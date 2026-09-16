@@ -15,7 +15,6 @@ struct BrowserFolderTabRows: View {
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
     var displayedItems: [BrowserSidebarTabListItem]? = nil
-    var followingTabIDsOverride: [TabID: TabID]? = nil
 
     private var items: [BrowserSidebarTabListItem] { displayedItems ?? configuration.items }
 
@@ -33,7 +32,7 @@ struct BrowserFolderTabRows: View {
         // Built once for the whole run rather than per row: it is a map over
         // every tab in the folder, and asking each row to rebuild it would
         // make drawing the folder quadratic in its own contents.
-        let followingTabIDs = followingTabIDsOverride ?? configuration.followingTabIDs
+        let followingTabIDs = configuration.followingTabIDs
 
         VStack(spacing: 0) {
             if interaction.isExpanded.wrappedValue {
@@ -80,32 +79,8 @@ struct BrowserFolderTabRows: View {
     @ViewBuilder
     private func rows(followingTabIDs: [TabID: TabID]) -> some View {
         ForEach(items) { item in
-            switch item {
-            case .tab(let tab):
-                let followingTabID = followingTabIDs[tab.id]
-                BrowserFolderTabRow(
-                    configuration: configuration,
-                    tab: tab,
-                    isLoaded: configuration.isLoaded(tab.id),
-                    followingTabID: followingTabID,
-                    hasVisibleFollowingRow: followingTabID != nil,
-                    unload: { configuration.unload($0) }
-                )
-                // The identity a scroll aims at when a shell brings the
-                // selected tab into view from inside a folder.
-                .id(tab.id)
-            case .splitGroup(let groupID, let members):
-                let followingTabID = members.last.flatMap {
-                    followingTabIDs[$0.id]
-                }
-                BrowserFolderSplitGroupRow(
-                    configuration: configuration,
-                    groupID: groupID,
-                    members: members,
-                    followingTabID: followingTabID,
-                    hasVisibleFollowingRow: followingTabID != nil
-                )
-            }
+            BrowserFolderExpandedTabRow(
+                configuration: configuration, item: item, followingTabIDs: followingTabIDs)
         }
     }
 
@@ -130,5 +105,52 @@ struct BrowserFolderTabRows: View {
             BrowserSidebarInteractionPolicy
             .tabListMetrics(configuration.capabilities)
         return metrics.sectionEndBandHeight
+    }
+}
+
+/// An expanded row can sit directly in the folder's ordered contents, without
+/// introducing a separate list and disclosure container for each tab.
+struct BrowserFolderExpandedTabRow: View {
+    let configuration: BrowserFolderGroupConfiguration
+    let item: BrowserSidebarTabListItem
+    let followingTabID: TabID?
+
+    init(
+        configuration: BrowserFolderGroupConfiguration,
+        item: BrowserSidebarTabListItem,
+        followingTabIDs: [TabID: TabID]
+    ) {
+        self.configuration = configuration
+        self.item = item
+        switch item {
+        case .tab(let tab):
+            followingTabID = followingTabIDs[tab.id]
+        case .splitGroup(_, let members):
+            followingTabID = members.last.flatMap { followingTabIDs[$0.id] }
+        }
+    }
+
+    var body: some View {
+        switch item {
+        case .tab(let tab):
+            BrowserFolderTabRow(
+                configuration: configuration,
+                tab: tab,
+                isLoaded: configuration.isLoaded(tab.id),
+                followingTabID: followingTabID,
+                hasVisibleFollowingRow: followingTabID != nil,
+                unload: { configuration.unload($0) }
+            )
+            // Keep the identity used when revealing a selected folder tab.
+            .id(tab.id)
+        case .splitGroup(let groupID, let members):
+            BrowserFolderSplitGroupRow(
+                configuration: configuration,
+                groupID: groupID,
+                members: members,
+                followingTabID: followingTabID,
+                hasVisibleFollowingRow: followingTabID != nil
+            )
+        }
     }
 }

@@ -2522,6 +2522,39 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(coordinator.journal, original)
     }
 
+    func testJournalReadsAndNewerRevisionsDoNotWaitForBackgroundPersistence() async throws {
+        let saving = expectation(description: "Background journal reached persistence")
+        let persistence = PausingBrowserSyncJournalPersistence { saving.fulfill() }
+        let coordinator = BrowserSyncCoordinator(persistence: persistence)
+        let original = coordinator.journal
+        let session = oneSpaceSession()
+        let stage = Task.detached {
+            try coordinator.stage(session: session, storeRevision: .initial)
+        }
+        await fulfillment(of: [saving], timeout: 5)
+
+        let accessed = expectation(description: "Session revision and committed snapshot remain available")
+        let access = Task.detached {
+            coordinator.advanceStoreRevision(to: .initial.successor())
+            let snapshot = coordinator.journal
+            accessed.fulfill()
+            return snapshot
+        }
+        await fulfillment(of: [accessed], timeout: 1)
+        persistence.resumeSave()
+
+        let snapshot = await access.value
+        let staged = try await stage.value
+        XCTAssertEqual(snapshot, original, "An unfinished save must not publish its candidate journal.")
+        XCTAssertTrue(staged)
+        XCTAssertFalse(coordinator.journal.records.isEmpty)
+        XCTAssertFalse(
+            try coordinator.stage(session: session, storeRevision: .initial),
+            "Finishing an older save must not roll back the newer revision barrier."
+        )
+        XCTAssertEqual(try persistence.load(), coordinator.journal)
+    }
+
     func testUseThisDeviceRebasesLocalRecordsAboveCloudAndDeletesCloudOnlyContent() throws {
         let localSession = oneSpaceSession()
         var cloudSession = localSession
@@ -3572,5 +3605,37 @@ private final class FailingSaveBrowserSyncJournalPersistence: BrowserSyncJournal
 
     func save(_ journal: BrowserSyncJournal) throws {
         throw Failure.save
+    }
+}
+
+private final class PausingBrowserSyncJournalPersistence: BrowserSyncJournalPersisting, @unchecked Sendable {
+    private let lock = NSLock()
+    private let gate = DispatchSemaphore(value: 0)
+    private let didBeginSave: @Sendable () -> Void
+    private var pausesNextSave = true
+    private var savedJournal: BrowserSyncJournal?
+
+    init(didBeginSave: @escaping @Sendable () -> Void) {
+        self.didBeginSave = didBeginSave
+    }
+
+    func load() throws -> BrowserSyncJournal? {
+        lock.withLock { savedJournal }
+    }
+
+    func save(_ journal: BrowserSyncJournal) throws {
+        let shouldPause = lock.withLock {
+            defer { pausesNextSave = false }
+            return pausesNextSave
+        }
+        if shouldPause {
+            didBeginSave()
+            gate.wait()
+        }
+        lock.withLock { savedJournal = journal }
+    }
+
+    func resumeSave() {
+        gate.signal()
     }
 }

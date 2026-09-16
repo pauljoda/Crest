@@ -296,7 +296,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.savedTabs.map(\.id), pins.ids)
     }
 
-    func testRemovingAScrollRegionReconcilesItsSelectedRows() async throws {
+    func testUnmountingScrollRowsPreservesLogicalSelectionUntilTabsAreRemoved() async throws {
         let session = makeSession(count: 3)
         let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
         let interaction = BrowserSidebarInteractionState.connected(to: browser)
@@ -314,7 +314,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         }
         browser.tabMultiSelection.selectAll(units: BrowserSidebarSelection.itemUnits(in: browser, reorder: reorder))
         XCTAssertEqual(browser.tabMultiSelection.selectedIDs, Set(ids))
-        let reconciled = expectation(description: "Selection reconciles after its rows disappear")
+        let reconciled = expectation(description: "Selection reconciles independently of mounted rows")
         withObservationTracking {
             _ = reorder.selectionRowsRevision
         } onChange: {
@@ -328,11 +328,15 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         reorder.removeScrollRegion(for: region)
         await fulfillment(of: [reconciled], timeout: 1)
 
-        XCTAssertEqual(browser.tabMultiSelection.selectedIDs, [ids[0]])
+        // Unmounting scroll content is not a model removal: lazy rows remain selectable.
+        XCTAssertEqual(browser.tabMultiSelection.selectedIDs, Set(ids))
         XCTAssertEqual(browser.session, session)
+        browser.closeTab(ids[2], matching: BrowserSpaceRuntimeAssignment(space: space))
+        browser.tabMultiSelection.reconcile(units: BrowserSidebarSelection.itemUnits(in: browser, reorder: reorder))
+        XCTAssertEqual(browser.tabMultiSelection.selectedIDs, Set(ids.prefix(2)))
     }
 
-    func testPointerTargetsAndRangesFollowLiveRowsAfterMovingAndReparenting() throws {
+    func testPointerTargetsFollowLiveFramesWhileRangesFollowModelOrder() throws {
         let session = makeSession(count: 3)
         let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
         let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
@@ -365,9 +369,9 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(target(rows[1]), space.tabs[1].id)
         XCTAssertEqual(
             BrowserSidebarSelection.units(in: browser, reorder: sidebarInteraction.sidebarReorderState).flatMap { $0 },
-            [
-                space.tabs[1].id, space.tabs[2].id, space.tabs[0].id,
-            ])
+            // Pointer hit-testing follows live geometry, while a range includes
+            // unrealized rows in model order; moving only views cannot reorder data.
+            space.tabs.map(\.id))
         // Move a row across sections and translate the entire sidebar.
         content.addSubview(rows[0])
         rows[0].setFrameOrigin(NSPoint(x: 30, y: 500))
@@ -459,6 +463,150 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
             result.tabs.first { $0.id == ids[0] }?.splitGroupID, result.tabs.first { $0.id == ids[1] }?.splitGroupID)
         XCTAssertEqual(result.pinnedTabs.map(\.id), [ids[3]])
         XCTAssertTrue(result.folderTree.isValid)
+    }
+
+    func testFortyTabRangeIncludesUnrealizedFolderRowsWithSixteenOrNoTargets() throws {
+        var session = makeSession(count: 40)
+        let folder = BrowserFolder(title: "Long folder", location: .current)
+        session.spaces[0].folders = [folder]
+        for index in session.spaces[0].tabs.indices { session.spaces[0].tabs[index].folderID = folder.id }
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let interaction = BrowserSidebarInteractionState.connected(to: browser)
+        let space = try XCTUnwrap(browser.selectedSpace)
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        let ids = space.tabs.map(\.id)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 280, height: 640),
+            styleMask: [.borderless], backing: .buffered, defer: false)
+        let targets = ids.prefix(16).enumerated().map { index, id in
+            let target = BrowserNativeTabSelectionTarget.TargetView(
+                frame: NSRect(x: 0, y: index * 40, width: 280, height: 40))
+            target.browser = browser
+            target.assignment = assignment
+            target.tabID = id
+            window.contentView?.addSubview(target)
+            return target
+        }
+        for mounted in [true, false] {
+            if !mounted {
+                for target in targets { target.removeFromSuperview() }
+            }
+            let units = BrowserSidebarSelection.itemUnits(in: browser, reorder: interaction.sidebarReorderState)
+            browser.tabMultiSelection.click(ids[0], units: units)
+            browser.tabMultiSelection.click(ids[39], units: units, shift: true)
+            XCTAssertEqual(browser.tabMultiSelection.selectedIDs, Set(ids))
+            XCTAssertEqual(
+                BrowserSidebarSelection.request(
+                    for: ids[0], browser: browser,
+                    reorder: interaction.sidebarReorderState)?.ids, ids)
+        }
+        browser.tabMultiSelection.selectAll(
+            units: BrowserSidebarSelection.itemUnits(
+                in: browser, reorder: interaction.sidebarReorderState))
+        XCTAssertEqual(browser.tabMultiSelection.selectedIDs, Set(ids))
+        XCTAssertEqual(
+            BrowserSidebarSelection.request(
+                for: .folder(folder.id), browser: browser,
+                reorder: interaction.sidebarReorderState)?.ids, ids)
+    }
+
+    func testLogicalOrderIncludesPinsMixedFoldersKeptSplitAndVisibleSections() throws {
+        var session = makeSession(count: 8)
+        let ids = session.spaces[0].tabs.map(\.id)
+        let parent = BrowserFolder(title: "Parent")
+        let child = BrowserFolder(title: "Child", parentID: parent.id, isCollapsed: true)
+        let empty = BrowserFolder(title: "Empty", orderAnchorTabID: ids[1])
+        session.spaces[0].folders = [parent, child, empty]
+        session.spaces[0].tabs[0].placement = .pinned
+        for index in 1...4 { session.spaces[0].tabs[index].placement = .saved }
+        for index in 2...3 { session.spaces[0].tabs[index].folderID = child.id }
+        let group = SplitGroupID()
+        for index in 2...3 { session.spaces[0].tabs[index].splitGroupID = group }
+        session.spaces[0].tabs[4].folderID = parent.id
+        session.spaces[0].tabs[7] = .startPage()
+        session.spaces[0].selectedTabID = ids[2]
+        session.spaces[0].isSavedTabsExpanded = true
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let interaction = BrowserSidebarInteractionState.connected(to: browser)
+        let space = try XCTUnwrap(browser.selectedSpace)
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        interaction.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[2], ids[3]])
+        XCTAssertEqual(
+            BrowserSidebarSelection.itemUnits(in: browser, reorder: interaction.sidebarReorderState),
+            [
+                [.tab(ids[0])], [.folder(empty.id)], [.tab(ids[1])], [.folder(parent.id)], [.folder(child.id)],
+                [.tab(ids[2]), .tab(ids[3])], [.tab(ids[4])], [.tab(ids[5])], [.tab(ids[6])],
+            ])
+        browser.setSavedTabsExpanded(false, matching: assignment)
+        XCTAssertEqual(
+            BrowserSidebarSelection.units(in: browser, reorder: interaction.sidebarReorderState),
+            [[ids[0]], [ids[5]], [ids[6]]])
+        XCTAssertEqual(
+            BrowserPlatformSidebarSelectionOrder.orderedItems(
+                in: browser,
+                assignment: BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: UUID())), [])
+    }
+
+    func testCollapsedVisibilitySurvivesUnmountingButIsScopedToWindowAssignmentAndResidency() throws {
+        var session = makeSession(count: 3)
+        let folder = BrowserFolder(title: "Kept", location: .current, isCollapsed: true)
+        session.spaces[0].folders = [folder]
+        let ids = session.spaces[0].tabs.map(\.id)
+        for index in 0...1 { session.spaces[0].tabs[index].folderID = folder.id }
+        let firstBrowser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let secondBrowser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let first = BrowserSidebarInteractionState.connected(to: firstBrowser)
+        let second = BrowserSidebarInteractionState.connected(to: secondBrowser)
+        var space = session.spaces[0]
+        let assignment = BrowserFolderRuntimeAssignment(
+            folderID: folder.id, spaceID: space.id,
+            profileID: space.profile.id)
+        first.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0], ids[1]])
+        space.selectedTabID = ids[1]
+        second.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0], ids[1]])
+        space.selectedTabID = ids[2]
+        first.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0], ids[1]])
+        second.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0], ids[1]])
+        XCTAssertEqual(first.collapsedFolderVisibility(for: assignment).state.keptTabID, ids[0])
+        XCTAssertEqual(second.collapsedFolderVisibility(for: assignment).state.keptTabID, ids[1])
+        first.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[1]])
+        XCTAssertNil(first.collapsedFolderVisibility(for: assignment).state.keptTabID)
+        XCTAssertEqual(second.collapsedFolderVisibility(for: assignment).state.keptTabID, ids[1])
+        space.folders[0].isCollapsed = false
+        second.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0], ids[1]])
+        XCTAssertNil(second.collapsedFolderVisibility(for: assignment).state.keptTabID)
+        space.folders[0].isCollapsed = true
+        space.selectedTabID = ids[0]
+        first.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0]])
+        let oldBox = first.collapsedFolderVisibility(for: assignment)
+        first.pruneCollapsedFolders(in: [])
+        XCTAssertNil(oldBox.state.keptTabID)
+        XCTAssertFalse(first.collapsedFolderVisibility(for: assignment) === oldBox)
+        first.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0]])
+        let previousProfileBox = first.collapsedFolderVisibility(for: assignment)
+        space = BrowserSpace(
+            id: space.id, profile: BrowsingProfile(), name: space.name, symbol: space.symbol, accent: space.accent,
+            folders: space.folders, tabs: space.tabs, selectedTabID: space.selectedTabID)
+        first.pruneCollapsedFolders(in: [space])
+        XCTAssertNil(previousProfileBox.state.keptTabID)
+        let newAssignment = BrowserFolderRuntimeAssignment(
+            folderID: folder.id, spaceID: space.id,
+            profileID: space.profile.id)
+        first.reconcileCollapsedFolders(in: space, residentTabIDs: [ids[0]])
+        XCTAssertEqual(first.collapsedFolderVisibility(for: newAssignment).state.keptTabID, ids[0])
+        first.browserWillResetSession()
+        XCTAssertNil(first.collapsedFolderVisibility(for: newAssignment).state.keptTabID)
+    }
+
+    func testLogicalSelectionDoesNotExposeALockedSpaceWithoutLiveAuthorization() throws {
+        var session = makeSession(count: 2)
+        session.spaces[0].accessPolicy = .deviceOwnerAuthentication
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let interaction = BrowserSidebarInteractionState.connected(to: browser)
+        XCTAssertEqual(BrowserSidebarSelection.itemUnits(in: browser, reorder: interaction.sidebarReorderState), [])
+        let access = BrowserSpaceAccessController()
+        interaction.sidebarSpaceAccess = access
+        XCTAssertEqual(BrowserSidebarSelection.itemUnits(in: browser, reorder: interaction.sidebarReorderState), [])
     }
 
     private func makeSession(count: Int) -> BrowserSession {

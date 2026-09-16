@@ -45,6 +45,8 @@ struct BrowserSidebarTabRow: View {
     @FocusState private var isTitleFocused: Bool
 
     var body: some View {
+        let configuration = self.configuration
+        let interaction = self.interaction
         BrowserSidebarTabRowContent(
             configuration: configuration,
             interaction: interaction

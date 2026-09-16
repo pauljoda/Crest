@@ -33,6 +33,52 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
         XCTAssertFalse(state.hasLiftInFlight)
     }
 
+    @MainActor
+    func testExplicitSpaceDropOverridesALargeGapAndTheMovingEdgeProbe() throws {
+        let destination = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: space.profileID)
+        let spaceZone = BrowserSidebarReorderZone(
+            target: .space(destination), frame: CGRect(x: 104, y: 988, width: 40, height: 30))
+        let sectionZone = BrowserSidebarReorderZone(
+            target: .section(current), frame: CGRect(x: 8, y: 100, width: 240, height: 1800))
+        let previous = BrowserSidebarReorderTarget(kind: .insert(section: current, beforeID: .tab(TabID()), index: 1))
+        let tab = BrowserSidebarReorderItem.tab(
+            .init(tabID: TabID(), spaceID: space.spaceID, profileID: space.profileID))
+        var tallGap = BrowserSidebarReorderLayout(
+            sourceID: tab.id, sourceFrame: CGRect(x: 8, y: 100, width: 240, height: 44), hiddenIDs: [tab.id],
+            gap: .init(
+                section: current, anchor: .emptySection(current),
+                frame: CGRect(x: 8, y: 220, width: 240, height: 44), containingFolders: []))
+        tallGap.batchHeight = 40 * 44
+        let pointer = CGPoint(x: spaceZone.frame.midX, y: spaceZone.frame.midY)
+        XCTAssertTrue(try XCTUnwrap(tallGap.gapFrame).contains(pointer))
+        let lift = BrowserSidebarReorderState.Lift(
+            item: tab, section: current, rowSize: CGSize(width: 240, height: 44), grabOffset: .zero)
+        func resolve(
+            _ lift: BrowserSidebarReorderState.Lift, layout: BrowserSidebarReorderLayout,
+            pointer: CGPoint, insertionPoint: CGPoint
+        ) -> BrowserSidebarReorderTarget? {
+            BrowserSidebarReorderTargetResolver(
+                lift: lift, pointer: pointer, insertionPoint: insertionPoint, layout: layout, pinned: nil,
+                zones: [sectionZone, spaceZone], rows: [:], splitCards: [:]
+            ).resolve(previousTarget: previous)
+        }
+        XCTAssertEqual(
+            resolve(lift, layout: tallGap, pointer: pointer, insertionPoint: pointer)?.kind,
+            .space(destination), "A batch gap must not mask fixed Space picker targets.")
+        let insideList = CGPoint(x: pointer.x, y: 500)
+        XCTAssertEqual(
+            resolve(lift, layout: tallGap, pointer: insideList, insertionPoint: insideList), previous,
+            "Ordinary list movement still preserves the existing gap.")
+        let folderLift = BrowserSidebarReorderState.Lift(
+            item: .folder(.init(folderID: FolderID(), spaceID: space.spaceID, profileID: space.profileID)),
+            section: current, rowSize: CGSize(width: 240, height: 1600), grabOffset: .zero)
+        XCTAssertEqual(
+            resolve(
+                folderLift, layout: BrowserSidebarReorderLayout(), pointer: pointer,
+                insertionPoint: CGPoint(x: pointer.x, y: pointer.y + 1600))?.kind,
+            .space(destination), "An explicit pointer target takes precedence over the moving row edge.")
+    }
+
     func testAdjacentFolderEdgesOfferTheirParentSectionForTabs() {
         for placement in [TabPlacement.saved, .current] {
             let parent = BrowserSidebarReorderSection.tabs(placement: placement, folderID: nil)

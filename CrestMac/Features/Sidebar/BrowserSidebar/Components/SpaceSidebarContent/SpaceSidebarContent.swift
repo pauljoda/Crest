@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SpaceSidebarContent: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let space: BrowserSpace
     let browser: BrowserStore
     let pages: BrowserPagePool
@@ -59,6 +60,10 @@ struct SpaceSidebarContent: View {
                     )
                 }
             }
+        }
+        .onChange(of: utilitySurface != nil) { _, isPresented in
+            // The utility surface replaces every browsing input host.
+            if isPresented { sidebarInteraction.cancel() }
         }
     }
 

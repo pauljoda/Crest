@@ -195,6 +195,7 @@ struct BrowserMacWindowScene: View {
     private func closeWindowRuntime() {
         guard !closed else { return }
         closed = true
+        (browser.interactionObserver as? BrowserSidebarInteractionState)?.cancel()
         sidebarWidgets.removeHost(id: id)
         extensionControllerPool.unregisterWindow(id: id)
         pagePoolRegistry.unregister(pages, for: id)

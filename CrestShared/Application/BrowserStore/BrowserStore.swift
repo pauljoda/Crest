@@ -350,7 +350,10 @@ extension BrowserStore: BrowserCloudSyncModelGateway {
     func markCloudSyncRecordsUploaded(
         _ acknowledgedVersions: [BrowserSyncRecordID: BrowserSyncVersion]
     ) async throws {
-        try syncCoordinator?.markUploaded(acknowledgedVersions)
+        guard let syncCoordinator else { return }
+        try await Task.detached(priority: .utility) {
+            try syncCoordinator.markUploaded(acknowledgedVersions)
+        }.value
     }
 }
 

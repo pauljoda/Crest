@@ -36,7 +36,7 @@ struct BrowserCurrentTabsDropSection: View {
             BrowserNewTabRow(capabilities: capabilities, action: openNewTab)
 
             if capabilities.showsRowDropIndicators {
-                VStack(spacing: 0) { rows }
+                BrowserSidebarRowsStack { rows }
 
                 // Also the band a cleared list draws its insertion line in: it
                 // sits directly below the new-tab row, where the first current
@@ -51,7 +51,7 @@ struct BrowserCurrentTabsDropSection: View {
                     state: sidebarInteraction.sidebarReorderState
                 )
             } else {
-                VStack(spacing: 0) {
+                BrowserSidebarRowsStack {
                     rows
 
                     // A cleared list has no row to draw the seam on, so it

@@ -26,7 +26,9 @@ final class BrowserSpacePickerAutoscrollView: NSView {
     private weak var clipView: NSClipView?
     private var observer: NSObjectProtocol?
     private var wasPostingBoundsChanges = false
-    private var timer: Timer?
+    private lazy var autoscrollClock = BrowserDragAutoscrollClock { [weak self] scale in
+        self?.advance(scale: scale)
+    }
     private var viewport = CGRect.zero
     private var pointer: CGPoint?
     private var lastOriginX: CGFloat = 0
@@ -50,7 +52,7 @@ final class BrowserSpacePickerAutoscrollView: NSView {
         self.pointer = pointer
         self.contentMoved = contentMoved
         connectSoon()
-        updateTimer()
+        updateAutoscroll()
     }
 
     private func connectSoon() {
@@ -70,7 +72,7 @@ final class BrowserSpacePickerAutoscrollView: NSView {
             ) { [weak self] _ in
                 MainActor.assumeIsolated { self?.boundsChanged() }
             }
-            updateTimer()
+            updateAutoscroll()
         }
     }
 
@@ -82,52 +84,41 @@ final class BrowserSpacePickerAutoscrollView: NSView {
         if pointer != nil, offset != 0 { contentMoved?(offset) }
     }
 
-    private func updateTimer() {
-        guard let pointer, clipView != nil,
+    private func updateAutoscroll() {
+        guard window != nil, let pointer, clipView != nil,
             CrestSpacePickerReordering.autoscrollStep(at: pointer, in: viewport) != 0
         else {
-            stopTimer()
+            autoscrollClock.stop()
             return
         }
-        guard timer == nil else { return }
-        let timer = Timer(timeInterval: 1 / 60, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.advance() }
-        }
-        timer.tolerance = 1 / 240
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        autoscrollClock.start(in: self)
     }
 
-    private func advance() {
-        guard let pointer, let clipView, let scrollView = clipView.enclosingScrollView,
+    private func advance(scale: CGFloat) {
+        guard window != nil, let pointer, let clipView, let scrollView = clipView.enclosingScrollView,
             let document = scrollView.documentView
         else {
-            stopTimer()
+            autoscrollClock.stop()
             return
         }
-        let step = CrestSpacePickerReordering.autoscrollStep(at: pointer, in: viewport)
+        let step = CrestSpacePickerReordering.autoscrollStep(at: pointer, in: viewport) * scale
         guard step != 0 else {
-            stopTimer()
+            autoscrollClock.stop()
             return
         }
         let origin = clipView.bounds.origin
         let maximum = max(document.bounds.minX, document.bounds.maxX - clipView.bounds.width)
         let newX = min(max(origin.x + step, document.bounds.minX), maximum)
         guard newX != origin.x else {
-            stopTimer()
+            autoscrollClock.stop()
             return
         }
         clipView.scroll(to: CGPoint(x: newX, y: origin.y))
         scrollView.reflectScrolledClipView(clipView)
     }
 
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-    }
-
     func disconnect() {
-        stopTimer()
+        autoscrollClock.stop()
         if let observer { NotificationCenter.default.removeObserver(observer) }
         observer = nil
         clipView?.postsBoundsChangedNotifications = wasPostingBoundsChanges

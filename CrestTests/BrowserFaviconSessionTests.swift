@@ -5,6 +5,60 @@ import XCTest
 
 @MainActor
 final class BrowserFaviconSessionTests: XCTestCase {
+    func testAutomaticRefreshDoesNotRepeatMissingIconWorkUntilDocumentInvalidation() async {
+        let document = SuspendedFaviconDocument()
+        document.suspendsCapture = false
+        document.suspendsFallback = false
+        let session = BrowserFaviconSession(document: document, receive: { _ in XCTFail("Missing icon published") })
+        let first = await session.pull()
+        XCTAssertNil(first)
+
+        let repeated = expectation(description: "Unchanged document must not start another capture")
+        repeated.isInverted = true
+        document.captureStarted = { repeated.fulfill() }
+        for _ in 0..<50 { session.refresh() }
+        await fulfillment(of: [repeated], timeout: 0.1)
+        XCTAssertEqual(document.captureCount, 1)
+        XCTAssertEqual(document.fallbackCount, 1)
+
+        // A reload can replace the document without changing its URL.
+        session.invalidate()
+        let reloaded = expectation(description: "Replacement document starts a capture")
+        document.captureStarted = { reloaded.fulfill() }
+        session.refresh()
+        await fulfillment(of: [reloaded], timeout: 1)
+        XCTAssertEqual(document.captureCount, 2)
+    }
+
+    func testAutomaticRefreshPreservesInFlightCaptureAndDelayedIconRetries() async {
+        let document = SuspendedFaviconDocument()
+        document.suspendsFallback = false
+        let session = BrowserFaviconSession(
+            document: document,
+            policy: .init(retryDelays: [.milliseconds(1)]),
+            wait: { _ in
+                document.suspendsCapture = false
+                document.captureData = Data([7])
+            },
+            receive: { _ in }
+        )
+        let started = expectation(description: "Capture started")
+        document.captureStarted = { started.fulfill() }
+        let request = Task { await session.pull() }
+        await fulfillment(of: [started], timeout: 1)
+        document.captureStarted = nil
+        document.suspendsCapture = false
+
+        for _ in 0..<50 { session.refresh() }
+        document.finishCapture(nil)
+        let result = await request.value
+
+        XCTAssertEqual(result, Data([7]))
+        XCTAssertEqual(document.captureCount, 2)
+        XCTAssertEqual(document.fallbackCount, 1)
+        session.stop()
+    }
+
     func testNavigationPreventsOldCaptureFromStartingFallback() async {
         let document = SuspendedFaviconDocument()
         let session = BrowserFaviconSession(document: document, receive: { _ in XCTFail("Stale icon published") })
@@ -62,7 +116,12 @@ final class BrowserFaviconSessionTests: XCTestCase {
 
     func testCallerCancellationPreventsFallbackAndPublication() async {
         let document = SuspendedFaviconDocument()
-        let session = BrowserFaviconSession(document: document, receive: { _ in XCTFail("Cancelled icon published") })
+        var received: [Data] = []
+        let refreshed = expectation(description: "Later refresh can capture after caller cancellation")
+        let session = BrowserFaviconSession(document: document) {
+            received.append($0)
+            refreshed.fulfill()
+        }
         let started = expectation(description: "Capture started")
         document.captureStarted = { started.fulfill() }
         let request = Task { await session.pull() }
@@ -74,6 +133,14 @@ final class BrowserFaviconSessionTests: XCTestCase {
 
         XCTAssertNil(result)
         XCTAssertEqual(document.fallbackCount, 0)
+        XCTAssertTrue(received.isEmpty)
+
+        document.suspendsCapture = false
+        document.captureStarted = nil
+        document.captureData = Data([2])
+        session.refresh()
+        await fulfillment(of: [refreshed], timeout: 1)
+        XCTAssertEqual(received, [Data([2])])
     }
 
     func testNewerRequestOwnsPublicationAndMissingCaptureKeepsLastIcon() async {
@@ -84,6 +151,7 @@ final class BrowserFaviconSessionTests: XCTestCase {
         document.captureStarted = { started.fulfill() }
         let oldRequest = Task { await session.pull() }
         await fulfillment(of: [started], timeout: 1)
+        document.captureStarted = nil
 
         document.suspendsCapture = false
         document.captureData = Data([2])
@@ -166,7 +234,10 @@ private final class SuspendedFaviconDocument: BrowserFaviconDocument {
 
     func capture() async -> Data? {
         captureCount += 1
-        guard suspendsCapture else { return captureData }
+        guard suspendsCapture else {
+            captureStarted?()
+            return captureData
+        }
         return await withCheckedContinuation { continuation in
             captureContinuation = continuation
             captureStarted?()

@@ -4,7 +4,7 @@ import SwiftUI
 /// session, unload for one that outlives it and only has a page to put away.
 struct BrowserSidebarTabTrailingControl: View {
     let configuration: BrowserSidebarTabRowConfiguration
-    let isHovering: Bool
+    @Binding var isHovering: Bool
 
     @ViewBuilder
     var body: some View {
@@ -130,9 +130,10 @@ private struct BrowserSidebarTabTrailingControlStyle: ViewModifier {
     #Preview("Close and unload") {
         HStack(spacing: 20) {
             BrowserSidebarTabTrailingControl(
-                configuration: BrowserSidebarTabRowPreviewFixture.configuration(), isHovering: true)
+                configuration: BrowserSidebarTabRowPreviewFixture.configuration(), isHovering: .constant(true))
             BrowserSidebarTabTrailingControl(
-                configuration: BrowserSidebarTabRowPreviewFixture.configuration(placement: .saved), isHovering: true)
+                configuration: BrowserSidebarTabRowPreviewFixture.configuration(placement: .saved),
+                isHovering: .constant(true))
         }.padding()
     }
 #endif

@@ -1333,6 +1333,46 @@
     "cleaner-about-app-summary": {
       "category": "improved",
       "message": "See your chosen app icon, app details, and software updates together in a cleaner About page"
+    },
+    "responsive-browsing-during-sync-saves": {
+      "category": "fixed",
+      "message": "Keep browsing responsive while large sessions and history sync in the background"
+    },
+    "faster-extension-tab-updates": {
+      "category": "improved",
+      "message": "Keep extensions responsive when browsing with many tabs and windows"
+    },
+    "display-paced-sidebar-drag-scrolling": {
+      "category": "fixed",
+      "message": "Drag tabs through long sidebars more reliably, with edge scrolling that follows your display's refresh rate"
+    },
+    "efficient-installed-translation-language-checks": {
+      "category": "improved",
+      "message": "Check installed translation languages more efficiently in Settings"
+    },
+    "quicker-large-sidebar-folder-toggles": {
+      "category": "improved",
+      "message": "Reduce delays when opening and closing large tab folders"
+    },
+    "reliable-large-selection-space-drops": {
+      "category": "fixed",
+      "message": "Move large tab selections between Spaces reliably"
+    },
+    "smoother-long-tab-list-scrolling": {
+      "category": "improved",
+      "message": "Scroll more smoothly through long lists of saved and current tabs"
+    },
+    "responsive-large-history-lists": {
+      "category": "improved",
+      "message": "Open and search large browsing histories with fewer pauses"
+    },
+    "release-dismissed-address-bar-views": {
+      "category": "fixed",
+      "message": "Reduce memory growth when repeatedly opening the address bar"
+    },
+    "bounded-missing-site-icon-requests": {
+      "category": "fixed",
+      "message": "Avoid repeated background requests and memory growth on pages without a site icon"
     }
   }
 }

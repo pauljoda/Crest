@@ -2,6 +2,44 @@ import Foundation
 
 @MainActor
 enum BrowserSidebarSelection {
+    /// Logical row order survives lazy view removal. Pointer targeting still
+    /// uses the platform's live view bounds independently of this projection.
+    static func logicalItems(
+        in space: BrowserSpace, keptTabID: (FolderID) -> TabID?
+    ) -> [BrowserSelectionItemID] {
+        let sections = space.tabSections
+        let tree = space.folderTree
+        var result = sections.pinnedTabs.filter { !$0.isStartPage }.map { BrowserSelectionItemID.tab($0.id) }
+
+        func append(_ items: [BrowserSidebarFolderListItem], from projection: BrowserSidebarFolderListItem.Projection) {
+            for item in items {
+                switch item {
+                case .tabs(let row):
+                    result.append(contentsOf: row.tabs.filter { !$0.isStartPage }.map { .tab($0.id) })
+                case .folder(let node):
+                    result.append(.folder(node.id))
+                    if !node.folder.isCollapsed {
+                        append(projection.items(in: node.id), from: projection)
+                    } else if let id = keptTabID(node.id),
+                        let row = BrowserSidebarTabListItemPolicy.collapsedItem(
+                            keeping: id, in: sections.tabs(in: node.id))
+                    {
+                        result.append(contentsOf: row.tabs.filter { !$0.isStartPage }.map { .tab($0.id) })
+                    }
+                }
+            }
+        }
+
+        if space.isSavedTabsExpanded {
+            let saved = BrowserSidebarFolderListItem.Projection(tabs: space.tabs, tree: tree, location: .saved)
+            append(saved.items(), from: saved)
+        }
+        let current = BrowserSidebarFolderListItem.Projection(
+            tabs: sections.sidebarCurrentTabs, tree: tree, location: .current)
+        append(current.items(), from: current)
+        return result
+    }
+
     static func units(in browser: BrowserStore, reorder: BrowserSidebarReorderState) -> [[TabID]] {
         itemUnits(in: browser, reorder: reorder).map { $0.compactMap(\.tabID) }.filter { !$0.isEmpty }
     }
@@ -12,16 +50,18 @@ enum BrowserSidebarSelection {
         let items =
             BrowserPlatformSidebarSelectionOrder.orderedItems(in: browser, assignment: assignment)
             ?? registeredItems(in: browser, assignment: assignment, reorder: reorder)
+        let tabsByID = Dictionary(uniqueKeysWithValues: space.tabs.map { ($0.id, $0) })
+        let folderIDs = Set(space.folders.map(\.id))
         var included: Set<BrowserSelectionItemID> = []
         return items.compactMap { item in
             guard !included.contains(item) else { return nil }
             let unit: [BrowserSelectionItemID]
             switch item {
             case .folder(let id):
-                guard space.folders.contains(where: { $0.id == id }) else { return nil }
+                guard folderIDs.contains(id) else { return nil }
                 unit = [item]
             case .tab(let id):
-                guard let tab = space.tabs.first(where: { $0.id == id }), !tab.isStartPage else { return nil }
+                guard let tab = tabsByID[id], !tab.isStartPage else { return nil }
                 unit = tab.splitGroupID.map { space.splitGroupMembers(of: $0).map { .tab($0.id) } } ?? [item]
             }
             included.formUnion(unit)

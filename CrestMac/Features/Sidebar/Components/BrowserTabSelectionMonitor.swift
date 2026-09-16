@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Routes sidebar selection keys and modifier clicks before row activation.
-struct BrowserTabSelectionMonitor: NSViewRepresentable {
+struct BrowserTabSelectionMonitor: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
@@ -10,23 +10,43 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
     let activate: (TabID) -> Void
     var ownsFocus = false
 
-    func makeNSView(context: Context) -> SelectionView { SelectionView() }
-
-    func updateNSView(_ view: SelectionView, context: Context) {
-        view.browser = browser
-        view.sidebarInteraction = sidebarInteraction
-        view.spaceAccess = spaceAccess
-        view.assignment = assignment
-        view.activate = activate
-        if ownsFocus, browser.session.selectedSpaceID == assignment.spaceID,
-            view.window?.attachedSheet == nil,
-            view.window?.firstResponder !== view
-        {
-            view.window?.makeFirstResponder(view)
+    var body: some View {
+        GeometryReader { proxy in
+            Bridge(
+                browser: browser, sidebarInteraction: sidebarInteraction, spaceAccess: spaceAccess,
+                assignment: assignment, activate: activate, ownsFocus: ownsFocus,
+                globalFrame: proxy.frame(in: .global))
         }
     }
 
-    static func dismantleNSView(_ view: SelectionView, coordinator: ()) { view.stop() }
+    private struct Bridge: NSViewRepresentable {
+        let browser: BrowserStore
+        let sidebarInteraction: BrowserSidebarInteractionState
+        let spaceAccess: BrowserSpaceAccessController
+        let assignment: BrowserSpaceRuntimeAssignment
+        let activate: (TabID) -> Void
+        let ownsFocus: Bool
+        let globalFrame: CGRect
+
+        func makeNSView(context: Context) -> SelectionView { SelectionView() }
+
+        func updateNSView(_ view: SelectionView, context: Context) {
+            view.browser = browser
+            view.sidebarInteraction = sidebarInteraction
+            view.spaceAccess = spaceAccess
+            view.assignment = assignment
+            view.activate = activate
+            view.globalFrame = globalFrame
+            if ownsFocus, browser.session.selectedSpaceID == assignment.spaceID,
+                view.window?.attachedSheet == nil,
+                view.window?.firstResponder !== view
+            {
+                view.window?.makeFirstResponder(view)
+            }
+        }
+
+        static func dismantleNSView(_ view: SelectionView, coordinator: ()) { view.stop() }
+    }
 
     final class SelectionView: NSView {
         weak var browser: BrowserStore?
@@ -34,9 +54,12 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
         weak var spaceAccess: BrowserSpaceAccessController?
         var assignment: BrowserSpaceRuntimeAssignment?
         var activate: ((TabID) -> Void)?
+        var globalFrame: CGRect = .zero
         private var monitor: Any?
+        private var windowObservers: [NSObjectProtocol] = []
         private var consumedDown = false
         override var acceptsFirstResponder: Bool { true }
+        override var isFlipped: Bool { true }
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
         override func resignFirstResponder() -> Bool {
@@ -47,9 +70,17 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             stop()
-            guard window != nil else { return }
+            guard let window else { return }
+            for name in [NSWindow.willCloseNotification, NSWindow.didResignKeyNotification] {
+                windowObservers.append(
+                    NotificationCenter.default.addObserver(
+                        forName: name, object: window, queue: .main
+                    ) { [weak self] _ in
+                        MainActor.assumeIsolated { self?.sidebarInteraction?.cancel() }
+                    })
+            }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [
-                .leftMouseDown, .leftMouseUp, .rightMouseDown, .keyDown,
+                .leftMouseDown, .leftMouseDragged, .leftMouseUp, .rightMouseDown, .keyDown,
             ]) {
                 [weak self] event in
                 guard let self else { return event }
@@ -60,10 +91,20 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
         func stop() {
             if let monitor { NSEvent.removeMonitor(monitor) }
             monitor = nil
+            windowObservers.forEach(NotificationCenter.default.removeObserver)
+            windowObservers.removeAll()
         }
 
-        private func handle(_ event: NSEvent) -> NSEvent? {
-            guard event.window === window, let browser, let sidebarInteraction, let spaceAccess, let assignment,
+        func handle(_ event: NSEvent) -> NSEvent? {
+            guard let eventWindow = window, event.window === eventWindow else { return event }
+            if event.type == .leftMouseDragged || event.type == .leftMouseUp {
+                let local = convert(event.locationInWindow, from: nil)
+                let global = CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
+                sidebarInteraction?.sidebarReorderState.forwardPointerContinuation(
+                    at: global, released: event.type == .leftMouseUp, eventTimestamp: event.timestamp)
+                if event.type == .leftMouseDragged { return event }
+            }
+            guard let browser, let sidebarInteraction, let spaceAccess, let assignment,
                 browser.session.selectedSpaceID == assignment.spaceID
             else { return event }
             guard

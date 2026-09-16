@@ -3,8 +3,171 @@ import XCTest
 
 @testable import Crest
 
+#if os(macOS)
+    import AppKit
+#endif
+
 @MainActor
 final class BrowserTabDragSafetyTests: XCTestCase {
+    func testPointerContinuationSurvivesSourceReleaseAndFinishesOnce() throws {
+        let context = makeContext()
+        let state = context.sidebarInteraction.sidebarReorderState
+        let reorder = BrowserSidebarReorderContext(
+            browser: context.browser, spaceAccess: context.spaceAccess, state: state)
+        let source = BrowserSidebarReorderInputSession.Source(
+            item: .tab(context.item), section: .tabs(placement: .current, folderID: nil))
+        state.begin(item: source.item, section: source.section, at: .zero)
+        var input: BrowserSidebarReorderInputSession? = BrowserSidebarReorderInputSession()
+        weak let retainedInput = input
+        var releases = 0
+        input?.retainPointerContinuation(
+            source: source, reorder: reorder,
+            windowDrop: BrowserSidebarWindowDrop(perform: { _ in
+                releases += 1
+                return true
+            }))
+        input = nil
+        XCTAssertNotNil(retainedInput, "The window session owns input after the row disappears.")
+        state.forwardPointerContinuation(at: CGPoint(x: 20, y: 90), released: false, eventTimestamp: 1)
+        XCTAssertEqual(state.pointer, CGPoint(x: 20, y: 90))
+        state.forwardPointerContinuation(at: CGPoint(x: 20, y: 10), released: false, eventTimestamp: 2)
+        XCTAssertEqual(state.pointer, CGPoint(x: 20, y: 10), "The offscreen source can reverse direction.")
+        state.forwardPointerContinuation(at: CGPoint(x: 20, y: 15), released: true, eventTimestamp: 3)
+        state.forwardPointerContinuation(at: CGPoint(x: 20, y: 15), released: true, eventTimestamp: 3)
+        XCTAssertEqual(releases, 1)
+        XCTAssertFalse(state.hasLiftInFlight)
+        XCTAssertNil(retainedInput, "Ending releases the captured source and window-drop handler.")
+    }
+
+    func testPointerContinuationRechecksSourceAuthorizationAndRejectsStaleSessions() throws {
+        let context = makeContext()
+        let state = context.sidebarInteraction.sidebarReorderState
+        let reorder = BrowserSidebarReorderContext(
+            browser: context.browser, spaceAccess: context.spaceAccess, state: state)
+        let source = BrowserSidebarReorderInputSession.Source(
+            item: .tab(context.item), section: .tabs(placement: .current, folderID: nil))
+        state.begin(item: source.item, section: source.section, at: .zero)
+        let staleToken = try XCTUnwrap(state.sessionToken)
+        let input = BrowserSidebarReorderInputSession()
+        input.retainPointerContinuation(source: source, reorder: reorder, windowDrop: nil)
+        // Selecting a destination Space does not revoke the captured source.
+        context.browser.selectSpace(context.destination.id)
+        state.forwardPointerContinuation(at: CGPoint(x: 10, y: 20), released: false, eventTimestamp: 1)
+        XCTAssertTrue(state.hasLiftInFlight)
+        replaceProfile(matching: context.sourceAssignment, with: Self.uuid(99), in: context.browser)
+        state.forwardPointerContinuation(at: CGPoint(x: 10, y: 30), released: false, eventTimestamp: 2)
+        XCTAssertFalse(state.hasLiftInFlight)
+        state.begin(item: source.item, section: source.section, at: .zero)
+        var staleCalls = 0
+        state.retainPointerContinuation(session: staleToken) { _, _ in staleCalls += 1 }
+        state.forwardPointerContinuation(at: CGPoint(x: 10, y: 40), released: true, eventTimestamp: 3)
+        XCTAssertEqual(staleCalls, 0)
+        XCTAssertTrue(state.hasLiftInFlight)
+        state.cancel()
+    }
+
+    func testPointerContinuationCommitsAllFortyMembersWhenOnlySixteenSourceRowsAreMeasured() throws {
+        let tabs = (1...42).map { index in
+            Self.makeTab(
+                id: Self.tabID(UInt8(index)), title: "Tab \(index)",
+                placement: index == 42 ? .saved : .current)
+        }
+        let space = Self.makeSpace(id: Self.spaceID(90), profileID: Self.uuid(91), name: "Source", tabs: tabs)
+        let browser = Self.makeBrowser(spaces: [space], selectedSpaceID: space.id)
+        let interaction = BrowserSidebarInteractionState.connected(to: browser)
+        let state = interaction.sidebarReorderState
+        let access = BrowserSpaceAccessController(authenticator: InMemoryAuthenticator())
+        let reorder = BrowserSidebarReorderContext(browser: browser, spaceAccess: access, state: state)
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        let current = BrowserSidebarReorderSection.tabs(placement: .current, folderID: nil)
+        let saved = BrowserSidebarReorderSection.tabs(placement: .saved, folderID: nil)
+        for (index, tab) in tabs.prefix(16).enumerated() {
+            state.register(
+                row: BrowserSidebarReorderRow(
+                    id: .tab(tab.id), space: assignment, section: current,
+                    frame: CGRect(x: 0, y: index * 44, width: 200, height: 44)), owner: UUID())
+        }
+        let anchor = try XCTUnwrap(tabs.last)
+        let targetFrame = CGRect(x: 400, y: 900, width: 200, height: 44)
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(anchor.id), space: assignment, section: saved,
+                frame: targetFrame), owner: UUID())
+        state.register(zone: BrowserSidebarReorderZone(target: .section(saved), frame: targetFrame), for: UUID())
+        let request = BrowserTabBatchRequest(ids: tabs.prefix(40).map(\.id), in: space)
+        let source = BrowserSidebarReorderInputSession.Source(
+            item: .tab(BrowserTabDragItem(tabID: tabs[0].id, spaceID: space.id, profileID: space.profile.id)),
+            section: current)
+        state.begin(item: source.item.selecting(request), section: current, at: CGPoint(x: 10, y: 10))
+        let input = BrowserSidebarReorderInputSession()
+        input.retainPointerContinuation(source: source, reorder: reorder, windowDrop: nil)
+        let point = CGPoint(x: targetFrame.midX, y: targetFrame.minY + 1)
+        state.forwardPointerContinuation(at: point, released: false, eventTimestamp: 1)
+        XCTAssertEqual(state.resolvedTarget?.kind, .insert(section: saved, beforeID: .tab(anchor.id), index: 0))
+        XCTAssertEqual(state.lift?.item.selection?.ids, request.ids)
+        state.forwardPointerContinuation(at: point, released: true, eventTimestamp: 2)
+        XCTAssertEqual(browser.selectedSpace?.savedTabs.map(\.id), request.ids + [anchor.id])
+        XCTAssertEqual(browser.selectedSpace?.currentTabs.map(\.id), [tabs[40].id])
+        XCTAssertFalse(state.hasLiftInFlight)
+    }
+
+    #if os(macOS)
+        func testNativePointerContinuationRejectsForeignWindowsDeduplicatesPanesAndCancelsOnClose() throws {
+            let context = makeContext()
+            let state = context.sidebarInteraction.sidebarReorderState
+            let window = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 400, height: 500),
+                styleMask: [], backing: .buffered, defer: false)
+            let foreign = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 400, height: 500),
+                styleMask: [], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            foreign.isReleasedWhenClosed = false
+            defer {
+                window.close()
+                foreign.close()
+            }
+            let first = BrowserTabSelectionMonitor.SelectionView(frame: CGRect(x: 0, y: 0, width: 400, height: 500))
+            let second = BrowserTabSelectionMonitor.SelectionView(frame: first.frame)
+            for view in [first, second] {
+                view.sidebarInteraction = context.sidebarInteraction
+                view.globalFrame = CGRect(x: 30, y: 40, width: 400, height: 500)
+                window.contentView?.addSubview(view)
+            }
+            // A retained pager pane can have a translated native frame; its SwiftUI
+            // global origin cancels that translation when mapping the window point.
+            second.frame.origin = CGPoint(x: 400, y: 100)
+            second.globalFrame.origin = CGPoint(x: 430, y: -60)
+            state.begin(item: .tab(context.item), section: .tabs(placement: .current, folderID: nil), at: .zero)
+            var points: [CGPoint] = []
+            state.retainPointerContinuation(session: try XCTUnwrap(state.sessionToken)) { point, _ in
+                points.append(point)
+            }
+            func event(in window: NSWindow, timestamp: TimeInterval) throws -> NSEvent {
+                try XCTUnwrap(
+                    NSEvent.mouseEvent(
+                        with: .leftMouseDragged, location: CGPoint(x: 10, y: 20),
+                        modifierFlags: [], timestamp: timestamp, windowNumber: window.windowNumber,
+                        context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+            }
+            _ = first.handle(try event(in: foreign, timestamp: 1))
+            XCTAssertTrue(points.isEmpty)
+            let move = try event(in: window, timestamp: 2)
+            _ = first.handle(move)
+            _ = second.handle(move)
+            XCTAssertEqual(points, [CGPoint(x: 40, y: 520)])
+            first.stop()  // Recycling one Space pane does not cancel the window's session.
+            _ = second.handle(try event(in: window, timestamp: 3))
+            XCTAssertEqual(points, [CGPoint(x: 40, y: 520), CGPoint(x: 40, y: 520)])
+            XCTAssertTrue(state.hasLiftInFlight)
+            NotificationCenter.default.post(name: NSWindow.willCloseNotification, object: window)
+            XCTAssertFalse(state.hasLiftInFlight)
+            _ = second.handle(try event(in: window, timestamp: 4))
+            XCTAssertEqual(points.count, 2)
+            second.stop()
+        }
+    #endif
+
     func testDragItemExposesItsExactRuntimeAssignment() {
         let item = BrowserTabDragItem(
             tabID: Self.tabID(1),

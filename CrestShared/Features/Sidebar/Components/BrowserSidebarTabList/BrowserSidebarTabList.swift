@@ -76,3 +76,16 @@ struct BrowserSidebarTabList: View {
         _ = tabActions.clearCurrentTabs()
     }
 }
+
+/// macOS selection and active drag input outlive rows that leave the viewport.
+struct BrowserSidebarRowsStack<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        #if os(macOS)
+            LazyVStack(spacing: 0, content: content)
+        #else
+            VStack(spacing: 0, content: content)
+        #endif
+    }
+}

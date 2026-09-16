@@ -113,30 +113,7 @@ struct BrowserFolderGroupSurface: View {
             value: configuration.tabs.map(\.id)
         )
         .onAppear(perform: interaction.beginTitleEditingIfNeeded)
-        .onChange(
-            of: interaction.isExpanded.wrappedValue,
-            initial: true
-        ) { _, isExpanded in
-            interaction.collapsedTabVisibility.wrappedValue.expansionDidChange(
-                isExpanded: isExpanded,
-                selectedTabID: configuration.selectedTabID,
-                folderTabIDs: configuration.tabs.map(\.id)
-            )
-        }
-        .onChange(of: configuration.selectedTabID) { _, selectedTabID in
-            interaction.collapsedTabVisibility.wrappedValue.selectionDidChange(
-                isExpanded: interaction.isExpanded.wrappedValue,
-                selectedTabID: selectedTabID,
-                folderTabIDs: configuration.tabs.map(\.id)
-            )
-        }
-        .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
-            interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
-                isExpanded: interaction.isExpanded.wrappedValue,
-                selectedTabID: configuration.selectedTabID,
-                residentFolderTabIDs: configuration.residentFolderTabIDs
-            )
-        }
+        .modifier(BrowserFolderCollapsedVisibilityUpdates(configuration: configuration, interaction: interaction))
         .onChange(of: interaction.editingFolderRequest.wrappedValue) { _, _ in
             interaction.beginTitleEditingIfNeeded()
         }
@@ -149,4 +126,68 @@ struct BrowserFolderGroupSurface: View {
             }
         }
     }
+
+}
+
+/// macOS keeps visibility in the retained Space host; mobile retains its
+/// existing row-local lifecycle. A lazy Mac row remount must not reset history.
+private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
+    let configuration: BrowserFolderGroupConfiguration
+    let interaction: BrowserFolderGroupInteractionContext
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+            content
+                // Also supports isolated folder components in previews and
+                // practice surfaces. Reconciliation is idempotent on remount;
+                // the retained host updates folders while these views are absent.
+                .onChange(of: interaction.isExpanded.wrappedValue, initial: true) { _, _ in reconcileVisibility() }
+                .onChange(of: configuration.selectedTabID) { _, _ in reconcileVisibility() }
+                .onChange(of: configuration.residencyRevision, initial: true) { _, _ in reconcileVisibility() }
+        #else
+            content
+                .onChange(
+                    of: interaction.isExpanded.wrappedValue,
+                    initial: true
+                ) { _, isExpanded in
+                    interaction.collapsedTabVisibility.wrappedValue.expansionDidChange(
+                        isExpanded: isExpanded,
+                        selectedTabID: configuration.selectedTabID,
+                        folderTabIDs: configuration.tabs.map(\.id)
+                    )
+                }
+                .onChange(of: configuration.selectedTabID) { _, selectedTabID in
+                    interaction.collapsedTabVisibility.wrappedValue.selectionDidChange(
+                        isExpanded: interaction.isExpanded.wrappedValue,
+                        selectedTabID: selectedTabID,
+                        folderTabIDs: configuration.tabs.map(\.id)
+                    )
+                }
+                .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
+                    interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
+                        isExpanded: interaction.isExpanded.wrappedValue,
+                        selectedTabID: configuration.selectedTabID,
+                        residentFolderTabIDs: configuration.residentFolderTabIDs
+                    )
+                }
+        #endif
+    }
+
+    #if os(macOS)
+        private func reconcileVisibility() {
+            guard let space = configuration.browser.space(matching: configuration.assignment),
+                !configuration.spaceAccess.isLocked(space),
+                let folder = space.folders.first(where: { $0.id == configuration.folder.id })
+            else { return }
+            let tabs = space.tabSections.tabs(in: folder.id)
+            configuration.sidebarInteraction.reconcileCollapsedFolder(
+                configuration.folderRuntimeAssignment, isExpanded: !folder.isCollapsed,
+                selectedTabID: space.selectedTabID, folderTabIDs: tabs.map(\.id),
+                residentFolderTabIDs: tabs.compactMap { tab in
+                    configuration.pageAccess.containsResidentPageMatching(
+                        BrowserTabRuntimeAssignment(
+                            tabID: tab.id, spaceID: space.id, profileID: space.profile.id)) ? tab.id : nil
+                })
+        }
+    #endif
 }

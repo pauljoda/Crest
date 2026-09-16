@@ -29,7 +29,7 @@ struct BrowserSavedTabsDropSection: View {
     var body: some View {
         VStack(spacing: 0) {
             if capabilities.showsRowDropIndicators {
-                VStack(spacing: 0) { rows }
+                BrowserSidebarRowsStack { rows }
 
                 // Also the band an empty unfiled run draws its insertion line
                 // in: it sits directly below the folder groups, where that
@@ -44,7 +44,7 @@ struct BrowserSavedTabsDropSection: View {
                     state: sidebarInteraction.sidebarReorderState
                 )
             } else {
-                VStack(spacing: 0) {
+                BrowserSidebarRowsStack {
                     rows
 
                     // A Space whose every saved tab lives in a folder still has

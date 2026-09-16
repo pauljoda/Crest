@@ -39,16 +39,9 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             .frame(minHeight: minHeight)
             .contentShape(.rect)
             .modifier(
-                BrowserTabAppearanceSurface(
-                    appearance: BrowserDeviceAppearanceStore.shared.tabs,
-                    accent: (BrowserDeviceAppearanceStore.shared.tabs.color ?? branding?.primaryColor ?? .indigo).color,
-                    isPinned: false,
-                    isSelected: configuration.isSelected,
-                    isHovering: interaction.isHovering.wrappedValue
-                        || (configuration.tab.splitGroupID == nil
-                            && configuration.browser.tabMultiSelection.contains(configuration.tab.id)
-                            && !BrowserSidebarSelection.isCoveredBySelectedFolder(
-                                .tab(configuration.tab.id), in: configuration.browser))
+                BrowserSidebarTabRowAppearance(
+                    configuration: configuration,
+                    isHovering: interaction.isHovering
                 )
             )
             .padding(
@@ -181,14 +174,36 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             touch: configuration.capabilities.supportsTouch)
     }
 
-    private var branding: BrowserSpaceBranding? {
-        configuration.spacePresentation?.branding
-            ?? configuration.browser.session.space(id: configuration.spaceID)?.branding
-    }
-
     private var usesMatchedGeometryPromotion: Bool {
         BrowserSidebarInteractionPolicy.usesMatchedGeometryPromotionDestination(
             configuration.capabilities
         )
+    }
+}
+
+/// Hover updates the row's appearance without rebuilding its input modifiers.
+private struct BrowserSidebarTabRowAppearance: ViewModifier {
+    let configuration: BrowserSidebarTabRowConfiguration
+    @Binding var isHovering: Bool
+
+    func body(content: Content) -> some View {
+        content.modifier(
+            BrowserTabAppearanceSurface(
+                appearance: BrowserDeviceAppearanceStore.shared.tabs,
+                accent: (BrowserDeviceAppearanceStore.shared.tabs.color ?? branding?.primaryColor ?? .indigo).color,
+                isPinned: false,
+                isSelected: configuration.isSelected,
+                isHovering: isHovering
+                    || (configuration.tab.splitGroupID == nil
+                        && configuration.browser.tabMultiSelection.contains(configuration.tab.id)
+                        && !BrowserSidebarSelection.isCoveredBySelectedFolder(
+                            .tab(configuration.tab.id), in: configuration.browser))
+            )
+        )
+    }
+
+    private var branding: BrowserSpaceBranding? {
+        configuration.spacePresentation?.branding
+            ?? configuration.browser.session.space(id: configuration.spaceID)?.branding
     }
 }

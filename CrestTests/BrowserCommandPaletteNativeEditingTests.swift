@@ -6,6 +6,74 @@ import XCTest
 
 @MainActor
 final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
+    func testDismantlingFieldReleasesCompletionHostWithoutDisruptingItsSuccessor() async throws {
+        weak var oldLabel: BrowserPlatformCommandPaletteField.CompletionLabel?
+        let successor = try autoreleasepool {
+            let fixture = makeEditor()
+            let editor = try XCTUnwrap(fixture.field.currentEditor() as? NSTextView)
+            fixture.coordinator.controlTextDidBeginEditing(
+                Notification(name: NSControl.textDidBeginEditingNotification, object: fixture.field))
+            oldLabel = fixture.coordinator.suffixLabel
+            XCTAssertTrue(oldLabel?.superview === editor)
+            let unrelated = NSView()
+            editor.addSubview(unrelated)
+
+            // Removing a representable need not send the text delegate an
+            // end-editing callback. The shared editor outlives this field.
+            BrowserPlatformCommandPaletteField.dismantleNSView(fixture.field, coordinator: fixture.coordinator)
+            XCTAssertNil(oldLabel?.superview)
+            XCTAssertNil(oldLabel?.nextResponder)
+            XCTAssertNil(fixture.coordinator.field)
+            XCTAssertNil(fixture.field.delegate)
+            XCTAssertTrue(unrelated.superview === editor)
+            let oldQuery = fixture.model.query
+            editor.string = "detached editor text"
+            NotificationCenter.default.post(name: NSTextView.didChangeSelectionNotification, object: editor)
+            XCTAssertEqual(fixture.model.query, oldQuery)
+
+            let view = BrowserPlatformCommandPaletteField(
+                model: fixture.model, presentation: .overlay, identifier: "successor-field", focused: false)
+            let coordinator = view.makeCoordinator()
+            let field = view.makeField(coordinator: coordinator)
+            field.frame = fixture.field.frame
+            fixture.window.contentView?.addSubview(field)
+            fixture.window.makeFirstResponder(field)
+            field.selectText(nil)
+            let nextEditor = try XCTUnwrap(field.currentEditor() as? NSTextView)
+            coordinator.controlTextDidBeginEditing(
+                Notification(name: NSControl.textDidBeginEditingNotification, object: field))
+            XCTAssertTrue(nextEditor === editor)
+            XCTAssertTrue(coordinator.suffixLabel.superview === editor)
+
+            // Delayed disposal of an old field must not clear a newer field's
+            // callback, responder link, delegate or selection observer.
+            BrowserPlatformCommandPaletteField.dismantleNSView(fixture.field, coordinator: fixture.coordinator)
+            XCTAssertTrue(field.delegate === coordinator)
+            XCTAssertTrue(coordinator.suffixLabel.nextResponder === editor)
+            editor.insertText("exa", replacementRange: NSRange(location: 0, length: editor.string.utf16.count))
+            coordinator.editingChanged()
+            XCTAssertTrue(fixture.model.acceptURLCompletion())
+            XCTAssertEqual(editor.string, "example.com/path")
+
+            // The same coordinator can detach and rejoin normal editing.
+            coordinator.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification))
+            XCTAssertNil(coordinator.suffixLabel.nextResponder)
+            coordinator.controlTextDidBeginEditing(Notification(name: NSControl.textDidBeginEditingNotification))
+            XCTAssertTrue(coordinator.suffixLabel.superview === editor)
+            XCTAssertTrue(coordinator.suffixLabel.nextResponder === editor)
+            return (window: fixture.window, field: field, coordinator: coordinator, editor: editor)
+        }
+        defer {
+            BrowserPlatformCommandPaletteField.dismantleNSView(successor.field, coordinator: successor.coordinator)
+            successor.window.close()
+        }
+        for _ in 0..<20 where oldLabel != nil {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNil(oldLabel, "The surviving field editor must not retain a disposed completion hosting view")
+        XCTAssertTrue(successor.field.currentEditor() === successor.editor)
+    }
+
     func testArrowNavigationScrollsResultsAndWrapsWhileKeepingTheEditorFocused() async throws {
         let tabs = (0..<8).map {
             BrowserTab(title: "Result \($0)", url: URL(string: "https://example.invalid/\($0)"), placement: .current)

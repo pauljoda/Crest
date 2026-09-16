@@ -49,21 +49,27 @@ final class BrowserTranslationLanguageCatalog {
     }
 
     private nonisolated static func check(_ pairs: [Pair]) async -> Set<Pair> {
-        await withTaskGroup(of: Pair?.self, returning: Set<Pair>.self) { group in
-            var iterator = pairs.makeIterator()
-            func enqueue(_ pair: Pair) {
+        await withTaskGroup(of: Set<Pair>.self, returning: Set<Pair>.self) { group in
+            let workerCount = min(4, pairs.count)
+            for worker in 0..<workerCount {
                 group.addTask {
-                    guard !Task.isCancelled else { return nil }
-                    let status = await BrowserTranslationPreference.languageAvailability().status(
-                        from: .init(identifier: pair.source), to: .init(identifier: pair.target))
-                    return status == .installed ? pair : nil
+                    guard !Task.isCancelled else { return [] }
+                    // Reuse setup while keeping the non-Sendable checker within one task.
+                    let availability = BrowserTranslationPreference.languageAvailability()
+                    var installed: Set<Pair> = []
+                    for index in stride(from: worker, to: pairs.count, by: workerCount) {
+                        guard !Task.isCancelled else { return installed }
+                        let pair = pairs[index]
+                        let status = await availability.status(
+                            from: .init(identifier: pair.source), to: .init(identifier: pair.target))
+                        if status == .installed { installed.insert(pair) }
+                    }
+                    return installed
                 }
             }
-            for _ in 0..<4 { if let pair = iterator.next() { enqueue(pair) } }
             var installed: Set<Pair> = []
-            for await pair in group {
-                if let pair { installed.insert(pair) }
-                if !Task.isCancelled, let next = iterator.next() { enqueue(next) }
+            for await batch in group {
+                installed.formUnion(batch)
             }
             return installed
         }

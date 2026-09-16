@@ -49,12 +49,18 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         context.coordinator.refreshSuffix()
         if focused, canFocus, !context.coordinator.didRequestFocus {
             context.coordinator.didRequestFocus = true
-            DispatchQueue.main.async { [weak field] in
-                guard let field, field.isEditable, let window = field.window else { return }
+            DispatchQueue.main.async { [weak field, weak coordinator = context.coordinator] in
+                guard let field, coordinator?.field === field, field.isEditable, let window = field.window else {
+                    return
+                }
                 window.makeFirstResponder(field)
                 field.currentEditor()?.selectAll(nil)
             }
         }
+    }
+
+    static func dismantleNSView(_ field: NSTextField, coordinator: Coordinator) {
+        coordinator.dismantle(field)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
@@ -81,6 +87,7 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
             editor.isAutomaticQuoteSubstitutionEnabled = false
             editor.isAutomaticDashSubstitutionEnabled = false
             editor.addSubview(suffixLabel)
+            suffixLabel.nextResponder = editor
             NotificationCenter.default.removeObserver(self)
             NotificationCenter.default.addObserver(
                 self, selector: #selector(selectionChanged), name: NSTextView.didChangeSelectionNotification,
@@ -94,8 +101,23 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
 
         func controlTextDidEndEditing(_ notification: Notification) {
             model.rejectURLCompletion()
+            detachSuffix()
+        }
+
+        func dismantle(_ field: NSTextField) {
+            detachSuffix()
+            if field.delegate === self { field.delegate = nil }
+            if self.field === field { self.field = nil }
+            didRequestFocus = false
+        }
+
+        private func detachSuffix() {
+            NotificationCenter.default.removeObserver(
+                self, name: NSTextView.didChangeSelectionNotification, object: nil)
             suffixLabel.rootView.isVisible = false
             suffixLabel.removeFromSuperview()
+            suffixLabel.nextResponder = nil
+            field?.setAccessibilityHelp(nil)
         }
 
         func editingChanged() {

@@ -45,8 +45,20 @@ struct BrowserFolderGroup: View {
     @State private var iconRequest: BrowserFolderRuntimeAssignment?
     @State private var colorRequest: BrowserFolderRuntimeAssignment?
     @State private var deletionRequest: BrowserFolderRuntimeAssignment?
-    @State private var collapsedTabVisibility =
-        BrowserCollapsedFolderTabVisibilityState()
+    #if os(macOS)
+        private var collapsedTabVisibility: BrowserCollapsedFolderTabVisibilityState {
+            get { collapsedVisibilityOwner.state }
+            nonmutating set { collapsedVisibilityOwner.state = newValue }
+        }
+
+        private var collapsedVisibilityOwner: BrowserSidebarFolderVisibility {
+            sidebarInteraction.collapsedFolderVisibility(
+                for: BrowserFolderRuntimeAssignment(
+                    folderID: folder.id, spaceID: spaceID, profileID: profileID))
+        }
+    #else
+        @State private var collapsedTabVisibility = BrowserCollapsedFolderTabVisibilityState()
+    #endif
     @FocusState private var isTitleFocused: Bool
 
     private var folder: BrowserFolder { node.folder }
@@ -81,7 +93,8 @@ struct BrowserFolderGroup: View {
             isChoosingIcon: iconPresentation,
             folderSymbol: folderSymbolBinding,
             isConfirmingDeletion: deletionPresentation,
-            collapsedTabVisibility: $collapsedTabVisibility,
+            collapsedTabVisibility: Binding(
+                get: { collapsedTabVisibility }, set: { collapsedTabVisibility = $0 }),
             isTitleFocused: $isTitleFocused,
             folderColor: folderColorBinding,
             beginCreatingChild: beginCreatingChild,
@@ -96,13 +109,15 @@ struct BrowserFolderGroup: View {
     }
 
     var body: some View {
+        let configuration = self.configuration
+        let interaction = self.interaction
         VStack(spacing: 0) {
             BrowserFolderGroupSurface(
                 configuration: configuration,
                 interaction: interaction, showsExpandedRows: false
             )
             if isExpanded {
-                folderContents
+                folderContents(configuration: configuration, interaction: interaction)
             }
         }
         .environment(\.browserInteractionCapabilities, capabilities)
@@ -147,19 +162,24 @@ struct BrowserFolderGroup: View {
     /// Nested folders are children of the section they move with, so a parent's
     /// measurement, hover surface and lift include the entire expanded subtree.
     @ViewBuilder
-    private var folderContents: some View {
+    private func folderContents(
+        configuration: BrowserFolderGroupConfiguration,
+        interaction: BrowserFolderGroupInteractionContext
+    ) -> some View {
         let items = ordering.items(in: folder.id)
         let followingTabIDs = configuration.followingTabIDs
-        VStack(spacing: 0) {
+        BrowserSidebarRowsStack {
             if items.isEmpty {
                 BrowserFolderTabRows(configuration: configuration, interaction: interaction, displayedItems: [])
             }
             ForEach(items) { item in
                 switch item {
                 case .tabs(let row):
-                    BrowserFolderTabRows(
-                        configuration: configuration, interaction: interaction, displayedItems: [row],
-                        followingTabIDsOverride: followingTabIDs)
+                    BrowserFolderExpandedTabRow(
+                        configuration: configuration, item: row, followingTabIDs: followingTabIDs
+                    )
+                    .frame(maxWidth: .infinity)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 case .folder(let childNode):
                     let child = childNode.folder
                     BrowserFolderGroup(

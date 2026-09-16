@@ -6,6 +6,41 @@ import XCTest
 
 final class BrowserFaviconFallbackLoaderTests: XCTestCase {
     @MainActor
+    func testRejectedResponsesDoNotAccumulateTasksInTheLiveResourceSession() async throws {
+        let server = try BrowserPrivacyHTTPServer()
+        server.overrideResponse = { request in
+            if request.path == "/too-large" {
+                return (
+                    "200 OK", "Content-Type: image/png\r\n",
+                    Data(repeating: 65, count: BrowserFaviconCapture.maximumByteCount + 1)
+                )
+            }
+            return ("404 Not Found", "Content-Type: text/plain\r\n", Data("Missing site icon".utf8))
+        }
+        try await server.start()
+        defer { server.stop() }
+        let tracker = FaviconTaskLifetimeTracker()
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.urlCache = nil
+        let session = URLSession(configuration: configuration, delegate: tracker, delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+
+        for path in ["/missing", "/too-large", "/missing", "/too-large", "/missing", "/too-large"] {
+            let data = await BrowserFaviconFallbackLoader.download(
+                server.url(host: "127.0.0.1", path: path), session: session)
+            XCTAssertNil(data)
+        }
+
+        // getAllTasks excludes these canceled tasks even when the session
+        // retains them. Observe weak lifetimes while the session stays alive.
+        for _ in 0..<100 where tracker.livingCount > 1 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(tracker.createdCount, 6)
+        XCTAssertLessThanOrEqual(tracker.livingCount, 1, "Rejected responses must not accumulate retained tasks")
+    }
+
+    @MainActor
     func testSVGIconCandidateRasterizesIntoImageIODecodableData() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
@@ -358,5 +393,22 @@ final class BrowserFaviconFallbackLoaderTests: XCTestCase {
         }
 
         override func stopLoading() {}
+    }
+
+    private final class FaviconTaskLifetimeTracker: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+        private final class Reference {
+            weak var task: URLSessionTask?
+            init(_ task: URLSessionTask) { self.task = task }
+        }
+
+        private let lock = NSLock()
+        private var references: [Reference] = []
+
+        var createdCount: Int { lock.withLock { references.count } }
+        var livingCount: Int { lock.withLock { references.filter { $0.task != nil }.count } }
+
+        func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
+            lock.withLock { references.append(Reference(task)) }
+        }
     }
 }

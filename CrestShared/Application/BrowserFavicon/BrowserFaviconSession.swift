@@ -8,6 +8,7 @@ final class BrowserFaviconSession {
     private let receive: (Data) -> Void
     private var generation: UInt64 = 0
     private var task: Task<Data?, Never>?
+    private var requestedDocumentURL: URL?
     private var isStopped = false
 
     init(
@@ -28,6 +29,7 @@ final class BrowserFaviconSession {
         generation &+= 1
         task?.cancel()
         task = nil
+        requestedDocumentURL = nil
     }
 
     func stop() {
@@ -36,6 +38,10 @@ final class BrowserFaviconSession {
     }
 
     func refresh() {
+        // Page reconciliation can repeat for every chrome update. A missing
+        // icon is still a completed attempt; only navigation, icon changes,
+        // or an explicit pull should start another discovery sequence.
+        guard let url = document.url, requestedDocumentURL != url else { return }
         _ = start()
     }
 
@@ -51,6 +57,7 @@ final class BrowserFaviconSession {
     private func start() -> Task<Data?, Never>? {
         invalidate()
         guard !isStopped, let url = document.url else { return nil }
+        requestedDocumentURL = url
         let requestGeneration = generation
         let document = document
         let policy = policy
@@ -60,7 +67,13 @@ final class BrowserFaviconSession {
                 !Task.isCancelled && self?.generation == requestGeneration && document.url == url
             }
             let data = await Self.load(document, url: url, policy: policy, wait: wait, isCurrent: isCurrent)
-            guard isCurrent() else { return nil as Data? }
+            guard isCurrent() else {
+                if Task.isCancelled, self?.generation == requestGeneration {
+                    self?.task = nil
+                    self?.requestedDocumentURL = nil
+                }
+                return nil as Data?
+            }
             self?.task = nil
             if let data { self?.receive(data) }
             return data

@@ -55,6 +55,61 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
 
     // MARK: - Selector conformance
 
+    func testFullProjectionPreservesWindowIndicesAndReadsEachTabsActivityOnce() throws {
+        let tabs = (0..<4).map {
+            BrowserTab(title: "Tab \($0)", url: URL(string: "https://example.com/\($0)"), placement: .current)
+        }
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Shared", symbol: "globe", accent: .indigo,
+            folders: [], tabs: tabs, selectedTabID: tabs[0].id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let second = browser.makeWindowStore()
+        second.selectTab(tabs[2].id)
+        let firstPages = PageProviderStub()
+        let secondPages = PageProviderStub()
+        let coordinator = BrowserExtensionTabWindowCoordinator()
+        let firstID = BrowserWindowID()
+        let secondID = BrowserWindowID()
+        coordinator.registerWindow(id: firstID, browser: browser, pageProvider: firstPages, focus: {}, close: {})
+        coordinator.registerWindow(id: secondID, browser: second, pageProvider: secondPages, focus: {}, close: {})
+        coordinator.windowsBySpace[space.id] = [
+            firstID: BrowserExtensionWindowAdapter(spaceID: space.id, hostWindowID: firstID, coordinator: coordinator),
+            secondID: BrowserExtensionWindowAdapter(
+                spaceID: space.id, hostWindowID: secondID, coordinator: coordinator),
+        ]
+        coordinator.tabOwnerWindowIDs[tabs[0].id] = secondID
+        coordinator.tabOwnerWindowIDs[tabs[2].id] = secondID
+        let transient = BrowserExtensionTransientTab(id: TabID(), url: URL(string: "https://example.com/peek")!)
+        coordinator.transientTabsBySpace[space.id] = [transient]
+        coordinator.tabOwnerWindowIDs[transient.id] = secondID
+        secondPages.readerModeStates[tabs[2].id] = .active
+        firstPages.readerModeReads = []
+        secondPages.readerModeReads = []
+
+        let projected = try XCTUnwrap(coordinator.currentState?.space(space.id))
+
+        XCTAssertEqual(projected.tabs.map(\.id), tabs.map(\.id) + [transient.id])
+        XCTAssertEqual(projected.tabs.map(\.index), [0, 0, 1, 1, 4])
+        XCTAssertEqual(projected.tabs.filter(\.isSelected).map(\.id), [tabs[2].id])
+        XCTAssertEqual(projected.tabs.filter(\.isReaderModeActive).map(\.id), [tabs[2].id])
+        XCTAssertEqual(firstPages.readerModeReads, [tabs[1].id, tabs[3].id])
+        XCTAssertEqual(secondPages.readerModeReads, [tabs[0].id, tabs[2].id, transient.id])
+        let firstWindow = try XCTUnwrap(coordinator.windowsBySpace[space.id]?[firstID])
+        let secondWindow = try XCTUnwrap(coordinator.windowsBySpace[space.id]?[secondID])
+        XCTAssertEqual(coordinator.ownedTabIDs(in: firstWindow), [tabs[1].id, tabs[3].id])
+        XCTAssertEqual(coordinator.ownedTabIDs(in: secondWindow), [tabs[0].id, tabs[2].id, transient.id])
+
+        coordinator.tabOwnerWindowIDs[tabs[2].id] = firstID
+        let moved = try XCTUnwrap(coordinator.currentState?.space(space.id))
+        XCTAssertEqual(moved.tabs.map(\.index), [0, 0, 1, 2, 4])
+        XCTAssertTrue(moved.tabs.filter(\.isSelected).isEmpty)
+        XCTAssertFalse(try XCTUnwrap(moved.tab(tabs[2].id)).isReaderModeActive)
+        XCTAssertEqual(coordinator.ownedTabIDs(in: firstWindow), [tabs[1].id, tabs[2].id, tabs[3].id])
+        XCTAssertEqual(coordinator.ownedTabIDs(in: secondWindow), [tabs[0].id, transient.id])
+    }
+
     /// A Swift method that only *nearly* matches an optional WebKit requirement
     /// compiles without complaint and is then never called, so each one Crest
     /// relies on is pinned by its Objective-C selector.

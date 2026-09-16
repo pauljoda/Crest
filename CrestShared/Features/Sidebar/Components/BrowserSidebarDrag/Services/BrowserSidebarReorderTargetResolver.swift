@@ -13,13 +13,18 @@ struct BrowserSidebarReorderTargetResolver {
     let splitCards: [TabID: BrowserSidebarReorderGeometry.SplitCard]
 
     func resolve(previousTarget: BrowserSidebarReorderTarget?) -> BrowserSidebarReorderTarget? {
+        let available = zones.filter { !$0.frame.isEmpty && allowsNesting(in: $0) }
+        let direct = BrowserSidebarReorderPolicy.zone(at: pointer, in: available, accepting: lift.item)
+        // A Space picker remains reachable when a tall batch's temporary gap
+        // overlaps it or the lifted folder's moving edge extends beyond it.
+        if case .space(let assignment) = direct?.target {
+            return BrowserSidebarReorderTarget(kind: .space(assignment))
+        }
         // Keep the open gap stable while neighbouring rows animate around it.
         if let gap = layout.gapFrame, gap.contains(insertionPoint) { return previousTarget }
         if let pinned, let gap = pinned.layout.frame(for: .gap, in: pinned.frame), gap.contains(pointer) {
             return previousTarget
         }
-        let available = zones.filter { !$0.frame.isEmpty && allowsNesting(in: $0) }
-        let direct = BrowserSidebarReorderPolicy.zone(at: pointer, in: available, accepting: lift.item)
         let nesting: BrowserSidebarReorderZone? =
             switch direct?.target {
             case .folder, .currentFolder, .currentTab: direct

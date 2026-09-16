@@ -45,7 +45,10 @@ struct BrowserUtilityListSectionList: View {
                     dismissOnBlankSpace?()
                 }
         }
-        .environment(\.defaultMinListRowHeight, 1)
+        // Preserve native row-height estimates on macOS for long history lists.
+        #if !os(macOS)
+            .environment(\.defaultMinListRowHeight, 1)
+        #endif
     }
 
 }

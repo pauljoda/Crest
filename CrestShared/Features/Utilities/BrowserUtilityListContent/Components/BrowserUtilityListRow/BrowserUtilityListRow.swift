@@ -6,7 +6,8 @@ struct BrowserUtilityListRow: View {
     let actions: BrowserUtilityListActions
 
     var body: some View {
-        Group {
+        // List can gather row identities without resolving every row's branch.
+        VStack(alignment: .leading, spacing: 0) {
             switch item {
             case .archive(let archived):
                 Button {

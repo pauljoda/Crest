@@ -58,7 +58,18 @@ enum BrowserFaviconResourceLoader {
                 (200..<300).contains(response.statusCode),
                 response.expectedContentLength <= maximumByteCount,
                 let responseURL = response.url
-            else { return nil }
+            else {
+                // A response rejected before iteration can leave AsyncBytes'
+                // task retained in its session. Finish its response callback
+                // in an independent cancellation scope, even if the page left.
+                let cleanup = Task {
+                    bytes.task.cancel()
+                    var iterator = bytes.makeAsyncIterator()
+                    _ = try? await iterator.next()
+                }
+                await cleanup.value
+                return nil
+            }
             var data = Data()
             for try await byte in bytes {
                 guard data.count < maximumByteCount, !Task.isCancelled else { return nil }

@@ -205,7 +205,8 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         // A closed tab must end its debugger session now, not at the next
         // command: the session holds a live Inspector connection to the page.
         debuggerService?.reconcileTargets()
-        let newState = projectedState(for: session)
+        let projection = projectedState(for: session)
+        let newState = projection.state
         let oldState = lastState
         for space in session.spaces {
             for group in tabGroupService?.groups(in: space.id) ?? [] {
@@ -221,15 +222,13 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
                 window: entry.window,
                 spaceID: spaceID,
                 previous: oldState?.space(spaceID),
-                next: newState.space(spaceID)
+                next: newState.space(spaceID),
+                windowsByTabID: projection.windowsByTabID
             )
         }
 
         lastState = newState
-        lastWindowsByTabID = Dictionary(
-            uniqueKeysWithValues: newState.spaces.flatMap { space in
-                space.tabs.compactMap { tab in window(for: tab.id, in: space.id).map { (tab.id, $0) } }
-            })
+        lastWindowsByTabID = projection.windowsByTabID
         reconcileWindowFocus(selectedSpaceID: newState.selectedSpaceID)
         permissionPrompts.reconcile()
     }
@@ -287,7 +286,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
 
     var currentState: BrowserExtensionSessionState? {
         if let session = browser?.session ?? hostWindowOrder.compactMap({ hostWindows[$0]?.browser?.session }).first {
-            return projectedState(for: combinedSession(fallback: session))
+            return projectedState(for: combinedSession(fallback: session)).state
         }
         return lastState
     }
@@ -297,7 +296,8 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     /// resolve unrelated pages while WebKit enumerates the tabs in one window.
     private func projectedTabState(
         for tabID: TabID,
-        in spaceID: SpaceID
+        in spaceID: SpaceID,
+        includingWindowIndex: Bool = true
     ) -> BrowserExtensionTabState? {
         guard let browser = browser(for: tabID, in: spaceID) else {
             return self.browser == nil && hostWindows.isEmpty ? lastState?.space(spaceID)?.tab(tabID) : nil
@@ -306,7 +306,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         if let index = space.tabs.firstIndex(where: { $0.id == tabID }) {
             return BrowserExtensionTabState(
                 tab: space.tabs[index],
-                index: hostWindows.isEmpty
+                index: hostWindows.isEmpty || !includingWindowIndex
                     ? index : ownedTabIDs(in: window(for: tabID, in: spaceID)).firstIndex(of: tabID) ?? index,
                 isSelected: tabID == space.selectedTabID,
                 runtimeActivity: runtimeActivity(for: tabID, in: spaceID)
@@ -327,25 +327,32 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     /// carry, plus any transient pages announced on top of it.
     private func projectedState(
         for session: BrowserSession
-    ) -> BrowserExtensionSessionState {
-        let initial = BrowserExtensionSessionState(
-            session: session,
-            runtimeActivity: { [weak self] spaceID, tabID in
-                self?.runtimeActivity(for: tabID, in: spaceID) ?? .settled
-            }
-        )
+    ) -> (state: BrowserExtensionSessionState, windowsByTabID: [TabID: BrowserExtensionWindowAdapter]) {
         let projected: BrowserExtensionSessionState
+        var windowsByTabID: [TabID: BrowserExtensionWindowAdapter]
         if hostWindows.isEmpty {
-            projected = initial
-        } else {
-            projected = .init(
-                selectedSpaceID: initial.selectedSpaceID,
-                spaces: initial.spaces.map { space in
-                    .init(id: space.id, tabs: space.tabs.compactMap { projectedTabState(for: $0.id, in: space.id) })
+            projected = BrowserExtensionSessionState(
+                session: session,
+                runtimeActivity: { [weak self] spaceID, tabID in
+                    self?.runtimeActivity(for: tabID, in: spaceID) ?? .settled
+                }
+            )
+            windowsByTabID = Dictionary(
+                uniqueKeysWithValues: projected.spaces.flatMap { space in
+                    space.tabs.compactMap { tab in window(for: tab.id, in: space.id).map { (tab.id, $0) } }
                 })
+        } else {
+            let projection = projectedHostState(for: session)
+            projected = projection.state
+            windowsByTabID = projection.windowsByTabID
         }
-        guard !transientTabsBySpace.isEmpty else { return projected }
-        return BrowserExtensionSessionState(
+        guard !transientTabsBySpace.isEmpty else { return (projected, windowsByTabID) }
+        for space in projected.spaces {
+            for tab in transientTabsBySpace[space.id] ?? [] {
+                windowsByTabID[tab.id] = window(for: tab.id, in: space.id)
+            }
+        }
+        let state = BrowserExtensionSessionState(
             selectedSpaceID: projected.selectedSpaceID,
             spaces: projected.spaces.map { space in
                 let transient = transientTabsBySpace[space.id] ?? []
@@ -361,6 +368,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
                 )
             }
         )
+        return (state, windowsByTabID)
     }
 
     /// The live page state for one tab, transient or not.
@@ -526,10 +534,11 @@ extension BrowserExtensionTabWindowCoordinator {
     func state(
         for tabID: TabID,
         in spaceID: SpaceID,
-        context: WKWebExtensionContext
+        context: WKWebExtensionContext,
+        includingWindowIndex: Bool = true
     ) -> BrowserExtensionTabState? {
         guard owns(context: context, spaceID: spaceID) else { return nil }
-        guard let state = projectedTabState(for: tabID, in: spaceID) else {
+        guard let state = projectedTabState(for: tabID, in: spaceID, includingWindowIndex: includingWindowIndex) else {
             return nil
         }
         guard auxiliaryWindowByTabID[tabID] != nil else { return state }
@@ -613,7 +622,8 @@ extension BrowserExtensionTabWindowCoordinator {
         window: BrowserExtensionWindowAdapter,
         spaceID: SpaceID,
         previous: BrowserExtensionSpaceState?,
-        next: BrowserExtensionSpaceState?
+        next: BrowserExtensionSpaceState?,
+        windowsByTabID: [TabID: BrowserExtensionWindowAdapter]
     ) {
         let previousTabs = previous?.tabs ?? []
         let nextTabs = next?.tabs ?? []
@@ -645,7 +655,7 @@ extension BrowserExtensionTabWindowCoordinator {
             else {
                 continue
             }
-            let currentWindow = self.window(for: newTab.id, in: spaceID) ?? window
+            let currentWindow = windowsByTabID[newTab.id] ?? window
             let previousWindow = lastWindowsByTabID[newTab.id] ?? currentWindow
             if oldTab.index != newTab.index || previousWindow !== currentWindow {
                 controller.didMoveTab(adapter, from: oldTab.index, in: previousWindow)

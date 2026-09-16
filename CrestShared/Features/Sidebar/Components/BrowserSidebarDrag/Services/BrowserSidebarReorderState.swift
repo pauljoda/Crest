@@ -90,6 +90,29 @@ final class BrowserSidebarReorderState {
         hasLiftInFlight ? BrowserDragSessionToken(generation: sessionGeneration) : nil
     }
 
+    @ObservationIgnored private var pointerContinuation:
+        (
+            session: BrowserDragSessionToken, update: (CGPoint, Bool) -> Void
+        )?
+    @ObservationIgnored private var lastPointerEvent: (timestamp: TimeInterval, released: Bool)?
+
+    func retainPointerContinuation(
+        session: BrowserDragSessionToken, update: @escaping (CGPoint, Bool) -> Void
+    ) {
+        guard sessionToken == session else { return }
+        pointerContinuation = (session, update)
+        lastPointerEvent = nil
+    }
+
+    func forwardPointerContinuation(at point: CGPoint, released: Bool, eventTimestamp: TimeInterval) {
+        guard let continuation = pointerContinuation, continuation.session == sessionToken else { return }
+        // Retained Space panes can each observe the same native window event.
+        guard lastPointerEvent?.timestamp != eventTimestamp || lastPointerEvent?.released != released else { return }
+        lastPointerEvent = (eventTimestamp, released)
+        if released { pointerContinuation = nil }
+        continuation.update(point, released)
+    }
+
     func isLifted(_ id: BrowserSidebarReorderItemID) -> Bool {
         lift?.item.selectionRowIDs.contains(id) == true
     }
@@ -278,6 +301,8 @@ final class BrowserSidebarReorderState {
         section: BrowserSidebarReorderSection,
         at pointer: CGPoint
     ) {
+        pointerContinuation = nil
+        lastPointerEvent = nil
         if stagedLift?.item.id != item.id || stagedLift?.section != section {
             sessionGeneration &+= 1
         }
@@ -378,6 +403,8 @@ final class BrowserSidebarReorderState {
             }
         }
         defer {
+            pointerContinuation = nil
+            lastPointerEvent = nil
             if lift != nil, suppressReleaseActivation { suppressActivation() }
             lift = nil
             stagedLift = nil
@@ -399,6 +426,8 @@ final class BrowserSidebarReorderState {
     }
 
     func cancel() {
+        pointerContinuation = nil
+        lastPointerEvent = nil
         if let id = landingPreview?.landing?.id { finishLanding(id) }
         if lift != nil { suppressActivation() }
         lift = nil

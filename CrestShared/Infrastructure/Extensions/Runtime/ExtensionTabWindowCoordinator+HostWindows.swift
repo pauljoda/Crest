@@ -144,14 +144,97 @@ extension BrowserExtensionTabWindowCoordinator {
     }
 
     func reconcileTabOwners() {
-        for id in hostWindowOrder {
-            guard let session = hostWindows[id]?.browser?.session else { continue }
-            for space in session.spaces {
-                for tab in space.tabs where ownerHost(for: tab.id, in: space.id)?.id == id {
-                    tabOwnerWindowIDs[tab.id] = id
+        for sources in hostTabProjection().sources.values {
+            for (tabID, source) in sources {
+                tabOwnerWindowIDs[tabID] = source.host?.id
+            }
+        }
+    }
+
+    /// A full projection reads each host session once and assigns each window's
+    /// tab indices once. Single-tab getters keep their live lookup path.
+    func projectedHostState(
+        for session: BrowserSession
+    ) -> (state: BrowserExtensionSessionState, windowsByTabID: [TabID: BrowserExtensionWindowAdapter]) {
+        let primary = browser?.session
+        let projection = hostTabProjection(including: primary)
+        var windowsByTabID: [TabID: BrowserExtensionWindowAdapter] = [:]
+        var windows: [ObjectIdentifier: BrowserExtensionWindowAdapter] = [:]
+        for (spaceID, sources) in projection.sources {
+            for (tabID, source) in sources {
+                let window =
+                    auxiliaryWindowByTabID[tabID]
+                    ?? source.host.flatMap { windowsBySpace[spaceID]?[$0.id] }
+                    ?? controllers[spaceID]?.window
+                if let window {
+                    windowsByTabID[tabID] = window
+                    windows[ObjectIdentifier(window)] = window
                 }
             }
         }
+        var indicesByTabID: [TabID: Int] = [:]
+        for window in windows.values {
+            let ownerSession = window.hostWindowID.flatMap { projection.sessions[$0] } ?? primary
+            let tabs = ownerSession?.space(id: window.spaceID)?.tabs ?? []
+            var index = 0
+            for tab in tabs where windowsByTabID[tab.id] === window {
+                indicesByTabID[tab.id] = index
+                index += 1
+            }
+        }
+        let state = BrowserExtensionSessionState(
+            selectedSpaceID: session.selectedSpaceID,
+            spaces: session.spaces.map { space in
+                BrowserExtensionSpaceState(
+                    id: space.id,
+                    tabs: space.tabs.compactMap { tab in
+                        guard let source = projection.sources[space.id]?[tab.id] else { return nil }
+                        let provider = source.host?.pageProvider ?? pageProvider
+                        let activity = BrowserExtensionTabRuntimeActivity(
+                            isLoadingComplete: provider?.extensionWebView(for: tab.id, in: space.id)?.isLoading != true,
+                            isReaderModeActive: provider?.extensionReaderModeState(for: tab.id, in: space.id).isActive
+                                == true
+                        )
+                        return BrowserExtensionTabState(
+                            tab: source.tab, index: indicesByTabID[tab.id] ?? source.index,
+                            isSelected: source.isSelected, runtimeActivity: activity)
+                    })
+            })
+        return (state, windowsByTabID)
+    }
+
+    private struct HostTabSource {
+        let tab: BrowserTab
+        let index: Int
+        let isSelected: Bool
+        let host: BrowserExtensionHostWindow?
+    }
+
+    private struct HostTabProjection {
+        var sessions: [BrowserWindowID: BrowserSession] = [:]
+        var sources: [SpaceID: [TabID: HostTabSource]] = [:]
+    }
+
+    private func hostTabProjection(including primary: BrowserSession? = nil) -> HostTabProjection {
+        var projection = HostTabProjection()
+        for space in primary?.spaces ?? [] {
+            for (index, tab) in space.tabs.enumerated() {
+                projection.sources[space.id, default: [:]][tab.id] = HostTabSource(
+                    tab: tab, index: index, isSelected: tab.id == space.selectedTabID, host: nil)
+            }
+        }
+        for id in hostWindowOrder {
+            guard let host = hostWindows[id], let session = host.browser?.session else { continue }
+            projection.sessions[id] = session
+            for space in session.spaces {
+                for (index, tab) in space.tabs.enumerated()
+                where projection.sources[space.id]?[tab.id]?.host == nil || tabOwnerWindowIDs[tab.id] == id {
+                    projection.sources[space.id, default: [:]][tab.id] = HostTabSource(
+                        tab: tab, index: index, isSelected: tab.id == space.selectedTabID, host: host)
+                }
+            }
+        }
+        return projection
     }
 
     func combinedSession(fallback: BrowserSession) -> BrowserSession {
@@ -182,8 +265,29 @@ extension BrowserExtensionTabWindowCoordinator {
         let ids =
             session?.space(id: window.spaceID)?.tabs.map(\.id)
             ?? lastState?.space(window.spaceID)?.tabs.map(\.id) ?? []
-        return (ids + (transientTabsBySpace[window.spaceID]?.map(\.id) ?? [])).filter {
-            self.window(for: $0, in: window.spaceID) === window
+        let transientIDs = transientTabsBySpace[window.spaceID]?.map(\.id) ?? []
+        let transientMembership = Set(transientIDs)
+        let hostMembership = hostWindows.mapValues { host in
+            Set(host.browser?.session.space(id: window.spaceID)?.tabs.map(\.id) ?? [])
+        }
+        var firstOwnerByTabID: [TabID: BrowserWindowID] = [:]
+        for hostID in hostWindowOrder {
+            for tabID in hostMembership[hostID] ?? [] where firstOwnerByTabID[tabID] == nil {
+                firstOwnerByTabID[tabID] = hostID
+            }
+        }
+        return (ids + transientIDs).filter { tabID in
+            var ownerID = firstOwnerByTabID[tabID]
+            if let assigned = tabOwnerWindowIDs[tabID], hostWindows[assigned] != nil,
+                hostMembership[assigned]?.contains(tabID) == true || transientMembership.contains(tabID)
+            {
+                ownerID = assigned
+            }
+            let resolved =
+                auxiliaryWindowByTabID[tabID]
+                ?? ownerID.flatMap { windowsBySpace[window.spaceID]?[$0] }
+                ?? controllers[window.spaceID]?.window
+            return resolved === window
         }
     }
 

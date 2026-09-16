@@ -24,7 +24,8 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
             coordinator?.state(
                 for: tabID,
                 in: spaceID,
-                context: context
+                context: context,
+                includingWindowIndex: false
             ) != nil
         else {
             return nil
@@ -46,7 +47,8 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
             let state = coordinator.state(
                 for: tabID,
                 in: spaceID,
-                context: context
+                context: context,
+                includingWindowIndex: false
             ),
             coordinator.canRevealSensitiveProperties(
                 of: self,
@@ -64,7 +66,8 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
             let state = coordinator.state(
                 for: tabID,
                 in: spaceID,
-                context: context
+                context: context,
+                includingWindowIndex: false
             ),
             coordinator.canRevealSensitiveProperties(
                 of: self,
@@ -85,7 +88,8 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
             let placement = coordinator?.state(
                 for: tabID,
                 in: spaceID,
-                context: context
+                context: context,
+                includingWindowIndex: false
             )?.placement
         else {
             return false
@@ -198,7 +202,8 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
             coordinator.state(
                 for: tabID,
                 in: spaceID,
-                context: context
+                context: context,
+                includingWindowIndex: false
             ) != nil
         else {
             return .unavailable
@@ -312,7 +317,8 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
         coordinator?.state(
             for: tabID,
             in: spaceID,
-            context: context
+            context: context,
+            includingWindowIndex: false
         )?.isSelected == true
     }
 

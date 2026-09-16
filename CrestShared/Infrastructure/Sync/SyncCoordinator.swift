@@ -1,14 +1,18 @@
 import Foundation
 
 final class BrowserSyncCoordinator: @unchecked Sendable {
-    private let lock = NSLock()
+    /// Readers and main-actor revision updates only touch committed state.
+    /// Projection and encoding serialize separately so a background save cannot
+    /// make the next browsing interaction wait for the whole journal to encode.
+    private let stateLock = NSLock()
+    private let mutationLock = NSLock()
     private var storedJournal: BrowserSyncJournal
     private var storedLatestStoreRevision: BrowserStoreSyncRevision?
     let status: BrowserSyncCoordinatorStatus
     private let persistence: any BrowserSyncJournalPersisting
 
     var journal: BrowserSyncJournal {
-        lock.withLock { storedJournal }
+        stateLock.withLock { storedJournal }
     }
 
     init(
@@ -30,10 +34,10 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
 
     /// Publishes the newest main-actor session revision before its background
     /// projection begins. This closes the narrow window where an already-running
-    /// task from another window could acquire the journal lock after a newer
+    /// task from another window could snapshot the journal after a newer
     /// session existed but before that newer task reached the coordinator.
     func advanceStoreRevision(to revision: BrowserStoreSyncRevision) {
-        lock.withLock {
+        stateLock.withLock {
             guard storedLatestStoreRevision.map({ $0 < revision }) ?? true else {
                 return
             }
@@ -181,11 +185,11 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
     private func commit<Result>(
         _ mutation: (inout BrowserSyncJournal) throws -> Result
     ) throws -> Result {
-        try lock.withLock {
-            var candidate = storedJournal
+        try mutationLock.withLock {
+            var candidate = stateLock.withLock { storedJournal }
             let result = try mutation(&candidate)
             try persistence.save(candidate)
-            storedJournal = candidate
+            stateLock.withLock { storedJournal = candidate }
             return result
         }
     }
@@ -195,21 +199,33 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         staleResult: @autoclosure () -> Result,
         _ mutation: (inout BrowserSyncJournal) throws -> Result
     ) throws -> Result {
-        try lock.withLock {
-            if let storeRevision,
-                let latest = storedLatestStoreRevision,
-                storeRevision < latest
-            {
-                return staleResult()
-            }
-            var candidate = storedJournal
+        try mutationLock.withLock {
+            guard
+                var candidate = stateLock.withLock({
+                    isStale(storeRevision) ? nil : storedJournal
+                })
+            else { return staleResult() }
             let result = try mutation(&candidate)
+            guard stateLock.withLock({ !isStale(storeRevision) }) else { return staleResult() }
             try persistence.save(candidate)
-            storedJournal = candidate
-            if let storeRevision {
-                storedLatestStoreRevision = storeRevision
+            stateLock.withLock {
+                storedJournal = candidate
+                // A newer session may arrive while this save is encoding.
+                // Its stage follows this writer; keep its revision barrier so
+                // an older queued snapshot cannot commit in between them.
+                if let storeRevision,
+                    storedLatestStoreRevision.map({ $0 < storeRevision }) ?? true
+                {
+                    storedLatestStoreRevision = storeRevision
+                }
             }
             return result
         }
+    }
+
+    /// Called only while holding the committed-state lock.
+    private func isStale(_ revision: BrowserStoreSyncRevision?) -> Bool {
+        guard let revision, let latest = storedLatestStoreRevision else { return false }
+        return revision < latest
     }
 }

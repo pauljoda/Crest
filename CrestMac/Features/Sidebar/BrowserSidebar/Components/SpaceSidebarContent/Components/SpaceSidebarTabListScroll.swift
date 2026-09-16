@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import SwiftUI
 
 /// The windowed shell's scrolling chrome around the shared tab list.
@@ -17,6 +18,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     @State private var scrollRegionID = UUID()
+    @State private var viewport = BrowserSidebarScrollViewport()
 
     var body: some View {
         GeometryReader { geometry in
@@ -32,6 +34,15 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: geometry.size.height, alignment: .top)
+                .background {
+                    // A ScrollView's outer background is a native sibling of
+                    // its NSScrollView. The bridge needs the document ancestry.
+                    BrowserSidebarDragAutoscrollObserver(
+                        regionID: scrollRegionID,
+                        viewport: viewport,
+                        state: sidebarInteraction.sidebarReorderState
+                    )
+                }
             }
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
             .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
@@ -39,8 +50,9 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 !BrowserSidebarScrollLayoutPolicy.clipsScrollableRegion
             )
             .background {
-                BrowserSidebarDragAutoscrollObserver(
+                BrowserSidebarScrollViewportObserver(
                     regionID: scrollRegionID,
+                    viewport: viewport,
                     state: sidebarInteraction.sidebarReorderState
                 )
             }
@@ -58,35 +70,52 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     }
 }
 
+/// Only the measurement and native bridge observe the viewport. Moving a Space
+/// therefore does not make the tab-list closure depend on its global frame.
+@Observable
+@MainActor
+private final class BrowserSidebarScrollViewport {
+    var frame = CGRect.zero
+}
+
+private struct BrowserSidebarScrollViewportObserver: View {
+    let regionID: UUID
+    let viewport: BrowserSidebarScrollViewport
+    let state: BrowserSidebarReorderState
+
+    var body: some View {
+        Color.clear
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
+            } action: { frame in
+                viewport.frame = frame
+                state.register(scrollRegionFrame: frame, for: regionID)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 /// AppKit owns the scroll mechanics while SwiftUI owns the list and drag. This
 /// observer bridges only the live scroll offset: it advances the
 /// enclosing `NSScrollView` at an edge and tells the reorder registry the exact
 /// uniform translation applied to its otherwise-frozen row geometry.
 private struct BrowserSidebarDragAutoscrollObserver: View {
     let regionID: UUID
+    let viewport: BrowserSidebarScrollViewport
     let state: BrowserSidebarReorderState
 
-    @State private var viewport = CGRect.zero
-
     var body: some View {
-        // The background receives the ScrollView's full viewport proposal.
-        // Measure that region, independently of the native bridge's ideal size.
+        // The bridge lives inside the scrolling document, but its edge bands
+        // use the viewport measured by the stationary outer background.
         GeometryReader { _ in
             BrowserSidebarDragAutoscrollBridge(
                 regionID: regionID,
-                viewport: viewport,
+                viewport: viewport.frame,
                 pointer: state.pointer,
                 isDragging: state.isDragging,
                 state: state
             )
-        }
-        .onGeometryChange(for: CGRect.self) { proxy in
-            proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
-        } action: { frame in
-            // Pager offsets and pointer tracking only update this observer,
-            // without rebuilding the ancestor's tab and folder content.
-            viewport = frame
-            state.register(scrollRegionFrame: frame, for: regionID)
         }
     }
 }
@@ -114,6 +143,10 @@ private struct BrowserSidebarDragAutoscrollBridge: NSViewRepresentable {
             state: state
         )
     }
+
+    static func dismantleNSView(_ view: BrowserSidebarDragAutoscrollObserverView, coordinator: ()) {
+        view.disconnect()
+    }
 }
 
 @MainActor
@@ -122,7 +155,9 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
     private weak var observedClipView: NSClipView?
     private var boundsObserver: NSObjectProtocol?
     private var clipViewWasPostingBoundsChanges = false
-    private var timer: Timer?
+    private lazy var autoscrollClock = BrowserDragAutoscrollClock { [weak self] scale in
+        self?.advanceScroll(scale: scale)
+    }
     private var regionID = UUID()
     private var viewport = CGRect.zero
     private var pointer = CGPoint.zero
@@ -132,18 +167,17 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
 
     override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
-        scheduleConnection()
+        if superview == nil { disconnect() } else { scheduleConnection() }
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        scheduleConnection()
+        if window == nil { disconnect() } else { scheduleConnection() }
     }
 
     override func viewWillMove(toSuperview newSuperview: NSView?) {
         if newSuperview == nil {
-            stopTimer()
-            stopObservingBounds()
+            disconnect()
         }
         super.viewWillMove(toSuperview: newSuperview)
     }
@@ -165,17 +199,18 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
         self.isDragging = isDragging
         reorderState = state
         scheduleConnection()
-        updateTimer()
+        updateAutoscroll()
     }
 
     private func scheduleConnection() {
-        guard observedClipView == nil, !connectionIsScheduled else { return }
+        guard window != nil, observedClipView == nil, !connectionIsScheduled else { return }
         connectionIsScheduled = true
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             connectionIsScheduled = false
+            guard window != nil else { return }
             connectToEnclosingScrollView()
-            updateTimer()
+            updateAutoscroll()
         }
     }
 
@@ -215,35 +250,25 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
         )
     }
 
-    private func updateTimer() {
+    private func updateAutoscroll() {
         let step = BrowserSidebarReorderPolicy.autoscrollStep(
             at: pointer,
             in: viewport
         )
-        guard isDragging, step != 0, observedClipView != nil else {
-            stopTimer()
+        guard window != nil, isDragging, step != 0, observedClipView != nil else {
+            autoscrollClock.stop()
             return
         }
-        guard timer == nil else { return }
-
-        let timer = Timer(timeInterval: 1 / 60, repeats: true) {
-            [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.advanceScroll()
-            }
-        }
-        timer.tolerance = 1 / 240
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        autoscrollClock.start(in: self)
     }
 
-    private func advanceScroll() {
-        guard isDragging,
+    private func advanceScroll(scale: CGFloat) {
+        guard window != nil, isDragging,
             let clipView = observedClipView,
             let scrollView = clipView.enclosingScrollView,
             let documentView = scrollView.documentView
         else {
-            stopTimer()
+            autoscrollClock.stop()
             return
         }
 
@@ -252,11 +277,11 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
             in: viewport
         )
         guard requestedStep != 0 else {
-            stopTimer()
+            autoscrollClock.stop()
             return
         }
 
-        let step = documentView.isFlipped ? requestedStep : -requestedStep
+        let step = (documentView.isFlipped ? requestedStep : -requestedStep) * scale
         let minimumY = documentView.bounds.minY
         let maximumY = max(
             minimumY,
@@ -265,7 +290,7 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
         let oldOrigin = clipView.bounds.origin
         let newY = min(max(oldOrigin.y + step, minimumY), maximumY)
         guard newY != oldOrigin.y else {
-            stopTimer()
+            autoscrollClock.stop()
             return
         }
 
@@ -273,9 +298,9 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
         scrollView.reflectScrolledClipView(clipView)
     }
 
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
+    func disconnect() {
+        autoscrollClock.stop()
+        stopObservingBounds()
     }
 
     private func stopObservingBounds() {
