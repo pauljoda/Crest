@@ -19,6 +19,8 @@ struct BrowserChromeWebStoreCandidate: Identifiable, Sendable {
     let nativeMessagingCapability: BrowserExtensionNativeMessagingCapability
     let iCloudPasswordsCapability: BrowserICloudPasswordsCapability
 
+    var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
+
     var id: String { source.extensionID.rawValue }
     var iconData: Data? { iconPayload?.data }
 

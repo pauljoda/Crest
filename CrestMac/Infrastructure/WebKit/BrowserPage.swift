@@ -63,6 +63,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
     private(set) var chromeWebStoreInstallItem: BrowserChromeWebStoreItem?
+    @ObservationIgnored var additionalExtensionSpaces: @MainActor (String) -> [BrowserSpace] = { _ in [] }
     private(set) var chromeWebStoreCandidate: BrowserChromeWebStoreCandidate?
     private(set) var isPreparingChromeWebStoreExtension = false
     private(set) var isInstallingChromeWebStoreExtension = false
@@ -792,12 +793,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         installedChromeWebStoreExtensionName = nil
     }
 
-    func installPreparedChromeWebStoreExtension() {
-        guard let candidate = chromeWebStoreCandidate,
+    func installPreparedChromeWebStoreExtension(review: BrowserExtensionInstallationPermissionPolicy.Review = .init()) {
+        guard var candidate = chromeWebStoreCandidate,
             !isInstallingChromeWebStoreExtension
         else {
             return
         }
+        candidate.accessReview = review
         chromeWebStoreInstallErrorDescription = nil
         isInstallingChromeWebStoreExtension = true
         chromeWebStoreTask?.cancel()

@@ -4,6 +4,8 @@ struct BrowserChromeWebStoreInstallActions: View {
     let page: BrowserPage
     let phase: BrowserChromeWebStoreInstallPhase
 
+    var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
+
     var body: some View {
         HStack {
             if case .failed = phase {
@@ -22,7 +24,7 @@ struct BrowserChromeWebStoreInstallActions: View {
                 cancelButton
             case .review(let candidate, _):
                 cancelButton
-                Button(action: page.installPreparedChromeWebStoreExtension) {
+                Button(action: { page.installPreparedChromeWebStoreExtension(review: accessReview) }) {
                     if page.isInstallingChromeWebStoreExtension {
                         ProgressView()
                             .controlSize(.small)

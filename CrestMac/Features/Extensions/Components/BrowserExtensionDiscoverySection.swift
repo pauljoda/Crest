@@ -125,8 +125,12 @@ struct BrowserExtensionDiscoverySection: View {
                     space: model.extensionsModel.space,
                     isInstalling: model.installingExtensionID == item.id,
                     isDisabled: model.installingExtensionID != nil,
-                    install: {
-                        Task { await model.install(item) }
+                    additionalSpaces: model.extensionsModel.extensionControllerPool.copyDestinations(
+                        extensionID: item.candidate.id, excluding: model.extensionsModel.space.id),
+                    previousSnapshot: model.extensionsModel.extensionControllerPool.persistenceController.installation(
+                        extensionID: item.candidate.id, in: model.extensionsModel.space.id)?.permissionSnapshot,
+                    install: { review in
+                        Task { await model.install(item, review: review) }
                     }
                 )
             }

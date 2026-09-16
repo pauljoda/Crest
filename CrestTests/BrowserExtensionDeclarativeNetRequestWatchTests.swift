@@ -76,4 +76,40 @@ final class BrowserExtensionDeclarativeNetRequestWatchTests: XCTestCase {
         defer { connection.stop() }
         XCTAssertThrowsError(try connection.receive(["api": "dnr.watch"]))
     }
+
+    func testAnExistingWatchRevalidatesDenialAndExpiryBeforeDelivery() async throws {
+        for revoked in [
+            BrowserExtensionPermissionSnapshot(
+                grantedPermissions: ["declarativeNetRequest": .distantFuture],
+                deniedPermissions: ["declarativeNetRequest": .distantFuture]),
+            .init(grantedPermissions: ["declarativeNetRequest": .distantPast]),
+        ] {
+            let store = BrowserExtensionDeclarativeNetRequestStore(
+                persistence: InMemoryBrowserExtensionDeclarativeNetRequestStore())
+            let space = SpaceID()
+            store.register(client: claude, spaceID: space)
+            var snapshot = BrowserExtensionPermissionSnapshot(
+                grantedPermissions: ["declarativeNetRequest": .distantFuture])
+            let delivered = expectation(description: "Authorized event")
+            let blocked = expectation(description: "Revoked event must not be delivered")
+            blocked.isInverted = true
+            var hasRevoked = false
+            let connection = BrowserExtensionCapabilityBrokerConnection(
+                authorization: .init(clientID: claude, permissionSnapshot: { snapshot }),
+                notificationService: nil, idleStateProvider: { _ in .active }, webpageMenuRegistry: .init(),
+                declarativeNetRequestService: store,
+                publish: { _ in
+                    if hasRevoked { blocked.fulfill() } else { delivered.fulfill() }
+                })
+            defer { connection.stop() }
+            try connection.receive(["api": "dnr.watch"])
+            store.setRules([rule(id: 1)], ruleset: .session, for: claude, in: space)
+            await fulfillment(of: [delivered], timeout: 2)
+            snapshot = revoked
+            hasRevoked = true
+            store.setRules([rule(id: 2)], ruleset: .session, for: claude, in: space)
+            await fulfillment(of: [blocked], timeout: 0.2)
+            XCTAssertThrowsError(try connection.receive(["api": "dnr.watch"]))
+        }
+    }
 }

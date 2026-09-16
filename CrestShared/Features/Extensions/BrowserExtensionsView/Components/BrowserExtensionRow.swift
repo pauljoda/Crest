@@ -19,9 +19,15 @@ struct BrowserExtensionRow: View {
         ) -> Void
     let requestRemoval: @MainActor @Sendable () -> Void
 
+    var requestCopy: (@MainActor () -> Void)? = nil
+
     var body: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+                if let requestCopy {
+                    Button("Install a copy in other spaces", action: requestCopy)
+                        .disabled(isBusy)
+                }
                 if !summary.requestedPermissions.isEmpty {
                     BrowserExtensionAccessSection(
                         title: "Permissions",

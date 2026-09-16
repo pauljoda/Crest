@@ -31,6 +31,12 @@ struct BrowserExtensionsPreviewExtensionPackageStore:
         throw BrowserExtensionPackageStoreError.unsupportedSource
     }
 
+    func stageCopy(
+        packageName: String, extensionID: String, from sourceSpace: SpaceID, in destinationSpace: SpaceID
+    ) throws -> BrowserExtensionPackage {
+        throw BrowserExtensionPackageStoreError.unsupportedSource
+    }
+
     func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,

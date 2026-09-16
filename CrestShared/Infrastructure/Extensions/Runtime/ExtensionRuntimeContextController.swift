@@ -571,12 +571,13 @@ final class BrowserExtensionRuntimeContextController {
         default:
             nativeMessagingIdentity = nil
         }
-        var authorizedPermissions = Set(
-            permissionSnapshot.grantedPermissions.keys
-        )
-        authorizedPermissions.formUnion(
-            capabilityBrokerGrantedPermissions
-        )
+        // Preparation describes supported routes, never user consent. Read
+        // current decisions for every call, including on existing watch ports.
+        let currentPermissions: @MainActor @Sendable () -> BrowserExtensionPermissionSnapshot = {
+            [weak context, weak permissions] in
+            guard let context, context.isLoaded, let permissions else { return .empty }
+            return permissions.snapshot(for: context, excluding: internalGrantedPermissions)
+        }
         // Read from the loaded package, so a capability the broker runs
         // outside WebKit — today only a background worker's WebSocket — is
         // held to the same `connect-src` the extension's own pages are.
@@ -586,14 +587,14 @@ final class BrowserExtensionRuntimeContextController {
             )
         let nativeMessagingAuthorization =
             BrowserExtensionNativeMessagingAuthorization(
-                grantedPermissions: authorizedPermissions,
                 clientID: .scoped(
                     extensionID: extensionID,
                     spaceID: space.id
                 ),
                 allowsInternalCapabilityBroker:
                     allowsInternalCapabilityBroker,
-                contentSecurityPolicy: contentSecurityPolicy
+                contentSecurityPolicy: contentSecurityPolicy,
+                permissionSnapshot: currentPermissions
             )
         if let nativeMessagingIdentity {
             tabWindowCoordinator.registerVerifiedNativeMessagingIdentity(
@@ -603,12 +604,7 @@ final class BrowserExtensionRuntimeContextController {
             )
         } else if allowsInternalCapabilityBroker {
             tabWindowCoordinator.registerCapabilityBrokerAuthorization(
-                BrowserExtensionNativeMessagingAuthorization(
-                    grantedPermissions: authorizedPermissions,
-                    clientID: nativeMessagingAuthorization.clientID,
-                    allowsInternalCapabilityBroker: true,
-                    contentSecurityPolicy: contentSecurityPolicy
-                ),
+                nativeMessagingAuthorization,
                 for: context
             )
         }

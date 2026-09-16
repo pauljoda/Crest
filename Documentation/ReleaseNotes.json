@@ -1381,6 +1381,18 @@
     "stop-location-watches-after-permission-revocation": {
       "category": "fixed",
       "message": "Stop sharing your location immediately when you block or reset a site's location permission"
+    },
+    "honor-extension-permission-revocation": {
+      "category": "fixed",
+      "message": "Keep blocked and expired extension permissions disabled after reloads and restarts"
+    },
+    "review-extension-access-and-copy-between-spaces": {
+      "category": "new",
+      "message": "Choose extension access during installation and install independent copies in multiple Spaces"
+    },
+    "single-browser-window-after-setup": {
+      "category": "fixed",
+      "message": "Open a single browser window when finishing setup"
     }
   }
 }

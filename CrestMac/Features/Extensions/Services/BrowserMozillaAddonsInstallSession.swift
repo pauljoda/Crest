@@ -30,6 +30,7 @@ final class BrowserMozillaAddonsInstallSession {
     let spaceID: SpaceID
     let spaceName: String
 
+    @ObservationIgnored var additionalSpaces: @MainActor (String) -> [BrowserSpace] = { _ in [] }
     @ObservationIgnored private let prepare: Prepare
     @ObservationIgnored private let install: Install
     @ObservationIgnored var reportInstalled: ReportInstalled = { _ in }
@@ -93,8 +94,9 @@ final class BrowserMozillaAddonsInstallSession {
         }
     }
 
-    func installPrepared() {
-        guard let candidate, !isInstalling else { return }
+    func installPrepared(review: BrowserExtensionInstallationPermissionPolicy.Review = .init()) {
+        guard var candidate, !isInstalling else { return }
+        candidate.accessReview = review
         errorDescription = nil
         isInstalling = true
         task?.cancel()

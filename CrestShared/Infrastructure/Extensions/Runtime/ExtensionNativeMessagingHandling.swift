@@ -10,8 +10,16 @@ enum BrowserExtensionNativeMessagingApplication {
         ProductIdentity.serviceNamespace + ".webextension-compatibility"
 }
 
-struct BrowserExtensionNativeMessagingAuthorization: Equatable, Sendable {
-    let grantedPermissions: Set<String>
+struct BrowserExtensionNativeMessagingAuthorization: Sendable {
+    private let initialPermissions: Set<String>
+    private let permissionSnapshot: (@MainActor @Sendable () -> BrowserExtensionPermissionSnapshot)?
+
+    /// The client binding is fixed, but authority follows the live context.
+    /// A copied authorization must not preserve access after revocation.
+    @MainActor var grantedPermissions: Set<String> {
+        guard let permissionSnapshot else { return initialPermissions }
+        return BrowserExtensionManagedPermissionPolicy.effectivePermissions(in: permissionSnapshot())
+    }
     let clientID: BrowserExtensionServiceClientID?
     let allowsInternalCapabilityBroker: Bool
     /// The `content_security_policy` value the package's manifest declared.
@@ -27,15 +35,17 @@ struct BrowserExtensionNativeMessagingAuthorization: Equatable, Sendable {
         grantedPermissions: Set<String> = [],
         clientID: BrowserExtensionServiceClientID? = nil,
         allowsInternalCapabilityBroker: Bool = false,
-        contentSecurityPolicy: String? = nil
+        contentSecurityPolicy: String? = nil,
+        permissionSnapshot: (@MainActor @Sendable () -> BrowserExtensionPermissionSnapshot)? = nil
     ) {
-        self.grantedPermissions = grantedPermissions
+        initialPermissions = grantedPermissions
+        self.permissionSnapshot = permissionSnapshot
         self.clientID = clientID
         self.allowsInternalCapabilityBroker = allowsInternalCapabilityBroker
         self.contentSecurityPolicy = contentSecurityPolicy
     }
 
-    func grants(_ permission: String) -> Bool {
+    @MainActor func grants(_ permission: String) -> Bool {
         grantedPermissions.contains(permission)
     }
 }

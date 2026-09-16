@@ -28,21 +28,8 @@ final class BrowserExtensionPermissionController {
         else {
             return .ask
         }
-        if BrowserExtensionManagedPermissionPolicy.names.contains(permission) {
-            return BrowserExtensionManagedPermissionPolicy.decision(
-                for: permission, in: installation.permissionSnapshot)
-        }
-        if installation.permissionSnapshot
-            .grantedPermissions[permission] != nil
-        {
-            return .allow
-        }
-        if installation.permissionSnapshot
-            .deniedPermissions[permission] != nil
-        {
-            return .block
-        }
-        return .ask
+        return BrowserExtensionManagedPermissionPolicy.decision(
+            for: permission, in: installation.permissionSnapshot)
     }
 
     func hostDecision(

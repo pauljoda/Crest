@@ -18,6 +18,8 @@ struct BrowserMozillaAddonsCandidate: Identifiable, Sendable {
     let isMozillaRecommended: Bool
     let nativeMessagingCapability: BrowserExtensionNativeMessagingCapability
 
+    var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
+
     var id: String { source.extensionID.rawValue }
     var iconData: Data? { iconPayload?.data }
 

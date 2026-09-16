@@ -3,6 +3,8 @@ import WebKit
 
 @MainActor
 final class BrowserExtensionInstallationController {
+    var pendingCopies: Set<BrowserExtensionServiceClientID> = []
+
     let persistence: BrowserExtensionPersistenceController
     let runtime: BrowserExtensionRuntimeContextController
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry

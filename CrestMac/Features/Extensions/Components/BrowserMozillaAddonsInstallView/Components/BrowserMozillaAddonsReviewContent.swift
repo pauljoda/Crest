@@ -5,6 +5,7 @@ struct BrowserMozillaAddonsReviewContent: View {
     let spaceName: String
     let errorDescription: String?
     @Binding var isAccessExpanded: Bool
+    @Binding var accessReview: BrowserExtensionInstallationPermissionPolicy.Review
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
@@ -46,12 +47,16 @@ struct BrowserMozillaAddonsReviewContent: View {
                         BrowserExtensionInstallAccessGroup(
                             title: "Permissions",
                             values: candidate.requestedPermissions,
-                            emptyText: "No additional browser permissions requested."
+                            emptyText: "No additional browser permissions requested.",
+                            choices: $accessReview.permissions,
+                            defaultAllowance: accessReview.allowsPermission
                         )
                         BrowserExtensionInstallAccessGroup(
                             title: "Website Access",
                             values: candidate.requestedHosts,
-                            emptyText: "No website access requested."
+                            emptyText: "No website access requested.",
+                            choices: $accessReview.hosts,
+                            defaultAllowance: accessReview.allowsHost
                         )
                         if !candidate.errors.isEmpty {
                             BrowserExtensionInstallAccessGroup(

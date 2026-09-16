@@ -2124,8 +2124,12 @@ final class BrowserPagePool:
             defaultPageZoom: pageZoomPreferences.defaultZoom,
             allowsChromeWebStoreExtensions: !browsingMode.isPrivate,
             prepareChromeWebStoreExtension: {
-                [chromeWebStoreProvider] item in
-                try await chromeWebStoreProvider.candidate(for: item)
+                [chromeWebStoreProvider, extensionControllerPool] item in
+                var candidate = try await chromeWebStoreProvider.candidate(for: item)
+                candidate.accessReview.previousSnapshot =
+                    extensionControllerPool.persistenceController.installation(
+                        extensionID: candidate.id, in: space.id)?.permissionSnapshot
+                return candidate
             },
             installChromeWebStoreExtension: {
                 [extensionControllerPool] candidate in
@@ -2134,8 +2138,12 @@ final class BrowserPagePool:
             },
             allowsMozillaAddonsExtensions: !browsingMode.isPrivate,
             prepareMozillaAddonsExtension: {
-                [mozillaAddonsProvider] item in
-                try await mozillaAddonsProvider.candidate(for: item)
+                [mozillaAddonsProvider, extensionControllerPool] item in
+                var candidate = try await mozillaAddonsProvider.candidate(for: item)
+                candidate.accessReview.previousSnapshot =
+                    extensionControllerPool.persistenceController.installation(
+                        extensionID: candidate.id, in: space.id)?.permissionSnapshot
+                return candidate
             },
             installMozillaAddonsExtension: {
                 [extensionControllerPool] candidate in
@@ -2166,6 +2174,10 @@ final class BrowserPagePool:
                 )
             }
         )
+        page.additionalExtensionSpaces = { [weak extensionControllerPool] extensionID in
+            extensionControllerPool?.copyDestinations(extensionID: extensionID, excluding: space.id) ?? []
+        }
+        page.mozillaAddonsInstall.additionalSpaces = page.additionalExtensionSpaces
         page.host = self
         page.windowRouting = routing
         return page

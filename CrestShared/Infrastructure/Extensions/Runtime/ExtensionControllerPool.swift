@@ -5,6 +5,8 @@ import WebKit
 @Observable
 @MainActor
 final class BrowserExtensionControllerPool {
+    @ObservationIgnored var installationSpaces: @MainActor () -> [BrowserSpace] = { [] }
+
     @ObservationIgnored let tabWindowCoordinator: BrowserExtensionTabWindowCoordinator
     @ObservationIgnored let persistenceController: BrowserExtensionPersistenceController
     @ObservationIgnored let permissionController: BrowserExtensionPermissionController

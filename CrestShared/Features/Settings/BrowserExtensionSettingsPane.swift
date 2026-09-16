@@ -44,7 +44,15 @@ struct BrowserExtensionSettingsPane: View {
                 )
             }
         }
-        .onAppear(perform: repairSelection)
+        .onAppear {
+            repairSelection()
+            extensionControllerPool.installationSpaces = { [weak browser, weak spaceAccess] in
+                guard let browser, let spaceAccess else { return [] }
+                return browser.session.spaces.filter {
+                    BrowserSettingsPrivacyPolicy.canRevealSpaceData(in: $0, accessController: spaceAccess)
+                }
+            }
+        }
         .onChange(of: browser.session.spaces.map(\.id)) {
             repairSelection()
         }

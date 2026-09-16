@@ -5085,6 +5085,9 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             from: popupReloadProbeFixtureURL,
             in: space
         )
+        // This fixture tests messaging through an authorized offscreen page;
+        // loading an unpacked declaration does not approve that capability.
+        try await pool.setPermissionDecision(.allow, for: "offscreen", extensionID: summary.id, in: space)
         let context = try XCTUnwrap(
             pool.loadedContext(extensionID: summary.id, in: space.id)
         )
