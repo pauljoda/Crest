@@ -162,20 +162,23 @@ final class BrowserExtensionDiscoveryModel {
     }
 
     func install(
-        _ item: BrowserExtensionDiscoveryItem
+        _ item: BrowserExtensionDiscoveryItem,
+        review: BrowserExtensionInstallationPermissionPolicy.Review = .init()
     ) async {
         guard installingExtensionID == nil else { return }
         installingExtensionID = item.id
         defer { installingExtensionID = nil }
         do {
             switch item.candidate {
-            case .safariApplication(let candidate):
+            case .safariApplication(var candidate):
+                candidate.accessReview = review
                 try await extensionsModel.extensionControllerPool
                     .installSafariWebExtension(
                         candidate,
                         in: extensionsModel.space
                     )
-            case .safariCustom(let candidate):
+            case .safariCustom(var candidate):
+                candidate.accessReview = review
                 try await extensionsModel.extensionControllerPool
                     .installLocalExtension(
                         candidate,
@@ -183,6 +186,9 @@ final class BrowserExtensionDiscoveryModel {
                     )
             }
             discoveryItems.removeAll { $0.id == item.id }
+        } catch let partial as BrowserExtensionPartialInstallationError {
+            discoveryItems.removeAll { $0.id == item.id }
+            publishFailure(partial)
         } catch {
             publishFailure(error)
         }

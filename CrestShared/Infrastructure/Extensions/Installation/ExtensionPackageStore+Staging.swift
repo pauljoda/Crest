@@ -18,6 +18,15 @@ extension BrowserExtensionPackageStore {
         try await stageOnWorker { try $0.stage(package, in: spaceID) }
     }
 
+    func stageCopy(
+        packageName: String, extensionID: String, from sourceSpace: SpaceID, in destinationSpace: SpaceID
+    ) async throws -> BrowserExtensionPackage {
+        try await stageOnWorker {
+            try $0.stageCopy(
+                packageName: packageName, extensionID: extensionID, from: sourceSpace, in: destinationSpace)
+        }
+    }
+
     func stageVerifiedChromeResource(
         _ sourceURL: URL, extensionID: BrowserChromeExtensionID, in spaceID: SpaceID
     ) async throws -> BrowserExtensionPackage {

@@ -420,9 +420,9 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertFalse(pool.activePage === secondPage)
     }
 
-    func testFindPresentationRequiresALoadedPageURL() {
+    func testFindPresentationRequiresALoadedPageURL() async throws {
         let blank = BrowserTab(title: "Blank", url: nil, placement: .current)
-        let loaded = BrowserTab(title: "Loaded", url: URL(string: "https://example.com"), placement: .current)
+        let loaded = BrowserTab(title: "Loaded", url: nil, placement: .current)
         let space = makeSpace(tabs: [blank, loaded], selectedTabID: blank.id)
         let pool = BrowserPagePool()
 
@@ -431,6 +431,9 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertFalse(pool.activePage?.isFindPresented == true)
 
         pool.select(tab: loaded, space: space)
+        let page = try XCTUnwrap(pool.activePage)
+        page.webView.loadHTMLString("<main>Local find fixture</main>", baseURL: URL(string: "https://find.crest.test"))
+        await waitUntil { page.completedNavigationCount == 1 && page.url != nil }
         pool.presentFind()
         XCTAssertTrue(pool.activePage?.isFindPresented == true)
         pool.activePage?.dismissFind()

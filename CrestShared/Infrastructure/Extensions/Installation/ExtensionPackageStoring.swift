@@ -21,6 +21,10 @@ protocol BrowserExtensionPackageStoring {
         in spaceID: SpaceID
     ) async throws -> BrowserExtensionPackage
 
+    @MainActor func stageCopy(
+        packageName: String, extensionID: String, from sourceSpace: SpaceID, in destinationSpace: SpaceID
+    ) async throws -> BrowserExtensionPackage
+
     @MainActor func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,

@@ -356,8 +356,10 @@ final class BrowserExtensionRuntimeContextController {
         source: BrowserExtensionInstallationSource?,
         internalGrantedPermissions: Set<String> = [],
         capabilityBrokerGrantedPermissions: Set<String> = [],
-        allowsInternalCapabilityBroker: Bool = false
+        allowsInternalCapabilityBroker: Bool = false,
+        validateAccess: () throws -> Void = {}
     ) async throws -> WKWebExtensionContext {
+        try validateAccess()
         if let existingContext = loadedContext(
             extensionID: extensionID,
             in: space.id
@@ -367,6 +369,7 @@ final class BrowserExtensionRuntimeContextController {
         let webExtension = try await WKWebExtension(
             resourceBaseURL: resourceBaseURL
         )
+        try validateAccess()
         let context = try load(
             webExtension: webExtension,
             extensionID: extensionID,
@@ -404,8 +407,10 @@ final class BrowserExtensionRuntimeContextController {
 
     func loadInstallation(
         _ installation: BrowserExtensionInstallation,
-        in space: BrowserSpace
+        in space: BrowserSpace,
+        validateAccess: () throws -> Void = {}
     ) async throws -> WKWebExtensionContext {
+        try validateAccess()
         if let existingContext = loadedContext(
             extensionID: installation.id,
             in: space.id
@@ -422,12 +427,13 @@ final class BrowserExtensionRuntimeContextController {
         case nil, .unpackedPackage:
             context = try await loadStoredPackage(
                 installation,
-                in: space
+                in: space, validateAccess: validateAccess
             )
         case .safariWebExtension(let source):
             let resource =
                 try await BrowserPlatformSafariWebExtensionLoader
                 .load(source)
+            try validateAccess()
             context = try load(
                 webExtension: resource.webExtension,
                 extensionID: installation.id,
@@ -447,7 +453,7 @@ final class BrowserExtensionRuntimeContextController {
         case .chromeWebStore, .mozillaAddons, .localPackage:
             context = try await loadStoredPackage(
                 installation,
-                in: space
+                in: space, validateAccess: validateAccess
             )
         }
         persistence.updateSummary(
@@ -543,7 +549,22 @@ final class BrowserExtensionRuntimeContextController {
         context.unsupportedAPIs = unsupportedAPIs.union(
             platformUnsupportedAPIs
         )
-        let restoreError = permissions.apply(permissionSnapshot, to: context)
+        // Retain consent only for capabilities still declared by this package,
+        // including previously approved optional permissions and Firefox aliases.
+        var declaredPermissions = Set(authoredRequestedPermissions)
+            .union(webExtension.manifest["permissions"] as? [String] ?? [])
+            .union(webExtension.optionalPermissions.map(\.rawValue))
+            .union(webExtension.manifest["optional_permissions"] as? [String] ?? [])
+            .subtracting(internalGrantedPermissions)
+        if declaredPermissions.contains("menus") { declaredPermissions.insert("contextMenus") }
+        var currentSnapshot = permissionSnapshot
+        currentSnapshot.grantedPermissions = currentSnapshot.grantedPermissions.filter {
+            declaredPermissions.contains($0.key)
+        }
+        currentSnapshot.deniedPermissions = currentSnapshot.deniedPermissions.filter {
+            declaredPermissions.contains($0.key)
+        }
+        let restoreError = permissions.apply(currentSnapshot, to: context)
         for permissionName in internalGrantedPermissions {
             let permission =
                 if permissionName == "nativeMessaging" {
@@ -571,12 +592,13 @@ final class BrowserExtensionRuntimeContextController {
         default:
             nativeMessagingIdentity = nil
         }
-        var authorizedPermissions = Set(
-            permissionSnapshot.grantedPermissions.keys
-        )
-        authorizedPermissions.formUnion(
-            capabilityBrokerGrantedPermissions
-        )
+        // Preparation describes supported routes, never user consent. Read
+        // current decisions for every call, including on existing watch ports.
+        let currentPermissions: @MainActor @Sendable () -> BrowserExtensionPermissionSnapshot = {
+            [weak context, weak permissions] in
+            guard let context, context.isLoaded, let permissions else { return .empty }
+            return permissions.snapshot(for: context, excluding: internalGrantedPermissions)
+        }
         // Read from the loaded package, so a capability the broker runs
         // outside WebKit — today only a background worker's WebSocket — is
         // held to the same `connect-src` the extension's own pages are.
@@ -586,14 +608,14 @@ final class BrowserExtensionRuntimeContextController {
             )
         let nativeMessagingAuthorization =
             BrowserExtensionNativeMessagingAuthorization(
-                grantedPermissions: authorizedPermissions,
                 clientID: .scoped(
                     extensionID: extensionID,
                     spaceID: space.id
                 ),
                 allowsInternalCapabilityBroker:
                     allowsInternalCapabilityBroker,
-                contentSecurityPolicy: contentSecurityPolicy
+                contentSecurityPolicy: contentSecurityPolicy,
+                permissionSnapshot: currentPermissions
             )
         if let nativeMessagingIdentity {
             tabWindowCoordinator.registerVerifiedNativeMessagingIdentity(
@@ -603,12 +625,7 @@ final class BrowserExtensionRuntimeContextController {
             )
         } else if allowsInternalCapabilityBroker {
             tabWindowCoordinator.registerCapabilityBrokerAuthorization(
-                BrowserExtensionNativeMessagingAuthorization(
-                    grantedPermissions: authorizedPermissions,
-                    clientID: nativeMessagingAuthorization.clientID,
-                    allowsInternalCapabilityBroker: true,
-                    contentSecurityPolicy: contentSecurityPolicy
-                ),
+                nativeMessagingAuthorization,
                 for: context
             )
         }
@@ -830,8 +847,10 @@ final class BrowserExtensionRuntimeContextController {
 
     private func loadStoredPackage(
         _ installation: BrowserExtensionInstallation,
-        in space: BrowserSpace
+        in space: BrowserSpace,
+        validateAccess: () throws -> Void
     ) async throws -> WKWebExtensionContext {
+        try validateAccess()
         let storedResourceURL = try persistence.resourceURL(
             packageName: installation.packageName,
             in: space.id
@@ -850,6 +869,7 @@ final class BrowserExtensionRuntimeContextController {
                     )
             )
         )
+        try validateAccess()
         let context = try await loadExtension(
             at: preparedResource.resourceURL,
             extensionID: installation.id,
@@ -865,7 +885,8 @@ final class BrowserExtensionRuntimeContextController {
             capabilityBrokerGrantedPermissions:
                 preparedResource.capabilityBrokerGrantedPermissions,
             allowsInternalCapabilityBroker:
-                preparedResource.allowsInternalCapabilityBroker
+                preparedResource.allowsInternalCapabilityBroker,
+            validateAccess: validateAccess
         )
         if let retainedAccess = preparedResource.retainedAccess {
             retainRuntimeResourceAccess(

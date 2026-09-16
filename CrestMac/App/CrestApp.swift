@@ -93,6 +93,12 @@ struct CrestApp: App {
             usesEphemeralProfileStorage: usesEphemeralProfileStorage,
             capturesExtensionConsole: capturesExtensionConsole
         )
+        extensionControllerPool.installationSpaces = { [weak browser, weak spaceAccess] in
+            guard let browser, let spaceAccess else { return [] }
+            return browser.session.spaces.filter {
+                BrowserSettingsPrivacyPolicy.canRevealSpaceData(in: $0, accessController: spaceAccess)
+            }
+        }
         let privateExtensionControllerPool = BrowserExtensionControllerPool()
         let sidebarDefaults: UserDefaults?
         if usesIsolatedLaunch, let isolationID = launchEnvironment.persistentIsolationID {

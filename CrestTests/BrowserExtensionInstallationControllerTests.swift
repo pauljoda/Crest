@@ -1,10 +1,187 @@
 import Foundation
+import WebKit
 import XCTest
 
 @testable import Crest
 
 @MainActor
 final class BrowserExtensionInstallationControllerTests: XCTestCase {
+    func testReloadDropsRemovedManagedPermissionsAndKeepsCurrentConsent() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appending(path: "Source")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        let manifest = source.appending(path: "manifest.json")
+        try Data(
+            #"{"manifest_version":3,"name":"Reload consent","version":"1","permissions":["idle","clipboardRead","storage"],"optional_permissions":["tabGroups"]}"#
+                .utf8
+        ).write(to: manifest)
+        let space = BrowserSession.preview.spaces[0]
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(rootURL: root.appending(path: "Packages")), registry: registry)
+        let installed = try await pool.loadUnpackedExtension(from: source, in: space)
+        pool.setPermissionDecision(.allow, for: "tabGroups", extensionID: installed.id, in: space.id)
+        pool.setPermissionDecision(.allow, for: "idle", extensionID: installed.id, in: space.id)
+        pool.setPermissionDecision(.block, for: "clipboardRead", extensionID: installed.id, in: space.id)
+        pool.setPermissionDecision(.block, for: "storage", extensionID: installed.id, in: space.id)
+        try Data(
+            #"{"manifest_version":3,"name":"Reload consent","version":"2","permissions":["storage"],"optional_permissions":["tabGroups"]}"#
+                .utf8
+        ).write(to: manifest)
+        let reloaded = try await pool.loadUnpackedExtension(from: source, in: space)
+        XCTAssertEqual(reloaded.id, installed.id)
+        let snapshot = try XCTUnwrap(registry.installation(extensionID: installed.id, in: space.id)).permissionSnapshot
+        XCTAssertEqual(snapshot.grantedPermissions["tabGroups"], .distantFuture)
+        XCTAssertNil(snapshot.grantedPermissions["idle"])
+        XCTAssertNil(snapshot.deniedPermissions["clipboardRead"])
+        XCTAssertEqual(pool.permissionDecision(for: "storage", extensionID: installed.id, in: space.id), .block)
+    }
+
+    func testHostDecisionsRespectExpiryAndDenialPrecedence() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appending(path: "Source")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try Data(#"{"manifest_version":3,"name":"Host consent","version":"1"}"#.utf8).write(
+            to: source.appending(path: "manifest.json"))
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(rootURL: root.appending(path: "Packages")), registry: registry)
+        let space = BrowserSession.preview.spaces[0]
+        let installed = try await pool.loadUnpackedExtension(from: source, in: space)
+        let host = "https://example.com/*"
+        for (grant, denial, expected) in [
+            (Date.distantPast, Date.distantPast, BrowserExtensionAccessDecision.ask),
+            (.distantFuture, .distantFuture, .block),
+            (.distantFuture, .distantPast, .allow),
+            (.distantPast, .distantFuture, .block),
+        ] {
+            registry.updatePermissionSnapshot(
+                .init(grantedHosts: [host: grant], deniedHosts: [host: denial]),
+                extensionID: installed.id, in: space.id)
+            XCTAssertEqual(pool.hostDecision(for: host, extensionID: installed.id, in: space.id), expected)
+        }
+    }
+
+    func testCopyStopsWhenSpaceAccessChangesDuringPreparation() async throws {
+        for locksSource in [true, false] {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let source = root.appending(path: "Source")
+            try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+            try Data(#"{"manifest_version":3,"name":"Copy consent","version":"1"}"#.utf8)
+                .write(to: source.appending(path: "manifest.json"))
+            let spaces = BrowserSession.preview.spaces
+            var available = spaces
+            let preparer = CopyAccessChangingPreparer()
+            let registry = BrowserExtensionRegistry()
+            let packageRoot = root.appending(path: "Packages")
+            let pool = BrowserExtensionControllerPool(
+                packageStore: BrowserExtensionPackageStore(rootURL: packageRoot), registry: registry,
+                storedResourcePreparer: preparer)
+            pool.installationSpaces = { available }
+            let installed = try await pool.loadUnpackedExtension(from: source, in: spaces[0])
+            preparer.onPrepare = {
+                available.removeAll { $0.id == spaces[locksSource ? 0 : 1].id }
+            }
+            do {
+                try await pool.copyExtension(extensionID: installed.id, from: spaces[0].id, to: [spaces[1].id])
+                XCTFail("Access revoked during preparation must abort the copy")
+            } catch {}
+            XCTAssertNil(registry.installation(extensionID: installed.id, in: spaces[1].id))
+            XCTAssertNil(pool.runtimeContextController.loadedContext(extensionID: installed.id, in: spaces[1].id))
+            XCTAssertNotNil(registry.installation(extensionID: installed.id, in: spaces[0].id))
+            let destination = packageRoot.appending(path: spaces[1].id.rawValue.uuidString.lowercased())
+            let retained = (try? FileManager.default.contentsOfDirectory(atPath: destination.path)) ?? []
+            XCTAssertTrue(retained.isEmpty, "Aborted copies must discard their staged packages")
+        }
+    }
+
+    func testInstallReviewDefaultsToAllowAndPersistsOnlyReviewedChoices() throws {
+        let permissions = ["storage", "declarativeNetRequest"]
+        let hosts = ["https://example.com/*"]
+        var review = BrowserExtensionInstallationPermissionPolicy.Review()
+        XCTAssertTrue(review.allowsPermission("declarativeNetRequest"))
+        XCTAssertTrue(review.allowsHost(hosts[0]))
+        review.permissions = ["declarativeNetRequest": false, "unrequested": true]
+        review.hosts[hosts[0]] = false
+        let snapshot = BrowserExtensionInstallationPermissionPolicy.reviewedRequiredAccess(
+            permissions: permissions, hosts: hosts, review: review)
+        let restored = try JSONDecoder().decode(
+            BrowserExtensionPermissionSnapshot.self, from: JSONEncoder().encode(snapshot))
+        XCTAssertEqual(Set(restored.grantedPermissions.keys), ["storage"])
+        XCTAssertEqual(Set(restored.deniedPermissions.keys), ["declarativeNetRequest"])
+        XCTAssertEqual(Set(restored.deniedHosts.keys), Set(hosts))
+        XCTAssertTrue(restored.grantedHosts.isEmpty)
+
+        var replacement = BrowserExtensionInstallationPermissionPolicy.Review(previousSnapshot: restored)
+        XCTAssertFalse(replacement.allowsPermission("declarativeNetRequest"))
+        XCTAssertFalse(replacement.allowsPermission("idle"))
+        XCTAssertFalse(replacement.allowsHost(hosts[0]))
+        XCTAssertEqual(
+            BrowserExtensionInstallationPermissionPolicy.reviewedRequiredAccess(
+                permissions: permissions + ["idle"], hosts: hosts, previous: restored, review: replacement), restored)
+        replacement.permissions["idle"] = true
+        let approved = BrowserExtensionInstallationPermissionPolicy.reviewedRequiredAccess(
+            permissions: permissions + ["idle"], hosts: hosts, previous: restored, review: replacement)
+        XCTAssertEqual(approved.grantedPermissions["idle"], .distantFuture)
+        XCTAssertEqual(approved.deniedPermissions, restored.deniedPermissions)
+    }
+
+    func testCopiesKeepConsentAndPackagesIsolatedAndNeverReplaceAnExistingInstallation() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sourceURL = root.appending(path: "Source")
+        try FileManager.default.createDirectory(at: sourceURL, withIntermediateDirectories: true)
+        try Data(#"{"manifest_version":3,"name":"Space copy","version":"1.0","permissions":["storage","idle"]}"#.utf8)
+            .write(to: sourceURL.appending(path: "manifest.json"))
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(rootURL: root.appending(path: "Packages")), registry: registry)
+        let spaces = BrowserSession.preview.spaces
+        pool.installationSpaces = { spaces }
+        let installed = try await pool.loadUnpackedExtension(from: sourceURL, in: spaces[0])
+        try await pool.setPermissionDecision(.allow, for: "storage", extensionID: installed.id, in: spaces[0])
+        try await pool.setPermissionDecision(.block, for: "idle", extensionID: installed.id, in: spaces[0])
+        let sourceData = try XCTUnwrap(pool.extensionWebsiteDataStore(in: spaces[0].id))
+        let cookie = try XCTUnwrap(
+            HTTPCookie(properties: [
+                .name: "source-only", .value: "disposable", .domain: "example.com", .path: "/",
+            ]))
+        await sourceData.httpCookieStore.setCookie(cookie)
+        let original = try XCTUnwrap(registry.installation(extensionID: installed.id, in: spaces[0].id))
+        do {
+            try await pool.copyExtension(extensionID: installed.id, from: spaces[0].id, to: [spaces[1].id, SpaceID()])
+            XCTFail("An unavailable destination must report a partial failure.")
+        } catch {}
+        let copy = try XCTUnwrap(registry.installation(extensionID: installed.id, in: spaces[1].id))
+        let destinationData = try XCTUnwrap(pool.extensionWebsiteDataStore(in: spaces[1].id))
+        XCTAssertFalse(sourceData === destinationData)
+        let destinationCookies = await destinationData.httpCookieStore.allCookies()
+        XCTAssertFalse(destinationCookies.contains { $0.name == "source-only" })
+        XCTAssertEqual(copy.permissionSnapshot, original.permissionSnapshot)
+        XCTAssertEqual(copy.source, original.source)
+        XCTAssertNotEqual(copy.packageName, original.packageName)
+        let originalURL = try pool.persistenceController.resourceURL(
+            packageName: original.packageName, in: spaces[0].id)
+        let copyURL = try pool.persistenceController.resourceURL(packageName: copy.packageName, in: spaces[1].id)
+        try Data("destination only".utf8).write(to: copyURL.appending(path: "copy-only.txt"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: originalURL.appending(path: "copy-only.txt").path))
+        XCTAssertFalse(
+            pool.runtimeContextController.loadedContext(extensionID: installed.id, in: spaces[0].id)
+                === pool.runtimeContextController.loadedContext(extensionID: installed.id, in: spaces[1].id))
+        try await pool.setPermissionDecision(.allow, for: "idle", extensionID: installed.id, in: spaces[1])
+        try await pool.copyExtension(extensionID: installed.id, from: spaces[0].id, to: [spaces[1].id])
+        XCTAssertEqual(pool.permissionDecision(for: "idle", extensionID: installed.id, in: spaces[1].id), .allow)
+        XCTAssertEqual(pool.permissionDecision(for: "idle", extensionID: installed.id, in: spaces[0].id), .block)
+        pool.installationSpaces = { [spaces[0]] }
+        do {
+            try await pool.copyExtension(extensionID: installed.id, from: spaces[0].id, to: [spaces[1].id])
+            XCTFail("Unavailable Spaces must be rejected, including stale selections.")
+        } catch {}
+    }
+
     func testFailedUnpackedInstallationDiscardsItsStagedCopy() async throws {
         let fileManager = FileManager.default
         let rootURL = fileManager.temporaryDirectory.appending(
@@ -289,5 +466,18 @@ final class BrowserExtensionInstallationControllerTests: XCTestCase {
             }
             return url
         }
+    }
+}
+
+@MainActor
+private final class CopyAccessChangingPreparer: BrowserExtensionStoredResourcePreparing {
+    var onPrepare: (() -> Void)?
+
+    func prepare(resourceURL: URL, request: BrowserExtensionStoredResourcePreparationRequest) async throws
+        -> BrowserExtensionStoredResource
+    {
+        await Task.yield()
+        onPrepare?()
+        return BrowserExtensionStoredResource(resourceURL: resourceURL)
     }
 }

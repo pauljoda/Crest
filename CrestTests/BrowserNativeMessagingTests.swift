@@ -1844,6 +1844,37 @@ final class BrowserNativeMessagingTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testOneShotReplyRevalidatesNativeMessagingConsent() async throws {
+        try Self.skipUnlessNativeHostsCanLaunch()
+        let extensionID = try Self.extensionID()
+        let root = try installHostManifest(
+            for: try makeHostExecutable(Self.echoHostScript),
+            hostName: "com.example.echo", extensionID: extensionID)
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(searchDirectories: [root]))
+        var snapshot = BrowserExtensionPermissionSnapshot(grantedPermissions: ["nativeMessaging": .distantFuture])
+        let reply = expectation(description: "Revoked native reply")
+        reply.assertForOverFulfill = true
+        var received: Any?
+        var failure: Error?
+        service.sendMessage(
+            ["ping": "pong"], applicationIdentifier: "com.example.echo",
+            extensionIdentity: .chromeWebStore(extensionID),
+            authorization: .init(permissionSnapshot: { snapshot })
+        ) { value, error in
+            received = value
+            failure = error
+            reply.fulfill()
+        }
+        // Revoke before yielding the main actor to the asynchronous host reply.
+        snapshot = .init(deniedPermissions: ["nativeMessaging": .distantFuture])
+        await fulfillment(of: [reply], timeout: 5)
+        XCTAssertNil(received)
+        XCTAssertEqual(failure as? BrowserExtensionCapabilityBrokerError, .permissionDenied("nativeMessaging"))
+    }
+
     private func installHostManifest(
         for executable: URL,
         hostName: String,
