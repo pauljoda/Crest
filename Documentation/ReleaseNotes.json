@@ -1425,6 +1425,10 @@
     "pdf-preview-download": {
       "category": "fixed",
       "message": "Save the displayed PDF directly from the built-in preview"
+    },
+    "quick-window-border-preference": {
+      "category": "fixed",
+      "message": "Quick Windows follow your browser border size while keeping balanced spacing around their controls"
     }
   }
 }

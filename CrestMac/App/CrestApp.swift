@@ -687,6 +687,7 @@ struct CrestApp: App {
                     pagePoolRegistry: pagePoolRegistry,
                     windowCoordinator: windowCoordinator
                 )
+                .modifier(BrowserChromeAppearancePersistence())
                 .environment(windowTransparency)
                 .frame(
                     minWidth: BrowserQuickWindowLayout.minimumWidth,
