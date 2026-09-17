@@ -6,45 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.15</title>
-            <pubDate>Wed, 16 Sep 2026 13:39:30 +0000</pubDate>
+            <title>0.6.23</title>
+            <pubDate>Thu, 17 Sep 2026 13:36:54 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1111</sparkle:version>
-            <sparkle:shortVersionString>0.6.15</sparkle:shortVersionString>
+            <sparkle:version>1120</sparkle:version>
+            <sparkle:shortVersionString>0.6.23</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 25 user-facing changes.
+### New
 
-### Improved
-
-- See your chosen app icon, app details, and software updates together in a cleaner About page
-- Keep extensions responsive when browsing with many tabs and windows
-- Check installed translation languages more efficiently in Settings
-- Reduce delays when opening and closing large tab folders
-- Scroll more smoothly through long lists of saved and current tabs
-- Open and search large browsing histories with fewer pauses
+- Choose extension access during installation and install independent copies in multiple Spaces
 
 ### Fixed
 
-- Keep General settings responsive while checking system permissions
-- Keep browsing responsive while large sessions and history sync in the background
-- Drag tabs through long sidebars more reliably, with edge scrolling that follows your display's refresh rate
-- Move large tab selections between Spaces reliably
-- Reduce memory growth when repeatedly opening the address bar
-- Avoid repeated background requests and memory growth on pages without a site icon
+- Keep the address bar and Back and Forward history in sync when following links within sites such as Reddit
+- Stop sharing your location immediately when you block or reset a site's location permission
+- Keep blocked and expired extension permissions disabled after reloads and restarts
+- Open a single browser window when finishing setup
+- Honor changed extension permissions and locked Spaces during pending operations
+- Show successful extension installations when copies in other Spaces cannot be completed
+- Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state.
+- Keep permissions and private data separate when importing unsigned Firefox extensions
+- Select webpage text and use controls near the top edge without moving the window
+- Save the displayed PDF directly from the built-in preview
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/3f3a19021daf4cb4324ff75eae8e2d388b23f7f4...b4fe18277cf7420c897cb15718590077e123323c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.15-2026-09-16-1111-r111.1/Installer-Crest-0.6.15-nightly-2026-09-16-b4fe182-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/b4fe18277cf7420c897cb15718590077e123323c...616f92d745b82c36cf78daded5e7174d83ab1669) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.23-2026-09-17-1120-r120.1/Installer-Crest-0.6.23-nightly-2026-09-17-616f92d-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.15-2026-09-16-1111-r111.1/Installer-Crest-0.6.15-nightly-2026-09-16-b4fe182-arm64.dmg" length="27044653" type="application/octet-stream" sparkle:edSignature="cxcYUnV2waU9vcTkdFd1UcmdHGxTyNDYrEtnzMxX/udvYOeCg50cm5dFBTxrQ3GnQtSnX9rgX6Hd1cbctGNcDw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.23-2026-09-17-1120-r120.1/Installer-Crest-0.6.23-nightly-2026-09-17-616f92d-arm64.dmg" length="27144493" type="application/octet-stream" sparkle:edSignature="awGbAk+X+94ovoOFQy0PnqwvaF9bBlTMFDh75W47YiCPsUqkt3AOiCi/qE41vVoHkHsQBjqPWZkyr0nGNsPJBg=="/>
         </item>
         <item>
             <title>0.6.8</title>
@@ -83,6 +80,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: PJlru+rq0okqHvxWAONo7MmvSmWnneNKeKdsiOhBL7L4USzPya2Xy+TFwptPjJ2eRANnGaW2zHKEGYoDepnmBg==
-length: 5113
+edSignature: JNiveGMTlnCn/IQjCtt6zNxpVnmqgoZabk5px1uz1SKMk4wN6XcJEzQ10GobwFDmFh0o26KvHituNnO2Yt3pAg==
+length: 5111
 -->
