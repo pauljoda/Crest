@@ -7,7 +7,7 @@ struct BrowserExtensionInstallation:
     Identifiable,
     Sendable
 {
-    let id: String
+    var id: String
     let spaceID: SpaceID
     let packageName: String
     var source: BrowserExtensionInstallationSource? = nil

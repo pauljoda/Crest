@@ -1,9 +1,49 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 @MainActor
 final class BrowserExtensionRegistryTests: XCTestCase {
+    func testLegacyUnsignedIdentityIsQuarantinedOnceAndSurvivesReconstruction() throws {
+        let spaceID = SpaceID()
+        var legacy = installation(
+            id: "claimed@crest.test", spaceID: spaceID, packageName: "old.zip",
+            permissions: .init(grantedPermissions: ["tabs": .distantFuture]))
+        legacy.source = .localPackage(
+            .init(extensionID: legacy.id, format: .firefoxXPI, sha256Hex: String(repeating: "a", count: 64)))
+        let persistence = InMemoryBrowserExtensionRegistryPersistence(installations: [legacy])
+        let registry = BrowserExtensionRegistry(persistence: persistence)
+        let migrated = try XCTUnwrap(registry.installations.first)
+        XCTAssertNotEqual(migrated.id, legacy.id)
+        XCTAssertTrue(migrated.id.hasPrefix("local.xpi."))
+        XCTAssertFalse(migrated.isEnabled)
+        XCTAssertEqual(migrated.permissionSnapshot, .empty)
+        XCTAssertEqual(migrated.packageName, legacy.packageName)
+        let before = BrowserExtensionRuntimeIdentifierPolicy.identity(
+            extensionID: legacy.id,
+            source: .mozillaAddons(
+                .init(
+                    slug: BrowserMozillaAddonSlug("claimed")!, extensionID: BrowserMozillaExtensionID(legacy.id)!,
+                    storeURL: URL(string: "https://addons.mozilla.org/en-US/firefox/addon/claimed/")!, version: "1",
+                    xpiSHA256Hex: String(repeating: "a", count: 64))), spaceID: spaceID)
+        let after = BrowserExtensionRuntimeIdentifierPolicy.identity(
+            extensionID: migrated.id, source: migrated.source, spaceID: spaceID)
+        XCTAssertNotEqual(before.baseURL, after.baseURL)
+        XCTAssertNotEqual(before.uniqueIdentifier, after.uniqueIdentifier)
+        XCTAssertEqual(BrowserExtensionRegistry(persistence: persistence).installations, [migrated])
+        var otherLegacy = legacy
+        otherLegacy.id = "other@crest.test"
+        otherLegacy.source = .localPackage(
+            .init(extensionID: otherLegacy.id, format: .firefoxXPI, sha256Hex: String(repeating: "a", count: 64)))
+        let distinct = BrowserExtensionRegistry(
+            persistence: InMemoryBrowserExtensionRegistryPersistence(
+                installations: [legacy, otherLegacy]))
+        XCTAssertEqual(
+            distinct.installations.count, 2, "Equal archive bytes do not merge separately installed identities")
+        XCTAssertEqual(Set(distinct.installations.map(\.id)).count, 2)
+    }
+
     func testReconstructionPreservesSpaceEnablementAndPermissionState() {
         let persistence = InMemoryBrowserExtensionRegistryPersistence()
         let workID = SpaceID()

@@ -61,9 +61,14 @@ final class BrowserLocalExtensionInstallSession {
                 }
             }
             var candidate = try await provider.candidate(for: sourceURL)
-            candidate.accessReview.previousSnapshot =
-                extensionControllerPool.persistenceController.installation(
-                    extensionID: candidate.id, in: space.id)?.permissionSnapshot
+            let previous = extensionControllerPool.persistenceController.installation(
+                extensionID: candidate.id, in: space.id)
+            candidate.replacingDisplayName = previous?.displayName
+            if BrowserExtensionInstallationSource.localPackage(candidate.source).authenticatesContinuity(
+                from: previous?.source)
+            {
+                candidate.accessReview.previousSnapshot = previous?.permissionSnapshot
+            }
             phase = .review(candidate: candidate, errorDescription: nil)
         } catch {
             phase = .failed(errorDescription: error.localizedDescription)

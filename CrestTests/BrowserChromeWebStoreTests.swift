@@ -328,6 +328,27 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(
             storeCandidate.requestedPermissions, ["debugger", "storage"],
             "The install review must disclose debugger access even when WebKit omits it.")
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(rootURL: rootURL.appending(path: "Packages")), registry: registry
+        )
+        let space = BrowserSession.preview.spaces[0]
+        _ = try await pool.installLocalExtension(candidate, in: space)
+        pool.setPermissionDecision(.block, for: "debugger", extensionID: candidate.id, in: space.id)
+        let original = try XCTUnwrap(pool.loadedContext(extensionID: candidate.id, in: space.id))
+        _ = try await pool.installLocalExtension(candidate, in: space)
+        let updated = try XCTUnwrap(pool.loadedContext(extensionID: candidate.id, in: space.id))
+        XCTAssertEqual(updated.baseURL, original.baseURL)
+        XCTAssertEqual(updated.uniqueIdentifier, original.uniqueIdentifier)
+        XCTAssertEqual(pool.permissionDecision(for: "debugger", extensionID: candidate.id, in: space.id), .block)
+        let before = registry.installations
+        do {
+            _ = try await pool.installChromeWebStoreExtension(storeCandidate, in: space)
+            XCTFail("A cross-source install must not silently replace the reviewed local installation")
+        } catch BrowserExtensionControllerPoolError.unauthenticatedReplacement {}
+        XCTAssertEqual(registry.installations, before)
+        XCTAssertTrue(pool.loadedContext(extensionID: candidate.id, in: space.id) === updated)
+        try pool.controller(for: space).unload(updated)
     }
 
     func testVerifierRejectsAMismatchedStoreIDAndTampering() throws {
@@ -4624,9 +4645,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             )
             XCTFail("An untrusted replacement record was persisted.")
         } catch BrowserExtensionControllerPoolError
-            .invalidInstallationRecord
+            .unauthenticatedReplacement
         {
-            // The registry is the final provenance boundary after runtime load.
+            // Publisher mismatch is rejected before the old context or package is touched.
         }
 
         XCTAssertEqual(

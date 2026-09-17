@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Observation
 
@@ -291,6 +292,28 @@ final class BrowserExtensionRegistry {
         )
         normalized.sourceDisplayName = candidate.sourceDisplayName
             .flatMap(normalizedText)
+        if case .localPackage(var local) = candidate.source,
+            local.format == .firefoxXPI, local.storageIdentifier == nil
+        {
+            // Old local XPIs could have inherited a store record's authority.
+            // Quarantine their old grants and storage instead of blessing that
+            // history on relaunch. Keep the package available for inspection.
+            let lineage = Data(SHA256.hash(data: Data("\(candidate.id)\u{0}\(local.sha256Hex)".utf8))).hexString
+            normalized.id = "local.xpi.legacy." + lineage
+            local.declaredGeckoID = BrowserMozillaExtensionID(candidate.id)?.rawValue
+            local.storageIdentifier = "legacy-" + lineage
+            normalized.source = .localPackage(
+                BrowserLocalExtensionSource(
+                    extensionID: normalized.id, format: local.format, sha256Hex: local.sha256Hex,
+                    declaredGeckoID: local.declaredGeckoID, storageIdentifier: local.storageIdentifier))
+            normalized.permissionSnapshot = .empty
+            normalized.isEnabled = false
+            normalized.errors.append(
+                String(
+                    localized:
+                        "Reimport this local Firefox package to review its access. Previous unverified identity, permissions, and storage have been isolated."
+                ))
+        }
         if let iconData = candidate.iconData,
             iconData.count
                 <= BrowserExtensionIconPayload.maximumEncodedByteCount

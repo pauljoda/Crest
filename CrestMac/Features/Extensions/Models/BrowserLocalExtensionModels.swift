@@ -14,6 +14,7 @@ struct BrowserLocalExtensionCandidate: Equatable, Identifiable, Sendable {
     let nativeMessagingCapability: BrowserExtensionNativeMessagingCapability
 
     var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
+    var replacingDisplayName: String?
 
     var id: String { package.extensionID }
     var iconData: Data? { iconPayload?.data }
@@ -23,7 +24,9 @@ struct BrowserLocalExtensionCandidate: Equatable, Identifiable, Sendable {
         BrowserLocalExtensionSource(
             extensionID: package.extensionID,
             format: package.format,
-            sha256Hex: package.sha256Hex
+            sha256Hex: package.sha256Hex,
+            declaredGeckoID: package.declaredGeckoID,
+            storageIdentifier: package.storageIdentifier
         )
     }
 

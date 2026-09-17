@@ -2126,9 +2126,13 @@ final class BrowserPagePool:
             prepareChromeWebStoreExtension: {
                 [chromeWebStoreProvider, extensionControllerPool] item in
                 var candidate = try await chromeWebStoreProvider.candidate(for: item)
-                candidate.accessReview.previousSnapshot =
-                    extensionControllerPool.persistenceController.installation(
-                        extensionID: candidate.id, in: space.id)?.permissionSnapshot
+                let previous = extensionControllerPool.persistenceController.installation(
+                    extensionID: candidate.id, in: space.id)
+                if BrowserExtensionInstallationSource.chromeWebStore(candidate.source).authenticatesContinuity(
+                    from: previous?.source)
+                {
+                    candidate.accessReview.previousSnapshot = previous?.permissionSnapshot
+                }
                 return candidate
             },
             installChromeWebStoreExtension: {
@@ -2140,9 +2144,13 @@ final class BrowserPagePool:
             prepareMozillaAddonsExtension: {
                 [mozillaAddonsProvider, extensionControllerPool] item in
                 var candidate = try await mozillaAddonsProvider.candidate(for: item)
-                candidate.accessReview.previousSnapshot =
-                    extensionControllerPool.persistenceController.installation(
-                        extensionID: candidate.id, in: space.id)?.permissionSnapshot
+                let previous = extensionControllerPool.persistenceController.installation(
+                    extensionID: candidate.id, in: space.id)
+                if BrowserExtensionInstallationSource.mozillaAddons(candidate.source).authenticatesContinuity(
+                    from: previous?.source)
+                {
+                    candidate.accessReview.previousSnapshot = previous?.permissionSnapshot
+                }
                 return candidate
             },
             installMozillaAddonsExtension: {

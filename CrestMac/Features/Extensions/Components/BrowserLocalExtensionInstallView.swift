@@ -142,6 +142,8 @@ struct BrowserLocalExtensionInstallView: View {
                 Image(systemName: "internaldrive")
             }
 
+            identityNotice(for: candidate)
+
             if let issue = candidate.compatibility.blockingIssues.first {
                 Label {
                     VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
@@ -281,6 +283,23 @@ struct BrowserLocalExtensionInstallView: View {
             String(localized: "Couldn’t Read Extension Package")
         case .preparing, .unavailable:
             String(localized: "Install Extension Package")
+        }
+    }
+
+    @ViewBuilder
+    private func identityNotice(for candidate: BrowserLocalExtensionCandidate) -> some View {
+        if candidate.format == .firefoxXPI {
+            Text(
+                "This package’s publisher is unverified. It will be added as a separate extension with new permissions and empty private storage, even if its Firefox ID matches an installed extension."
+            )
+            .font(.callout)
+            .fixedSize(horizontal: false, vertical: true)
+        } else if let previousName = candidate.replacingDisplayName {
+            Text(
+                "Replace \(previousName) in this Space. Existing access and private storage are retained only when the verified source and publisher match. Review the access below."
+            )
+            .font(.callout)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
