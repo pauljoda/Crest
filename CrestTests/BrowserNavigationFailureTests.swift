@@ -91,11 +91,6 @@ final class BrowserNavigationFailureClassificationTests: XCTestCase {
 }
 
 @MainActor
-final class BrowserNavigationFailureViewTests: XCTestCase {
-
-}
-
-@MainActor
 final class BrowserPageNavigationFailureTests: XCTestCase {
     private var navigationSource: WKWebView?
 
