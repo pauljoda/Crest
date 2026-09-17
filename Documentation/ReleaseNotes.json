@@ -1421,6 +1421,10 @@
     "mac-titlebar-webpage-input": {
       "category": "fixed",
       "message": "Select webpage text and use controls near the top edge without moving the window"
+    },
+    "pdf-preview-download": {
+      "category": "fixed",
+      "message": "Save the displayed PDF directly from the built-in preview"
     }
   }
 }
