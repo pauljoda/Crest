@@ -1437,6 +1437,10 @@
     "reliable-extension-image-conversion": {
       "category": "fixed",
       "message": "Image-converter extensions can save JPEGs repeatedly and keep their image menus after restarting Crest"
+    },
+    "picture-in-picture-return-to-source-tab": {
+      "category": "fixed",
+      "message": "Return from Picture in Picture to the tab and browser window that started playback"
     }
   }
 }

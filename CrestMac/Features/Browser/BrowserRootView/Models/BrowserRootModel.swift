@@ -322,7 +322,7 @@ extension BrowserRootModel {
         if let tab = browser.selectedTab, tab.isStartPage,
             browser.selectedSpace?.splitGroup(containing: tab.id) == nil
         {
-            pages.deactivatePagePresentation()
+            pages.leavePagePresentation()
         } else {
             pages.select(session: browser.session)
         }

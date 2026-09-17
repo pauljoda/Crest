@@ -29,8 +29,10 @@ Reference implementation and definitions:
 - [WKPreferences desktop SPI](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKPreferencesPrivate.h)
 - [WebKit preference defaults](https://github.com/WebKit/WebKit/blob/main/Source/WTF/Scripts/Preferences/UnifiedWebPreferences.yaml)
 - [WebKit native context-menu eligibility](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/page/ContextMenuController.cpp)
+- [Native PiP control routing](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/mac/VideoPresentationInterfaceMac.mm)
+- [Inline-return delegate dispatch](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Cocoa/UIDelegate.mm)
 
-Source investigation used WebKit commit
+The original desktop preference investigation used WebKit commit
 `824d434d74a36754b75566c9939b0aef46e21757`. The links above follow upstream so
 future investigations can compare changes.
 
@@ -39,8 +41,19 @@ future investigations can compare changes.
 `BrowserPagePool` requests automatic entry only for pages leaving the visible
 tab set. Moving focus between cards in a visible split does not enter PiP.
 If multiple cards leave together, the focused card is considered first.
+Entering an unlocked empty Space or start page follows the same departure
+lifecycle. Locking a protected Space still invalidates its presentations.
 Returning to the source tab ends the PiP session Crest started automatically;
 it preserves a session the user entered manually.
+
+The native Return to tab control reaches WebKit's
+`_webViewFullscreenMayReturnToInline:` delegate callback. Crest accepts it only
+for an active, valid PiP source and resolves the exact current page through its
+runtime's owning window. It selects that tab and Space, restores the split group,
+and raises the window without replacing the media pipeline. Closed tabs,
+retired documents, unavailable windows, and locked or replaced Space profiles
+cannot activate another tab. Ordinary PiP dismissal does not request this routing.
+The page controller's `returnToTab()` is a separate tab-arrival lifecycle hook.
 
 One application-wide coordinator serves all windows and private Spaces.
 It reserves the slot before dispatching a request, rejects requests while a
@@ -106,27 +119,15 @@ separate WebKit capability and is not subject to the automatic classifier.
 
 ## Validation
 
-Ordinary tests cover default preferences, slot reservation/cancellation,
-manual occupancy, DOM player permutations, frame routing, and decorative
-embeds. Live checks also exercise WebKit's enabled native PiP context-menu
-item with automatic entry disabled, background Space locking, rapid return
-during entry, competing videos, source residency, and the YouTube watch player.
-Live tests are opt-in because they open actual system PiP windows:
+Retained tests cover slot reservation/cancellation, manual occupancy, DOM player
+eligibility, and native callback routing to the exact tab, split group, Space,
+and owning window. They also reject unavailable or inaccessible sources.
 
-```sh
-TEST_RUNNER_CREST_PIP_LIVE_TESTS=1 \
-TEST_RUNNER_CREST_PIP_WEBSITE_TESTS=1 \
-xcodebuild -project Crest.xcodeproj -scheme Crest \
-  -destination 'platform=macOS,arch=arm64' \
-  -only-testing:CrestTests/BrowserAutomaticPictureInPictureTests \
-  -only-testing:CrestTests/BrowserPictureInPicturePlayerTests \
-  -only-testing:CrestTests/BrowserPictureInPictureLiveTests test
-```
-
-The `TEST_RUNNER_` prefix passes the flags into the XCTest app process. Close
-any existing PiP session first; live tests skip when the slot is already in
-use. Website tests additionally require network access and may be affected by
-consent pages, ads, account requirements, and changes to the selected video.
+Exercise the actual macOS PiP controls in an isolated app with a disposable video
+fixture. Check manual and automatic entry, Return to tab from another tab, Space,
+and browser window, ordinary Close, playback continuity, and source navigation or
+closure. These native UI checks complement the delegate-routing tests; invoking
+the delegate directly does not establish that the system control sends it.
 
 ## Media pipeline
 

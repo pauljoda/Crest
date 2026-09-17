@@ -426,6 +426,10 @@ struct CrestApp: App {
             splitLinkHost: privateBrowser.splitLinkHost,
             linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess)
         )
+        privatePages.connectPictureInPictureSourceSelection(
+            to: privateBrowser,
+            spaceAccess: spaceAccess
+        )
         browser.tabLinkProvider = pages
         privateBrowser.tabLinkProvider = privatePages
         browser.tabCopying = pages
@@ -740,6 +744,19 @@ struct CrestApp: App {
                 .preferredColorScheme(.dark)
                 .environment(
                     \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
+                )
+                .background(
+                    BrowserMacWindowAttachment(
+                        attach: { window in
+                            privatePages.bindNativeWindow(window)
+                            privatePages.setWindowFocused(window.isKeyWindow)
+                        },
+                        focusChanged: { privatePages.setWindowFocused($0) },
+                        close: {
+                            privatePages.setWindowFocused(false)
+                            privatePages.bindNativeWindow(nil)
+                        }
+                    )
                 )
                 .onDisappear(perform: closePrivateBrowsingWindow)
             } else {

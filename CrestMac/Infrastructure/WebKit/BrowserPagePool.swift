@@ -133,6 +133,9 @@ final class BrowserPagePool:
     @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
     @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
+    @ObservationIgnored private var selectPictureInPictureSource: (BrowserTabRuntimeAssignment) -> BrowserSession? = {
+        _ in nil
+    }
     @ObservationIgnored private let activateHostedNotificationSource: (SpaceID, TabID) -> Void
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
@@ -490,10 +493,29 @@ final class BrowserPagePool:
                 browser?.selectTab(tabID)
             },
             residencyDecisionProvider: residencyDecisionProvider)
+        pool.connectPictureInPictureSourceSelection(to: browser, spaceAccess: spaceAccess)
         browser.tabLinkProvider = pool
         browser.tabCopying = pool
         pool.setWindowFocused(false)
         return pool
+    }
+
+    /// Connects a directly presented pool to the browser selection it owns.
+    func connectPictureInPictureSourceSelection(
+        to browser: BrowserStore,
+        spaceAccess: BrowserSpaceAccessController
+    ) {
+        selectPictureInPictureSource = { [weak browser, weak spaceAccess] source in
+            guard let browser, let spaceAccess,
+                let space = BrowserSidebarAccessPolicy.unlockedSpace(
+                    matching: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
+                    in: browser, accessController: spaceAccess),
+                space.tabs.contains(where: { $0.id == source.tabID })
+            else { return nil }
+            browser.selectSpace(space.id)
+            browser.selectTab(source.tabID)
+            return browser.session
+        }
     }
 
     var retainedTabIDs: Set<TabID> {
@@ -905,10 +927,12 @@ final class BrowserPagePool:
             Self.lifecycleSignposter.endInterval("Select Browser Page", interval)
         }
 
-        guard let tab, let space,
-            !isRuntimeCreationBlocked(in: space.id)
-        else {
+        guard let space, !isRuntimeCreationBlocked(in: space.id) else {
             deactivatePagePresentation(at: time)
+            return []
+        }
+        guard let tab else {
+            leavePagePresentation(at: time)
             return []
         }
         // Every member of the selected tab's split group is a live card, so
@@ -1073,6 +1097,13 @@ final class BrowserPagePool:
         extensionControllerPool.reconcileExtensionState(in: session)
         startInitialNavigations(cards)
         reconcileCredentialAccess(in: session)
+    }
+
+    /// An unlocked empty Space or start page is an ordinary departure. Keep
+    /// the same PiP lifecycle as switching between loaded tabs; security
+    /// teardown uses deactivatePagePresentation instead.
+    func leavePagePresentation(at time: Date = .now) {
+        activate(nil, presenting: [], at: time)
     }
 
     /// Removes every rendered page from presentation without evicting their
@@ -1633,6 +1664,25 @@ final class BrowserPagePool:
             inactiveSinceByTabID[tabID] = .now
         }
         closeWebContentInitiatedPage(page)
+    }
+
+    func restorePictureInPictureSourcePage(_ page: BrowserPage) {
+        guard page.pictureInPicture.canRestoreSource,
+            let tabID = tabID(for: page),
+            tabRuntimes[tabID]?.routingWindowID == windowID,
+            !isRuntimeCreationBlocked(in: page.spaceID),
+            let window = presentationWindow,
+            let session = selectPictureInPictureSource(
+                BrowserTabRuntimeAssignment(tabID: tabID, spaceID: page.spaceID, profileID: page.profileID))
+        else { return }
+        // Claim the existing runtime and its split group through normal
+        // selection. WebKit finishes returning the original video inline once
+        // SwiftUI reattaches its view; never recreate or navigate the page here.
+        setWindowFocused(true)
+        select(session: session)
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate()
     }
 
     func activateNotificationSourcePage(_ page: BrowserPage) {
@@ -2354,11 +2404,11 @@ final class BrowserPagePool:
     /// unfocused: every presented card is cleared, and only a tab the new set
     /// leaves behind starts counting as inactive.
     private func activate(
-        _ tabID: TabID,
+        _ tabID: TabID?,
         presenting presentedTabIDs: [TabID],
         at time: Date
     ) {
-        prepareFocusTransition(to: tabRuntimes[tabID]?.page)
+        prepareFocusTransition(to: tabID.flatMap { tabRuntimes[$0]?.page })
         let departed = Set(self.presentedTabIDs).subtracting(presentedTabIDs)
         // Only pages leaving the visible set qualify. Moving focus within a
         // split must not float a video that is still visible beside the tab.

@@ -31,8 +31,8 @@ the live status for each issue.
 - [ ] [Choose which sidebar widgets appear](https://github.com/pauljoda/Crest/issues/160)
 - [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
 - [ ] [Make unloaded-tab dimming optional](https://github.com/pauljoda/Crest/issues/162)
-- [ ] [Investigate WebP conversion and Slack Huddle behavior](https://github.com/pauljoda/Crest/issues/163)
 - [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
+- [ ] [Return from picture-in-picture to the originating tab](https://github.com/pauljoda/Crest/issues/166)
 
 #### Completed
 
@@ -42,6 +42,7 @@ the live status for each issue.
 - [x] [Apply browser border size to Quick Windows](https://github.com/pauljoda/Crest/issues/147) — [`e2dd9187`](https://github.com/pauljoda/Crest/commit/e2dd9187d6a1345c5a1106726e64bdae012d67f0)
 - [x] [Restore downloads from the built-in PDF preview](https://github.com/pauljoda/Crest/issues/150) — [`616f92d7`](https://github.com/pauljoda/Crest/commit/616f92d745b82c36cf78daded5e7174d83ab1669)
 - [x] [Preserve webpage text interaction beneath the hidden title bar](https://github.com/pauljoda/Crest/issues/155) — [`9610550a`](https://github.com/pauljoda/Crest/commit/9610550a5690bbad15ef3bf37087c9dd085921b6)
+- [x] [Investigate WebP conversion and Slack Huddle behavior](https://github.com/pauljoda/Crest/issues/163) — [`f0de6ca2`](https://github.com/pauljoda/Crest/commit/f0de6ca247b6a769941e70042564aeebb6592011)
 
 #### Not planned
 
@@ -70,5 +71,7 @@ Repeat these checks for each release candidate.
 - Run the real-world migration corpus for bookmarks, tabs, folders, and portable archives from supported source browsers.
 
 ## Active platform work
+
+- [Image-conversion compatibility](https://github.com/pauljoda/Crest/issues/163) is delivered. Slack Huddles remain deferred and are not claimed fixed or validated.
 
 - Extension work is active on macOS. Preserve per-Space isolation, prefer Safari Web Extension app bundles where native integration is required, and report WebKit compatibility limits instead of presenting partially initialized extension UI as working.
