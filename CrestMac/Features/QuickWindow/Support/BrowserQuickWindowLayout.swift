@@ -16,6 +16,7 @@ enum BrowserQuickWindowLayout {
     static let toolbarTopPadding: CGFloat = horizontalPadding
     static let toolbarSpacing: CGFloat = 8
     static let sourceChipHorizontalPadding: CGFloat = 9
+    static let sourceChipLeadingInset: CGFloat = (controlHeight - CrestLayout.minimumHitTarget) / 2
     static let windowControlClearance: CGFloat = 92
     static let spacePickerWidth: CGFloat = 240
     static let spacePickerRowHeight: CGFloat = 38

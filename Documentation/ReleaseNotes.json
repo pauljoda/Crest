@@ -1445,6 +1445,10 @@
     "optional-unloaded-tab-dimming": {
       "category": "improved",
       "message": "Choose whether unloaded tabs appear dimmed in Look and Feel settings"
+    },
+    "balanced-quick-window-space-padding": {
+      "category": "improved",
+      "message": "Quick Window Space indicators now use balanced padding."
     }
   }
 }

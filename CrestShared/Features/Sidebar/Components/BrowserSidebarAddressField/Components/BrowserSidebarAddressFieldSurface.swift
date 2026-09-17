@@ -9,6 +9,7 @@ import SwiftUI
 /// surface without adopting the sidebar's anatomy.
 struct BrowserSidebarAddressFieldSurface: ViewModifier {
     var metrics = BrowserSidebarAddressFieldMetrics.pointer
+    var leadingPadding: CGFloat? = nil
     let progress: Double
     let isLoading: Bool
     let isEditing: Bool
@@ -21,7 +22,11 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     @Environment(\.spaceChromeForeground) private var spaceForeground
 
     func body(content: Content) -> some View {
-        band(content.padding(.horizontal, metrics.horizontalPadding))
+        band(
+            content
+                .padding(.leading, leadingPadding ?? metrics.horizontalPadding)
+                .padding(.trailing, metrics.horizontalPadding)
+        )
             .background {
                 ZStack(alignment: .leading) {
                     fieldShape.fill((spaceForeground ?? .primary).opacity(CrestOpacity.chromeSurface))
@@ -86,6 +91,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
 extension View {
     func browserAddressFieldSurface(
         metrics: BrowserSidebarAddressFieldMetrics = .pointer,
+        leadingPadding: CGFloat? = nil,
         progress: Double,
         isLoading: Bool,
         isEditing: Bool,
@@ -94,6 +100,7 @@ extension View {
         modifier(
             BrowserSidebarAddressFieldSurface(
                 metrics: metrics,
+                leadingPadding: leadingPadding,
                 progress: progress,
                 isLoading: isLoading,
                 isEditing: isEditing,
