@@ -24,6 +24,9 @@
         }
       }
     },
+    "%@ — Not Downloaded" : {
+
+    },
     "%@ · %@" : {
       "localizations" : {
         "ar" : {
@@ -731,6 +734,16 @@
     },
     "%lld items selected" : {
 
+    },
+    "%lld of %lld selected" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld selected"
+          }
+        }
+      }
     },
     "%lld passwords" : {
       "comment" : "Password count shown while reviewing a browser import.",
@@ -1639,6 +1652,9 @@
         }
       }
     },
+    "A selected Space is no longer available." : {
+
+    },
     "A small symbol with a little personality." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2529,6 +2545,9 @@
     "Always show folder highlights" : {
 
     },
+    "Always Translate %@" : {
+
+    },
     "An open source browser for Mac, iPhone, and iPad." : {
 
     },
@@ -2894,6 +2913,9 @@
     "Automatic" : {
 
     },
+    "Automatic download blocked. Use Allow Download to retry, or change Automatic Downloads in this site’s permissions." : {
+
+    },
     "Automatic Pop-ups" : {
 
     },
@@ -2926,7 +2948,7 @@
     "Automatically Translate" : {
 
     },
-    "Automatically Translate is off by default. When enabled, Crest uses your preferred device language and only languages already downloaded. The translation controls show when a page was automatically translated. Show Original keeps that page in its original language until you navigate or reload." : {
+    "Automatically Translate is off by default. Choose which languages to translate and their destination languages in Settings → General → Page Translation. Only enabled language mappings with downloaded languages translate automatically. Automatic translation never opens a translation bar or asks to download languages. Open the translation controls to check status or download missing languages. Turn off Offer to Translate to stop automatic offers. Show Original keeps that page in its original language until you navigate or reload." : {
 
     },
     "Automatically translated available text to %@. Some content was too large or changed during translation." : {
@@ -3210,6 +3232,7 @@
 
     },
     "Blocked an automatic download from this site." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3425,7 +3448,7 @@
         }
       }
     },
-    "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse" : {
+    "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair" : {
 
     },
     "Browser window preview" : {
@@ -3455,8 +3478,25 @@
     "Browsing and startup" : {
 
     },
-    "Build" : {
-
+    "Build %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Build %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Build %@, bundle identifier: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Build %1$@, bundle identifier: %2$@"
+          }
+        }
+      }
     },
     "Build a shield from a field, ordinary, charge, and restrained outer trim." : {
       "extractionState" : "stale",
@@ -3481,9 +3521,6 @@
       }
     },
     "Built-In" : {
-
-    },
-    "Bundle identifier" : {
 
     },
     "Cancel" : {
@@ -3674,6 +3711,9 @@
       }
     },
     "Checking for Updates" : {
+
+    },
+    "Checking Languages…" : {
 
     },
     "Checking passkey access" : {
@@ -3897,6 +3937,9 @@
       }
     },
     "Choose Folder…" : {
+
+    },
+    "Choose Language" : {
 
     },
     "Choose one detail to change. See the result as you go." : {
@@ -4618,6 +4661,9 @@
         }
       }
     },
+    "Copies use the current permissions from %@. Each Space keeps its own extension data; existing data is not copied." : {
+
+    },
     "Copy as Markdown" : {
       "localizations" : {
         "ar" : {
@@ -4685,6 +4731,9 @@
       }
     },
     "Corner radius" : {
+
+    },
+    "Could not open language downloads. Open your device’s language settings to manage downloaded translation languages." : {
 
     },
     "Couldn’t change app icon" : {
@@ -5785,6 +5834,9 @@
         }
       }
     },
+    "Defaults" : {
+
+    },
     "delete" : {
       "localizations" : {
         "ar" : {
@@ -6172,6 +6224,12 @@
       }
     },
     "Download Actions" : {
+
+    },
+    "Download both languages in Apple’s Translate app, then refresh this list." : {
+
+    },
+    "Download both languages to use this mapping" : {
 
     },
     "download files transfers" : {
@@ -8971,6 +9029,12 @@
     "Inside %@" : {
 
     },
+    "Install a copy in other spaces" : {
+
+    },
+    "Install a Copy in Other Spaces" : {
+
+    },
     "Install an unpacked extension or ZIP in this Space" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8992,6 +9056,9 @@
           }
         }
       }
+    },
+    "Install Copies" : {
+
     },
     "Installed in this Space" : {
       "localizations" : {
@@ -10019,6 +10086,9 @@
     "New" : {
 
     },
+    "New Blank Window" : {
+
+    },
     "New Browser Window" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10272,6 +10342,9 @@
     "No Custom Search Engines" : {
 
     },
+    "No downloaded language pairs" : {
+
+    },
     "No Downloads" : {
       "localizations" : {
         "ar" : {
@@ -10365,9 +10438,6 @@
     "No Matching Emoji" : {
 
     },
-    "No Matching Icons" : {
-
-    },
     "No Matching Passwords" : {
       "localizations" : {
         "ar" : {
@@ -10377,6 +10447,9 @@
           }
         }
       }
+    },
+    "No other Spaces are available. Unlock a Space to include it; Spaces that already have this extension are excluded." : {
+
     },
     "No passwords saved for this site" : {
 
@@ -10561,6 +10634,9 @@
           }
         }
       }
+    },
+    "Offer to Translate" : {
+
     },
     "Offering a copy to Passwords requires iOS or iPadOS 26.2 or later." : {
       "localizations" : {
@@ -10914,6 +10990,9 @@
           }
         }
       }
+    },
+    "Open Translate…" : {
+
     },
     "Open-tab import accepts a copied Safari session property list, cleartext Chrome or Chromium Session_* file, Firefox recovery.jsonlz4 or sessionstore.jsonlz4, or Arc StorableSidebar.json. Each source window becomes a fresh, isolated Crest Space; profile-encrypted Chromium sessions cannot be imported." : {
       "localizations" : {
@@ -12326,6 +12405,9 @@
     "Reddit is public. Remove passwords, private URLs, browsing history, and other sensitive information before posting. Use GitHub Issues for reports with a Crest version, Apple platform, and repeatable steps." : {
 
     },
+    "Refresh Languages" : {
+
+    },
     "Regional" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -12339,6 +12421,9 @@
     },
     "Regular" : {
       "extractionState" : "manual"
+    },
+    "Reimport this local Firefox package to review its access. Previous unverified identity, permissions, and storage have been isolated." : {
+
     },
     "Rejected rows" : {
 
@@ -14237,6 +14322,9 @@
         }
       }
     },
+    "Site Permissions" : {
+
+    },
     "site rule" : {
       "localizations" : {
         "ar" : {
@@ -14352,6 +14440,9 @@
           }
         }
       }
+    },
+    "Some copies could not be installed. Completed installations were kept." : {
+
     },
     "Some features may not work correctly. Try turning the extension off and back on. If the problem continues, update or reinstall it." : {
       "localizations" : {
@@ -15393,6 +15484,9 @@
     "Teeth" : {
 
     },
+    "temporary disposable unsynced window" : {
+
+    },
     "TEST" : {
 
     },
@@ -15996,6 +16090,9 @@
         }
       }
     },
+    "This package cannot replace an extension from a different source. Remove the existing installation and its data before installing from this source." : {
+
+    },
     "This page could not be presented in Reader Mode." : {
       "localizations" : {
         "ar" : {
@@ -16252,10 +16349,16 @@
     "Translate" : {
 
     },
+    "Translate %@ to" : {
+
+    },
     "Translate From" : {
 
     },
     "Translate Now" : {
+
+    },
+    "Translate only the languages you turn on below, using their chosen destination. Other languages stay unchanged. Automatic translation never shows a popup or downloads languages." : {
 
     },
     "Translate Page" : {
@@ -16264,7 +16367,7 @@
     "Translate Page Again" : {
 
     },
-    "Translate pages into your preferred device language when the required languages are already downloaded. Other pages show a translation offer. Automatic translation never downloads languages." : {
+    "Translate to" : {
 
     },
     "Translate To" : {
@@ -16719,6 +16822,9 @@
           }
         }
       }
+    },
+    "Unlock the source Space before copying its extensions." : {
+
     },
     "Unlock to view your tabs." : {
 
@@ -17193,6 +17299,9 @@
     "Version" : {
 
     },
+    "Version %@" : {
+
+    },
     "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community" : {
 
     },
@@ -17271,6 +17380,9 @@
         }
       }
     },
+    "Wants to download multiple files automatically" : {
+
+    },
     "Wants to send notifications while this page is open" : {
 
     },
@@ -17278,6 +17390,9 @@
 
     },
     "Wants to use your camera and microphone" : {
+
+    },
+    "Wants to use your location" : {
 
     },
     "Wants to use your microphone" : {

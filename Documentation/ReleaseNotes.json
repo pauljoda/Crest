@@ -1417,6 +1417,10 @@
     "manual-development-build-validation": {
       "category": "internal",
       "message": "Run the Build Crest workflow only when manually requested"
+    },
+    "mac-titlebar-webpage-input": {
+      "category": "fixed",
+      "message": "Select webpage text and use controls near the top edge without moving the window"
     }
   }
 }
