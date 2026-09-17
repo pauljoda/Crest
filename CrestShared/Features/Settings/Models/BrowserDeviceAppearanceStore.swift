@@ -6,6 +6,7 @@ struct BrowserTabAppearance: Codable, Equatable, Sendable {
     var borders: Borders = .selected
     var outlinesSelectedTabs = false
     var usesWebsitePinColor = true
+    var dimsUnloadedTabs = true
     var pinFill: Double = 0
     var pinGlow: Double = 0
     var hoverFill: Double = 0
@@ -25,7 +26,7 @@ struct BrowserAddressAppearance: Codable, Equatable, Sendable {
 
 extension BrowserTabAppearance {
     private enum CodingKeys: String, CodingKey {
-        case borders, outlinesSelectedTabs, usesWebsitePinColor
+        case borders, outlinesSelectedTabs, usesWebsitePinColor, dimsUnloadedTabs
         case pinFill, pinGlow, hoverFill, color
     }
 
@@ -35,6 +36,7 @@ extension BrowserTabAppearance {
         borders = (try? values.decode(Borders.self, forKey: .borders)) ?? .selected
         outlinesSelectedTabs = (try? values.decode(Bool.self, forKey: .outlinesSelectedTabs)) ?? false
         usesWebsitePinColor = (try? values.decode(Bool.self, forKey: .usesWebsitePinColor)) ?? true
+        dimsUnloadedTabs = (try? values.decode(Bool.self, forKey: .dimsUnloadedTabs)) ?? true
         pinFill = Self.intensity((try? values.decode(Double.self, forKey: .pinFill)) ?? 0)
         pinGlow = Self.intensity((try? values.decode(Double.self, forKey: .pinGlow)) ?? 0)
         hoverFill = Self.intensity((try? values.decode(Double.self, forKey: .hoverFill)) ?? 0)

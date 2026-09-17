@@ -1441,6 +1441,10 @@
     "picture-in-picture-return-to-source-tab": {
       "category": "fixed",
       "message": "Return from Picture in Picture to the tab and browser window that started playback"
+    },
+    "optional-unloaded-tab-dimming": {
+      "category": "improved",
+      "message": "Choose whether unloaded tabs appear dimmed in Look and Feel settings"
     }
   }
 }
