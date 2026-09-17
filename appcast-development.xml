@@ -6,41 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.20</title>
-            <pubDate>Wed, 16 Sep 2026 23:41:39 +0000</pubDate>
+            <title>0.6.21</title>
+            <pubDate>Thu, 17 Sep 2026 00:31:16 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1115</sparkle:version>
-            <sparkle:shortVersionString>0.6.20</sparkle:shortVersionString>
+            <sparkle:version>1116</sparkle:version>
+            <sparkle:shortVersionString>0.6.21</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Choose extension access during installation and install independent copies in multiple Spaces
-
 ### Fixed
 
-- Keep blocked and expired extension permissions disabled after reloads and restarts
-- Open a single browser window when finishing setup
-- Honor changed extension permissions and locked Spaces during pending operations
-- Show successful extension installations when copies in other Spaces cannot be completed
-- Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state.
+- Keep permissions and private data separate when importing unsigned Firefox extensions
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/da0c62f2ce6e1abe323150775402a366f1884be1...06d46846f05c7d42d04362037bfbbc9f80373874) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.20-2026-09-16-1115-r115.1/Installer-Crest-0.6.20-development-2026-09-16-06d4684-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/06d46846f05c7d42d04362037bfbbc9f80373874...361a1e92cd2652e21746e3e3376a54aad70f1c5b) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.21-2026-09-17-1116-r116.1/Installer-Crest-0.6.21-development-2026-09-17-361a1e9-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.20-2026-09-16-1115-r115.1/Installer-Crest-0.6.20-development-2026-09-16-06d4684-arm64.dmg" length="27134261" type="application/octet-stream" sparkle:edSignature="dyJ3ID8iEuWkC1Ed7/GW0L7gosx2jH99AFYT6sXjj4Zj0qq5qw81I/xz0y+uXkYuUa/vFKYf9+9mBDHdyFd/BA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.21-2026-09-17-1116-r116.1/Installer-Crest-0.6.21-development-2026-09-17-361a1e9-arm64.dmg" length="27138356" type="application/octet-stream" sparkle:edSignature="f6WTnbGoK9b3xoQCoyrkZinMhKEjALsM5aV5ebU0xf5jcNmSWjJfcsYkQBoGVS4MUMS1BJFYlTPCCE/aSWoyBQ=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: FEw4kUtzkqXqFRtjyv6kawsps7ZGV2V46kMckAJSjref7sGU9fUP+kqkmAPCY4XwGp0YsOXnl/yZg89M9E6OBQ==
-length: 2489
+edSignature: rDTcKNUtN0K0nBccaoTTnzNiDAsvDmOEYIaW7/BVR4szeWyaxhH+ZK401LItK6nmN5N0muZdxgYtlfT0kVW8Dg==
+length: 2047
 -->
