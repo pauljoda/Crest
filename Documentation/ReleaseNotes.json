@@ -1409,6 +1409,14 @@
     "automatic-development-publication-after-pr-merge": {
       "category": "internal",
       "message": "Dispatch the development release workflow when a pull request is merged into main."
+    },
+    "isolate-unsigned-extension-imports": {
+      "category": "fixed",
+      "message": "Keep permissions and private data separate when importing unsigned Firefox extensions"
+    },
+    "manual-development-build-validation": {
+      "category": "internal",
+      "message": "Run the Build Crest workflow only when manually requested"
     }
   }
 }

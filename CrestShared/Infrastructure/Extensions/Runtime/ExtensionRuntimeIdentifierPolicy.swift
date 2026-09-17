@@ -96,8 +96,12 @@ enum BrowserExtensionRuntimeIdentifierPolicy {
         {
             return url(host: extensionID.lowercased())
         }
-        let originIdentifier =
-            "\(extensionID).space.\(spaceID.rawValue.uuidString.lowercased())"
+        let originIdentifier: String
+        if case .localPackage(let local) = source, local.format == .firefoxXPI {
+            originIdentifier = identifier(extensionID: extensionID, source: source, spaceID: spaceID)
+        } else {
+            originIdentifier = "\(extensionID).space.\(spaceID.rawValue.uuidString.lowercased())"
+        }
         let digest = SHA256.hash(data: Data(originIdentifier.utf8))
             .map { String(format: "%02x", $0) }
             .joined()
@@ -135,6 +139,12 @@ enum BrowserExtensionRuntimeIdentifierPolicy {
             chromeSource.extensionID.rawValue == extensionID
         {
             return extensionID
+        }
+        if case .localPackage(let local) = source, local.format == .firefoxXPI {
+            // Persisted with the installation so relaunch preserves only this
+            // import's storage. A new unverified import cannot reuse its origin.
+            return
+                "local.xpi.\(local.storageIdentifier ?? local.sha256Hex).space.\(spaceID.rawValue.uuidString.lowercased())"
         }
         return "\(extensionID).space.\(spaceID.rawValue.uuidString.lowercased())"
     }

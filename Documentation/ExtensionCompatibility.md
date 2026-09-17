@@ -34,6 +34,18 @@ Do not publish a blanket claim that all Chrome or all Firefox extensions work.
   remains a local package because the file alone cannot reproduce its Firefox
   Add-ons listing provenance. Both formats are copied into the selected Space,
   and neither receives store updates or verified native-companion access.
+  Each local XPI import gets a new local identity and empty private storage,
+  including a repeat import of the same file. A declared Gecko ID remains in
+  the manifest for compatibility; it does not select an existing installation
+  or authorize its permissions. The review sheet identifies this as a separate
+  installation. Existing local XPI records from older versions are disabled,
+  their grants cleared, and their old identity and storage isolated until the
+  package is reimported and reviewed.
+  Verified same-source Chrome CRX, Chrome Web Store, and Firefox Add-ons updates
+  retain their reviewed access and storage. Switching between installation
+  sources is rejected: remove the existing installation and its data before
+  installing from a different source. Private storage is not migrated between
+  unverified packages.
 - Extension installations remain **per Space and per device**. Permissions,
   storage, enablement, website access, and pinning do not silently cross into
   another Space or device.

@@ -61,6 +61,8 @@ struct BrowserLocalExtensionSource: Codable, Equatable, Sendable {
     let extensionID: String
     let format: BrowserLocalExtensionPackageFormat
     let sha256Hex: String
+    var declaredGeckoID: String? = nil
+    var storageIdentifier: String? = nil
 }
 
 /// Validated archive bytes ready to be copied into one Space.
@@ -72,6 +74,8 @@ struct BrowserLocalExtensionPackage: Equatable, Sendable {
     let format: BrowserLocalExtensionPackageFormat
     let payload: BrowserLocalExtensionPackagePayload
     let sha256Hex: String
+    var declaredGeckoID: String? = nil
+    var storageIdentifier: String? = nil
 
     init(
         extensionID: String,

@@ -111,6 +111,10 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space.id
         )
+        let incomingSource = BrowserExtensionInstallationSource.chromeWebStore(candidate.source)
+        if let previous, !incomingSource.permitsReplacement(of: previous.source) {
+            throw BrowserExtensionControllerPoolError.unauthenticatedReplacement
+        }
         let package = try await persistence.stage(
             candidate.verifiedPackage,
             in: space.id
@@ -266,6 +270,10 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space.id
         )
+        let incomingSource = BrowserExtensionInstallationSource.mozillaAddons(candidate.source)
+        if let previous, !incomingSource.permitsReplacement(of: previous.source) {
+            throw BrowserExtensionControllerPoolError.unauthenticatedReplacement
+        }
         let package = try await persistence.stage(
             candidate.verifiedPackage,
             in: space.id
@@ -404,6 +412,12 @@ extension BrowserExtensionInstallationController {
         in space: BrowserSpace
     ) async throws -> BrowserExtensionSummary {
         let extensionID = candidate.id
+        if candidate.format == .firefoxXPI {
+            guard extensionID.hasPrefix("local.xpi."),
+                let storageID = candidate.source.storageIdentifier,
+                UUID(uuidString: storageID) != nil
+            else { throw BrowserExtensionControllerPoolError.invalidInstallationRecord }
+        }
         guard candidate.package.extensionID == extensionID,
             candidate.source.extensionID == extensionID,
             candidate.source.sha256Hex == candidate.package.sha256Hex
@@ -420,6 +434,10 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space.id
         )
+        let incomingSource = BrowserExtensionInstallationSource.localPackage(candidate.source)
+        if let previous, !incomingSource.permitsReplacement(of: previous.source) {
+            throw BrowserExtensionControllerPoolError.unauthenticatedReplacement
+        }
         let package = try await persistence.stage(
             candidate.package,
             in: space.id

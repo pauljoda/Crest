@@ -455,13 +455,14 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         await session.prepare(from: .success([source]))
         var review = BrowserExtensionInstallationPermissionPolicy.Review()
         review.additionalSpaceIDs = [SpaceID()]
+        let candidateID = try XCTUnwrap(session.phase.candidate?.id)
         session.install(review: review)
         let deadline = ContinuousClock.now.advanced(by: .seconds(5))
         while session.isInstalling && ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }
         XCTAssertFalse(session.isInstalling)
-        XCTAssertNotNil(registry.installation(extensionID: fixture.extensionID.rawValue, in: space.id))
+        XCTAssertNotNil(registry.installation(extensionID: candidateID, in: space.id))
         guard case .installed = session.phase else {
             return XCTFail("The committed primary must have completion state, not a retry-install action")
         }
@@ -495,7 +496,8 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             nativeMessagingCapability: .available
         ).candidate(for: sourceURL)
 
-        XCTAssertEqual(candidate.id, fixture.extensionID.rawValue)
+        XCTAssertTrue(candidate.id.hasPrefix("local.xpi."))
+        XCTAssertEqual(candidate.source.declaredGeckoID, fixture.extensionID.rawValue)
         XCTAssertEqual(candidate.format, .firefoxXPI)
         XCTAssertEqual(candidate.package.archiveData, fixture.archiveData)
         XCTAssertEqual(candidate.source.sha256Hex, fixture.sha256Hex)
@@ -1199,6 +1201,131 @@ final class BrowserMozillaAddonsTests: XCTestCase {
     }
 
     // MARK: - Fixtures
+
+    func testUnsignedImportCannotInheritStoreIdentityGrantsOrStorage() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "crest-source-continuity-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let files = root.appending(path: "Source")
+        try FileManager.default.createDirectory(at: files, withIntermediateDirectories: true)
+        try Data(
+            #"{"manifest_version":2,"name":"Continuity fixture","version":"1.0","permissions":["storage"],"optional_permissions":["tabs"],"browser_specific_settings":{"gecko":{"id":"continuity@crest.test"}}}"#
+                .utf8
+        )
+        .write(to: files.appending(path: "manifest.json"))
+        try Data("<!doctype html><body>Continuity probe</body>".utf8).write(to: files.appending(path: "probe.html"))
+        let archive = root.appending(path: "fixture.xpi")
+        try createZipArchive(from: files, at: archive)
+        let bytes = try Data(contentsOf: archive)
+        let digest = Data(SHA256.hash(data: bytes)).hexString
+        let id = try XCTUnwrap(BrowserMozillaExtensionID("continuity@crest.test"))
+        let item = try XCTUnwrap(
+            BrowserMozillaAddonsItem(url: URL(string: "https://addons.mozilla.org/en-US/firefox/addon/continuity/")!))
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(rootURL: root.appending(path: "Packages")),
+            registry: registry, usesEphemeralWebKitStorage: false)
+        let space = BrowserSession.preview.spaces[0]
+        defer { WKWebsiteDataStore.remove(forIdentifier: space.profile.id) { _ in } }
+        // A test-controlled trusted acquisition result; no remote installation is exercised.
+        var trusted = candidate(
+            item: item, extensionID: id, archiveData: bytes, sourceDigest: digest, packageDigest: digest)
+        trusted.accessReview.permissions["storage"] = true
+        _ = try await pool.installMozillaAddonsExtension(trusted, in: space)
+        pool.setPermissionDecision(.allow, for: "storage", extensionID: id.rawValue, in: space.id)
+        pool.setPermissionDecision(.allow, for: "tabs", extensionID: id.rawValue, in: space.id)
+        let original = try XCTUnwrap(pool.loadedContext(extensionID: id.rawValue, in: space.id))
+        let originalPage = try await continuityPage(original)
+        _ = try await originalPage.callAsyncJavaScript(
+            "await browser.storage.local.set({marker:'trusted-private-value'}); return true;", arguments: [:],
+            contentWorld: .page)
+
+        let session = BrowserLocalExtensionInstallSession(space: space, extensionControllerPool: pool)
+        await session.prepare(from: .success([archive]))
+        let imported = try XCTUnwrap(session.phase.candidate)
+        XCTAssertNotEqual(imported.id, id.rawValue, "A manifest ID is not authenticated provenance")
+        XCTAssertNil(imported.accessReview.previousSnapshot)
+        session.dismiss()
+        XCTAssertTrue(pool.loadedContext(extensionID: id.rawValue, in: space.id) === original)
+        _ = try await pool.installLocalExtension(imported, in: space)
+        let local = try XCTUnwrap(pool.loadedContext(extensionID: imported.id, in: space.id))
+        let localPage = try await continuityPage(local)
+        let marker =
+            try await localPage.callAsyncJavaScript(
+                "return (await browser.storage.local.get('marker')).marker ?? 'empty';", arguments: [:],
+                contentWorld: .page) as? String
+        XCTAssertNotEqual(local.baseURL, original.baseURL)
+        XCTAssertNotEqual(local.uniqueIdentifier, original.uniqueIdentifier)
+        XCTAssertEqual(marker, "empty")
+        XCTAssertNil(
+            registry.installation(extensionID: imported.id, in: space.id)?.permissionSnapshot.grantedPermissions["tabs"]
+        )
+        XCTAssertEqual(
+            registry.installation(extensionID: id.rawValue, in: space.id)?.source, .mozillaAddons(trusted.source))
+        _ = try await localPage.callAsyncJavaScript(
+            "await browser.storage.local.set({marker:'local-only'}); return true;", arguments: [:], contentWorld: .page)
+        let second = try await BrowserLocalExtensionProvider().candidate(for: archive)
+        XCTAssertNotEqual(second.id, imported.id, "Reimporting an unsigned package cannot authenticate an update")
+        _ = try await pool.installLocalExtension(second, in: space)
+        let secondContext = try XCTUnwrap(pool.loadedContext(extensionID: second.id, in: space.id))
+        let secondPage = try await continuityPage(secondContext)
+        let secondMarker =
+            try await secondPage.callAsyncJavaScript(
+                "return (await browser.storage.local.get('marker')).marker ?? 'empty';", arguments: [:],
+                contentWorld: .page) as? String
+        XCTAssertEqual(secondMarker, "empty")
+        // A legitimate authenticated same-source replacement keeps its private
+        // state and previously reviewed optional access.
+        _ = try await pool.installMozillaAddonsExtension(trusted, in: space)
+        let updated = try XCTUnwrap(pool.loadedContext(extensionID: id.rawValue, in: space.id))
+        XCTAssertEqual(updated.baseURL, original.baseURL)
+        let updatedPage = try await continuityPage(updated)
+        let updatedMarker =
+            try await updatedPage.callAsyncJavaScript(
+                "return (await browser.storage.local.get('marker')).marker;", arguments: [:], contentWorld: .page)
+            as? String
+        XCTAssertEqual(updatedMarker, "trusted-private-value")
+        XCTAssertEqual(
+            registry.installation(extensionID: id.rawValue, in: space.id)?.permissionSnapshot.grantedPermissions[
+                "tabs"], .distantFuture)
+        let serialized = try JSONEncoder().encode(registry.installations)
+        for context in pool.controller(for: space).extensionContexts {
+            try? pool.controller(for: space).unload(context)
+        }
+        let restoredRegistry = BrowserExtensionRegistry(
+            persistence: InMemoryBrowserExtensionRegistryPersistence(
+                installations: try JSONDecoder().decode([BrowserExtensionInstallation].self, from: serialized)))
+        let restored = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(
+                rootURL: root.appending(path: "Packages"), removesRootOnDeinit: false),
+            registry: restoredRegistry, usesEphemeralWebKitStorage: false)
+        await restored.restoreEnabledExtensions(in: [space])
+        let restoredLocal = try XCTUnwrap(restored.loadedContext(extensionID: imported.id, in: space.id))
+        XCTAssertEqual(restoredLocal.baseURL, local.baseURL)
+        let restoredPage = try await continuityPage(restoredLocal)
+        let restoredMarker =
+            try await restoredPage.callAsyncJavaScript(
+                "return (await browser.storage.local.get('marker')).marker;", arguments: [:], contentWorld: .page)
+            as? String
+        XCTAssertEqual(restoredMarker, "local-only")
+        XCTAssertNil(
+            restoredRegistry.installation(extensionID: imported.id, in: space.id)?.permissionSnapshot
+                .grantedPermissions["tabs"])
+        for context in restored.controller(for: space).extensionContexts {
+            try? restored.controller(for: space).unload(context)
+        }
+    }
+
+    private func continuityPage(_ context: WKWebExtensionContext) async throws -> WKWebView {
+        let page = WKWebView(frame: .zero, configuration: try XCTUnwrap(context.webViewConfiguration))
+        page.load(URLRequest(url: context.baseURL.appending(path: "probe.html")))
+        for _ in 0..<100 {
+            if (try? await page.evaluateJavaScript("document.body?.textContent")) as? String == "Continuity probe" {
+                return page
+            }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        throw CocoaError(.fileReadUnknown)
+    }
 
     private func mozillaSource() throws -> BrowserMozillaAddonsSource {
         BrowserMozillaAddonsSource(

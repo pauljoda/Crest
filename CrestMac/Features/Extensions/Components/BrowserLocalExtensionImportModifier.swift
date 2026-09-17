@@ -20,12 +20,16 @@ struct BrowserLocalExtensionImportModifier: ViewModifier {
 }
 
 extension UTType {
-    fileprivate static let crestChromeCRX = UTType(
-        importedAs: "com.google.chrome.crx",
-        conformingTo: .data
-    )
-    fileprivate static let crestFirefoxXPI = UTType(
-        importedAs: "org.mozilla.firefox.xpi",
-        conformingTo: .zip
-    )
+    fileprivate static let crestChromeCRX =
+        UTType(filenameExtension: "crx")
+        ?? UTType(
+            importedAs: "com.google.chrome.crx",
+            conformingTo: .data
+        )
+    fileprivate static let crestFirefoxXPI =
+        UTType(filenameExtension: "xpi")
+        ?? UTType(
+            importedAs: "org.mozilla.firefox.xpi",
+            conformingTo: .zip
+        )
 }

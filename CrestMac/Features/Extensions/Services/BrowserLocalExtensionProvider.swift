@@ -62,10 +62,7 @@ final class BrowserLocalExtensionProvider {
                 throw BrowserLocalExtensionProviderError.invalidArchive
             }
             package = BrowserLocalExtensionPackage(
-                extensionID: BrowserExtensionUnpackedIdentityPolicy.extensionID(
-                    for: sourceURL,
-                    fileManager: fileManager
-                ),
+                extensionID: "local.xpi." + UUID().uuidString.lowercased(),
                 format: format,
                 archiveData: selectedData,
                 sha256Hex: Data(SHA256.hash(data: selectedData)).hexString
@@ -75,7 +72,7 @@ final class BrowserLocalExtensionProvider {
         }
 
         let webExtension = try await inspect(package)
-        let resolvedPackage = try packageWithManifestIdentity(
+        let resolvedPackage = try packageWithLocalProvenance(
             package,
             manifest: webExtension.manifest
         )
@@ -132,25 +129,23 @@ final class BrowserLocalExtensionProvider {
         return try await WKWebExtension(resourceBaseURL: temporaryURL)
     }
 
-    private func packageWithManifestIdentity(
+    private func packageWithLocalProvenance(
         _ package: BrowserLocalExtensionPackage,
         manifest: [String: Any]
     ) throws -> BrowserLocalExtensionPackage {
-        guard package.format == .firefoxXPI,
-            let declaredIdentity = declaredFirefoxIdentity(in: manifest)
-        else {
-            return package
+        guard package.format == .firefoxXPI else { return package }
+        var resolved = package
+        // The selected file identifies a local import, never a publisher.
+        // Every import gets a new authority/storage lineage, including reimports
+        // of the same file. The manifest remains intact for Firefox compatibility.
+        resolved.storageIdentifier = UUID().uuidString.lowercased()
+        if let declaredIdentity = declaredFirefoxIdentity(in: manifest) {
+            guard let declaredID = BrowserMozillaExtensionID(declaredIdentity) else {
+                throw BrowserLocalExtensionProviderError.invalidFirefoxIdentity
+            }
+            resolved.declaredGeckoID = declaredID.rawValue
         }
-        guard let extensionID = BrowserMozillaExtensionID(declaredIdentity)
-        else {
-            throw BrowserLocalExtensionProviderError.invalidFirefoxIdentity
-        }
-        return BrowserLocalExtensionPackage(
-            extensionID: extensionID.rawValue,
-            format: package.format,
-            archiveData: package.archiveData,
-            sha256Hex: package.sha256Hex
-        )
+        return resolved
     }
 
     private func declaredFirefoxIdentity(
