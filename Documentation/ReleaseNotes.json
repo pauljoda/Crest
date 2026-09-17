@@ -1449,6 +1449,10 @@
     "balanced-quick-window-space-padding": {
       "category": "improved",
       "message": "Quick Window Space indicators now use balanced padding."
+    },
+    "password-manager-page-reload-loops": {
+      "category": "fixed",
+      "message": "Prevent password manager popups and login-field suggestions from repeatedly reloading webpages"
     }
   }
 }
