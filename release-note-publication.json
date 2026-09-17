@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "pdf-preview-download",
+    "development": "quick-window-border-preference",
     "nightly": "pdf-preview-download"
   }
 }
