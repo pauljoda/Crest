@@ -1433,6 +1433,10 @@
     "focus-regression-tests-on-fragile-contracts": {
       "category": "internal",
       "message": "Focus regression coverage on fragile behavioral contracts and run retained script tests in CI."
+    },
+    "reliable-extension-image-conversion": {
+      "category": "fixed",
+      "message": "Image-converter extensions can save JPEGs repeatedly and keep their image menus after restarting Crest"
     }
   }
 }

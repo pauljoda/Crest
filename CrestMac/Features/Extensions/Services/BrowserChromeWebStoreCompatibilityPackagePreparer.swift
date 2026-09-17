@@ -3571,6 +3571,34 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                                 items.set(id, item);
                                 resumeNativeClicks(id);
                             }
+                            // WebKit also drops its native menu objects when
+                            // the app exits. Reconcile them without replaying
+                            // onInstalled (which can open welcome pages).
+                            // Sequential callbacks preserve parent-first order.
+                            void (async () => {
+                                for (const item of restoredItems.values()) {
+                                    if (items.get(item.id) !== item) continue;
+                                    await new Promise(resolve => {
+                                        try {
+                                            Reflect.apply(nativeUpdate, nativeMenus, [
+                                                item.id, nativeProperties(item), () => {
+                                                    const error = nativeRuntime?.lastError;
+                                                    if (!error || items.get(item.id) !== item) {
+                                                        resolve();
+                                                        return;
+                                                    }
+                                                    try {
+                                                        Reflect.apply(nativeCreate, nativeMenus, [nativeProperties(item), () => {
+                                                            void nativeRuntime?.lastError;
+                                                            resolve();
+                                                        }]);
+                                                    } catch { resolve(); }
+                                                }
+                                            ]);
+                                        } catch { resolve(); }
+                                    });
+                                }
+                            })();
                             return;
                         }
                         if (
@@ -4346,52 +4374,51 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                             return callbackOrPromise(args, undefined);
                         }
                     });
-                let activeOffscreenDocumentURL;
-                const serviceWorkerClients = Object.freeze({
-                    async matchAll() {
-                        // Chrome's WorkerGlobalScope.clients returns structured
-                        // WindowClient handles. WebKit does not provide that
-                        // API here, and chrome.extension.getViews() instead
-                        // exposes live cross-context DOMWindow wrappers. Those
-                        // wrappers become stale as a popup reloads and can crash
-                        // WebKit when worker code reads location or document.
-                        // Crest owns emulated offscreen documents and can expose
-                        // their stable URL without handing the worker a live DOM
-                        // wrapper. This preserves the pre-runtime.getContexts
-                        // lifecycle check used by Chrome extensions while every
-                        // other unrepresentable client remains conservatively
-                        // absent.
-                        if (activeOffscreenDocumentURL) {
-                            try {
-                                const hasDocument = await requestCapability(
-                                    "offscreen.hasDocument",
-                                    {},
-                                    [],
-                                    (response) =>
-                                        response?.hasDocument === true
-                                );
-                                if (hasDocument) {
-                                    return [Object.freeze({
-                                        url: activeOffscreenDocumentURL
-                                    })];
-                                }
-                            } catch {}
-                        }
-                        return [];
+                const nativeClients = globalThis.clients;
+                const nativeMatchAll = nativeClients?.matchAll?.bind(nativeClients);
+                const matchExtensionClients = async (...args) => {
+                    const clients = nativeMatchAll ? await nativeMatchAll(...args) : [];
+                    const type = args[0]?.type;
+                    if (!isPrivilegedExtensionContext || (type && type !== "window" && type !== "all")) {
+                        return clients;
                     }
-                });
-                if (!globalThis.clients) {
+                    // WebKit's native Clients cannot see Crest-hosted offscreen
+                    // pages. Ask their authenticated, Space-scoped owner on each
+                    // lookup, including after the worker restarts. Never expose
+                    // live DOMWindow wrappers to a background worker.
                     try {
-                        Object.defineProperty(globalThis, "clients", {
-                            value: serviceWorkerClients,
+                        const response = await requestCapability(
+                            "runtime.getContexts",
+                            { filter: { contextTypes: ["OFFSCREEN_DOCUMENT"] } },
+                            []
+                        );
+                        for (const context of response?.contexts ?? []) {
+                            const url = context.documentUrl;
+                            if (context.contextType === "OFFSCREEN_DOCUMENT"
+                                && typeof url === "string"
+                                && !clients.some(client => client.url === url)) {
+                                clients.push(Object.freeze({ url }));
+                            }
+                        }
+                    } catch {}
+                    return clients;
+                };
+                if (nativeClients) {
+                    try {
+                        Object.defineProperty(nativeClients, "matchAll", {
+                            value: matchExtensionClients,
                             writable: true,
                             configurable: true
                         });
-                    } catch {
-                        try {
-                            globalThis.clients = serviceWorkerClients;
-                        } catch {}
-                    }
+                    } catch {}
+                } else {
+                    try {
+                        Object.defineProperty(globalThis, "clients", {
+                            value: Object.freeze({ matchAll: matchExtensionClients }),
+                            writable: true,
+                            configurable: true
+                        });
+                    } catch {}
                 }
                 // Worker code hosted in a background document keeps its
                 // worker-lifecycle calls; answering them is harmless where
@@ -4855,6 +4882,25 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                         });
                     }
                 };
+                // Blob URLs belong to the extension's WebKit storage partition,
+                // not the selected webpage that owns Crest's download UI. Read
+                // them here using WebKit's normal origin/partition checks; only
+                // transferable bytes cross the authenticated capability broker.
+                const transferableDownloadURL = async (url) => {
+                    if (!url.startsWith("blob:")) return url;
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    if (blob.size > 32 * 1024 * 1024) {
+                        throw new Error("Crest supports extension blob downloads up to 32 MiB.");
+                    }
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => reject(reader.error ?? new Error("Could not read the download blob."));
+                        reader.onabort = () => reject(new Error("Reading the download blob was cancelled."));
+                        reader.readAsDataURL(blob);
+                    });
+                };
                 const downloads = {
                     download(...args) {
                         const options = args[0];
@@ -4869,17 +4915,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                                 "downloads.download requires a URL."
                             );
                         }
-                        return requestCapability(
+                        const payload = {
+                            filename: typeof options.filename === "string" ? options.filename : undefined,
+                            saveAs: options.saveAs === true
+                        };
+                        const operation = transferableDownloadURL(options.url).then(url => requestCapability(
                             "downloads.download",
                             {
-                                url: options.url,
-                                filename:
-                                    typeof options.filename === "string"
-                                        ? options.filename
-                                        : undefined,
-                                saveAs: options.saveAs === true
+                                url,
+                                ...payload
                             },
-                            args,
+                            [],
                             (response) => {
                                 const downloadID = response?.downloadID;
                                 if (!Number.isSafeInteger(downloadID)) {
@@ -4889,7 +4935,14 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                                 }
                                 return downloadID;
                             }
+                        ));
+                        const callback = args.at(-1);
+                        if (typeof callback !== "function") return operation;
+                        operation.then(
+                            callback,
+                            error => invokeCallbackWithLastError(callback, error?.message ?? "The download failed.")
                         );
+                        return undefined;
                     }
                 };
                 const offscreenReasons = Object.freeze({
@@ -4947,7 +5000,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                                         "Crest did not create the offscreen document."
                                     );
                                 }
-                                activeOffscreenDocumentURL = url;
                             }
                         );
                     },
@@ -4962,7 +5014,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                                         "Crest did not close the offscreen document."
                                     );
                                 }
-                                activeOffscreenDocumentURL = undefined;
                             }
                         );
                     },

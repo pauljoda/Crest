@@ -339,6 +339,8 @@ that reason.
 - `contextMenus` / `menus`: Crest registry and native webpage-menu
   presentation; contexts are normalized across the Chrome and Firefox schemas
   so one unsupported item cannot invalidate a complete menu replacement.
+  Validated menu definitions persist with their Space-specific installation
+  across application restarts, up to 1 MiB per installation.
 - `cookies`: constrained by reviewed host permissions.
 - `declarativeNetRequest`: WebKit's content-rule translation is lossy.
 - `devtools`: WebKit's subset only.
@@ -346,7 +348,10 @@ that reason.
   scripts.
 - `downloads`: emulated through the capability broker for `downloads.download`
   only, and the broker applies Crest's own destination and risk policy rather
-  than an extension-chosen path. Every other member the Chromium schema defines
+  than an extension-chosen path. Downloads require a reviewed `downloads` grant.
+  Extension-readable blob URLs are transferred within their WebKit storage
+  partition, with a 32 MiB limit, before the broker checks current authorization.
+  Every other member the Chromium schema defines
   is present and **Presence only** — searching, pausing, erasing, the shelf, and
   the four events — so a package that detects the namespace can call them and
   gets a real failure instead of a missing function.

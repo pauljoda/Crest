@@ -29,4 +29,5 @@ struct BrowserExtensionInstallation:
     var hasCommands: Bool? = nil
     var isPinned: Bool? = nil
     var commandShortcutOverrides: [String: BrowserExtensionCommandShortcutOverride]? = nil
+    var contextMenuState: Data? = nil
 }
