@@ -7,32 +7,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.6.22</title>
-            <pubDate>Thu, 17 Sep 2026 02:16:55 +0000</pubDate>
+            <pubDate>Thu, 17 Sep 2026 02:24:31 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1117</sparkle:version>
+            <sparkle:version>1118</sparkle:version>
             <sparkle:shortVersionString>0.6.22</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Fixed
+### Maintenance
 
-- Select webpage text and use controls near the top edge without moving the window
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/361a1e92cd2652e21746e3e3376a54aad70f1c5b...9610550a5690bbad15ef3bf37087c9dd085921b6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.22-2026-09-17-1117-r117.1/Installer-Crest-0.6.22-development-2026-09-17-9610550-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/9610550a5690bbad15ef3bf37087c9dd085921b6...9610550a5690bbad15ef3bf37087c9dd085921b6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.22-2026-09-17-1118-r118.1/Installer-Crest-0.6.22-development-2026-09-17-9610550-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.22-2026-09-17-1117-r117.1/Installer-Crest-0.6.22-development-2026-09-17-9610550-arm64.dmg" length="27134772" type="application/octet-stream" sparkle:edSignature="yEc0+3oYtqlo2dXqpH5lwuKeVD9DjG4nr4UrpZoxpDxcLmAcv1+FzHOExEN+/az2B7NjaPhoXQ81e+uvZAZEAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.22-2026-09-17-1118-r118.1/Installer-Crest-0.6.22-development-2026-09-17-9610550-arm64.dmg" length="27155764" type="application/octet-stream" sparkle:edSignature="7jKqkTcyIaHauw4n9u7GmxsuvZe4gBaqbK0t76kveLYmFQ37I4JYegMyu3mdhYT2RG3mtCVTFNhKDNKHvkHPDQ=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: fdv53zbbZ6Dh4NVZpumnbxdzEF+R/VErV4tTfQGi0zscR2IxR2KoXC9sGw58M+byh1uGNvh1Exf6EfcqoNlGDA==
-length: 2042
+edSignature: TNLFfqu7o//V2P9Q2ZsjVm+EWJCrPSCLQugARXFRteclWp/yirtF1qJzz46tge2WiqYFAZvD2sKP/x4YY5WZDA==
+length: 2006
 -->
