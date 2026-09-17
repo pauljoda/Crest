@@ -32,7 +32,6 @@ the live status for each issue.
 - [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
 - [ ] [Make unloaded-tab dimming optional](https://github.com/pauljoda/Crest/issues/162)
 - [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
-- [ ] [Return from picture-in-picture to the originating tab](https://github.com/pauljoda/Crest/issues/166)
 
 #### Completed
 
@@ -43,6 +42,7 @@ the live status for each issue.
 - [x] [Restore downloads from the built-in PDF preview](https://github.com/pauljoda/Crest/issues/150) — [`616f92d7`](https://github.com/pauljoda/Crest/commit/616f92d745b82c36cf78daded5e7174d83ab1669)
 - [x] [Preserve webpage text interaction beneath the hidden title bar](https://github.com/pauljoda/Crest/issues/155) — [`9610550a`](https://github.com/pauljoda/Crest/commit/9610550a5690bbad15ef3bf37087c9dd085921b6)
 - [x] [Investigate WebP conversion and Slack Huddle behavior](https://github.com/pauljoda/Crest/issues/163) — [`f0de6ca2`](https://github.com/pauljoda/Crest/commit/f0de6ca247b6a769941e70042564aeebb6592011)
+- [x] [Return from picture-in-picture to the originating tab](https://github.com/pauljoda/Crest/issues/166) — [`0e5c7162`](https://github.com/pauljoda/Crest/commit/0e5c716267863df43256d7a0b5b2d007440288ff)
 
 #### Not planned
 

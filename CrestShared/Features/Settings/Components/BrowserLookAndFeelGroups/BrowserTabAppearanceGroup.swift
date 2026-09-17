@@ -67,6 +67,10 @@ struct BrowserTabAppearanceGroup: View {
                 Toggle("Website colors for pins", isOn: websiteColors.binding)
                     .labelsHidden()
             }
+            CrestSettingRow("Dim unloaded tabs", setting: dimming.resettable("Dim unloaded tabs")) {
+                Toggle("Dim unloaded tabs", isOn: dimming.binding)
+                    .labelsHidden()
+            }
             BrowserAppearanceAccentRow(
                 color: accent,
                 fallback: space?.branding.primaryColor ?? .indigo,
@@ -110,6 +114,12 @@ struct BrowserTabAppearanceGroup: View {
         CrestSettingValue($appearance.tabs.color)
     }
 
+    private var dimming: CrestSettingValue<Bool> {
+        CrestSettingValue(
+            $appearance.tabs.dimsUnloadedTabs,
+            default: BrowserLookAndFeelDefaults.tabs.dimsUnloadedTabs)
+    }
+
     private var pinFill: CrestSettingValue<Double> {
         CrestSettingValue($appearance.tabs.pinFill, default: BrowserLookAndFeelDefaults.tabs.pinFill)
     }
@@ -130,6 +140,7 @@ struct BrowserTabAppearanceGroup: View {
             borders.resettable("Color borders"),
             outlines.resettable("Accent outline on selected tabs"),
             websiteColors.resettable("Website colors for pins"),
+            dimming.resettable("Dim unloaded tabs"),
             accent.resettable("Follow Space accent"),
             pinFill.resettable("Pinned fill"),
             pinGlow.resettable("Selected tab glow"),

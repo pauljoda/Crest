@@ -35,6 +35,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
             forKey: BrowserDeviceAppearanceStore.tabsKey)
         let local = BrowserDeviceAppearanceStore(defaults: first)
         XCTAssertEqual(local.tabs.borders, .selected)
+        XCTAssertTrue(local.tabs.dimsUnloadedTabs)
         XCTAssertEqual(local.tabs.pinFill, 0.7)
         XCTAssertEqual(local.tabs.hoverFill, 1)
         XCTAssertEqual(local.cornerRadius, 0)
@@ -46,15 +47,37 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(local.containerCornerRadius(), 10)
         XCTAssertEqual(local.containerCornerRadius(padding: 4), 14)
         local.cornerRadius = 24
+        local.tabs.dimsUnloadedTabs = false
         local.address.border = 0.6
         let restored = BrowserDeviceAppearanceStore(defaults: first)
         XCTAssertEqual(restored.tabs, local.tabs)
+        XCTAssertFalse(restored.tabs.dimsUnloadedTabs)
         XCTAssertEqual(restored.cornerRadius, 24)
         XCTAssertEqual(restored.address, local.address)
         let otherDevice = BrowserDeviceAppearanceStore(defaults: second)
         XCTAssertEqual(otherDevice.tabs, .init())
         XCTAssertEqual(otherDevice.cornerRadius, 10)
         XCTAssertEqual(otherDevice.address, .init())
+    }
+
+    func testResetAllLookAndFeelPersistsDefaultDeviceAppearance() throws {
+        let name = "crest-test-appearance-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let appearance = BrowserDeviceAppearanceStore(defaults: defaults)
+        appearance.tabs.dimsUnloadedTabs = false
+        appearance.tabs.pinFill = 0.7
+        appearance.address.border = 0.6
+        appearance.cornerRadius = 24
+
+        BrowserLookAndFeelDefaults.resetAll(
+            appearance: appearance, chrome: defaults, density: defaults, folders: defaults)
+
+        let restored = BrowserDeviceAppearanceStore(defaults: defaults)
+        XCTAssertEqual(restored.tabs, BrowserLookAndFeelDefaults.tabs)
+        XCTAssertTrue(restored.tabs.dimsUnloadedTabs)
+        XCTAssertEqual(restored.address, BrowserLookAndFeelDefaults.address)
+        XCTAssertEqual(restored.cornerRadius, BrowserLookAndFeelDefaults.cornerRadius)
     }
 
     // MARK: - Sigils

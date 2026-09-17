@@ -8,12 +8,12 @@ enum BrowserVisualAccessibilityPolicy {
     private static let reducedTransparencyScrimOpacity = 0.56
     static var tabCloseForeground: Color { .primary }
 
-    static func tabResidencySaturation(isLoaded: Bool) -> Double {
-        isLoaded ? 1 : 0.3
+    static func tabResidencySaturation(isLoaded: Bool, dimsUnloadedTabs: Bool) -> Double {
+        isLoaded || !dimsUnloadedTabs ? 1 : 0.3
     }
 
-    static func tabResidencyOpacity(isLoaded: Bool) -> Double {
-        isLoaded ? 1 : 0.5
+    static func tabResidencyOpacity(isLoaded: Bool, dimsUnloadedTabs: Bool) -> Double {
+        isLoaded || !dimsUnloadedTabs ? 1 : 0.5
     }
 
     static func atmosphereOpacity(

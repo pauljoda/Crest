@@ -19,15 +19,16 @@ private struct BrowserTabResidencyModifier: ViewModifier {
     let isLoaded: Bool
 
     func body(content: Content) -> some View {
+        let dimsUnloadedTabs = BrowserDeviceAppearanceStore.shared.tabs.dimsUnloadedTabs
         content
             .saturation(
                 BrowserVisualAccessibilityPolicy.tabResidencySaturation(
-                    isLoaded: isLoaded
+                    isLoaded: isLoaded, dimsUnloadedTabs: dimsUnloadedTabs
                 )
             )
             .opacity(
                 BrowserVisualAccessibilityPolicy.tabResidencyOpacity(
-                    isLoaded: isLoaded
+                    isLoaded: isLoaded, dimsUnloadedTabs: dimsUnloadedTabs
                 )
             )
     }
@@ -64,7 +65,7 @@ extension View {
         modifier(BrowserReadableForegroundModifier(background: background))
     }
 
-    /// Fades what stands for a tab the shell is no longer holding in memory.
+    /// Optionally fades what stands for a tab the shell is no longer holding in memory.
     ///
     /// Applied to the pieces that *describe* the tab — its favicon, its title —
     /// rather than to the row or tile as a whole, so a mark drawn over one of
