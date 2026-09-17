@@ -4,7 +4,8 @@ import Foundation
 /// them. Declaring a permission is not a grant, and this does not publish an API.
 enum BrowserExtensionManagedPermissionPolicy {
     static let names: Set<String> = [
-        "debugger", "clipboardRead", "identity", "idle", "offscreen", "sidePanel", "tabGroups", "sidebarAction",
+        "debugger", "clipboardRead", "downloads", "identity", "idle", "offscreen", "sidePanel", "tabGroups",
+        "sidebarAction",
     ]
 
     static func requestedPermissions(

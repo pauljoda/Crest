@@ -100,6 +100,25 @@ final class BrowserExtensionRegistry {
         }
     }
 
+    func contextMenuState(for clientID: BrowserExtensionServiceClientID) -> Data? {
+        installations.first {
+            BrowserExtensionServiceClientID.scoped(extensionID: $0.id, spaceID: $0.spaceID) == clientID
+        }?.contextMenuState
+    }
+
+    func setContextMenuState(_ data: Data?, for clientID: BrowserExtensionServiceClientID) {
+        guard
+            let installation = installations.first(where: {
+                BrowserExtensionServiceClientID.scoped(extensionID: $0.id, spaceID: $0.spaceID) == clientID
+            })
+        else { return }
+        let bounded = data.flatMap { $0.count <= 1_048_576 ? $0 : nil }
+        guard installation.contextMenuState != bounded else { return }
+        mutate(extensionID: installation.id, in: installation.spaceID) {
+            $0.contextMenuState = bounded
+        }
+    }
+
     func setPinned(
         _ pinned: Bool,
         extensionID: String,
@@ -307,6 +326,7 @@ final class BrowserExtensionRegistry {
                     extensionID: normalized.id, format: local.format, sha256Hex: local.sha256Hex,
                     declaredGeckoID: local.declaredGeckoID, storageIdentifier: local.storageIdentifier))
             normalized.permissionSnapshot = .empty
+            normalized.contextMenuState = nil
             normalized.isEnabled = false
             normalized.errors.append(
                 String(
@@ -321,6 +341,9 @@ final class BrowserExtensionRegistry {
             normalized.iconData = iconData
         } else {
             normalized.iconData = nil
+        }
+        if let state = normalized.contextMenuState, state.count > 1_048_576 {
+            normalized.contextMenuState = nil
         }
         return normalized
     }

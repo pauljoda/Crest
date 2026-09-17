@@ -42,6 +42,8 @@ final class BrowserExtensionControllerPool {
             BrowserExtensionWebpageMenuRegistry(),
         usesEphemeralWebKitStorage: Bool = true
     ) {
+        webpageMenuRegistry.loadPersistedState = { registry.contextMenuState(for: $0) }
+        webpageMenuRegistry.savePersistedState = { registry.setContextMenuState($1, for: $0) }
         let tabWindowCoordinator = BrowserExtensionTabWindowCoordinator(
             webpageMenuRegistry: webpageMenuRegistry
         )

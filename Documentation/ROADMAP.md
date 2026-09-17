@@ -26,18 +26,26 @@ the live status for each issue.
 - [ ] [Organize shared browsing sessions with Sub-Spaces](https://github.com/pauljoda/Crest/issues/144)
 - [ ] [Choose a default Space using Focus](https://github.com/pauljoda/Crest/issues/145)
 - [ ] [Separate selection outlines from tab highlight colors](https://github.com/pauljoda/Crest/issues/146)
-- [ ] [Apply browser border size to Quick Windows](https://github.com/pauljoda/Crest/issues/147)
-- [ ] [Use a thinner scrollbar that fades when idle](https://github.com/pauljoda/Crest/issues/148)
 - [ ] [Choose which browsing data syncs across devices](https://github.com/pauljoda/Crest/issues/149)
 - [ ] [Add common browsing actions to the macOS Dock menu](https://github.com/pauljoda/Crest/issues/152)
+- [ ] [Choose which sidebar widgets appear](https://github.com/pauljoda/Crest/issues/160)
+- [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
+- [ ] [Make unloaded-tab dimming optional](https://github.com/pauljoda/Crest/issues/162)
+- [ ] [Investigate WebP conversion and Slack Huddle behavior](https://github.com/pauljoda/Crest/issues/163)
+- [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
 
 #### Completed
 
 - [x] [Keep active location access consistent with site permissions](https://github.com/pauljoda/Crest/issues/141)
 - [x] [Keep extension compatibility access aligned with permission choices](https://github.com/pauljoda/Crest/issues/142) — [`22b22c95`](https://github.com/pauljoda/Crest/commit/22b22c959f59d9d1f7a6d7b490f14834fc446129)
 - [x] [Clarify local extension replacement and permission continuity](https://github.com/pauljoda/Crest/issues/143) — [`361a1e92`](https://github.com/pauljoda/Crest/commit/361a1e92cd2652e21746e3e3376a54aad70f1c5b)
+- [x] [Apply browser border size to Quick Windows](https://github.com/pauljoda/Crest/issues/147) — [`e2dd9187`](https://github.com/pauljoda/Crest/commit/e2dd9187d6a1345c5a1106726e64bdae012d67f0)
 - [x] [Restore downloads from the built-in PDF preview](https://github.com/pauljoda/Crest/issues/150) — [`616f92d7`](https://github.com/pauljoda/Crest/commit/616f92d745b82c36cf78daded5e7174d83ab1669)
 - [x] [Preserve webpage text interaction beneath the hidden title bar](https://github.com/pauljoda/Crest/issues/155) — [`9610550a`](https://github.com/pauljoda/Crest/commit/9610550a5690bbad15ef3bf37087c9dd085921b6)
+
+#### Not planned
+
+- [x] [Use a thinner scrollbar that fades when idle](https://github.com/pauljoda/Crest/issues/148)
 
 <!-- crest-roadmap-sync:end -->
 

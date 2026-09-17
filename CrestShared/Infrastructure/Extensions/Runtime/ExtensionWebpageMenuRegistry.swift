@@ -37,6 +37,8 @@ private struct BrowserExtensionInstallLifecycleEvent: Equatable {
 final class BrowserExtensionWebpageMenuRegistry {
     typealias ClickPublisher = ([String: Any]) -> Void
     var userDidInvoke: ((BrowserExtensionServiceClientID) -> Void)?
+    var loadPersistedState: ((BrowserExtensionServiceClientID) -> Data?)?
+    var savePersistedState: ((BrowserExtensionServiceClientID, Data?) -> Void)?
 
     private struct PendingClick {
         let id: UUID
@@ -106,6 +108,11 @@ final class BrowserExtensionWebpageMenuRegistry {
         for clientID: BrowserExtensionServiceClientID
     ) throws {
         definitionsByClient[clientID] = []
+        defer {
+            var state = restorationMessage(for: clientID) ?? ["items": []]
+            state["api"] = "contextMenus.replace"
+            savePersistedState?(clientID, try? JSONSerialization.data(withJSONObject: state, options: [.sortedKeys]))
+        }
         guard let request = message as? [String: Any],
             request["api"] as? String == "contextMenus.replace",
             let items = request["items"] as? [[String: Any]]
@@ -133,7 +140,18 @@ final class BrowserExtensionWebpageMenuRegistry {
     func definitions(
         for clientID: BrowserExtensionServiceClientID
     ) -> [BrowserExtensionWebpageMenuDefinition] {
-        definitionsByClient[clientID] ?? []
+        // onInstalled-only menus must survive application restarts. Restore
+        // through the same validator as live messages; the installation owns
+        // persistence, while callers still enforce current grants and Space.
+        if definitionsByClient[clientID] == nil {
+            definitionsByClient[clientID] = []
+            if let data = loadPersistedState?(clientID),
+                let message = try? JSONSerialization.jsonObject(with: data)
+            {
+                try? replaceDefinitions(message: message, for: clientID)
+            }
+        }
+        return definitionsByClient[clientID] ?? []
     }
 
     func restorationMessage(
