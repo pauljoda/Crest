@@ -30,8 +30,10 @@ the live status for each issue.
 - [ ] [Add common browsing actions to the macOS Dock menu](https://github.com/pauljoda/Crest/issues/152)
 - [ ] [Choose which sidebar widgets appear](https://github.com/pauljoda/Crest/issues/160)
 - [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
-- [ ] [Make unloaded-tab dimming optional](https://github.com/pauljoda/Crest/issues/162)
 - [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
+- [ ] [Stop LastPass popups from reloading the active page](https://github.com/pauljoda/Crest/issues/169)
+- [ ] [Clear browsing data by Space and time range](https://github.com/pauljoda/Crest/issues/170)
+- [ ] [Balance Quick Window Space indicator padding](https://github.com/pauljoda/Crest/issues/171)
 
 #### Completed
 
@@ -41,6 +43,7 @@ the live status for each issue.
 - [x] [Apply browser border size to Quick Windows](https://github.com/pauljoda/Crest/issues/147) — [`e2dd9187`](https://github.com/pauljoda/Crest/commit/e2dd9187d6a1345c5a1106726e64bdae012d67f0)
 - [x] [Restore downloads from the built-in PDF preview](https://github.com/pauljoda/Crest/issues/150) — [`616f92d7`](https://github.com/pauljoda/Crest/commit/616f92d745b82c36cf78daded5e7174d83ab1669)
 - [x] [Preserve webpage text interaction beneath the hidden title bar](https://github.com/pauljoda/Crest/issues/155) — [`9610550a`](https://github.com/pauljoda/Crest/commit/9610550a5690bbad15ef3bf37087c9dd085921b6)
+- [x] [Make unloaded-tab dimming optional](https://github.com/pauljoda/Crest/issues/162) — [`b920e80e`](https://github.com/pauljoda/Crest/commit/b920e80e096087b26b67e98ff986dd54644ddb33)
 - [x] [Investigate WebP conversion and Slack Huddle behavior](https://github.com/pauljoda/Crest/issues/163) — [`f0de6ca2`](https://github.com/pauljoda/Crest/commit/f0de6ca247b6a769941e70042564aeebb6592011)
 - [x] [Return from picture-in-picture to the originating tab](https://github.com/pauljoda/Crest/issues/166) — [`0e5c7162`](https://github.com/pauljoda/Crest/commit/0e5c716267863df43256d7a0b5b2d007440288ff)
 
