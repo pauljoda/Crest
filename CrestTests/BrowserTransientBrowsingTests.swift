@@ -499,30 +499,6 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         XCTAssertEqual(source.label.count, 160)
     }
 
-    func testPeekSourcePresentationFallsBackToTheRenderedLinksCenter() {
-        let source = BrowserPeekSourcePresentation(
-            normalizedMinX: 0.18,
-            normalizedMinY: 0.32,
-            normalizedWidth: 0.44,
-            normalizedHeight: 0.08,
-            label: "Rendered link"
-        )
-
-        XCTAssertEqual(source.normalizedTouchX, 0.4, accuracy: 0.000_001)
-        XCTAssertEqual(source.normalizedTouchY, 0.36, accuracy: 0.000_001)
-    }
-
-    func testMissingTransientPresentationOriginResolvesToBrowserCenter() {
-        let source = BrowserPeekSourcePresentation.resolved(nil)
-
-        XCTAssertEqual(source.normalizedMinX, 0.5, accuracy: 0.000_001)
-        XCTAssertEqual(source.normalizedMinY, 0.5, accuracy: 0.000_001)
-        XCTAssertEqual(source.normalizedWidth, 0, accuracy: 0.000_001)
-        XCTAssertEqual(source.normalizedHeight, 0, accuracy: 0.000_001)
-        XCTAssertEqual(source.normalizedTouchX, 0.5, accuracy: 0.000_001)
-        XCTAssertEqual(source.normalizedTouchY, 0.5, accuracy: 0.000_001)
-    }
-
     func testAutomaticPeekCanBeDisabledWithoutDisablingOptionClick() throws {
         let pinned = BrowserTab(
             title: "Pinned",

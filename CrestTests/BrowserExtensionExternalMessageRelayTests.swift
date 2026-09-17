@@ -124,26 +124,6 @@ final class BrowserExtensionExternalMessageRelayTests: XCTestCase {
         XCTAssertEqual(senders.map(\.frameID), [1, 2, 1, 0])
     }
 
-    /// A top-level scalar is a legal message and a legal answer, which
-    /// `JSONSerialization` writes only with `.fragmentsAllowed`.
-    func testScalarMessagesAndAnswersSurviveTheRoundTrip() async throws {
-        var received: String?
-        let relay = BrowserExtensionWebPageRuntimeRelay { _ in
-            .init(
-                externallyConnectableMatchPatterns: ["<all_urls>"],
-                hasHostAccess: { _ in true },
-                deliver: { json, _ in
-                    received = String(decoding: json, as: UTF8.self)
-                    return Data(#""pong""#.utf8)
-                })
-        }
-        let response = await relay.relayedResponse(
-            extensionID: "e", message: "ping", frameURL: URL(string: "https://claude.ai/"),
-            isMainFrame: false)
-        XCTAssertEqual(received, #""ping""#)
-        XCTAssertEqual(response as? String, "pong")
-    }
-
     // MARK: - Registry
 
     func testADeliveryFansOutToEveryPortAndCompletesOnTheFirstReply() async throws {

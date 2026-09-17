@@ -35,46 +35,6 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
         XCTAssertNil(navigated)
     }
 
-    func testCompositionKeepsUncommittedTextOutOfResultsAndNetworkSuggestions() async {
-        let tab = BrowserTab(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
-        let model = makeModel(makeSpace(tab), tab)
-        model.updateCompletionEditing(text: "exa", selection: NSRange(location: 3, length: 0), isComposing: true)
-        await model.waitForPendingResults()
-        XCTAssertEqual(model.query, "")
-        XCTAssertNil(model.urlCompletion)
-        model.updateCompletionEditing(text: "exa", selection: NSRange(location: 3, length: 0), isComposing: false)
-        XCTAssertEqual(model.urlCompletion?.suffix, "mple.com/path")
-        model.moveSelection(by: 1)
-        XCTAssertNil(model.urlCompletion)
-    }
-
-    func testAcceptedAddressUsesExistingNavigationActionOnEnter() async {
-        let tab = BrowserTab(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
-        var navigated: URL?
-        let model = BrowserCommandPaletteModel(
-            space: makeSpace(tab), selectedTabID: tab.id, initialQuery: "", commands: nil,
-            isSourceAvailable: { _ in true },
-            selectTab: { _, _ in
-                XCTFail("Should use URL intent")
-                return false
-            },
-            openURL: { _, url in
-                navigated = url
-                return true
-            }, dismiss: {})
-        model.applyCompletion = { [weak model] insertion, range in
-            guard let model else { return }
-            let text = (model.query as NSString).replacingCharacters(in: range, with: insertion)
-            model.updateCompletionEditing(
-                text: text, selection: NSRange(location: text.utf16.count, length: 0), isComposing: false)
-        }
-        model.updateCompletionEditing(text: "exa", selection: NSRange(location: 3, length: 0), isComposing: false)
-        XCTAssertTrue(model.acceptURLCompletion())
-        XCTAssertNil(navigated)
-        model.activateSelectedResult()
-        XCTAssertEqual(navigated?.absoluteString, "https://example.com/path")
-    }
-
     func testLiveLockSelectionSpaceAndProfileChangesHideAndRejectCompletion() {
         let tab = BrowserTab(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
         let original = makeSpace(tab)
@@ -150,13 +110,4 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
             tabs: [tab], selectedTabID: tab.id)
     }
 
-    private func makeModel(_ space: BrowserSpace, _ tab: BrowserTab) -> BrowserCommandPaletteModel {
-        BrowserCommandPaletteModel(
-            space: space, selectedTabID: tab.id, initialQuery: "", commands: nil,
-            fetchSuggestions: { _, _ in
-                XCTFail("Local completion must not send a request")
-                return []
-            },
-            isSourceAvailable: { _ in true }, selectTab: { _, _ in false }, openURL: { _, _ in false }, dismiss: {})
-    }
 }

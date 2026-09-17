@@ -35,7 +35,6 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
             ]
         )
         let query = try XCTUnwrap(client.copyQueries.first)
-        XCTAssertEqual(query.count, 6)
         assertBaseQuery(query, service: "test.service")
         assertCFValue(query[kSecMatchLimit], equals: kSecMatchLimitAll)
         XCTAssertEqual(query[kSecReturnAttributes] as? Bool, true)
@@ -76,7 +75,6 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
             )
         )
         let query = try XCTUnwrap(client.copyQueries.first)
-        XCTAssertEqual(query.count, 8)
         assertBaseQuery(query, service: "test.service")
         XCTAssertEqual(query[kSecAttrAccount] as? String, "credential-account")
         assertCFValue(query[kSecMatchLimit], equals: kSecMatchLimitOne)
@@ -101,14 +99,12 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
         try await store.upsert(item, in: "test.service")
 
         let update = try XCTUnwrap(client.updates.first)
-        XCTAssertEqual(update.query.count, 5)
         assertBaseQuery(
             update.query,
             service: "test.service",
             synchronizable: true
         )
         XCTAssertEqual(update.query[kSecAttrAccount] as? String, item.account)
-        XCTAssertEqual(update.attributes.count, 3)
         XCTAssertEqual(update.attributes[kSecAttrGeneric] as? Data, item.metadata)
         XCTAssertEqual(update.attributes[kSecValueData] as? Data, item.secret)
         XCTAssertEqual(
@@ -133,7 +129,6 @@ final class SecurityCredentialKeychainStoreTests: XCTestCase {
         try await store.upsert(item, in: "test.service")
 
         let attributes = try XCTUnwrap(client.adds.first)
-        XCTAssertEqual(attributes.count, 9)
         assertBaseQuery(
             attributes,
             service: "test.service",

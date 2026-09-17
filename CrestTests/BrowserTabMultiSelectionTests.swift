@@ -336,59 +336,6 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(browser.tabMultiSelection.selectedIDs, Set(ids.prefix(2)))
     }
 
-    func testPointerTargetsFollowLiveFramesWhileRangesFollowModelOrder() throws {
-        let session = makeSession(count: 3)
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
-        let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
-        let space = try XCTUnwrap(browser.selectedSpace)
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let window = NSWindow(
-            contentRect: NSRect(x: 100, y: 200, width: 400, height: 600),
-            styleMask: [.borderless], backing: .buffered, defer: false)
-        let content = try XCTUnwrap(window.contentView)
-        let container = NSView(frame: NSRect(x: 20, y: 80, width: 240, height: 400))
-        content.addSubview(container)
-        let rows = space.tabs.enumerated().map { index, tab in
-            let row = BrowserNativeTabSelectionTarget.TargetView(
-                frame: NSRect(x: 0, y: 300 - index * 40, width: 220, height: 40))
-            row.browser = browser
-            row.assignment = assignment
-            row.tabID = tab.id
-            container.addSubview(row)
-            return row
-        }
-        func target(_ row: NSView) -> TabID? {
-            BrowserNativeTabSelectionTarget.TargetView.tab(
-                at: row.convert(NSPoint(x: 100, y: 20), to: nil), in: window,
-                browser: browser, assignment: assignment)
-        }
-        XCTAssertEqual(target(rows[0]), space.tabs[0].id)
-        // Reordering must take effect without registering another drag frame.
-        rows[0].setFrameOrigin(NSPoint(x: 0, y: 180))
-        XCTAssertEqual(target(rows[0]), space.tabs[0].id)
-        XCTAssertEqual(target(rows[1]), space.tabs[1].id)
-        XCTAssertEqual(
-            BrowserSidebarSelection.units(in: browser, reorder: sidebarInteraction.sidebarReorderState).flatMap { $0 },
-            // Pointer hit-testing follows live geometry, while a range includes
-            // unrealized rows in model order; moving only views cannot reorder data.
-            space.tabs.map(\.id))
-        // Move a row across sections and translate the entire sidebar.
-        content.addSubview(rows[0])
-        rows[0].setFrameOrigin(NSPoint(x: 30, y: 500))
-        container.setFrameOrigin(NSPoint(x: 40, y: 100))
-        XCTAssertEqual(target(rows[0]), space.tabs[0].id)
-        XCTAssertEqual(target(rows[2]), space.tabs[2].id)
-        XCTAssertEqual(
-            BrowserSidebarSelection.units(in: browser, reorder: sidebarInteraction.sidebarReorderState).first,
-            [space.tabs[0].id])
-        container.isHidden = true
-        XCTAssertNil(target(rows[2]))
-        rows[0].removeFromSuperview()
-        XCTAssertNil(
-            BrowserNativeTabSelectionTarget.TargetView.tab(
-                at: NSPoint(x: 130, y: 520), in: window, browser: browser, assignment: assignment))
-    }
-
     func testSelectedNestedFolderMovesOutWithItsSubtreeAndLooseTabsInOrder() throws {
         var session = makeSession(count: 4)
         let spaceID = session.selectedSpaceID

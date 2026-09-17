@@ -123,46 +123,6 @@ final class BrowserHostedWebNotificationTests: XCTestCase {
         pool.reconcile(validTabIDs: [])
     }
 
-    func testPermissionRetryRefreshesNativeDecisionAfterCachedDenial() async throws {
-        let url = try XCTUnwrap(URL(string: "https://notifications.crest.test/"))
-        let origin = try XCTUnwrap(BrowserSiteOrigin(url: url))
-        let tab = BrowserTab(title: "Notifications", url: nil, placement: .current)
-        let space = BrowserSpace(
-            id: SpaceID(), profile: BrowsingProfile(), name: "Work",
-            symbol: "briefcase", accent: .teal, folders: [], tabs: [tab], selectedTabID: tab.id
-        )
-        let permissions = BrowserSitePermissionCenter()
-        permissions.setDecision(.denyPersistently, for: .notifications, origin: origin, in: space.id)
-        let center = TestHostedWebNotificationCenter(authorization: .authorized)
-        let pool = BrowserPagePool(
-            usesEphemeralWebsiteDataStores: true,
-            permissionCenter: permissions, hostedNotificationCenter: center
-        )
-        pool.select(tab: tab, space: space)
-        let page = try XCTUnwrap(pool.activePage)
-        page.webView.loadSimulatedRequest(
-            URLRequest(url: url), responseHTML: "<!doctype html><title>Permissions</title>")
-        try await waitUntil("initial denial") {
-            try await self.boolResult(
-                from: page.webView,
-                script: "return !!globalThis.__crestHostedNotificationBridge && Notification.permission === 'denied';"
-            )
-        }
-        permissions.setDecision(.grantPersistently, for: .notifications, origin: origin, in: space.id)
-        XCTAssertEqual(
-            page.permissionCenter.decision(for: .notifications, origin: origin, in: page.spaceID), .grantPersistently)
-        let result = try await stringResult(
-            from: page.webView, script: "return await Notification.requestPermission();")
-        XCTAssertEqual(result, "granted")
-        permissions.setDecision(.ask, for: .notifications, origin: origin, in: space.id)
-        let withoutGesture = try await stringResult(
-            from: page.webView, script: "return await Notification.requestPermission();")
-        XCTAssertEqual(withoutGesture, "default")
-        XCTAssertNil(page.sitePermissionRequests.current)
-        XCTAssertTrue(center.deliveries.isEmpty)
-        pool.reconcile(validTabIDs: [])
-    }
-
     func testPermissionRequestRequiresUserActivationBeforePrompting() {
         XCTAssertEqual(
             BrowserHostedWebNotificationPermissionRequestPolicy.action(

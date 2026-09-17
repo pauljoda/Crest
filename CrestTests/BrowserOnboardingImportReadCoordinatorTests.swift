@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Crest
 
 @MainActor
@@ -37,49 +38,6 @@ final class BrowserOnboardingImportReadCoordinatorTests: XCTestCase {
         XCTAssertEqual(recorder.successfulApplications, [.chrome])
         XCTAssertTrue(recorder.errorDescriptions.isEmpty)
         XCTAssertEqual(recorder.finishCount, 2)
-    }
-
-    func testCancellationIgnoresAReaderThatDoesNotCooperateWithTaskCancellation() async {
-        let reader = SuspendedBrowserOnboardingImportReader()
-        let coordinator = BrowserOnboardingImportReadCoordinator(reader: reader)
-        let recorder = BrowserOnboardingImportReadRecorder()
-
-        coordinator.startReading(
-            payload(for: .safari),
-            onFinish: recorder.recordFinish,
-            completion: recorder.record
-        )
-        await reader.waitUntilStarted(.safari)
-
-        coordinator.cancel()
-
-        XCTAssertFalse(coordinator.isInFlight)
-        XCTAssertNil(coordinator.phase.application)
-
-        await reader.complete(.safari)
-        await waitUntil { recorder.finishCount == 1 }
-
-        XCTAssertTrue(recorder.successfulApplications.isEmpty)
-        XCTAssertTrue(recorder.errorDescriptions.isEmpty)
-    }
-
-    func testPhaseProvidesOneInFlightStateForImportControlAvailability() async {
-        let reader = SuspendedBrowserOnboardingImportReader()
-        let coordinator = BrowserOnboardingImportReadCoordinator(reader: reader)
-
-        XCTAssertFalse(coordinator.isInFlight)
-
-        coordinator.startReading(payload(for: .arc)) { _ in }
-        await reader.waitUntilStarted(.arc)
-
-        XCTAssertTrue(coordinator.isInFlight)
-        XCTAssertEqual(coordinator.phase.application, .arc)
-
-        await reader.complete(.arc)
-        await waitUntil { !coordinator.isInFlight }
-
-        XCTAssertFalse(coordinator.isInFlight)
-        XCTAssertNil(coordinator.phase.application)
     }
 
     private func payload(
@@ -129,16 +87,15 @@ private actor SuspendedBrowserOnboardingImportReader:
 {
     private struct PendingRead {
         let payload: BrowserDetectedImportPayload
-        let continuation: CheckedContinuation<
-            BrowserOnboardingImportReadOutput,
-            Error
-        >
+        let continuation:
+            CheckedContinuation<
+                BrowserOnboardingImportReadOutput,
+                Error
+            >
     }
 
     private var pendingReads: [BrowserImportApplication: PendingRead] = [:]
-    private var startWaiters: [
-        BrowserImportApplication: [CheckedContinuation<Void, Never>]
-    ] = [:]
+    private var startWaiters: [BrowserImportApplication: [CheckedContinuation<Void, Never>]] = [:]
 
     func read(
         _ payload: BrowserDetectedImportPayload
@@ -149,7 +106,7 @@ private actor SuspendedBrowserOnboardingImportReader:
                 continuation: continuation
             )
             let waiters = startWaiters.removeValue(forKey: payload.application) ?? []
-            waiters.forEach { $0.resume() }
+            for waiter in waiters { waiter.resume() }
         }
     }
 

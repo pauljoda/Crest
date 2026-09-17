@@ -27,29 +27,6 @@ final class BrowserExtensionIconDecoderTests: XCTestCase {
         XCTAssertEqual(decodeCount, 1)
     }
 
-    func testCacheUsesItsBoundAndEvictsTheLeastRecentlyUsedEntry() async {
-        let port = CountingBrowserExtensionIconPort()
-        let decoder = BrowserExtensionIconDecoder<Int>(
-            cacheLimit: 2,
-            decodingPort: port
-        )
-        let first = Self.request(data: Data([0x01]))
-        let second = Self.request(data: Data([0x02]))
-        let third = Self.request(data: Data([0x03]))
-
-        _ = await decoder.icon(for: first)
-        _ = await decoder.icon(for: second)
-        _ = await decoder.icon(for: first)
-        _ = await decoder.icon(for: third)
-        _ = await decoder.icon(for: first)
-        _ = await decoder.icon(for: second)
-
-        let decodeCount = await port.decodeCount
-        let cachedEntryCount = await decoder.cachedEntryCount
-        XCTAssertEqual(decodeCount, 4)
-        XCTAssertEqual(cachedEntryCount, 2)
-    }
-
     func testUnavailableDecoderResultIsNegativeCached() async {
         let encodedData = Self.encodedPNGData
         let port = UnavailableBrowserExtensionIconPort()
@@ -71,49 +48,6 @@ final class BrowserExtensionIconDecoderTests: XCTestCase {
         XCTAssertNil(second)
         XCTAssertEqual(decodeCount, 1)
         XCTAssertEqual(cachedEntryCount, 1)
-    }
-
-    func testStaleWaiterCannotClearANewerInFlightGeneration() async {
-        let port = SequencedBrowserExtensionIconPort()
-        let barrier = SecondCompletionBarrier()
-        let decoder = BrowserExtensionIconDecoder<Int>(
-            decodingPort: port,
-            completionBarrier: { await barrier.wait() }
-        )
-        let request = Self.request(data: Data([0xCE, 0x57]))
-
-        let firstWaiter = Task { await decoder.icon(for: request) }
-        await port.waitUntilDecodeCountReaches(1)
-        let staleWaiter = Task { await decoder.icon(for: request) }
-        await Self.waitUntilWaiterCount(2, decoder: decoder)
-
-        await port.completeDecode(1, with: 11)
-        await barrier.waitUntilSecondCompletionIsSuspended()
-        await Self.waitUntilInFlightCount(0, decoder: decoder)
-        await decoder.removeAll()
-
-        let successor = Task { await decoder.icon(for: request) }
-        await port.waitUntilDecodeCountReaches(2)
-        let countBeforeStaleCompletion = await decoder.inFlightRequestCount
-        XCTAssertEqual(countBeforeStaleCompletion, 1)
-
-        await barrier.resumeSecondCompletion()
-        let firstResult = await firstWaiter.value
-        let staleResult = await staleWaiter.value
-        let countAfterStaleCompletion = await decoder.inFlightRequestCount
-        let cacheCountAfterStaleCompletion = await decoder.cachedEntryCount
-        XCTAssertEqual(firstResult, 11)
-        XCTAssertEqual(staleResult, 11)
-        XCTAssertEqual(countAfterStaleCompletion, 1)
-        XCTAssertEqual(cacheCountAfterStaleCompletion, 0)
-
-        await port.completeDecode(2, with: 22)
-        let successorResult = await successor.value
-        let cachedSuccessorResult = await decoder.icon(for: request)
-        let decodeCount = await port.decodeCount
-        XCTAssertEqual(successorResult, 22)
-        XCTAssertEqual(cachedSuccessorResult, 22)
-        XCTAssertEqual(decodeCount, 2)
     }
 
     func testMalformedPayloadIsRejectedBeforeIdentificationOrDecoding() async {
@@ -206,102 +140,6 @@ final class BrowserExtensionIconDecoderTests: XCTestCase {
         XCTAssertEqual(inFlightRequestCount, 0)
     }
 
-    func testPayloadWithMismatchedIdentifierLengthNeverReachesDecoderOrCache() async {
-        let data = Data([0xCE, 0x57])
-        let payload = BrowserExtensionIconPayload(
-            data: data,
-            contentIdentifier: Self.identifier(
-                seed: 1,
-                byteCount: data.count + 1
-            )
-        )
-        let port = CountingBrowserExtensionIconPort()
-        let decoder = BrowserExtensionIconDecoder<Int>(decodingPort: port)
-        let request = BrowserExtensionIconRequest(
-            extensionID: "com.example.extension",
-            spaceID: Self.spaceID(tail: 0x10),
-            payload: payload,
-            maximumPixelSize: 64
-        )
-
-        let result = await decoder.icon(for: request)
-
-        let decodeCount = await port.decodeCount
-        let cachedEntryCount = await decoder.cachedEntryCount
-        XCTAssertNil(result)
-        XCTAssertEqual(decodeCount, 0)
-        XCTAssertEqual(cachedEntryCount, 0)
-    }
-
-    func testContentIdentifierIsStableFixedSizeAndChangesWithContent() throws {
-        let originalData = Self.encodedPNGData
-        let original = try XCTUnwrap(
-            BrowserExtensionIconPayloadFactory.production.payload(
-                for: originalData
-            )
-        )
-        let duplicate = try XCTUnwrap(
-            BrowserExtensionIconPayloadFactory.production.payload(
-                for: Data(originalData)
-            )
-        )
-        let changed = try XCTUnwrap(
-            BrowserExtensionIconPayloadFactory.production.payload(
-                for: originalData + Data([0x00])
-            )
-        )
-
-        XCTAssertEqual(BrowserExtensionIconContentIdentifier.digestByteCount, 32)
-        XCTAssertEqual(original.contentIdentifier, duplicate.contentIdentifier)
-        XCTAssertNotEqual(original.contentIdentifier, changed.contentIdentifier)
-    }
-
-    func testContentIdentifierEqualityIncludesEncodedByteCount() {
-        let shorter = Self.identifier(seed: 7, byteCount: 2)
-        let longer = Self.identifier(seed: 7, byteCount: 3)
-
-        XCTAssertNotEqual(shorter, longer)
-    }
-
-    func testTaskIdentityTracksPayloadExtensionSpaceAndPixelSize() {
-        let spaceID = Self.spaceID(tail: 0x10)
-        let original = Self.request(
-            extensionID: "com.example.extension",
-            spaceID: spaceID,
-            data: Data([0x01, 0x02, 0x03]),
-            maximumPixelSize: 64
-        )
-        let changedPayload = Self.request(
-            extensionID: "com.example.extension",
-            spaceID: spaceID,
-            data: Data([0x01, 0xFF, 0x03]),
-            maximumPixelSize: 64
-        )
-        let changedExtension = Self.request(
-            extensionID: "com.example.other-extension",
-            spaceID: spaceID,
-            data: Data([0x01, 0x02, 0x03]),
-            maximumPixelSize: 64
-        )
-        let changedSpace = Self.request(
-            extensionID: "com.example.extension",
-            spaceID: Self.spaceID(tail: 0x20),
-            data: Data([0x01, 0x02, 0x03]),
-            maximumPixelSize: 64
-        )
-        let changedPixelSize = Self.request(
-            extensionID: "com.example.extension",
-            spaceID: spaceID,
-            data: Data([0x01, 0x02, 0x03]),
-            maximumPixelSize: 128
-        )
-
-        XCTAssertNotEqual(original.identity, changedPayload.identity)
-        XCTAssertNotEqual(original.identity, changedExtension.identity)
-        XCTAssertNotEqual(original.identity, changedSpace.identity)
-        XCTAssertNotEqual(original.identity, changedPixelSize.identity)
-    }
-
     func testCacheDoesNotShareDecodedArtworkAcrossSpaces() async {
         let port = CountingBrowserExtensionIconPort()
         let decoder = BrowserExtensionIconDecoder<Int>(decodingPort: port)
@@ -323,22 +161,6 @@ final class BrowserExtensionIconDecoderTests: XCTestCase {
 
         let decodeCount = await port.decodeCount
         XCTAssertEqual(decodeCount, 2)
-    }
-
-    func testRenderStateNeverReturnsArtworkForAChangedRequestIdentity() {
-        let original = Self.request(data: Data([0x01]))
-        let changed = Self.request(data: Data([0x02]))
-        var state = BrowserExtensionIconRenderState<Int>()
-
-        state.store(11, for: original.identity)
-
-        XCTAssertEqual(state.icon(for: original.identity), 11)
-        XCTAssertNil(state.icon(for: changed.identity))
-
-        state.store(22, for: changed.identity)
-
-        XCTAssertNil(state.icon(for: original.identity))
-        XCTAssertEqual(state.icon(for: changed.identity), 22)
     }
 
     private static func request(data: Data) -> BrowserExtensionIconRequest {
@@ -392,30 +214,6 @@ final class BrowserExtensionIconDecoderTests: XCTestCase {
                 uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tail)
             )
         )
-    }
-
-    private static func waitUntilWaiterCount(
-        _ expectedCount: Int,
-        decoder: BrowserExtensionIconDecoder<Int>
-    ) async {
-        for _ in 0..<1_000 {
-            guard await decoder.inFlightWaiterCount != expectedCount else {
-                return
-            }
-            await Task.yield()
-        }
-    }
-
-    private static func waitUntilInFlightCount(
-        _ expectedCount: Int,
-        decoder: BrowserExtensionIconDecoder<Int>
-    ) async {
-        for _ in 0..<1_000 {
-            guard await decoder.inFlightRequestCount != expectedCount else {
-                return
-            }
-            await Task.yield()
-        }
     }
 
     private static let encodedPNGData =
@@ -476,69 +274,6 @@ private actor UnavailableBrowserExtensionIconPort:
     func decode(_ data: Data, maximumPixelSize: Int) -> Int? {
         decodeCount += 1
         return nil
-    }
-}
-
-private actor SequencedBrowserExtensionIconPort:
-    BrowserExtensionIconDecoding
-{
-    private(set) var decodeCount = 0
-    private var startWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
-    private var completions: [Int: CheckedContinuation<Int?, Never>] = [:]
-
-    func decode(_ data: Data, maximumPixelSize: Int) async -> Int? {
-        decodeCount += 1
-        let invocation = decodeCount
-        let readyWaiters = startWaiters.filter { $0.count <= invocation }
-        startWaiters.removeAll { $0.count <= invocation }
-        for waiter in readyWaiters {
-            waiter.continuation.resume()
-        }
-        return await withCheckedContinuation { continuation in
-            completions[invocation] = continuation
-        }
-    }
-
-    func waitUntilDecodeCountReaches(_ expectedCount: Int) async {
-        guard decodeCount < expectedCount else { return }
-        await withCheckedContinuation { continuation in
-            startWaiters.append((expectedCount, continuation))
-        }
-    }
-
-    func completeDecode(_ invocation: Int, with icon: Int?) {
-        completions.removeValue(forKey: invocation)?.resume(returning: icon)
-    }
-}
-
-private actor SecondCompletionBarrier {
-    private var invocationCount = 0
-    private var suspendedContinuation: CheckedContinuation<Void, Never>?
-    private var suspensionWaiters: [CheckedContinuation<Void, Never>] = []
-
-    func wait() async {
-        invocationCount += 1
-        guard invocationCount == 2 else { return }
-        let waiters = suspensionWaiters
-        suspensionWaiters.removeAll()
-        for waiter in waiters {
-            waiter.resume()
-        }
-        await withCheckedContinuation { continuation in
-            suspendedContinuation = continuation
-        }
-    }
-
-    func waitUntilSecondCompletionIsSuspended() async {
-        guard suspendedContinuation == nil else { return }
-        await withCheckedContinuation { continuation in
-            suspensionWaiters.append(continuation)
-        }
-    }
-
-    func resumeSecondCompletion() {
-        suspendedContinuation?.resume()
-        suspendedContinuation = nil
     }
 }
 

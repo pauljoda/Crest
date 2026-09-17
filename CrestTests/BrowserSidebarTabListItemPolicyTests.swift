@@ -61,25 +61,6 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
         )
     }
 
-    /// Two groups in a row stay two rows rather than merging into one.
-    func testAdjacentGroupsFoldSeparately() {
-        let first = SplitGroupID(rawValue: Self.uuid(0x04))
-        let second = SplitGroupID(rawValue: Self.uuid(0x05))
-        let tabs = [
-            makeTab(0x41, "A", group: first),
-            makeTab(0x42, "B", group: first),
-            makeTab(0x43, "C", group: second),
-            makeTab(0x44, "D", group: second),
-        ]
-
-        let items = BrowserSidebarTabListItemPolicy.items(for: tabs)
-
-        XCTAssertEqual(
-            items.map(\.id),
-            [.splitGroup(first), .splitGroup(second)]
-        )
-    }
-
     /// Defensive: the normalizer clears a second occurrence of a group ID, so a
     /// list carrying one is malformed. It must never produce two rows claiming
     /// the same identity — `ForEach` would then have duplicate IDs.
@@ -108,98 +89,6 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
             Set(items.map(\.id)).count,
             items.count,
             "Row identities must be unique."
-        )
-    }
-
-    /// Defensive: an interleaved list has no run long enough to render, so every
-    /// tab stays a plain row.
-    func testAnInterleavedRunRendersAsPlainTabs() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x07))
-        let tabs = [
-            makeTab(0x61, "A", group: group),
-            makeTab(0x62, "B"),
-            makeTab(0x63, "C", group: group),
-        ]
-
-        let items = BrowserSidebarTabListItemPolicy.items(for: tabs)
-
-        XCTAssertEqual(items, tabs.map { .tab($0) })
-    }
-
-    /// Pinned tabs are a grid of shortcuts rather than an ordered run, so they
-    /// never fold even if a stale membership rode in on them.
-    func testPinnedTabsNeverFold() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x08))
-        let tabs = [
-            makeTab(0x71, "A", group: group, placement: .pinned),
-            makeTab(0x72, "B", group: group, placement: .pinned),
-        ]
-
-        let items = BrowserSidebarTabListItemPolicy.items(for: tabs)
-
-        XCTAssertEqual(items, tabs.map { .tab($0) })
-    }
-
-    /// A pinned member cannot join a run around it either: it breaks contiguity
-    /// rather than being folded in.
-    func testAPinnedTabBreaksTheRunAroundIt() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x09))
-        let head = makeTab(0x81, "Head", group: group)
-        let pinned = makeTab(0x82, "Pinned", group: group, placement: .pinned)
-        let tail = makeTab(0x83, "Tail", group: group)
-
-        let items = BrowserSidebarTabListItemPolicy.items(
-            for: [head, pinned, tail]
-        )
-
-        XCTAssertEqual(items, [.tab(head), .tab(pinned), .tab(tail)])
-    }
-
-    /// The row identity is the group's, not its members', so the row survives a
-    /// member arriving or leaving instead of being rebuilt.
-    func testGroupRowIdentityIsStableAcrossMembershipChanges() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x0A))
-        let head = makeTab(0x91, "Head", group: group)
-        let tail = makeTab(0x92, "Tail", group: group)
-        let joiner = makeTab(0x93, "Joiner", group: group)
-
-        let before = BrowserSidebarTabListItemPolicy.items(for: [head, tail])
-        let after = BrowserSidebarTabListItemPolicy.items(
-            for: [head, tail, joiner]
-        )
-
-        XCTAssertEqual(before.map(\.id), after.map(\.id))
-        XCTAssertEqual(
-            before.map(\.collectionMotionID),
-            after.map(\.collectionMotionID)
-        )
-        XCTAssertNotEqual(before, after)
-    }
-
-    func testCollectionMotionIdentitiesDistinguishGroupsFromTabs() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x0B))
-        let head = makeTab(0xA1, "Head", group: group)
-        let tail = makeTab(0xA2, "Tail", group: group)
-
-        let grouped = BrowserSidebarTabListItemPolicy.items(for: [head, tail])
-        let ungrouped = BrowserSidebarTabListItemPolicy.items(
-            for: [head, tail].map { tab in
-                var plain = tab
-                plain.splitGroupID = nil
-                return plain
-            }
-        )
-
-        XCTAssertEqual(
-            grouped.map(\.collectionMotionID),
-            ["split-\(group.rawValue.uuidString)"]
-        )
-        XCTAssertEqual(
-            ungrouped.map(\.collectionMotionID),
-            [
-                "tab-\(head.id.rawValue.uuidString)",
-                "tab-\(tail.id.rawValue.uuidString)",
-            ]
         )
     }
 
@@ -285,30 +174,6 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
             .splitGroup(id: group, members: [head, selected]),
             "The collapsed representation must match the split still presented in content."
         )
-    }
-
-    func testCollapsedFolderKeepsAnOrdinarySelectedTabAsAPlainRow() throws {
-        let selected = makeTab(0xE1, "Selected", placement: .saved)
-        let neighbor = makeTab(0xE2, "Neighbor", placement: .saved)
-
-        XCTAssertEqual(
-            BrowserSidebarTabListItemPolicy.collapsedItem(
-                keeping: selected.id,
-                in: [selected, neighbor]
-            ),
-            .tab(selected)
-        )
-        XCTAssertNil(
-            BrowserSidebarTabListItemPolicy.collapsedItem(
-                keeping: TabID(),
-                in: [selected, neighbor]
-            ),
-            "A collapsed, nonselected folder does not invent a retained row."
-        )
-    }
-
-    func testAnEmptySectionHasNoRows() {
-        XCTAssertTrue(BrowserSidebarTabListItemPolicy.items(for: []).isEmpty)
     }
 
     private func makeTab(

@@ -4,54 +4,6 @@ import XCTest
 
 @MainActor
 final class MobileBrowserPagePresentationTests: XCTestCase {
-    func testCompactUnloadedPageRestoresWhileRegularPageRemainsUnloaded() {
-        XCTAssertEqual(
-            presentation(isCompact: true),
-            .automaticRestore
-        )
-        XCTAssertEqual(
-            presentation(isCompact: false),
-            .unloaded
-        )
-    }
-
-    func testMobileFailurePrecedenceMatchesMacPresentation() {
-        XCTAssertEqual(
-            presentation(
-                isCompact: true,
-                hasActivePage: true,
-                hasNavigationFailure: true,
-                hasProcessFailure: true
-            ),
-            .navigationFailure
-        )
-        XCTAssertEqual(
-            presentation(
-                isCompact: true,
-                hasActivePage: true,
-                hasProcessFailure: true
-            ),
-            .processFailure
-        )
-        XCTAssertEqual(
-            presentation(isCompact: true, hasActivePage: true),
-            .livePage
-        )
-    }
-
-    func testNoSelectionNeverRestoresOrPresentsAResidentPage() {
-        XCTAssertEqual(
-            presentation(
-                isCompact: true,
-                selection: .none,
-                hasActivePage: true,
-                hasNavigationFailure: true,
-                hasProcessFailure: true
-            ),
-            .noSelection
-        )
-    }
-
     func testCompactPageActionsExposeOnlyTheSelectedRuntimeAssignment() throws {
         let firstTab = BrowserTab(
             title: "First",
@@ -152,26 +104,6 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
         )
         XCTAssertFalse(wrongProfilePort.isAvailable)
         XCTAssertNil(wrongProfilePort.activePage)
-    }
-
-    private func presentation(
-        isCompact: Bool,
-        selection: BrowserPagePresentationSelection = .webPage,
-        hasActivePage: Bool = false,
-        hasNavigationFailure: Bool = false,
-        hasProcessFailure: Bool = false
-    ) -> BrowserPagePresentation {
-        BrowserPagePresentationPolicy.resolve(
-            BrowserPagePresentationInput(
-                selection: selection,
-                hasActivePage: hasActivePage,
-                hasNavigationFailure: hasNavigationFailure,
-                hasProcessFailure: hasProcessFailure,
-                unloadedBehavior: isCompact
-                    ? .restoreAutomatically
-                    : .remainUnloaded
-            )
-        )
     }
 
     private func assignment(

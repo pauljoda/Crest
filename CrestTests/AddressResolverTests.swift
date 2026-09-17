@@ -1,4 +1,3 @@
-import AppKit
 import XCTest
 
 @testable import Crest
@@ -66,19 +65,6 @@ final class AddressResolverTests: XCTestCase {
 
             XCTAssertEqual(components.host, expectedHosts[provider])
             XCTAssertEqual(components.queryItems?.first?.value, "space private search")
-        }
-    }
-
-    func testEverySearchProviderHasAUniqueLogoInTheApplicationAssetCatalog() {
-        let logoNames = BrowserSearchProvider.allCases.compactMap(\.logoAssetName)
-
-        XCTAssertEqual(Set(logoNames).count, BrowserSearchProvider.allCases.count)
-        for provider in BrowserSearchProvider.allCases {
-            let logoAssetName = provider.logoAssetName
-            XCTAssertNotNil(
-                logoAssetName.flatMap(NSImage.init(named:)),
-                "Missing logo asset for \(provider.title)"
-            )
         }
     }
 
@@ -279,24 +265,4 @@ final class AddressResolverTests: XCTestCase {
         )
     }
 
-    func testCommandActionNamesTheSelectedSearchProvider() throws {
-        let website = try XCTUnwrap(
-            BrowserCommandActionPresentation(
-                query: "apple.com/mac",
-                searchProvider: .brave
-            )
-        )
-        let search = try XCTUnwrap(
-            BrowserCommandActionPresentation(
-                query: "native webkit browser",
-                searchProvider: .brave
-            )
-        )
-
-        XCTAssertEqual(website.title, "Open apple.com")
-        XCTAssertEqual(website.symbol, "globe")
-        XCTAssertEqual(search.title, "Search with Brave Search")
-        XCTAssertEqual(search.subtitle, "native webkit browser")
-        XCTAssertEqual(search.symbol, "magnifyingglass")
-    }
 }

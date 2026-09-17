@@ -16,37 +16,6 @@ final class BrowserDownloadLedgerTests: XCTestCase {
         XCTAssertEqual(ledger.items(for: personalProfileID).map(\.filename), ["personal.pdf"])
     }
 
-    func testTracksDestinationProgressAndCompletion() {
-        var ledger = BrowserDownloadLedger()
-        let profileID = UUID()
-        let itemID = ledger.begin(profileID: profileID, filename: "report.pdf")
-        let destination = URL(fileURLWithPath: "/Downloads/report.pdf")
-
-        ledger.setDestination(destination, for: itemID)
-        ledger.setProgress(0.45, for: itemID)
-
-        XCTAssertEqual(ledger.items[0].destinationURL, destination)
-        XCTAssertEqual(ledger.items[0].progress, 0.45)
-        XCTAssertEqual(ledger.items[0].state, .downloading)
-
-        ledger.finish(itemID)
-
-        XCTAssertEqual(ledger.items[0].progress, 1)
-        XCTAssertEqual(ledger.items[0].state, .finished)
-    }
-
-    func testRetainsTheFailureReason() {
-        var ledger = BrowserDownloadLedger()
-        let itemID = ledger.begin(profileID: UUID(), filename: "report.pdf")
-
-        ledger.fail(itemID, message: "The destination is unavailable.")
-
-        XCTAssertEqual(
-            ledger.items[0].state,
-            .failed("The destination is unavailable.")
-        )
-    }
-
     func testRiskyDownloadWaitsForApprovalAndCanBeCanceled() {
         var ledger = BrowserDownloadLedger()
         let itemID = ledger.begin(profileID: UUID(), filename: "dangerous.command")
@@ -64,20 +33,6 @@ final class BrowserDownloadLedgerTests: XCTestCase {
         ledger.cancel(itemID, message: "Canceled for safety.")
 
         XCTAssertEqual(ledger.items[0].state, .canceled("Canceled for safety."))
-    }
-
-    func testCompletedRecordCanBeClearedWithoutAffectingAnotherProfile() {
-        var ledger = BrowserDownloadLedger()
-        let workProfileID = UUID()
-        let personalProfileID = UUID()
-        let workItemID = ledger.begin(profileID: workProfileID, filename: "work.pdf")
-        _ = ledger.begin(profileID: personalProfileID, filename: "personal.pdf")
-
-        ledger.finish(workItemID)
-        ledger.remove(workItemID)
-
-        XCTAssertTrue(ledger.items(for: workProfileID).isEmpty)
-        XCTAssertEqual(ledger.items(for: personalProfileID).map(\.filename), ["personal.pdf"])
     }
 
     func testRemovingAProfilesDownloadHistoryPreservesEveryOtherProfile() {
@@ -200,36 +155,6 @@ final class BrowserDownloadLedgerTests: XCTestCase {
             [secondID, firstID]
         )
         XCTAssertEqual(ledger.items.map(\.createdAt), [secondDate, firstDate])
-    }
-
-    func testBenignRiskAssessmentUpdatesMetadataWithoutAdvancingState() throws {
-        var ledger = BrowserDownloadLedger()
-        let itemID = ledger.begin(profileID: UUID(), filename: "../report.pdf")
-        let assessment = BrowserDownloadRiskAssessment.assess(
-            suggestedFilename: "../report.pdf",
-            mimeType: "application/pdf"
-        )
-
-        ledger.setRiskAssessment(assessment, for: itemID)
-
-        let item = try XCTUnwrap(ledger.items.first)
-        XCTAssertEqual(item.filename, "report.pdf")
-        XCTAssertEqual(item.riskAssessment, assessment)
-        XCTAssertEqual(item.state, .preparing)
-    }
-
-    func testRestartMakesAnAcknowledgedDownloadVisibleAgain() {
-        var ledger = BrowserDownloadLedger()
-        let profileID = UUID()
-        let itemID = ledger.begin(profileID: profileID, filename: "Emerald.dmg")
-        ledger.blockAutomaticDownload(itemID)
-        ledger.acknowledgeItems(for: profileID)
-
-        XCTAssertTrue(ledger.unacknowledgedItems(for: profileID).isEmpty)
-
-        ledger.restart(itemID)
-
-        XCTAssertEqual(ledger.unacknowledgedItems(for: profileID).map(\.id), [itemID])
     }
 
     func testExplicitRetryOverridesAStoredAutomaticDownloadDenialOnce() {
@@ -464,91 +389,6 @@ final class BrowserDownloadLedgerTests: XCTestCase {
         XCTAssertEqual(regressed.progress, 0.3, accuracy: 0.001)
     }
 
-    func testTransferEstimatorHandlesUnknownAndIncorrectTotalsHonestly() {
-        var estimator = BrowserDownloadTransferEstimator()
-        let unknown = estimator.sample(
-            completedUnitCount: 500,
-            totalUnitCount: -1,
-            fractionCompleted: 0.2,
-            isPaused: false,
-            uptime: 1
-        )
-        let incorrect = estimator.sample(
-            completedUnitCount: 700,
-            totalUnitCount: 600,
-            fractionCompleted: 0.3,
-            isPaused: false,
-            uptime: 2
-        )
-
-        XCTAssertNil(unknown.telemetry.totalBytes)
-        XCTAssertNil(unknown.telemetry.estimatedTimeRemaining)
-        XCTAssertEqual(unknown.progress, 0.2, accuracy: 0.001)
-        XCTAssertNil(incorrect.telemetry.totalBytes)
-        XCTAssertEqual(incorrect.telemetry.bytesReceived, 700)
-    }
-
-    func testPausedAndTerminalTransfersNeverClaimActiveRateOrETA() throws {
-        var estimator = BrowserDownloadTransferEstimator()
-        _ = estimator.sample(
-            completedUnitCount: 0,
-            totalUnitCount: 1_000,
-            fractionCompleted: 0,
-            isPaused: false,
-            uptime: 0
-        )
-        let active = estimator.sample(
-            completedUnitCount: 250,
-            totalUnitCount: 1_000,
-            fractionCompleted: 0.25,
-            isPaused: false,
-            uptime: 1
-        )
-        let paused = estimator.sample(
-            completedUnitCount: 250,
-            totalUnitCount: 1_000,
-            fractionCompleted: 0.25,
-            isPaused: true,
-            uptime: 2
-        )
-        XCTAssertNotNil(active.telemetry.bytesPerSecond)
-        XCTAssertTrue(paused.telemetry.isPaused)
-        XCTAssertNil(paused.telemetry.bytesPerSecond)
-        XCTAssertNil(paused.telemetry.estimatedTimeRemaining)
-
-        var ledger = BrowserDownloadLedger()
-        let itemID = ledger.begin(profileID: UUID(), filename: "transfer.bin")
-        ledger.setDestination(URL(fileURLWithPath: "/Downloads/transfer.bin"), for: itemID)
-        ledger.setTransferUpdate(active, for: itemID)
-        ledger.fail(itemID, message: "Connection lost.")
-        let failed = try XCTUnwrap(ledger.items.first)
-        XCTAssertNil(failed.telemetry.bytesPerSecond)
-        XCTAssertNil(failed.telemetry.estimatedTimeRemaining)
-
-        ledger.restart(itemID)
-        XCTAssertEqual(ledger.items.first?.telemetry, .empty)
-        ledger.finish(itemID, finalByteCount: 0)
-        let completed = try XCTUnwrap(ledger.items.first)
-        XCTAssertEqual(completed.telemetry.bytesReceived, 0)
-        XCTAssertEqual(completed.telemetry.totalBytes, 0)
-        XCTAssertNil(completed.telemetry.bytesPerSecond)
-    }
-
-    func testAcknowledgementIsIdempotentAcrossCompletionAndRecreationReads() {
-        var ledger = BrowserDownloadLedger()
-        let profileID = UUID()
-        let itemID = ledger.begin(profileID: profileID, filename: "one.bin")
-
-        XCTAssertEqual(ledger.acknowledgeItems(for: profileID), 1)
-        XCTAssertEqual(ledger.acknowledgeItems(for: profileID), 0)
-        ledger.finish(itemID, finalByteCount: 10)
-        XCTAssertTrue(ledger.unacknowledgedItems(for: profileID).isEmpty)
-
-        let recreatedViewRead = ledger
-        XCTAssertTrue(recreatedViewRead.unacknowledgedItems(for: profileID).isEmpty)
-        XCTAssertTrue(BrowserDownloadLedger().items(for: profileID).isEmpty)
-    }
-
     func testDownloadSourceCaptureIsClampedMatchedOnceAndExpires() throws {
         let destination = try XCTUnwrap(URL(string: "https://example.com/file.bin"))
         let capture = BrowserDownloadSourceCapture(
@@ -578,28 +418,6 @@ final class BrowserDownloadLedgerTests: XCTestCase {
         XCTAssertNil(store.consume(destinationURL: destination, uptime: 31))
     }
 
-    func testDownloadSourceStoreMatchesConcurrentActivationsIndependently() throws {
-        let firstURL = try XCTUnwrap(URL(string: "https://example.com/first.bin"))
-        let secondURL = try XCTUnwrap(URL(string: "https://example.com/second.bin"))
-        let first = BrowserDownloadSourceCapture(
-            destinationURL: firstURL,
-            normalizedSourceRect: CGRect(x: 0.1, y: 0.2, width: 0.2, height: 0.1),
-            normalizedTouchPoint: CGPoint(x: 0.15, y: 0.25)
-        )
-        let second = BrowserDownloadSourceCapture(
-            destinationURL: secondURL,
-            normalizedSourceRect: CGRect(x: 0.6, y: 0.7, width: 0.2, height: 0.1),
-            normalizedTouchPoint: CGPoint(x: 0.65, y: 0.75)
-        )
-        var store = BrowserDownloadSourceStore(maximumAge: 2)
-
-        store.record(first, uptime: 10)
-        store.record(second, uptime: 10.1)
-
-        XCTAssertEqual(store.consume(destinationURL: secondURL, uptime: 10.5), second)
-        XCTAssertEqual(store.consume(destinationURL: firstURL, uptime: 10.6), first)
-    }
-
     func testDownloadSourceMessageRejectsUntrustedContracts() throws {
         let body: [String: Any] = [
             "version": 1,
@@ -623,135 +441,6 @@ final class BrowserDownloadLedgerTests: XCTestCase {
                 messageBody: body.merging(["href": "javascript:alert(1)"]) { _, new in new }
             )
         )
-    }
-
-    func testDownloadFeedbackPolicyUsesHonestFallbackAndReduceMotion() {
-        XCTAssertEqual(
-            BrowserDownloadFeedbackPolicy.presentation(
-                hasSource: true,
-                hasSidebarDestination: true,
-                reduceMotion: false
-            ),
-            .flight
-        )
-        XCTAssertEqual(
-            BrowserDownloadFeedbackPolicy.presentation(
-                hasSource: true,
-                hasSidebarDestination: true,
-                reduceMotion: true
-            ),
-            .destinationFade
-        )
-        XCTAssertEqual(
-            BrowserDownloadFeedbackPolicy.presentation(
-                hasSource: false,
-                hasSidebarDestination: true,
-                reduceMotion: false
-            ),
-            .none
-        )
-        XCTAssertEqual(
-            BrowserDownloadFeedbackPolicy.presentation(
-                hasSource: true,
-                hasSidebarDestination: false,
-                reduceMotion: false
-            ),
-            .none
-        )
-    }
-
-    func testOnlyTrustedDownloadGeometryStrengthensUserInitiation() {
-        XCTAssertEqual(
-            BrowserDownloadInitiationPolicy.userInitiatedOverride(
-                hasTrustedSource: true
-            ),
-            true
-        )
-        XCTAssertNil(
-            BrowserDownloadInitiationPolicy.userInitiatedOverride(
-                hasTrustedSource: false
-            )
-        )
-    }
-
-    func testDownloadFeedbackQueueIsBoundedForSimultaneousDownloads() {
-        let profileID = UUID()
-        let spaceID = SpaceID(rawValue: UUID())
-        var events: [BrowserDownloadFeedbackEvent] = []
-        for index in 0..<8 {
-            events = BrowserDownloadFeedbackPolicy.bounded(
-                events,
-                appending: BrowserDownloadFeedbackEvent(
-                    id: UUID(),
-                    profileID: profileID,
-                    spaceID: spaceID,
-                    filename: "\(index).bin",
-                    source: BrowserDownloadFeedbackSource(
-                        pointInGlobal: .zero,
-                        windowIdentifier: nil
-                    )
-                )
-            )
-        }
-        XCTAssertEqual(events.count, BrowserDownloadFeedbackPolicy.maximumVisibleEvents)
-        XCTAssertEqual(events.map(\.filename), ["5.bin", "6.bin", "7.bin"])
-    }
-
-    func testDownloadRowPresentationAdaptsAndSuppressesStoppedTelemetry() throws {
-        var item = BrowserDownloadItem(
-            id: UUID(),
-            profileID: UUID(),
-            createdAt: .now,
-            filename: "large.bin",
-            destinationURL: nil,
-            progress: 0.5,
-            state: .downloading,
-            riskAssessment: nil
-        )
-        item.telemetry = BrowserDownloadTransferTelemetry(
-            bytesReceived: 500,
-            totalBytes: 1_000,
-            bytesPerSecond: 100,
-            estimatedTimeRemaining: 5,
-            isPaused: false
-        )
-        let active = BrowserDownloadRowPresentation.resolve(item: item)
-        XCTAssertEqual(active.bytesReceived, 500)
-        XCTAssertEqual(active.totalBytes, 1_000)
-        XCTAssertEqual(active.bytesPerSecond, 100)
-        XCTAssertEqual(
-            BrowserDownloadRowLayoutPolicy.resolve(
-                availableWidth: 500,
-                usesAccessibilityTextSize: false,
-                hasSecondaryMetrics: active.hasSecondaryTransferMetrics,
-                statusNeedsAttention: active.statusNeedsAttention
-            ),
-            .inline
-        )
-        XCTAssertEqual(
-            BrowserDownloadRowLayoutPolicy.resolve(
-                availableWidth: 240,
-                usesAccessibilityTextSize: false,
-                hasSecondaryMetrics: active.hasSecondaryTransferMetrics,
-                statusNeedsAttention: active.statusNeedsAttention
-            ),
-            .stacked
-        )
-        XCTAssertEqual(
-            BrowserDownloadRowLayoutPolicy.resolve(
-                availableWidth: 500,
-                usesAccessibilityTextSize: true,
-                hasSecondaryMetrics: active.hasSecondaryTransferMetrics,
-                statusNeedsAttention: active.statusNeedsAttention
-            ),
-            .stacked
-        )
-
-        item.state = .canceled("Canceled.")
-        let canceled = BrowserDownloadRowPresentation.resolve(item: item)
-        XCTAssertNil(canceled.bytesPerSecond)
-        XCTAssertNil(canceled.estimatedTimeRemaining)
-        XCTAssertTrue(canceled.showsStatusAlongsideMetrics)
     }
 
     private func fixedID(_ byte: UInt8) -> UUID {

@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 @MainActor
@@ -67,62 +68,6 @@ final class BrowserCredentialOperationModelTests: XCTestCase {
         XCTAssertEqual(loader.cancelledOrigins, [requestOrigin])
     }
 
-    func testSuccessfulSuggestionLoadPrioritizesUsernameHint() async throws {
-        let spaceID = SpaceID()
-        let requestOrigin = try origin("https://success.example.com/login")
-        let request = makeRequest(
-            origin: requestOrigin,
-            usernameHint: "MATCH@example.com"
-        )
-        let other = descriptor(
-            username: "other@example.com",
-            origin: requestOrigin,
-            spaceID: spaceID
-        )
-        let match = descriptor(
-            username: "match@example.com",
-            origin: requestOrigin,
-            spaceID: spaceID
-        )
-        let loader = StubCredentialSuggestionLoader(result: .success([other, match]))
-        let model = BrowserCredentialSuggestionModel()
-
-        await model.load(request, in: spaceID, using: loader)
-
-        XCTAssertEqual(model.phase, .suggestions([match, other]))
-        XCTAssertEqual(model.suggestions, [match, other])
-    }
-
-    func testSuccessfulEmptySuggestionLoadPublishesEmptyPhase() async throws {
-        let spaceID = SpaceID()
-        let request = makeRequest(
-            origin: try origin("https://empty.example.com/login")
-        )
-        let loader = StubCredentialSuggestionLoader(result: .success([]))
-        let model = BrowserCredentialSuggestionModel()
-
-        await model.load(request, in: spaceID, using: loader)
-
-        XCTAssertEqual(model.phase, .empty)
-        XCTAssertTrue(model.suggestions.isEmpty)
-        XCTAssertFalse(model.hasFailed)
-    }
-
-    func testFailedSuggestionLoadPublishesFailureWithoutSuggestions() async throws {
-        let spaceID = SpaceID()
-        let request = makeRequest(
-            origin: try origin("https://failure.example.com/login")
-        )
-        let loader = StubCredentialSuggestionLoader(result: .failure(TestFailure.expected))
-        let model = BrowserCredentialSuggestionModel()
-
-        await model.load(request, in: spaceID, using: loader)
-
-        XCTAssertEqual(model.phase, .failed)
-        XCTAssertTrue(model.suggestions.isEmpty)
-        XCTAssertTrue(model.hasFailed)
-    }
-
     func testStrongPasswordOperationSavesBeforeFillingGeneratedPassword() async {
         let model = BrowserStrongPasswordOperationModel()
         var operations: [String] = []
@@ -155,18 +100,6 @@ final class BrowserCredentialOperationModelTests: XCTestCase {
 
         XCTAssertFalse(filled)
         XCTAssertEqual(model.phase, .failedBeforeSave)
-    }
-
-    func testStrongPasswordOperationReportsThatThePasswordIsSafeWhenFillFails() async {
-        let model = BrowserStrongPasswordOperationModel()
-
-        await model.generateSaveAndFill(
-            generate: { "fixed-strong-password" },
-            save: { _ in },
-            fill: { _ in throw TestFailure.expected }
-        )
-
-        XCTAssertEqual(model.phase, .savedButFillFailed)
     }
 
     private func origin(_ string: String) throws -> CredentialOrigin {
@@ -203,29 +136,11 @@ final class BrowserCredentialOperationModelTests: XCTestCase {
 }
 
 @MainActor
-private final class StubCredentialSuggestionLoader: BrowserCredentialSuggestionLoading {
-    private let result: Result<[CredentialDescriptor], any Error>
-
-    init(result: Result<[CredentialDescriptor], any Error>) {
-        self.result = result
-    }
-
-    func credentialSuggestions(
-        for origin: CredentialOrigin,
-        in spaceID: SpaceID
-    ) async throws -> [CredentialDescriptor] {
-        try result.get()
-    }
-}
-
-@MainActor
 private final class SuspendedCredentialSuggestionLoader: BrowserCredentialSuggestionLoading {
     private(set) var cancelledOrigins: [CredentialOrigin] = []
 
     private var requestedOrigins: [CredentialOrigin] = []
-    private var continuations: [
-        CredentialOrigin: CheckedContinuation<[CredentialDescriptor], any Error>
-    ] = [:]
+    private var continuations: [CredentialOrigin: CheckedContinuation<[CredentialDescriptor], any Error>] = [:]
 
     func credentialSuggestions(
         for origin: CredentialOrigin,

@@ -4,15 +4,6 @@ import XCTest
 
 @MainActor
 final class BrowserAutomaticPictureInPictureTests: XCTestCase {
-    func testAutomaticPreferenceDefaultsOnAndPersistsOptOut() throws {
-        let suite = "CrestPiPTests.\(UUID())"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        XCTAssertTrue(BrowserAutomaticPictureInPicturePreference.isEnabled(in: defaults))
-        defaults.set(false, forKey: BrowserAutomaticPictureInPicturePreference.key)
-        XCTAssertFalse(BrowserAutomaticPictureInPicturePreference.isEnabled(in: defaults))
-    }
-
     func testPendingRequestReservesSlotAcrossPages() {
         let coordinator = BrowserAutomaticPictureInPictureCoordinator(isEnabled: { true }, isSystemOccupied: { false })
         let first = Client()

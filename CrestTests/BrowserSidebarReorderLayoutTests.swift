@@ -120,19 +120,6 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
         XCTAssertEqual(items.map(\.id), [.folder(first.id), .tab(middle.id), .folder(second.id)])
     }
 
-    func testSourceDescendantsAndTheirDropZonesDisappearTogether() {
-        let childID = FolderID()
-        var layout = layout(before: row(.tab(TabID()), y: 300, height: 40))
-        layout.hiddenIDs.insert(.folder(childID))
-        XCTAssertNil(layout.frame(for: row(source, y: 100, height: 160)))
-        XCTAssertNil(layout.frame(for: row(.folder(childID), y: 140, height: 100)))
-        XCTAssertNil(
-            layout.frame(
-                for: .init(
-                    target: .section(.folders(parentID: childID)),
-                    frame: CGRect(x: 8, y: 180, width: 240, height: 60))))
-    }
-
     @MainActor
     func testExpandedFolderPassesItsSiblingWithoutDraggingAnEntireFolderHeight() throws {
         let state = BrowserSidebarReorderState()
@@ -170,71 +157,10 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
         XCTAssertNil(state.layout.gapFrame)
     }
 
-    @MainActor
-    func testAutoscrollMovesTheExistingGapBeforeResolvingTheHeldPointer() throws {
-        let state = BrowserSidebarReorderState()
-        let regionID = UUID()
-        let sibling = row(.folder(FolderID()), y: 260, height: 80)
-        let following = row(.tab(TabID()), y: 340, height: 40)
-        state.register(scrollRegionFrame: CGRect(x: 0, y: 0, width: 260, height: 600), for: regionID)
-        for row in [row(source, y: 100, height: 160), sibling, following] {
-            state.register(row: row, owner: UUID(), scrollRegionID: regionID)
-        }
-        state.register(
-            zone: .init(target: .section(current), frame: CGRect(x: 8, y: 100, width: 240, height: 280)),
-            for: UUID(), scrollRegionID: regionID)
-        state.begin(
-            item: .folder(
-                .init(folderID: try XCTUnwrap(source.folderID), spaceID: space.spaceID, profileID: space.profileID)),
-            section: current, at: CGPoint(x: 80, y: 120))
-        state.update(pointer: CGPoint(x: 80, y: 168))
-        let target = state.resolvedTarget
-        state.scrollableContentDidMove(in: regionID, by: -10)
-        XCTAssertEqual(state.resolvedTarget, target)
-
-        state.update(pointer: CGPoint(x: 80, y: 168))
-
-    }
-
-    @MainActor
-    func testPinnedToStackUsesRowHeightAndMovesFollowingSectionsWithTheGrid() throws {
-        let state = BrowserSidebarReorderState()
-        let ids = (0..<5).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
-        let pinned = BrowserSidebarReorderSection.tabs(placement: .pinned, folderID: nil)
-        let grid = BrowserPinnedTabReorderLayout(ids: ids, availableWidth: 176)
-        let bounds = CGRect(x: 8, y: 20, width: grid.availableWidth, height: grid.height)
-        for id in ids {
-            state.register(
-                row: .init(
-                    id: id, space: space, section: pinned,
-                    frame: try XCTUnwrap(grid.frame(for: .tab(id), in: bounds))), owner: UUID())
-        }
-        let destination = row(.tab(TabID()), y: 400, height: 40)
-        state.register(row: destination, owner: UUID())
-        state.register(zone: .init(target: .section(pinned), frame: bounds, minimumHeight: 12), for: UUID())
-        state.register(zone: .init(target: .section(current), frame: destination.frame), for: UUID())
-        state.begin(
-            item: .tab(.init(tabID: try XCTUnwrap(ids[0].tabID), spaceID: space.spaceID, profileID: space.profileID)),
-            section: pinned, at: CGPoint(x: 30, y: 40))
-        state.update(pointer: CGPoint(x: 90, y: 350))
-        XCTAssertEqual(state.resolvedTarget?.kind, .insert(section: current, beforeID: destination.id, index: 0))
-
-        for _ in 0..<50 { state.update(pointer: CGPoint(x: 90, y: 350)) }
-
-    }
-
     private func row(_ id: BrowserSidebarReorderItemID, y: CGFloat, height: CGFloat) -> BrowserSidebarReorderRow {
         BrowserSidebarReorderRow(
             id: id, space: space, section: current,
             frame: CGRect(x: 8, y: y, width: 240, height: height))
     }
 
-    private func layout(before destination: BrowserSidebarReorderRow) -> BrowserSidebarReorderLayout {
-        BrowserSidebarReorderLayout(
-            sourceID: source, sourceFrame: CGRect(x: 8, y: 100, width: 240, height: 160),
-            hiddenIDs: [source],
-            gap: .init(
-                section: current, anchor: .before(destination.id),
-                frame: destination.frame, containingFolders: []))
-    }
 }

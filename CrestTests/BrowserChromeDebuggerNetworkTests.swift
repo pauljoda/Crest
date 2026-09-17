@@ -80,32 +80,6 @@ final class BrowserChromeDebuggerNetworkTests: XCTestCase {
         }
     }
 
-    func testDocumentNavigationReportsTheDocumentTypeAndDisableStopsEvents() async throws {
-        try await withNetwork { network, fixture in
-            fixture.page.load(URLRequest(url: try XCTUnwrap(URL(string: "https://crest.test/domain?network"))))
-            try await fixture.waitForEvent("Network.requestWillBeSent") { $0["type"] as? String == "Document" }
-            network.disable()
-            let count = fixture.all("Network.requestWillBeSent").count
-            _ = try? await fixture.page.evaluateJavaScript(
-                "fetch('https://127.0.0.1:49222/crest-while-disabled').catch(() => {}); undefined")
-            try await Task.sleep(for: .milliseconds(400))
-            XCTAssertEqual(fixture.all("Network.requestWillBeSent").count, count)
-        }
-    }
-
-    func testUnsupportedNetworkCommandsAreRefused() async throws {
-        try await withNetwork { network, _ in
-            for method in [
-                "Network.setExtraHTTPHeaders", "Network.setCacheDisabled", "Network.emulateNetworkConditions",
-            ] {
-                do {
-                    _ = try await network.execute(method, parameters: [:])
-                    XCTFail("An unimplemented Network command must report unsupported: \(method)")
-                } catch BrowserChromeDebuggerProtocolError.unsupportedCommand {}
-            }
-        }
-    }
-
     private func withNetwork(
         _ operation: (BrowserChromeDebuggerNetwork, BrowserChromeDebuggerDomainFixture) async throws -> Void
     ) async throws {

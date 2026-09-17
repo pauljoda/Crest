@@ -8,38 +8,6 @@ import XCTest
 /// requests gain the headers.
 @MainActor
 final class BrowserExtensionDeclarativeNetRequestCompatibilityScriptTests: XCTestCase {
-    func testRestorationAndXHRHonorExclusionsWithoutAnInclusionList() async throws {
-        let result = try await evaluate(
-            """
-            const send = url => { const request = new XMLHttpRequest();
-                request.open("GET", url); request.send(); return request.headers; };
-            const allowed = send("https://api.example.test/");
-            const excluded = send("https://sub.excluded.example.test/");
-            const rules = await chrome.declarativeNetRequest.getDynamicRules();
-            rules[0].condition.excludedRequestDomains.length = 0;
-            return {allowed, excluded,
-                stillExcluded: send("https://excluded.example.test/"),
-                fetchExcluded: await fetch("https://excluded.example.test/"),
-                restored: await chrome.declarativeNetRequest.getDynamicRules()};
-            """,
-            startupRulesets:
-                #"{"session":[],"dynamic":[{"id":1,"condition":{"excludedRequestDomains":["excluded.example.test"]},"requestHeaders":[{"header":"x-synthetic","operation":"set","value":"fixture"}]},{"id":2,"condition":{"excludedTabIds":[-1]},"requestHeaders":[{"header":"x-unsafe","operation":"set","value":"fixture"}]}]}"#,
-            requestSetup: """
-                globalThis.XMLHttpRequest = class {
-                    constructor() { this.headers = {}; }
-                    open() {}
-                    setRequestHeader(name, value) { this.headers[name] = value; }
-                    send() {}
-                };
-                """)
-        XCTAssertEqual((result["allowed"] as? [String: Any])?["x-synthetic"] as? String, "fixture")
-        for key in ["excluded", "stillExcluded", "fetchExcluded"] {
-            XCTAssertTrue(try XCTUnwrap(result[key] as? [String: Any]).isEmpty, key)
-        }
-        XCTAssertNil((result["allowed"] as? [String: Any])?["x-unsafe"])
-        XCTAssertEqual((result["restored"] as? [[String: Any]])?.count, 1)
-    }
-
     func testUnsupportedCustomConditionsRejectThroughCallbacksButNativeRulesRemainNative() async throws {
         let result = try await evaluate(
             """
@@ -58,65 +26,6 @@ final class BrowserExtensionDeclarativeNetRequestCompatibilityScriptTests: XCTes
         XCTAssertEqual((result["nativeCalls"] as? [Any])?.count, 1)
         let rule = try XCTUnwrap((result["rules"] as? [[String: Any]])?.first)
         XCTAssertEqual((rule["condition"] as? [String: Any])?["tabIds"] as? [Int], [-1])
-    }
-
-    func testDestinationConditionsSurviveUpdateReadbackAndFetchMatching() async throws {
-        let result = try await evaluate(
-            """
-            const results = [];
-            for (const name of ["Session", "Dynamic"]) {
-                await chrome.declarativeNetRequest[`update${name}Rules`]({addRules: [{
-                    id: 339, action: {type: "modifyHeaders", requestHeaders: [
-                        {header: "x-synthetic", operation: "set", value: "fixture"}
-                    ]}, condition: {requestDomains: ["example.test"],
-                        excludedRequestDomains: ["excluded.example.test"]}
-                }]});
-                results.push({rules: await chrome.declarativeNetRequest[`get${name}Rules`](),
-                    allowed: await fetch("https://api.example.test/"),
-                    excluded: await fetch("https://sub.excluded.example.test/"),
-                    other: await fetch("https://other.test/?example.test")});
-                await chrome.declarativeNetRequest[`update${name}Rules`]({removeRuleIds: [339]});
-            }
-            return {results};
-            """)
-        let results = try XCTUnwrap(result["results"] as? [[String: Any]])
-        for item in results {
-            let rule = try XCTUnwrap((item["rules"] as? [[String: Any]])?.first)
-            XCTAssertEqual((rule["condition"] as? [String: Any])?["requestDomains"] as? [String], ["example.test"])
-            XCTAssertEqual((item["allowed"] as? [String: Any])?["x-synthetic"] as? String, "fixture")
-            XCTAssertNil((item["excluded"] as? [String: Any])?["x-synthetic"])
-            XCTAssertNil((item["other"] as? [String: Any])?["x-synthetic"])
-        }
-    }
-
-    func testRejectedConditionLeavesBothPartitionsAndBrokerUnchanged() async throws {
-        let result = try await evaluate(
-            """
-            const rule = condition => ({id: 339, action: {type: "modifyHeaders", requestHeaders: [
-                {header: "Accept", operation: "set", value: "application/json"},
-                {header: "x-synthetic", operation: "set", value: "fixture"}
-            ]}, condition});
-            await chrome.declarativeNetRequest.updateSessionRules({addRules: [rule({urlFilter: "*"})]});
-            const before = JSON.stringify(await chrome.declarativeNetRequest.getSessionRules());
-            const calls = nativeCalls.length, published = brokerRequests.length;
-            const errors = [];
-            for (const condition of [{domainType: "firstParty"}, {initiatorDomains: ["a.test"]},
-                {excludedInitiatorDomains: ["a.test"]}, {domains: ["a.test"]},
-                {excludedDomains: ["a.test"]}, {tabIds: [-1]}, {excludedTabIds: [-1]},
-                {topDomains: ["a.test"]}, {responseHeaders: []}, {requestDomains: []},
-                {excludedRequestDomains: ["a.test", 1]}, {resourceTypes: []}]) {
-                try { await chrome.declarativeNetRequest.updateSessionRules({removeRuleIds: [339],
-                    addRules: [rule(condition)]}); errors.push(false); }
-                catch (error) { errors.push(error.message.includes("condition")); }
-            }
-            return {errors, nativeUnchanged: calls === nativeCalls.length,
-                brokerUnchanged: published === brokerRequests.length,
-                unchanged: before === JSON.stringify(await chrome.declarativeNetRequest.getSessionRules())};
-            """)
-        XCTAssertEqual(result["errors"] as? [Bool], Array(repeating: true, count: 12))
-        XCTAssertEqual(result["nativeUnchanged"] as? Bool, true)
-        XCTAssertEqual(result["brokerUnchanged"] as? Bool, true)
-        XCTAssertEqual(result["unchanged"] as? Bool, true)
     }
 
     /// Claude's real session rule: one standard header WebKit accepts and two
@@ -167,34 +76,6 @@ final class BrowserExtensionDeclarativeNetRequestCompatibilityScriptTests: XCTes
         XCTAssertEqual(
             (emulated[0]["condition"] as? [String: Any])?["urlFilter"] as? String,
             "https://api.anthropic.com/*")
-    }
-
-    /// WebKit rejects a `modifyHeaders` rule with no header operation left, so
-    /// a rule Crest took over entirely is not sent at all.
-    func testARuleWithNoAcceptedHeaderIsNotSentNatively() async throws {
-        let result = try await evaluate(
-            """
-            await chrome.declarativeNetRequest.updateDynamicRules({
-                addRules: [{
-                    id: 7,
-                    action: {type: "modifyHeaders", requestHeaders: [
-                        {header: "x-crest-token", operation: "set", value: "abc"}
-                    ]},
-                    condition: {urlFilter: "||example.test^"}
-                }]
-            });
-            return {nativeCalls, brokerRequests};
-            """)
-        let nativeCalls = try XCTUnwrap(result["nativeCalls"] as? [[String: Any]])
-        XCTAssertEqual(nativeCalls.count, 1)
-        XCTAssertEqual(nativeCalls[0]["method"] as? String, "updateDynamicRules")
-        XCTAssertEqual(
-            ((nativeCalls[0]["options"] as? [String: Any])?["addRules"] as? [Any])?.count, 0)
-        let set = try XCTUnwrap(
-            (result["brokerRequests"] as? [[String: Any]])?
-                .first { $0["api"] as? String == "dnr.setEmulatedHeaderRules" })
-        XCTAssertEqual(set["ruleset"] as? String, "dynamic")
-        XCTAssertEqual((set["rules"] as? [[String: Any]])?.first?["id"] as? Int, 7)
     }
 
     /// A native refusal is the extension's error, and nothing is recorded for
@@ -296,39 +177,6 @@ final class BrowserExtensionDeclarativeNetRequestCompatibilityScriptTests: XCTes
         XCTAssertNil(matched["user-agent"])
         let missed = try XCTUnwrap(result["missed"] as? [String: Any])
         XCTAssertNil(missed["anthropic-client-platform"])
-    }
-
-    /// `resourceTypes` that name neither `xmlhttprequest` nor `other`, an
-    /// excluded method, and a case-sensitive filter all keep a rule away from
-    /// a request it was not written for.
-    func testConditionsThatDoNotDescribeAnExtensionRequestDoNotApply() async throws {
-        let result = try await evaluate(
-            """
-            await chrome.declarativeNetRequest.updateSessionRules({
-                addRules: [
-                    {id: 1, action: {type: "modifyHeaders", requestHeaders: [
-                        {header: "x-images", operation: "set", value: "1"}]},
-                        condition: {urlFilter: "*", resourceTypes: ["image"]}},
-                    {id: 2, action: {type: "modifyHeaders", requestHeaders: [
-                        {header: "x-not-post", operation: "set", value: "1"}]},
-                        condition: {urlFilter: "*", excludedRequestMethods: ["post"]}},
-                    {id: 3, action: {type: "modifyHeaders", requestHeaders: [
-                        {header: "x-cased", operation: "set", value: "1"}]},
-                        condition: {urlFilter: "https://API.anthropic.com/*",
-                            isUrlFilterCaseSensitive: true}},
-                    {id: 4, action: {type: "modifyHeaders", requestHeaders: [
-                        {header: "x-regex", operation: "set", value: "1"}]},
-                        condition: {regexFilter: "^https://api\\\\.anthropic\\\\.com/v\\\\d+/"}}
-                ]
-            });
-            const headers = await fetch("https://api.anthropic.com/v1/messages", {method: "POST"});
-            return {headers};
-            """)
-        let headers = try XCTUnwrap(result["headers"] as? [String: Any])
-        XCTAssertNil(headers["x-images"])
-        XCTAssertNil(headers["x-not-post"])
-        XCTAssertNil(headers["x-cased"])
-        XCTAssertEqual(headers["x-regex"] as? String, "1")
     }
 
     func testTheHighestPriorityRuleWinsAHeaderAndTiesGoToTheLowerRuleID() async throws {

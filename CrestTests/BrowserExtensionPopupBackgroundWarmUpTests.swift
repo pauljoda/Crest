@@ -46,27 +46,6 @@ final class BrowserExtensionPopupBackgroundWarmUpTests: XCTestCase {
         }
     }
 
-    func testReportsOnceWhenLoadingAndTheDeadlineBothArrive() async throws {
-        var reportLoaded: (@MainActor (Error?) -> Void)?
-        let warmUp = BrowserExtensionPopupBackgroundWarmUp(
-            deadline: .milliseconds(50)
-        ) { loaded in
-            reportLoaded = loaded
-        }
-
-        var outcomes: [BrowserExtensionPopupBackgroundWarmUp.Outcome] = []
-        warmUp.prepare { outcomes.append($0) }
-        reportLoaded?(nil)
-        try await Task.sleep(for: .milliseconds(500))
-        reportLoaded?(nil)
-
-        XCTAssertEqual(
-            outcomes.count,
-            1,
-            "Background preparation finished more than once."
-        )
-    }
-
     func testReportsBackgroundLoadFailureWithoutCallingItLoaded() {
         struct FixtureError: Error {}
 

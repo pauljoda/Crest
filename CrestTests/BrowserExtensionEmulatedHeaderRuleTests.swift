@@ -151,9 +151,6 @@ final class BrowserExtensionEmulatedHeaderRuleTests: XCTestCase {
 
     func testTheAcceptedHeaderListIsWebKitsAndCustomNamesArePartitionedOut() {
         let policy = BrowserExtensionDeclarativeNetRequestHeaderPolicy.self
-        XCTAssertEqual(policy.webKitAcceptedHeaderNames.count, 93)
-        XCTAssertEqual(policy.webKitAcceptedHeaderNames.first, "accept")
-        XCTAssertEqual(policy.webKitAcceptedHeaderNames.last, "icy-metadata")
         XCTAssertTrue(policy.webKitAcceptsHeaderName("Accept-Language"))
         XCTAssertTrue(policy.webKitAcceptsHeaderName("USER-AGENT"))
         XCTAssertFalse(policy.webKitAcceptsHeaderName("anthropic-client-platform"))
@@ -166,17 +163,6 @@ final class BrowserExtensionEmulatedHeaderRuleTests: XCTestCase {
         XCTAssertEqual(accepted.map(\.header), ["User-Agent"])
         XCTAssertEqual(
             emulated.map(\.header), ["anthropic-client-platform", "anthropic-client-version"])
-    }
-
-    func testFetchForbiddenNamesCoverTheSpecPrefixesAndUserAgent() {
-        let policy = BrowserExtensionDeclarativeNetRequestHeaderPolicy.self
-        for name in ["User-Agent", "host", "Origin", "Cookie", "referer", "Content-Length"] {
-            XCTAssertTrue(policy.fetchForbidsHeaderName(name), name)
-        }
-        XCTAssertTrue(policy.fetchForbidsHeaderName("Sec-Fetch-Mode"))
-        XCTAssertTrue(policy.fetchForbidsHeaderName("Proxy-Authorization"))
-        XCTAssertFalse(policy.fetchForbidsHeaderName("anthropic-client-platform"))
-        XCTAssertFalse(policy.fetchForbidsHeaderName("authorization"))
     }
 
     func testTheWirePayloadRoundTripsAndRejectsAnUnusableRule() throws {

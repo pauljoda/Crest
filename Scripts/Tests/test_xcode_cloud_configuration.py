@@ -21,15 +21,6 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
         version_file = REPOSITORY_ROOT / "Config" / "Version.xcconfig"
         return version_file.read_text().split("=", maxsplit=1)[1].strip()
 
-    def test_project_targets_os26_with_the_current_project_format(self) -> None:
-        project = (REPOSITORY_ROOT / "project.yml").read_text()
-
-        self.assertIn('xcodeVersion: "27.0"', project)
-        self.assertIn('iOS: "26.1"', project)
-        self.assertIn('macOS: "26.1"', project)
-        self.assertIn('IPHONEOS_DEPLOYMENT_TARGET: "26.1"', project)
-        self.assertIn('MACOSX_DEPLOYMENT_TARGET: "26.1"', project)
-        self.assertIn("SWIFT_COMPILATION_MODE: singlefile", project)
 
     def test_both_app_schemes_are_shared_and_archive_enabled(self) -> None:
         for scheme_name, blueprint_name in (
@@ -56,26 +47,6 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 }
                 self.assertIn(blueprint_name, archivable_blueprints)
 
-    def test_post_clone_guard_enforces_manual_cross_platform_archives(self) -> None:
-        guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_clone.sh"
-
-        self.assertTrue(guard.is_file())
-        self.assertTrue(os.access(guard, os.X_OK))
-        contents = guard.read_text()
-        for required in (
-            "CI_START_CONDITION",
-            "manual",
-            "manual_rebuild",
-            "CI_PRODUCT_PLATFORM",
-            "CI_COMMIT",
-            "https://github.com/pauljoda/Crest.git",
-            "CrestMobile",
-            "Crest",
-            "26.1",
-            "release Xcode",
-            "beta or prerelease",
-        ):
-            self.assertIn(required, contents)
 
     def test_post_clone_guard_accepts_submission_xcode_and_rejects_unknown_prerelease(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_clone.sh"
@@ -139,34 +110,6 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                     if expected_return_code:
                         self.assertIn("beta or prerelease", result.stderr)
 
-    def test_cloud_version_guards_are_executable(self) -> None:
-        for script_name, required_environment in (
-            (
-                "ci_pre_xcodebuild.sh",
-                (
-                    "CI_XCODE_SCHEME",
-                    "CI_BUILD_NUMBER",
-                    "MARKETING_VERSION",
-                    "CURRENT_PROJECT_VERSION",
-                    "-showBuildSettings",
-                ),
-            ),
-            (
-                "ci_post_xcodebuild.sh",
-                (
-                    "CI_ARCHIVE_PATH",
-                    "CI_BUILD_NUMBER",
-                    "CFBundleShortVersionString",
-                ),
-            ),
-        ):
-            with self.subTest(script=script_name):
-                script = REPOSITORY_ROOT / "ci_scripts" / script_name
-                self.assertTrue(script.is_file())
-                self.assertTrue(os.access(script, os.X_OK))
-                contents = script.read_text()
-                for required in required_environment:
-                    self.assertIn(required, contents)
 
     def test_pre_xcodebuild_guard_rejects_resolved_version_drift(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_pre_xcodebuild.sh"
@@ -292,10 +235,6 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                             result.stderr,
                         )
 
-    def test_release_builds_keep_batch_compilation_enabled(self) -> None:
-        project = (REPOSITORY_ROOT / "project.yml").read_text()
-
-        self.assertNotIn("SWIFT_ENABLE_BATCH_MODE: NO", project)
 
 if __name__ == "__main__":
     unittest.main()

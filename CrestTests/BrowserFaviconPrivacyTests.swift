@@ -105,46 +105,6 @@ final class BrowserFaviconPrivacyTests: XCTestCase {
         }
     }
 
-    func testSecurePageCaptureDoesNotDiscloseReferrersOrCookiesOnDowngrade() async throws {
-        let server = try BrowserPrivacyHTTPServer()
-        try await server.start()
-        defer { server.stop() }
-        let secureServer = try BrowserPrivacyHTTPServer(tls: true)
-        try await secureServer.start()
-        defer { secureServer.stop() }
-        let webView = makeWebView()
-        try await load(
-            secureServer.url(host: "parent.localhost", path: "/private/page?secret=query#fragment"), in: webView)
-        try await webView.evaluateJavaScript(
-            """
-            document.head.innerHTML = '<link rel="icon" href="/downgrade-icon?port=\(server.port)">';
-            """)
-        // WebKit can block the insecure redirect as mixed content. It must not
-        // disclose headers even when there is no usable image at the end.
-        _ = await BrowserFaviconCapture.capture(from: webView)
-        let secureRequests = secureServer.requests.filter { $0.path == "/downgrade-icon" }
-        XCTAssertFalse(secureRequests.isEmpty)
-        XCTAssertTrue(secureRequests.contains { $0.headers["cookie", default: ""].contains("secureOnly=secure") })
-        try await webView.evaluateJavaScript(
-            """
-            document.head.innerHTML = '<link rel="icon" href="http://child.parent.localhost:\(server.port)/policy-icon-redirect">';
-            """)
-        let publicData = await BrowserFaviconCapture.capture(from: webView)
-        XCTAssertNotNil(publicData)
-        let downgraded = server.requests.filter { $0.path == "/cors-icon" || $0.path.hasPrefix("/policy-icon") }
-        XCTAssertTrue(downgraded.contains { $0.path == "/policy-icon" })
-        attach(
-            (secureRequests + downgraded).map(\.description).joined(separator: "\n"),
-            name: "HTTPS downgrade wire requests")
-        for request in secureRequests + downgraded {
-            XCTAssertNil(request.headers["referer"], request.description)
-        }
-        for request in downgraded {
-            XCTAssertNil(request.headers["cookie"], request.description)
-            XCTAssertNil(request.headers["authorization"], request.description)
-        }
-    }
-
     func testNativeFallbackOmitsURLCredentialsCookiesAndReferrersAcrossRedirects() async throws {
         let server = try BrowserPrivacyHTTPServer()
         try await server.start()

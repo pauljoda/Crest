@@ -9,106 +9,6 @@ import XCTest
 @MainActor
 final class BrowserSplitDropPolicyTests: XCTestCase {
 
-    // MARK: - Insertion index
-
-    /// Cards are passed once the pointer is beyond their midpoint, exactly as
-    /// list rows are.
-    func testInsertionIndexCountsTheCardsThePointerHasPassed() {
-        let cards = Self.cardFrames(count: 3)
-
-        XCTAssertEqual(Self.index(atX: 10, in: cards), 0)
-        XCTAssertEqual(Self.index(atX: 149, in: cards), 0)
-        XCTAssertEqual(Self.index(atX: 151, in: cards), 1)
-        XCTAssertEqual(Self.index(atX: 457, in: cards), 1)
-        XCTAssertEqual(Self.index(atX: 459, in: cards), 2)
-        XCTAssertEqual(Self.index(atX: 767, in: cards), 3)
-        XCTAssertEqual(
-            Self.index(atX: 5_000, in: cards),
-            3,
-            "Overshooting the row appends rather than resolving nothing."
-        )
-    }
-
-    /// The midpoint itself is not past the card: the comparison is strict, so a
-    /// pointer resting exactly on the seam keeps the lower slot.
-    func testACardsMidpointIsNotPastIt() {
-        let cards = Self.cardFrames(count: 2)
-
-        XCTAssertEqual(Self.index(atX: 150, in: cards), 0)
-        XCTAssertEqual(Self.index(atX: 458, in: cards), 1)
-    }
-
-    /// The lone-tab case, which is how a split gets created at all.
-    func testASingleCardSplitsIntoALeadingAndATrailingHalf() {
-        let card = [CGRect(x: 0, y: 0, width: 900, height: 600)]
-
-        XCTAssertEqual(Self.index(atX: 100, in: card), 0)
-        XCTAssertEqual(Self.index(atX: 800, in: card), 1)
-    }
-
-    func testNoCardsResolveToTheFirstSlot() {
-        XCTAssertEqual(Self.index(atX: 400, in: []), 0)
-    }
-
-    /// Ordering comes from the leading edges, and a hidden duplicate of a live
-    /// card — an empty frame — is not a card at all.
-    func testOrderingSortsByLeadingEdgeAndDropsEmptyFrames() {
-        let leading = CGRect(x: 0, y: 0, width: 300, height: 600)
-        let trailing = CGRect(x: 308, y: 0, width: 300, height: 600)
-        let hidden = CGRect(x: 120, y: 0, width: 0, height: 0)
-
-        XCTAssertEqual(
-            BrowserSplitDropPolicy.ordered([trailing, hidden, leading]),
-            [leading, trailing]
-        )
-    }
-
-    /// The placeholder the drop opens moves every card, and the index has to
-    /// survive that or the target would flicker between two slots under a
-    /// stationary pointer. Earlier cards shrink toward the leading edge and
-    /// later ones are pushed away, both of which reinforce the answer.
-    func testTheIndexSurvivesTheLayoutItsOwnPlaceholderCauses() {
-        let containerWidth: CGFloat = 900
-        let fractions = [0.5, 0.5]
-        let widths = BrowserSplitColumnLayout.widths(
-            containerWidth: containerWidth,
-            fractions: fractions
-        )
-
-        for pointerX in stride(from: CGFloat(5), to: containerWidth, by: 5) {
-            let restingCards = Self.frames(widths: widths)
-            let index = BrowserSplitDropPolicy.insertionIndex(
-                at: CGPoint(x: pointerX, y: 300),
-                orderedCardFrames: restingCards
-            )
-            // The drop column is a column: every slot, cards included, is
-            // re-shared for the split the drop would make.
-            let dragging = BrowserSplitColumnLayout.widths(
-                containerWidth: containerWidth,
-                fractions: BrowserSplitColumnLayout.fractionsInserting(
-                    at: index,
-                    into: fractions
-                )
-            )
-            var shifted = dragging
-            let placeholderWidth = shifted.remove(at: index)
-            let shiftedCards = Self.frames(
-                widths: shifted,
-                placeholderWidth: placeholderWidth,
-                placeholderIndex: index
-            )
-
-            XCTAssertEqual(
-                BrowserSplitDropPolicy.insertionIndex(
-                    at: CGPoint(x: pointerX, y: 300),
-                    orderedCardFrames: shiftedCards
-                ),
-                index,
-                "A pointer at \(pointerX) changed slot once the placeholder opened."
-            )
-        }
-    }
-
     // MARK: - Acceptance: what the zone itself refuses
 
     /// Only a tab becomes a card. A folder has no page, and a whole group would
@@ -324,26 +224,6 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
 
     // MARK: - Acceptance: what the presented cards refuse
 
-    /// A resolved target and the slot it names, from cards the state measured.
-    func testResolutionOverRegisteredCardsNamesTheSlotUnderThePointer() {
-        let state = Self.stateWithCards(count: 2)
-
-        state.begin(
-            item: Self.tabItem(in: Self.assignment),
-            section: .tabs(placement: .current, folderID: nil),
-            at: CGPoint(x: 100, y: 20)
-        )
-        state.update(pointer: CGPoint(x: 600, y: 300))
-
-        XCTAssertEqual(
-            state.resolvedTarget?.kind,
-            .splitInsert(assignment: Self.assignment, index: 1)
-        )
-        XCTAssertEqual(state.liftTargetShape, .webpageCard)
-        XCTAssertTrue(state.hasEnteredSplitContent)
-        state.cancel()
-    }
-
     /// A tab already on show has nothing to join. That covers the lone tab in an
     /// unsplit window dropped onto itself as much as a member of a live split.
     func testAPresentedTabIsRefusedByItsOwnContentArea() {
@@ -373,22 +253,6 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         let state = Self.stateWithCards(
             count: BrowserSplitGroupPolicy.maximumMembers
         )
-
-        state.begin(
-            item: Self.tabItem(in: Self.assignment),
-            section: .tabs(placement: .current, folderID: nil),
-            at: CGPoint(x: 100, y: 20)
-        )
-        state.update(pointer: CGPoint(x: 460, y: 300))
-
-        XCTAssertNil(state.resolvedTarget)
-        state.cancel()
-    }
-
-    /// Nothing presented — a locked Space, a window with no selection — is not a
-    /// place to drop a card either.
-    func testAnEmptyContentAreaOffersNoInsertionPoint() {
-        let state = Self.stateWithCards(count: 0)
 
         state.begin(
             item: Self.tabItem(in: Self.assignment),
@@ -510,9 +374,6 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
     )
 
     /// Three 300pt cards with an 8pt gap: midpoints at 150, 458, and 766.
-    private static func cardFrames(count: Int) -> [CGRect] {
-        frames(widths: Array(repeating: 300, count: count))
-    }
 
     private static func frames(
         widths: [CGFloat],

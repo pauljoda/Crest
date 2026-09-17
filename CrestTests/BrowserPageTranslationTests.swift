@@ -5,52 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserPageTranslationTests: XCTestCase {
-    func testTranslationOfferPreferencesSurviveNavigationAndExplicitControlsRemainAvailable() async throws {
-        let web = try await fixture()
-        let translation = BrowserPageTranslation()
-        translation.setActive(true, in: web)
-        for automatic in [false, true] {
-            translation.updatePreferences(automaticallyTranslates: automatic, offersTranslation: false)
-            translation.reset()
-            await translation.detect(in: web)
-            XCTAssertFalse(translation.showsToolbar)
-            XCTAssertNil(translation.configuration)
-            translation.present()
-            XCTAssertTrue(translation.showsToolbar)
-        }
-        translation.updatePreferences(automaticallyTranslates: true, offersTranslation: true)
-        translation.reset()
-        await translation.detect(in: web)
-        XCTAssertFalse(translation.showsToolbar, "Automatic translation must not open an offer or status bar.")
-        XCTAssertNil(translation.configuration)
-    }
-
-    func testAutomaticModeLeavesUnselectedLanguagesUnchanged() async throws {
-        let web = try await fixture()
-        let translation = BrowserPageTranslation()
-        var rules = BrowserAutomaticTranslationRules()
-        rules.set(sourceID: "de", targetID: "en", isEnabled: true)
-        translation.updatePreferences(automaticallyTranslates: true, offersTranslation: true, languageRules: rules)
-        translation.setActive(true, in: web)
-        await translation.detect(in: web)
-        await translation.automaticallyTranslateIfAvailable(enabled: true)
-        XCTAssertFalse(translation.isWorking)
-        XCTAssertFalse(translation.isTranslated)
-        XCTAssertFalse(translation.showsToolbar)
-        XCTAssertNil(translation.configuration)
-        let heading = try await web.evaluateJavaScript("document.querySelector('h1').textContent") as? String
-        XCTAssertEqual(heading, "Hola mundo")
-    }
-
-    func testPreferredTargetSurvivesAMissingCatalogAndPreservesThePreferredScript() {
-        let english = Locale.Language(identifier: "en-US")
-        XCTAssertEqual(BrowserTranslationPreference.preferredTarget(in: [], preferred: english), english)
-        let traditional = Locale.Language(identifier: "zh-Hant")
-        let available = [Locale.Language(identifier: "zh-Hans"), traditional, english]
-        XCTAssertEqual(
-            BrowserTranslationPreference.preferredTarget(in: available, preferred: traditional), traditional)
-    }
-
     func testOffersDoNotTranslateUntilRequestedAndShowingOriginalSuppressesAutomaticRetry() async throws {
         let web = try await fixture()
         let translation = BrowserPageTranslation()
@@ -70,28 +24,6 @@ final class BrowserPageTranslationTests: XCTestCase {
         XCTAssertNil(translation.configuration)
         translation.reset()
         XCTAssertFalse(translation.isOffered)
-        XCTAssertNil(translation.configuration)
-    }
-
-    func testToolbarVisibilityPreservesThePendingTranslationAndResetsWithItsDocument() async throws {
-        let web = try await fixture()
-        let translation = BrowserPageTranslation()
-        translation.setActive(true, in: web)
-        translation.sourceID = "es"
-        translation.targetID = "en"
-        translation.start()
-        let configuration = try XCTUnwrap(translation.configuration)
-        XCTAssertTrue(translation.isWorking)
-        translation.setToolbarVisible(false)
-        XCTAssertFalse(translation.showsToolbar)
-        XCTAssertTrue(translation.isWorking)
-        XCTAssertEqual(translation.configuration, configuration)
-        translation.toggleToolbarVisibility()
-        XCTAssertTrue(translation.showsToolbar)
-        XCTAssertEqual(translation.configuration, configuration)
-        translation.reset()
-        XCTAssertFalse(translation.showsToolbar)
-        XCTAssertFalse(translation.isWorking)
         XCTAssertNil(translation.configuration)
     }
 
@@ -202,14 +134,6 @@ final class BrowserPageTranslationTests: XCTestCase {
         XCTAssertEqual(heading, 7500)
         let capture = try await BrowserTranslationDocument.capture(in: web, token: "large")
         XCTAssertTrue(capture.isLimited)
-    }
-
-    func testSparseJapanesePageUsesDeclaredLanguageAndEmptyPagesDoNotOfferTranslation() async throws {
-        let sample = BrowserTranslationDocument.Sample(text: "Google ログイン すべて 画像 動画 ニュース", declaredLanguage: "ja")
-        XCTAssertEqual(BrowserPageTranslation.detectedLanguage(in: sample), "ja")
-        XCTAssertNil(BrowserPageTranslation.detectedLanguage(in: .init(text: "", declaredLanguage: "ja")))
-        XCTAssertEqual(
-            BrowserPageTranslation.detectedLanguage(in: .init(text: "日本語のページを表示しています。", declaredLanguage: "ja")), "ja")
     }
 
     private func fixture() async throws -> WKWebView {

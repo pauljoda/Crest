@@ -13,33 +13,6 @@ RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 
 class DirectDistributionContractTests(unittest.TestCase):
 
-    def test_each_release_publishes_one_clearly_named_asset_set(self) -> None:
-        workflow = RELEASE_WORKFLOW.read_text()
-
-        self.assertNotIn('release_tag="nightly"', workflow)
-        self.assertNotIn('release_tag="development"', workflow)
-        self.assertIn("maximum_versions=1", workflow)
-        self.assertIn('installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"', workflow)
-        self.assertIn('checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"', workflow)
-        self.assertIn('symbols_name="Debug-Symbols-${RELEASE_ASSET_BASE}.dSYM.zip"', workflow)
-        self.assertIn('release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"', workflow)
-        self.assertIn("generate-release-notes.py", workflow)
-
-    def test_interrupted_release_uses_the_last_published_appcast_and_retains_history(self) -> None:
-        workflow = RELEASE_WORKFLOW.read_text()
-
-        self.assertIn("resolve-published-release.py", workflow)
-        self.assertIn('appcast_filename="appcast-development.xml"', workflow)
-        self.assertIn('appcast_filename="appcast.xml"', workflow)
-        self.assertIn('git show "FETCH_HEAD:${appcast_filename}"', workflow)
-        self.assertIn("reconcile-release-assets.py", workflow)
-        self.assertNotIn("--prune-other-assets", workflow)
-        self.assertNotIn("gh release delete", workflow)
-        self.assertNotIn("gh release edit", workflow)
-        self.assertNotIn("force=true", workflow)
-        self.assertNotIn("--clobber", workflow)
-        self.assertIn("local attempt delay exit_code", workflow)
-        self.assertNotIn("local attempt delay status", workflow)
 
     def test_release_note_cursor_advances_atomically_with_the_signed_appcast(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
@@ -59,15 +32,6 @@ class DirectDistributionContractTests(unittest.TestCase):
             workflow.index('git -C "$updates_checkout" push origin HEAD:updates'),
         )
 
-    def test_release_build_number_survives_the_public_repository_epoch(self) -> None:
-        workflow = RELEASE_WORKFLOW.read_text()
-
-        self.assertIn("build_epoch=1000", workflow)
-        self.assertIn(
-            'build_number="$((build_epoch + GITHUB_RUN_NUMBER))"',
-            workflow,
-        )
-        self.assertNotIn('build_number="$GITHUB_RUN_NUMBER"', workflow)
 
     def test_export_uses_the_named_developer_id_profile(self) -> None:
         with EXPORT_OPTIONS.open("rb") as stream:

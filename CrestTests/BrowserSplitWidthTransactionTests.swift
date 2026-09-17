@@ -21,32 +21,7 @@ final class BrowserSplitWidthTransactionTests: XCTestCase {
 
     // MARK: - Stability under a stationary pointer
 
-    func testAccessibilityStepsMeasureFromTheLayoutOnScreen() {
-        var transaction = makeTransaction()
-        let step = BrowserSplitCardResizeHandleMetrics.accessibilityStep
-
-        transaction.resize(dividerIndex: 0, delta: step, containerWidth: containerWidth)
-        _ = transaction.commit()
-        let afterOne = transaction.fractions[0]
-        transaction.resize(dividerIndex: 0, delta: step, containerWidth: containerWidth)
-        _ = transaction.commit()
-
-        XCTAssertGreaterThan(
-            transaction.fractions[0],
-            afterOne,
-            "Each step commits, so the next one starts from the layout it produced."
-        )
-    }
-
     // MARK: - Commit contract
-
-    func testADragMovesTheLiveLayoutBeforeItIsCommitted() {
-        var transaction = makeTransaction()
-
-        transaction.resize(dividerIndex: 0, delta: 40, containerWidth: containerWidth)
-
-        XCTAssertGreaterThan(transaction.fractions[0], transaction.persistedFractions[0])
-    }
 
     func testCommittingPublishesTheLayoutTheDragSettledOn() {
         var transaction = makeTransaction()

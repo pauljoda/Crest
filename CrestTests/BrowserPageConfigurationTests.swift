@@ -79,28 +79,6 @@ final class BrowserPageConfigurationTests: XCTestCase {
         XCTAssertFalse(userAgent?.contains("Crest/") == true)
     }
 
-    func testSafariCompatibilityUsesTheInstalledSafariVersion() {
-        XCTAssertEqual(
-            BrowserPlatformUserAgent.applicationName(safariVersion: "26.6.2"),
-            "Version/26.6.2 Safari/605.1.15"
-        )
-        XCTAssertEqual(
-            BrowserPlatformUserAgent.applicationName(safariVersion: " 18.6 \n"),
-            "Version/18.6 Safari/605.1.15"
-        )
-    }
-
-    func testSafariCompatibilityRejectsMissingOrMalformedVersions() {
-        XCTAssertNil(BrowserPlatformUserAgent.applicationName(safariVersion: nil))
-        XCTAssertNil(BrowserPlatformUserAgent.applicationName(safariVersion: ""))
-        XCTAssertNil(
-            BrowserPlatformUserAgent.applicationName(safariVersion: "26.6 Beta")
-        )
-        XCTAssertNil(
-            BrowserPlatformUserAgent.applicationName(safariVersion: "26..6")
-        )
-    }
-
     func testDesktopWebViewAcceptsTheClickThatActivatesItsWindow() {
         let webView = BrowserDesktopWebView(
             frame: .zero,

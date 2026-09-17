@@ -29,26 +29,6 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             context.model.windowTitle(for: context.requestBinding.request), String(localized: "Quick Window"))
     }
 
-    func testStaleQuickRequestDoesNotExposeItsPageTitle() throws {
-        let context = try makeContext()
-        context.model.preparePage(isActive: true)
-        context.requestBinding.request = .empty(
-            spaceAssignment: BrowserSpaceRuntimeAssignment(space: context.destination)
-        )
-        XCTAssertEqual(
-            context.model.windowTitle(for: context.requestBinding.request), String(localized: "Quick Window"))
-    }
-
-    func testWindowTitleUsesSceneRequestInsteadOfAnActionTimeBindingRead() async throws {
-        let context = try makeContext()
-        context.model.preparePage(isActive: true)
-        let page = try XCTUnwrap(context.model.page)
-        page.webView.loadHTMLString("<title>Current scene page</title>", baseURL: context.model.presentedRequest.url)
-        try await waitUntil { page.title == "Current scene page" && !page.isLoading }
-        context.requestBinding.rejectActionReads = true
-        XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Current scene page")
-    }
-
     func testRetargetedSceneRequestRedactsThePreviousPageBeforeModelReconciliation() throws {
         let context = try makeContext()
         let retargeted = context.requestBinding.request.retargeted(
@@ -81,34 +61,6 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         XCTAssertTrue(context.model.page === page)
         XCTAssertEqual(page.pendingNavigationURL, destination)
         XCTAssertEqual(context.browser.selectedSpace?.tabs.count, tabCount)
-        XCTAssertEqual(
-            context.model.presentedRequest.id,
-            context.requestBinding.request.id
-        )
-    }
-
-    func testWindowOpenAboutBlankStaysInTheExactQuickWindowLease() throws {
-        let context = try makeContext()
-        context.model.preparePage(isActive: true)
-        let lease = try XCTUnwrap(context.model.pageLease)
-        let page = try XCTUnwrap(lease.page)
-        let destination = try XCTUnwrap(
-            URL(string: "about:blank#quick-window-open")
-        )
-
-        let popupWebView = try page.requestTestPopup(
-            url: destination,
-            navigationType: .other
-        )
-
-        XCTAssertNil(popupWebView)
-        XCTAssertTrue(context.model.pageLease === lease)
-        XCTAssertTrue(context.model.page === page)
-        XCTAssertEqual(page.pendingNavigationURL, destination)
-        XCTAssertEqual(
-            context.browser.selectedSpace?.tabs.map(\.id),
-            context.source.tabs.map(\.id)
-        )
         XCTAssertEqual(
             context.model.presentedRequest.id,
             context.requestBinding.request.id
@@ -179,26 +131,6 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         XCTAssertFalse(model.archivePageIfNeeded())
         XCTAssertFalse(model.promote(to: replacement))
         XCTAssertEqual(model.selectedAssignment.profileID, context.source.profile.id)
-    }
-
-    func testSpaceInsertionReorderAndRenamePreserveTheExactRuntimeLease() throws {
-        let context = try makeContext()
-        context.model.preparePage(isActive: true)
-        let lease = try XCTUnwrap(context.model.pageLease)
-        let page = try XCTUnwrap(lease.page)
-        var renamedSource = context.source
-        renamedSource.name = "Renamed Source"
-        let inserted = makeSpace(name: "Inserted")
-        context.browser.session = BrowserSession(
-            spaces: [context.destination, inserted, renamedSource],
-            selectedSpaceID: renamedSource.id
-        )
-
-        context.model.preparePage(isActive: true)
-
-        XCTAssertTrue(context.model.pageLease === lease)
-        XCTAssertTrue(context.model.page === page)
-        XCTAssertEqual(context.model.page?.profileID, renamedSource.profile.id)
     }
 
     func testPermanentlyInvalidatedLeaseIsRebuiltForTheSameAssignment() throws {

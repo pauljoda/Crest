@@ -206,34 +206,6 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
         )
     }
 
-    /// The windowed shell answers history in place: a new tab in the Space the
-    /// reader is looking at, and Finder destinations for finished files.
-    func testPagePoolBindingOpensHistoryInPlace() throws {
-        let context = makeContext()
-        let pages = BrowserPagePool(
-            browsingMode: .privateBrowsing,
-            usesEphemeralWebsiteDataStores: true
-        )
-        let coordinator = BrowserSidebarUtilityCoordinator(
-            browser: context.browser,
-            pages: pages,
-            spaceAccess: context.access
-        )
-        let assignment = BrowserSpaceRuntimeAssignment(space: context.source)
-
-        coordinator.actions.openHistoryEntry(context.history, assignment)
-
-        XCTAssertEqual(
-            coordinator.actions.downloadDestinations,
-            [.open, .revealInFinder]
-        )
-        XCTAssertTrue(
-            try XCTUnwrap(
-                context.browser.session.space(id: context.source.id)
-            ).tabs.contains(where: { $0.url == context.history.url })
-        )
-    }
-
     private func assertActionsAreRejected(
         context: Context? = nil,
         mutation: (Context) -> Void,

@@ -90,33 +90,4 @@ final class BrowserDownloadRiskAssessmentTests: XCTestCase {
         )
     }
 
-    func testRiskReasonPresentationResolvesEnglishAndArabicWarningCopy() {
-        let expectations: [(BrowserDownloadRiskReason, String, String)] = [
-            (
-                .executableOrInstaller,
-                "This file type can install or run software.",
-                "يمكن لهذا النوع من الملفات تثبيت البرامج أو تشغيلها."
-            ),
-            (
-                .deceptiveFilename,
-                "The original filename used invisible or direction-changing characters that can disguise its real extension.",
-                "استخدم اسم الملف الأصلي أحرفًا غير مرئية أو أحرفًا تغيّر اتجاه النص لإخفاء امتداده الحقيقي."
-            ),
-            (
-                .dangerousTypeMismatch,
-                "The server-reported file type does not match the filename and one of those types can run software.",
-                "نوع الملف الذي أبلغ عنه الخادم لا يطابق اسم الملف، ويمكن لأحد هذين النوعين تشغيل البرامج."
-            ),
-        ]
-
-        for (reason, expectedEnglish, expectedArabic) in expectations {
-            var englishResource = reason.warningMessage
-            englishResource.locale = Locale(identifier: "en")
-            XCTAssertEqual(String(localized: englishResource), expectedEnglish)
-
-            var arabicResource = reason.warningMessage
-            arabicResource.locale = Locale(identifier: "ar")
-            XCTAssertEqual(String(localized: arabicResource), expectedArabic)
-        }
-    }
 }

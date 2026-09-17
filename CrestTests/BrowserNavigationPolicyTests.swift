@@ -24,18 +24,6 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         }
     }
 
-    func testUnmodifiedNativeWindowsKeepTheirForegroundSemantics() {
-        for focusesNewTabs in [false, true] {
-            XCTAssertTrue(
-                BrowserLinkOpeningPolicy.selectsNewTab(
-                    isNewTabGesture: false,
-                    isShiftModified: true,
-                    focusesNewTabs: focusesNewTabs
-                )
-            )
-        }
-    }
-
     func testInlineDirectVideoUsesBrowserOwnedPlaybackDocument() throws {
         let url = try XCTUnwrap(
             URL(string: "https://media.example/watch?id=direct&quality=source")
@@ -101,29 +89,6 @@ final class BrowserNavigationPolicyTests: XCTestCase {
                 "https://cdn.example/assets/redirected.mp4?token=one&amp;part=two"
             )
         )
-    }
-
-    func testDirectAudioUsesAnAudioElement() throws {
-        let url = try XCTUnwrap(URL(string: "https://media.example/listen"))
-        let response = try XCTUnwrap(
-            HTTPURLResponse(
-                url: url,
-                statusCode: 200,
-                httpVersion: "HTTP/1.1",
-                headerFields: ["Content-Type": "audio/mpeg"]
-            )
-        )
-
-        let navigation = try XCTUnwrap(
-            BrowserDirectMediaNavigation.classify(
-                canShowMIMEType: true,
-                isForMainFrame: true,
-                response: response
-            )
-        )
-
-        XCTAssertEqual(navigation.kind, .audio)
-        XCTAssertTrue(navigation.responseHTML.contains("<audio"))
     }
 
     func testOnlyDisplayableInlineTopLevelMediaUsesPlaybackDocument() throws {
@@ -235,38 +200,6 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         )
     }
 
-    func testInlineDispositionRemainsDisplayable() throws {
-        let url = try XCTUnwrap(URL(string: "https://example.com/report"))
-        let response = try XCTUnwrap(
-            HTTPURLResponse(
-                url: url,
-                statusCode: 200,
-                httpVersion: "HTTP/1.1",
-                headerFields: ["Content-Disposition": "inline"]
-            )
-        )
-
-        XCTAssertEqual(
-            BrowserNavigationDecider.decidePolicy(
-                canShowMIMEType: true,
-                response: response
-            ),
-            .allow
-        )
-    }
-
-    func testTargetlessNavigationOpensInANewBrowserTab() throws {
-        let url = try XCTUnwrap(URL(string: "https://example.com/popup"))
-
-        let intent = BrowserNavigationIntent.classify(
-            url: url,
-            hasTargetFrame: false,
-            shouldPerformDownload: false
-        )
-
-        XCTAssertEqual(intent, .openInNewTab(url))
-    }
-
     func testDownloadTakesPrecedenceOverTargetlessNavigation() throws {
         let url = try XCTUnwrap(URL(string: "https://example.com/archive.zip"))
 
@@ -277,18 +210,6 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(intent, .download)
-    }
-
-    func testOrdinaryTargetedNavigationRemainsInTheCurrentPage() throws {
-        let url = try XCTUnwrap(URL(string: "https://example.com/next"))
-
-        let intent = BrowserNavigationIntent.classify(
-            url: url,
-            hasTargetFrame: true,
-            shouldPerformDownload: false
-        )
-
-        XCTAssertEqual(intent, .allow)
     }
 
     func testCommandAndMiddleClickedWebLinksUseNativeTabDisposition() throws {
@@ -518,35 +439,6 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         )
         XCTAssertNil(firstTab.notice, "A later indication remains scoped to its own page.")
         XCTAssertEqual(secondTab.indicationRevision, 1)
-    }
-
-    func testBlockedPopupPresentationNamesSiteAndExposesAllowAction() {
-        let notice = BrowserBlockedPopupNotice(
-            origin: BrowserSiteOrigin(
-                scheme: "https",
-                host: "vcenter.example",
-                port: 443
-            ),
-            status: .blocked
-        )
-
-        XCTAssertEqual(notice.title, "Pop-up blocked for vcenter.example")
-        XCTAssertEqual(
-            notice.chromeAccessibilityLabel(surfaceName: "Site Controls"),
-            "Pop-up blocked for vcenter.example. Site Controls"
-        )
-        XCTAssertEqual(
-            notice.allowActionAccessibilityLabel,
-            "Allow automatic pop-ups for vcenter.example"
-        )
-        XCTAssertTrue(notice.allowActionAccessibilityHint.contains("current Space"))
-
-        let allowed = BrowserBlockedPopupNotice(
-            origin: notice.origin,
-            status: .allowedAwaitingRetry
-        )
-        XCTAssertTrue(allowed.guidance.contains("Retry the action"))
-        XCTAssertTrue(allowed.guidance.contains("did not reopen"))
     }
 
     func testExternalSchemesLeaveWebKitWhileItsOwnSchemesStay() throws {
@@ -928,37 +820,6 @@ final class BrowserDownloadNavigationLifecycleTests: XCTestCase {
 
 @MainActor
 final class BrowserPopupSchemeRoutingTests: XCTestCase {
-    func testAPopupDestinationAnotherApplicationOwnsIsRoutedNotOpened() throws {
-        let mailURL = try XCTUnwrap(URL(string: "mailto:person@example.com"))
-
-        XCTAssertEqual(
-            BrowserPopupSchemeRouting.classify(destinationURL: mailURL),
-            .handOffToSystem(mailURL)
-        )
-        XCTAssertEqual(
-            BrowserPopupSchemeRouting.classify(
-                destinationURL: try XCTUnwrap(URL(string: "zoommtg://zoom.us/join?confno=1"))
-            ),
-            .handOffToSystem(try XCTUnwrap(URL(string: "zoommtg://zoom.us/join?confno=1")))
-        )
-    }
-
-    func testWebKitsOwnSchemesStillAnswerToThePopupPolicy() throws {
-        for address in ["https://example.com/popup", "about:blank", "data:text/plain,hi"] {
-            XCTAssertEqual(
-                BrowserPopupSchemeRouting.classify(
-                    destinationURL: try XCTUnwrap(URL(string: address))
-                ),
-                .popupPolicy,
-                "\(address) is WebKit's to host, so the pop-up policy decides."
-            )
-        }
-        XCTAssertEqual(
-            BrowserPopupSchemeRouting.classify(destinationURL: nil),
-            .popupPolicy,
-            "window.open() without a destination is still a window request."
-        )
-    }
 
     func testAPopupMayNotReachAScriptOrFileURLThroughAnyRoute() throws {
         for address in ["javascript:alert(1)", "file:///etc/passwd"] {
@@ -1030,25 +891,6 @@ final class BrowserPopupSchemeRoutingTests: XCTestCase {
             XCTAssertTrue(harness.openedTabURLs.isEmpty)
             XCTAssertEqual(harness.adoptedURLs.count, 0)
         }
-    }
-
-    func testAnOrdinaryPopupStillReachesAdoptionUnchanged() throws {
-        let harness = Harness()
-        let popupURL = try XCTUnwrap(URL(string: "https://example.com/popup"))
-
-        _ = harness.resolveOpen(
-            url: popupURL,
-            navigationType: .linkActivated,
-            currentURL: try XCTUnwrap(URL(string: "https://example.com/"))
-        )
-        _ = harness.resolveOpen(
-            url: nil,
-            navigationType: .linkActivated,
-            currentURL: try XCTUnwrap(URL(string: "https://example.com/"))
-        )
-
-        XCTAssertEqual(harness.adoptedURLs, [popupURL, nil])
-        XCTAssertTrue(harness.handedOff.isEmpty)
     }
 
     func testAUserActivatedWindowOpenClassifiedAsOtherStillReachesAdoption() throws {

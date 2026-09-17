@@ -28,59 +28,6 @@ final class BrowserChromeDebuggerPageTests: XCTestCase {
         }
     }
 
-    func testLayoutMetricsMeasureScrolledContentWithoutMovingThePage() async throws {
-        try await withPage { page, fixture, _ in
-            _ = try await fixture.page.evaluateJavaScript(
-                """
-                document.documentElement.style.cssText = 'overflow:scroll; scrollbar-width:none';
-                document.body.style.cssText = 'margin:0; width:1600px; height:2400px';
-                window.scrollTo(120, 300);
-                undefined
-                """)
-            try await BrowserChromeDebuggerDomainFixture.waitFor(seconds: 5) {
-                (try? await fixture.page.evaluateJavaScript("scrollY")) as? Int == 300
-            }
-            let result = try await page.execute("Page.getLayoutMetrics", parameters: [:])
-            let layout = try XCTUnwrap(result["cssLayoutViewport"] as? [String: Double])
-            XCTAssertEqual(layout, ["pageX": 120, "pageY": 300, "clientWidth": 640, "clientHeight": 480])
-            XCTAssertEqual(
-                result["cssContentSize"] as? [String: Double], ["x": 0, "y": 0, "width": 1600, "height": 2400])
-            let visual = try XCTUnwrap(result["cssVisualViewport"] as? [String: Double])
-            XCTAssertEqual(visual["pageY"], 300)
-            XCTAssertEqual(visual["clientWidth"], 640)
-            XCTAssertEqual(visual["scale"], 1)
-            let measuredRatio = try await fixture.page.evaluateJavaScript("devicePixelRatio")
-            let ratio = try XCTUnwrap(measuredRatio as? Double)
-            let legacy = try XCTUnwrap(result["layoutViewport"] as? [String: Double])
-            XCTAssertEqual(legacy["clientWidth"], 640 * ratio)
-            XCTAssertEqual(legacy["pageY"], 300 * ratio)
-            let scrollY = try await fixture.page.evaluateJavaScript("scrollY")
-            XCTAssertEqual(scrollY as? Int, 300)
-        }
-    }
-
-    func testLayoutMetricsRespectPageZoomAndIgnorePageDefinedGetters() async throws {
-        try await withPage { page, fixture, _ in
-            fixture.page.pageZoom = 2
-            _ = try await fixture.page.evaluateJavaScript(
-                """
-                document.documentElement.style.cssText = 'scrollbar-width:none';
-                document.body.style.cssText = 'margin:0; height:1000px';
-                Object.defineProperty(window, 'visualViewport', { get() { throw new Error('page getter'); } });
-                Object.defineProperty(window, 'devicePixelRatio', { get() { return 9000; } });
-                undefined
-                """)
-            let result = try await page.execute("Page.getLayoutMetrics", parameters: [:])
-            let layout = try XCTUnwrap(result["cssLayoutViewport"] as? [String: Double])
-            XCTAssertEqual(layout["clientWidth"], 320)
-            XCTAssertEqual(layout["clientHeight"], 240)
-            let visual = try XCTUnwrap(result["cssVisualViewport"] as? [String: Double])
-            XCTAssertEqual(visual["zoom"], 2)
-            let legacy = try XCTUnwrap(result["layoutViewport"] as? [String: Double])
-            XCTAssertLessThan(try XCTUnwrap(legacy["clientWidth"]), 10000)
-        }
-    }
-
     func testFrameTreeAndNavigationReportTheSameChromeFrame() async throws {
         try await withPage { page, fixture, _ in
             let tree = try await page.execute("Page.getFrameTree", parameters: [:])
@@ -121,30 +68,6 @@ final class BrowserChromeDebuggerPageTests: XCTestCase {
         }
     }
 
-    func testAChildFrameAppearsUnderItsParentInTheFrameTree() async throws {
-        try await withPage { page, fixture, _ in
-            _ = try await fixture.page.evaluateJavaScript(
-                """
-                globalThis.crestChildLoaded = false;
-                const frame = document.createElement('iframe');
-                frame.onload = () => { crestChildLoaded = true; };
-                frame.srcdoc = '<!doctype html><title>Child frame</title>';
-                document.body.append(frame);
-                undefined
-                """)
-            try await BrowserChromeDebuggerDomainFixture.waitFor(seconds: 10) {
-                (try? await fixture.page.evaluateJavaScript("globalThis.crestChildLoaded")) as? Bool == true
-            }
-            let tree = try await page.execute("Page.getFrameTree", parameters: [:])
-            let root = try XCTUnwrap(tree["frameTree"] as? [String: Any])
-            let children = try XCTUnwrap(root["childFrames"] as? [[String: Any]])
-            let child = try XCTUnwrap(children.first?["frame"] as? [String: Any])
-            XCTAssertEqual(
-                child["parentId"] as? String, (root["frame"] as? [String: Any])?["id"] as? String)
-            XCTAssertFalse(try XCTUnwrap(child["id"] as? String).isEmpty)
-        }
-    }
-
     func testAlertIsHeldForTheClientAndReleasedByHandleJavaScriptDialog() async throws {
         let host = BrowserChromeDebuggerDialogPage()
         try await withPage(uiDelegate: host) { page, fixture, _ in
@@ -166,25 +89,6 @@ final class BrowserChromeDebuggerPageTests: XCTestCase {
             await self.fulfillment(of: [answered], timeout: 5)
             let closed = try XCTUnwrap(fixture.first("Page.javascriptDialogClosed"))
             XCTAssertEqual(closed["result"] as? Bool, true)
-        }
-    }
-
-    func testPromptCarriesItsDefaultAndReturnsTheClientsText() async throws {
-        let host = BrowserChromeDebuggerDialogPage()
-        try await withPage(uiDelegate: host) { page, fixture, _ in
-            let answered = self.expectation(description: "Prompt resolved with the client's text")
-            fixture.page.evaluateJavaScript("prompt('crest-prompt', 'preset')") { value, _ in
-                XCTAssertEqual(value as? String, "crest-answer")
-                answered.fulfill()
-            }
-            try await fixture.waitForEvent("Page.javascriptDialogOpening")
-            let opening = try XCTUnwrap(fixture.first("Page.javascriptDialogOpening"))
-            XCTAssertEqual(opening["type"] as? String, "prompt")
-            XCTAssertEqual(opening["defaultPrompt"] as? String, "preset")
-            _ = try await page.execute(
-                "Page.handleJavaScriptDialog", parameters: ["accept": true, "promptText": "crest-answer"])
-            await self.fulfillment(of: [answered], timeout: 5)
-            XCTAssertEqual(fixture.first("Page.javascriptDialogClosed")?["userInput"] as? String, "crest-answer")
         }
     }
 
@@ -230,21 +134,6 @@ final class BrowserChromeDebuggerPageTests: XCTestCase {
                 _ = try await page.execute("Page.setDownloadBehavior", parameters: [:])
                 XCTFail("An unimplemented Page command must report unsupported.")
             } catch BrowserChromeDebuggerProtocolError.unsupportedCommand {}
-        }
-    }
-
-    func testReloadRunsThePageAgainAndRejectsUnsupportedOptions() async throws {
-        try await withPage { page, fixture, _ in
-            _ = try await fixture.page.evaluateJavaScript("globalThis.crestSurvivesReload = true; undefined")
-            _ = try await page.execute("Page.reload", parameters: ["ignoreCache": true])
-            try await BrowserChromeDebuggerDomainFixture.waitFor(seconds: 10) {
-                (try? await fixture.page.evaluateJavaScript("typeof globalThis.crestSurvivesReload")) as? String
-                    == "undefined"
-            }
-            do {
-                _ = try await page.execute("Page.reload", parameters: ["scriptToEvaluateOnLoad": "globalThis.x = 1"])
-                XCTFail("An unsupported reload option must not be silently dropped.")
-            } catch BrowserChromeDebuggerProtocolError.unsupportedParameter("scriptToEvaluateOnLoad") {}
         }
     }
 

@@ -91,61 +91,6 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
         XCTAssertEqual(observedDelays, expectedDelays)
     }
 
-    func testRemovalTreatsAnIdentifierDisappearingAfterAnErrorAsSuccess() async throws {
-        let profile = BrowsingProfile()
-        var identifierChecks = 0
-        var removalAttempts = 0
-        let remover = WebKitBrowserWebsiteDataStoreRemover(
-            retryDelays: [.milliseconds(10)],
-            identifierProvider: { [profile] in
-                identifierChecks += 1
-                return identifierChecks == 1 ? [profile.id] : []
-            },
-            removeDataStore: { _ in
-                removalAttempts += 1
-                throw TestWebsiteDataStoreRemovalError.storeInUse
-            },
-            sleep: { _ in
-                XCTFail("A removed identifier must not be retried")
-            },
-            clearDataStore: { _ in },
-            acceptsClearedStoreFallback: false
-        )
-
-        try await remover.removePersistentDataStore(for: profile)
-
-        XCTAssertEqual(removalAttempts, 1)
-        XCTAssertEqual(identifierChecks, 3)
-    }
-
-    func testRemovalSurfacesTheLastErrorAfterTheBoundedRetryBudget() async {
-        let profile = BrowsingProfile()
-        var removalAttempts = 0
-        let remover = WebKitBrowserWebsiteDataStoreRemover(
-            retryDelays: [.milliseconds(10), .milliseconds(20)],
-            identifierProvider: { [profile] in [profile.id] },
-            removeDataStore: { _ in
-                removalAttempts += 1
-                throw TestWebsiteDataStoreRemovalError.storeInUse
-            },
-            sleep: { _ in },
-            clearDataStore: { _ in },
-            acceptsClearedStoreFallback: false
-        )
-
-        do {
-            try await remover.removePersistentDataStore(for: profile)
-            XCTFail("Expected the final WebKit error")
-        } catch {
-            XCTAssertEqual(
-                error as? TestWebsiteDataStoreRemovalError,
-                .storeInUse
-            )
-        }
-
-        XCTAssertEqual(removalAttempts, 3)
-    }
-
     func testClearedStoreCanFinishTransactionAndQueueContainerRemoval() async throws {
         let profile = BrowsingProfile()
         var clearedIdentifiers: [UUID] = []

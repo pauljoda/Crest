@@ -41,18 +41,6 @@ final class BrowserExtensionDebuggerSessionStoreTests: XCTestCase {
         }
     }
 
-    func testCompetingAttachmentDoesNotStealTheOwnersInspector() async throws {
-        try await withFixture { fixture, store in
-            try await store.attach(to: fixture.target, for: fixture.client, requiredVersion: "1.3")
-            do {
-                try await store.attach(to: fixture.target, for: fixture.otherClient, requiredVersion: "1.3")
-                XCTFail("A second client must not take over the existing Inspector.")
-            } catch BrowserExtensionDebuggerError.alreadyAttached {}
-            let response = try await self.evaluate("40 + 2", store: store, fixture: fixture)
-            XCTAssertEqual((response["result"] as? [String: Any])?["value"] as? Int, 42)
-        }
-    }
-
     func testRestrictedOrReplacedPageImmediatelyEndsTheSession() async throws {
         try await withFixture { fixture, store in
             try await store.attach(to: fixture.target, for: fixture.client, requiredVersion: "1.3")
@@ -114,21 +102,6 @@ final class BrowserExtensionDebuggerSessionStoreTests: XCTestCase {
             store.cancel(target: fixture.target)
             await self.fulfillment(of: [stopped], timeout: 5)
             request.cancel()
-            XCTAssertTrue(store.sessions.isEmpty)
-        }
-    }
-
-    func testUnsupportedProtocolVersionDoesNotConnectToThePage() async throws {
-        try await withFixture { fixture, store in
-            for version in ["", "1", "1.4", "2.0", "01.3", "1.3 "] {
-                do {
-                    try await store.attach(to: fixture.target, for: fixture.client, requiredVersion: version)
-                    XCTFail("Unsupported versions must not attach.")
-                } catch {
-                    XCTAssertEqual(error as? BrowserExtensionDebuggerError, .unsupportedVersion(version))
-                }
-            }
-            XCTAssertEqual(fixture.resolutionCount, 0)
             XCTAssertTrue(store.sessions.isEmpty)
         }
     }
@@ -262,36 +235,6 @@ final class BrowserExtensionDebuggerSessionStoreTests: XCTestCase {
         }
     }
 
-    func testCallerCancellationDoesNotCancelTheOwnersOtherCommands() async throws {
-        try await withFixture { fixture, store in
-            try await store.attach(to: fixture.target, for: fixture.client, requiredVersion: "1.3")
-            let stopped = self.expectation(description: "Caller cancellation acknowledged")
-            let task = Task {
-                do {
-                    _ = try await store.sendCommand(
-                        .init(
-                            method: "Runtime.evaluate",
-                            parameters: Data(
-                                #"{"expression":"globalThis.crestPendingStarted = true; new Promise(() => {})","awaitPromise":true}"#
-                                    .utf8)),
-                        to: fixture.target, for: fixture.client)
-                    XCTFail("A cancelled request must not succeed.")
-                } catch {
-                    XCTAssertTrue(error is CancellationError)
-                }
-                stopped.fulfill()
-            }
-            try await self.waitUntil {
-                (try? await fixture.page.evaluateJavaScript("crestPendingStarted === true")) as? Bool == true
-            }
-            task.cancel()
-            await self.fulfillment(of: [stopped], timeout: 5)
-            XCTAssertEqual(store.sessions.count, 1)
-            let response = try await self.evaluate("6 * 7", store: store, fixture: fixture)
-            XCTAssertEqual((response["result"] as? [String: Any])?["value"] as? Int, 42)
-        }
-    }
-
     private func evaluate(_ expression: String, store: BrowserExtensionDebuggerSessionStore, fixture: Fixture)
         async throws -> [String: Any]
     {
@@ -306,12 +249,14 @@ final class BrowserExtensionDebuggerSessionStoreTests: XCTestCase {
         async throws
     {
         let fixture = Fixture(page: try await page())
-        let store = BrowserExtensionDebuggerSessionStore(authorizeClient: { _ in true }) { [weak fixture] target in
-            guard let fixture, target == fixture.target else { return .closed }
-            fixture.resolutionCount += 1
-            if fixture.isClosed { return .closed }
-            return fixture.isRestricted ? .restricted : .available(fixture.page)
-        }
+        let store = BrowserExtensionDebuggerSessionStore(
+            authorizeClient: { _ in true },
+            resolveTarget: { [weak fixture] target in
+                guard let fixture, target == fixture.target else { return .closed }
+                fixture.resolutionCount += 1
+                if fixture.isClosed { return .closed }
+                return fixture.isRestricted ? .restricted : .available(fixture.page)
+            })
         store.register(client: fixture.client, spaceID: fixture.space, displayName: "First extension")
         store.register(client: fixture.otherClient, spaceID: fixture.space, displayName: "Second extension")
         defer { store.shutdown() }

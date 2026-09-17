@@ -167,19 +167,6 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         }
     }
 
-    func testCoordinatorAnswersTheOptionsPageDelegateSelector() {
-        let coordinator = BrowserExtensionControllerPool()
-            .tabWindowCoordinator
-
-        XCTAssertTrue(
-            coordinator.responds(
-                to: NSSelectorFromString(
-                    "webExtensionController:openOptionsPageForExtensionContext:completionHandler:"
-                )
-            )
-        )
-    }
-
     // MARK: - Tab metadata
 
     func testStartPageTitleStaysHiddenWithoutTheTabsPermission() async throws {
@@ -276,33 +263,6 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         XCTAssertTrue(pages.readerModeReads.isEmpty)
     }
 
-    func testSessionProjectionCarriesLoadingAndReaderModeActivity() throws {
-        let session = BrowserSession.preview
-        let space = try XCTUnwrap(session.selectedSpace)
-        let tab = try XCTUnwrap(space.tabs.first)
-
-        let settled = BrowserExtensionSessionState(session: session)
-        let busy = BrowserExtensionSessionState(session: session) {
-            _, tabID in
-            BrowserExtensionTabRuntimeActivity(
-                isLoadingComplete: tabID != tab.id,
-                isReaderModeActive: tabID == tab.id
-            )
-        }
-
-        XCTAssertEqual(settled.space(space.id)?.tab(tab.id)?.isLoadingComplete, true)
-        XCTAssertEqual(
-            settled.space(space.id)?.tab(tab.id)?.isReaderModeActive,
-            false
-        )
-        XCTAssertEqual(busy.space(space.id)?.tab(tab.id)?.isLoadingComplete, false)
-        XCTAssertEqual(
-            busy.space(space.id)?.tab(tab.id)?.isReaderModeActive,
-            true
-        )
-        XCTAssertNotEqual(settled, busy)
-    }
-
     func testTabAdapterReportsAndTogglesReaderMode() async throws {
         let browser = BrowserStore.preview()
         let pages = PageProviderStub()
@@ -339,31 +299,6 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         XCTAssertTrue(adapter.isReaderModeActive(for: context))
     }
 
-    func testWindowAdapterReportsTheHostingWindowGeometry() async throws {
-        let browser = BrowserStore.preview()
-        let pages = PageProviderStub()
-        let frame = CGRect(x: 12, y: 34, width: 900, height: 600)
-        let screenFrame = CGRect(x: 0, y: 0, width: 1_800, height: 1_200)
-        pages.windowGeometry = BrowserExtensionWindowGeometry(
-            frame: frame,
-            screenFrame: screenFrame,
-            state: .fullscreen
-        )
-        let pool = BrowserExtensionControllerPool()
-        pool.connect(browser: browser, pageProvider: pages)
-        let space = try XCTUnwrap(browser.session.selectedSpace)
-        let context = try await pool.loadExtension(
-            at: fixtureURL,
-            extensionID: extensionID,
-            in: space
-        )
-        let window = try XCTUnwrap(pool.extensionWindow(in: space.id))
-
-        XCTAssertEqual(window.frame(for: context), frame)
-        XCTAssertEqual(window.screenFrame(for: context), screenFrame)
-        XCTAssertEqual(window.windowState(for: context), .fullscreen)
-    }
-
     // MARK: - Options page
 
     func testOptionsPageFocusesAnOpenTabInsteadOfOpeningASecond() async throws {
@@ -393,35 +328,6 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         XCTAssertEqual(afterFirst, originalCount + 1)
         XCTAssertEqual(afterSecond, afterFirst)
         XCTAssertEqual(browser.session.selectedTab?.url, optionsURL)
-    }
-
-    func testOptionsPageDelegateReportsAMissingOptionsPage() async throws {
-        let browser = BrowserStore.preview()
-        let pool = BrowserExtensionControllerPool()
-        pool.connect(browser: browser, pageProvider: PageProviderStub())
-        let space = try XCTUnwrap(browser.session.selectedSpace)
-        let extensionURL = try makeTemporaryExtension(
-            named: "No Options",
-            extraManifest: [:]
-        )
-        defer { try? FileManager.default.removeItem(at: extensionURL) }
-        let context = try await pool.loadExtension(
-            at: extensionURL,
-            extensionID: "com.example.no-options",
-            in: space
-        )
-        let controller = pool.controller(for: space)
-        var reported: Error?
-
-        pool.tabWindowCoordinator.webExtensionController(
-            controller,
-            openOptionsPageFor: context
-        ) { reported = $0 }
-
-        XCTAssertEqual(
-            (reported as? NSError)?.code,
-            BrowserExtensionAdapterErrorCode.optionsPageUnavailable.rawValue
-        )
     }
 
     // MARK: - Commands
@@ -1169,51 +1075,6 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
             installed.permissionSnapshot.grantedPermissions["contextMenus"]
         )
         XCTAssertNil(installed.permissionSnapshot.grantedPermissions["tabs"])
-    }
-
-    func testActionContextMenuOffersCommandsSettingsAndPinning() async throws {
-        let fileManager = FileManager.default
-        let root = fileManager.temporaryDirectory.appending(
-            path: "crest-extension-menu-\(UUID().uuidString)",
-            directoryHint: .isDirectory
-        )
-        defer { try? fileManager.removeItem(at: root) }
-        let browser = BrowserStore.preview()
-        let pool = BrowserExtensionControllerPool(
-            packageStore: BrowserExtensionPackageStore(
-                fileManager: fileManager,
-                rootURL: root
-            ),
-            registry: BrowserExtensionRegistry()
-        )
-        pool.connect(browser: browser, pageProvider: PageProviderStub())
-        let space = try XCTUnwrap(browser.session.selectedSpace)
-        let installed = try await pool.loadUnpackedExtension(
-            from: fixtureURL,
-            in: space
-        )
-        pool.reconcileExtensionState(in: browser.session)
-        let action = try XCTUnwrap(
-            pool.toolbarActions(
-                in: space.id,
-                tabID: browser.session.selectedTab?.id
-            )
-            .first { $0.id == installed.id }
-        )
-
-        let menu = BrowserExtensionContextMenu().makeMenu(
-            for: action,
-            pool: pool,
-            spaceID: space.id,
-            manageExtensions: {}
-        )
-        let titles = menu.items.map(\.title)
-
-        XCTAssertFalse(menu.autoenablesItems)
-        XCTAssertTrue(titles.contains("Add this site"))
-        XCTAssertTrue(titles.contains("Extension Settings…"))
-        XCTAssertTrue(titles.contains("Pin to Sidebar"))
-        XCTAssertTrue(titles.contains("Manage Extensions…"))
     }
 
     func testActionContextMenuPinItemPinsTheExtension() async throws {

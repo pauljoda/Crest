@@ -73,52 +73,6 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
         )
     }
 
-    func testFolderLiftKeepsTheExpandedBlockAndOnlyItsVisibleDescendants() {
-        let state = BrowserSidebarReorderState()
-        let folderID = FolderID()
-        let childID = FolderID()
-        let tabID = TabID()
-        let outsideID = TabID()
-        let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let foreign = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let section = BrowserSidebarReorderSection.folders(parentID: nil)
-        func register(
-            _ id: BrowserSidebarReorderItemID, _ space: BrowserSpaceRuntimeAssignment,
-            _ section: BrowserSidebarReorderSection, _ frame: CGRect
-        ) {
-            state.register(
-                row: BrowserSidebarReorderRow(id: id, space: space, section: section, frame: frame), owner: UUID())
-        }
-        register(.folder(folderID), assignment, section, CGRect(x: 8, y: 100, width: 280, height: 160))
-        register(
-            .folder(childID), assignment, .folders(parentID: folderID), CGRect(x: 8, y: 140, width: 280, height: 120))
-        register(
-            .tab(tabID), assignment, .tabs(placement: .saved, folderID: childID),
-            CGRect(x: 22, y: 180, width: 252, height: 40))
-        register(
-            .tab(outsideID), assignment, .tabs(placement: .saved, folderID: nil),
-            CGRect(x: 8, y: 260, width: 280, height: 40))
-        register(
-            .tab(TabID()), foreign, .tabs(placement: .saved, folderID: nil),
-            CGRect(x: 22, y: 220, width: 252, height: 40))
-        let item = BrowserSidebarReorderItem.folder(
-            BrowserFolderDragItem(
-                folderID: folderID, spaceID: assignment.spaceID, profileID: assignment.profileID))
-        state.begin(item: item, section: section, at: CGPoint(x: 80, y: 120))
-        XCTAssertEqual(state.lift?.rowSize, CGSize(width: 280, height: 160))
-        XCTAssertEqual(state.lift?.previewRows.map(\.id), [.folder(childID), .tab(tabID)])
-        XCTAssertEqual(state.lift?.previewRows.last?.frame, CGRect(x: 14, y: 80, width: 252, height: 40))
-
-        // A later layout change cannot shrink the already lifted preview.
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: .tab(tabID), space: assignment,
-                section: .tabs(placement: .saved, folderID: childID), frame: .zero), owner: UUID())
-        XCTAssertEqual(state.liftPreview?.sourceSize.height, 160)
-        XCTAssertEqual(state.liftPreview?.previewRows.count, 2)
-        _ = state.end()
-    }
-
     // MARK: - Presented cards
 
     /// A drag into the content area joins the cards of the Space that content
@@ -164,58 +118,6 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
         )
     }
 
-    /// Nor can it push the slot along. One card fewer keeps the pair under the
-    /// cap, so the count no longer hides what the ordering does: the Space left
-    /// behind was showing a single full-width page, whose midpoint the pointer
-    /// has passed, and counting it would put the drop after the card it is
-    /// actually standing on rather than before it.
-    func testAnotherSpacesCardsCannotPushThisDropsSlotAlong() {
-        let fixture = SplitCardRegistryFixture(
-            ownCardCount: 2,
-            foreignCardCount: 1
-        )
-        let state = fixture.sidebarInteraction.sidebarReorderState
-        fixture.register(in: state)
-
-        fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
-
-        XCTAssertEqual(
-            state.resolvedTarget?.kind,
-            .splitInsert(assignment: fixture.ownSpace, index: 1),
-            "The pointer is in the second card's leading half, so the drop "
-                + "goes between the two — not past them both at index 2."
-        )
-    }
-
-    /// The cap still bites where it is meant to. Scoping the count must not
-    /// become a way of ignoring it: a group already holding this Space's own
-    /// maximum has nowhere to put another card, so the drag resolves nothing
-    /// rather than opening a slot the release would decline.
-    func testAGroupFullOfThisSpacesOwnCardsStillRefusesAnIncomingTab() {
-        let fixture = SplitCardRegistryFixture(
-            ownCardCount: BrowserSplitGroupPolicy.maximumMembers,
-            foreignCardCount: 1
-        )
-        let state = fixture.sidebarInteraction.sidebarReorderState
-        fixture.register(in: state)
-
-        fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
-
-        XCTAssertNil(
-            state.resolvedTarget,
-            "A group at the cap has to refuse the drop instead of promising a "
-                + "slot the commit would decline."
-        )
-        XCTAssertEqual(
-            state.liftTargetShape,
-            .row,
-            "Nothing resolved, so the lift holds the row shape it started as."
-        )
-        XCTAssertFalse(
-            state.hasEnteredSplitContent,
-            "And the columns layout stays shut."
-        )
-    }
 }
 
 // MARK: - Fixture

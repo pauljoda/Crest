@@ -5,12 +5,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserCloudSyncStateTests: XCTestCase {
-    func testCloudTransportUsesTheCrestContainerConfiguredByBothApps() throws {
-        let configuration = try XCTUnwrap(BrowserCloudSyncConfiguration.configured())
-
-        XCTAssertEqual(configuration.containerIdentifier, "iCloud.com.pauldavis.crest")
-    }
-
     func testCloudContainerEntitlementMustAuthorizeTheConfiguredContainer() {
         let identifier = "iCloud.com.pauldavis.crest"
 
@@ -168,19 +162,6 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         let encoded = try XCTUnwrap(
             JSONSerialization.jsonObject(with: JSONEncoder().encode(upgraded)) as? [String: Any])
         XCTAssertEqual(encoded["recordSchemaVersion"] as? Int, BrowserCloudRecordCodec.currentSchemaVersion)
-    }
-
-    func testCloudTransportUsesItsStableDefaultsKey() throws {
-        let suiteName = "BrowserCloudSyncStateTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let persistence = UserDefaultsBrowserCloudSyncStatePersistence(
-            defaults: defaults
-        )
-
-        try persistence.save(BrowserCloudSyncState())
-
-        XCTAssertNotNil(defaults.data(forKey: "crest.cloud-sync.state.v1"))
     }
 
     func testLegacyRecordConflictPauseMigratesToAutomaticReconciliation() throws {

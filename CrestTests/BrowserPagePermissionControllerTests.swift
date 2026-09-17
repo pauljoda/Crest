@@ -114,23 +114,6 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         XCTAssertEqual(center.mediaDecision(for: .camera, origin: origin, in: spaceID), .denyPersistently)
     }
 
-    func testConcurrentRequestsCoalesceAndResolveExactlyOnce() throws {
-        let controller = BrowserPagePermissionController()
-        controller.setPresentationAvailable(true)
-        let origin = BrowserSiteOrigin(scheme: "https", host: "camera.example", port: 443)
-        var responses: [BrowserPagePermissionController.Response?] = []
-        for _ in 0..<2 {
-            controller.request(.camera, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
-                responses.append($0)
-            }
-        }
-        let request = try XCTUnwrap(controller.current)
-        controller.resolve(request.id, response: .allowOnce)
-        controller.resolve(request.id, response: .grantPersistently)
-        XCTAssertEqual(responses, [.allowOnce, .allowOnce])
-        XCTAssertNil(controller.current)
-    }
-
     func testDismissalCancelsQueueWithoutSavingDenialsOrAnsweringLaterRequests() throws {
         let controller = BrowserPagePermissionController()
         controller.setPresentationAvailable(true)

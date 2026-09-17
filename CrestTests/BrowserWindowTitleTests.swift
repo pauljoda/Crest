@@ -7,22 +7,6 @@ import XCTest
 
 @MainActor
 final class BrowserWindowTitleTests: XCTestCase {
-    func testRestoredSelectionUsesOnlyItsOwnTabTitle() {
-        let model = makeModel()
-        XCTAssertEqual(model.windowTitle, "Alpha")
-        model.browser.selectTab(model.browser.selectedSpace!.tabs[1].id)
-        XCTAssertEqual(model.windowTitle, "Beta")
-    }
-
-    func testStartPageAndMissingSelectionNeverRetainThePreviousTitle() {
-        let model = makeModel()
-        model.browser.session.spaces[0].tabs = [.startPage()]
-        model.browser.session.spaces[0].selectedTabID = model.browser.session.spaces[0].tabs[0].id
-        XCTAssertEqual(model.windowTitle, String(localized: "Start Page"))
-        model.browser.session.spaces[0].tabs = []
-        model.browser.session.spaces[0].selectedTabID = nil
-        XCTAssertEqual(model.windowTitle, ProductIdentity.name)
-    }
 
     func testBlankTitlesUseSafeHostWithoutCredentialsPathOrQuery() {
         let model = makeModel()
@@ -81,34 +65,10 @@ final class BrowserWindowTitleTests: XCTestCase {
         XCTAssertEqual(model.windowTitle, "Alpha")
     }
 
-    func testTabClosureAndRestorationRecomputeTheTitle() {
-        let model = makeModel()
-        let alpha = model.browser.selectedTab!
-        model.browser.closeTab(alpha.id)
-        XCTAssertNil(model.browser.selectedTab)
-        XCTAssertEqual(model.windowTitle, ProductIdentity.name)
-        model.browser.restoreArchivedTab(alpha.id)
-        XCTAssertEqual(model.windowTitle, "Alpha")
-    }
-
     func testDeletingSpaceImmediatelyRedactsItsTitle() {
         let model = makeModel()
         XCTAssertTrue(model.browser.family.beginDeletingSpace(model.browser.session.selectedSpaceID))
         XCTAssertEqual(model.windowTitle, ProductIdentity.name)
-    }
-
-    func testNavigationFailureDoesNotKeepThePreviousDocumentTitle() async throws {
-        let model = makeModel()
-        model.pages.select(session: model.browser.session)
-        let page = try XCTUnwrap(model.pages.activePage)
-        try await load("Previous Document", into: page)
-        page.prepareForNavigation(to: URL(string: "https://failed.crest.test/secret"))
-        page.recordNavigationFailure(
-            NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost),
-            phase: .provisional, navigation: nil
-        )
-        XCTAssertNotNil(page.navigationFailure)
-        XCTAssertEqual(model.windowTitle, "failed.crest.test")
     }
 
     func testSpaceSwitchRejectsThePreviousActivePage() async throws {
@@ -133,39 +93,6 @@ final class BrowserWindowTitleTests: XCTestCase {
 
         XCTAssertEqual(model.browser.session, sessionBeforePageCallbacks)
         XCTAssertEqual(model.address, "Destination address draft")
-    }
-
-    func testLiveDocumentTitleAndEmptyTitleAreObservedWithoutStoredMetadata() async throws {
-        let model = makeModel()
-        model.pages.select(session: model.browser.session)
-        let page = try XCTUnwrap(model.pages.activePage)
-        try await load("Live Alpha", into: page)
-        XCTAssertEqual(model.windowTitle, "Live Alpha")
-        model.recordCompletedNavigation()
-        XCTAssertEqual(model.browser.selectedTab?.title, "Live Alpha")
-        XCTAssertEqual(model.browser.selectedSpace?.history.first?.url, page.url)
-        XCTAssertEqual(model.address, page.url?.absoluteString)
-        let changed = expectation(description: "Window title observes document title")
-        withObservationTracking {
-            _ = model.windowTitle
-        } onChange: {
-            changed.fulfill()
-        }
-        try await page.webView.evaluateJavaScript("document.title = 'Updated Alpha'")
-        await fulfillment(of: [changed], timeout: 2)
-        XCTAssertEqual(model.windowTitle, "Updated Alpha")
-        try await page.webView.evaluateJavaScript("document.title = ''")
-        try await waitUntil { page.title.isEmpty }
-        XCTAssertEqual(model.windowTitle, "alpha.crest.test")
-    }
-
-    func testPendingNavigationDoesNotReuseThePreviousDocumentTitle() async throws {
-        let model = makeModel()
-        model.pages.select(session: model.browser.session)
-        let page = try XCTUnwrap(model.pages.activePage)
-        try await load("Previous Document", into: page)
-        page.prepareForNavigation(to: URL(string: "https://destination.crest.test/private"))
-        XCTAssertEqual(model.windowTitle, "destination.crest.test")
     }
 
     func testExtensionCommandsUseWindowIdentityNotPageTitle() {

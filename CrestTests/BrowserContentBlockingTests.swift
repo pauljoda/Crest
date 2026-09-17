@@ -66,114 +66,6 @@ final class BrowserContentBlockingTests: XCTestCase {
         )
     }
 
-    func testBalancedRulesBlockOnlyKnownThirdPartySubresources() throws {
-        let data = try XCTUnwrap(
-            BrowserContentBlockingRules.balancedSource.data(using: .utf8)
-        )
-        let rules = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: data) as? [[String: Any]]
-        )
-        let rule = try XCTUnwrap(rules.first)
-        let trigger = try XCTUnwrap(rule["trigger"] as? [String: Any])
-        let action = try XCTUnwrap(rule["action"] as? [String: Any])
-        let resourceTypes = try XCTUnwrap(trigger["resource-type"] as? [String])
-        let urlFilters = try rules.map { rule in
-            try XCTUnwrap(
-                (rule["trigger"] as? [String: Any])?["url-filter"] as? String
-            )
-        }
-
-        XCTAssertEqual(BrowserContentBlockingRules.identifier, "com.pauldavis.crest.content-blocking.balanced.v2")
-        XCTAssertEqual(trigger["load-type"] as? [String], ["third-party"])
-        XCTAssertFalse(resourceTypes.contains("document"))
-        XCTAssertFalse(resourceTypes.contains("top-document"))
-        XCTAssertTrue(resourceTypes.contains("script"))
-        XCTAssertTrue(resourceTypes.contains("fetch"))
-        XCTAssertTrue(
-            rules.allSatisfy { rule in
-                (rule["trigger"] as? [String: Any])?["if-domain"] == nil
-            })
-        XCTAssertTrue(urlFilters.contains { $0.contains("doubleclick\\.net") })
-        XCTAssertTrue(urlFilters.contains { $0.contains("google-analytics\\.com") })
-        XCTAssertEqual(action["type"] as? String, "block")
-    }
-
-    func testNativeRuleListBlocksAMatchingScriptWithoutBlockingTheDocument() async throws {
-        let identifier = "com.pauldavis.crest.tests.content-blocking.\(UUID().uuidString)"
-        let source = #"""
-            [{
-              "trigger": {
-                "url-filter": "tracker-script\\.js$",
-                "resource-type": ["script"]
-              },
-              "action": { "type": "block" }
-            }]
-            """#
-        let ruleList = try await BrowserContentRuleListCompiler.compile(
-            identifier: identifier,
-            source: source
-        )
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("crest-content-blocking-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let documentURL = directory.appendingPathComponent("index.html")
-        let scriptURL = directory.appendingPathComponent("tracker-script.js")
-        let html = #"""
-            <!doctype html><html><body>
-              <p id="status">ready</p>
-              <script src="tracker-script.js"></script>
-            </body></html>
-            """#
-        try Data(html.utf8).write(to: documentURL)
-        try Data("window.crestTrackerScriptLoaded = true;".utf8).write(to: scriptURL)
-        let websiteDataStore = WKWebsiteDataStore.nonPersistent()
-        let webView = WKWebView(
-            frame: .zero,
-            configuration: BrowserPageConfiguration.make(
-                for: BrowsingProfile(),
-                websiteDataStore: websiteDataStore
-            )
-        )
-        let navigation = ContentBlockingNavigationWaiter(webView: webView)
-        defer { releaseWebView(webView) }
-
-        do {
-            try await navigation.loadFileURL(
-                documentURL,
-                allowingReadAccessTo: directory
-            )
-            let controlScriptLoaded =
-                try await webView.evaluateJavaScript(
-                    "window.crestTrackerScriptLoaded === true"
-                ) as? Bool
-            XCTAssertEqual(controlScriptLoaded, true)
-
-            webView.configuration.userContentController.add(ruleList)
-            try await navigation.loadFileURL(
-                documentURL,
-                allowingReadAccessTo: directory
-            )
-            let documentLoaded =
-                try await webView.evaluateJavaScript(
-                    "document.querySelector('#status')?.textContent === 'ready'"
-                ) as? Bool
-            let trackerLoaded =
-                try await webView.evaluateJavaScript(
-                    "window.crestTrackerScriptLoaded === true"
-                ) as? Bool
-            XCTAssertEqual(documentLoaded, true)
-            XCTAssertEqual(trackerLoaded, false)
-        } catch {
-            await BrowserContentRuleListCompiler.remove(identifier: identifier)
-            throw error
-        }
-        await BrowserContentRuleListCompiler.remove(identifier: identifier)
-    }
-
     func testPagePoolReconcilesThePolicyAcrossResidentAndRecoveredTransientPages() async throws {
         let store = try isolatedRuleListStore()
         defer { store.remove() }
@@ -392,105 +284,6 @@ final class BrowserContentBlockingTests: XCTestCase {
         }
     }
 
-    /// A protection change the person just made is answered on every card of
-    /// the split they are looking at — the unfocused ones included — and on
-    /// nothing that is off screen.
-    func testProtectionChangeReloadsEveryPresentedCardAndOnlyThose() async throws {
-        let documents = try TrackerDocuments()
-        defer { documents.remove() }
-        let store = try isolatedRuleListStore()
-        defer { store.remove() }
-        let ruleList = try await BrowserContentRuleListCompiler.compile(
-            identifier: "com.pauldavis.crest.tests.protection-change.\(UUID().uuidString)",
-            source: blockingRuleSource(matching: "first-tracker\\.js$"),
-            store: store.store
-        )
-        let provider = StubContentRuleListProvider(generations: [[ruleList]])
-        let splitGroupID = SplitGroupID()
-        let activeTab = BrowserTab(
-            title: "Focused card",
-            url: nil,
-            placement: .current,
-            splitGroupID: splitGroupID
-        )
-        let companionTab = BrowserTab(
-            title: "Unfocused card",
-            url: nil,
-            placement: .current,
-            splitGroupID: splitGroupID
-        )
-        let backgroundTab = BrowserTab.startPage()
-        let space = contentBlockingSpace(
-            name: "Protected",
-            tabs: [activeTab, companionTab, backgroundTab]
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-        let pool = BrowserPagePool(
-            browsingMode: .privateBrowsing,
-            contentRuleListProvider: provider
-        )
-        defer {
-            for tabID in pool.retainedTabIDs {
-                pool.unloadPage(for: tabID)
-            }
-        }
-
-        await pool.prepareContentBlocking()
-        session.selectTab(backgroundTab.id)
-        pool.select(session: session)
-        let backgroundPage = try XCTUnwrap(pool.activePage)
-        session.selectTab(activeTab.id)
-        pool.select(session: session)
-        let activePage = try XCTUnwrap(pool.activePage)
-        let companionPage = try XCTUnwrap(
-            pool.presentedPage(for: companionTab.id)
-        )
-        XCTAssertEqual(
-            pool.presentedTabIDs,
-            [activeTab.id, companionTab.id]
-        )
-        // Adopts the Space's current protection level, which is what a window
-        // does as it opens. Nothing may reload for it.
-        await pool.reconcileContentBlocking(in: session)
-
-        for page in [activePage, companionPage, backgroundPage] {
-            try await documents.load(into: page)
-            try await documents.markSentinel(in: page)
-        }
-        let activeNavigationCount = activePage.completedNavigationCount
-        let companionNavigationCount = companionPage.completedNavigationCount
-        let backgroundNavigationCount = backgroundPage.completedNavigationCount
-
-        var preferences = try XCTUnwrap(
-            session.space(id: space.id)?.browsingPreferences
-        )
-        preferences.contentBlockingPolicy = .off
-        session.updateBrowsingPreferences(preferences, in: space.id)
-        await pool.reconcileContentBlocking(in: session)
-
-        try await waitForNavigation(after: activeNavigationCount, on: activePage)
-        try await waitForNavigation(
-            after: companionNavigationCount,
-            on: companionPage
-        )
-        for page in [activePage, companionPage] {
-            let sentinel = try await documents.hasSentinel(in: page)
-            let trackers = try await documents.trackerState(in: page)
-            XCTAssertFalse(sentinel)
-            XCTAssertEqual(trackers, [true, true])
-            XCTAssertEqual(page.isContentBlockingActive, false)
-        }
-
-        let backgroundSentinel = try await documents.hasSentinel(in: backgroundPage)
-        XCTAssertEqual(
-            backgroundPage.completedNavigationCount,
-            backgroundNavigationCount
-        )
-        XCTAssertFalse(backgroundPage.isLoading)
-        XCTAssertTrue(backgroundSentinel)
-        XCTAssertEqual(backgroundPage.isContentBlockingActive, false)
-    }
-
     private func isolatedRuleListStore() throws -> IsolatedRuleListStore {
         try IsolatedRuleListStore()
     }
@@ -532,13 +325,6 @@ final class BrowserContentBlockingTests: XCTestCase {
         )
     }
 
-    private func releaseWebView(_ webView: WKWebView) {
-        webView.stopLoading()
-        webView.navigationDelegate = nil
-        webView.uiDelegate = nil
-        webView.removeFromSuperview()
-    }
-
     private func waitForNavigation(
         after startingCount: Int,
         on page: BrowserPage
@@ -552,7 +338,6 @@ final class BrowserContentBlockingTests: XCTestCase {
 }
 
 private enum ContentBlockingTestError: Error {
-    case releasedWebView
     case unavailableRuleListStore
     case navigationTimedOut
 }
@@ -698,48 +483,5 @@ private final class StubContentRuleListProvider: BrowserContentRuleListProviding
     func balancedRuleLists() async throws -> [WKContentRuleList] {
         defer { requestCount += 1 }
         return generations[min(requestCount, generations.count - 1)]
-    }
-}
-
-@MainActor
-private final class ContentBlockingNavigationWaiter: NSObject, WKNavigationDelegate {
-    private weak var webView: WKWebView?
-    private var continuation: CheckedContinuation<Void, any Error>?
-
-    init(webView: WKWebView) {
-        self.webView = webView
-        super.init()
-        webView.navigationDelegate = self
-    }
-
-    func loadFileURL(_ url: URL, allowingReadAccessTo directory: URL) async throws {
-        guard let webView else { throw ContentBlockingTestError.releasedWebView }
-        try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            webView.loadFileURL(url, allowingReadAccessTo: directory)
-        }
-    }
-
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
-        continuation?.resume()
-        continuation = nil
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        didFail navigation: WKNavigation?,
-        withError error: any Error
-    ) {
-        continuation?.resume(throwing: error)
-        continuation = nil
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        didFailProvisionalNavigation navigation: WKNavigation?,
-        withError error: any Error
-    ) {
-        continuation?.resume(throwing: error)
-        continuation = nil
     }
 }

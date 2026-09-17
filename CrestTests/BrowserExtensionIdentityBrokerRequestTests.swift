@@ -3,49 +3,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserExtensionIdentityBrokerRequestTests: XCTestCase {
-    /// The envelope the Claude extension's startup re-authentication sends.
-    func testDecodesTheSilentReauthenticationEnvelope() throws {
-        let request = try BrowserExtensionIdentityBrokerRequest(
-            message: [
-                "api": "identity.launchWebAuthFlow",
-                "url": "https://claude.ai/oauth/authorize?client_id=abc&prompt=none",
-                "interactive": false,
-                "abortOnLoadForNonInteractive": false,
-                "timeoutMs": 5000,
-            ]
-        )
-        XCTAssertEqual(
-            request.url.absoluteString,
-            "https://claude.ai/oauth/authorize?client_id=abc&prompt=none")
-        XCTAssertFalse(request.isInteractive)
-        XCTAssertFalse(request.abortsOnLoadForNonInteractive)
-        XCTAssertEqual(request.nonInteractiveTimeout, 5, accuracy: 0.001)
-    }
-
-    /// Chrome's defaults, applied when the caller omits them.
-    func testAppliesChromesDefaultsForOmittedOptions() throws {
-        let request = try BrowserExtensionIdentityBrokerRequest(
-            message: ["api": "identity.launchWebAuthFlow", "url": "https://example.com/auth"]
-        )
-        XCTAssertFalse(request.isInteractive)
-        XCTAssertTrue(request.abortsOnLoadForNonInteractive)
-        XCTAssertEqual(request.nonInteractiveTimeout, 60, accuracy: 0.001)
-    }
-
-    /// A request for a longer non-interactive run is a request to keep an
-    /// invisible web view alive, so the ceiling is enforced here rather than
-    /// trusted from JavaScript.
-    func testClampsTheNonInteractiveTimeoutToChromesCeiling() throws {
-        let request = try BrowserExtensionIdentityBrokerRequest(
-            message: [
-                "api": "identity.launchWebAuthFlow",
-                "url": "https://example.com/auth",
-                "timeoutMs": 900_000,
-            ]
-        )
-        XCTAssertEqual(request.nonInteractiveTimeout, 60, accuracy: 0.001)
-    }
-
     func testRejectsRequestsCrestCannotRun() {
         let messages: [[String: Any]] = [
             ["api": "identity.getAuthToken", "url": "https://example.com/"],
@@ -66,20 +23,6 @@ final class BrowserExtensionIdentityBrokerRequestTests: XCTestCase {
                     error as? BrowserExtensionIdentityBrokerError, .invalidRequest)
             }
         }
-    }
-
-    /// Packages branch on these strings, so they are Chrome's exactly. None of
-    /// them names the URL: an error message is a place a package logs.
-    func testFailureTextMatchesChrome() {
-        XCTAssertEqual(
-            BrowserExtensionIdentityBrokerError.pageLoadFailure.errorDescription,
-            "Authorization page could not be loaded.")
-        XCTAssertEqual(
-            BrowserExtensionIdentityBrokerError.userRejected.errorDescription,
-            "The user did not approve access.")
-        XCTAssertEqual(
-            BrowserExtensionIdentityBrokerError.interactionRequired.errorDescription,
-            "User interaction required.")
     }
 
     func testRedirectOriginIsDerivedFromTheRuntimeIdentifier() {

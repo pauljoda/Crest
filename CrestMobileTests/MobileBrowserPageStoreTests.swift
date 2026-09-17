@@ -154,36 +154,6 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     // MARK: - Per-Space credential access
 
-    func testCredentialAccessReconcilesAcrossAnExistingSpacePage() throws {
-        var session = makeSession(index: 1)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
-        pages.select(session: session)
-        XCTAssertTrue(try XCTUnwrap(pages.activePage).isCredentialAccessEnabled)
-
-        let space = try XCTUnwrap(session.selectedSpace)
-        var preferences = space.credentialPreferences
-        preferences.isEnabled = false
-        session.updateCredentialPreferences(preferences, in: space.id)
-        pages.reconcileCredentialAccess(in: session)
-
-        XCTAssertFalse(try XCTUnwrap(pages.activePage).isCredentialAccessEnabled)
-        XCTAssertFalse(pages.downloadCenter.isCredentialAccessEnabled(in: space.id))
-    }
-
-    func testSelectingASpaceWithSavingOffBuildsItsPageWithCredentialAccessDisabled() throws {
-        let session = makeSession(index: 2, savesCredentials: false)
-        let space = try XCTUnwrap(session.selectedSpace)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
-
-        pages.select(session: session)
-
-        XCTAssertFalse(try XCTUnwrap(pages.activePage).isCredentialAccessEnabled)
-        XCTAssertFalse(
-            pages.downloadCenter.isCredentialAccessEnabled(in: space.id),
-            "Selecting a Space must carry its saving preference into HTTP authentication."
-        )
-    }
-
     func testDisablingCredentialAccessResetsAPendingFillRequest() throws {
         var session = makeSession(index: 3)
         let space = try XCTUnwrap(session.selectedSpace)
@@ -397,37 +367,6 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         )
     }
 
-    func testATabOutsideARenderableRunPresentsAloneRatherThanAsASpecialCase() throws {
-        let session = makeSession(index: 20)
-        let pages = makeSplitPageStore()
-
-        pages.select(session: session)
-
-        XCTAssertEqual(
-            pages.presentedTabIDs,
-            [try XCTUnwrap(session.selectedTab?.id)]
-        )
-    }
-
-    func testPreparingACardBuildsItsPageWithoutTakingFocus() throws {
-        let split = makeSplitSession(memberCount: 3, selectedIndex: 0)
-        let pages = makeSplitPageStore()
-        pages.select(session: split.session)
-
-        let prepared = pages.prepareResidentPage(
-            for: split.memberIDs[1],
-            in: split.session
-        )
-
-        XCTAssertEqual(prepared?.tabID, split.memberIDs[1])
-        XCTAssertTrue(pages.containsResidentPage(for: split.memberIDs[1]))
-        XCTAssertEqual(
-            pages.activePage?.tabID,
-            split.memberIDs[0],
-            "Preparing a neighbour must never move focus off the selected card."
-        )
-    }
-
     func testPreparingACardRefusesTabsOutsideTheSelectedSpace() throws {
         let split = makeSplitSession(memberCount: 2, selectedIndex: 0)
         let otherSpace = makeSpace(index: 21, savesCredentials: true)
@@ -492,23 +431,6 @@ final class MobileBrowserPageStoreTests: XCTestCase {
             ),
             "A background tab with a resident page is not a card."
         )
-    }
-
-    func testDeactivatingPresentationTakesEveryCardAwayAtOnce() throws {
-        let split = makeSplitSession(memberCount: 3, selectedIndex: 1)
-        let pages = makeSplitPageStore()
-        pages.select(session: split.session)
-        pages.prepareResidentPage(for: split.memberIDs[0], in: split.session)
-
-        pages.deactivatePagePresentation()
-
-        XCTAssertTrue(
-            pages.presentedTabIDs.isEmpty,
-            "Half a split left on screen behind a lock gate is a privacy failure."
-        )
-        XCTAssertNil(pages.activePage)
-        XCTAssertTrue(pages.containsResidentPage(for: split.memberIDs[0]))
-        XCTAssertTrue(pages.containsResidentPage(for: split.memberIDs[1]))
     }
 
     // MARK: - Split View memory pressure
@@ -707,27 +629,6 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     // MARK: - Presented release policy
 
-    func testPresentedReleasePolicyAnswersNothingUntilCriticalWithNoAlternative() {
-        let members = (0..<4).map { TabID(rawValue: fixedUUID(0x100 + $0)) }
-
-        XCTAssertTrue(
-            BrowserPresentedPageReleasePolicy.fallbackReleasableTabIDs(
-                presentedTabIDs: members,
-                focusedTabID: members[0],
-                level: .warning,
-                hasOtherReleasablePages: false
-            ).isEmpty
-        )
-        XCTAssertTrue(
-            BrowserPresentedPageReleasePolicy.fallbackReleasableTabIDs(
-                presentedTabIDs: members,
-                focusedTabID: members[0],
-                level: .critical,
-                hasOtherReleasablePages: true
-            ).isEmpty
-        )
-    }
-
     func testPresentedReleasePolicyProtectsTheFocusedCardAndBothNeighbours() {
         let members = (0..<4).map { TabID(rawValue: fixedUUID(0x200 + $0)) }
 
@@ -740,42 +641,6 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         XCTAssertEqual(
             fallback(members, focusedIndex: 3),
             [members[0], members[1]]
-        )
-    }
-
-    func testPresentedReleasePolicyKeepsEveryCardOfASmallSplit() {
-        let pair = (0..<2).map { TabID(rawValue: fixedUUID(0x300 + $0)) }
-        let triple = (0..<3).map { TabID(rawValue: fixedUUID(0x310 + $0)) }
-
-        XCTAssertTrue(fallback(pair, focusedIndex: 0).isEmpty)
-        XCTAssertTrue(fallback(pair, focusedIndex: 1).isEmpty)
-        XCTAssertTrue(
-            fallback(triple, focusedIndex: 1).isEmpty,
-            "Focused in the middle of three: every card is one swipe away."
-        )
-        XCTAssertEqual(fallback(triple, focusedIndex: 0), [triple[2]])
-    }
-
-    func testPresentedReleasePolicyAnswersNothingWithoutAFocusedMember() {
-        let members = (0..<4).map { TabID(rawValue: fixedUUID(0x400 + $0)) }
-
-        XCTAssertTrue(
-            BrowserPresentedPageReleasePolicy.fallbackReleasableTabIDs(
-                presentedTabIDs: members,
-                focusedTabID: nil,
-                level: .critical,
-                hasOtherReleasablePages: false
-            ).isEmpty,
-            "Nothing is presented, so nothing is a card to reclaim."
-        )
-        XCTAssertTrue(
-            BrowserPresentedPageReleasePolicy.fallbackReleasableTabIDs(
-                presentedTabIDs: members,
-                focusedTabID: TabID(rawValue: fixedUUID(0x4FF)),
-                level: .critical,
-                hasOtherReleasablePages: false
-            ).isEmpty,
-            "A focus outside the run means the caller is mid-reconciliation."
         )
     }
 

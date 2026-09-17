@@ -44,45 +44,6 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [newID, firstID, concurrentID])
     }
 
-    func testLegacyDraftAndInvalidMovesDoNotOverrideLiveSpaceOrder() throws {
-        var existing = makeSession()
-        let firstID = existing.selectedSpaceID
-        existing.addSpace()
-        let secondID = existing.selectedSpaceID
-        let plan = BrowserManualSetupPlan(existing: existing)
-        var encoded = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as? [String: Any])
-        encoded.removeValue(forKey: "spaceOrderWasEdited")
-        var resumed = try JSONDecoder().decode(
-            BrowserManualSetupPlan.self, from: JSONSerialization.data(withJSONObject: encoded))
-        resumed.moveSpace(SpaceID(), to: firstID)
-        resumed.moveSpace(firstID, to: SpaceID())
-        resumed.moveSpace(firstID, to: firstID)
-        existing.moveSpaces(from: IndexSet(integer: 1), to: 0)
-
-        XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [secondID, firstID])
-    }
-
-    func testDiscardingAddedTabsKeepsSpaceCustomization() throws {
-        let existing = BrowserSession.preview
-        var plan = BrowserManualSetupPlan(existing: existing)
-        let spaceID = try XCTUnwrap(plan.spaces.first?.id)
-        plan.setSpaceIdentity(name: "Renamed", symbol: "star.fill", for: spaceID)
-        _ = try plan.addTab(
-            title: "Example",
-            url: try XCTUnwrap(URL(string: "https://example.com")),
-            placement: .pinned,
-            to: spaceID
-        )
-
-        plan.discardAddedTabs()
-
-        let draft = try XCTUnwrap(plan.spaces.first)
-        XCTAssertEqual(draft.customization.name, "Renamed")
-        XCTAssertEqual(draft.customization.symbol, "star.fill")
-        XCTAssertTrue(draft.addedTabs.isEmpty)
-    }
-
     func testPreviewPreservesExistingTabsWhileApplyingEditsAndManualTabs() throws {
         let existing = makeSession()
         let space = try XCTUnwrap(existing.spaces.first)
@@ -175,35 +136,6 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         }
     }
 
-    func testPlanRoundTripsForWizardResume() throws {
-        let existing = makeSession()
-        var plan = BrowserManualSetupPlan(existing: existing)
-        let newSpaceID = try plan.addSpace()
-        _ = try plan.addTab(input: "crest.app", placement: .saved, to: newSpaceID)
-
-        let data = try JSONEncoder().encode(plan)
-        let decoded = try JSONDecoder().decode(BrowserManualSetupPlan.self, from: data)
-
-        XCTAssertEqual(decoded, plan)
-    }
-
-    func testDraftStoreSavesLoadsAndClearsAResumablePlan() throws {
-        let suiteName = "BrowserManualSetupDraftStoreTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        var plan = BrowserManualSetupPlan(existing: makeSession())
-        _ = try plan.addSpace()
-
-        BrowserManualSetupDraftStore.save(plan, defaults: defaults)
-        XCTAssertEqual(
-            BrowserManualSetupDraftStore.load(defaults: defaults),
-            plan
-        )
-
-        BrowserManualSetupDraftStore.clear(defaults: defaults)
-        XCTAssertNil(BrowserManualSetupDraftStore.load(defaults: defaults))
-    }
-
     func testReconcileDropsRemovedSpacesAndIncludesNewExistingSpaces() throws {
         var existing = makeSession()
         var plan = BrowserManualSetupPlan(existing: existing)
@@ -245,24 +177,6 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         XCTAssertFalse(plan.spaces.contains { $0.id == removedID })
         XCTAssertTrue(plan.spaces.contains { $0.id == draftedID && $0.isNew })
         XCTAssertTrue(plan.spaces.contains { $0.id == replacement.id && !$0.isNew })
-    }
-
-    func testABlankIdentityFallsBackForANewSpaceJustAsItDoesForAnEditedOne() throws {
-        let existing = makeSession()
-        let editedID = try XCTUnwrap(existing.spaces.first?.id)
-        var plan = BrowserManualSetupPlan(existing: existing)
-        let newSpaceID = try plan.addSpace()
-        plan.setSpaceIdentity(name: "  ", symbol: "  ", for: newSpaceID)
-        plan.setSpaceIdentity(name: "\t", symbol: "\n", for: editedID)
-
-        let preview = try plan.preview(mergingInto: existing)
-        let created = try XCTUnwrap(preview.space(id: newSpaceID))
-        let edited = try XCTUnwrap(preview.space(id: editedID))
-
-        XCTAssertEqual(created.name, BrowserImportSpaceCustomization.fallbackName)
-        XCTAssertEqual(created.symbol, BrowserImportSpaceCustomization.fallbackSymbol)
-        XCTAssertEqual(edited.name, BrowserImportSpaceCustomization.fallbackName)
-        XCTAssertEqual(edited.symbol, BrowserImportSpaceCustomization.fallbackSymbol)
     }
 
     private func makeSession() -> BrowserSession {

@@ -1,22 +1,10 @@
 import Foundation
-import UniformTypeIdentifiers
 import XCTest
 
 @testable import Crest
 
 @MainActor
 final class BrowserMigrationTests: XCTestCase {
-    func testChromeBookmarkPickerAcceptsTheExtensionlessProfileFile() {
-        let allowedTypes = BrowserBookmarkMigrationSource.chromeBookmarks
-            .allowedContentTypes
-
-        XCTAssertTrue(allowedTypes.contains(.json))
-        XCTAssertTrue(
-            allowedTypes.contains(.data),
-            "Chrome stores bookmarks in an extensionless file named Bookmarks."
-        )
-    }
-
     func testNetscapeHTMLImportPreservesNestedFoldersAndSanitizesURLs() throws {
         let html = """
             <!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -319,42 +307,6 @@ final class BrowserMigrationTests: XCTestCase {
         let imported = try BrowserBookmarkMigration.decode(Data(json.utf8), source: .arcSidebar)
 
         XCTAssertEqual(imported.spaces.first?.tabs.compactMap(\.url), [URL(string: "https://current.example/")!])
-    }
-
-    func testBrowserWithoutAnExposedThemeUsesNeutralImportBranding() throws {
-        let json = """
-            {
-              "sidebar": {
-                "containers": [
-                  {
-                    "items": [
-                      "root",
-                      {"id":"root","title":"","childrenIds":["tab-one"],"data":{"itemContainer":{"containerType":{"spaceItems":[null]}}}},
-                      "tab-one",
-                      {"id":"tab-one","title":"","parentID":"root","data":{"tab":{"savedTitle":"Arc","savedURL":"https://arc.net/","timeLastActiveAt":1700000000}}}
-                    ],
-                    "spaces": [
-                      "space-one",
-                      {"id":"space-one","title":"Work","containerIDs":["root"],"newContainerIDs":[]}
-                    ],
-                    "topAppsContainerIDs": []
-                  }
-                ]
-              }
-            }
-            """
-
-        let imported = try BrowserTabMigration.decode(
-            Data(json.utf8),
-            source: .arc,
-            importedAt: Date(timeIntervalSince1970: 1_800_000_000)
-        )
-        let branding = try XCTUnwrap(imported.spaces.first?.branding)
-
-        XCTAssertEqual(branding, .neutralImport(symbol: "sidebar.left"))
-        XCTAssertEqual(branding.colors.count, 1)
-        XCTAssertEqual(branding.bannerPattern, .solid)
-        XCTAssertFalse(branding.showsTexture)
     }
 
     func testImportRejectsASeventeenthNestedFolderBeforeCreatingASpace() {

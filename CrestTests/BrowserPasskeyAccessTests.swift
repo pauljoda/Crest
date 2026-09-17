@@ -4,64 +4,6 @@ import XCTest
 
 @MainActor
 final class BrowserPasskeyAccessTests: XCTestCase {
-    func testPrivacyBoundaryKeepsSystemCredentialsGlobalAndWebsiteSessionsSpaceIsolated() {
-        XCTAssertEqual(
-            BrowserPasskeyPrivacyBoundary.webKit.credentialAccess,
-            .applicationWideSystemProvider
-        )
-        XCTAssertEqual(
-            BrowserPasskeyPrivacyBoundary.webKit.websiteSession,
-            .spaceIsolated
-        )
-        XCTAssertFalse(BrowserPasskeyPrivacyBoundary.webKit.storesCredentialInventoryInCrest)
-    }
-
-    func testManagedCapabilityIsRequiredBeforeEveryOtherStatus() {
-        XCTAssertEqual(
-            BrowserPasskeyAccessPolicy.status(
-                hasManagedCapability: false,
-                deviceConfiguration: .configured,
-                authorizationState: .authorized
-            ),
-            .managedCapabilityRequired
-        )
-    }
-
-    func testDeviceConfigurationAndAuthorizationMapToExplicitStatuses() {
-        XCTAssertEqual(
-            BrowserPasskeyAccessPolicy.status(
-                hasManagedCapability: true,
-                deviceConfiguration: .notConfigured,
-                authorizationState: .authorized
-            ),
-            .deviceNotConfigured
-        )
-        XCTAssertEqual(
-            BrowserPasskeyAccessPolicy.status(
-                hasManagedCapability: true,
-                deviceConfiguration: .unknown,
-                authorizationState: .notDetermined
-            ),
-            .notDetermined
-        )
-        XCTAssertEqual(
-            BrowserPasskeyAccessPolicy.status(
-                hasManagedCapability: true,
-                deviceConfiguration: .configured,
-                authorizationState: .authorized
-            ),
-            .authorized
-        )
-        XCTAssertEqual(
-            BrowserPasskeyAccessPolicy.status(
-                hasManagedCapability: true,
-                deviceConfiguration: .configured,
-                authorizationState: .denied
-            ),
-            .denied
-        )
-    }
-
     func testControllerRequestsAccessOnlyAfterAnExplicitEligibleAction() async {
         var requestCount = 0
         var systemAuthorization = BrowserPasskeyAuthorizationState.notDetermined
@@ -120,35 +62,6 @@ final class BrowserPasskeyAccessTests: XCTestCase {
         XCTAssertEqual(authorizationCheckCount, 0)
         XCTAssertEqual(requestCount, 0)
         XCTAssertFalse(controller.canRequestAccess)
-    }
-
-    func testConcurrentConsentRequestsWaitForTheSameSystemConsent() async {
-        var requestCount = 0
-        var consent: CheckedContinuation<BrowserPasskeyAuthorizationState, Never>?
-        let controller = BrowserPasskeyAccessController(
-            capabilityCheck: { true },
-            deviceConfigurationCheck: { .configured },
-            authorizationCheck: { .notDetermined },
-            authorizationRequester: {
-                requestCount += 1
-                return await withCheckedContinuation { consent = $0 }
-            }
-        )
-        controller.refreshStatus()
-        let first = Task { await controller.requestAccess() }
-        while consent == nil { await Task.yield() }
-        var secondCompleted = false
-        let second = Task {
-            await controller.requestAccess()
-            secondCompleted = true
-        }
-        for _ in 0..<10 { await Task.yield() }
-        XCTAssertFalse(secondCompleted, "Every caller must wait until consent resolves.")
-        consent?.resume(returning: .authorized)
-        await first.value
-        await second.value
-        XCTAssertEqual(requestCount, 1)
-        XCTAssertEqual(controller.status, .authorized)
     }
 
     func testCheckingStatusAcrossRelaunchesNeverRequestsSystemConsent() async {

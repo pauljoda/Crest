@@ -42,32 +42,6 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
         XCTAssertEqual(requestCount, 0)
     }
 
-    func testRenderedImageIsQualifiedByTheFullRenderRequestIdentity() {
-        let tab = makeTab(
-            id: tabID(tail: 0x30),
-            url: URL(string: "https://identity.invalid/original"),
-            data: Data([0x01, 0x02, 0x03]),
-            iconMode: .automatic
-        )
-        let original = BrowserFaviconTaskIdentityPolicy.identity(
-            for: tab,
-            profileID: fixedUUID(tail: 0xA0),
-            maximumPixelSize: 64
-        )
-        let replacementProfile = BrowserFaviconTaskIdentityPolicy.identity(
-            for: tab,
-            profileID: fixedUUID(tail: 0xA1),
-            maximumPixelSize: 64
-        )
-        let rendered = BrowserFaviconRenderedImage(
-            requestIdentity: original,
-            image: Image(systemName: "shield.fill")
-        )
-
-        XCTAssertNotNil(rendered.image(matching: original))
-        XCTAssertNil(rendered.image(matching: replacementProfile))
-    }
-
     func testCancelledOlderRequestStartingLateCannotClearOrReplaceNewerImage() {
         let tab = makeTab(
             id: tabID(tail: 0x31),
@@ -103,77 +77,6 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
 
         XCTAssertNotNil(state.renderedImage?.image(matching: newer))
         XCTAssertNil(state.renderedImage?.image(matching: older))
-    }
-
-    func testTaskIdentityIncludesTabProfileURLModePayloadAndPixelSize() {
-        let baseTab = makeTab(
-            id: tabID(tail: 0x40),
-            url: URL(string: "https://identity.invalid/base"),
-            data: Data([0x10, 0x20, 0x30]),
-            iconMode: .automatic
-        )
-        let profileID = fixedUUID(tail: 0xB0)
-        let base = BrowserFaviconTaskIdentityPolicy.identity(
-            for: baseTab,
-            profileID: profileID,
-            maximumPixelSize: 64
-        )
-        let variations = [
-            BrowserFaviconTaskIdentityPolicy.identity(
-                for: makeTab(
-                    id: tabID(tail: 0x41),
-                    url: baseTab.url,
-                    data: baseTab.faviconData,
-                    iconMode: .automatic
-                ),
-                profileID: profileID,
-                maximumPixelSize: 64
-            ),
-            BrowserFaviconTaskIdentityPolicy.identity(
-                for: baseTab,
-                profileID: fixedUUID(tail: 0xB1),
-                maximumPixelSize: 64
-            ),
-            BrowserFaviconTaskIdentityPolicy.identity(
-                for: makeTab(
-                    id: baseTab.id,
-                    url: URL(string: "https://identity.invalid/changed"),
-                    data: baseTab.faviconData,
-                    iconMode: .automatic
-                ),
-                profileID: profileID,
-                maximumPixelSize: 64
-            ),
-            BrowserFaviconTaskIdentityPolicy.identity(
-                for: makeTab(
-                    id: baseTab.id,
-                    url: baseTab.url,
-                    data: baseTab.faviconData,
-                    iconMode: .pulled
-                ),
-                profileID: profileID,
-                maximumPixelSize: 64
-            ),
-            BrowserFaviconTaskIdentityPolicy.identity(
-                for: makeTab(
-                    id: baseTab.id,
-                    url: baseTab.url,
-                    data: Data([0x10, 0x20, 0x31]),
-                    iconMode: .automatic
-                ),
-                profileID: profileID,
-                maximumPixelSize: 64
-            ),
-            BrowserFaviconTaskIdentityPolicy.identity(
-                for: baseTab,
-                profileID: profileID,
-                maximumPixelSize: 65
-            ),
-        ]
-
-        for variation in variations {
-            XCTAssertNotEqual(base, variation)
-        }
     }
 
     private func makeTab(

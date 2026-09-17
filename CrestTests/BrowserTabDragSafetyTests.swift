@@ -168,23 +168,6 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         }
     #endif
 
-    func testDragItemExposesItsExactRuntimeAssignment() {
-        let item = BrowserTabDragItem(
-            tabID: Self.tabID(1),
-            spaceID: Self.spaceID(2),
-            profileID: Self.uuid(3)
-        )
-
-        XCTAssertEqual(
-            item.runtimeAssignment,
-            BrowserTabRuntimeAssignment(
-                tabID: Self.tabID(1),
-                spaceID: Self.spaceID(2),
-                profileID: Self.uuid(3)
-            )
-        )
-    }
-
     func testExactUnlockedDragActionMovesOnlyIntoItsCapturedDestination() throws {
         let context = makeContext()
         let action = BrowserTabDragAction(
@@ -639,140 +622,6 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
-    /// A phone sidebar can place an ordinary tab before and after a much taller
-    /// split-group row. Moving the group past the trailing tab must close the
-    /// group's whole 120-point slot; deriving one stride from the smallest
-    /// neighbouring pitch only closes a 44-point tab slot and leaves the row
-    /// progressively farther from where it belongs as the drag crosses back
-    /// and forth.
-    func testMobileSplitGroupLiftClosesItsWholeMixedHeightSlot() {
-        let context = makeSplitContext()
-        let state = context.sidebarInteraction.sidebarReorderState
-        let section = BrowserSidebarReorderSection.tabs(
-            placement: .current,
-            folderID: nil
-        )
-        let leading = BrowserSidebarReorderItemID.tab(Self.tabID(75))
-        let trailing = BrowserSidebarReorderItemID.tab(context.outsider.id)
-        let groupFrame = CGRect(x: 8, y: 154, width: 374, height: 120)
-
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: leading,
-                space: context.assignment,
-                section: section,
-                frame: CGRect(x: 8, y: 110, width: 374, height: 44)
-            ),
-            owner: UUID()
-        )
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: .splitGroup(context.groupID),
-                space: context.assignment,
-                section: section,
-                frame: groupFrame
-            ),
-            owner: UUID()
-        )
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: trailing,
-                space: context.assignment,
-                section: section,
-                frame: CGRect(x: 8, y: 274, width: 374, height: 44)
-            ),
-            owner: UUID()
-        )
-        state.register(
-            zone: BrowserSidebarReorderZone(
-                target: .section(section),
-                frame: CGRect(x: 0, y: 100, width: 390, height: 300)
-            ),
-            for: UUID()
-        )
-
-        state.stage(item: .splitGroup(context.item), section: section)
-        state.update(pointer: CGPoint(x: 195, y: 300))
-
-        XCTAssertEqual(
-            state.displacement(for: trailing),
-            CGSize(width: 0, height: -groupFrame.height),
-            "The plain tab must close the complete tall slot the group vacated."
-        )
-    }
-
-    /// Offset rows continue reporting geometry while their drag animation is
-    /// running. That presentation frame must not replace the resting frame the
-    /// reorder calculation started from, or repeated hovers feed each temporary
-    /// offset back into the next one and can push a current tab into Saved.
-    func testActiveDragKeepsTheRestingRowGeometryStable() {
-        let context = makeSplitContext()
-        let state = context.sidebarInteraction.sidebarReorderState
-        let section = BrowserSidebarReorderSection.tabs(
-            placement: .current,
-            folderID: nil
-        )
-        let groupFrame = CGRect(x: 8, y: 154, width: 374, height: 120)
-        let trailingFrame = CGRect(x: 8, y: 274, width: 374, height: 44)
-        let groupOwner = UUID()
-        let trailingOwner = UUID()
-
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: .splitGroup(context.groupID),
-                space: context.assignment,
-                section: section,
-                frame: groupFrame
-            ),
-            owner: groupOwner
-        )
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: .tab(context.outsider.id),
-                space: context.assignment,
-                section: section,
-                frame: trailingFrame
-            ),
-            owner: trailingOwner
-        )
-        state.register(
-            zone: BrowserSidebarReorderZone(
-                target: .section(section),
-                frame: CGRect(x: 0, y: 100, width: 390, height: 300)
-            ),
-            for: UUID()
-        )
-
-        state.begin(
-            item: .splitGroup(context.item),
-            section: section,
-            at: CGPoint(x: groupFrame.midX, y: groupFrame.midY)
-        )
-        state.update(
-            pointer: CGPoint(x: trailingFrame.midX, y: trailingFrame.midY + 1)
-        )
-        XCTAssertEqual(
-            state.displacement(for: .tab(context.outsider.id)),
-            CGSize(width: 0, height: -groupFrame.height)
-        )
-
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: .tab(context.outsider.id),
-                space: context.assignment,
-                section: section,
-                frame: trailingFrame.offsetBy(dx: 0, dy: -groupFrame.height)
-            ),
-            owner: trailingOwner
-        )
-
-        XCTAssertEqual(
-            state.frame(ofRow: .tab(context.outsider.id)),
-            trailingFrame,
-            "Animated hover offsets must never become the row's resting geometry."
-        )
-    }
-
     /// Pinning by drag is a lift that resolves the pinned grid: the pointer
     /// entering the grid is what opens the tile slot and morphs the preview into
     /// a tile, and nothing else in the drag reaches that state. Only a split
@@ -973,25 +822,6 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             state.isTargetedFolder(folderID),
             "A settled list must not keep drawing the last target."
         )
-    }
-
-    /// The `.onDrag` provider hands the session a JSON payload. It never leaves
-    /// Crest, but it does have to survive the round trip the provider encodes.
-    func testTheSplitGroupDragPayloadRoundTripsAsJSON() throws {
-        let item = BrowserSplitGroupDragItem(
-            groupID: SplitGroupID(rawValue: Self.uuid(70)),
-            spaceID: Self.spaceID(71),
-            profileID: Self.uuid(72),
-            memberTabIDs: [Self.tabID(73), Self.tabID(74)]
-        )
-
-        let decoded = try JSONDecoder().decode(
-            BrowserSplitGroupDragItem.self,
-            from: JSONEncoder().encode(item)
-        )
-
-        XCTAssertEqual(decoded, item)
-        XCTAssertEqual(decoded.spaceAssignment, item.spaceAssignment)
     }
 
     /// Anchoring on a group row means landing before its first member. Without

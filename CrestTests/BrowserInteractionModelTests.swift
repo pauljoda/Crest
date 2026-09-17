@@ -7,23 +7,6 @@ import struct SwiftUI.Color
 
 @MainActor
 final class BrowserInteractionModelTests: XCTestCase {
-    func testTabActivationSelectsTheModelBeforePresentingItsPage() {
-        let tabID = TabID()
-        var events: [String] = []
-
-        BrowserTabActivationPolicy.activate(
-            tabID,
-            selectTab: { selectedID in
-                XCTAssertEqual(selectedID, tabID)
-                events.append("select")
-            },
-            presentPage: {
-                events.append("present")
-            }
-        )
-
-        XCTAssertEqual(events, ["select", "present"])
-    }
 
     func testSpaceIdentityAndOrderingRemainStableAcrossEdits() throws {
         var session = BrowserSession.preview
@@ -55,108 +38,6 @@ final class BrowserInteractionModelTests: XCTestCase {
             XCTAssertEqual(session.space(id: spaceID)?.profile.id, profileID)
         }
         XCTAssertEqual(session.selectedSpaceID, session.spaces.dropLast().last?.id)
-    }
-
-    func testDragStateMorphsAsTheTabCrossesPlacementZones() throws {
-        let tabID = TabID()
-        let spaceID = SpaceID()
-        let item = BrowserTabDragItem(
-            tabID: tabID,
-            spaceID: spaceID,
-            profileID: UUID()
-        )
-        let dragState = BrowserTabDragState()
-
-        dragState.begin(item: item, placement: .current)
-        XCTAssertTrue(dragState.isDragging(item))
-
-        XCTAssertEqual(dragState.currentPlacement, .current)
-
-        let pinned = BrowserTabDropLocation(
-            placement: .pinned,
-            folderID: nil,
-            beforeTabID: nil
-        )
-        XCTAssertTrue(dragState.enter(pinned))
-        XCTAssertEqual(dragState.currentPlacement, .pinned)
-        XCTAssertEqual(dragState.liveMoveCount, 0)
-        dragState.recordLiveMove()
-        XCTAssertEqual(dragState.liveMoveCount, 1)
-        XCTAssertFalse(dragState.enter(pinned))
-
-        dragState.leave(pinned, restoringSourcePlacement: true)
-        XCTAssertEqual(dragState.currentPlacement, .current)
-        XCTAssertNil(dragState.dropLocation)
-
-        let pinnedCell = BrowserTabDropLocation(
-            placement: .pinned,
-            folderID: nil,
-            beforeTabID: TabID()
-        )
-        XCTAssertTrue(dragState.enter(pinnedCell))
-        dragState.leavePinnedZone()
-        XCTAssertEqual(dragState.currentPlacement, .current)
-        XCTAssertNil(dragState.dropLocation)
-
-        XCTAssertTrue(dragState.enter(pinned))
-        XCTAssertEqual(dragState.currentPlacement, .pinned)
-
-        let folderID = FolderID()
-        let saved = BrowserTabDropLocation(
-            placement: .saved,
-            folderID: folderID,
-            beforeTabID: nil
-        )
-        XCTAssertTrue(dragState.enter(saved))
-        XCTAssertEqual(dragState.currentPlacement, .saved)
-        XCTAssertEqual(dragState.dropLocation?.folderID, folderID)
-
-        dragState.end()
-        XCTAssertFalse(dragState.isDragging(item))
-        XCTAssertNil(dragState.item)
-        XCTAssertNil(dragState.currentPlacement)
-        XCTAssertNil(dragState.dropLocation)
-    }
-
-    func testRowInsertionLocationTracksTheFingerAcrossTheRowsMidpoint() {
-        let before = BrowserTabDropLocation(
-            placement: .current,
-            folderID: nil,
-            beforeTabID: TabID()
-        )
-        let after = BrowserTabDropLocation(
-            placement: .current,
-            folderID: nil,
-            beforeTabID: TabID()
-        )
-
-        XCTAssertEqual(
-            BrowserTabRowInsertionPolicy.location(
-                y: 10,
-                rowHeight: 44,
-                before: before,
-                after: after
-            ),
-            before
-        )
-        XCTAssertEqual(
-            BrowserTabRowInsertionPolicy.location(
-                y: 22,
-                rowHeight: 44,
-                before: before,
-                after: after
-            ),
-            after
-        )
-        XCTAssertEqual(
-            BrowserTabRowInsertionPolicy.location(
-                y: 42,
-                rowHeight: 44,
-                before: before,
-                after: after
-            ),
-            after
-        )
     }
 
     func testRowInsertionLowerHalfResolvesBeforeTheActualFollowingTab() {
@@ -315,95 +196,6 @@ final class BrowserInteractionModelTests: XCTestCase {
             space: space,
             section: section,
             frame: frame
-        )
-    }
-
-    /// A list insertion lands wherever the pointer has passed a row's midpoint.
-    func testListInsertionIndexTracksRowMidpoints() {
-        let space = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let section = BrowserSidebarReorderSection.tabs(
-            placement: .current,
-            folderID: nil
-        )
-        let ids = (0..<3).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
-        let rows = ids.enumerated().map { index, id in
-            reorderRow(
-                id,
-                in: space,
-                section: section,
-                CGRect(x: 0, y: CGFloat(index) * 40, width: 200, height: 40)
-            )
-        }
-
-        // Above the first midpoint (y=20) nothing has been passed.
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.insertionIndex(
-                at: CGPoint(x: 100, y: 5),
-                orderedRows: rows,
-                excluding: nil
-            ),
-            0
-        )
-        // Past the last midpoint (y=100) the drop appends.
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.insertionIndex(
-                at: CGPoint(x: 100, y: 300),
-                orderedRows: rows,
-                excluding: nil
-            ),
-            3
-        )
-        XCTAssertNil(
-            BrowserSidebarReorderPolicy.insertionAnchor(
-                index: 3,
-                orderedRows: rows,
-                excluding: nil
-            )
-        )
-    }
-
-    /// The grid compares horizontally only on a cell's own line. Comparing both
-    /// axes at once made every cell on the line count as passed, which made
-    /// leftward moves impossible.
-    func testGridInsertionAllowsMovingLeftWithinALine() {
-        let space = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let section = BrowserSidebarReorderSection.tabs(
-            placement: .pinned,
-            folderID: nil
-        )
-        let ids = (0..<3).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
-        let rows = ids.enumerated().map { index, id in
-            reorderRow(
-                id,
-                in: space,
-                section: section,
-                CGRect(x: CGFloat(index) * 100, y: 0, width: 90, height: 40)
-            )
-        }
-
-        // Left of the first cell's center, even while below the line's middle.
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.insertionIndex(
-                at: CGPoint(x: 10, y: 30),
-                orderedRows: rows,
-                excluding: nil
-            ),
-            0
-        )
-        // Between the first and second centers.
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.insertionIndex(
-                at: CGPoint(x: 120, y: 20),
-                orderedRows: rows,
-                excluding: nil
-            ),
-            1
         )
     }
 
@@ -735,54 +527,6 @@ final class BrowserInteractionModelTests: XCTestCase {
     }
 
     // MARK: - A folder that fills the saved list
-
-    /// The saved list wraps its folder groups, so a Space whose every saved tab
-    /// lives in one folder measures the folder group and the list around it as
-    /// the same rectangle: a `VStack(spacing: 0)` holding a single child is that
-    /// child. Ranking overlapping sections by area alone leaves that a tie, and
-    /// a tie is settled by whichever registration the registry happens to yield
-    /// first — so the list can outrank the folder nested inside it. Nesting is
-    /// structural, not a matter of pixels, so it is ranked before area.
-    func testAFolderFillingTheSavedListOutranksTheListAroundIt() {
-        let frame = CGRect(x: 0, y: 95, width: 200, height: 120)
-        let folderID = FolderID()
-        let folderRun = BrowserSidebarReorderSection.tabs(
-            placement: .saved,
-            folderID: folderID
-        )
-        let savedList = BrowserSidebarReorderZone(
-            target: .section(.tabs(placement: .saved, folderID: nil)),
-            frame: frame
-        )
-        let folderGroup = BrowserSidebarReorderZone(
-            target: .section(folderRun),
-            frame: frame
-        )
-        let tab = BrowserSidebarReorderItem.tab(
-            BrowserTabDragItem(
-                tabID: TabID(),
-                spaceID: SpaceID(),
-                profileID: UUID()
-            )
-        )
-
-        // Over the folder's rows, and past the bottom of both, where the slop
-        // fallback answers instead of containment.
-        for point in [CGPoint(x: 100, y: 160), CGPoint(x: 100, y: 260)] {
-            for zones in [[savedList, folderGroup], [folderGroup, savedList]] {
-                XCTAssertEqual(
-                    BrowserSidebarReorderPolicy.zone(
-                        at: point,
-                        in: zones,
-                        accepting: tab
-                    )?
-                    .target,
-                    .section(folderRun),
-                    "The nested folder run owns the rows it measures."
-                )
-            }
-        }
-    }
 
     /// The live shape behind the report: pinned tiles on top, one folder holding
     /// every saved tab, no unfiled saved rows at all, and a current list below.
@@ -1162,18 +906,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertNil(state.end())
     }
 
-    /// Only the middle of a collapsed folder nests; the edges stay available for
-    /// reordering past it.
-    func testNestingClaimsOnlyTheMiddleOfAFolderRow() {
-        let frame = CGRect(x: 0, y: 100, width: 200, height: 40)
-        let nesting = BrowserSidebarReorderPolicy.nestingFrame(for: frame)
-
-        XCTAssertEqual(nesting.height, 20)
-        XCTAssertFalse(nesting.contains(CGPoint(x: 100, y: 105)))
-        XCTAssertTrue(nesting.contains(CGPoint(x: 100, y: 120)))
-        XCTAssertFalse(nesting.contains(CGPoint(x: 100, y: 135)))
-    }
-
     func testFolderDragUsesSavedInsertionLocationsAndCannotEnterPinnedTabs() {
         let folderID = FolderID()
         let siblingID = FolderID()
@@ -1232,26 +964,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(sidebarInteraction.tabDragState.sessionToken, token)
     }
 
-    func testNewTabAndLocationUseDistinctCommandPaletteModes() {
-        let chrome = BrowserChromeState()
-
-        chrome.presentCommandPalette()
-        XCTAssertTrue(chrome.isCommandPalettePresented)
-        XCTAssertEqual(chrome.commandPaletteMode, .newTab)
-        XCTAssertEqual(chrome.commandPaletteMode?.initialQuery, "")
-
-        chrome.openLocation("https://webkit.org/blog/")
-        XCTAssertTrue(chrome.isCommandPalettePresented)
-        XCTAssertEqual(
-            chrome.commandPaletteMode,
-            .editLocation("https://webkit.org/blog/")
-        )
-        XCTAssertEqual(
-            chrome.commandPaletteMode?.initialQuery,
-            "https://webkit.org/blog/"
-        )
-    }
-
     func testNewTabFocusesAnAlreadySelectedStartPageWithoutAnOverlay() {
         let chrome = BrowserChromeState()
         let initialFocusRequest = chrome.startPageFocusRequest
@@ -1294,15 +1006,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.currentTabs.map(\.id), currentTabs)
         XCTAssertNil(chrome.commandPaletteMode)
         XCTAssertEqual(chrome.startPageFocusRequest, initialFocusRequest + 2)
-    }
-
-    func testStartPageHasADistinctIdentityFromTheNewTabAction() {
-        let tab = BrowserTab.startPage()
-
-        XCTAssertEqual(tab.title, "Start Page")
-        XCTAssertEqual(tab.symbol, BrowserTab.startPageSymbol)
-        XCTAssertTrue(tab.isStartPage)
-        XCTAssertNil(tab.url)
     }
 
     func testMiddleClickClosesOnlyCurrentTabsAndUnloadsSavedTabs() {

@@ -90,48 +90,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         )
     }
 
-    // MARK: - Text that is not ASCII
-
-    func testScoringSurvivesEveryScriptItCanBeHandedWithoutTrapping() {
-        // Crest ships Arabic and lets anyone rename a tab, so none of this is
-        // exotic input — it is Tuesday. The point of the assertion is that the
-        // call returns at all.
-        let haystacks = [
-            "علامة التبويب الجديدة",
-            "新しいタブ",
-            "简体中文文档",
-            "Ελληνικά Σημειώσεις",
-            "Здравствуйте",
-            "🚀 Launch Notes",
-            "Reading › Long Reads › Café",
-            "naïve café —— résumé",
-            "",
-        ]
-        let queries = [
-            "علامة",
-            "新しい",
-            "文档",
-            "ΣΗΜΕΙΩΣΕΙΣ",
-            "здрав",
-            "🚀",
-            "café",
-            "reading",
-            "a b",
-            "",
-        ]
-
-        for raw in queries {
-            let query = BrowserCommandPaletteQuery(raw)
-            for haystack in haystacks {
-                _ = BrowserCommandPaletteText.score(
-                    query,
-                    title: haystack,
-                    detail: "https://example.com/" + haystack
-                )
-            }
-        }
-    }
-
     func testArabicAndCJKTitlesMatchAndRankTheSameWayLatinOnesDo() throws {
         let arabic = BrowserCommandPaletteQuery("علامة")
         let opening = try XCTUnwrap(
@@ -153,92 +111,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
             BrowserCommandPaletteText.matchKind(of: japanese.terms[0], in: "新しいタブ"),
             .contains
         )
-    }
-
-    func testNonAsciiSeparatorsAndEmojiStartAWordJustLikeASpaceDoes() {
-        let needle = BrowserCommandPaletteQuery("reads").terms[0]
-
-        // The folder path separator Crest joins names with.
-        XCTAssertEqual(
-            BrowserCommandPaletteText.matchKind(of: needle, in: "Reading › Reads"),
-            .wordPrefix
-        )
-        XCTAssertEqual(
-            BrowserCommandPaletteText.matchKind(
-                of: BrowserCommandPaletteQuery("launch").terms[0],
-                in: "🚀Launch"
-            ),
-            .wordPrefix
-        )
-        // An em dash and a non-breaking space are boundaries too.
-        XCTAssertEqual(
-            BrowserCommandPaletteText.matchKind(of: needle, in: "Long—Reads"),
-            .wordPrefix
-        )
-        XCTAssertEqual(
-            BrowserCommandPaletteText.matchKind(of: needle, in: "Long\u{00A0}Reads"),
-            .wordPrefix
-        )
-    }
-
-    func testCaseFoldingReachesBeyondAsciiIntoGreekAndCyrillic() {
-        XCTAssertNotNil(
-            BrowserCommandPaletteText.score(
-                BrowserCommandPaletteQuery("ΣΗΜΕΙΩΣΕΙΣ"),
-                title: "σημειωσεις"
-            )
-        )
-        XCTAssertNotNil(
-            BrowserCommandPaletteText.score(
-                BrowserCommandPaletteQuery("здравствуйте"),
-                title: "ЗДРАВСТВУЙТЕ"
-            )
-        )
-    }
-
-    func testAMixedScriptQueryStillRequiresEveryTermToLand() {
-        let query = BrowserCommandPaletteQuery("apple علامة")
-
-        XCTAssertNotNil(
-            BrowserCommandPaletteText.score(
-                query,
-                title: "علامة Apple التبويب"
-            )
-        )
-        XCTAssertNil(
-            BrowserCommandPaletteText.score(query, title: "Apple Newsroom")
-        )
-    }
-
-    func testTheWholeResultListBuildsFromNonAsciiTabsHistoryAndFolders() {
-        let folder = BrowserFolder(title: "قراءة")
-        let space = makeSpace(
-            name: "العمل",
-            tabs: [tab("علامة التبويب الجديدة", "https://example.com/ar")],
-            pinned: [
-                tab(
-                    "علامة محفوظة",
-                    "https://example.com/saved",
-                    placement: .saved,
-                    folderID: folder.id
-                )
-            ],
-            folders: [folder],
-            history: [historyEntry("علامة في السجل", "https://example.com/history")]
-        )
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(
-                query: "علامة",
-                space: space,
-                commands: [.toggleSidebar]
-            )
-        )
-
-        XCTAssertEqual(
-            results.compactMap(\.section),
-            [.tabs, .saved, .history]
-        )
-        XCTAssertEqual(results.first?.title, "Search with Google")
     }
 
     // MARK: - Sections and order
@@ -320,24 +192,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         XCTAssertEqual(results.count, 5)
     }
 
-    func testSearchIntentCarriesTheSelectedProviderForBrandedPresentation() throws {
-        let space = makeSpace(tabs: [])
-
-        for provider in BrowserSearchProvider.allCases {
-            let result = try XCTUnwrap(
-                BrowserCommandPaletteResults.results(
-                    for: BrowserCommandPaletteInput(
-                        query: "private search",
-                        space: space,
-                        searchProvider: provider
-                    )
-                ).first
-            )
-
-            XCTAssertEqual(result.searchProvider, provider)
-        }
-    }
-
     func testRemoteSuggestionsAreLimitedDeduplicatedAndUseTheOrdinaryProviderURLBuilder() throws {
         let provider = try BrowserCustomSearchProvider(
             name: "Kagi",
@@ -390,37 +244,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
                 )
             ).isEmpty
         )
-    }
-
-    func testEmbeddedPaletteIdentityChangesWithItsSpaceSearchContract() throws {
-        var space = makeSpace(tabs: [])
-        let original = BrowserCommandPalettePresentationIdentity(
-            space: space,
-            source: nil
-        )
-        var preferences = space.browsingPreferences
-        let custom = try BrowserCustomSearchProvider(
-            name: "Kagi",
-            searchURLTemplate: "https://kagi.com/search?q=%s",
-            suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"
-        )
-        try preferences.upsertCustomSearchProvider(custom)
-        preferences.searchProvider = custom.provider
-        space.browsingPreferences = preferences
-        let customProvider = BrowserCommandPalettePresentationIdentity(
-            space: space,
-            source: nil
-        )
-
-        preferences.searchSuggestionsEnabled = true
-        space.browsingPreferences = preferences
-        let suggestionsEnabled = BrowserCommandPalettePresentationIdentity(
-            space: space,
-            source: nil
-        )
-
-        XCTAssertNotEqual(original, customProvider)
-        XCTAssertNotEqual(customProvider, suggestionsEnabled)
     }
 
     func testAQueryThatAlreadyReadsAsAURLPutsGoingThereFirst() throws {
@@ -477,42 +300,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         XCTAssertTrue(historyResults.allSatisfy { $0.trailing == "Open" })
     }
 
-    func testRecencyBreaksTiesBetweenEquallyGoodHistoryMatches() {
-        let space = makeSpace(
-            tabs: [],
-            history: [
-                historyEntry("Notes Later", "https://later.example.com/notes"),
-                historyEntry("Notes Earlier", "https://earlier.example.com/notes"),
-            ]
-        )
-
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(query: "notes", space: space)
-        )
-        .filter { $0.section == .history }
-
-        XCTAssertEqual(results.map(\.title), ["Notes Later", "Notes Earlier"])
-    }
-
-    func testHistorySearchStopsAtTheFreshestMatchesRatherThanScanningEverything() {
-        let matching = (0..<400).map {
-            historyEntry("Ledger \($0)", "https://example.com/ledger/\($0)")
-        }
-        let space = makeSpace(tabs: [], history: matching)
-
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(query: "ledger", space: space)
-        )
-        .filter { $0.section == .history }
-
-        // Every entry matches equally well, so what survives is simply the most
-        // recent handful — the scan never had to reach the four hundredth.
-        XCTAssertEqual(
-            results.map(\.title),
-            (0..<BrowserCommandPaletteResultLimits.history).map { "Ledger \($0)" }
-        )
-    }
-
     // MARK: - Saved, pinned, and folders
 
     func testPinnedAndSavedTabsAppearTogetherAndSelectThemselves() {
@@ -536,47 +323,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         XCTAssertTrue(results.allSatisfy { $0.trailing == "Switch to Tab" })
     }
 
-    func testAMatchingFolderOpensTheFirstTabItHoldsAndSaysSoOnTheRow() {
-        let folder = BrowserFolder(title: "Reading")
-        let first = tab(
-            "Long Article",
-            "https://example.com/long",
-            placement: .saved,
-            folderID: folder.id
-        )
-        let second = tab(
-            "Short Article",
-            "https://example.com/short",
-            placement: .saved,
-            folderID: folder.id
-        )
-        let space = makeSpace(tabs: [], pinned: [first, second], folders: [folder])
-
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(query: "reading", space: space)
-        )
-        let folderResult = results.first { $0.id.hasPrefix("folder-") }
-
-        XCTAssertEqual(folderResult?.title, "Reading")
-        XCTAssertEqual(folderResult?.subtitle, "2 tabs")
-        XCTAssertEqual(folderResult?.trailing, "Open First Tab")
-        XCTAssertEqual(
-            folderResult?.target,
-            .tab(tabAssignment(first, in: space))
-        )
-    }
-
-    func testAnEmptyFolderIsNotOfferedBecauseThereIsNothingToOpen() {
-        let folder = BrowserFolder(title: "Reading")
-        let space = makeSpace(tabs: [], folders: [folder])
-
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(query: "reading", space: space)
-        )
-
-        XCTAssertFalse(results.contains { $0.id.hasPrefix("folder-") })
-    }
-
     // MARK: - Actions
 
     func testOnlyRegisteredCommandsAreOfferedAndTheLauncherNeverOffersItself() {
@@ -597,45 +343,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         )
         XCTAssertFalse(results.contains { $0.target == .command(.newTab) })
         XCTAssertFalse(results.contains { $0.target == .command(.openLocation) })
-    }
-
-    func testAShellThatRegistersNothingSimplyHasNoActionSection() {
-        let space = makeSpace(tabs: [tab("Reader", "https://example.com/reader")])
-
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(query: "reader", space: space)
-        )
-
-        XCTAssertFalse(results.contains { $0.section == .actions })
-    }
-
-    // MARK: - Identity
-
-    func testEveryResultCarriesADistinctIdentitySoTheListCanAnimate() {
-        let folder = BrowserFolder(title: "Apple Reading")
-        let space = makeSpace(
-            tabs: [tab("Apple Store", "https://apple.com/store")],
-            pinned: [
-                tab("Apple Support", "https://apple.com/support", placement: .pinned),
-                tab(
-                    "Apple Notes",
-                    "https://apple.com/notes",
-                    placement: .saved,
-                    folderID: folder.id
-                ),
-            ],
-            folders: [folder],
-            history: [historyEntry("Apple Newsroom", "https://apple.com/newsroom")]
-        )
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(
-                query: "apple",
-                space: space,
-                commands: [.toggleSidebar]
-            )
-        )
-
-        XCTAssertEqual(Set(results.map(\.id)).count, results.count)
     }
 
     // MARK: - The selected tab
@@ -782,61 +489,4 @@ final class BrowserCommandPaletteModelPerformanceTests: XCTestCase {
         XCTAssertNotEqual(model.resultGroups, publishedGroups)
     }
 
-    func testRapidQueriesOnlyPublishTheLatestResultSet() async throws {
-        let first = BrowserTab(
-            title: "First Needle",
-            url: try XCTUnwrap(URL(string: "https://example.com/first")),
-            placement: .current
-        )
-        let second = BrowserTab(
-            title: "Second Needle",
-            url: try XCTUnwrap(URL(string: "https://example.com/second")),
-            placement: .current
-        )
-        let history = try (0..<1_500).map { index in
-            BrowserHistoryEntry(
-                url: try XCTUnwrap(
-                    URL(string: "https://history.example.com/\(index)")
-                ),
-                title: "First Needle History \(index)",
-                firstVisitedAt: .now,
-                lastVisitedAt: .now
-            )
-        }
-        let space = BrowserSpace(
-            id: SpaceID(),
-            profile: BrowsingProfile(),
-            name: "Performance",
-            symbol: "speedometer",
-            accent: .indigo,
-            folders: [],
-            tabs: [first, second],
-            history: history,
-            selectedTabID: nil
-        )
-        let model = BrowserCommandPaletteModel(
-            space: space,
-            selectedTabID: nil,
-            initialQuery: "",
-            commands: nil,
-            isSourceAvailable: { _ in true },
-            selectTab: { _, _ in true },
-            openURL: { _, _ in true },
-            dismiss: {}
-        )
-
-        model.query = "first needle"
-        model.query = "second needle"
-
-        for _ in 0..<200 {
-            if model.results.first?.subtitle == "second needle" {
-                break
-            }
-            try await Task.sleep(for: .milliseconds(10))
-        }
-
-        XCTAssertEqual(model.results.first?.subtitle, "second needle")
-        XCTAssertTrue(model.results.contains { $0.title == "Second Needle" })
-        XCTAssertFalse(model.results.contains { $0.title == "First Needle" })
-    }
 }

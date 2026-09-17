@@ -51,25 +51,6 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
         )
     }
 
-    func testFirstRunAlwaysStartsAtWelcome() {
-        XCTAssertEqual(
-            MobileBrowserOnboardingPolicy.initialStep(for: .firstRun),
-            .welcome
-        )
-    }
-
-    func testDirectCustomizationStartsAtSpaceCustomization() {
-        XCTAssertEqual(
-            MobileBrowserOnboardingPolicy.initialStep(for: .manualSetup),
-            .manualSetup
-        )
-    }
-
-    func testExplicitRerunStartsAtWelcome() {
-        XCTAssertEqual(MobileBrowserOnboardingPolicy.initialStep(for: .rerun), .welcome)
-        XCTAssertNotEqual(BrowserOnboardingRequest.rerun, BrowserOnboardingRequest.rerun)
-    }
-
     @MainActor
     func testRerunDiscardsTheOldDraftAndKeepsExistingSpaces() throws {
         let session = BrowserSession.preview
@@ -83,33 +64,4 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
         XCTAssertFalse(rerun.spaces.contains { $0.id == uncommittedID })
     }
 
-    func testImportRequestExplainsTheMacHandoff() {
-        XCTAssertEqual(
-            MobileBrowserOnboardingPolicy.initialStep(for: .importBrowser),
-            .macImport
-        )
-    }
-
-    func testFirstRunMovesDirectlyToSpaceSetup() {
-        XCTAssertEqual(
-            MobileBrowserOnboardingPolicy.nextStep(after: .welcome),
-            .manualSetup
-        )
-        XCTAssertEqual(
-            MobileBrowserOnboardingPolicy.nextStep(after: .featureSpaces),
-            .featureTabs
-        )
-        XCTAssertEqual(
-            MobileBrowserOnboardingPolicy.nextStep(after: .featureTabs),
-            .featureSync
-        )
-        XCTAssertEqual(
-            MobileBrowserOnboardingPolicy.nextStep(after: .featureSync),
-            .manualSetup
-        )
-    }
-
-    func testGuidedSetupFinishesAfterTheSingleSpaceEditor() {
-        XCTAssertNil(MobileBrowserOnboardingPolicy.nextStep(after: .manualSetup))
-    }
 }

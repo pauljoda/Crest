@@ -115,24 +115,18 @@ Use `CREST_ISOLATED_PERSISTENCE_ID=<name>` when a validation profile needs to su
 ## Focused guard tests
 
 The general architecture and vertical checks above are the supported
-repository-wide gates. Their focused regression tests, plus the release and
-version contracts, run with Xcode's bundled Python:
+repository-wide gates. Run all retained script tests, including release,
+version, isolation, and measurement contracts, with:
 
 ```sh
-python3 -m unittest \
-  Scripts.Tests.test_repository_guardrails \
-  Scripts.Tests.test_direct_distribution_contract \
-  Scripts.Tests.test_public_source_contract \
-  Scripts.Tests.test_release_note_catalog \
-  Scripts.Tests.test_release_note_publication \
-  Scripts.Tests.test_release_notes \
-  Scripts.Tests.test_release_publication_recovery \
-  Scripts.Tests.test_release_workflow \
-  Scripts.Tests.test_vertical_feature_contract \
-  Scripts.Tests.test_version_contract \
-  Scripts.Tests.test_cloudkit_environment_configuration \
-  Scripts.Tests.test_xcode_cloud_configuration
+python3 -m unittest discover -s Scripts/Tests
 ```
+
+`Scripts/validate.sh` runs this suite before the app tests. CI also runs the
+suite in a separate macOS job, including release workflow, version, release-note
+publication, public-source, and CloudKit environment contracts. These tests do
+not build the app; the shell-based version tests require macOS `plutil`, Git,
+zsh, and ripgrep.
 
 `Scripts/check-public-source.py` separately inspects the exact Git index and
 rejects coding-assistant instructions or state, machine-local editor files,

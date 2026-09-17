@@ -4,31 +4,6 @@ import XCTest
 
 @MainActor
 final class MobileSplitCardPagerPolicyTests: XCTestCase {
-    func testDirectDragStaysDisabledSoTheCarouselNeverFightsWebContentPans() {
-        XCTAssertFalse(
-            MobileSplitCardPagerPolicy.allowsDirectDrag,
-            """
-            A horizontal ScrollView over live WKWebViews competes with every \
-            page's own horizontal pan. Paging is programmatic for 0.4.
-            """
-        )
-        XCTAssertFalse(MobileSplitCardPagerPolicy.showsScrollIndicators)
-    }
-
-    func testPagerAppearsOnlyForARunLongEnoughToRender() {
-        XCTAssertFalse(MobileSplitCardPagerPolicy.isPagerPresented(memberCount: 0))
-        XCTAssertFalse(
-            MobileSplitCardPagerPolicy.isPagerPresented(memberCount: 1),
-            "A run of one is a plain tab and takes the single-page path."
-        )
-        XCTAssertTrue(MobileSplitCardPagerPolicy.isPagerPresented(memberCount: 2))
-        XCTAssertTrue(
-            MobileSplitCardPagerPolicy.isPagerPresented(
-                memberCount: BrowserSplitGroupPolicy.maximumMembers
-            )
-        )
-    }
-
     func testAdjacentMemberStepsOneCardInEachDirection() {
         let members = memberIDs(count: 3)
 

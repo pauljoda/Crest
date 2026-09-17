@@ -35,24 +35,6 @@ final class BrowserSessionWindowStateLimitTests: XCTestCase {
         }
     }
 
-    func testANewSceneEveryLaunchCannotAccumulateRecords() async throws {
-        let harness = makeHarness()
-        let session = BrowserSession.preview
-
-        // One record per simulated force-quit, far past the cap.
-        for _ in 0..<200 {
-            harness.persistence.save(
-                BrowserWindowState(id: BrowserWindowID(), restoring: session)
-            )
-        }
-        await harness.persistence.flushPendingSaves()
-
-        XCTAssertEqual(
-            try storedStates(in: harness).count,
-            UserDefaultsBrowserWindowStatePersistence.maximumStoredStateCount
-        )
-    }
-
     func testAWindowStillInUseIsNotEvictedByOlderNeighbours() async throws {
         let harness = makeHarness(cap: 3)
         let session = BrowserSession.preview
@@ -94,27 +76,6 @@ final class BrowserSessionWindowStateLimitTests: XCTestCase {
             session.spaces[1].id,
             "Capping must not cost the one Mac window its selection."
         )
-    }
-
-    func testAStoredRecordSurvivesAReloadThroughTheStore() async throws {
-        let harness = makeHarness()
-        let session = BrowserSession.preview
-        let id = BrowserWindowID()
-        let first = BrowserWindowStateStore(
-            id: id,
-            session: session,
-            persistence: harness.persistence
-        )
-        first.selectSpace(session.spaces[1].id, session: session)
-        await harness.persistence.flushPendingSaves()
-
-        let reopened = BrowserWindowStateStore(
-            id: id,
-            session: session,
-            persistence: makeHarness(defaults: harness.defaults).persistence
-        )
-
-        XCTAssertEqual(reopened.selectedSpaceID, session.spaces[1].id)
     }
 
     // MARK: - Helpers

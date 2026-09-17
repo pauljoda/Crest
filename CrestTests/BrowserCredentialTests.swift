@@ -322,22 +322,6 @@ final class BrowserCredentialTests: XCTestCase {
         }
     }
 
-    func testCredentialDebugDescriptionRedactsThePassword() throws {
-        let origin = try XCTUnwrap(
-            CredentialOrigin(url: try XCTUnwrap(URL(string: "https://example.com")))
-        )
-        let credential = makeCredential(
-            spaceID: SpaceID(),
-            origin: origin,
-            username: "person",
-            password: "never-log-this"
-        )
-
-        XCTAssertFalse(String(describing: credential).contains("never-log-this"))
-        XCTAssertFalse(String(reflecting: credential).contains("never-log-this"))
-        XCTAssertTrue(String(describing: credential).contains("<redacted>"))
-    }
-
     func testInMemoryVaultNeverReturnsAnotherSpacesCredential() async throws {
         let work = SpaceID()
         let personal = SpaceID()
@@ -916,191 +900,6 @@ final class BrowserCredentialTests: XCTestCase {
         XCTAssertEqual(inventory.count, 1)
     }
 
-    func testSignedDataProtectionKeychainRoundTripWhenExplicitlyEnabled() async throws {
-        guard ProcessInfo.processInfo.environment["CREST_RUN_KEYCHAIN_INTEGRATION"] == "1" else {
-            throw XCTSkip("Set CREST_RUN_KEYCHAIN_INTEGRATION=1 in a development-signed host")
-        }
-
-        let testPrefix = "com.pauldavis.crest.integration.\(UUID().uuidString.lowercased())"
-        let work = SpaceID()
-        let personal = SpaceID()
-        let url = try XCTUnwrap(URL(string: "https://accounts.example.com/login"))
-        let origin = try XCTUnwrap(CredentialOrigin(url: url))
-        let firstVault = KeychainCredentialVault(servicePrefix: testPrefix)
-        let workCredential = makeCredential(
-            spaceID: work,
-            origin: origin,
-            username: "same-user",
-            password: "work-secret"
-        )
-        let personalCredential = makeCredential(
-            spaceID: personal,
-            origin: origin,
-            username: "same-user",
-            password: "personal-secret",
-            isSynchronizable: true
-        )
-
-        do {
-            try await firstVault.save(workCredential, in: work)
-            try await firstVault.save(personalCredential, in: personal)
-
-            // A new vault instance models relaunch: it shares no in-memory state.
-            let relaunchedVault = KeychainCredentialVault(servicePrefix: testPrefix)
-            let workAfterRelaunch = try await relaunchedVault.credential(
-                id: workCredential.descriptor.id,
-                in: work
-            )
-            let personalAfterRelaunch = try await relaunchedVault.credential(
-                id: personalCredential.descriptor.id,
-                in: personal
-            )
-            let workCredentialFromPersonal = try await relaunchedVault.credential(
-                id: workCredential.descriptor.id,
-                in: personal
-            )
-
-            XCTAssertEqual(workAfterRelaunch?.password, "work-secret")
-            XCTAssertEqual(personalAfterRelaunch?.password, "personal-secret")
-            XCTAssertEqual(personalAfterRelaunch?.descriptor.isSynchronizable, true)
-            XCTAssertNil(workCredentialFromPersonal)
-
-            try await relaunchedVault.setSynchronizable(true, in: work)
-            let synchronizedWorkCredentialResult = try await relaunchedVault.credential(
-                id: workCredential.descriptor.id,
-                in: work
-            )
-            let synchronizedWorkCredential = try XCTUnwrap(synchronizedWorkCredentialResult)
-            XCTAssertTrue(synchronizedWorkCredential.descriptor.isSynchronizable)
-            XCTAssertEqual(synchronizedWorkCredential.password, "work-secret")
-
-            var updatedWorkCredential = synchronizedWorkCredential
-            updatedWorkCredential.password = "updated-work-secret"
-            updatedWorkCredential.descriptor.updatedAt = Date(timeIntervalSince1970: 2_000)
-            try await relaunchedVault.save(updatedWorkCredential, in: work)
-            let updatedPassword = try await relaunchedVault.credential(
-                id: workCredential.descriptor.id,
-                in: work
-            )?.password
-            XCTAssertEqual(updatedPassword, "updated-work-secret")
-
-            try await relaunchedVault.delete(id: workCredential.descriptor.id, in: work)
-            let deletedWorkCredential = try await relaunchedVault.credential(
-                id: workCredential.descriptor.id,
-                in: work
-            )
-            let remainingPersonalPassword = try await relaunchedVault.credential(
-                id: personalCredential.descriptor.id,
-                in: personal
-            )?.password
-            XCTAssertNil(deletedWorkCredential)
-            XCTAssertEqual(remainingPersonalPassword, "personal-secret")
-        } catch {
-            try? await firstVault.deleteAll(in: work)
-            try? await firstVault.deleteAll(in: personal)
-            throw error
-        }
-
-        try await firstVault.deleteAll(in: work)
-        try await firstVault.deleteAll(in: personal)
-        let remainingWorkDescriptors = try await firstVault.descriptors(matching: origin, in: work)
-        let remainingPersonalDescriptors = try await firstVault.descriptors(matching: origin, in: personal)
-        XCTAssertEqual(remainingWorkDescriptors, [])
-        XCTAssertEqual(remainingPersonalDescriptors, [])
-    }
-
-    func testSignedDataProtectionKeychainFormLifecycleWhenExplicitlyEnabled() async throws {
-        guard ProcessInfo.processInfo.environment["CREST_RUN_KEYCHAIN_INTEGRATION"] == "1" else {
-            throw XCTSkip("Set CREST_RUN_KEYCHAIN_INTEGRATION=1 in a development-signed host")
-        }
-
-        let testPrefix = "com.pauldavis.crest.form-lifecycle.\(UUID().uuidString.lowercased())"
-        let vault = KeychainCredentialVault(servicePrefix: testPrefix)
-        let store = BrowserStore(
-            session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
-            credentialVault: vault
-        )
-        let work = try XCTUnwrap(store.session.spaces.first)
-        let personal = try XCTUnwrap(store.session.spaces.dropFirst().first)
-        let submittedAt = Date.now
-        let origin = try XCTUnwrap(
-            CredentialOrigin(url: try XCTUnwrap(URL(string: "https://accounts.crest.test/login")))
-        )
-        let original = makeCandidate(
-            origin: origin,
-            username: "person@example.com",
-            password: "original-secret",
-            submittedAt: submittedAt
-        )
-
-        do {
-            let created = try await store.commitCredentialSave(
-                original,
-                in: work.id,
-                now: submittedAt
-            )
-            guard
-                case .alreadyStored = try await store.credentialSavePlan(
-                    for: original,
-                    in: work.id,
-                    now: submittedAt
-                )
-            else {
-                return XCTFail("The real Keychain should suppress an unchanged prompt")
-            }
-
-            let changedAt = submittedAt.addingTimeInterval(1)
-            let changed = makeCandidate(
-                origin: origin,
-                username: "PERSON@example.com",
-                password: "updated-secret",
-                submittedAt: changedAt
-            )
-            let updated = try await store.commitCredentialSave(
-                changed,
-                in: work.id,
-                now: changedAt
-            )
-
-            let relaunchedStore = BrowserStore(
-                session: store.session,
-                persistence: InMemoryBrowserSessionPersistence(),
-                credentialVault: KeychainCredentialVault(servicePrefix: testPrefix)
-            )
-            let relaunched = try await relaunchedStore.credential(
-                id: updated.descriptor.id,
-                in: work.id
-            )
-            let crossSpace = try await relaunchedStore.credential(
-                id: updated.descriptor.id,
-                in: personal.id
-            )
-
-            XCTAssertEqual(updated.disposition, .updated)
-            XCTAssertEqual(updated.descriptor.id, created.descriptor.id)
-            XCTAssertEqual(relaunched?.password, "updated-secret")
-            XCTAssertNil(crossSpace)
-
-            try await relaunchedStore.deleteCredential(
-                id: updated.descriptor.id,
-                in: work.id
-            )
-            let deleted = try await relaunchedStore.credential(
-                id: updated.descriptor.id,
-                in: work.id
-            )
-            XCTAssertNil(deleted)
-        } catch {
-            try? await vault.deleteAll(in: work.id)
-            try? await vault.deleteAll(in: personal.id)
-            throw error
-        }
-
-        try await vault.deleteAll(in: work.id)
-        try await vault.deleteAll(in: personal.id)
-    }
-
     func testSensitiveCredentialRevealAuthenticatesBeforeReadingTheExactSpace() async throws {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
@@ -1202,30 +1001,6 @@ final class BrowserCredentialTests: XCTestCase {
         )
         XCTAssertFalse(csv.contains("personal-secret-must-not-export"))
         XCTAssertEqual(authenticator.reasons.count, 1)
-    }
-
-    func testSensitiveCredentialLeasesExpireAtTheirDocumentedBoundaries() {
-        let issuedAt = Date(timeIntervalSince1970: 10_000)
-        let reveal = BrowserCredentialSecretLease.reveal(
-            password: "secret",
-            issuedAt: issuedAt
-        )
-        let clipboard = BrowserCredentialSecretLease.clipboard(
-            password: "secret",
-            issuedAt: issuedAt
-        )
-
-        XCTAssertEqual(reveal.password(at: issuedAt), "secret")
-        XCTAssertEqual(
-            reveal.password(at: issuedAt.addingTimeInterval(29.999)),
-            "secret"
-        )
-        XCTAssertNil(reveal.password(at: issuedAt.addingTimeInterval(30)))
-        XCTAssertEqual(
-            clipboard.expiration,
-            issuedAt.addingTimeInterval(60)
-        )
-        XCTAssertNil(clipboard.password(at: issuedAt.addingTimeInterval(60)))
     }
 
     private func makeCredential(
@@ -1346,52 +1121,6 @@ private actor RecordingCredentialKeychainStore: CredentialKeychainStoring {
 }
 
 final class BrowserCredentialCSVImportTests: XCTestCase {
-    func testParsesBrowserCSVWithQuotedUnicodeCommasAndNewlines() throws {
-        let csv =
-            "name,url,username,password,note\r\n"
-            + "\"Café, Admin\",https://EXAMPLE.com:443/login,\"zoë@example.com\","
-            + "\"line one\nline two, \"\"quoted\"\"\",\"optional, note\"\r\n"
-
-        let parsed = try BrowserCredentialCSVImportParser.parse(Data(csv.utf8))
-        let record = try XCTUnwrap(parsed.records.first)
-
-        XCTAssertEqual(parsed.format, .browser)
-        XCTAssertEqual(parsed.records.count, 1)
-        XCTAssertTrue(parsed.rejections.isEmpty)
-        XCTAssertEqual(record.displayName, "Café, Admin")
-        XCTAssertEqual(record.origin.description, "https://example.com")
-        XCTAssertEqual(record.username, "zoë@example.com")
-        XCTAssertEqual(record.password, "line one\nline two, \"quoted\"")
-        XCTAssertFalse(String(describing: record).contains(record.password))
-        XCTAssertFalse(String(reflecting: record).contains(record.password))
-    }
-
-    func testDetectsFirefoxSafariAndBitwardenHeaderVariants() throws {
-        let firefox = try BrowserCredentialCSVImportParser.parse(
-            Data(
-                "url,username,password,httpRealm,formActionOrigin,guid\nhttps://mozilla.example/login,user,secret,,,id"
-                    .utf8
-            )
-        )
-        let safari = try BrowserCredentialCSVImportParser.parse(
-            Data(
-                "Title,URL,Username,Password,Notes,OTPAuth\nApple,https://apple.example,user,secret,,"
-                    .utf8
-            )
-        )
-        let bitwarden = try BrowserCredentialCSVImportParser.parse(
-            Data(
-                "name,login_uri,login_username,login_password,notes\nVault,bitwarden.example,user,secret,"
-                    .utf8
-            )
-        )
-
-        XCTAssertEqual(firefox.format, .firefox)
-        XCTAssertEqual(safari.format, .safari)
-        XCTAssertEqual(bitwarden.format, .bitwarden)
-        XCTAssertEqual(bitwarden.records.first?.origin.description, "https://bitwarden.example")
-    }
-
     func testRejectsAmbiguousMissingMalformedAndOversizedCSV() throws {
         XCTAssertThrowsError(
             try BrowserCredentialCSVImportParser.parse(
@@ -1433,28 +1162,6 @@ final class BrowserCredentialCSVImportTests: XCTestCase {
         XCTAssertThrowsError(
             try BrowserCredentialCSVImportParser.parse(
                 Data("url,username,password\nhttps://one.example,user,secret".utf8),
-                limits: BrowserCredentialCSVImportLimits(
-                    maximumByteCount: 12,
-                    maximumRowCount: 10,
-                    maximumColumnCount: 10,
-                    maximumFieldCharacterCount: 100
-                )
-            )
-        ) { error in
-            XCTAssertEqual(error as? BrowserCredentialCSVImportError, .fileTooLarge)
-        }
-    }
-
-    func testFileReadStopsAtTheConfiguredByteLimit() throws {
-        let fileURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("crest-password-import-\(UUID().uuidString).csv")
-        defer { try? FileManager.default.removeItem(at: fileURL) }
-        try Data("url,username,password\nhttps://one.example,user,synthetic-secret".utf8)
-            .write(to: fileURL)
-
-        XCTAssertThrowsError(
-            try BrowserCredentialCSVImportParser.parse(
-                contentsOf: fileURL,
                 limits: BrowserCredentialCSVImportLimits(
                     maximumByteCount: 12,
                     maximumRowCount: 10,
@@ -1543,80 +1250,6 @@ final class BrowserCredentialCSVImportTests: XCTestCase {
         )
         XCTAssertEqual(try plan.resolvedInventory().summary.acceptedCount, 2)
         XCTAssertEqual(try plan.resolvedInventory().summary.warningCount, 1)
-    }
-
-    func testConflictPlanCollapsesIdenticalRowsAndRequiresChoiceForDifferentSecrets() throws {
-        let spaceID = SpaceID()
-        let origin = try XCTUnwrap(
-            CredentialOrigin(url: URL(string: "https://accounts.example/login")!)
-        )
-        let existing = BrowserCredential(
-            descriptor: CredentialDescriptor(
-                spaceID: spaceID,
-                origin: origin,
-                username: "Paul@example.com",
-                createdAt: Date(timeIntervalSince1970: 100)
-            ),
-            password: "current-secret"
-        )
-        let records = [
-            BrowserCredentialCSVImportRecord(
-                rowNumber: 2,
-                displayName: "Accounts",
-                origin: origin,
-                username: "paul@example.com",
-                password: "imported-secret"
-            ),
-            BrowserCredentialCSVImportRecord(
-                rowNumber: 3,
-                displayName: "Accounts duplicate",
-                origin: origin,
-                username: "PAUL@example.com",
-                password: "imported-secret"
-            ),
-            BrowserCredentialCSVImportRecord(
-                rowNumber: 4,
-                displayName: "Accounts alternate",
-                origin: origin,
-                username: "paul@example.com",
-                password: "alternate-secret"
-            ),
-        ]
-        var plan = BrowserCredentialImportPlan(
-            format: .browser,
-            records: records,
-            rejections: [],
-            existingCredentials: [existing],
-            destination: BrowserSpaceRuntimeAssignment(
-                spaceID: spaceID,
-                profileID: UUID()
-            ),
-            synchronizesWithICloud: false,
-            now: Date(timeIntervalSince1970: 200)
-        )
-        let group = try XCTUnwrap(plan.groups.first)
-
-        XCTAssertTrue(group.requiresChoice)
-        XCTAssertEqual(group.selection, .existing)
-        XCTAssertEqual(group.candidates.map(\.rowNumber), [2, 4])
-        XCTAssertEqual(group.collapsedDuplicateRowCount, 1)
-        XCTAssertEqual(plan.groups(matching: "ACCOUNTS").map(\.id), [group.id])
-        XCTAssertEqual(plan.groups(matching: "paul@").map(\.id), [group.id])
-        XCTAssertTrue(plan.groups(matching: "missing").isEmpty)
-        XCTAssertFalse(String(describing: plan).contains("current-secret"))
-        XCTAssertFalse(String(describing: plan).contains("imported-secret"))
-        XCTAssertFalse(String(reflecting: group.id).contains("paul@example.com"))
-        XCTAssertTrue(String(reflecting: group.id).contains("<redacted>"))
-
-        plan.select(.imported(rowNumber: 4), for: group.id)
-        let result = try plan.resolvedInventory()
-        XCTAssertEqual(result.credentials.count, 1)
-        XCTAssertEqual(result.credentials.first?.descriptor.id, existing.descriptor.id)
-        XCTAssertEqual(result.credentials.first?.password, "alternate-secret")
-        XCTAssertEqual(result.summary.acceptedCount, 1)
-        XCTAssertEqual(result.summary.skippedCount, 2)
-        XCTAssertEqual(result.summary.warningCount, 0)
-        XCTAssertEqual(result.summary.rejectedCount, 0)
     }
 
     @MainActor

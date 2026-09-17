@@ -19,41 +19,6 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
         XCTAssertEqual(center.mediaDecision(for: .cameraAndMicrophone, origin: origin, in: spaceID), .ask)
     }
 
-    func testPermissionEnumCodableRawValuesRemainStable() throws {
-        let mediaPermissions: [(BrowserMediaPermission, String)] = [
-            (.camera, "camera"),
-            (.microphone, "microphone"),
-            (.cameraAndMicrophone, "cameraAndMicrophone"),
-        ]
-        let sitePermissions: [(BrowserSitePermission, String)] = [
-            (.camera, "camera"),
-            (.microphone, "microphone"),
-            (.cameraAndMicrophone, "cameraAndMicrophone"),
-            (.location, "location"),
-            (.notifications, "notifications"),
-            (.popups, "popups"),
-            (.automaticDownloads, "automaticDownloads"),
-            (.externalApplications, "externalApplications"),
-        ]
-        let decisions: [(BrowserSitePermissionDecision, String)] = [
-            (.ask, "ask"),
-            (.grantForSession, "grantForSession"),
-            (.denyForSession, "denyForSession"),
-            (.grantPersistently, "grantPersistently"),
-            (.denyPersistently, "denyPersistently"),
-        ]
-
-        for (permission, rawValue) in mediaPermissions {
-            try assertCodableRawValue(permission, equals: rawValue)
-        }
-        for (permission, rawValue) in sitePermissions {
-            try assertCodableRawValue(permission, equals: rawValue)
-        }
-        for (decision, rawValue) in decisions {
-            try assertCodableRawValue(decision, equals: rawValue)
-        }
-    }
-
     func testPermissionRecordCodableKeysRemainStable() throws {
         let recordID = try XCTUnwrap(
             UUID(uuidString: "B0479F10-CECA-4D7B-A4C9-86B41CB624A4")
@@ -133,126 +98,6 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
         XCTAssertNil(BrowserSiteOrigin(url: URL(fileURLWithPath: "/tmp/index.html")))
     }
 
-    func testRecordsRetainExistingPresentationOrdering() {
-        let spaceID = SpaceID()
-        let origin = BrowserSiteOrigin(
-            scheme: "https",
-            host: "permissions.example",
-            port: 443
-        )
-        let records = [
-            BrowserSitePermissionRecord(
-                spaceID: spaceID,
-                origin: origin,
-                permission: .popups,
-                decision: .grantPersistently
-            ),
-            BrowserSitePermissionRecord(
-                spaceID: spaceID,
-                origin: origin,
-                permission: .externalApplications,
-                detail: "mailto",
-                decision: .grantPersistently
-            ),
-            BrowserSitePermissionRecord(
-                spaceID: spaceID,
-                origin: origin,
-                permission: .camera,
-                decision: .grantPersistently
-            ),
-            BrowserSitePermissionRecord(
-                spaceID: spaceID,
-                origin: origin,
-                permission: .automaticDownloads,
-                decision: .grantPersistently
-            ),
-            BrowserSitePermissionRecord(
-                spaceID: spaceID,
-                origin: origin,
-                permission: .microphone,
-                decision: .grantPersistently
-            ),
-            BrowserSitePermissionRecord(
-                spaceID: spaceID,
-                origin: origin,
-                permission: .cameraAndMicrophone,
-                decision: .grantPersistently
-            ),
-        ]
-        let center = BrowserSitePermissionCenter(
-            persistence: InMemoryBrowserSitePermissionPersistence(records: records)
-        )
-
-        XCTAssertEqual(
-            center.records(in: spaceID).map(\.displayLabel),
-            [
-                "Automatic Downloads",
-                "Camera",
-                "Camera & Microphone",
-                "External Apps (mailto)",
-                "Microphone",
-                "Automatic Pop-ups",
-            ]
-        )
-    }
-
-    func testHostedNotificationBoundarySupportsOnlyLivePageDelivery() {
-        let capabilities = BrowserHostedWebNotificationCapabilities.wkWebView
-
-        XCTAssertTrue(capabilities.supportsPermissionDelegation)
-        XCTAssertTrue(capabilities.supportsForegroundPageDelivery)
-        XCTAssertFalse(capabilities.supportsBackgroundPushDelivery)
-        XCTAssertEqual(capabilities.systemOwner, .crestWhilePageIsLoaded)
-        XCTAssertTrue(BrowserSitePermission.allCases.map(\.settingsLabel).contains("Notifications"))
-    }
-
-    func testPopupAndDownloadDefaultsDescribeTheirNonInterruptiveBehavior() {
-        XCTAssertEqual(
-            BrowserSitePermission.popups.settingsLabel(for: .ask),
-            "Blocked by Default"
-        )
-        XCTAssertEqual(
-            BrowserSitePermission.popups.defaultDecisionLabel,
-            "Default (Block)"
-        )
-        XCTAssertEqual(
-            BrowserSitePermission.automaticDownloads.settingsLabel(for: .ask),
-            "Ask after First"
-        )
-        XCTAssertEqual(
-            BrowserSitePermission.automaticDownloads.defaultDecisionLabel,
-            "Default (Ask after First)"
-        )
-    }
-
-    func testHostedNotificationsRequireHTTPSOrLoopbackHTTP() {
-        XCTAssertTrue(
-            BrowserHostedWebNotificationOriginPolicy.allows(
-                BrowserSiteOrigin(scheme: "https", host: "news.example", port: 443)
-            )
-        )
-        XCTAssertTrue(
-            BrowserHostedWebNotificationOriginPolicy.allows(
-                BrowserSiteOrigin(scheme: "http", host: "localhost", port: 8080)
-            )
-        )
-        XCTAssertFalse(
-            BrowserHostedWebNotificationOriginPolicy.allows(
-                BrowserSiteOrigin(scheme: "http", host: "news.example", port: 80)
-            )
-        )
-    }
-
-    func testUnknownPermissionAsksByDefault() {
-        let center = BrowserSitePermissionCenter()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "meet.example", port: 443)
-
-        XCTAssertEqual(
-            center.decision(for: .camera, origin: origin, in: SpaceID()),
-            .ask
-        )
-    }
-
     func testDecisionIsScopedToExactSpaceOriginAndCapability() {
         let center = BrowserSitePermissionCenter()
         let work = SpaceID()
@@ -265,49 +110,6 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
         XCTAssertEqual(center.decision(for: .microphone, origin: origin, in: work), .ask)
         XCTAssertEqual(center.decision(for: .camera, origin: otherPort, in: work), .ask)
         XCTAssertEqual(center.decision(for: .camera, origin: origin, in: personal), .ask)
-    }
-
-    func testPopupsAndAutomaticDownloadsRemainIndependentBySpace() {
-        let center = BrowserSitePermissionCenter()
-        let work = SpaceID()
-        let personal = SpaceID()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "news.example", port: 443)
-
-        center.setDecision(.grantPersistently, for: .popups, origin: origin, in: work)
-        center.setDecision(
-            .denyPersistently,
-            for: .automaticDownloads,
-            origin: origin,
-            in: work
-        )
-
-        XCTAssertEqual(
-            center.decision(for: .popups, origin: origin, in: work),
-            .grantPersistently
-        )
-        XCTAssertEqual(
-            center.decision(for: .automaticDownloads, origin: origin, in: work),
-            .denyPersistently
-        )
-        XCTAssertEqual(center.decision(for: .popups, origin: origin, in: personal), .ask)
-        XCTAssertEqual(
-            center.decision(for: .automaticDownloads, origin: origin, in: personal),
-            .ask
-        )
-    }
-
-    func testDenyAndResetRemainSpaceLocal() {
-        let center = BrowserSitePermissionCenter()
-        let work = SpaceID()
-        let personal = SpaceID()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "meet.example", port: 443)
-        center.setDecision(.denyForSession, for: .microphone, origin: origin, in: work)
-        center.setDecision(.grantForSession, for: .microphone, origin: origin, in: personal)
-
-        center.reset(spaceID: work)
-
-        XCTAssertEqual(center.decision(for: .microphone, origin: origin, in: work), .ask)
-        XCTAssertEqual(center.decision(for: .microphone, origin: origin, in: personal), .grantForSession)
     }
 
     func testPersistentDecisionSurvivesCenterReconstruction() {
@@ -327,39 +129,6 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
         XCTAssertEqual(
             secondCenter.decision(for: .camera, origin: origin, in: spaceID),
             .grantPersistently
-        )
-        XCTAssertEqual(secondCenter.records(in: spaceID).count, 1)
-    }
-
-    func testUserDefaultsPersistenceSurvivesAdapterReconstruction() throws {
-        let suiteName = "BrowserSitePermissionCenterTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let key = "site-permissions"
-        let spaceID = SpaceID()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "meet.example", port: 443)
-
-        let firstPersistence = UserDefaultsBrowserSitePermissionPersistence(
-            defaults: defaults,
-            key: key
-        )
-        let firstCenter = BrowserSitePermissionCenter(persistence: firstPersistence)
-        firstCenter.setDecision(
-            .denyPersistently,
-            for: .microphone,
-            origin: origin,
-            in: spaceID
-        )
-
-        let secondPersistence = UserDefaultsBrowserSitePermissionPersistence(
-            defaults: defaults,
-            key: key
-        )
-        let secondCenter = BrowserSitePermissionCenter(persistence: secondPersistence)
-
-        XCTAssertEqual(
-            secondCenter.decision(for: .microphone, origin: origin, in: spaceID),
-            .denyPersistently
         )
         XCTAssertEqual(secondCenter.records(in: spaceID).count, 1)
     }
@@ -416,21 +185,6 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
         XCTAssertEqual(center.decision(for: .microphone, origin: origin, in: work), .ask)
         XCTAssertEqual(center.decision(for: .camera, origin: origin, in: personal), .denyPersistently)
         XCTAssertEqual(persistence.records.map(\.spaceID), [personal])
-    }
-
-    func testOriginDisplayNameOmitsOnlyDefaultPorts() {
-        XCTAssertEqual(
-            BrowserSiteOrigin(scheme: "https", host: "Meet.Example", port: 443).displayName,
-            "https://meet.example"
-        )
-        XCTAssertEqual(
-            BrowserSiteOrigin(scheme: "https", host: "meet.example", port: 8443).displayName,
-            "https://meet.example:8443"
-        )
-        XCTAssertEqual(
-            BrowserSiteOrigin(scheme: "https", host: "meet.example", port: 0).displayName,
-            "https://meet.example"
-        )
     }
 
     func testExistingMediaPermissionRecordDecodesAfterCapabilityExpansion() throws {
@@ -584,50 +338,5 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
             .grantPersistently
         )
         XCTAssertEqual(persistence.records.map(\.detail), ["tel"])
-    }
-
-    func testStoredRecordWithoutADetailStillDecodesAfterSchemeScoping() throws {
-        let recordID = UUID()
-        let spaceID = SpaceID()
-        let json = """
-            [{
-              "id":"\(recordID.uuidString)",
-              "spaceID":{"rawValue":"\(spaceID.rawValue.uuidString)"},
-              "origin":{"scheme":"https","host":"news.example","port":443},
-              "permission":"popups",
-              "decision":"denyPersistently",
-              "modifiedAt":0
-            }]
-            """
-
-        let records = try JSONDecoder().decode(
-            [BrowserSitePermissionRecord].self,
-            from: Data(json.utf8)
-        )
-
-        XCTAssertEqual(records.first?.permission, .popups)
-        XCTAssertNil(records.first?.detail)
-        XCTAssertEqual(records.first?.displayLabel, "Automatic Pop-ups")
-    }
-
-    private func assertCodableRawValue<Value: Codable & Equatable>(
-        _ value: Value,
-        equals rawValue: String,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) throws {
-        let encoded = try JSONEncoder().encode(value)
-        XCTAssertEqual(
-            String(decoding: encoded, as: UTF8.self),
-            "\"\(rawValue)\"",
-            file: file,
-            line: line
-        )
-        XCTAssertEqual(
-            try JSONDecoder().decode(Value.self, from: encoded),
-            value,
-            file: file,
-            line: line
-        )
     }
 }

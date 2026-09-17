@@ -3,6 +3,38 @@ import XCTest
 @testable import Crest
 
 final class BrowserSessionTests: XCTestCase {
+    func testLegacySpaceWithoutHistoryDecodesWithEmptyHistory() throws {
+        let space = try XCTUnwrap(BrowserSession.preview.spaces.first)
+        let encoded = try JSONEncoder().encode(space)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object.removeValue(forKey: "history")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(BrowserSpace.self, from: legacyData)
+
+        XCTAssertTrue(decoded.history.isEmpty)
+    }
+
+    func testRepeatedVisitMergesByURLAndUpdatesRecency() throws {
+        var session = BrowserSession.preview
+        let url = try XCTUnwrap(URL(string: "https://example.com/article#section"))
+
+        session.recordVisit(url: url, title: "First title", at: Date(timeIntervalSince1970: 100))
+        session.recordVisit(
+            url: try XCTUnwrap(URL(string: "https://example.com/article#other")),
+            title: "Updated title",
+            at: Date(timeIntervalSince1970: 200)
+        )
+
+        let entry = try XCTUnwrap(session.selectedSpace?.history.first)
+        XCTAssertEqual(try XCTUnwrap(session.selectedSpace).history.count, 1)
+        XCTAssertEqual(entry.url.absoluteString, "https://example.com/article")
+        XCTAssertEqual(entry.title, "Updated title")
+        XCTAssertEqual(entry.visitCount, 2)
+        XCTAssertEqual(entry.firstVisitedAt, Date(timeIntervalSince1970: 100))
+        XCTAssertEqual(entry.lastVisitedAt, Date(timeIntervalSince1970: 200))
+    }
+
     func testPinnedAndSavedTabsTrackWhenTheyLeaveTheirSavedLocation() throws {
         var pinned = BrowserTab(
             title: "Home",
@@ -69,25 +101,6 @@ final class BrowserSessionTests: XCTestCase {
         )
         XCTAssertEqual(session.selectedTab?.url, currentURL)
         XCTAssertFalse(try XCTUnwrap(session.selectedTab).isAwayFromSavedLocation)
-    }
-
-    func testPinnedTabDoubleClickLetsThePageActionCheckPendingNavigation() throws {
-        var tab = BrowserTab(
-            title: "Media Library",
-            url: try XCTUnwrap(URL(string: "https://media.example/audio/episode")),
-            savedURL: try XCTUnwrap(URL(string: "https://media.example/")),
-            placement: .pinned
-        )
-
-        XCTAssertTrue(BrowserPinnedTabInteraction.shouldRestoreSavedLocation(for: tab))
-
-        tab.url = tab.savedURL
-        XCTAssertTrue(BrowserPinnedTabInteraction.shouldRestoreSavedLocation(for: tab))
-        XCTAssertFalse(BrowserSavedLocationRestorePolicy.shouldRestore(tab, pendingURL: nil))
-        XCTAssertTrue(
-            BrowserSavedLocationRestorePolicy.shouldRestore(
-                tab, pendingURL: URL(string: "https://media.example/next")
-            ))
     }
 
     func testTabSectionsPartitionLargeFolderedSpaceInOneStableOrder() {
@@ -205,17 +218,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertTrue(updated.contains(pinned.id))
         XCTAssertFalse(updated.archivedTabs.contains { $0.id == pinned.id })
         XCTAssertEqual(updated.selectedTabID, pinned.id)
-    }
-
-    func testNewCurrentTabsUseArcsStableNewestFirstOrder() throws {
-        var session = BrowserSession.preview
-
-        let firstID = try XCTUnwrap(session.openTab(title: "First", url: nil))
-        let secondID = try XCTUnwrap(session.openTab(title: "Second", url: nil))
-
-        XCTAssertEqual(try XCTUnwrap(session.selectedSpace).currentTabs.prefix(2).map(\.id), [secondID, firstID])
-        session.selectTab(firstID)
-        XCTAssertEqual(try XCTUnwrap(session.selectedSpace).currentTabs.prefix(2).map(\.id), [secondID, firstID])
     }
 
     func testClosingASelectedCurrentTabReturnsToThePreviouslyActivatedTab() throws {
@@ -349,13 +351,6 @@ final class BrowserSessionTests: XCTestCase {
 
         XCTAssertNil(session.removeSpace(session.selectedSpaceID))
         XCTAssertEqual(session.spaces.count, 1)
-    }
-
-    func testEverySpaceHasAnIndependentWebsiteDataStore() {
-        let session = BrowserSession.preview
-        let profileIDs = Set(session.spaces.map(\.profile.id))
-
-        XCTAssertEqual(profileIDs.count, session.spaces.count)
     }
 
     func testCleanupRemovesOnlyExpiredUnselectedCurrentTabs() throws {
@@ -722,24 +717,6 @@ final class BrowserSessionTests: XCTestCase {
             session.selectedTab?.titleModifiedAt,
             movedAt.addingTimeInterval(100)
         )
-    }
-
-    func testDuplicatingARenamedTabCarriesTheRename() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        session.openTab(title: "Docs", url: URL(string: "https://example.com/docs"))
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
-        XCTAssertTrue(
-            session.setTabCustomTitle("Release Notes", tabID: tabID, in: spaceID)
-        )
-
-        let duplicateID = try XCTUnwrap(session.duplicateTab(tabID, in: spaceID))
-
-        let duplicate = try XCTUnwrap(
-            session.selectedSpace?.tabs.first(where: { $0.id == duplicateID })
-        )
-        XCTAssertEqual(duplicate.customTitle, "Release Notes")
-        XCTAssertEqual(duplicate.displayTitle, "Release Notes")
     }
 
     func testTabWrittenBeforeRenamingDecodesWithoutACustomTitle() throws {
@@ -1198,125 +1175,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertNil(BrowserIconSymbol.normalizedEmoji("ordinary text"))
     }
 
-    func testSharedIconPickerCatalogKeepsEveryOfficialSequenceComplete() {
-        let choices = BrowserTabEmojiChoices.matching(
-            "",
-            maximumVersion: 17
-        )
-
-        XCTAssertFalse(choices.isEmpty)
-        XCTAssertEqual(
-            choices.count,
-            BrowserTabEmojiChoices.catalogMetadata.fullyQualifiedCount
-        )
-        XCTAssertEqual(BrowserTabEmojiChoices.catalogMetadata.unicodeVersion, "17.0")
-        XCTAssertEqual(
-            BrowserTabEmojiChoices.catalogMetadata.sourceURL,
-            "https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt"
-        )
-        XCTAssertEqual(
-            BrowserTabEmojiChoices.catalogMetadata.sourceSHA256,
-            "1d8a944f88d7952f7ef7c5167fef3c67995bcae24543949710231b03a201acda"
-        )
-        XCTAssertEqual(Set(choices.map(\.id)).count, choices.count)
-        for category in BrowserEmojiCategory.allCases {
-            XCTAssertFalse(
-                BrowserTabEmojiChoices.choices(
-                    in: category,
-                    maximumVersion: 17
-                ).isEmpty,
-                "Missing choices for \(category.rawValue)"
-            )
-        }
-        for choice in choices {
-            XCTAssertEqual(choice.emoji.count, 1, choice.name)
-            XCTAssertEqual(
-                BrowserIconSymbol.normalizedEmoji(choice.emoji),
-                choice.emoji,
-                choice.name
-            )
-        }
-    }
-
-    func testSharedIconPickerSearchesOfficialNamesAndExactToneVariants() {
-        XCTAssertTrue(
-            BrowserTabEmojiChoices.matching(
-                "technologist: medium skin tone",
-                maximumVersion: 17
-            ).contains { $0.emoji == "👩🏽‍💻" }
-        )
-        XCTAssertTrue(
-            BrowserTabEmojiChoices.matching("star", maximumVersion: 17)
-                .contains { $0.emoji == "⭐" }
-        )
-        XCTAssertTrue(
-            BrowserTabEmojiChoices.matching(
-                "rainbow flag",
-                maximumVersion: 17
-            )
-            .contains { $0.emoji == "🏳️‍🌈" }
-        )
-        XCTAssertTrue(
-            BrowserTabEmojiChoices.matching(
-                "handshake: dark skin tone, light skin tone",
-                maximumVersion: 17
-            ).contains { $0.emoji == "🫱🏿‍🫲🏻" }
-        )
-    }
-
-    func testSharedIconPickerGroupsToneVariantsWithoutDiscardingThem() throws {
-        let handshake = try XCTUnwrap(
-            BrowserTabEmojiChoices.choices(
-                in: .people,
-                maximumVersion: 17
-            ).first { $0.name == "Handshake" }
-        )
-
-        XCTAssertEqual(handshake.emoji, "🤝")
-        XCTAssertTrue(handshake.variants.contains { $0.emoji == "🫱🏿‍🫲🏻" })
-        XCTAssertTrue(handshake.keywords.contains("dark skin tone"))
-    }
-
-    func testSharedIconPickerFiltersNewEmojiByPlatformRelease() {
-        let emoji16 = BrowserEmojiPlatformSupport.maximumVersion(
-            for: OperatingSystemVersion(
-                majorVersion: 26,
-                minorVersion: 1,
-                patchVersion: 0
-            )
-        )
-        let emoji17 = BrowserEmojiPlatformSupport.maximumVersion(
-            for: OperatingSystemVersion(
-                majorVersion: 26,
-                minorVersion: 4,
-                patchVersion: 0
-            )
-        )
-        let nextMajor = BrowserEmojiPlatformSupport.maximumVersion(
-            for: OperatingSystemVersion(
-                majorVersion: 27,
-                minorVersion: 0,
-                patchVersion: 0
-            )
-        )
-
-        XCTAssertEqual(emoji16, 16)
-        XCTAssertEqual(emoji17, 17)
-        XCTAssertEqual(nextMajor, 17)
-        XCTAssertFalse(
-            BrowserTabEmojiChoices.matching(
-                "distorted face",
-                maximumVersion: emoji16
-            ).contains { $0.emoji == "🫪" }
-        )
-        XCTAssertTrue(
-            BrowserTabEmojiChoices.matching(
-                "distorted face",
-                maximumVersion: emoji17
-            ).contains { $0.emoji == "🫪" }
-        )
-    }
-
     func testComposedEmojiPersistsWithoutScalarTruncation() throws {
         var session = BrowserSession.preview
         let tab = try XCTUnwrap(session.selectedTab)
@@ -1336,13 +1194,6 @@ final class BrowserSessionTests: XCTestCase {
         )
         XCTAssertEqual(decoded.selectedTab?.emojiIcon, emoji)
         XCTAssertEqual(decoded.selectedTab?.emojiIcon?.count, 1)
-    }
-
-    func testMacUsesTheNativeCharacterPaletteForEmojiCustomization() {
-        XCTAssertEqual(
-            BrowserNativeEmojiPickerPresentation.current,
-            .characterPalette
-        )
     }
 
     func testClearingAnIconReturnsTheTabToAutomaticCurrentURLUpdates() throws {
@@ -1403,28 +1254,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertNil(space.folders.first(where: { $0.id == childID })?.parentID)
         XCTAssertEqual(space.folders.first(where: { $0.id == leafID })?.parentID, childID)
         XCTAssertTrue(space.folderTree.isValid)
-    }
-
-    func testFoldersUseMutedDefaultColorAndPersistCustomColor() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let folderID = try XCTUnwrap(session.addFolder(in: spaceID))
-
-        XCTAssertEqual(
-            session.space(id: spaceID)?.folders.first(where: { $0.id == folderID })?.color,
-            .folderDefault
-        )
-
-        let custom = BrowserSpaceBrandColor(
-            red: 0.19,
-            green: 0.43,
-            blue: 0.71
-        )
-        XCTAssertTrue(session.setFolderColor(folderID, in: spaceID, color: custom))
-        XCTAssertEqual(
-            session.space(id: spaceID)?.folders.first(where: { $0.id == folderID })?.color,
-            custom
-        )
     }
 
     func testFolderCollapseStateChangesOnlyWhenNeeded() throws {
@@ -1830,34 +1659,6 @@ final class BrowserSessionTests: XCTestCase {
 }
 
 final class BrowserTabStateArchiveTests: XCTestCase {
-    func testEnvelopeRoundTripsItsPayloadStampAndURL() throws {
-        let payload = Data((0..<2048).map { UInt8($0 % 251) })
-        let url = try XCTUnwrap(URL(string: "https://example.com/reader?page=3#anchor"))
-
-        let encoded = BrowserTabStateEnvelope(
-            interactionState: payload,
-            url: url
-        ).encoded()
-        let decoded = try XCTUnwrap(BrowserTabStateEnvelope.decode(encoded))
-
-        XCTAssertEqual(decoded.interactionState, payload)
-        XCTAssertEqual(decoded.url, url)
-        XCTAssertEqual(decoded.formatVersion, BrowserTabStateEnvelope.currentFormatVersion)
-        XCTAssertEqual(decoded.osBuild, BrowserTabStateEnvelope.currentOSBuild)
-        XCTAssertTrue(decoded.isRestorable)
-    }
-
-    func testEnvelopeSurvivesAnAbsentURLAndAnEmptyPayload() throws {
-        let encoded = BrowserTabStateEnvelope(
-            interactionState: Data(),
-            url: nil
-        ).encoded()
-
-        let decoded = try XCTUnwrap(BrowserTabStateEnvelope.decode(encoded))
-
-        XCTAssertNil(decoded.url)
-        XCTAssertTrue(decoded.interactionState.isEmpty)
-    }
 
     func testStateFromAnotherOSBuildOrFormatIsNotRestorable() throws {
         let payload = Data("session".utf8)

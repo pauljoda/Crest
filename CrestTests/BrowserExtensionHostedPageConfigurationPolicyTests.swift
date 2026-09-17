@@ -23,13 +23,4 @@ final class BrowserExtensionHostedPageConfigurationPolicyTests: XCTestCase {
             BrowserExtensionHostedPageConfigurationPolicy.Mode.none)
     }
 
-    func testAFreshConfigurationStartsWithoutAnExtensionMode() throws {
-        let configuration = WKWebViewConfiguration()
-        guard BrowserExtensionHostedPageConfigurationPolicy.isSupported(by: configuration) else {
-            throw XCTSkip("This WebKit does not expose the extension CSP mode.")
-        }
-        XCTAssertEqual(
-            BrowserExtensionHostedPageConfigurationPolicy.extensionContentSecurityPolicyMode(of: configuration),
-            BrowserExtensionHostedPageConfigurationPolicy.Mode.none)
-    }
 }

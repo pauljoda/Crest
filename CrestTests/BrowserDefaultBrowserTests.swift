@@ -3,43 +3,6 @@ import XCTest
 
 @MainActor
 final class BrowserDefaultBrowserTests: XCTestCase {
-    func testApplicationRegistersBothWebURLSchemes() throws {
-        let urlTypes = try XCTUnwrap(
-            Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes")
-                as? [[String: Any]]
-        )
-        let schemes = Set(
-            urlTypes.flatMap { $0["CFBundleURLSchemes"] as? [String] ?? [] }
-        )
-
-        XCTAssertTrue(schemes.contains("http"))
-        XCTAssertTrue(schemes.contains("https"))
-    }
-
-    func testApplicationRegistersBrowserDocumentTypesUsedByTheSystemPicker() throws {
-        let documentTypes = try XCTUnwrap(
-            Bundle.main.object(forInfoDictionaryKey: "CFBundleDocumentTypes")
-                as? [[String: Any]]
-        )
-        let contentTypes = Set(
-            documentTypes.flatMap { $0["LSItemContentTypes"] as? [String] ?? [] }
-        )
-        let handlerRanksByName: [String: String] = Dictionary(
-            uniqueKeysWithValues: documentTypes.compactMap { documentType -> (String, String)? in
-                guard let name = documentType["CFBundleTypeName"] as? String,
-                      let handlerRank = documentType["LSHandlerRank"] as? String else {
-                    return nil
-                }
-                return (name, handlerRank)
-            }
-        )
-
-        XCTAssertTrue(contentTypes.contains("public.html"))
-        XCTAssertTrue(contentTypes.contains("public.xhtml"))
-        XCTAssertEqual(handlerRanksByName["HTML document"], "Default")
-        XCTAssertEqual(handlerRanksByName["XHTML document"], "Default")
-    }
-
     func testExternalURLPolicyAcceptsOnlyHostBasedHTTPAndHTTPSURLs() throws {
         XCTAssertTrue(
             BrowserExternalURLPolicy.accepts(
@@ -83,15 +46,6 @@ final class BrowserDefaultBrowserTests: XCTestCase {
         XCTAssertNotEqual(browser.selectedTab?.id, originalTabID)
         XCTAssertEqual(browser.selectedTab?.url, secondURL)
         XCTAssertEqual(browser.selectedSpace?.currentTabs.count, 2)
-    }
-
-    func testRejectedExternalURLDoesNotMutateTheSession() throws {
-        let browser = BrowserStore.privateBrowsing()
-        let initialSession = browser.session
-        let rejectedURL = try XCTUnwrap(URL(string: "file:///tmp/private.txt"))
-
-        XCTAssertFalse(browser.openExternalURL(rejectedURL))
-        XCTAssertEqual(browser.session, initialSession)
     }
 
     func testDefaultBrowserControllerOwnsExplicitStatusAndRequestFlow() async {

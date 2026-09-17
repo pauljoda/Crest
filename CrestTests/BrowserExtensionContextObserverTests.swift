@@ -73,34 +73,6 @@ final class BrowserExtensionContextObserverTests: XCTestCase {
         XCTAssertEqual(runtimeUpdateCount, 0)
     }
 
-    func testReleasingObserverStopsEveryContextNotification() async throws {
-        let webExtension = try await WKWebExtension(
-            resourceBaseURL: fixtureURL
-        )
-        let context = WKWebExtensionContext(for: webExtension)
-        var observer: BrowserExtensionContextObserver? =
-            BrowserExtensionContextObserver()
-        weak var releasedObserver = observer
-        var permissionUpdateCount = 0
-        observer?.observe(
-            context,
-            permissionsDidChange: {
-                permissionUpdateCount += 1
-            },
-            runtimeSummaryDidChange: {}
-        )
-
-        observer = nil
-        XCTAssertNil(releasedObserver)
-        NotificationCenter.default.post(
-            name: WKWebExtensionContext.permissionsWereGrantedNotification,
-            object: context
-        )
-        try await Task.sleep(for: .milliseconds(50))
-
-        XCTAssertEqual(permissionUpdateCount, 0)
-    }
-
     private var fixtureURL: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

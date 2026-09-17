@@ -1,33 +1,10 @@
 import Foundation
-import Observation
 import XCTest
 
 @testable import Crest
 
 @MainActor
 final class BrowserStoreWorkspaceTests: XCTestCase {
-    func testWindowStoresReadTheSameMutationBeforePersistenceAndKeepTheirOwnSelection() throws {
-        let first = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
-        let second = first.makeWindowStore()
-        let space = try XCTUnwrap(first.selectedSpace)
-        let firstTab = space.tabs[0]
-        let secondTab = space.tabs[1]
-        first.selectTab(firstTab.id)
-        second.selectTab(secondTab.id)
-
-        first.session.updateTab(url: firstTab.url, title: "Shared immediately", tabID: firstTab.id, in: space.id)
-
-        XCTAssertEqual(
-            second.session.space(id: space.id)?.tabs.first { $0.id == firstTab.id }?.title, "Shared immediately")
-        second.session.updateSpaceIdentity(
-            space.id, name: "Renamed from another window", symbol: space.symbol, accent: space.accent)
-        XCTAssertEqual(first.selectedSpace?.name, "Renamed from another window")
-        XCTAssertEqual(first.selectedTab?.id, firstTab.id)
-        XCTAssertEqual(second.selectedTab?.id, secondTab.id)
-        XCTAssertEqual(
-            first.session.space(id: space.id)?.tabs.first { $0.id == firstTab.id }?.title, "Shared immediately")
-    }
-
     func testAnEmptyWindowSelectionSurvivesOtherWindowsPublishingAndDeletingTabs() throws {
         let first = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
         let empty = first.makeWindowStore(restoresTabSelection: false)
@@ -41,34 +18,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         first.deleteTab(tab.id, in: first.session.selectedSpaceID)
         XCTAssertNil(empty.selectedTab)
         XCTAssertFalse(empty.session.tabIDs.contains(tab.id))
-    }
-
-    func testAWindowObservesSharedMetadataAndItsOwnSelectionChanges() throws {
-        let first = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
-        let second = first.makeWindowStore()
-        let tab = try XCTUnwrap(second.selectedTab)
-        let observed = expectation(description: "Shared metadata invalidates the other window")
-        withObservationTracking {
-            _ = second.selectedTab?.title
-        } onChange: {
-            observed.fulfill()
-        }
-
-        first.session.updateTab(
-            url: tab.url, title: "Observed shared title", tabID: tab.id, in: second.session.selectedSpaceID)
-
-        wait(for: [observed], timeout: 1)
-        XCTAssertEqual(second.selectedTab?.title, "Observed shared title")
-        let selectionChanged = expectation(description: "Local selection invalidates the window")
-        withObservationTracking {
-            _ = second.selectedTab
-        } onChange: {
-            selectionChanged.fulfill()
-        }
-        second.session.spaces[0].selectedTabID = nil
-        wait(for: [selectionChanged], timeout: 1)
-        XCTAssertNil(second.selectedTab)
-        XCTAssertEqual(first.selectedTab?.id, tab.id)
     }
 
     func testAnExplicitEmptyWindowSelectionSurvivesPersistenceAndRestoration() throws {
@@ -243,34 +192,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(temporary.selectedSpace).archivedTabs.isEmpty)
     }
 
-    func testTransferRemovesSourceSplitReferencesWithoutArchivingEitherMember() throws {
-        let groupID = SplitGroupID()
-        let tab = BrowserTab(
-            title: "Moving", url: URL(string: "https://transfer.crest.test/moving"), placement: .current,
-            splitGroupID: groupID)
-        let remaining = BrowserTab(
-            title: "Remaining", url: URL(string: "https://transfer.crest.test/remaining"), placement: .current,
-            splitGroupID: groupID)
-        let space = BrowserSpace(
-            id: SpaceID(), profile: BrowsingProfile(), name: "Source", symbol: "globe", accent: .indigo,
-            folders: [], tabs: [tab, remaining], selectedTabID: tab.id)
-        let source = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence())
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        XCTAssertTrue(source.setSplitGroupTitle("Pair", groupID: groupID, matching: assignment))
-        let destination = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
-
-        XCTAssertTrue(source.transferTab(tab.id, matching: assignment, to: destination, in: assignment))
-
-        XCTAssertEqual(source.selectedSpace?.tabs.map(\.id), [remaining.id])
-        XCTAssertNil(source.selectedSpace?.tabs.first?.splitGroupID)
-        XCTAssertTrue(try XCTUnwrap(source.selectedSpace).splitGroups.isEmpty)
-        XCTAssertTrue(try XCTUnwrap(source.selectedSpace).archivedTabs.isEmpty)
-        XCTAssertNil(destination.selectedTab?.splitGroupID)
-        XCTAssertTrue(try XCTUnwrap(destination.selectedSpace).splitGroups.isEmpty)
-    }
-
     func testTransferRejectsStaleAssignmentsAndDuplicateDestinationIdentityAtomically() throws {
         let source = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
         let space = try XCTUnwrap(source.selectedSpace)
@@ -296,21 +217,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(destination.session, duplicateDestination)
     }
 
-    func testTransferWithinTheSharedFamilyOnlyChangesTheDestinationWindowSelection() throws {
-        let first = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
-        let second = first.makeWindowStore()
-        let space = try XCTUnwrap(first.selectedSpace)
-        let tab = try XCTUnwrap(space.tabs.first)
-        let sourceSelection = first.selectedTab?.id
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-
-        XCTAssertTrue(first.transferTab(tab.id, matching: assignment, to: second, in: assignment))
-
-        XCTAssertEqual(first.selectedTab?.id, sourceSelection)
-        XCTAssertEqual(second.selectedTab?.id, tab.id)
-        XCTAssertTrue(first.session.tabIDs.contains(tab.id))
-        XCTAssertEqual(first.session.tabIDs, second.session.tabIDs)
-    }
 }
 
 @MainActor

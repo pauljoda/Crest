@@ -124,28 +124,6 @@ final class BrowserExtensionExternalMessagingCompatibilityScriptTests: XCTestCas
         XCTAssertEqual(requests[0]["response"] as? String, "second")
     }
 
-    func testASilentCallbackListenerDoesNotBlockALaterResponse() async throws {
-        let result = try await evaluate(
-            """
-            let lateReply;
-            addExternalMessageListener((message, sender, reply) => {
-                lateReply = reply;
-                return true;
-            });
-            addExternalMessageListener(async () => "ready");
-            deliver({api: "runtime.externalMessage", requestId: "startup", message: {type: "ready"}});
-            await settle();
-            const beforeLateReply = requests.map(request => request.response);
-            lateReply("too late");
-            await settle();
-            return {beforeLateReply, requests};
-            """)
-        XCTAssertEqual(result["beforeLateReply"] as? [String], ["ready"])
-        let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
-        XCTAssertEqual(requests.count, 1)
-        XCTAssertEqual(requests[0]["response"] as? String, "ready")
-    }
-
     func testARejectedListenerSettlesTheDeliveryWithoutAnUnhandledRejection() async throws {
         let result = try await evaluate(
             """

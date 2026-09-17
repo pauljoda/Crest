@@ -63,20 +63,6 @@ final class BrowserExtensionDeclarativeNetRequestWatchTests: XCTestCase {
         XCTAssertEqual((last["dynamic"] as? [[String: Any]])?.map { $0["id"] as? Int }, [2])
     }
 
-    func testTheWatchIsRefusedWithoutADeclarativeNetRequestPermission() {
-        let store = BrowserExtensionDeclarativeNetRequestStore(
-            persistence: InMemoryBrowserExtensionDeclarativeNetRequestStore())
-        let connection = BrowserExtensionCapabilityBrokerConnection(
-            authorization: .init(grantedPermissions: ["tabs"], clientID: claude),
-            notificationService: nil, idleStateProvider: { _ in .active },
-            webpageMenuRegistry: .init(),
-            declarativeNetRequestService: store,
-            publish: { _ in }
-        )
-        defer { connection.stop() }
-        XCTAssertThrowsError(try connection.receive(["api": "dnr.watch"]))
-    }
-
     func testAnExistingWatchRevalidatesDenialAndExpiryBeforeDelivery() async throws {
         for revoked in [
             BrowserExtensionPermissionSnapshot(

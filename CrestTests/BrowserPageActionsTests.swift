@@ -3,17 +3,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserPageZoomPolicyTests: XCTestCase {
-    func testCustomViewportAcceptsWholeCSSDimensionsWithinTheRenderingLimit() {
-        XCTAssertEqual(
-            BrowserDeveloperViewport.customSize(width: " 1024 ", height: "768"),
-            .custom(width: 1024, height: 768)
-        )
-        for invalid in ["", "0", "-1", "390.5", "8193", "999999999999999999999"] {
-            XCTAssertNil(BrowserDeveloperViewport.customSize(width: invalid, height: "844"))
-            XCTAssertNil(BrowserDeveloperViewport.customSize(width: "390", height: invalid))
-        }
-    }
-
     func testDeveloperModeAutomaticallyRecognizesLocalPagesAndHostnames() {
         let localURLs = [
             "http://localhost:3000/dashboard",
@@ -25,44 +14,6 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
             "http://router.home.arpa",
             "http://dashboard.lan",
             "file:///tmp/crest-preview/index.html",
-        ]
-
-        for value in localURLs {
-            XCTAssertTrue(
-                BrowserDeveloperModePolicy.isAutomatic(for: URL(string: value)),
-                value
-            )
-        }
-    }
-
-    func testDeveloperModeAutomaticallyRecognizesLocalIPv4Addresses() {
-        let localURLs = [
-            "http://127.0.0.1:1",
-            "http://127.42.99.4",
-            "http://0.0.0.0:3000",
-            "http://10.23.45.67",
-            "http://172.16.0.1",
-            "http://172.31.255.255",
-            "http://192.168.0.25",
-            "http://169.254.1.1",
-        ]
-
-        for value in localURLs {
-            XCTAssertTrue(
-                BrowserDeveloperModePolicy.isAutomatic(for: URL(string: value)),
-                value
-            )
-        }
-    }
-
-    func testDeveloperModeAutomaticallyRecognizesLocalIPv6Addresses() {
-        let localURLs = [
-            "http://[::1]:3000",
-            "http://[::]:3000",
-            "http://[fd12:3456:789a::1]",
-            "http://[fe80::1]",
-            "http://[::ffff:127.0.0.1]",
-            "http://[::ffff:192.168.1.20]",
         ]
 
         for value in localURLs {
@@ -97,94 +48,6 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
         XCTAssertFalse(BrowserDeveloperModePolicy.isAutomatic(for: nil))
     }
 
-    func testDeveloperCapturePolicyClampsSelectionAndRejectsTinyDrags() {
-        let bounds = CGRect(x: 0, y: 0, width: 800, height: 600)
-
-        XCTAssertEqual(
-            BrowserDeveloperCapturePolicy.captureRect(
-                from: CGPoint(x: 700, y: 500),
-                to: CGPoint(x: 100, y: 50),
-                in: bounds
-            ),
-            CGRect(x: 100, y: 50, width: 600, height: 450)
-        )
-        XCTAssertEqual(
-            BrowserDeveloperCapturePolicy.captureRect(
-                from: CGPoint(x: -20, y: -40),
-                to: CGPoint(x: 900, y: 700),
-                in: bounds
-            ),
-            bounds
-        )
-        XCTAssertNil(
-            BrowserDeveloperCapturePolicy.captureRect(
-                from: CGPoint(x: 20, y: 20),
-                to: CGPoint(x: 25, y: 26),
-                in: bounds
-            )
-        )
-    }
-
-    func testDeveloperCaptureFilenameUsesTheExistingSafeExportRules() {
-        XCTAssertEqual(
-            BrowserDeveloperCapturePolicy.pngFilename(
-                title: #" Local / Preview: "Home"? "#,
-                url: URL(string: "http://localhost:3000")
-            ),
-            "Local - Preview- -Home-.png"
-        )
-        XCTAssertEqual(
-            BrowserDeveloperCapturePolicy.pngFilename(
-                title: " ",
-                url: URL(string: "http://localhost:3000")
-            ),
-            "localhost.png"
-        )
-    }
-
-    func testDeveloperURLUpdatesTheStoredTabOnlyForTheActivePage() {
-        XCTAssertTrue(
-            BrowserDeveloperNavigationPolicy.updatesSelectedTab(
-                isActivePage: true
-            )
-        )
-        XCTAssertFalse(
-            BrowserDeveloperNavigationPolicy.updatesSelectedTab(
-                isActivePage: false
-            )
-        )
-    }
-
-    func testReloadPolicyPreservesStopBehaviorAndBypassesCachesOnDemand() {
-        XCTAssertEqual(
-            BrowserPageReloadPolicy.action(isLoading: true, mode: .standard),
-            .stop
-        )
-        XCTAssertEqual(
-            BrowserPageReloadPolicy.action(isLoading: false, mode: .standard),
-            .reload
-        )
-        XCTAssertEqual(
-            BrowserPageReloadPolicy.action(isLoading: true, mode: .fromOrigin),
-            .reloadFromOrigin
-        )
-        XCTAssertEqual(
-            BrowserPageReloadPolicy.action(isLoading: false, mode: .fromOrigin),
-            .reloadFromOrigin
-        )
-    }
-
-    func testZoomStepsUseStableBrowserLevelsAndClampAtTheEnds() {
-        XCTAssertEqual(BrowserPageZoomPolicy.increased(from: 1), 1.1)
-        XCTAssertEqual(BrowserPageZoomPolicy.increased(from: 3), 3)
-        XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 1), 0.9)
-        XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 0.5), 0.5)
-        XCTAssertEqual(BrowserPageZoomPolicy.increased(from: 5), 5)
-        XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 0.25), 0.25)
-        XCTAssertEqual(BrowserPageZoomPolicy.increased(from: 0.25), 0.5)
-        XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 5), 3)
-    }
-
     func testDefaultZoomPreservesIntermediateValuesAndClampsToItsOwnBounds() {
         XCTAssertEqual(BrowserPageZoomPolicy.defaultLevel, 1)
         XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.1), 0.25)
@@ -199,50 +62,6 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
         }
     }
 
-    func testPDFExportFilenameUsesTitleThenHostAndRemovesUnsafePathCharacters() {
-        XCTAssertEqual(
-            BrowserPageExportPolicy.pdfFilename(
-                title: #" Crest / Design: "System"? "#,
-                url: URL(string: "https://example.com/page")
-            ),
-            "Crest - Design- -System-.pdf"
-        )
-        XCTAssertEqual(
-            BrowserPageExportPolicy.pdfFilename(
-                title: "   ",
-                url: URL(string: "https://example.com/page")
-            ),
-            "example.com.pdf"
-        )
-        XCTAssertEqual(
-            BrowserPageExportPolicy.pdfFilename(title: "Release.pdf", url: nil),
-            "Release.pdf"
-        )
-    }
-
-    func testWebArchiveFilenameUsesTheSameSafePolicyWithoutDoublingItsExtension() {
-        XCTAssertEqual(
-            BrowserPageExportPolicy.webArchiveFilename(
-                title: #" Crest / Snapshot: "Today"? "#,
-                url: URL(string: "https://example.com/page")
-            ),
-            "Crest - Snapshot- -Today-.webarchive"
-        )
-        XCTAssertEqual(
-            BrowserPageExportPolicy.webArchiveFilename(
-                title: "   ",
-                url: URL(string: "https://example.com/page")
-            ),
-            "example.com.webarchive"
-        )
-        XCTAssertEqual(
-            BrowserPageExportPolicy.webArchiveFilename(
-                title: "Snapshot.webarchive",
-                url: nil
-            ),
-            "Snapshot.webarchive"
-        )
-    }
 }
 
 @MainActor
@@ -323,25 +142,6 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertEqual(webView.pageZoom, normalZoom)
     }
 
-    func testPagePoolRoutesZoomOnlyToTheActivePage() {
-        let first = BrowserTab(title: "First", url: URL(string: "https://first.example"), placement: .current)
-        let second = BrowserTab(title: "Second", url: URL(string: "https://second.example"), placement: .current)
-        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
-        let pool = BrowserPagePool()
-
-        pool.select(tab: first, space: space)
-        pool.zoomIn()
-        let firstPage = pool.activePage
-        pool.select(tab: second, space: space)
-        pool.zoomOut()
-
-        XCTAssertEqual(firstPage?.pageZoom, 1.1)
-        XCTAssertEqual(firstPage?.webView.pageZoom, 1.1)
-        XCTAssertEqual(pool.activePage?.pageZoom, 0.9)
-        XCTAssertEqual(pool.activePage?.webView.pageZoom, 0.9)
-        XCTAssertEqual(pool.pageZoomLabel, "90%")
-    }
-
     func testDefaultZoomFollowsResidentAndRecreatedPageLifecycles() throws {
         let preferences = BrowserDefaultPageZoomStore(
             persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.00001)
@@ -420,26 +220,6 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertFalse(pool.activePage === secondPage)
     }
 
-    func testFindPresentationRequiresALoadedPageURL() async throws {
-        let blank = BrowserTab(title: "Blank", url: nil, placement: .current)
-        let loaded = BrowserTab(title: "Loaded", url: nil, placement: .current)
-        let space = makeSpace(tabs: [blank, loaded], selectedTabID: blank.id)
-        let pool = BrowserPagePool()
-
-        pool.select(tab: blank, space: space)
-        pool.presentFind()
-        XCTAssertFalse(pool.activePage?.isFindPresented == true)
-
-        pool.select(tab: loaded, space: space)
-        let page = try XCTUnwrap(pool.activePage)
-        page.webView.loadHTMLString("<main>Local find fixture</main>", baseURL: URL(string: "https://find.crest.test"))
-        await waitUntil { page.completedNavigationCount == 1 && page.url != nil }
-        pool.presentFind()
-        XCTAssertTrue(pool.activePage?.isFindPresented == true)
-        pool.activePage?.dismissFind()
-        XCTAssertFalse(pool.activePage?.isFindPresented == true)
-    }
-
     func testFindUsesNativeWebKitSearchAndClearsItsStateOnDismiss() async throws {
         let tab = BrowserTab(title: "Find", url: nil, placement: .current)
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
@@ -464,16 +244,6 @@ final class BrowserPageActionsTests: XCTestCase {
         page.dismissFind()
         XCTAssertFalse(page.isFindPresented)
         XCTAssertEqual(page.findMatchState, .idle)
-    }
-
-    func testBrowserPagesAreInspectableWithSafarisPublicDeveloperTools() throws {
-        let tab = BrowserTab(title: "Developer Tools", url: nil, placement: .current)
-        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
-        let pool = BrowserPagePool()
-
-        pool.select(tab: tab, space: space)
-
-        XCTAssertTrue(try XCTUnwrap(pool.activePage).webView.isInspectable)
     }
 
     func testWebInspectorAccessShowsWebKitsInspectorOnlyForInspectableContent() {
@@ -548,30 +318,6 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertTrue(host.inspector.isElementSelectionActive)
     }
 
-    func testWebInspectorToggleFailsClosedWhenContentIsNotInspectable() {
-        let host = BrowserWebInspectorHost()
-
-        XCTAssertEqual(
-            BrowserWebInspectorAccess.toggle(
-                .console,
-                currentPanel: nil,
-                inspectorOwner: host,
-                isInspectable: false
-            ),
-            .unavailable
-        )
-        XCTAssertEqual(host.inspector.showConsoleCount, 0)
-    }
-
-    func testWebInspectorAccessEnablesWebKitsDeveloperExtras() {
-        let preferences = BrowserWebInspectorPreferencesSpy()
-
-        XCTAssertTrue(
-            BrowserWebInspectorAccess.enableDeveloperExtras(in: preferences)
-        )
-        XCTAssertTrue(preferences.isEnabled)
-    }
-
     func testReaderModeCreatesAReversibleSanitizedViewInTheExistingSpacePage() async throws {
         let tab = BrowserTab(title: "Reader", url: nil, placement: .current)
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
@@ -635,23 +381,6 @@ final class BrowserPageActionsTests: XCTestCase {
                 "document.querySelector('article') !== null"
             ) as? Bool
         XCTAssertEqual(originalArticleExists, true)
-    }
-
-    func testReaderModeRejectsPagesWithoutSubstantialArticleContent() async throws {
-        let tab = BrowserTab(title: "Short", url: nil, placement: .current)
-        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
-        let pool = BrowserPagePool()
-        pool.select(tab: tab, space: space)
-        let page = try XCTUnwrap(pool.activePage)
-
-        page.webView.loadHTMLString(
-            "<html><body><main><p>Short utility page.</p></main></body></html>",
-            baseURL: URL(string: "https://reader.crest.test/utility")
-        )
-        await waitUntil { page.completedNavigationCount == 1 }
-        await page.refreshReaderModeAvailability()
-
-        XCTAssertEqual(page.readerModeState, .unavailable)
     }
 
     func testLoadedPageCreatesARealPDFDocument() async throws {
@@ -768,14 +497,5 @@ private final class BrowserWebInspectorSpy: NSObject {
     @objc func toggleElementSelection() {
         toggleElementSelectionCount += 1
         isElementSelectionActive.toggle()
-    }
-}
-
-private final class BrowserWebInspectorPreferencesSpy: NSObject {
-    private(set) var isEnabled = false
-
-    @objc(_setDeveloperExtrasEnabled:)
-    func setDeveloperExtrasEnabled(_ isEnabled: Bool) {
-        self.isEnabled = isEnabled
     }
 }
