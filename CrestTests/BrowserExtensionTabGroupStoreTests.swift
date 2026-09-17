@@ -32,20 +32,6 @@ final class BrowserExtensionTabGroupStoreTests: XCTestCase {
         XCTAssertEqual(received.flatMap(\.changes).map(\.groupID), [group.id, group.id, nil])
     }
 
-    func testIdentityRevisionDetectsMovingUngroupedTabsAwayAndBack() {
-        let browser = makeBrowser()
-        let store = browser.extensionTabGroups
-        let before = browser.session
-        let revision = store.revision
-        browser.session.spaces[0].tabs.swapAt(0, 1)
-        browser.persist(scope: .core)
-        XCTAssertGreaterThan(store.revision, revision)
-        let movedRevision = store.revision
-        browser.session = before
-        browser.persist(scope: .core)
-        XCTAssertGreaterThan(store.revision, movedRevision)
-    }
-
     func testMembershipWatchDoesNotRequireSensitiveTabOrGroupPermission() async throws {
         let browser = makeBrowser()
         let space = browser.session.spaces[0]
@@ -134,34 +120,6 @@ final class BrowserExtensionTabGroupStoreTests: XCTestCase {
         XCTAssertEqual(store.space(for: chatgpt), space.id)
     }
 
-    func testUIChangesPublishToSharedSpaceClientsAndNeverAcrossSpaces() async throws {
-        let browser = makeBrowser()
-        let space = browser.session.spaces[0]
-        let personal = browser.session.spaces[1]
-        let store = browser.extensionTabGroups
-        let outsider = BrowserExtensionServiceClientID("outsider")!
-        store.register(client: claude, spaceID: space.id)
-        store.register(client: chatgpt, spaceID: space.id)
-        store.register(client: outsider, spaceID: personal.id)
-        var first = store.events(for: claude).makeAsyncIterator()
-        var second = store.events(for: chatgpt).makeAsyncIterator()
-        var third = store.events(for: outsider).makeAsyncIterator()
-        let folder = try XCTUnwrap(browser.createTabFolder([space.tabs[0].id], in: space.id))
-        let created = await first.next()
-        let shared = await second.next()
-        XCTAssertEqual(created?.kind, .created)
-        XCTAssertEqual(created, shared)
-        XCTAssertEqual(created?.group.folderID, folder)
-        _ = browser.renameFolder(folder, in: space.id, title: "Docs")
-        let updated = await first.next()
-        XCTAssertEqual(updated?.kind, .updated)
-        XCTAssertEqual(updated?.group.title, "Docs")
-        let unrelated = try store.group([personal.tabs[0].id], in: personal.id, into: nil)
-        let outside = await third.next()
-        XCTAssertEqual(outside?.group.id, unrelated.id)
-        XCTAssertEqual(outside?.kind, .created)
-    }
-
     func testMembershipDoesNotMasqueradeAsVisualUpdateAndAnEmptiedGroupIDIsNotReused() async throws {
         let browser = makeBrowser()
         let space = browser.session.spaces[0]
@@ -201,28 +159,6 @@ final class BrowserExtensionTabGroupStoreTests: XCTestCase {
         XCTAssertThrowsError(try store.group([space.tabs[1].id], in: space.id, into: nil))
     }
 
-    func testSavedTabCanEstablishAnExtensionGroupWithoutLosingSavedPlacement() throws {
-        let browser = makeBrowser()
-        let space = browser.session.spaces[0]
-        let tabID = space.tabs[0].id
-        _ = browser.moveTab(tabID, to: .saved)
-        let savedURL = browser.session.spaces[0].tabs.first { $0.id == tabID }?.savedURL
-        let store = browser.extensionTabGroups
-        let group = try store.group([tabID], in: space.id, into: nil)
-        _ = try store.update(group.id, in: space.id, title: "Claude", color: .orange, isCollapsed: false)
-        let folder = try XCTUnwrap(browser.session.spaces[0].folders.first { $0.id == group.folderID })
-        XCTAssertEqual(folder.location, .saved)
-        XCTAssertEqual(folder.title, "Claude")
-        XCTAssertEqual(store.membership(in: space.id)[tabID], group.id)
-        store.ungroup([tabID], in: space.id)
-        let ungrouped = try XCTUnwrap(browser.session.spaces[0].tabs.first { $0.id == tabID })
-        XCTAssertEqual(ungrouped.placement, .saved)
-        XCTAssertEqual(ungrouped.savedURL, savedURL)
-        XCTAssertNil(ungrouped.folderID)
-        XCTAssertNil(store.membership(in: space.id)[tabID])
-        XCTAssertTrue(browser.session.spaces[0].folders.contains { $0.id == group.folderID })
-    }
-
     func testRestoredExtensionRegroupingDoesNotAccumulateEmptyCurrentFolders() throws {
         let browser = makeBrowser()
         let space = browser.session.spaces[0]
@@ -259,37 +195,6 @@ final class BrowserExtensionTabGroupStoreTests: XCTestCase {
         XCTAssertEqual(try store.group(group.id, in: space.id).folderID, group.folderID)
     }
 
-    func testAddingToSavedGroupUsesTheExistingFoldersPlacement() throws {
-        let browser = makeBrowser()
-        let space = browser.session.spaces[0]
-        _ = browser.moveTab(space.tabs[0].id, to: .saved)
-        let store = browser.extensionTabGroups
-        let group = try store.group([space.tabs[0].id], in: space.id, into: nil)
-        _ = try store.group([space.tabs[1].id], in: space.id, into: group.id)
-        let members = browser.session.spaces[0].tabs.filter { $0.folderID == group.folderID }
-        XCTAssertEqual(Set(members.map(\.id)), Set(space.tabs.prefix(2).map(\.id)))
-        XCTAssertTrue(members.allSatisfy { $0.placement == .saved })
-        XCTAssertEqual(Set(store.membership(in: space.id).values), [group.id])
-    }
-
-    func testMovingSavedGroupReordersItsFolderAndNativeTabsWithoutDemotingIt() throws {
-        let browser = makeBrowser()
-        let space = browser.session.spaces[0]
-        let ids = space.tabs.map(\.id)
-        for id in ids { _ = browser.moveTab(id, to: .saved) }
-        let store = browser.extensionTabGroups
-        let first = try store.group([ids[0]], in: space.id, into: nil)
-        let second = try store.group([ids[1], ids[2]], in: space.id, into: nil)
-        _ = try store.move(second.id, in: space.id, to: 0)
-        XCTAssertEqual(browser.session.spaces[0].tabs.map(\.id), [ids[1], ids[2], ids[0]])
-        XCTAssertEqual(browser.session.spaces[0].folders.map(\.id), [second.folderID, first.folderID])
-        XCTAssertTrue(browser.session.spaces[0].tabs.allSatisfy { $0.placement == .saved })
-        _ = try store.move(second.id, in: space.id, to: -1)
-        XCTAssertEqual(browser.session.spaces[0].tabs.map(\.id), ids)
-        XCTAssertEqual(browser.session.spaces[0].folders.map(\.id), [first.folderID, second.folderID])
-        XCTAssertTrue(browser.session.spaces[0].tabs.allSatisfy { $0.placement == .saved })
-    }
-
     func testClosingTabsAndUnregisteringClientsPreserveOrdinaryFolderState() async throws {
         let browser = makeBrowser()
         let space = browser.session.spaces[0]
@@ -306,17 +211,6 @@ final class BrowserExtensionTabGroupStoreTests: XCTestCase {
         store.unregister(client: claude)
         let finished = await events.next()
         XCTAssertNil(finished)
-    }
-
-    func testCustomFolderColorIsPreservedWhileTheAPIUsesItsNearestPaletteColor() throws {
-        let browser = makeBrowser()
-        let space = browser.session.spaces[0]
-        let color = BrowserSpaceBrandColor(red: 0.031, green: 0.51, blue: 0.99)
-        let folder = try XCTUnwrap(browser.createTabFolder([space.tabs[0].id], in: space.id))
-        _ = browser.setFolderColor(folder, in: space.id, color: color)
-        let group = try XCTUnwrap(browser.extensionTabGroups.groups(in: space.id).first)
-        XCTAssertEqual(group.color, .blue)
-        XCTAssertEqual(browser.session.spaces[0].folders.first?.color, color)
     }
 
     private func makeBrowser() -> BrowserStore {

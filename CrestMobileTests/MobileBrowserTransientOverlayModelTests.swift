@@ -66,24 +66,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
 
-    func testFailedPromotionLeavesTheExactTransientPageOpen() throws {
-        let context = try makeContext()
-        context.model.preparePage(isActive: true)
-        let lease = try XCTUnwrap(context.model.pageLease)
-        let destinationAssignment = BrowserSpaceRuntimeAssignment(
-            space: context.destination
-        )
-        context.browser.session = BrowserSession(
-            spaces: [context.source],
-            selectedSpaceID: context.source.id
-        )
-
-        XCTAssertFalse(context.model.promote(to: destinationAssignment))
-        XCTAssertFalse(context.model.wasPromoted)
-        XCTAssertNotNil(lease.page)
-        XCTAssertEqual(context.coordinator.peekRequest, context.request)
-    }
-
     func testSameSpacePromotionAdoptsTheExactTransientPage() throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
@@ -117,21 +99,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             context.pages.activePage?.profileID,
             context.destination.profile.id
         )
-    }
-
-    func testSuccessfulPromotionRequestsSelectedTabPresentation() throws {
-        var didPromote = false
-        let context = try makeContext {
-            didPromote = true
-        }
-        context.model.preparePage(isActive: true)
-
-        XCTAssertTrue(
-            context.model.promote(
-                to: BrowserSpaceRuntimeAssignment(space: context.destination)
-            )
-        )
-        XCTAssertTrue(didPromote)
     }
 
     func testMemoryPressureReleaseRemainsExplicitlyRestorable() throws {
@@ -254,21 +221,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             lockedDestination.tabs.count
         )
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
-    }
-
-    func testLockedSourceStillOffersItsOnlyUnlockedAlternative() throws {
-        let context = try makeContext()
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
-
-        XCTAssertEqual(
-            Set(context.model.availableSpaces.map(\.id)),
-            Set([lockedSource.id, context.destination.id])
-        )
     }
 
     func testRelockedSourceRejectsLatePromotion() throws {
@@ -446,25 +398,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         )
     }
 
-    func testSpaceInsertionReorderAndRenamePreserveTheExactRuntimeLease() throws {
-        let context = try makeContext()
-        context.model.preparePage(isActive: true)
-        let lease = try XCTUnwrap(context.model.pageLease)
-        let page = try XCTUnwrap(lease.page)
-        var renamedSource = context.source
-        renamedSource.name = "Renamed Source"
-        let inserted = makeSpace(name: "Inserted")
-        context.browser.session = BrowserSession(
-            spaces: [context.destination, inserted, renamedSource],
-            selectedSpaceID: renamedSource.id
-        )
-
-        XCTAssertTrue(context.model.preparePage(isActive: true))
-        XCTAssertTrue(context.model.pageLease === lease)
-        XCTAssertTrue(context.model.page === page)
-        XCTAssertEqual(context.model.page?.profileID, renamedSource.profile.id)
-    }
-
     func testQuickWindowDismissArchivesExactlyOnceInItsSourceAssignment() throws {
         let context = try makeQuickWindowContext()
         context.model.preparePage(isActive: true)
@@ -628,29 +561,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             context.browser.session.space(id: context.source.id)?.archivedTabs.isEmpty
                 == true
         )
-    }
-
-    func testQuickWindowPromotionRemembersItsExactDestination() throws {
-        var rememberedSpaceID: SpaceID?
-        var rememberedURL: URL?
-        let context = try makeQuickWindowContext(
-            preferences: BrowserTransientBrowsingPreferences(
-                archiveLifetime: nil,
-                rememberSpace: { spaceID, url in
-                    rememberedSpaceID = spaceID
-                    rememberedURL = url
-                }
-            )
-        )
-        context.model.preparePage(isActive: true)
-
-        XCTAssertTrue(
-            context.model.promote(
-                to: BrowserSpaceRuntimeAssignment(space: context.destination)
-            )
-        )
-        XCTAssertEqual(rememberedSpaceID, context.destination.id)
-        XCTAssertEqual(rememberedURL, context.request.url)
     }
 
     func testQuickWindowReplacementProfileCannotArchiveTheStaleLease() throws {

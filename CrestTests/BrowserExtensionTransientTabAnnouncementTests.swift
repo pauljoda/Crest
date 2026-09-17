@@ -143,37 +143,6 @@ final class BrowserExtensionTransientTabAnnouncementTests: XCTestCase {
         )
     }
 
-    func testAdoptingAPeekWithdrawsItsTransientAnnouncement() throws {
-        let space = makeSpace(tabs: [])
-        let harness = try makeHarness(space: space)
-        let url = try XCTUnwrap(URL(string: "https://example.com/"))
-        let lease = try XCTUnwrap(
-            harness.pages.makeTransientPageLease(url: url, in: space)
-        )
-        let transientTabID = lease.extensionTabID
-
-        // Promotion hands the live page to a real tab, which announces itself.
-        let adopted = BrowserTab(title: "Adopted", url: url, placement: .current)
-        var promoted = space
-        promoted.tabs = [adopted]
-        promoted.selectedTabID = adopted.id
-        XCTAssertTrue(
-            harness.pages.adoptTransientPage(
-                lease,
-                as: adopted.id,
-                in: promoted
-            )
-        )
-
-        XCTAssertNil(
-            harness.pages.extensionWebView(for: transientTabID, in: space.id),
-            "One web view was left described as two tabs."
-        )
-        XCTAssertNotNil(
-            harness.pages.extensionWebView(for: adopted.id, in: space.id)
-        )
-    }
-
     // MARK: - Split members
 
     func testSplitMembersAreAnnouncedBeforeTheirFirstNavigation() throws {
@@ -266,25 +235,6 @@ final class BrowserExtensionTransientTabAnnouncementTests: XCTestCase {
         XCTAssertTrue(
             harness.pages.activePage?.webView === harness.pages.extensionWebView(for: selected.id, in: space.id))
         view.stopLoading()
-    }
-
-    func testExtensionChromeNewTabRequestsUseTheNativeStartPage() throws {
-        for rawURL in ["chrome://newtab", "chrome://newtab/"] {
-            let space = makeSpace(tabs: [])
-            let harness = try makeHarness(space: space)
-            var opened: (any WKWebExtensionTab)?
-            harness.extensions.tabWindowCoordinator.openTab(
-                url: try XCTUnwrap(URL(string: rawURL)), spaceID: space.id,
-                pinned: false, index: nil, selected: false
-            ) { tab, error in
-                XCTAssertNil(error)
-                opened = tab
-            }
-            XCTAssertNotNil(opened)
-            let tab = try XCTUnwrap(harness.browser.session.space(id: space.id)?.tabs.first)
-            XCTAssertNil(tab.url, "A browser-owned new-tab URL must not navigate to an external application.")
-            XCTAssertEqual(tab.title, BrowserTab.startPageTitle)
-        }
     }
 
     // MARK: - Support

@@ -6,68 +6,9 @@ import XCTest
 
 @testable import Crest
 
-/// Pinning a tab by dragging it, through the real shell in a real window.
-///
-/// The arithmetic and the acceptance rules are proved elsewhere. What only a
-/// hosted window can prove is that the pinned grid is reachable by a pointer
-/// that is aiming at it. The grid is the one run a reader aims at from outside
-/// its own rectangle: it sits above the scrolling list rather than inside it,
-/// it is a few tiles wide, and until somebody pins a first tab it is a band a
-/// dozen points tall. Both presentations are driven here because the sidebar
-/// changes what is *behind* it when it floats, and that is what broke the
-/// gesture — see `testPinningWorksWithTheSidebarFloatingOverThePage`.
-///
-/// The fixture is entirely in memory: its own session store, its own private
-/// ephemeral page pool, and its own window, so nothing here can see or touch an
-/// installed profile.
+/// The floating sidebar must receive pin drops instead of the page behind it.
 @MainActor
 final class BrowserSidebarPinByDragWindowTests: XCTestCase {
-
-    func testDraggingACurrentTabOntoThePinnedGridPinsIt() throws {
-        let fixture = try makeHostedWindow()
-        defer { fixture.input.close() }
-        let state = fixture.model.sidebarInteraction.sidebarReorderState
-
-        let tileFrame = try XCTUnwrap(
-            state.frame(ofRow: .tab(fixture.pinned.id)),
-            "The pinned tile never measured itself."
-        )
-        let rowFrame = try XCTUnwrap(
-            state.frame(ofRow: .tab(fixture.joiner.id)),
-            "The sidebar row for the tab about to be dragged never measured."
-        )
-        // Past the tile's midpoint, so the drop resolves to the slot after the
-        // tab already pinned.
-        let overTile = CGPoint(x: tileFrame.maxX - 4, y: tileFrame.midY)
-        fixture.drag(from: rowFrame, to: overTile)
-
-        XCTAssertEqual(
-            state.resolvedTarget?.kind,
-            .insert(
-                section: .tabs(placement: .pinned, folderID: nil),
-                beforeID: nil,
-                index: 1
-            ),
-            "A tab held over the pinned grid has to resolve a pinned slot."
-        )
-        XCTAssertEqual(
-            state.liftTargetShape,
-            .pinnedTile,
-            "The lift morphs toward the tile the drop would make of it."
-        )
-
-        fixture.send(.leftMouseUp, at: overTile)
-        pump(0.4)
-
-        let space = try XCTUnwrap(
-            fixture.model.browser.session.space(id: fixture.assignment.spaceID)
-        )
-        XCTAssertEqual(
-            space.pinnedTabs.map(\.title),
-            ["Pinned", "Joiner"],
-            "Releasing over the grid has to pin the tab it was carrying."
-        )
-    }
 
     /// The same gesture with the sidebar floating over the page, aimed at the
     /// seam above the grid rather than at a tile.

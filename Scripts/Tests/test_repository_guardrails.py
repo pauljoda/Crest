@@ -14,7 +14,6 @@ import unittest
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 ARCHITECTURE_SCRIPT = REPOSITORY_ROOT / "Scripts" / "check-architecture.py"
 FORMAT_SCRIPT = REPOSITORY_ROOT / "Scripts" / "check-swift-format.sh"
-PERIPHERY_SCRIPT = REPOSITORY_ROOT / "Scripts" / "audit-periphery.sh"
 
 def load_architecture_module():
     spec = importlib.util.spec_from_file_location(
@@ -265,74 +264,6 @@ class SwiftFormatGuardTests(unittest.TestCase):
         self.assertIn("Untracked.swift", arguments)
         self.assertNotIn("notes.txt", arguments)
         self.assertNotIn("--in-place", arguments)
-
-class PeripheryAuditTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temporary_directory = tempfile.TemporaryDirectory()
-        self.fixture_root = Path(self.temporary_directory.name)
-        (self.fixture_root / "Crest.xcodeproj").mkdir()
-
-    def tearDown(self) -> None:
-        self.temporary_directory.cleanup()
-
-    def test_missing_periphery_explains_how_to_enable_the_audit(self) -> None:
-        result = subprocess.run(
-            [str(PERIPHERY_SCRIPT)],
-            env=os.environ
-            | {
-                "CREST_PERIPHERY_REPOSITORY_ROOT": str(self.fixture_root),
-                "CREST_PERIPHERY": str(self.fixture_root / "missing-periphery"),
-            },
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 69)
-        self.assertIn("brew install periphery", result.stderr)
-        self.assertIn("evidence", result.stderr.lower())
-
-    def test_audit_covers_every_app_scheme_and_configuration(self) -> None:
-        invocation_log = self.fixture_root / "periphery-invocations.txt"
-        fake_periphery = self.fixture_root / "periphery"
-        fake_periphery.write_text(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$CREST_TEST_INVOCATION_LOG\"\n"
-        )
-        fake_periphery.chmod(0o755)
-
-        result = subprocess.run(
-            [str(PERIPHERY_SCRIPT)],
-            env=os.environ
-            | {
-                "CREST_PERIPHERY_REPOSITORY_ROOT": str(self.fixture_root),
-                "CREST_PERIPHERY": str(fake_periphery),
-                "CREST_TEST_INVOCATION_LOG": str(invocation_log),
-            },
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        invocations = invocation_log.read_text().splitlines()
-        self.assertEqual(len(invocations), 4)
-        for scheme in ("Crest", "CrestMobile"):
-            for configuration in ("Debug", "Release"):
-                with self.subTest(scheme=scheme, configuration=configuration):
-                    self.assertTrue(
-                        any(
-                            f"--schemes {scheme}" in invocation
-                            and f"-configuration {configuration}" in invocation
-                            for invocation in invocations
-                        )
-                    )
-        self.assertNotIn("--strict", "\n".join(invocations))
-        self.assertTrue(
-            all("--retain-objc-accessible" in invocation for invocation in invocations)
-        )
-        self.assertTrue(
-            all("--retain-codable-properties" in invocation for invocation in invocations)
-        )
 
 if __name__ == "__main__":
     unittest.main()

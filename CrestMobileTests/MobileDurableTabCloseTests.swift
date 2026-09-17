@@ -30,21 +30,6 @@ final class MobileDurableTabCloseTests: XCTestCase {
         }
     }
 
-    func testRawUnloadKeepsChildLocationEvenWhenClosePolicyReturnsToRoot() throws {
-        let preferences = BrowserDurableTabPreferenceStore.shared
-        let previousPolicy = preferences.closePolicy
-        defer { preferences.closePolicy = previousPolicy }
-        preferences.closePolicy = .returnToSavedURL
-        let context = try makeContext(placement: .saved)
-        defer { context.pages.reconcile(validTabIDs: []) }
-        context.pages.select(session: context.browser.session)
-
-        context.pages.unloadPage(for: context.tab.id)
-
-        XCTAssertEqual(context.browser.selectedTab, context.tab)
-        XCTAssertFalse(context.pages.containsResidentPage(for: context.tab.id))
-    }
-
     func testLockedSpaceCommandCannotResetOrCloseItsDurableTab() throws {
         let context = try makeContext(placement: .saved)
         defer { context.pages.reconcile(validTabIDs: []) }

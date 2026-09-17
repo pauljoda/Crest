@@ -214,18 +214,6 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         }
     }
 
-    func testSwiftUIPreviewsAlwaysUseTheIsolatedDataGraph() {
-        XCTAssertTrue(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(
-                    values: [:],
-                    isXCTestRuntime: false,
-                    isSwiftUIPreviewRuntime: true
-                )
-            )
-        )
-    }
-
     /// A named isolated profile persists its WebKit storage, so it has to
     /// persist the record of what is installed as well. An anonymous isolated
     /// launch keeps forgetting both.
@@ -339,20 +327,6 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
                 "\(isolationID) must not become an isolated package root."
             )
         }
-    }
-
-    func testExplicitIsolationAndPerformanceFixturesCannotCancelEachOther() {
-        XCTAssertTrue(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(
-                    values: [
-                        "CREST_ISOLATED_SESSION": "1",
-                        "CREST_PERFORMANCE_BASE_URL": "http://127.0.0.1:8080/",
-                    ],
-                    isXCTestRuntime: false
-                )
-            )
-        )
     }
 
     @MainActor

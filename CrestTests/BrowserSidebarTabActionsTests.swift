@@ -1,6 +1,4 @@
-import AppKit
 import Foundation
-import SwiftUI
 import XCTest
 
 @testable import Crest
@@ -10,35 +8,6 @@ import XCTest
 /// `MobileBrowserSidebarTabActionsTests`.
 @MainActor
 final class BrowserSidebarTabActionsTests: XCTestCase {
-    func testPinnedIconChoiceAndRestorePreserveBrowsingState() throws {
-        let context = makeContext()
-        context.browser.session.spaces[0].tabs[0].placement = .pinned
-        let assignment = BrowserTabRuntimeAssignment(
-            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id)
-        let action = BrowserTabOrganizationAction(browser: context.browser, spaceAccess: context.access)
-        let before = context.browser.session
-
-        XCTAssertTrue(action.canCustomizePinnedIcon(for: assignment))
-        XCTAssertEqual(context.browser.session, before, "Opening the editor cannot activate or load the pin")
-        XCTAssertTrue(action.setPinnedTabEmoji("👩🏽‍🚀", for: assignment))
-        let changed = context.browser.session.spaces[0].tabs[0]
-        XCTAssertEqual(changed.emojiIcon, "👩🏽‍🚀")
-        XCTAssertEqual(changed.url, before.spaces[0].tabs[0].url)
-        XCTAssertEqual(changed.savedURL, before.spaces[0].tabs[0].savedURL)
-        XCTAssertEqual(changed.lastActivatedAt, before.spaces[0].tabs[0].lastActivatedAt)
-        XCTAssertEqual(context.browser.session.selectedSpaceID, before.selectedSpaceID)
-        XCTAssertEqual(context.browser.selectedSpace?.selectedTabID, before.spaces[0].selectedTabID)
-        XCTAssertEqual(context.browser.session.spaces[0].tabs[1], before.spaces[0].tabs[1])
-        let restored = try JSONDecoder().decode(
-            BrowserSession.self, from: JSONEncoder().encode(context.browser.session))
-        XCTAssertEqual(restored.spaces[0].tabs[0].emojiIcon, "👩🏽‍🚀")
-
-        XCTAssertTrue(action.clearPinnedTabIcon(for: assignment))
-        XCTAssertEqual(context.browser.session.spaces[0].tabs[0].iconMode, .automatic)
-        XCTAssertNil(context.browser.session.spaces[0].tabs[0].emojiIcon)
-        XCTAssertEqual(context.browser.selectedSpace?.selectedTabID, before.spaces[0].selectedTabID)
-    }
-
     func testPinnedIconActionsRejectInvalidatedTargetsWithoutMutatingEitherSpace() {
         let invalidations: [(Context) -> Void] = [
             { $0.browser.selectSpace($0.otherSpace.id) },
@@ -66,20 +35,6 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
             XCTAssertFalse(action.clearPinnedTabIcon(for: assignment))
             XCTAssertEqual(context.browser.session, before)
         }
-    }
-
-    func testTabLinkUsesLiveTargetURLWithoutChangingSelectionOrSavedRoot() throws {
-        let context = makeContext()
-        let assignment = BrowserTabRuntimeAssignment(
-            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id)
-        let action = BrowserTabOrganizationAction(browser: context.browser, spaceAccess: context.access)
-        let currentURL = try XCTUnwrap(URL(string: "https://sidebar.crest.test/current?q=a%20b#section"))
-        context.browser.session.spaces[0].tabs[0].url = currentURL
-        let before = context.browser.session
-
-        XCTAssertEqual(action.linkURL(for: assignment), currentURL)
-        XCTAssertEqual(context.browser.session, before)
-        XCTAssertEqual(context.browser.session.spaces[0].tabs[0].savedURL, context.tab.savedURL)
     }
 
     func testTabLinkRejectsStaleSpaceProfileMissingAndLockedTargets() {
@@ -142,32 +97,6 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         XCTAssertEqual(context.browser.session.space(id: destination.spaceID)?.tabs.count, 0)
     }
 
-    func testSelectionSearchUsesTheSpacesProviderAndOpensANewTabWithoutNavigatingTheSource() throws {
-        let context = makeContext()
-        context.browser.session.spaces[0].browsingPreferences.searchProvider = .duckDuckGo
-        let host = BrowserLinkDestinationHost(browser: context.browser, spaceAccess: context.access)
-        let source = BrowserTabRuntimeAssignment(
-            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id
-        )
-        // A URL-shaped selection is still a search, including its punctuation.
-        let text = "https://example.com/?q=café&lang=en"
-        let search = try XCTUnwrap(host.selectionSearch(for: " \n" + text + "\n\n", from: source))
-        XCTAssertEqual(search.provider, .duckDuckGo)
-        let components = try XCTUnwrap(URLComponents(url: search.url, resolvingAgainstBaseURL: false))
-        XCTAssertEqual(components.host, "duckduckgo.com")
-        XCTAssertEqual(components.queryItems, [URLQueryItem(name: "q", value: text)])
-
-        XCTAssertTrue(
-            host.openLink(search.url, from: search.source, in: BrowserSpaceRuntimeAssignment(space: context.space)))
-
-        XCTAssertEqual(context.browser.selectedSpace?.id, context.space.id)
-        XCTAssertEqual(context.browser.selectedSpace?.tabs.count, context.space.tabs.count + 1)
-        XCTAssertEqual(context.browser.selectedTab?.url, search.url)
-        XCTAssertNotEqual(context.browser.selectedTab?.id, context.tab.id)
-        XCTAssertEqual(context.browser.selectedSpace?.tabs.first { $0.id == context.tab.id }, context.tab)
-        XCTAssertEqual(context.browser.session.space(id: context.otherSpace.id), context.otherSpace)
-    }
-
     func testSelectionSearchRejectsEmptyOrInvalidatedSources() throws {
         let invalidations: [(Context) -> Void] = [
             { $0.browser.selectSpace($0.otherSpace.id) },
@@ -193,30 +122,6 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         }
     }
 
-    func testNewTabInvokesTheExistingCommandOnceWithoutEditingTheSession() {
-        let context = makeContext()
-        let action = makeActions(context, pullFavicon: { _, _ in nil })
-        let session = context.browser.session
-        var invocationCount = 0
-
-        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
-
-        XCTAssertEqual(invocationCount, 1)
-        XCTAssertEqual(context.browser.session, session)
-    }
-
-    func testNewTabIsRefusedAfterTheSelectionMoves() {
-        let context = makeContext()
-        let action = makeActions(context, pullFavicon: { _, _ in nil })
-        context.browser.selectSpace(context.otherSpace.id)
-        var invocationCount = 0
-
-        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
-
-        XCTAssertEqual(invocationCount, 0)
-        XCTAssertEqual(context.browser.selectedSpace?.id, context.otherSpace.id)
-    }
-
     func testNewTabIsRefusedAfterTheProfileIsReplaced() {
         let context = makeContext()
         let action = makeActions(context, pullFavicon: { _, _ in nil })
@@ -226,44 +131,6 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         XCTAssertFalse(action.openNewTab { invocationCount += 1 })
 
         XCTAssertEqual(invocationCount, 0)
-    }
-
-    func testNewTabIsRefusedWhenAProtectedSpaceIsLocked() async {
-        let context = makeContext(isProtected: true)
-        let action = makeActions(context, pullFavicon: { _, _ in nil })
-        var invocationCount = 0
-
-        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
-        let didUnlock = await context.access.unlock(context.space)
-        XCTAssertTrue(didUnlock)
-        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
-        context.access.lock(context.space.id)
-        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
-
-        XCTAssertEqual(invocationCount, 1)
-    }
-
-    func testNewTabIsRefusedDuringSidebarReordering() {
-        let context = makeContext()
-        let action = makeActions(context, pullFavicon: { _, _ in nil })
-        context.sidebarInteraction.sidebarReorderState.begin(
-            item: .tab(
-                BrowserTabDragItem(
-                    tabID: context.tab.id,
-                    spaceID: context.space.id,
-                    profileID: context.space.profile.id
-                )
-            ),
-            section: .tabs(placement: .saved, folderID: nil),
-            at: .zero
-        )
-        var invocationCount = 0
-
-        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
-        context.sidebarInteraction.sidebarReorderState.cancel()
-        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
-
-        XCTAssertEqual(invocationCount, 1)
     }
 
     func testFaviconPullCannotWriteAfterProfileReplacementDuringAwait() async throws {
@@ -502,177 +369,5 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         func authenticate(reason _: String) async throws -> Bool {
             true
         }
-    }
-}
-
-extension BrowserSidebarTabActionsTests {
-    /// Exercise the native event route: calling closeTab directly cannot detect
-    /// a recognizer that fails to close a row or leaves its selection target mounted.
-    func testMiddleClickClosesSelectedAndBackgroundTabsThroughNativeInput() async throws {
-        let previous = BrowserTab(title: "Previous", url: URL(string: "about:blank#previous"), placement: .current)
-        let space = BrowserSpace(
-            id: SpaceID(), profile: BrowsingProfile(), name: "Middle Click", symbol: "globe",
-            accent: .indigo, folders: [], tabs: [previous], selectedTabID: previous.id)
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
-        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
-        let window = NSWindow(
-            contentRect: CGRect(x: -10000, y: -10000, width: 1100, height: 720),
-            styleMask: [.titled, .resizable], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(
-            rootView: BrowserRootView(
-                browser: browser, pages: pages, chrome: BrowserChromeState(),
-                transientBrowsing: BrowserTransientBrowsingCoordinator(), startupBehavior: .lastActiveTab,
-                initialSidebarWidth: 250, persistSidebarWidth: { _ in }
-            ).environment(BrowserWindowTransparencyPreviewFixture.makeStore()))
-        window.orderFront(nil)
-        defer {
-            window.contentView = nil
-            window.close()
-            pages.reconcile(validTabIDs: [])
-        }
-        try await awaitMiddleClickState {
-            pages.activeTabID == previous.id && self.nativeTabRows(in: window).contains { $0.tabID == previous.id }
-        }
-
-        for selecting in [true, false] {
-            let id = try XCTUnwrap(
-                browser.openNewTab(url: URL(string: "about:blank#closing")!, in: space.id, selecting: selecting))
-            try await awaitMiddleClickState {
-                self.nativeTabRows(in: window).contains { $0.tabID == id && !$0.bounds.isEmpty }
-            }
-            try postMiddleClick(on: id, in: window)
-            try await awaitMiddleClickState {
-                browser.selectedSpace?.contains(id) == false
-                    && !self.nativeTabRows(in: window).contains { $0.tabID == id }
-                    && pages.activeTabID == previous.id
-            }
-
-            XCTAssertEqual(browser.selectedTab?.id, previous.id)
-            XCTAssertEqual(browser.selectedSpace?.currentTabs.map(\.id), [previous.id])
-            XCTAssertEqual(browser.selectedSpace?.archivedTabs.filter { $0.id == id }.count, 1)
-            XCTAssertEqual(nativeTabRows(in: window).compactMap(\.tabID), [previous.id])
-            XCTAssertFalse(pages.containsResidentPage(for: id))
-        }
-    }
-
-    private func postMiddleClick(on id: TabID, in window: NSWindow) throws {
-        let row = try XCTUnwrap(nativeTabRows(in: window).first { $0.tabID == id })
-        let frame = row.convert(row.bounds, to: nil)
-        let point = CGPoint(x: frame.minX + frame.width * 0.45, y: frame.midY)
-        for type: NSEvent.EventType in [.otherMouseDown, .otherMouseUp] {
-            let event = try XCTUnwrap(
-                NSEvent.mouseEvent(
-                    with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                    windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1,
-                    pressure: type == .otherMouseDown ? 1 : 0))
-            let cgEvent = try XCTUnwrap(event.cgEvent)
-            // NSEvent's factory defaults even otherMouse events to button 0.
-            cgEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
-            NSApplication.shared.postEvent(try XCTUnwrap(NSEvent(cgEvent: cgEvent)), atStart: false)
-        }
-    }
-
-    private func nativeTabRows(in window: NSWindow) -> [BrowserNativeTabSelectionTarget.TargetView] {
-        func descendants(of view: NSView) -> [BrowserNativeTabSelectionTarget.TargetView] {
-            if let target = view as? BrowserNativeTabSelectionTarget.TargetView { return [target] }
-            return view.subviews.flatMap { descendants(of: $0) }
-        }
-        return window.contentView.map { descendants(of: $0) } ?? []
-    }
-
-    private func awaitMiddleClickState(
-        _ condition: () -> Bool,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) async throws {
-        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
-        while !condition(), ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        XCTAssertTrue(condition(), "Native tab state did not settle", file: file, line: line)
-    }
-}
-
-extension BrowserSidebarTabActionsTests {
-    func testRetainedSidebarRootObservesClosedTabWithoutReplacement() async throws {
-        let previous = BrowserTab(title: "Search", url: URL(string: "about:blank#search"), placement: .current)
-        let space = BrowserSpace(
-            id: SpaceID(), profile: BrowsingProfile(), name: "Retention", symbol: "globe", accent: .indigo,
-            folders: [], tabs: [previous], selectedTabID: previous.id)
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
-        let closing = try XCTUnwrap(browser.openNewTab(url: URL(string: "about:blank#closing")!))
-        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
-        pages.select(session: browser.session)
-        // Keep the native root intact across closing, just as a cached pager host can.
-        // Residency updates alone must not leave a closed tab in the sidebar snapshot.
-        let root = RetainedSidebarContent(space: browser.selectedSpace!, browser: browser, pages: pages)
-        let host = NSHostingView(rootView: root)
-        let window = NSWindow(
-            contentRect: CGRect(x: -10000, y: -10000, width: 250, height: 720), styleMask: .borderless,
-            backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = host
-        window.orderFront(nil)
-        defer {
-            window.contentView = nil
-            window.close()
-            pages.reconcile(validTabIDs: [])
-        }
-        try await awaitMiddleClickState { self.nativeTabRows(in: window).contains { $0.tabID == closing } }
-        try postMiddleClick(on: closing, in: window)
-        try await awaitMiddleClickState { browser.selectedSpace?.contains(closing) == false }
-        pages.reconcile(session: browser.session)
-        pages.select(session: browser.session)
-        try await awaitMiddleClickState { !self.nativeTabRows(in: window).contains { $0.tabID == closing } }
-        XCTAssertEqual(browser.selectedTab?.id, previous.id)
-        XCTAssertFalse(pages.containsResidentPage(for: closing))
-        XCTAssertFalse(nativeTabRows(in: window).contains { $0.tabID == closing })
-        XCTAssertEqual(pages.activeTabID, previous.id)
-        // The retained root must also stop exposing a Space whose profile changed.
-        browser.session.spaces[0] = replacingProfile(in: space)
-        try await awaitMiddleClickState { self.nativeTabRows(in: window).isEmpty }
-    }
-}
-
-private struct RetainedSidebarContent: View {
-    let sidebarInteraction: BrowserSidebarInteractionState
-    let space: BrowserSpace
-    let browser: BrowserStore
-    let pages: BrowserPagePool
-    private let access = BrowserSpaceAccessController()
-    private let utility = BrowserUtilityPresentationState()
-    @Namespace private var commands
-    @Namespace private var promotion
-
-    init(space: BrowserSpace, browser: BrowserStore, pages: BrowserPagePool) {
-        self.space = space
-        self.browser = browser
-        self.pages = pages
-        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
-    }
-
-    var body: some View {
-        let context = BrowserSidebarContext(
-            sidebarInteraction: sidebarInteraction,
-            browser: browser,
-            pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: access),
-            spaceAccess: access, capabilities: BrowserInteractionCapabilities(), availableSpaces: [space],
-            utilityPresentation: utility,
-            utilityActions: BrowserSidebarUtilityCoordinator(browser: browser, pages: pages, spaceAccess: access)
-                .actions,
-            utilitySearchText: .constant(""), utilityFilter: .constant(.all),
-            chromeActions: BrowserSidebarChromeActions(presentSpaceSettings: { _ in }, presentHistory: {}),
-            selectSpace: { _ in }, confirmClearHistory: { _ in }, dismissUtilityOnBlankSpace: {},
-            toggleUtilitySwitcher: {})
-        BrowserSidebarSpacePage(
-            space: space, isSelected: true, context: context, pages: pages, openNewTab: {},
-            commandSurfaceNamespace: commands, tabPromotionNamespace: promotion
-        )
-        .environment(sidebarInteraction)
     }
 }

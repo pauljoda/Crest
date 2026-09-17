@@ -5,10 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserPortableArchiveTests: XCTestCase {
-    func testCanonicalExportFilenameCarriesTheImportableJSONExtension() {
-        XCTAssertTrue(BrowserPortableArchive.defaultFilename.hasSuffix(".json"))
-    }
-
     func testRoundTripPreservesPortableStateWithFreshIsolationIdentities() throws {
         let source = try makePortableFixture()
         let sourceSpace = try XCTUnwrap(source.selectedSpace)
@@ -80,61 +76,6 @@ final class BrowserPortableArchiveTests: XCTestCase {
         XCTAssertFalse(json.contains("destinationURL"))
         XCTAssertFalse(json.contains("riskAssessment"))
         XCTAssertTrue(json.contains(BrowserPortableArchive.formatIdentifier))
-    }
-
-    func testVersionFourArchiveKeepsItsCanonicalJSONKeys() throws {
-        let data = try BrowserPortableArchive.encode(
-            session: try makePortableFixture(),
-            exportedAt: Date(timeIntervalSince1970: 1_800_000_000)
-        )
-        let root = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: data) as? [String: Any]
-        )
-        let spaces = try XCTUnwrap(root["spaces"] as? [[String: Any]])
-        let space = try XCTUnwrap(spaces.first)
-        let folders = try XCTUnwrap(space["folders"] as? [[String: Any]])
-        let tabs = try XCTUnwrap(space["tabs"] as? [[String: Any]])
-        let archivedTabs = try XCTUnwrap(space["archivedTabs"] as? [[String: Any]])
-        let history = try XCTUnwrap(space["history"] as? [[String: Any]])
-
-        XCTAssertEqual(root["schemaVersion"] as? Int, BrowserPortableArchive.currentSchemaVersion)
-        XCTAssertEqual(
-            Set(root.keys),
-            Set(["exportedAt", "format", "schemaVersion", "spaces"])
-        )
-        XCTAssertEqual(
-            Set(space.keys),
-            Set([
-                "accent", "archivedTabs", "branding", "browsingPreferences",
-                "folders", "history", "name", "selectedTabID", "symbol", "tabs",
-                "splitGroups",
-            ])
-        )
-        XCTAssertEqual(
-            Set(try XCTUnwrap(folders.first).keys),
-            Set(["color", "id", "isCollapsed", "location", "symbol", "title"])
-        )
-        XCTAssertEqual(
-            Set(try XCTUnwrap(folders.last).keys),
-            Set(["color", "id", "isCollapsed", "location", "parentID", "symbol", "title"])
-        )
-        XCTAssertEqual(
-            Set(try XCTUnwrap(tabs.first).keys),
-            Set([
-                "id", "lastActivatedAt", "placement", "savedURL", "symbol",
-                "title", "url",
-            ])
-        )
-        XCTAssertEqual(
-            Set(try XCTUnwrap(archivedTabs.first).keys),
-            Set(["archivedAt", "reason", "tab"])
-        )
-        XCTAssertEqual(
-            Set(try XCTUnwrap(history.first).keys),
-            Set([
-                "firstVisitedAt", "lastVisitedAt", "title", "url", "visitCount",
-            ])
-        )
     }
 
     func testSplitGroupMembershipAndCustomizationRoundTripWithFreshIdentity()

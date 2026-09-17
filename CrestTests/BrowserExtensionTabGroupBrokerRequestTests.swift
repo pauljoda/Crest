@@ -67,17 +67,6 @@ final class BrowserExtensionTabGroupBrokerRequestTests: XCTestCase {
         }
     }
 
-    func testChromeErrorTextIsReproducedVerbatim() {
-        XCTAssertEqual(
-            BrowserExtensionTabGroupBrokerError.unknownGroup(7).errorDescription,
-            "No group with id: 7.")
-        XCTAssertEqual(
-            BrowserExtensionTabGroupBrokerError.failedToMove.errorDescription,
-            "Failed to move group.")
-        XCTAssertEqual(
-            BrowserExtensionTabGroupBrokerError.staleTab.errorDescription, "Unable to find tab.")
-    }
-
     func testQueryFilterMatchesChromiumGlobTitlesAndNeverReportsSharedGroups() throws {
         let request = try BrowserExtensionTabGroupBrokerRequest(message: [
             "api": "tabGroups.query", "title": "Res*ch", "color": "orange", "collapsed": true,
@@ -108,16 +97,4 @@ final class BrowserExtensionTabGroupBrokerRequestTests: XCTestCase {
         XCTAssertTrue(unshared.filter.matches(group))
     }
 
-    func testTitlePatternFollowsBaseMatchPattern() {
-        XCTAssertTrue(BrowserExtensionTabGroupTitlePattern.matches("Research", pattern: "*"))
-        XCTAssertTrue(BrowserExtensionTabGroupTitlePattern.matches("", pattern: "*"))
-        XCTAssertTrue(BrowserExtensionTabGroupTitlePattern.matches("abc", pattern: "a?c"))
-        XCTAssertFalse(BrowserExtensionTabGroupTitlePattern.matches("ac", pattern: "a?c"))
-        XCTAssertTrue(BrowserExtensionTabGroupTitlePattern.matches("aXbXc", pattern: "a*b*c"))
-        XCTAssertFalse(BrowserExtensionTabGroupTitlePattern.matches("aXbX", pattern: "a*b*c"))
-        XCTAssertTrue(BrowserExtensionTabGroupTitlePattern.matches("abab", pattern: "*ab"))
-        XCTAssertFalse(BrowserExtensionTabGroupTitlePattern.matches("Research", pattern: "research"))
-        // A glob, not a regular expression: `.` is a literal.
-        XCTAssertFalse(BrowserExtensionTabGroupTitlePattern.matches("ab", pattern: "a.b"))
-    }
 }

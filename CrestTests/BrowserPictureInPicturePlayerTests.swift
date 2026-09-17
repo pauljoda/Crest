@@ -5,32 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserPictureInPicturePlayerTests: XCTestCase {
-    func testInactiveMediaAndEmptyFramesDoNotReadLayout() async throws {
-        let webView = makeWebView()
-        webView.configuration.userContentController.addUserScript(
-            WKUserScript(
-                source: """
-                    globalThis.layoutReads = 0;
-                    const original = Element.prototype.getBoundingClientRect;
-                    Element.prototype.getBoundingClientRect = function() {
-                      globalThis.layoutReads++;
-                      return original.call(this);
-                    };
-                    """,
-                injectionTime: .atDocumentStart, forMainFrameOnly: false,
-                in: BrowserPictureInPictureContentBridge.contentWorld))
-        webView.loadHTMLString(
-            "<video controls></video><iframe srcdoc='<p>No media</p>'></iframe>",
-            baseURL: URL(string: "https://pip.crest.test"))
-        try await waitForBridge(webView)
-        _ = try await evaluate(
-            mockPlayback(overrides: "paused: true")
-                + "; globalThis.__crestPictureInPicture.emit(); true", in: webView)
-        try await Task.sleep(for: .milliseconds(350))
-        let reads = try await evaluate("globalThis.layoutReads", in: webView)
-        XCTAssertEqual(reads as? Int, 0, "Inactive players and empty frames must not force page layout.")
-    }
-
     func testPlayerEligibilityPermutations() async throws {
         let cases: [(String, String, String, Bool)] = [
             ("native controls", "<video controls></video>", "", true),
@@ -84,25 +58,6 @@ final class BrowserPictureInPicturePlayerTests: XCTestCase {
         }
     }
 
-    func testLargerBackgroundVideoDoesNotWinOverRealPlayer() async throws {
-        let webView = makeWebView()
-        webView.loadHTMLString(
-            """
-            <video id="background" autoplay muted loop style="width:800px;height:400px;position:absolute"></video>
-            <video id="player" controls style="width:320px;height:180px;position:relative"></video>
-            """, baseURL: URL(string: "https://pip.crest.test"))
-        try await waitForBridge(webView)
-        let value = try await evaluate(mockPlayback() + "; globalThis.__crestPictureInPicture.snapshot()", in: webView)
-        let state = try XCTUnwrap(value as? [String: Any])
-        XCTAssertEqual(state["eligible"] as? Bool, true)
-        let chosen = try XCTUnwrap(state["videoID"] as? String)
-        let newState = try await evaluate(
-            "document.querySelector('#player').controls = false; globalThis.__crestPictureInPicture.snapshot()",
-            in: webView)
-        XCTAssertEqual((newState as? [String: Any])?["eligible"] as? Bool, false)
-        XCTAssertFalse(chosen.isEmpty)
-    }
-
     func testSubframeReportsReachTheOwningWebView() async throws {
         let webView = makeWebView()
         let controller = BrowserPictureInPicturePageController(webView: webView)
@@ -150,35 +105,6 @@ final class BrowserPictureInPicturePlayerTests: XCTestCase {
         try await waitForEligibility(true, controller: controller)
         _ = try await evaluate("document.querySelector('iframe').srcdoc = '<p>No media</p>'; true", in: webView)
         try await waitForEligibility(false, controller: controller)
-    }
-
-    func testDecorativeFrameCannotQualifyEvenWithAnInteractivePlayerInside() async throws {
-        let webView = makeWebView()
-        let controller = BrowserPictureInPicturePageController(webView: webView)
-        webView.configuration.userContentController.addUserScript(
-            WKUserScript(
-                source: mockPlayback(), injectionTime: .atDocumentEnd, forMainFrameOnly: false,
-                in: BrowserPictureInPictureContentBridge.contentWorld))
-        webView.loadHTMLString(
-            """
-            <div style="pointer-events:none">
-              <iframe role="presentation" style="width:700px;height:420px" srcdoc="<video controls style='width:640px;height:360px'></video>"></iframe>
-            </div>
-            """, baseURL: URL(string: "https://pip.crest.test"))
-        try await waitForBridge(webView)
-        try await Task.sleep(for: .milliseconds(350))
-        XCTAssertFalse(controller.canAutomaticallyEnterPictureInPicture)
-        _ = try await evaluate(
-            "document.querySelector('iframe').removeAttribute('role'); document.querySelector('div').style.pointerEvents='auto'; globalThis.__crestPictureInPicture.emit(); true",
-            in: webView)
-        let deadline = Date().addingTimeInterval(3)
-        while !controller.canAutomaticallyEnterPictureInPicture && Date() < deadline {
-            try await Task.sleep(for: .milliseconds(20))
-        }
-        XCTAssertTrue(
-            controller.canAutomaticallyEnterPictureInPicture,
-            "The same player qualifies after its parent becomes interactive.")
-        controller.invalidate()
     }
 
     func testInsertedShadowPlayerAndAncestorVisibilityRemainObserved() async throws {

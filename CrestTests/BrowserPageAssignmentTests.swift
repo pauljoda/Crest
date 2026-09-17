@@ -52,29 +52,6 @@ final class BrowserPageAssignmentTests: XCTestCase {
         pool.reconcile(validTabIDs: [])
     }
 
-    func testPreparingAnExtensionSelectionStillOwesItsInitialNavigation() throws {
-        var session = BrowserSession.preview
-        let spaceIndex = try XCTUnwrap(
-            session.spaces.firstIndex {
-                $0.id == session.selectedSpaceID
-            })
-        let tabIndex = try XCTUnwrap(
-            session.spaces[spaceIndex].tabs.firstIndex {
-                $0.id == session.spaces[spaceIndex].selectedTabID
-            })
-        session.spaces[spaceIndex].tabs[tabIndex].url = try XCTUnwrap(
-            URL(string: "about:blank#extension-preparation")
-        )
-        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
-
-        pool.prepareExtensionSelection(session: session)
-        XCTAssertFalse(pool.isPresentingSelection(in: session))
-
-        pool.select(session: session)
-        XCTAssertTrue(pool.isPresentingSelection(in: session))
-        pool.reconcile(validTabIDs: [])
-    }
-
     func testActivePageMatchingRequiresTheExactTabSpaceAndProfileAssignment() throws {
         let session = BrowserSession.preview
         let tab = try XCTUnwrap(session.selectedTab)

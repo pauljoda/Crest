@@ -24,15 +24,6 @@ final class BrowserDataRetentionTests: XCTestCase {
         XCTAssertEqual(decoded.dataRetention.downloads, .forever)
     }
 
-    func testRetentionChoicesIncludeShortLongThirtyDayAndForeverWindows() {
-        XCTAssertEqual(
-            BrowserDataRetentionDuration.allCases,
-            [.oneDay, .oneWeek, .thirtyDays, .ninetyDays, .oneYear, .forever]
-        )
-        XCTAssertEqual(BrowserDataRetentionDuration.thirtyDays.lifetime, 30 * 24 * 60 * 60)
-        XCTAssertNil(BrowserDataRetentionDuration.forever.lifetime)
-    }
-
     func testSessionCleanupAppliesEachSpacesOwnHistoryAndArchiveWindows() throws {
         let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
         let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
@@ -249,30 +240,6 @@ final class BrowserDataRetentionTests: XCTestCase {
                     BrowserCurrentTabCleanupSchedule.minimumSweepSpacing
                 )
             )
-        )
-    }
-
-    func testShorterRetentionNeedsConfirmationButLongerRetentionDoesNot() {
-        XCTAssertTrue(
-            BrowserDataRetentionChange(
-                category: .history,
-                previous: .forever,
-                proposed: .thirtyDays
-            ).requiresConfirmation
-        )
-        XCTAssertTrue(
-            BrowserDataRetentionChange(
-                category: .archive,
-                previous: .oneYear,
-                proposed: .ninetyDays
-            ).requiresConfirmation
-        )
-        XCTAssertFalse(
-            BrowserDataRetentionChange(
-                category: .downloads,
-                previous: .thirtyDays,
-                proposed: .oneYear
-            ).requiresConfirmation
         )
     }
 

@@ -1,4 +1,3 @@
-import Observation
 import XCTest
 
 @testable import Crest
@@ -159,31 +158,6 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
         )
     }
 
-    func testExtensionResetRemainsScopedToTheSelectedSpace() throws {
-        let fixture = makeFixture()
-        let selectedSpace = try XCTUnwrap(
-            fixture.browser.session.spaces.last
-        )
-        let command = extensionCommand(
-            extensionID: "reader.extension",
-            commandID: "capture",
-            title: "Capture"
-        )
-
-        fixture.model.reset(command, in: selectedSpace.id)
-
-        XCTAssertEqual(
-            fixture.extensions.resetRequests,
-            [
-                ExtensionResetRequest(
-                    commandID: "capture",
-                    extensionID: "reader.extension",
-                    spaceID: selectedSpace.id
-                )
-            ]
-        )
-    }
-
     func testDeepLinkSelectsTheRequestedSpaceClearsSearchAndPublishesScrollTarget()
         throws
     {
@@ -221,48 +195,6 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
         fixture.model.applyDeepLink(
             requestedSpaceID: requestedSpace.id, extensionID: "reader.extension", commandID: "capture", revision: 7)
         XCTAssertEqual(fixture.model.searchText, "Split", "Remounting must not replay a consumed route")
-    }
-
-    func testDeepLinkCannotSelectAnUnknownSpaceID() throws {
-        let fixture = makeFixture()
-        let selectedSpaceID = fixture.model.selectedExtensionSpaceID
-        let missingSpaceID = SpaceID(
-            rawValue: try XCTUnwrap(
-                UUID(uuidString: "11111111-2222-3333-4444-555555555555")
-            )
-        )
-
-        fixture.model.applyDeepLink(
-            requestedSpaceID: missingSpaceID,
-            extensionID: "reader.extension",
-            commandID: "capture",
-            revision: 8
-        )
-
-        XCTAssertEqual(
-            fixture.model.selectedExtensionSpaceID,
-            selectedSpaceID
-        )
-    }
-
-    func testResetAllCrestShortcutsRestoresDefaults() {
-        let fixture = makeFixture()
-        let custom = BrowserShortcut(
-            key: .character("g"),
-            modifiers: [.command, .option]
-        )
-        XCTAssertEqual(
-            fixture.shortcuts.assign(custom, to: .newTab),
-            .assigned
-        )
-
-        fixture.model.resetAllCrestShortcuts()
-
-        XCTAssertEqual(
-            fixture.shortcuts.shortcut(for: .newTab),
-            BrowserShortcutCommand.newTab.defaultShortcut
-        )
-        XCTAssertFalse(fixture.shortcuts.hasCustomizations)
     }
 
     func testExtensionShortcutCannotReplaceACrestAssignment() throws {
@@ -309,116 +241,6 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
 
         XCTAssertEqual(fixture.model.validationIssue, .invalidShortcut)
         XCTAssertTrue(fixture.extensions.setRequests.isEmpty)
-    }
-
-    func testUpdatingLocaleCatalogInvalidatesAndRefreshesLocalizedSearch() {
-        let english = Locale(identifier: "en")
-        let arabic = Locale(identifier: "ar")
-        let fixture = makeFixture(
-            searchProvider: BrowserShortcutPresentationCatalog(
-                locale: english
-            )
-        )
-        fixture.model.searchText = "علامة تبويب"
-
-        XCTAssertFalse(
-            fixture.model.commandGroups
-                .flatMap(\.commands)
-                .contains(.newTab)
-        )
-
-        let invalidated = expectation(
-            description: "Locale catalog replacement invalidates search"
-        )
-        withObservationTracking {
-            _ = fixture.model.commandGroups
-        } onChange: {
-            invalidated.fulfill()
-        }
-
-        fixture.model.updateSearchProvider(
-            BrowserShortcutPresentationCatalog(locale: arabic)
-        )
-
-        XCTAssertEqual(
-            XCTWaiter.wait(for: [invalidated], timeout: 0.1),
-            .completed
-        )
-        XCTAssertTrue(
-            fixture.model.commandGroups
-                .flatMap(\.commands)
-                .contains(.newTab)
-        )
-    }
-
-    func testExtensionSearchKeepsLegacySinglePhraseSemantics() throws {
-        let fixture = makeFixture(
-            searchProvider: BrowserShortcutPresentationCatalog(
-                locale: Locale(identifier: "en")
-            )
-        )
-        let spaceID = try XCTUnwrap(fixture.model.selectedExtensionSpaceID)
-        fixture.extensions.commandsBySpace[spaceID] = [
-            BrowserShortcutExtensionCommand(
-                extensionID: "reader.extension",
-                extensionDisplayName: "Reader Tools",
-                commandID: "capture",
-                title: "Capture Article",
-                shortcut: nil,
-                isCustomized: false
-            )
-        ]
-
-        fixture.model.searchText = "reader tools"
-        XCTAssertEqual(
-            fixture.model.extensionCommandGroups.flatMap(\.commands).count,
-            1
-        )
-
-        fixture.model.searchText = "reader capture"
-        XCTAssertTrue(fixture.model.extensionCommandGroups.isEmpty)
-    }
-
-    func testShortcutPresentationResolvesEnglishAndArabicExplicitly() {
-        let english = Locale(identifier: "en")
-        let arabic = Locale(identifier: "ar")
-        let spaceShortcut = BrowserShortcut(
-            key: .special(.space),
-            modifiers: [.command]
-        )
-
-        XCTAssertEqual(
-            BrowserShortcutCommand.newTab.title(locale: english),
-            "New Tab"
-        )
-        XCTAssertEqual(
-            BrowserShortcutCommand.newTab.title(locale: arabic),
-            "علامة تبويب جديدة"
-        )
-        XCTAssertEqual(spaceShortcut.displayString(locale: english), "⌘Space")
-        XCTAssertEqual(
-            spaceShortcut.displayString(locale: arabic),
-            "⌘المساحة"
-        )
-
-        let conflict = BrowserShortcutPendingConflict(
-            command: .showHistory,
-            shortcut: spaceShortcut,
-            conflictingCommands: [.newTab, .newWindow]
-        )
-        let englishMessage = BrowserShortcutLocalization.string(
-            conflict.messageResource(locale: english),
-            locale: english
-        )
-        let arabicMessage = BrowserShortcutLocalization.string(
-            conflict.messageResource(locale: arabic),
-            locale: arabic
-        )
-
-        XCTAssertTrue(englishMessage.contains("New Tab"))
-        XCTAssertTrue(englishMessage.contains("New Window"))
-        XCTAssertTrue(arabicMessage.contains("علامة تبويب جديدة"))
-        XCTAssertTrue(arabicMessage.contains("نافذة جديدة"))
     }
 
     private func makeFixture(

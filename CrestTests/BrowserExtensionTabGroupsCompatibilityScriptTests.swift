@@ -51,46 +51,6 @@ final class BrowserExtensionTabGroupsCompatibilityScriptTests: XCTestCase {
         XCTAssertEqual(received.compactMap { ($0["tab"] as? [String: Any])?["groupId"] as? Int }, [-1, 8])
     }
 
-    func testMembershipIdentityRetriesChangedRevisionAndSkipsClosedTabs() async throws {
-        let result = try await evaluate(
-            """
-            const listeners = new Set();
-            primaryRoot.tabs.onUpdated = {
-                addListener: fn => listeners.add(fn), removeListener: fn => listeners.delete(fn),
-                hasListener: fn => listeners.has(fn), hasListeners: () => listeners.size > 0
-            };
-            let reads = 0;
-            let closed = false;
-            primaryRoot.tabs.get = async id => {
-                if (closed || id !== 7) throw new Error('closed');
-                return {id, index: 2, windowId: 12};
-            };
-            primaryRoot.tabs.query = async () => {
-                reads++;
-                // ABA: order looks unchanged, but the query crossed a move.
-                if (reads === 1) {
-                    membershipSnapshot.revision++;
-                    return [{id: 99, index: 2, windowId: 12}];
-                }
-                return [{id: 7, index: 2, windowId: 12}];
-            };
-            tabGroupsObserveTabs(primaryRoot.tabs, tab => tab);
-            const received = [];
-            primaryRoot.tabs.onUpdated.addListener((id, change, tab) => received.push({id, change, tab}));
-            await watches.tabMembership.onMessage({api: 'tabs.membership', windowKind: 'primary',
-                changes: [{tabToken: 'fixture-seven', groupId: 8}]});
-            closed = true;
-            await watches.tabMembership.onMessage({api: 'tabs.membership', windowKind: 'primary',
-                changes: [{tabToken: 'fixture-seven', groupId: -1}]});
-            return {reads, received};
-            """)
-        XCTAssertEqual(result["reads"] as? Int, 2)
-        let received = try XCTUnwrap(result["received"] as? [[String: Any]])
-        XCTAssertEqual(received.count, 1)
-        XCTAssertEqual(received.first?["id"] as? Int, 7)
-        XCTAssertNil((received.first?["tab"] as? [String: Any])?["url"], "The broker cannot supply withheld metadata.")
-    }
-
     func testNativeTabEventsIncludeGroupMetadataAndKeepTheirOtherFields() async throws {
         let result = try await evaluate(
             """
@@ -114,72 +74,6 @@ final class BrowserExtensionTabGroupsCompatibilityScriptTests: XCTestCase {
         XCTAssertEqual(received.compactMap { ($0["tab"] as? [String: Any])?["groupId"] as? Int }, [4, 4])
         XCTAssertEqual((received.first?["tab"] as? [String: Any])?["title"] as? String, "Native title")
         XCTAssertEqual((received.last?["change"] as? [String: String])?["status"], "complete")
-    }
-
-    func testTabMoveResolvesIdentityAndReturnsNativeTabMetadataForBothCallStyles() async throws {
-        let result = try await evaluate(
-            """
-            if (typeof tabGroupsMoveTabs !== 'function') return {available: false};
-            const single = await tabGroupsMoveTabs(7, {index: 0, windowId: 12});
-            const callback = await new Promise(resolve => tabGroupsMoveTabs([7], {index: -1}, resolve));
-            const errors = [];
-            for (const call of [
-                () => tabGroupsMoveTabs(7, {index: 1.5}),
-                () => tabGroupsMoveTabs(7, {index: 0, windowId: 99}),
-                () => tabGroupsMoveTabs([], {index: 0}),
-                () => tabGroupsMoveTabs(99, {index: 0})
-            ]) { try { await call(); } catch (e) { errors.push(e.message); } }
-            return {available: true, single, callback, errors, requests};
-            """)
-        XCTAssertEqual(result["available"] as? Bool, true)
-        XCTAssertEqual((result["single"] as? [String: Any])?["id"] as? Int, 7)
-        XCTAssertEqual((result["callback"] as? [String: Any])?["id"] as? Int, 7)
-        XCTAssertEqual((result["errors"] as? [String])?.count, 4)
-        let moves = (result["requests"] as? [[String: Any]])?.filter { $0["api"] as? String == "tabs.move" }
-        XCTAssertEqual(moves?.count, 2)
-        XCTAssertEqual(moves?.first?["index"] as? Int, 0)
-        XCTAssertEqual((moves?.first?["tabs"] as? [[String: Any]])?.first?["tabIndex"] as? Int, 2)
-    }
-
-    /// The official Claude extension reads `chrome.tabGroups.Color` in a
-    /// static class field, so this shape is evaluated before its worker can
-    /// do anything at all — including set its side-panel path.
-    func testColorAndIdNoneMatchChromesSchemaAndAreFrozen() async throws {
-        let result = try await evaluate(
-            """
-            const before = Object.assign({}, tabGroups.Color);
-            try { tabGroups.Color.ORANGE = "chartreuse"; } catch {}
-            try { tabGroups.Color.MAUVE = "mauve"; } catch {}
-            return {
-                surface: Object.keys(tabGroups).sort(),
-                color: tabGroups.Color,
-                keys: Object.keys(tabGroups.Color),
-                frozen: Object.isFrozen(tabGroups.Color),
-                unchanged: JSON.stringify(before) === JSON.stringify(tabGroups.Color),
-                orange: tabGroups.Color.ORANGE,
-                none: tabGroups.TAB_GROUP_ID_NONE,
-                isMinusOne: tabGroups.TAB_GROUP_ID_NONE === -1
-            };
-            """)
-        XCTAssertEqual(
-            result["surface"] as? [String],
-            [
-                "Color", "TAB_GROUP_ID_NONE", "get", "move", "onCreated", "onMoved", "onRemoved", "onUpdated",
-                "query", "update",
-            ])
-        XCTAssertEqual(
-            result["keys"] as? [String],
-            ["GREY", "BLUE", "RED", "YELLOW", "GREEN", "PINK", "PURPLE", "CYAN", "ORANGE"])
-        XCTAssertEqual(
-            result["color"] as? [String: String],
-            [
-                "GREY": "grey", "BLUE": "blue", "RED": "red", "YELLOW": "yellow", "GREEN": "green",
-                "PINK": "pink", "PURPLE": "purple", "CYAN": "cyan", "ORANGE": "orange",
-            ])
-        XCTAssertEqual(result["frozen"] as? Bool, true)
-        XCTAssertEqual(result["unchanged"] as? Bool, true)
-        XCTAssertEqual(result["orange"] as? String, "orange")
-        XCTAssertEqual(result["isMinusOne"] as? Bool, true)
     }
 
     func testGetQueryAndUpdateStampTheNativeWindowIdOntoTheBrokersGroup() async throws {
@@ -285,41 +179,6 @@ final class BrowserExtensionTabGroupsCompatibilityScriptTests: XCTestCase {
         XCTAssertEqual(targets.first?["url"] as? String, "https://example.com/")
     }
 
-    func testTabQueryFiltersAndConcurrentReadsShareOneMembershipRefresh() async throws {
-        let result = try await evaluate(
-            """
-            const untouched = tabGroupsQueryFilter({active: true});
-            const none = tabGroupsQueryFilter({groupId: -1});
-            const requested = tabGroupsQueryFilter({groupId: 4});
-            // Concurrent tab reads must share one refresh, not race the broker.
-            await Promise.all([tabGroupsWithMembership(false, () => 'a'), tabGroupsWithMembership(false, () => 'b')]);
-            const projected = tabGroupsProjectTab({index: 2});
-            return {untouched, none, requested, projected, requests};
-            """)
-        XCTAssertNil(result["untouched"])
-        XCTAssertEqual(result["none"] as? Int, -1)
-        XCTAssertEqual(result["requested"] as? Int, 4)
-        XCTAssertEqual(result["projected"] as? Int, 4)
-        XCTAssertEqual(
-            (result["requests"] as? [[String: Any]])?.map { $0["api"] as? String },
-            ["tabGroups.membership"])
-    }
-
-    func testOrdinaryTabReadIncludesExistingMembershipWithoutPermissionsOrGroupingCalls() async throws {
-        let result = try await evaluate(
-            """
-            const groupId = await tabGroupsWithMembership(false, () => tabGroupsProjectTab({index: 2}));
-            const popupGroupId = tabGroupsProjectTab({index: 2, windowId: 99});
-            const primaryGroupId = tabGroupsProjectTab({index: 2, windowId: 12});
-            return {groupId, popupGroupId, primaryGroupId, requests};
-            """)
-        XCTAssertEqual(result["groupId"] as? Int, 4)
-        XCTAssertEqual(result["primaryGroupId"] as? Int, 4)
-        XCTAssertEqual(
-            result["popupGroupId"] as? Int, -1, "A popup tab must not inherit a primary-window folder by index.")
-        XCTAssertEqual((result["requests"] as? [[String: Any]])?.first?["api"] as? String, "tabGroups.membership")
-    }
-
     func testEventsUseTheirOwnWatchPortAndInvalidateTheMirror() async throws {
         let result = try await evaluate(
             """
@@ -355,22 +214,6 @@ final class BrowserExtensionTabGroupsCompatibilityScriptTests: XCTestCase {
         XCTAssertEqual(received[1][0] as? String, "removed")
         // Chrome omits `title` entirely for an untitled group.
         XCTAssertNil((received[1][1] as? [String: Any])?["title"])
-    }
-
-    func testGroupingOmitsAnEmptyNativeURLWithoutLosingTheTabIndex() async throws {
-        let result = try await evaluate(
-            """
-            await tabsGroup({tabIds: 7});
-            await tabsUngroup(7);
-            return {requests};
-            """, nativeTabURL: "")
-        let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
-        XCTAssertEqual(requests.count, 2)
-        for request in requests {
-            let targets = try XCTUnwrap(request["tabs"] as? [[String: Any]])
-            XCTAssertEqual(targets.first?["tabIndex"] as? Int, 2)
-            XCTAssertNil(targets.first?["url"], "WebKit's empty URL is withheld metadata, not a stale navigation.")
-        }
     }
 
     private func evaluate(

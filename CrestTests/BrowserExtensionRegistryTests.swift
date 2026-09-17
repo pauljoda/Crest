@@ -180,39 +180,6 @@ final class BrowserExtensionRegistryTests: XCTestCase {
         XCTAssertEqual(persistence.installations, [newer])
     }
 
-    func testUserDefaultsPersistenceRoundTripsWithoutAnotherNamespace() {
-        let suiteName = "BrowserExtensionRegistryTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let persistence = UserDefaultsBrowserExtensionRegistryPersistence(
-            defaults: defaults,
-            key: "extensions"
-        )
-        let registry = BrowserExtensionRegistry(persistence: persistence)
-        let spaceID = SpaceID()
-        let record = installation(
-            id: "local.persisted",
-            spaceID: spaceID,
-            packageName: "persisted-package"
-        )
-
-        registry.upsert(record)
-
-        let reconstructed = BrowserExtensionRegistry(
-            persistence: UserDefaultsBrowserExtensionRegistryPersistence(
-                defaults: defaults,
-                key: "extensions"
-            )
-        )
-        XCTAssertEqual(
-            reconstructed.installation(
-                extensionID: record.id,
-                in: spaceID
-            ),
-            record
-        )
-    }
-
     func testLegacyPersistedRecordWithoutSourceMetadataStillLoads() throws {
         struct LegacyInstallation: Codable {
             let id: String

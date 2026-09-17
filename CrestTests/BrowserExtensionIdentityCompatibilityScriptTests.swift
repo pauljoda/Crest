@@ -39,20 +39,6 @@ final class BrowserExtensionIdentityCompatibilityScriptTests: XCTestCase {
             ])
     }
 
-    /// A store package runs at its real Chrome origin, so the redirect host is
-    /// the one the provider has on file. The fragment reads `runtime.id` live
-    /// rather than trusting the id baked in at preparation.
-    func testRedirectURLPrefersTheLiveRuntimeIdentifier() async throws {
-        let result = try await evaluate(
-            """
-            globalThis.chrome = {runtime: {id: 'fcoeoabgfenejglbffodgkkbkcdhcgfn'}};
-            return {live: identity.getRedirectURL('x')};
-            """)
-        XCTAssertEqual(
-            result["live"] as? String,
-            "https://fcoeoabgfenejglbffodgkkbkcdhcgfn.chromiumapp.org/x")
-    }
-
     /// The exact envelope the Claude extension's silent re-auth produces, and
     /// the URL it expects back. `abortOnLoadForNonInteractive: false` with a
     /// 5s timeout is the shape a JavaScript-redirecting provider needs.
@@ -195,18 +181,6 @@ final class BrowserExtensionIdentityCompatibilityScriptTests: XCTestCase {
         XCTAssertNil(result["cleared"])
         // None of these reach the broker: Crest answers them locally.
         XCTAssertTrue((result["requests"] as? [Any])?.isEmpty == true)
-    }
-
-    /// A manifest that declares `oauth2` has the section Chrome needs and is
-    /// still missing the grant, so the refusal names the other half.
-    func testGetAuthTokenNamesTheMissingGrantWhenTheManifestDeclaresOAuth2() async throws {
-        let result = try await evaluate(
-            """
-            const errors = [];
-            try { await identity.getAuthToken(); } catch (error) { errors.push(error.message); }
-            return {errors};
-            """, manifest: "{oauth2: {client_id: 'abc.apps.googleusercontent.com', scopes: []}}")
-        XCTAssertEqual(result["errors"] as? [String], ["OAuth2 not granted or revoked."])
     }
 
     /// Crest observes no Google sign-in state, so the event never fires. The

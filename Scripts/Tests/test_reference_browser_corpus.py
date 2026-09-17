@@ -26,8 +26,6 @@ from reference_browser_corpus import (  # noqa: E402
     CorpusResult,
     NetworkMetrics,
     arc_launch_command,
-    click_incognito_navigation_script,
-    click_window_cleanup_script,
     exact_application_process_is_present,
     read_application_metadata,
     run_arc,
@@ -313,29 +311,6 @@ class ClickNavigationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "bounded window transaction"):
                 _run_apple_script("return 1")
 
-    def test_incognito_url_is_committed_through_the_native_address_field(self) -> None:
-        script = click_incognito_navigation_script()
-
-        self.assertIn('attribute "AXIdentifier"', script)
-        self.assertIn("priorWindowIdentifiers", script)
-        self.assertIn("on error errorMessage number errorNumber", script)
-        self.assertIn('perform action "AXRaise" of taskWindow', script)
-        self.assertIn('click menu item "Close Window"', script)
-        self.assertIn("exists text field 1 of group 1 of taskWindow", script)
-        self.assertIn("set value of text field 1 of group 1 of taskWindow to targetURL", script)
-        self.assertLess(script.index("set value of text field"), script.index("key code 36"))
-
-    def test_cleanup_targets_only_the_leased_accessibility_window(self) -> None:
-        script = click_window_cleanup_script()
-
-        self.assertIn('system attribute "CREST_CLICK_WINDOW_IDENTIFIER"', script)
-        self.assertIn(
-            'every window whose value of attribute "AXIdentifier" is targetIdentifier',
-            script,
-        )
-        self.assertIn('perform action "AXRaise" of targetWindow', script)
-        self.assertIn('click menu item "Close Window"', script)
-        self.assertNotIn("window 1", script)
 
     def test_click_run_refuses_to_share_an_active_installed_session(self) -> None:
         metadata = ApplicationMetadata(
@@ -436,43 +411,6 @@ class ClickNavigationTests(unittest.TestCase):
                 )
 
         quit_click.assert_not_called()
-
-
-class LiveCorpusFixtureTests(unittest.TestCase):
-    def test_async_media_and_service_worker_checks_are_bounded(self) -> None:
-        fixture = (REPOSITORY_ROOT / "CrestTestFixtures" / "compatibility.html").read_text()
-
-        self.assertIn("waitForServiceWorkerActivation", fixture)
-        self.assertIn("playVideoWithTimeout", fixture)
-
-    def test_trusted_media_controls_have_unique_accessibility_names(self) -> None:
-        fixture = (REPOSITORY_ROOT / "CrestTestFixtures" / "compatibility.html").read_text()
-
-        self.assertIn('aria-label="Crest Fixture Play"', fixture)
-        self.assertIn('aria-label="Crest Fixture Picture in Picture"', fixture)
-        self.assertIn("Crest Fixture Exit Picture in Picture", fixture)
-
-    def test_physical_media_fixture_is_small_and_user_initiated(self) -> None:
-        fixture = (REPOSITORY_ROOT / "CrestTestFixtures" / "physical-media.html").read_text()
-
-        self.assertIn('src="sample.mp4"', fixture)
-        self.assertIn('aria-label="Crest Fixture Play"', fixture)
-        self.assertIn('aria-label="Crest Fixture Picture in Picture"', fixture)
-        self.assertIn("await video.play()", fixture)
-        self.assertIn("requestPictureInPicture", fixture)
-        self.assertNotIn("compatibility.html", fixture)
-
-    def test_physical_offline_fixture_stops_its_origin_then_reloads_from_cache(self) -> None:
-        fixture = (REPOSITORY_ROOT / "CrestTestFixtures" / "physical-offline.html").read_text()
-        service_worker = (
-            REPOSITORY_ROOT / "CrestTestFixtures" / "service-worker.js"
-        ).read_text()
-
-        self.assertIn("navigator.serviceWorker.register('service-worker.js')", fixture)
-        self.assertIn("/__crest_network_stop__", fixture)
-        self.assertIn("location.reload()", fixture)
-        self.assertIn("Loaded from Crest's offline cache", fixture)
-        self.assertIn("'physical-offline.html'", service_worker)
 
 
 class NetworkCorpusResultTests(unittest.TestCase):

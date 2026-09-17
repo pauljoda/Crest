@@ -25,6 +25,19 @@ jobs:
           python3 Scripts/release_note_catalog.py
           Scripts/audit-licenses.py
 
+  script-tests:
+    name: Release and repository contracts
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Ensure script tools are available
+        run: command -v rg >/dev/null || brew install ripgrep
+
+      - name: Test retained script contracts
+        run: python3 -m unittest discover -s Scripts/Tests
+
   app:
     name: Compile macOS and iOS
     runs-on: xcode-27

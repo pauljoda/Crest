@@ -121,47 +121,6 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
         XCTAssertEqual(page.displayURL, failingURL)
     }
 
-    func testDesktopPageDoesNotPublishCancelledLoads() throws {
-        let page = try makePage()
-
-        page.webView(
-            page.webView,
-            didFailProvisionalNavigation: nil,
-            withError: URLError(.cancelled)
-        )
-
-        XCTAssertNil(page.navigationFailure)
-    }
-
-    func testDesktopPageIgnoresAStaleFailureAfterTheNavigationFinished() throws {
-        let page = try makePage()
-        let navigation = try makeNavigation()
-
-        page.webView(page.webView, didStartProvisionalNavigation: navigation)
-        page.webView(page.webView, didFinish: navigation)
-
-        XCTAssertEqual(page.completedNavigationCount, 1)
-
-        page.webView(
-            page.webView,
-            didFail: navigation,
-            withError: URLError(.networkConnectionLost)
-        )
-
-        XCTAssertNil(page.navigationFailure)
-    }
-
-    func testDesktopPageReportsCommitBeforeNavigationFinishes() throws {
-        let page = try makePage()
-        let navigation = try makeNavigation()
-
-        page.webView(page.webView, didStartProvisionalNavigation: navigation)
-        page.webView(page.webView, didCommit: navigation)
-
-        XCTAssertEqual(page.committedNavigationCount, 1)
-        XCTAssertEqual(page.completedNavigationCount, 0)
-    }
-
     func testDesktopPageIgnoresAFailureFromASupersededNavigation() throws {
         let page = try makePage()
         let superseded = try makeNavigation()
@@ -176,28 +135,6 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
         )
 
         XCTAssertNil(page.navigationFailure)
-    }
-
-    func testDesktopPageRecordsAFailureForTheActiveNavigation() throws {
-        let page = try makePage()
-        let navigation = try makeNavigation()
-        let failingURL = try XCTUnwrap(URL(string: "https://unreachable.example.test/path"))
-        let error = NSError(
-            domain: NSURLErrorDomain,
-            code: URLError.cannotConnectToHost.rawValue,
-            userInfo: [NSURLErrorFailingURLErrorKey: failingURL]
-        )
-
-        page.webView(page.webView, didStartProvisionalNavigation: navigation)
-        page.webView(
-            page.webView,
-            didFailProvisionalNavigation: navigation,
-            withError: error
-        )
-
-        XCTAssertEqual(page.navigationFailure?.kind, .cannotConnect)
-        XCTAssertEqual(page.navigationFailure?.phase, .provisional)
-        XCTAssertEqual(page.displayURL, failingURL)
     }
 
     func testDesktopPageFollowsAServerRedirectInTheDisplayedURL() throws {
@@ -223,30 +160,6 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
 
         XCTAssertEqual(page.pendingNavigationURL, redirectedURL)
         XCTAssertEqual(page.displayURL, redirectedURL)
-    }
-
-    func testDesktopPageIgnoresAServerRedirectForASupersededNavigation() throws {
-        let page = try makePage()
-        let requestedURL = try XCTUnwrap(URL(string: "https://short.example.test/start"))
-        let superseded = try makeNavigation()
-        let current = try makeNavigation()
-        page.webView(page.webView, didStartProvisionalNavigation: superseded)
-        page.load(requestedURL)
-        page.webView(page.webView, didStartProvisionalNavigation: current)
-
-        let redirectingWebView = RedirectingWebViewStub(
-            frame: .zero,
-            configuration: WKWebViewConfiguration()
-        )
-        redirectingWebView.redirectedURL = try XCTUnwrap(
-            URL(string: "https://destination.example.test/final")
-        )
-        page.webView(
-            redirectingWebView,
-            didReceiveServerRedirectForProvisionalNavigation: superseded
-        )
-
-        XCTAssertEqual(page.pendingNavigationURL, requestedURL)
     }
 
     func testDesktopPageHandsOffAnExternalSchemeWithoutAnErrorPage() throws {

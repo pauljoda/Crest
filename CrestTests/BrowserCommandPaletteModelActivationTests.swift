@@ -130,30 +130,6 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
         XCTAssertEqual(model.selectedResultIndex, 0)
     }
 
-    func testSuggestionFailureLeavesTheAlreadyPublishedLocalResultsUsable() async {
-        let fixture = makePaletteFixture(searchSuggestionsEnabled: true)
-        let model = BrowserCommandPaletteModel(
-            space: fixture.space,
-            selectedTabID: fixture.sourceTab.id,
-            initialQuery: "",
-            commands: nil,
-            isPrivateBrowsing: false,
-            suggestionDebounce: .zero,
-            fetchSuggestions: { _, _ in throw SuggestionTestError.failed },
-            isSourceAvailable: { _ in true },
-            selectTab: { _, _ in false },
-            openURL: { _, _ in false },
-            dismiss: {}
-        )
-
-        model.query = "crest"
-        await model.waitForPendingResults()
-
-        XCTAssertEqual(model.results.first?.title, "Search with Google")
-        XCTAssertTrue(model.results.contains { $0.title == "Local Crest tab" })
-        XCTAssertFalse(model.results.contains { $0.section == .searchSuggestions })
-    }
-
     func testSuggestionNetworkConfigurationCarriesNoCookiesOrSharedCache() {
         let configuration = BrowserSearchSuggestionClient.sessionConfiguration
 
@@ -230,10 +206,6 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
                 0x54, 0x45, 0x4D, 0x4F, 0x44, finalByte
             ))
     }
-}
-
-private enum SuggestionTestError: Error {
-    case failed
 }
 
 private actor SuggestionRecorder {

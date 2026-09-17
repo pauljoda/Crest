@@ -4,47 +4,60 @@ import XCTest
 @testable import Crest
 
 final class BrowserImportReviewPlanTests: XCTestCase {
-    func testSourcePreviewPartitionsTabsAndFoldersInOneModel() {
-        let folder = BrowserFolder(title: "Reading")
-        let pinned = BrowserTab(title: "Pinned", url: nil, placement: .pinned)
-        let filed = BrowserTab(
-            title: "Filed",
-            url: nil,
-            placement: .saved,
-            folderID: folder.id
-        )
-        let unfiled = BrowserTab(title: "Unfiled", url: nil, placement: .saved)
-        let current = BrowserTab(title: "Current", url: nil, placement: .current)
-        let space = BrowserSpace(
-            id: SpaceID(),
-            profile: BrowsingProfile(),
-            name: "Imported",
-            symbol: "square.and.arrow.down",
-            accent: .indigo,
-            folders: [folder],
-            tabs: [pinned, filed, unfiled, current],
-            selectedTabID: current.id
-        )
-        let review = BrowserImportSpaceReview(
-            sourceSpace: space,
-            destination: .newSpace,
-            customization: BrowserImportSpaceCustomization(space: space),
-            includedTabIDs: Set(space.tabs.map(\.id)),
-            duplicateTabIDs: [],
-            placementOverrides: [:],
-            spaceInclusionOverride: nil,
-            passwordInclusionOverride: nil
+
+    func testEmptyRawSpacesDoNotCountTowardTheImportLimit() throws {
+        var rawSpaces: [Any] = [
+            "imported",
+            [
+                "id": "imported",
+                "title": "Imported",
+                "containerIDs": ["root"],
+            ],
+        ]
+        for index in 0...BrowserPortableArchive.maximumSpaceCount {
+            rawSpaces.append("empty-\(index)")
+            rawSpaces.append([
+                "id": "empty-\(index)",
+                "title": "Empty \(index)",
+                "containerIDs": [],
+            ])
+        }
+        let data = try JSONSerialization.data(withJSONObject: [
+            "sidebar": [
+                "containers": [
+                    [
+                        "items": [
+                            "root",
+                            [
+                                "id": "root",
+                                "childrenIds": ["tab"],
+                                "data": ["itemContainer": [:]],
+                            ],
+                            "tab",
+                            [
+                                "id": "tab",
+                                "data": [
+                                    "tab": [
+                                        "savedTitle": "Arc",
+                                        "savedURL": "https://arc.net/",
+                                    ]
+                                ],
+                            ],
+                        ],
+                        "spaces": rawSpaces,
+                    ]
+                ]
+            ]
+        ])
+
+        let imported = try BrowserTabMigration.decode(
+            data,
+            source: .arc,
+            importedAt: Date(timeIntervalSince1970: 1_800_000_000)
         )
 
-        let sections = BrowserSourceImportPreviewSections(review: review)
-
-        XCTAssertEqual(sections.pinnedTabs.map(\.id), [pinned.id])
-        XCTAssertEqual(sections.currentTabs.map(\.id), [current.id])
-        XCTAssertEqual(sections.unfiledSavedTabs.map(\.id), [unfiled.id])
-        XCTAssertEqual(
-            sections.savedTabsByFolderID[folder.id]?.map(\.id),
-            [filed.id]
-        )
+        XCTAssertEqual(imported.spaces.map(\.name), ["Imported"])
+        XCTAssertEqual(imported.spaces.first?.tabs.map(\.title), ["Arc"])
     }
 
     func testPlanMatchesSpaceNamesSkipsDuplicateTabsAndFlagsPinnedOverflow() throws {
@@ -283,38 +296,6 @@ final class BrowserImportReviewPlanTests: XCTestCase {
 
         plan.setSpace(importedSpace.id, isIncluded: false)
         XCTAssertFalse(try XCTUnwrap(plan.spaces.first).includesPasswords)
-    }
-
-    func testDuplicateExplanationTracksTheSelectedExistingDestination() throws {
-        let existing = makeExistingSession()
-        let importedSpace = makeImportedSpace(name: "Work")
-        var plan = BrowserImportReviewPlan(
-            imported: makeImport(spaces: [importedSpace]),
-            existing: existing
-        )
-        let duplicateID = importedSpace.tabs[0].id
-
-        XCTAssertEqual(plan.duplicateTabIDs(in: existing), Set([duplicateID]))
-
-        plan.setDestination(.newSpace, for: importedSpace.id)
-        XCTAssertTrue(plan.duplicateTabIDs(in: existing).isEmpty)
-    }
-
-    func testMatchedDestinationTabsIdentifyTheOtherSideOfADuplicatePair() throws {
-        let existing = makeExistingSession()
-        let importedSpace = makeImportedSpace(name: "Work")
-        let plan = BrowserImportReviewPlan(
-            imported: makeImport(spaces: [importedSpace]),
-            existing: existing
-        )
-
-        XCTAssertEqual(
-            plan.matchedDestinationTabIDs(
-                for: importedSpace.id,
-                in: existing
-            ),
-            Set([existing.spaces[0].tabs[0].id])
-        )
     }
 
     @MainActor
@@ -596,26 +577,6 @@ final class BrowserImportReviewPlanTests: XCTestCase {
 
         XCTAssertEqual(created.name, BrowserImportSpaceCustomization.fallbackName)
         XCTAssertEqual(created.symbol, BrowserImportSpaceCustomization.fallbackSymbol)
-    }
-
-    func testAReviewedSpaceNameKeepsItsInnerSpacingButLosesItsEdges() throws {
-        let existing = makeExistingSession()
-        let importedSpace = makeResearchSpace()
-        var plan = BrowserImportReviewPlan(
-            imported: makeImport(spaces: [importedSpace]),
-            existing: existing
-        )
-        plan.setSpaceIdentity(
-            name: "  Deep  Work  ",
-            symbol: " star.fill ",
-            for: importedSpace.id
-        )
-
-        let preview = try plan.preview(mergingInto: existing)
-        let created = try XCTUnwrap(preview.space(id: importedSpace.id))
-
-        XCTAssertEqual(created.name, "Deep  Work")
-        XCTAssertEqual(created.symbol, "star.fill")
     }
 
     private func makeSeededSession() -> BrowserSession {

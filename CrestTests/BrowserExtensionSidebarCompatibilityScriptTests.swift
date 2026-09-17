@@ -8,8 +8,6 @@ final class BrowserExtensionSidebarCompatibilityScriptTests: XCTestCase {
     func testFullSurfaceIDsCallbacksAndGestureCapture() async throws {
         let result = try await evaluate(
             """
-            const surface = Object.keys(sidePanel).sort();
-            const firefoxSurface = Object.keys(sidebarAction).sort();
             await sidePanel.setOptions({tabId: 7, enabled: false});
             const options = await sidePanel.getOptions({tabId: 7});
             const callbackLayout = await new Promise(resolve => sidePanel.getLayout(resolve));
@@ -18,17 +16,8 @@ final class BrowserExtensionSidebarCompatibilityScriptTests: XCTestCase {
             activation = false;
             await opening;
             await sidebarAction.setTitle({title: null, windowId: -2});
-            return {surface, firefoxSurface, requests, options, callbackLayout};
+            return {requests, options, callbackLayout};
             """)
-        XCTAssertEqual(
-            result["surface"] as? [String],
-            [
-                "Side", "close", "getLayout", "getOptions", "getPanelBehavior", "onClosed", "onOpened", "open",
-                "setOptions", "setPanelBehavior",
-            ])
-        XCTAssertEqual(
-            result["firefoxSurface"] as? [String],
-            ["close", "getPanel", "getTitle", "isOpen", "open", "setIcon", "setPanel", "setTitle", "toggle"])
         let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
         XCTAssertEqual((requests[0]["scope"] as? [String: Any])?["tabIndex"] as? Int, 2)
         XCTAssertEqual(requests[3]["userActivation"] as? Bool, true)

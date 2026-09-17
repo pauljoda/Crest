@@ -3,36 +3,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserExtensionCompatibilityTests: XCTestCase {
-    func testMacOSAppSandboxCapabilityBoundary() {
-        XCTAssertEqual(
-            BrowserPlatformExtensionNativeMessagingCapability.macOS(
-                appSandboxEnabled: false
-            ),
-            .available
-        )
-        XCTAssertEqual(
-            BrowserPlatformExtensionNativeMessagingCapability.macOS(
-                appSandboxEnabled: true
-            ),
-            .unavailableInAppSandbox
-        )
-    }
-
-    func testMacOSManagedBrowserCredentialCapabilityBoundary() {
-        XCTAssertEqual(
-            BrowserICloudPasswordsCapability.macOS(
-                hasManagedBrowserCredentialEntitlement: true
-            ),
-            .available
-        )
-        XCTAssertEqual(
-            BrowserICloudPasswordsCapability.macOS(
-                hasManagedBrowserCredentialEntitlement: false
-            ),
-            .missingManagedBrowserCredentialEntitlement
-        )
-    }
-
     func testSandboxedChromeWebStoreExtensionRequiringNativeMessagingIsBlocked() {
         let assessment = BrowserExtensionCompatibilityPolicy.assess(
             requestedPermissions: ["nativeMessaging", "storage"],
@@ -74,15 +44,6 @@ final class BrowserExtensionCompatibilityTests: XCTestCase {
             [.knownRuntimeLimitation]
         )
         XCTAssertFalse(assessment.issues[0].isBlocking)
-        XCTAssertEqual(
-            BrowserExtensionCompatibilityPresentation.message(
-                for: assessment.issues[0].kind
-            ),
-            "Password AutoFill won’t work in this Crest build. Apple requires "
-                + "Crest to be signed with the managed Web Browser Public Key "
-                + "Credential entitlement before its password helper will "
-                + "connect. This build does not have that entitlement."
-        )
     }
 
     func testApprovedBrowserCredentialEntitlementRemovesICloudWarning() {

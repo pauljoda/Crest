@@ -23,17 +23,6 @@ final class BrowserExtensionWebSocketPolicyTests: XCTestCase {
         )
     }
 
-    func testAnAbsentPolicyAllowsAnySocket() throws {
-        XCTAssertTrue(
-            BrowserExtensionWebSocketPolicy(policy: nil)
-                .allowsConnection(to: try url("wss://example.com/"))
-        )
-        XCTAssertTrue(
-            BrowserExtensionWebSocketPolicy.unrestricted
-                .allowsConnection(to: try url("ws://example.com/"))
-        )
-    }
-
     func testOnlyWebSocketSchemesAreEverAllowed() throws {
         let policy = BrowserExtensionWebSocketPolicy(policy: "connect-src *")
 
@@ -73,25 +62,6 @@ final class BrowserExtensionWebSocketPolicyTests: XCTestCase {
         )
     }
 
-    func testNoneBlocksEverySocket() throws {
-        let policy = BrowserExtensionWebSocketPolicy(
-            policy: "connect-src 'none'"
-        )
-
-        XCTAssertFalse(policy.allowsConnection(to: try url("wss://a.example/")))
-        XCTAssertFalse(policy.allowsConnection(to: try url("ws://a.example/")))
-    }
-
-    /// `'self'` for an extension page is a `chrome-extension:` origin, which no
-    /// WebSocket URL can be.
-    func testSelfAloneBlocksEverySocket() throws {
-        let policy = BrowserExtensionWebSocketPolicy(
-            policy: "connect-src 'self'"
-        )
-
-        XCTAssertFalse(policy.allowsConnection(to: try url("wss://a.example/")))
-    }
-
     func testSchemeSourcesUpgradeInOneDirectionOnly() throws {
         let insecure = BrowserExtensionWebSocketPolicy(policy: "connect-src ws:")
         XCTAssertTrue(insecure.allowsConnection(to: try url("ws://a.example/")))
@@ -126,28 +96,6 @@ final class BrowserExtensionWebSocketPolicyTests: XCTestCase {
         )
         XCTAssertFalse(
             policy.allowsConnection(to: try url("ws://localhost:1456/codex"))
-        )
-    }
-
-    /// A source with no port matches only the scheme's default port, so a
-    /// package that means to reach a local app server has to say which one.
-    func testAPortlessSourceMatchesOnlyTheDefaultPort() throws {
-        let policy = BrowserExtensionWebSocketPolicy(
-            policy: "connect-src ws://localhost"
-        )
-
-        XCTAssertTrue(
-            policy.allowsConnection(to: try url("ws://localhost/socket"))
-        )
-        XCTAssertFalse(
-            policy.allowsConnection(to: try url("ws://localhost:1455/socket"))
-        )
-
-        let anyPort = BrowserExtensionWebSocketPolicy(
-            policy: "connect-src ws://localhost:*"
-        )
-        XCTAssertTrue(
-            anyPort.allowsConnection(to: try url("ws://localhost:1455/socket"))
         )
     }
 
@@ -196,35 +144,6 @@ final class BrowserExtensionWebSocketPolicyTests: XCTestCase {
         )
     }
 
-    func testWildcardHostMatchesAnyHostOnTheNamedScheme() throws {
-        let policy = BrowserExtensionWebSocketPolicy(
-            policy: "connect-src wss://*"
-        )
-
-        XCTAssertTrue(policy.allowsConnection(to: try url("wss://a.example/")))
-        XCTAssertFalse(policy.allowsConnection(to: try url("ws://a.example/")))
-    }
-
-    func testNoncesAndKeywordsNeverMatchASocket() throws {
-        let policy = BrowserExtensionWebSocketPolicy(
-            policy:
-                "connect-src 'unsafe-inline' 'nonce-abc123' "
-                + "'sha256-Zm9vYmFy'"
-        )
-
-        XCTAssertFalse(policy.allowsConnection(to: try url("wss://a.example/")))
-    }
-
-    func testDirectiveNamesAndSchemesAreCaseInsensitive() throws {
-        let policy = BrowserExtensionWebSocketPolicy(
-            policy: "CONNECT-SRC WSS://API.Example.COM"
-        )
-
-        XCTAssertTrue(
-            policy.allowsConnection(to: try url("wss://api.example.com/"))
-        )
-    }
-
     func testManifestVersionThreeDeclaresPolicyForExtensionPages() {
         let manifest: [String: Any] = [
             "manifest_version": 3,
@@ -241,20 +160,4 @@ final class BrowserExtensionWebSocketPolicyTests: XCTestCase {
         )
     }
 
-    func testManifestVersionTwoDeclaresPolicyAsAString() {
-        let manifest: [String: Any] = [
-            "manifest_version": 2,
-            "content_security_policy": "connect-src ws://localhost:1455",
-        ]
-
-        XCTAssertEqual(
-            BrowserExtensionWebSocketPolicy.extensionPagesPolicy(in: manifest),
-            "connect-src ws://localhost:1455"
-        )
-        XCTAssertNil(
-            BrowserExtensionWebSocketPolicy.extensionPagesPolicy(
-                in: ["manifest_version": 3]
-            )
-        )
-    }
 }

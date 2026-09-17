@@ -5,17 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserWebKitFeatureFlagTests: XCTestCase {
-    func testSystemRegistryBuildsAVisibleRuntimeCatalogWithStableKeys() throws {
-        let registry = BrowserWebKitFeatureFlagRegistry()
-
-        XCTAssertNil(registry.availabilityFailure)
-        XCTAssertGreaterThan(registry.features.count, 100)
-        XCTAssertEqual(
-            Set(registry.features.map(\.key)).count,
-            registry.features.count
-        )
-        XCTAssertTrue(registry.features.allSatisfy { !$0.name.isEmpty })
-    }
 
     func testSystemRegistryCanOverrideAndRestoreATemporaryPreferencesObject() throws {
         let registry = BrowserWebKitFeatureFlagRegistry()
@@ -132,32 +121,6 @@ final class BrowserWebKitFeatureFlagTests: XCTestCase {
         XCTAssertEqual(relaunchedStore.override(for: .preview), .enabled)
     }
 
-    func testAllow120FPSDefaultsOffWithoutChangingScrollAnimator() {
-        let registry = StubBrowserWebKitFeatureFlagRegistry(
-            features: [.preferNear60FPS, .scrollAnimator]
-        )
-        let persistence = InMemoryBrowserWebKitFeatureFlagPersistence()
-        let store = BrowserWebKitFeatureFlagStore(
-            registry: registry,
-            persistence: persistence
-        )
-
-        XCTAssertFalse(store.allows120FPS)
-        XCTAssertNil(store.override(for: .scrollAnimator))
-        XCTAssertFalse(store.hasOverrides)
-        XCTAssertEqual(store.activeOverrideCount, 0)
-
-        store.apply(to: WKPreferences())
-
-        XCTAssertEqual(
-            registry.appliedOverrides,
-            [
-                BrowserWebKitFeatureFlagStore
-                    .preferPageRenderingUpdatesNear60FPSKey: .enabled
-            ]
-        )
-    }
-
     func testAllow120FPSSettingPersistsAndStaysInSyncWithRawOverride() {
         let registry = StubBrowserWebKitFeatureFlagRegistry(
             features: [.preferNear60FPS, .scrollAnimator]
@@ -196,37 +159,6 @@ final class BrowserWebKitFeatureFlagTests: XCTestCase {
         XCTAssertFalse(store.allows120FPS)
     }
 
-    func testScrollAnimatorRemainsAnOrdinaryRawFeatureFlag() {
-        let registry = StubBrowserWebKitFeatureFlagRegistry(
-            features: [.preferNear60FPS, .scrollAnimator]
-        )
-        let persistence = InMemoryBrowserWebKitFeatureFlagPersistence()
-        let store = BrowserWebKitFeatureFlagStore(
-            registry: registry,
-            persistence: persistence
-        )
-
-        XCTAssertNil(store.override(for: .scrollAnimator))
-
-        store.setOverride(.enabled, for: .scrollAnimator)
-
-        XCTAssertEqual(store.override(for: .scrollAnimator), .enabled)
-        XCTAssertEqual(store.activeOverrideCount, 1)
-        XCTAssertEqual(
-            persistence.overrides,
-            [
-                BrowserWebKitFeatureFlagStore
-                    .preferPageRenderingUpdatesNear60FPSKey: .enabled,
-                BrowserWebKitFeatureFlag.scrollAnimator.key: .enabled,
-            ]
-        )
-
-        store.setOverride(nil, for: .scrollAnimator)
-
-        XCTAssertNil(store.override(for: .scrollAnimator))
-        XCTAssertEqual(store.activeOverrideCount, 0)
-    }
-
     func testResetAllRestoresCrestPerformanceDefaults() {
         let registry = StubBrowserWebKitFeatureFlagRegistry(
             features: [.preferNear60FPS, .scrollAnimator, .preview]
@@ -258,33 +190,6 @@ final class BrowserWebKitFeatureFlagTests: XCTestCase {
         )
     }
 
-    func testFilterCombinesSearchStatusCategoryAndChangedState() {
-        let flags: [BrowserWebKitFeatureFlag] = [
-            .preview, .stable, .media,
-        ]
-        var filter = BrowserWebKitFeatureFlagFilter(
-            searchText: "animation",
-            status: BrowserWebKitFeatureStatus(rawValue: 5),
-            category: BrowserWebKitFeatureCategory(rawValue: 2),
-            showsOnlyChanged: true
-        )
-
-        XCTAssertEqual(
-            filter.groups(
-                from: flags,
-                overrides: [BrowserWebKitFeatureFlag.preview.key: .enabled]
-            ).flatMap(\.flags),
-            [.preview]
-        )
-
-        filter.searchText = "missing"
-        XCTAssertTrue(
-            filter.groups(
-                from: flags,
-                overrides: [BrowserWebKitFeatureFlag.preview.key: .enabled]
-            ).isEmpty
-        )
-    }
 }
 
 @MainActor

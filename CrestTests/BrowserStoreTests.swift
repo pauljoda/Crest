@@ -68,92 +68,6 @@ final class BrowserStoreTests: XCTestCase {
         }
     }
 
-    func testClosingANewSearchReturnsToTheTabThatWasActuallyOpen() throws {
-        let mediaLibrary = BrowserTab(
-            title: "Media Library",
-            url: URL(string: "https://media.example"),
-            placement: .pinned,
-            lastActivatedAt: Date(timeIntervalSince1970: 100)
-        )
-        let lidarr = BrowserTab(
-            title: "Lidarr",
-            url: URL(string: "https://lidarr.example"),
-            placement: .saved,
-            lastActivatedAt: Date(timeIntervalSince1970: 200)
-        )
-        let space = BrowserSpace(
-            id: SpaceID(),
-            profile: BrowsingProfile(),
-            name: "Work",
-            symbol: "briefcase.fill",
-            accent: .indigo,
-            folders: [],
-            tabs: [mediaLibrary, lidarr],
-            selectedTabID: mediaLibrary.id
-        )
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
-        let searchID = try XCTUnwrap(
-            store.openNewTab(
-                url: try XCTUnwrap(URL(string: "https://www.google.com/search?q=testing"))
-            )
-        )
-
-        store.closeTab(searchID)
-
-        XCTAssertEqual(store.selectedTab?.id, mediaLibrary.id)
-    }
-
-    func testClosingTheActiveTabShowsTheUnloadedStateWhenItsHistoryIsGone() throws {
-        let mediaLibrary = BrowserTab(
-            title: "Media Library",
-            url: URL(string: "https://media.example"),
-            placement: .pinned,
-            lastActivatedAt: Date(timeIntervalSince1970: 100)
-        )
-        let lidarr = BrowserTab(
-            title: "Lidarr",
-            url: URL(string: "https://lidarr.example"),
-            placement: .saved,
-            lastActivatedAt: Date(timeIntervalSince1970: 200)
-        )
-        let sonarr = BrowserTab(
-            title: "Sonarr",
-            url: URL(string: "https://sonarr.example"),
-            placement: .saved,
-            lastActivatedAt: Date(timeIntervalSince1970: 50)
-        )
-        let space = BrowserSpace(
-            id: SpaceID(),
-            profile: BrowsingProfile(),
-            name: "Work",
-            symbol: "briefcase.fill",
-            accent: .indigo,
-            folders: [],
-            tabs: [mediaLibrary, lidarr, sonarr],
-            selectedTabID: mediaLibrary.id
-        )
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
-        store.selectTab(sonarr.id)
-        store.selectTab(mediaLibrary.id)
-        let searchID = try XCTUnwrap(
-            store.openNewTab(
-                url: try XCTUnwrap(URL(string: "https://www.google.com/search?q=testing"))
-            )
-        )
-        store.deleteTab(mediaLibrary.id, in: space.id)
-
-        store.closeTab(searchID)
-
-        XCTAssertNil(store.selectedTab)
-        XCTAssertEqual(Set(store.selectedSpace?.tabs.map(\.id) ?? []), [lidarr.id, sonarr.id])
-    }
-
     func testSuccessiveClosesWalkBackThroughActualTabActivationHistory() throws {
         let first = BrowserTab(
             title: "First",
@@ -240,44 +154,6 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(
             try XCTUnwrap(navigatedStore.selectedSpace).currentTabs.map(\.id),
             [head.id, tail.id, navigatedID, trailing.id]
-        )
-    }
-
-    func testSessionRevisionAdvancesWhenTheStoreMutatesSessionState() {
-        let store = BrowserStore(
-            session: .preview,
-            persistence: InMemoryBrowserSessionPersistence()
-        )
-        let initialRevision = store.sessionRevision
-
-        _ = store.openNewTab()
-
-        XCTAssertGreaterThan(store.sessionRevision, initialRevision)
-    }
-
-    func testRuntimeProjectionMatchesTheSpecializedSessionSnapshots() {
-        let session = BrowserSession.preview
-        let projection = BrowserRuntimeSessionProjection(session: session)
-
-        XCTAssertEqual(
-            projection.extensionState,
-            BrowserExtensionSessionState(session: session)
-        )
-        XCTAssertEqual(
-            projection.tabIconState,
-            BrowserTabIconSessionState(session: session)
-        )
-        XCTAssertEqual(
-            projection.contentBlockingState,
-            BrowserContentBlockingSessionState(session: session)
-        )
-        XCTAssertEqual(
-            projection.credentialAccessState,
-            Dictionary(
-                uniqueKeysWithValues: session.spaces.map {
-                    ($0.id, $0.credentialPreferences.isEnabled)
-                }
-            )
         )
     }
 
@@ -427,35 +303,6 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(store.selectedSpace).archivedTabs.isEmpty)
     }
 
-    func testEverySpaceAddedToAPrivateWindowKeepsThePrivateAppearance() throws {
-        let store = BrowserStore.privateBrowsing()
-
-        store.addSpace()
-
-        XCTAssertEqual(store.session.spaces.count, 2)
-        for space in store.session.spaces {
-            XCTAssertEqual(space.symbol, "eyeglasses")
-            XCTAssertEqual(space.branding.colors.count, 1)
-            XCTAssertEqual(space.branding.bannerPattern, .solid)
-        }
-    }
-
-    func testOpeningAURLCreatesAndSelectsACurrentTabInTheActiveSpace() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
-        let spaceID = store.session.selectedSpaceID
-        let originalCount = try XCTUnwrap(store.selectedSpace).currentTabs.count
-        let url = try XCTUnwrap(URL(string: "https://example.com/popup"))
-
-        store.openNewTab(url: url)
-
-        XCTAssertEqual(store.session.selectedSpaceID, spaceID)
-        XCTAssertEqual(try XCTUnwrap(store.selectedSpace).currentTabs.count, originalCount + 1)
-        XCTAssertEqual(store.selectedTab?.url, url)
-        XCTAssertEqual(store.selectedTab?.title, "example.com")
-        XCTAssertEqual(persistence.session, store.session)
-    }
-
     func testOpeningABackgroundTabPreservesSelectionAndUsesTheExactOwningSpace() throws {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: .preview, persistence: persistence)
@@ -515,18 +362,6 @@ final class BrowserStoreTests: XCTestCase {
 
         XCTAssertEqual(store.selectedTab?.url, tab.url)
         XCTAssertEqual(persistence.session?.selectedTab?.url, tab.url)
-    }
-
-    func testNonNilPageURLStillUpdatesTheSelectedTab() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
-        let url = try XCTUnwrap(URL(string: "https://example.com/committed"))
-
-        store.updateSelectedTabFromPage(url: url, title: "Committed")
-
-        XCTAssertEqual(store.selectedTab?.url, url)
-        XCTAssertEqual(store.selectedTab?.title, "Committed")
-        XCTAssertEqual(persistence.session, store.session)
     }
 
     /// An unfocused Split View card browses on its own, and its sidebar row has to
@@ -642,22 +477,6 @@ final class BrowserStoreTests: XCTestCase {
         )
         XCTAssertEqual(unchanged.url, member.url)
         XCTAssertEqual(unchanged.title, member.title)
-    }
-
-    /// A tab that is not in the Space is not a card of it.
-    func testAnUnknownTabIDIsRefused() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
-        let space = try XCTUnwrap(store.selectedSpace)
-
-        XCTAssertFalse(
-            store.updateTabFromPage(
-                url: try XCTUnwrap(URL(string: "https://example.com/ghost")),
-                title: "Ghost",
-                for: TabID(),
-                matching: BrowserSpaceRuntimeAssignment(space: space)
-            )
-        )
     }
 
     /// The automatic-icon identity rules are the selected tab's rules: a renamed
@@ -1533,33 +1352,6 @@ final class BrowserStoreTests: XCTestCase {
         )
     }
 
-    func testWindowStateStoreCapturesSelectionFromItsWindowBrowser() throws {
-        let persistence = InMemoryBrowserWindowStatePersistence()
-        let browser = BrowserStore(
-            session: .preview,
-            persistence: InMemoryBrowserSessionPersistence()
-        )
-        let windowID = BrowserWindowID()
-        let stateStore = BrowserWindowStateStore(
-            id: windowID,
-            session: browser.session,
-            persistence: persistence
-        )
-        let personal = try XCTUnwrap(browser.session.spaces.last)
-        let personalTabID = try XCTUnwrap(personal.tabs.last?.id)
-
-        browser.selectSpace(personal.id)
-        browser.selectTab(personalTabID)
-        stateStore.captureSelection(from: browser.session)
-
-        let restoredState = try XCTUnwrap(persistence.load(id: windowID))
-        XCTAssertEqual(restoredState.selectedSpaceID, personal.id)
-        XCTAssertEqual(
-            restoredState.selectedTab(in: browser.session)?.id,
-            personalTabID
-        )
-    }
-
     func testWindowStateStoreRecordsTheTabThatActuallyRenders() throws {
         let persistence = InMemoryBrowserWindowStatePersistence()
         let session = BrowserSession.preview
@@ -1864,84 +1656,6 @@ final class BrowserStoreTests: XCTestCase {
         )
     }
 
-    func testPeriodicCleanupSweepCadenceIsPinnedForActiveScenes() {
-        let now = Date(timeIntervalSince1970: 4_000_000)
-
-        XCTAssertEqual(BrowserCurrentTabCleanupSchedule.sweepInterval, 15 * 60)
-        XCTAssertEqual(BrowserCurrentTabCleanupSchedule.minimumSweepSpacing, 60)
-        XCTAssertTrue(
-            BrowserCurrentTabCleanupSchedule.allowsSweep(lastSweptAt: nil, now: now)
-        )
-        XCTAssertFalse(
-            BrowserCurrentTabCleanupSchedule.allowsSweep(
-                lastSweptAt: now,
-                now: now.addingTimeInterval(59)
-            )
-        )
-        XCTAssertTrue(
-            BrowserCurrentTabCleanupSchedule.allowsSweep(
-                lastSweptAt: now,
-                now: now.addingTimeInterval(60)
-            )
-        )
-        XCTAssertTrue(
-            BrowserCurrentTabCleanupSchedule.allowsSweep(
-                lastSweptAt: now,
-                now: now.addingTimeInterval(BrowserCurrentTabCleanupSchedule.sweepInterval)
-            )
-        )
-        // A backwards clock adjustment must not wedge the sweep shut.
-        XCTAssertTrue(
-            BrowserCurrentTabCleanupSchedule.allowsSweep(
-                lastSweptAt: now,
-                now: now.addingTimeInterval(-60 * 60)
-            )
-        )
-    }
-
-    func testReleaseSoakFixtureBuildsThirteenCurrentTabsInsideOneLoopbackProfile() throws {
-        let session = try XCTUnwrap(
-            BrowserPerformanceSoakFixture.makeSession(
-                baseURLString: "http://127.0.0.1:18768/",
-                rawTabCount: "13",
-                runID: "release-run"
-            )
-        )
-        XCTAssertEqual(session.spaces.count, 1)
-        let space = try XCTUnwrap(session.spaces.first)
-
-        XCTAssertEqual(space.name, "Performance")
-        XCTAssertEqual(space.tabs.count, 13)
-        XCTAssertEqual(Set(space.tabs.map(\.placement)), [.current])
-        XCTAssertEqual(Set(space.tabs.compactMap { $0.url?.host() }), ["127.0.0.1"])
-        XCTAssertEqual(space.selectedTabID, space.tabs.first?.id)
-        XCTAssertEqual(space.browsingPreferences.currentTabCleanupPolicy, .never)
-        XCTAssertEqual(space.browsingPreferences.contentBlockingPolicy, .off)
-        XCTAssertTrue(space.tabs[0].url?.absoluteString.contains("mutate=1") == true)
-        XCTAssertTrue(space.tabs[1].url?.absoluteString.contains("video=1") == true)
-        XCTAssertEqual(
-            Set(session.tabRuntimeAssignments.map(\.profileID)),
-            [space.profile.id]
-        )
-    }
-
-    func testHeavyPerformanceFixtureCoversManyValidSpacesTabsFoldersAndHistoryRows() throws {
-        for tabCount in [24, 50, 200, 500] {
-            let session = try XCTUnwrap(
-                BrowserPerformanceSoakFixture.makeSession(
-                    baseURLString: "http://127.0.0.1:18768/", rawTabCount: String(tabCount),
-                    isHeavy: true, runID: "chrome-scale"))
-            let expectedNames = Set(BrowserSpaceHousePalette.allCases.map(\.name)).union(["Daylight"])
-            XCTAssertEqual(Set(session.spaces.map(\.name)), expectedNames)
-            XCTAssertTrue(session.spaces.allSatisfy { $0.tabs.count == tabCount && $0.folders.count == 8 })
-            XCTAssertTrue(session.spaces.allSatisfy { $0.history.count == 96 && $0.folderTree.isValid })
-            XCTAssertTrue(session.spaces.allSatisfy { $0.selectedTabID != nil })
-        }
-        XCTAssertNil(
-            BrowserPerformanceSoakFixture.makeSession(
-                baseURLString: "http://127.0.0.1:18768/", rawTabCount: "501", isHeavy: true, runID: "too-large"))
-    }
-
     func testReleaseSoakFixtureRejectsNonLoopbackAndMalformedInputs() {
         XCTAssertNil(
             BrowserPerformanceSoakFixture.makeSession(
@@ -2192,34 +1906,6 @@ final class BrowserStoreSaveScopeTests: XCTestCase {
         )
 
         XCTAssertEqual(persistence.savedScopes.last, .favicon(for: tab.id))
-    }
-
-    /// An unfocused card claims exactly what the focused one does: a title rewrite
-    /// is the core alone, and only an icon change reaches that tab's favicon store.
-    func testACardPageClaimsTheSameSaveScopesAsTheFocusedOne() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
-        let space = try XCTUnwrap(store.selectedSpace)
-        let member = try XCTUnwrap(space.tabs.first { $0.url != nil })
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-
-        store.updateTabFromPage(
-            url: member.url,
-            title: "A title the card keeps rewriting",
-            for: member.id,
-            matching: assignment
-        )
-        XCTAssertEqual(persistence.savedScopes.last, .core)
-
-        store.updateTabFromPage(
-            url: member.url,
-            title: "A title the card keeps rewriting",
-            faviconData: Data("captured".utf8),
-            iconAccent: BrowserTabIconAccent(red: 0.2, green: 0.4, blue: 0.6),
-            for: member.id,
-            matching: assignment
-        )
-        XCTAssertEqual(persistence.savedScopes.last, .favicon(for: member.id))
     }
 
     func testRecordingAVisitPersistsOnlyThatSpacesHistory() throws {

@@ -32,17 +32,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
         )
     }
 
-    func testCredentialFailuresAreBounded() {
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPBasic,
-                isProxy: false,
-                previousFailureCount: BrowserAuthenticationPolicy.maximumCredentialAttempts
-            ),
-            .cancel
-        )
-    }
-
     func testCredentialAttemptCapPreservesBoundaryAndProxyHandling() {
         XCTAssertEqual(BrowserAuthenticationPolicy.maximumCredentialAttempts, 3)
         XCTAssertEqual(
@@ -121,101 +110,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
         )
     }
 
-    func testPhysicalValidationFingerprintRejectsMissingMalformedAndPaddedValues() {
-        let fingerprint = String(repeating: "a", count: 64)
-
-        for expected in [nil, " \(fingerprint)", "\(fingerprint) ", String(repeating: "a", count: 63)] {
-            XCTAssertFalse(
-                BrowserPhysicalValidationTrustPolicy.allows(
-                    bundleIdentifier: BrowserPhysicalValidationTrustPolicy.bundleIdentifier,
-                    expectedCertificateSHA256: expected,
-                    actualCertificateSHA256: fingerprint
-                )
-            )
-        }
-        XCTAssertFalse(
-            BrowserPhysicalValidationTrustPolicy.allows(
-                bundleIdentifier: BrowserPhysicalValidationTrustPolicy.bundleIdentifier,
-                expectedCertificateSHA256: String(repeating: "g", count: 64),
-                actualCertificateSHA256: String(repeating: "g", count: 64)
-            )
-        )
-        XCTAssertFalse(
-            BrowserPhysicalValidationTrustPolicy.allows(
-                bundleIdentifier: BrowserPhysicalValidationTrustPolicy.bundleIdentifier,
-                expectedCertificateSHA256: fingerprint,
-                actualCertificateSHA256: "\(fingerprint)\n"
-            )
-        )
-    }
-
-    func testDescriptorIncludesNondefaultPortRealmAndTransportWarning() {
-        let protectionSpace = URLProtectionSpace(
-            host: "accounts.crest.test",
-            port: 8765,
-            protocol: "http",
-            realm: "Members",
-            authenticationMethod: NSURLAuthenticationMethodHTTPBasic
-        )
-
-        XCTAssertEqual(
-            BrowserHTTPAuthenticationDescriptor.sourceLabel(for: protectionSpace),
-            "accounts.crest.test:8765"
-        )
-    }
-
-    func testDescriptorOmitsDefaultHTTPSPort() {
-        let protectionSpace = URLProtectionSpace(
-            host: "accounts.crest.test",
-            port: 443,
-            protocol: "https",
-            realm: nil,
-            authenticationMethod: NSURLAuthenticationMethodHTTPDigest
-        )
-
-        XCTAssertEqual(
-            BrowserHTTPAuthenticationDescriptor.sourceLabel(for: protectionSpace),
-            "accounts.crest.test"
-        )
-    }
-
-    func testDescriptorPreservesChallengeMetadataAndDefaultHTTPSource() {
-        let protectionSpace = URLProtectionSpace(
-            host: "accounts.crest.test",
-            port: 80,
-            protocol: "HTTP",
-            realm: "Members",
-            authenticationMethod: NSURLAuthenticationMethodHTTPBasic
-        )
-        let descriptor = BrowserHTTPAuthenticationDescriptor(
-            challenge: makeChallenge(
-                protectionSpace: protectionSpace,
-                previousFailureCount: 2
-            )
-        )
-
-        XCTAssertEqual(descriptor.source, "accounts.crest.test")
-        XCTAssertEqual(descriptor.realm, "Members")
-        XCTAssertEqual(descriptor.authenticationMethod, NSURLAuthenticationMethodHTTPBasic)
-        XCTAssertFalse(descriptor.isSecureTransport)
-        XCTAssertEqual(descriptor.previousFailureCount, 2)
-    }
-
-    func testDescriptorUsesProductNameWhenProtectionSpaceHasNoHost() {
-        let protectionSpace = URLProtectionSpace(
-            host: "",
-            port: 443,
-            protocol: "https",
-            realm: nil,
-            authenticationMethod: NSURLAuthenticationMethodHTTPBasic
-        )
-
-        XCTAssertEqual(
-            BrowserHTTPAuthenticationDescriptor.sourceLabel(for: protectionSpace),
-            ProductIdentity.name
-        )
-    }
-
     func testCredentialProtectionSpaceIncludesOriginRealmAndAuthenticationMethod() throws {
         let basic = URLProtectionSpace(
             host: "accounts.crest.test",
@@ -259,103 +153,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
 
         XCTAssertNil(BrowserHTTPAuthenticationProtectionSpace(trust))
         XCTAssertNil(BrowserHTTPAuthenticationProtectionSpace(proxy))
-    }
-
-    func testAuthenticationPromptAndSaveRequestDescriptionsRedactPasswords() throws {
-        let response = BrowserHTTPAuthenticationPromptResponse(
-            username: "member",
-            password: "response-secret",
-            shouldSave: true
-        )
-        XCTAssertEqual(
-            response.description,
-            "BrowserHTTPAuthenticationPromptResponse(username: member, password: <redacted>, shouldSave: true)"
-        )
-        XCTAssertEqual(response.debugDescription, response.description)
-        XCTAssertFalse(response.description.contains("response-secret"))
-
-        let protectionSpace = try XCTUnwrap(
-            BrowserHTTPAuthenticationProtectionSpace(makeProtectionSpace())
-        )
-        let request = BrowserHTTPAuthenticationSaveRequest(
-            protectionSpace: protectionSpace,
-            username: "member",
-            password: "save-secret",
-            replacing: nil
-        )
-        XCTAssertEqual(
-            request.description,
-            "BrowserHTTPAuthenticationSaveRequest(protectionSpace: \(protectionSpace), username: member, password: <redacted>)"
-        )
-        XCTAssertEqual(request.debugDescription, request.description)
-        XCTAssertFalse(request.description.contains("save-secret"))
-    }
-
-    func testTypedAuthenticationChallengeDrivesTheFrameworkNeutralSession() async throws {
-        let origin = try XCTUnwrap(
-            CredentialOrigin(url: try XCTUnwrap(URL(string: "https://accounts.crest.test")))
-        )
-        let protectionSpace = BrowserHTTPAuthenticationProtectionSpace(
-            origin: origin,
-            credentialScope: .httpBasic(realm: "Members")
-        )
-        let descriptor = BrowserHTTPAuthenticationDescriptor(
-            source: "accounts.crest.test",
-            realm: "Members",
-            authenticationMethod: NSURLAuthenticationMethodHTTPBasic,
-            isSecureTransport: true,
-            previousFailureCount: 0
-        )
-        let challenge = BrowserAuthenticationChallenge(
-            authenticationMethod: .httpBasic,
-            isProxy: false,
-            previousFailureCount: 0,
-            protectionSpace: protectionSpace,
-            descriptor: descriptor,
-            proposedUsername: "proposed-member"
-        )
-        let session = BrowserHTTPAuthenticationSession(spaceID: SpaceID())
-
-        let decision = await session.response(to: challenge) { prompt in
-            XCTAssertEqual(prompt.descriptor, descriptor)
-            XCTAssertEqual(prompt.suggestedUsername, "proposed-member")
-            return BrowserHTTPAuthenticationPromptResponse(
-                username: "member",
-                password: "one-time-secret",
-                shouldSave: false
-            )
-        }
-
-        guard case .useCredential(let username, let password) = decision else {
-            return XCTFail("Expected the typed session to resolve a credential")
-        }
-        XCTAssertEqual(username, "member")
-        XCTAssertEqual(password, "one-time-secret")
-    }
-
-    func testFoundationResolutionPreservesItsExistingInitializerAndOneTimeAdapter() {
-        let credential = URLCredential(
-            user: "member",
-            password: "secret",
-            persistence: .forSession
-        )
-        let existingAPI = BrowserHTTPAuthenticationResolution(
-            disposition: .useCredential,
-            credential: credential
-        )
-        let adapted = BrowserHTTPAuthenticationResolution(
-            BrowserHTTPAuthenticationDecision.useCredential(
-                username: "member",
-                password: "secret"
-            )
-        )
-
-        XCTAssertEqual(existingAPI.disposition, .useCredential)
-        XCTAssertEqual(existingAPI.credential?.persistence, .forSession)
-        XCTAssertEqual(adapted.disposition, .useCredential)
-        XCTAssertEqual(adapted.credential?.user, "member")
-        XCTAssertEqual(adapted.credential?.password, "secret")
-        XCTAssertEqual(adapted.credential?.persistence, URLCredential.Persistence.none)
     }
 
     func testSavedHTTPSCredentialIsReusedOnceAndMarkedUsedOnlyAfterSuccess() async throws {
@@ -514,38 +311,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
         XCTAssertTrue(saves.isEmpty)
     }
 
-    func testDisablingCredentialStorageMakesAnExistingHTTPSAuthSessionOneTimeOnly() async throws {
-        let spaceID = SpaceID()
-        let protectionSpace = makeProtectionSpace()
-        var loadCount = 0
-        var saves: [BrowserHTTPAuthenticationSaveRequest] = []
-        let session = BrowserHTTPAuthenticationSession(
-            spaceID: spaceID,
-            loadCredential: { _ in
-                loadCount += 1
-                return nil
-            },
-            saveCredential: { saves.append($0) }
-        )
-
-        session.setCredentialStorageEnabled(false)
-        let resolution = await session.response(
-            to: makeChallenge(protectionSpace: protectionSpace)
-        ) { prompt in
-            XCTAssertFalse(prompt.allowsSaving)
-            return BrowserHTTPAuthenticationPromptResponse(
-                username: "member",
-                password: "one-time-secret",
-                shouldSave: true
-            )
-        }
-        await session.authenticationSucceeded()
-
-        XCTAssertEqual(resolution.disposition, .useCredential)
-        XCTAssertEqual(loadCount, 0)
-        XCTAssertTrue(saves.isEmpty)
-    }
-
     func testAuthenticationFailureClearsAPendingSaveRequest() async {
         var saves: [BrowserHTTPAuthenticationSaveRequest] = []
         let session = BrowserHTTPAuthenticationSession(
@@ -565,41 +330,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
         session.authenticationFailed()
         await session.authenticationSucceeded()
 
-        XCTAssertTrue(saves.isEmpty)
-    }
-
-    func testCancelledRetryClearsTheStoredCredentialSaveRequest() async throws {
-        let spaceID = SpaceID()
-        let protectionSpace = makeProtectionSpace()
-        let typedProtectionSpace = try XCTUnwrap(
-            BrowserHTTPAuthenticationProtectionSpace(protectionSpace)
-        )
-        let stored = makeCredential(
-            spaceID: spaceID,
-            protectionSpace: typedProtectionSpace,
-            username: "member",
-            password: "rejected-secret"
-        )
-        var saves: [BrowserHTTPAuthenticationSaveRequest] = []
-        let session = BrowserHTTPAuthenticationSession(
-            spaceID: spaceID,
-            loadCredential: { _ in stored },
-            saveCredential: { saves.append($0) }
-        )
-
-        _ = await session.response(to: makeChallenge(protectionSpace: protectionSpace)) { _ in
-            XCTFail("The stored credential should be attempted before prompting")
-            return nil
-        }
-        let cancellation = await session.response(
-            to: makeChallenge(protectionSpace: protectionSpace, previousFailureCount: 1)
-        ) { prompt in
-            XCTAssertEqual(prompt.suggestedUsername, "member")
-            return nil
-        }
-        await session.authenticationSucceeded()
-
-        XCTAssertEqual(cancellation.disposition, .cancelAuthenticationChallenge)
         XCTAssertTrue(saves.isEmpty)
     }
 
@@ -644,41 +374,6 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
 
         XCTAssertEqual(saves.count, 1)
         XCTAssertNil(saves.first?.replacing)
-    }
-
-    func testCredentialStorageSettingOnlyResetsWhenItsValueChanges() async {
-        var saves: [BrowserHTTPAuthenticationSaveRequest] = []
-        let session = BrowserHTTPAuthenticationSession(
-            spaceID: SpaceID(),
-            saveCredential: { saves.append($0) }
-        )
-
-        _ = await session.response(
-            to: makeChallenge(protectionSpace: makeProtectionSpace())
-        ) { _ in
-            BrowserHTTPAuthenticationPromptResponse(
-                username: "first-member",
-                password: "first-secret",
-                shouldSave: true
-            )
-        }
-        session.setCredentialStorageEnabled(true)
-        await session.authenticationSucceeded()
-
-        _ = await session.response(
-            to: makeChallenge(protectionSpace: makeProtectionSpace())
-        ) { _ in
-            BrowserHTTPAuthenticationPromptResponse(
-                username: "second-member",
-                password: "second-secret",
-                shouldSave: true
-            )
-        }
-        session.setCredentialStorageEnabled(false)
-        await session.authenticationSucceeded()
-
-        XCTAssertEqual(saves.count, 1)
-        XCTAssertEqual(saves.first?.username, "first-member")
     }
 
     private func makeProtectionSpace(

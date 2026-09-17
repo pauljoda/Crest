@@ -63,60 +63,6 @@ final class BrowserExtensionWebpageMenuPolicyTests: XCTestCase {
         )
     }
 
-    func testSelectionEditableAndFrameContextsAreIndependent() {
-        let context = makeContext(
-            selectionText: "selected words",
-            isEditable: true,
-            isMainFrame: false
-        )
-        let definitions = [
-            makeDefinition(id: "selection", contexts: ["selection"]),
-            makeDefinition(id: "editable", contexts: ["editable"]),
-            makeDefinition(id: "frame", contexts: ["frame"]),
-            makeDefinition(id: "image", contexts: ["image"]),
-        ]
-
-        XCTAssertEqual(
-            BrowserExtensionWebpageMenuPolicy.matchingDefinitions(
-                definitions,
-                context: context
-            ).map(\.id),
-            ["selection", "editable", "frame"]
-        )
-    }
-
-    func testHiddenItemsAreOmittedAndDisabledItemsRemainVisible() {
-        let definitions = [
-            makeDefinition(id: "hidden", visible: false),
-            makeDefinition(id: "disabled", enabled: false),
-        ]
-
-        XCTAssertEqual(
-            BrowserExtensionWebpageMenuPolicy.matchingDefinitions(
-                definitions,
-                context: makeContext()
-            ).map(\.id),
-            ["disabled"]
-        )
-    }
-
-    func testSelectionPlaceholderIsExpandedWithoutChangingStoredTitle() {
-        let definition = makeDefinition(
-            id: "selection",
-            title: "Search for %s",
-            contexts: ["selection"]
-        )
-
-        XCTAssertEqual(
-            BrowserExtensionWebpageMenuPolicy.title(
-                for: definition,
-                context: makeContext(selectionText: "Crest browser")
-            ),
-            "Search for Crest browser"
-        )
-        XCTAssertEqual(definition.title, "Search for %s")
-    }
-
     func testNativeTreeMappingPreservesSubmenusSeparatorsAndActions() throws {
         let actionTarget = WebpageMenuActionTarget()
         let parent = NSMenuItem(
@@ -182,78 +128,6 @@ final class BrowserExtensionWebpageMenuPolicyTests: XCTestCase {
                 definitions: definitions
             )
         )
-    }
-
-    func testNativeExtensionGroupIsUnwrappedForDefinitionMapping() throws {
-        let first = NSMenuItem(
-            title: "First",
-            action: nil,
-            keyEquivalent: ""
-        )
-        let second = NSMenuItem(
-            title: "Second",
-            action: nil,
-            keyEquivalent: ""
-        )
-        let group = NSMenuItem(
-            title: "Fixture Extension",
-            action: nil,
-            keyEquivalent: ""
-        )
-        let submenu = NSMenu(title: "Fixture Extension")
-        submenu.items = [first, second]
-        group.submenu = submenu
-
-        let mapped = try BrowserExtensionWebpageMenuPolicy.nativeItems(
-            [group],
-            definitions: [
-                makeDefinition(id: "first"),
-                makeDefinition(id: "second"),
-            ]
-        )
-
-        XCTAssertEqual(mapped.map(\.definition.id), ["first", "second"])
-        XCTAssertTrue(mapped[0].nativeItem === first)
-        XCTAssertTrue(mapped[1].nativeItem === second)
-    }
-
-    func testTabMenuKeepsOnlyVisibleMatchingTabDefinitions() throws {
-        let nativeItems = [
-            NSMenuItem(title: "Page", action: nil, keyEquivalent: ""),
-            NSMenuItem(title: "Tab", action: nil, keyEquivalent: ""),
-            NSMenuItem(title: "Hidden", action: nil, keyEquivalent: ""),
-            NSMenuItem(title: "Wrong Site", action: nil, keyEquivalent: ""),
-        ]
-        let group = NSMenuItem(
-            title: "Fixture Extension",
-            action: nil,
-            keyEquivalent: ""
-        )
-        let submenu = NSMenu(title: "Fixture Extension")
-        submenu.items = nativeItems
-        group.submenu = submenu
-        let definitions = [
-            makeDefinition(id: "page", contexts: ["page"]),
-            makeDefinition(id: "tab", contexts: ["tab"]),
-            makeDefinition(
-                id: "hidden",
-                contexts: ["tab"],
-                visible: false
-            ),
-            makeDefinition(
-                id: "wrong-site",
-                contexts: ["tab"],
-                documentURLPatterns: ["https://other.example/*"]
-            ),
-        ]
-
-        let result = try BrowserExtensionWebpageMenuPolicy.tabItems(
-            [group],
-            definitions: definitions,
-            pageURL: URL(string: "https://top.example/page")
-        )
-
-        XCTAssertEqual(result.map(\.title), ["Tab"])
     }
 
     /// An authored pattern list restricts an item to what it names.

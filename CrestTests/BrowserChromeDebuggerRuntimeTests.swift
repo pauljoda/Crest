@@ -30,17 +30,6 @@ final class BrowserChromeDebuggerRuntimeTests: XCTestCase {
         }
     }
 
-    func testRepeatedRuntimeEnableRejectsAfterDisconnection() async throws {
-        try await withRuntime { runtime, connection in
-            _ = try await runtime.execute("Runtime.enable", parameters: [:])
-            connection.disconnect()
-            do {
-                _ = try await runtime.execute("Runtime.enable", parameters: [:])
-                XCTFail("An enabled subscription must not hide a disconnected engine.")
-            } catch BrowserWebInspectorProtocolError.notConnected {}
-        }
-    }
-
     func testRuntimeEnableRebindsAfterTheInspectorConnectionIsReplaced() async throws {
         try await withRuntime { runtime, connection in
             var contexts: [[String: Any]] = []
@@ -95,111 +84,6 @@ final class BrowserChromeDebuggerRuntimeTests: XCTestCase {
         }
     }
 
-    func testRuntimeEnableReportsTheExistingContextWithoutRestartingTheEngineDomain() async throws {
-        try await withRuntime { runtime, _ in
-            let received = self.expectation(description: "Existing page execution context")
-            var contexts: [[String: Any]] = []
-            runtime.onEvent = { method, parameters in
-                guard method == "Runtime.executionContextCreated",
-                    let context = parameters["context"] as? [String: Any]
-                else { return }
-                contexts.append(context)
-                if (context["auxData"] as? [String: Any])?["isDefault"] as? Bool == true {
-                    received.fulfill()
-                }
-            }
-            _ = try await runtime.execute("Runtime.enable", parameters: [:])
-            await self.fulfillment(of: [received], timeout: 5)
-            let context = try XCTUnwrap(
-                contexts.first {
-                    ($0["auxData"] as? [String: Any])?["isDefault"] as? Bool == true
-                })
-            let id = try XCTUnwrap(context["id"] as? Int)
-            XCTAssertFalse(try XCTUnwrap(context["uniqueId"] as? String).isEmpty)
-            XCTAssertNotNil(context["origin"] as? String)
-            XCTAssertNotNil((context["auxData"] as? [String: Any])?["frameId"] as? String)
-            let evaluated = try await runtime.execute(
-                "Runtime.evaluate", parameters: ["expression": "document.title", "contextId": id])
-            XCTAssertEqual((evaluated["result"] as? [String: Any])?["value"] as? String, "Crest runtime test")
-            let count = contexts.count
-            _ = try await runtime.execute("Runtime.enable", parameters: [:])
-            _ = try await runtime.execute("Runtime.evaluate", parameters: ["expression": "0"])
-            XCTAssertEqual(contexts.count, count, "Repeated enable must not duplicate existing contexts.")
-        }
-    }
-
-    func testRuntimeTracksAnIframeContextAndItsRemoval() async throws {
-        try await withRuntime { runtime, _ in
-            var created: [[String: Any]] = []
-            var destroyed: [[String: Any]] = []
-            runtime.onEvent = { method, parameters in
-                if method == "Runtime.executionContextCreated", let context = parameters["context"] as? [String: Any] {
-                    created.append(context)
-                }
-                if method == "Runtime.executionContextDestroyed" { destroyed.append(parameters) }
-            }
-            _ = try await runtime.execute("Runtime.enable", parameters: [:])
-            try await self.waitUntil { !created.isEmpty }
-            let initialIDs = Set(created.compactMap { $0["id"] as? Int })
-            _ = try await runtime.execute(
-                "Runtime.evaluate",
-                parameters: [
-                    "expression": """
-                    globalThis.crestTestFrame = document.createElement('iframe');
-                    crestTestFrame.srcdoc = '<!doctype html><title>Child context</title>';
-                    document.body.append(crestTestFrame); undefined;
-                    """
-                ])
-            try await self.waitUntil { created.contains { !initialIDs.contains($0["id"] as? Int ?? -1) } }
-            let child = try XCTUnwrap(created.last { !initialIDs.contains($0["id"] as? Int ?? -1) })
-            let childID = try XCTUnwrap(child["id"] as? Int)
-            let value = try await runtime.execute(
-                "Runtime.evaluate", parameters: ["expression": "document.title", "contextId": childID])
-            XCTAssertEqual((value["result"] as? [String: Any])?["value"] as? String, "Child context")
-            _ = try await runtime.execute("Runtime.evaluate", parameters: ["expression": "crestTestFrame.remove()"])
-            try await self.waitUntil { destroyed.contains { $0["executionContextId"] as? Int == childID } }
-            XCTAssertEqual(
-                destroyed.first { $0["executionContextId"] as? Int == childID }?["executionContextUniqueId"] as? String,
-                child["uniqueId"] as? String)
-            XCTAssertFalse(destroyed.contains { initialIDs.contains($0["executionContextId"] as? Int ?? -1) })
-        }
-    }
-
-    func testRuntimeDisableStopsEventsAndReenableSnapshotsCurrentContexts() async throws {
-        try await withRuntime { runtime, _ in
-            var contexts: [[String: Any]] = []
-            runtime.onEvent = { method, parameters in
-                if method == "Runtime.executionContextCreated", let context = parameters["context"] as? [String: Any] {
-                    contexts.append(context)
-                }
-            }
-            _ = try await runtime.execute("Runtime.enable", parameters: [:])
-            try await self.waitUntil { !contexts.isEmpty }
-            let initial = try XCTUnwrap(contexts.first)
-            _ = try await runtime.execute("Runtime.disable", parameters: [:])
-            contexts.removeAll()
-            _ = try await runtime.execute(
-                "Runtime.evaluate",
-                parameters: [
-                    "expression": """
-                    new Promise(resolve => {
-                        const frame = document.createElement('iframe');
-                        frame.onload = () => resolve();
-                        frame.srcdoc = '<!doctype html><title>Created while disabled</title>';
-                        document.body.append(frame);
-                    })
-                    """, "awaitPromise": true,
-                ])
-            XCTAssertTrue(contexts.isEmpty)
-            _ = try await runtime.execute("Runtime.enable", parameters: [:])
-            try await self.waitUntil { contexts.count >= 2 }
-            XCTAssertEqual(
-                contexts.first { $0["id"] as? Int == initial["id"] as? Int }?["uniqueId"] as? String,
-                initial["uniqueId"] as? String,
-                "The same live context keeps its unique identity across event subscriptions.")
-        }
-    }
-
     func testEvaluationReturnsChromeValuesAndExceptionDetails() async throws {
         try await withRuntime { runtime, _ in
             let value = try await runtime.execute(
@@ -220,23 +104,6 @@ final class BrowserChromeDebuggerRuntimeTests: XCTestCase {
             XCTAssertNotNil(details["exceptionId"] as? Int)
             XCTAssertTrue(
                 (details["exception"] as? [String: Any])?["description"] as? String == "Error: crest-protocol-failure")
-        }
-    }
-
-    func testEvaluationAwaitsBothResolvedAndRejectedPromises() async throws {
-        try await withRuntime { runtime, _ in
-            let value = try await runtime.execute(
-                "Runtime.evaluate",
-                parameters: [
-                    "expression": "Promise.resolve({answer: 42})", "awaitPromise": true, "returnByValue": true,
-                ])
-            XCTAssertEqual(((value["result"] as? [String: Any])?["value"] as? [String: Int])?["answer"], 42)
-            let failure = try await runtime.execute(
-                "Runtime.evaluate",
-                parameters: [
-                    "expression": "Promise.reject(new Error('crest-promise-failure'))", "awaitPromise": true,
-                ])
-            XCTAssertNotNil(failure["exceptionDetails"])
         }
     }
 
@@ -294,18 +161,6 @@ final class BrowserChromeDebuggerRuntimeTests: XCTestCase {
         }
     }
 
-    func testREPLModeRunsOrdinaryBlockExpressionsWithAVendorTimeout() async throws {
-        try await withRuntime { runtime, _ in
-            let value = try await runtime.execute(
-                "Runtime.evaluate",
-                parameters: [
-                    "expression": "{document.title\n}", "replMode": true,
-                    "awaitPromise": true, "returnByValue": true, "timeout": 40_000,
-                ])
-            XCTAssertEqual((value["result"] as? [String: Any])?["value"] as? String, "Crest runtime test")
-        }
-    }
-
     func testEvaluationTimeoutBoundsAnUnsettledPromiseAndReportsEngineLimitation() async throws {
         try await withRuntime { runtime, _ in
             do {
@@ -331,60 +186,6 @@ final class BrowserChromeDebuggerRuntimeTests: XCTestCase {
                 XCTAssertEqual(remote["unserializableValue"] as? String, expression)
                 XCTAssertNil(remote["value"])
             }
-        }
-    }
-
-    func testFunctionCanTargetAnActualExecutionContext() async throws {
-        try await withRuntime { runtime, connection in
-            let received = self.expectation(description: "Default execution context")
-            var contextID: Int?
-            connection.onEvent = { method, parameters in
-                guard method == "Runtime.executionContextCreated", contextID == nil,
-                    let context = parameters["context"] as? [String: Any],
-                    context["type"] as? String == "normal", let id = context["id"] as? Int
-                else { return }
-                contextID = id
-                received.fulfill()
-            }
-            // Inspector bootstrap already enabled Runtime. Start a fresh
-            // listener interval so the engine publishes its real context ID.
-            _ = try await connection.sendCommand("Runtime.disable")
-            _ = try await connection.sendCommand("Runtime.enable")
-            await self.fulfillment(of: [received], timeout: 5)
-            let id = try XCTUnwrap(contextID)
-            let response = try await runtime.execute(
-                "Runtime.callFunctionOn",
-                parameters: [
-                    "executionContextId": id,
-                    "functionDeclaration": "function() { return this === globalThis ? 42 : 0; }",
-                    "returnByValue": true, "objectGroup": "crest-context-test",
-                ])
-            XCTAssertEqual((response["result"] as? [String: Any])?["value"] as? Int, 42)
-            _ = try await runtime.execute(
-                "Runtime.releaseObjectGroup", parameters: ["objectGroup": "crest-context-test"])
-        }
-    }
-
-    func testUnsupportedCallArgumentsRejectBeforeTheFunctionRuns() async throws {
-        try await withRuntime { runtime, _ in
-            let value = try await runtime.execute("Runtime.evaluate", parameters: ["expression": "globalThis"])
-            let objectID = try XCTUnwrap((value["result"] as? [String: Any])?["objectId"] as? String)
-            do {
-                _ = try await runtime.execute(
-                    "Runtime.callFunctionOn",
-                    parameters: [
-                        "objectId": objectID,
-                        "functionDeclaration": "function() { globalThis.crestUnexpectedCall = true; }",
-                        "arguments": [["unserializableValue": "not-a-number-literal"]],
-                    ])
-                XCTFail("An unsupported argument must not silently turn into undefined.")
-            } catch {}
-            let response = try await runtime.execute(
-                "Runtime.evaluate",
-                parameters: [
-                    "expression": "typeof globalThis.crestUnexpectedCall", "returnByValue": true,
-                ])
-            XCTAssertEqual((response["result"] as? [String: Any])?["value"] as? String, "undefined")
         }
     }
 

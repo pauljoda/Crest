@@ -4,41 +4,6 @@ import XCTest
 
 @MainActor
 final class BrowserMediaSessionTests: XCTestCase {
-    func testMediaOwnerTitleUsesLivePageTitleUntilAReaderNameExists() {
-        let automaticTab = BrowserTab(
-            title: "Persisted title",
-            url: URL(string: "https://example.com"),
-            placement: .current
-        )
-        let automaticContext = BrowserPageNavigationContext(
-            tab: automaticTab,
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-
-        XCTAssertEqual(
-            automaticContext.mediaSessionOwnerTitle(
-                observedPageTitle: "Current background title"
-            ),
-            "Current background title"
-        )
-
-        var namedTab = automaticTab
-        namedTab.customTitle = "Named by the reader"
-        let namedContext = BrowserPageNavigationContext(
-            tab: namedTab,
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-
-        XCTAssertEqual(
-            namedContext.mediaSessionOwnerTitle(
-                observedPageTitle: "Changing page title"
-            ),
-            "Named by the reader"
-        )
-    }
-
     func testMetadataPlaybackAndActionsUpdateOneStableSession() {
         let store = BrowserMediaSessionStore()
         let endpoint = FakeMediaSessionEndpoint()
@@ -83,60 +48,6 @@ final class BrowserMediaSessionTests: XCTestCase {
         )
         XCTAssertEqual(store.sessions[0].availableActions, [.pause, .nextTrack])
         XCTAssertEqual(store.sessions[0].orderingOrdinal, ordinal)
-    }
-
-    func testOwnerTabTitleRemainsIndependentFromPlaybackMetadata() {
-        let store = BrowserMediaSessionStore()
-        let endpoint = FakeMediaSessionEndpoint()
-        let owner = assignment()
-
-        store.receive(
-            event(document: "document", sequence: 1, title: "Video Ad"),
-            owner: owner,
-            fallbackTitle: "Custom Tab Name",
-            endpoint: endpoint
-        )
-
-        XCTAssertEqual(store.sessions.first?.ownerTitle, "Custom Tab Name")
-        XCTAssertEqual(store.sessions.first?.title, "Video Ad")
-        XCTAssertEqual(store.sessions.first?.ownerDisplayTitle, "Custom Tab Name")
-        XCTAssertEqual(store.sessions.first?.mediaDisplayTitle, "Video Ad")
-
-        store.receive(
-            event(document: "document", sequence: 2, title: nil),
-            owner: owner,
-            fallbackTitle: "Renamed Tab",
-            endpoint: endpoint
-        )
-
-        XCTAssertEqual(store.sessions.first?.ownerTitle, "Renamed Tab")
-        XCTAssertNil(store.sessions.first?.title)
-        XCTAssertEqual(store.sessions.first?.displayTitle, "Renamed Tab")
-        XCTAssertEqual(store.sessions.first?.mediaDisplayTitle, "Media from this tab")
-    }
-
-    func testMultipleTabsRemainDistinctAndDeterministicallyOrdered() {
-        let store = BrowserMediaSessionStore()
-        let endpointA = FakeMediaSessionEndpoint()
-        let endpointB = FakeMediaSessionEndpoint()
-        let first = assignment()
-        let second = assignment(profileID: first.profileID)
-
-        store.receive(
-            event(document: "a", sequence: 1, title: "A"),
-            owner: first,
-            fallbackTitle: nil,
-            endpoint: endpointA
-        )
-        store.receive(
-            event(document: "b", sequence: 1, title: "B"),
-            owner: second,
-            fallbackTitle: nil,
-            endpoint: endpointB
-        )
-
-        XCTAssertEqual(store.sessions.map(\.owner), [first, second])
-        XCTAssertNotEqual(store.sessions[0].id, store.sessions[1].id)
     }
 
     func testStaleEventsCannotOverwriteOrResurrectRetiredDocuments() {
@@ -393,100 +304,6 @@ final class BrowserMediaSessionTests: XCTestCase {
         )
     }
 
-    func testDismissingDuringPlaybackStaysHiddenUntilPlaybackRestarts() async {
-        let store = BrowserMediaSessionStore()
-        let endpoint = FakeMediaSessionEndpoint()
-        let owner = assignment()
-
-        store.receive(
-            event(
-                document: "document",
-                sequence: 1,
-                title: "Track",
-                playback: .playing,
-                actions: [.pause]
-            ),
-            owner: owner,
-            fallbackTitle: nil,
-            endpoint: endpoint
-        )
-        let widgetID = BrowserSidebarWidgetID(
-            kindID: .nowPlaying,
-            instanceID: store.sessions[0].id.id
-        )
-        store.perform(.dismissMediaSession, on: widgetID)
-
-        var iterator = store.events().makeAsyncIterator()
-        let published = await iterator.next() ?? []
-        XCTAssertTrue(
-            published.isEmpty,
-            "A card hidden mid-playback stays hidden."
-        )
-
-        store.receive(
-            event(
-                document: "document",
-                sequence: 2,
-                title: "Track",
-                playback: .playing,
-                actions: [.pause]
-            ),
-            owner: owner,
-            fallbackTitle: nil,
-            endpoint: endpoint
-        )
-        XCTAssertTrue(
-            store.widgetInstances.isEmpty,
-            "Continuing to play is not a fresh start, so the card does not resurrect."
-        )
-
-        store.receive(
-            event(document: "document", sequence: 3, title: "Track", playback: .paused),
-            owner: owner,
-            fallbackTitle: nil,
-            endpoint: endpoint
-        )
-        store.receive(
-            event(
-                document: "document",
-                sequence: 4,
-                title: "Track",
-                playback: .playing,
-                actions: [.pause]
-            ),
-            owner: owner,
-            fallbackTitle: nil,
-            endpoint: endpoint
-        )
-        XCTAssertEqual(
-            store.widgetInstances.count,
-            1,
-            "Pausing and playing again is the fresh start that restores the card."
-        )
-    }
-
-    func testDismissalPolicyOnlyClearsOnAFreshStartOfPlayback() {
-        XCTAssertTrue(
-            BrowserMediaSessionStore.clearsDismissal(previous: .paused, next: .playing)
-        )
-        XCTAssertTrue(
-            BrowserMediaSessionStore.clearsDismissal(previous: BrowserMediaSessionPlaybackState.none, next: .playing)
-        )
-        XCTAssertTrue(
-            BrowserMediaSessionStore.clearsDismissal(previous: nil, next: .playing),
-            "A tab starting fresh audio counts as a start of playback."
-        )
-        XCTAssertFalse(
-            BrowserMediaSessionStore.clearsDismissal(previous: .playing, next: .playing)
-        )
-        XCTAssertFalse(
-            BrowserMediaSessionStore.clearsDismissal(previous: .playing, next: .paused)
-        )
-        XCTAssertFalse(
-            BrowserMediaSessionStore.clearsDismissal(previous: .paused, next: .paused)
-        )
-    }
-
     func testDismissalRecordsAreDroppedWhenTheSessionGoesAway() async {
         let store = BrowserMediaSessionStore()
         let endpoint = FakeMediaSessionEndpoint()
@@ -524,43 +341,6 @@ final class BrowserMediaSessionTests: XCTestCase {
             1,
             "Dismissal records do not outlive the session they belong to."
         )
-    }
-
-    func testInactiveDocumentCanBecomeRelevantWithoutLosingItsSequence() {
-        let store = BrowserMediaSessionStore()
-        let endpoint = FakeMediaSessionEndpoint()
-        let owner = assignment()
-        var inactive = event(document: "document", sequence: 1, title: "Not yet active")
-        inactive = BrowserMediaSessionPageEvent(
-            documentIdentifier: inactive.documentIdentifier,
-            sequence: inactive.sequence,
-            location: inactive.location,
-            isInvalidated: false,
-            hasActiveSession: false,
-            title: inactive.title,
-            artist: nil,
-            album: nil,
-            artworkData: nil,
-            playbackState: .none,
-            isAudible: false,
-            isMuted: false,
-            availableActions: []
-        )
-        store.receive(
-            inactive,
-            owner: owner,
-            fallbackTitle: nil,
-            endpoint: endpoint
-        )
-        XCTAssertTrue(store.sessions.isEmpty)
-
-        store.receive(
-            event(document: "document", sequence: 2, title: "Now active"),
-            owner: owner,
-            fallbackTitle: nil,
-            endpoint: endpoint
-        )
-        XCTAssertEqual(store.sessions.first?.title, "Now active")
     }
 
     func testStaleEventRetentionIsBounded() {

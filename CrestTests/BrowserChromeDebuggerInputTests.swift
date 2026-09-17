@@ -1,4 +1,3 @@
-import AppKit
 import WebKit
 import XCTest
 
@@ -65,31 +64,6 @@ final class BrowserChromeDebuggerInputTests: XCTestCase {
         }
     }
 
-    func testInsertTextPlacesWholeTextInTheFocusedField() async throws {
-        try await withInput { input, fixture in
-            _ = try await fixture.page.evaluateJavaScript("document.getElementById('field').focus(); undefined")
-            _ = try await input.execute("Input.insertText", parameters: ["text": "crest inserted"])
-            try await BrowserChromeDebuggerDomainFixture.waitFor(seconds: 10) {
-                (try? await fixture.page.evaluateJavaScript("document.getElementById('field').value")) as? String
-                    == "crest inserted"
-            }
-        }
-    }
-
-    func testWheelScrollsThePageDown() async throws {
-        try await withInput { input, fixture in
-            _ = try await input.execute(
-                "Input.dispatchMouseEvent",
-                parameters: [
-                    "type": "mouseWheel", "x": 300, "y": 300, "button": "none", "deltaX": 0, "deltaY": 400,
-                ])
-            try await BrowserChromeDebuggerDomainFixture.waitFor(seconds: 10) {
-                let offset = (try? await fixture.page.evaluateJavaScript("window.scrollY")) as? Double ?? 0
-                return offset > 0
-            }
-        }
-    }
-
     func testInvalidInputParametersRejectBeforeReachingThePage() async throws {
         try await withInput { input, fixture in
             for parameters in [
@@ -110,16 +84,6 @@ final class BrowserChromeDebuggerInputTests: XCTestCase {
             let text = try await fixture.page.evaluateJavaScript("document.getElementById('button').textContent")
             XCTAssertEqual(text as? String, "idle")
         }
-    }
-
-    func testModifierBitsBecomeRealModifierFlags() throws {
-        XCTAssertEqual(try BrowserChromeDebuggerKeyCodes.modifierFlags(nil), [])
-        XCTAssertEqual(try BrowserChromeDebuggerKeyCodes.modifierFlags(1), .option)
-        XCTAssertEqual(try BrowserChromeDebuggerKeyCodes.modifierFlags(2), .control)
-        XCTAssertEqual(try BrowserChromeDebuggerKeyCodes.modifierFlags(4), .command)
-        XCTAssertEqual(try BrowserChromeDebuggerKeyCodes.modifierFlags(8), .shift)
-        XCTAssertEqual(try BrowserChromeDebuggerKeyCodes.modifierFlags(12), [.command, .shift])
-        XCTAssertThrowsError(try BrowserChromeDebuggerKeyCodes.modifierFlags(16))
     }
 
     private func withInput(

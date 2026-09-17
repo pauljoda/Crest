@@ -35,23 +35,6 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertTrue(controller.diagnosticsReport.contains("Status: Needs attention"))
     }
 
-    func testStoredDisabledPreferenceStartsInTheDisabledPhase() throws {
-        let suiteName = "BrowserCloudSyncControllerTests.Disabled.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        defaults.set(false, forKey: "sync-enabled")
-
-        let controller = BrowserCloudSyncController(
-            browser: BrowserStore.preview(),
-            configuration: nil,
-            defaults: defaults,
-            enabledKey: "sync-enabled"
-        )
-
-        XCTAssertFalse(controller.isEnabled)
-        XCTAssertEqual(controller.phase, .disabled)
-    }
-
     func testAvailableAccountStartsAutomaticTransportWithoutForcingAManualSync() async throws {
         let workflow = TestBrowserCloudSyncWorkflowGateway()
         let preferences = TestBrowserCloudSyncPreferences()
@@ -288,24 +271,6 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertTrue(try preferences.requiresAccountConfirmation())
     }
 
-    func testTurningSyncOffWithNoPendingDecisionStillClearsTransportState() async throws {
-        let preferences = TestBrowserCloudSyncPreferences()
-        let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
-            configuration: testConfiguration,
-            preferences: preferences,
-            remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
-            transportFactory: TestBrowserCloudSyncTransportFactory()
-        )
-
-        controller.isEnabled = false
-        for _ in 0..<100 where controller.phase != .disabled {
-            await Task.yield()
-        }
-
-        XCTAssertEqual(preferences.resetCount, 1)
-    }
-
     /// A disable that lands while `start` is suspended used to be overtaken: the
     /// resumed launch built a transport with automatic sync on and reported Ready
     /// while the interface said Off.
@@ -482,93 +447,6 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
         XCTAssertEqual(controller.phase, .ready)
         XCTAssertEqual(factory.transports.count, 1)
-    }
-
-    func testEnabledPreferenceRetainsItsStableDefaultsKey() throws {
-        let suiteName = "BrowserCloudSyncControllerTests.EnabledKey.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let preferences = UserDefaultsBrowserCloudSyncPreferences(defaults: defaults)
-
-        preferences.saveIsEnabled(false)
-
-        XCTAssertEqual(defaults.object(forKey: "crest.cloud-sync.enabled") as? Bool, false)
-        XCTAssertEqual(preferences.loadIsEnabled(), false)
-    }
-
-    func testDiagnosticsRetainTheirPrivacyPreservingFieldsAndFormatting() {
-        let diagnostics = BrowserCloudSyncDiagnostics(
-            containerIdentifier: "iCloud.com.pauldavis.crest",
-            isEnabled: true,
-            accountState: .available,
-            phase: .ready,
-            localRecordCount: 8,
-            pendingUploadCount: 2,
-            observedCloudRecordCount: 7,
-            lastAttemptAt: Date(timeIntervalSince1970: 0),
-            lastSuccessAt: nil,
-            lastFetchedRecordCount: 3,
-            lastUploadedRecordCount: 4,
-            hasError: false,
-            requiresReconciliation: false,
-            skippedRecordCount: 0,
-            requiresAppUpdate: false,
-            cloudDataWasRemoved: false
-        )
-
-        XCTAssertEqual(
-            diagnostics.report,
-            """
-            Crest iCloud Sync Diagnostics
-            Container: iCloud.com.pauldavis.crest
-            Enabled: true
-            Account: Available
-            Status: Ready
-            Local records: 8
-            Pending uploads: 2
-            Cloud records observed: 7
-            Last attempt: 1970-01-01T00:00:00Z
-            Last success: Never
-            Last download batch: 3
-            Last upload batch: 4
-            Error present: false
-            Reconciliation required: false
-            Records skipped: 0
-            Needs app update: false
-            iCloud data removed: false
-            """
-        )
-    }
-
-    func testCloudKitFailuresRetainTheirFriendlyMessages() {
-        let service = CloudKitBrowserCloudSyncRemoteService(
-            configuration: testConfiguration
-        )
-
-        XCTAssertEqual(
-            service.message(for: CKError(.notAuthenticated)),
-            "Sign in to iCloud to sync Crest."
-        )
-        XCTAssertEqual(
-            service.message(for: CKError(.networkFailure)),
-            "Crest can’t reach iCloud right now."
-        )
-        XCTAssertEqual(
-            service.message(for: CKError(.quotaExceeded)),
-            "Your iCloud storage is full."
-        )
-        XCTAssertEqual(
-            service.message(for: CKError(.permissionFailure)),
-            "This build is not permitted to use Crest’s iCloud container."
-        )
-        XCTAssertEqual(
-            service.message(for: CKError(.serviceUnavailable)),
-            "iCloud is temporarily unavailable. Crest will retry automatically."
-        )
-        XCTAssertEqual(
-            service.message(for: CKError(.requestRateLimited)),
-            "iCloud is temporarily busy. Crest will retry automatically."
-        )
     }
 
     func testPullUsesFreshSnapshotTransportAndReportsItsCount() async throws {

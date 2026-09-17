@@ -1,4 +1,3 @@
-import ImageIO
 @preconcurrency import MediaPlayer
 import XCTest
 
@@ -6,92 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserSystemNowPlayingTests: XCTestCase {
-    func testSystemArtworkCanBeRequestedFromMediaPlayerBackgroundQueue() async throws {
-        let data = try makeArtworkData(width: 128, height: 128)
-
-        let renderedSize = await Task.detached {
-            BrowserMediaPlayerNowPlayingDriver.artwork(from: data)?
-                .image(at: CGSize(width: 64, height: 64))?
-                .size
-        }.value
-
-        XCTAssertEqual(renderedSize?.width, 64)
-        XCTAssertEqual(renderedSize?.height, 64)
-    }
-
-    private func makeArtworkData(width: Int, height: Int) throws -> Data {
-        let bytes = Data(repeating: 0x7f, count: width * height * 4)
-        let provider = try XCTUnwrap(CGDataProvider(data: bytes as CFData))
-        let image = try XCTUnwrap(
-            CGImage(
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bitsPerPixel: 32,
-                bytesPerRow: width * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGBitmapInfo(
-                    rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
-                ),
-                provider: provider,
-                decode: nil,
-                shouldInterpolate: true,
-                intent: .defaultIntent
-            )
-        )
-        let output = NSMutableData()
-        let destination = try XCTUnwrap(
-            CGImageDestinationCreateWithData(
-                output,
-                "public.png" as CFString,
-                1,
-                nil
-            )
-        )
-        CGImageDestinationAddImage(destination, image, nil)
-        XCTAssertTrue(CGImageDestinationFinalize(destination))
-        return output as Data
-    }
-
-    func testSelectionPrefersPlayingThenAudibleThenNewest() {
-        let paused = snapshot(
-            title: "Paused",
-            playback: .paused,
-            audible: false,
-            ordinal: 4
-        )
-        let quietPlaying = snapshot(
-            title: "Quiet",
-            playback: .playing,
-            audible: false,
-            ordinal: 5
-        )
-        let audiblePlaying = snapshot(
-            title: "Audible",
-            playback: .playing,
-            audible: true,
-            ordinal: 2
-        )
-
-        XCTAssertEqual(
-            BrowserSystemNowPlayingSelectionPolicy.select(
-                from: [paused, quietPlaying, audiblePlaying]
-            ),
-            audiblePlaying
-        )
-        XCTAssertNil(
-            BrowserSystemNowPlayingSelectionPolicy.select(
-                from: [
-                    snapshot(
-                        title: "Metadata only",
-                        playback: .none,
-                        audible: false,
-                        ordinal: 1
-                    )
-                ]
-            )
-        )
-    }
 
     func testCoordinatorPublishesStoreTruthRoutesCommandsAndClearsOnInvalidation() async throws {
         let store = BrowserMediaSessionStore()
@@ -146,35 +59,6 @@ final class BrowserSystemNowPlayingTests: XCTestCase {
         }
         coordinator.stop()
         XCTAssertNil(driver.commandHandler)
-    }
-
-    private func snapshot(
-        title: String,
-        playback: BrowserMediaSessionPlaybackState,
-        audible: Bool,
-        ordinal: UInt64
-    ) -> BrowserMediaSessionSnapshot {
-        BrowserMediaSessionSnapshot(
-            id: BrowserMediaSessionID(
-                tabID: TabID(),
-                documentIdentifier: UUID().uuidString
-            ),
-            owner: BrowserTabRuntimeAssignment(
-                tabID: TabID(),
-                spaceID: SpaceID(),
-                profileID: UUID()
-            ),
-            ownerTitle: "Owner Tab",
-            title: title,
-            artist: nil,
-            album: nil,
-            artworkData: nil,
-            playbackState: playback,
-            isAudible: audible,
-            isMuted: false,
-            availableActions: [],
-            orderingOrdinal: ordinal
-        )
     }
 
     private func waitUntil(

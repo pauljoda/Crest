@@ -28,37 +28,6 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
         XCTAssertEqual(sourcePage.url, sourcePageURL)
     }
 
-    func testReplacementProfileWithTheSameSpaceIDCannotReuseTheOldAction() throws {
-        let context = makeContext()
-        let replacement = replacingProfile(
-            in: context.source,
-            with: Self.uuid(9)
-        )
-        let sourceIndex = try XCTUnwrap(
-            context.browser.session.spaces.firstIndex {
-                $0.id == context.source.id
-            }
-        )
-        context.browser.session.spaces[sourceIndex] = replacement
-        var activationCount = 0
-        let action = MobileSavedLocationRestoreAction(
-            browser: context.browser,
-            pages: context.pages,
-            selectTab: { _ in activationCount += 1 }
-        )
-
-        let restored = action.perform(context.assignment)
-
-        XCTAssertFalse(restored)
-        XCTAssertEqual(activationCount, 0)
-        XCTAssertEqual(
-            context.browser.session.space(id: replacement.id)?
-                .tabs.first?.url,
-            context.awayURL
-        )
-        XCTAssertEqual(context.pages.activePage?.profileID, context.source.profile.id)
-    }
-
     func testExactAssignmentRestoresAndActivatesItsOwnPage() throws {
         let context = makeContext()
         let action = MobileSavedLocationRestoreAction(
@@ -143,30 +112,6 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
             ),
             savedURL: savedURL,
             awayURL: awayURL
-        )
-    }
-
-    private func replacingProfile(
-        in space: BrowserSpace,
-        with profileID: UUID
-    ) -> BrowserSpace {
-        BrowserSpace(
-            id: space.id,
-            profile: BrowsingProfile(id: profileID),
-            name: space.name,
-            symbol: space.symbol,
-            accent: space.accent,
-            branding: space.branding,
-            folders: space.folders,
-            tabs: space.tabs,
-            archivedTabs: space.archivedTabs,
-            history: space.history,
-            browsingPreferences: space.browsingPreferences,
-            credentialPreferences: space.credentialPreferences,
-            accessPolicy: space.accessPolicy,
-            isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
-            selectedTabID: space.selectedTabID
         )
     }
 

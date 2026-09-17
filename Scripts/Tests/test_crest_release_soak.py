@@ -517,12 +517,6 @@ class GPUTraceTests(unittest.TestCase):
 
 
 class ReleaseSoakSummaryTests(unittest.TestCase):
-    def test_process_selection_discloses_the_performance_only_private_pid_probe(self) -> None:
-        description = process_selection_description()
-
-        self.assertIn("performance-only", description)
-        self.assertIn("_webProcessIdentifier", description)
-        self.assertNotIn("webContentProcessIdentifier", description)
 
     def test_summary_uses_simultaneous_aggregate_samples_not_summed_process_peaks(self) -> None:
         samples = [

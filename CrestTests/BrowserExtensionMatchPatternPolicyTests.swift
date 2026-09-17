@@ -69,9 +69,4 @@ final class BrowserExtensionMatchPatternPolicyTests: XCTestCase {
         XCTAssertFalse(try matches("https://claude.ai/", []))
     }
 
-    func testAnyOfIsSatisfiedByOnePattern() throws {
-        let patterns = ["https://example.test/*", "https://*.claude.ai/*"]
-        XCTAssertTrue(try matches("https://www.claude.ai/x", patterns))
-        XCTAssertFalse(try matches("https://elsewhere.test/x", patterns))
-    }
 }

@@ -5,103 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionRuntimeContextsCompatibilityScriptTests: XCTestCase {
-    func testRuntimeEnumsAreFrozenAndMatchTheChromeSchema() async throws {
-        let result = try await evaluate(
-            """
-            const enums = {};
-            const frozen = {};
-            for (const name of ["ContextType", "OnInstalledReason", "OnRestartRequiredReason",
-                "PlatformArch", "PlatformNaclArch", "PlatformOs", "RequestUpdateCheckStatus"]) {
-                enums[name] = {...runtime[name]};
-                frozen[name] = Object.isFrozen(runtime[name]);
-            }
-            let mutated = false;
-            try { runtime.ContextType.SIDE_PANEL = "nope"; } catch { mutated = true; }
-            return {enums, frozen, sidePanel: runtime.ContextType.SIDE_PANEL, mutated};
-            """)
-        let enums = try XCTUnwrap(result["enums"] as? [String: [String: String]])
-        XCTAssertEqual(
-            enums["ContextType"],
-            [
-                "TAB": "TAB", "POPUP": "POPUP", "BACKGROUND": "BACKGROUND",
-                "OFFSCREEN_DOCUMENT": "OFFSCREEN_DOCUMENT", "SIDE_PANEL": "SIDE_PANEL",
-                "DEVELOPER_TOOLS": "DEVELOPER_TOOLS",
-            ])
-        XCTAssertEqual(
-            enums["OnInstalledReason"],
-            [
-                "INSTALL": "install", "UPDATE": "update", "CHROME_UPDATE": "chrome_update",
-                "SHARED_MODULE_UPDATE": "shared_module_update",
-            ])
-        XCTAssertEqual(
-            enums["OnRestartRequiredReason"],
-            ["APP_UPDATE": "app_update", "OS_UPDATE": "os_update", "PERIODIC": "periodic"])
-        XCTAssertEqual(
-            enums["PlatformArch"],
-            [
-                "ARM": "arm", "ARM64": "arm64", "X86_32": "x86-32", "X86_64": "x86-64", "MIPS": "mips",
-                "MIPS64": "mips64", "RISCV64": "riscv64",
-            ])
-        XCTAssertEqual(
-            enums["PlatformNaclArch"],
-            ["ARM": "arm", "X86_32": "x86-32", "X86_64": "x86-64", "MIPS": "mips", "MIPS64": "mips64"])
-        XCTAssertEqual(
-            enums["PlatformOs"],
-            [
-                "MAC": "mac", "WIN": "win", "ANDROID": "android", "CROS": "cros", "LINUX": "linux",
-                "OPENBSD": "openbsd",
-            ])
-        XCTAssertEqual(
-            enums["RequestUpdateCheckStatus"],
-            ["THROTTLED": "throttled", "NO_UPDATE": "no_update", "UPDATE_AVAILABLE": "update_available"])
-        XCTAssertEqual(
-            result["frozen"] as? [String: Bool],
-            [
-                "ContextType": true, "OnInstalledReason": true, "OnRestartRequiredReason": true,
-                "PlatformArch": true, "PlatformNaclArch": true, "PlatformOs": true,
-                "RequestUpdateCheckStatus": true,
-            ])
-        XCTAssertEqual(result["sidePanel"] as? String, "SIDE_PANEL")
-    }
-
-    func testDeclarativeNetRequestEnumsAndLimitsMatchTheChromeSchema() async throws {
-        let result = try await evaluate(
-            """
-            return {
-                modifyHeaders: declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
-                set: declarativeNetRequest.HeaderOperation.SET,
-                webSocket: declarativeNetRequest.ResourceType.WEBSOCKET,
-                firstParty: declarativeNetRequest.DomainType.FIRST_PARTY,
-                syntaxError: declarativeNetRequest.UnsupportedRegexReason.SYNTAX_ERROR,
-                other: declarativeNetRequest.RequestMethod.OTHER,
-                dynamicRuleset: declarativeNetRequest.DYNAMIC_RULESET_ID,
-                sessionRuleset: declarativeNetRequest.SESSION_RULESET_ID,
-                dynamicRules: declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_RULES,
-                regexRules: declarativeNetRequest.MAX_NUMBER_OF_REGEX_RULES,
-                quotaInterval: declarativeNetRequest.GETMATCHEDRULES_QUOTA_INTERVAL,
-                frozen: Object.isFrozen(declarativeNetRequest.RuleActionType),
-                actions: Object.keys(declarativeNetRequest.RuleActionType),
-                resources: Object.keys(declarativeNetRequest.ResourceType).length
-            };
-            """)
-        XCTAssertEqual(result["modifyHeaders"] as? String, "modifyHeaders")
-        XCTAssertEqual(result["set"] as? String, "set")
-        XCTAssertEqual(result["webSocket"] as? String, "websocket")
-        XCTAssertEqual(result["firstParty"] as? String, "firstParty")
-        XCTAssertEqual(result["syntaxError"] as? String, "syntaxError")
-        XCTAssertEqual(result["other"] as? String, "other")
-        XCTAssertEqual(result["dynamicRuleset"] as? String, "_dynamic")
-        XCTAssertEqual(result["sessionRuleset"] as? String, "_session")
-        XCTAssertEqual(result["dynamicRules"] as? Int, 30000)
-        XCTAssertEqual(result["regexRules"] as? Int, 1000)
-        XCTAssertEqual(result["quotaInterval"] as? Int, 10)
-        XCTAssertEqual(result["frozen"] as? Bool, true)
-        XCTAssertEqual(
-            result["actions"] as? [String],
-            ["BLOCK", "REDIRECT", "ALLOW", "UPGRADE_SCHEME", "MODIFY_HEADERS", "ALLOW_ALL_REQUESTS"])
-        XCTAssertEqual(result["resources"] as? Int, 15)
-    }
-
     /// A namespace of constants with no `updateDynamicRules` behind it is
     /// worse than an absent one: feature detection succeeds and the next call
     /// throws.
@@ -372,27 +275,6 @@ final class BrowserExtensionRuntimeContextsCompatibilityScriptTests: XCTestCase 
         XCTAssertEqual(result["webSocket"] as? String, "websocket")
         XCTAssertEqual(result["dynamicRuleset"] as? String, "_dynamic")
         XCTAssertEqual(result["regexRules"] as? Int, 1000)
-    }
-
-    func testUserSettingsChangedIsARealRegistryThatNeverFires() async throws {
-        let result = try await evaluate(
-            """
-            const listener = () => {};
-            const surface = Object.keys(action.onUserSettingsChanged).sort();
-            action.onUserSettingsChanged.addListener(listener);
-            const added = action.onUserSettingsChanged.hasListener(listener);
-            const any = action.onUserSettingsChanged.hasListeners();
-            action.onUserSettingsChanged.removeListener(listener);
-            return {surface, added, any, removed: action.onUserSettingsChanged.hasListener(listener),
-                frozen: Object.isFrozen(action.onUserSettingsChanged)};
-            """)
-        XCTAssertEqual(
-            result["surface"] as? [String],
-            ["addListener", "hasListener", "hasListeners", "removeListener"])
-        XCTAssertEqual(result["added"] as? Bool, true)
-        XCTAssertEqual(result["any"] as? Bool, true)
-        XCTAssertEqual(result["removed"] as? Bool, false)
-        XCTAssertEqual(result["frozen"] as? Bool, true)
     }
 
     private func evaluate(

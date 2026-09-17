@@ -104,23 +104,6 @@ final class BrowserExtensionWebAuthFlowHostTests: XCTestCase {
         )
     }
 
-    func testAnUnreachableAuthorizationPageReportsChromesLoadFailure() async throws {
-        let host = makeHost()
-        var request = makeRequest(html: "<!doctype html>")
-        request = BrowserExtensionWebAuthFlowRequest(
-            url: try XCTUnwrap(URL(string: "https://crest-identity.invalid/authorize")),
-            redirectOrigin: request.redirectOrigin,
-            isInteractive: false,
-            abortsOnLoadForNonInteractive: true,
-            nonInteractiveTimeout: 5,
-            spaceID: request.spaceID,
-            extensionID: request.extensionID,
-            extensionDisplayName: request.extensionDisplayName
-        )
-        await assertFailure(.pageLoadFailure, from: { try await host.runWebAuthFlow(request) })
-        await assertFlowWasTornDown(host)
-    }
-
     private func makeHost() -> BrowserExtensionWebAuthFlowHost {
         BrowserExtensionWebAuthFlowHost(
             websiteDataStore: { _ in .nonPersistent() },

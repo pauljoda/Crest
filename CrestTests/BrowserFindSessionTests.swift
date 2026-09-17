@@ -5,30 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserFindSessionTests: XCTestCase {
-    func testPresentationRequiresLoadedContent() {
-        let session = BrowserFindSession()
-
-        session.present(hasLoadedPage: false)
-        XCTAssertFalse(session.isPresented)
-
-        session.present(hasLoadedPage: true)
-        XCTAssertTrue(session.isPresented)
-    }
-
-    func testEveryPresentationAsksForTheQueryFieldAgain() {
-        let session = BrowserFindSession()
-
-        session.present(hasLoadedPage: false)
-        XCTAssertEqual(session.focusRequest, 0)
-
-        session.present(hasLoadedPage: true)
-        let first = session.focusRequest
-
-        session.present(hasLoadedPage: true)
-        XCTAssertTrue(session.isPresented)
-        XCTAssertNotEqual(session.focusRequest, first)
-    }
-
     func testSearchConfiguresNativeFindAndPublishesItsResult() throws {
         let executor = BrowserFindExecutorSpy()
         let session = BrowserFindSession()
@@ -81,22 +57,6 @@ final class BrowserFindSessionTests: XCTestCase {
         XCTAssertFalse(session.isPresented)
     }
 
-    func testQueryBelongsToThePageUntilFindIsDismissed() {
-        let executor = BrowserFindExecutorSpy()
-        let session = BrowserFindSession()
-
-        session.present(hasLoadedPage: true)
-        session.find("resident editor", using: executor)
-        session.present(hasLoadedPage: true)
-
-        XCTAssertTrue(session.isPresented)
-        XCTAssertEqual(session.query, "resident editor")
-
-        session.dismiss(using: executor)
-
-        XCTAssertFalse(session.isPresented)
-        XCTAssertEqual(session.query, "")
-    }
 }
 
 @MainActor

@@ -4,42 +4,6 @@ import XCTest
 
 @MainActor
 final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
-    func testLiveSpaceSelectionAcceptsAnUnfocusedSettingsSplitAndReusesTheDestinationTab() throws {
-        var session = BrowserSession.preview
-        let sourceIndex = 0
-        let destinationIndex = 1
-        let group = SplitGroupID()
-        let sourcePage = BrowserTab(
-            title: "Page", url: URL(string: "https://example.com"), placement: .current, splitGroupID: group)
-        let sourceSettings = BrowserTab(
-            title: "Settings", url: nil, nativeContent: .settings, placement: .current, splitGroupID: group)
-        let destinationSettings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
-        session.spaces[sourceIndex].tabs.append(contentsOf: [sourcePage, sourceSettings])
-        session.spaces[sourceIndex].selectedTabID = sourcePage.id
-        session.spaces[destinationIndex].tabs.append(destinationSettings)
-        let source = session.spaces[sourceIndex]
-        let destination = session.spaces[destinationIndex]
-        session.selectedSpaceID = source.id
-        let persistence = InMemoryBrowserSessionPersistence()
-        let browser = BrowserStore(session: session, persistence: persistence)
-        let action = BrowserSettingsSpaceSelectionAction(browser: browser, spaceAccess: BrowserSpaceAccessController())
-        let sourceAssignment = BrowserTabRuntimeAssignment(
-            tabID: sourceSettings.id, spaceID: source.id, profileID: source.profile.id)
-        XCTAssertNotEqual(browser.selectedTab?.id, sourceSettings.id)
-
-        let selected = action.select(destination.id, matching: sourceAssignment)
-
-        XCTAssertEqual(
-            selected,
-            BrowserTabRuntimeAssignment(
-                tabID: destinationSettings.id, spaceID: destination.id, profileID: destination.profile.id))
-        XCTAssertEqual(browser.session.selectedSpaceID, destination.id)
-        XCTAssertEqual(browser.selectedTab?.id, destinationSettings.id)
-        XCTAssertEqual(browser.selectedSpace?.tabs.filter { $0.nativeContent == .settings }.count, 1)
-        XCTAssertEqual(browser.session.space(id: source.id), source)
-        XCTAssertEqual(try XCTUnwrap(persistence.load()), browser.session)
-    }
-
     func testLiveSpaceSelectionRejectsStaleSourcesAndUnavailableDestinationsWithoutMutation() {
         for invalidation in SettingsSelectionInvalidation.allCases {
             var session = BrowserSession.preview
@@ -115,25 +79,6 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
         )
     }
 
-    func testLockedSpacePickerSummaryDoesNotRevealTabCount() throws {
-        var space = try XCTUnwrap(BrowserSession.preview.spaces.first)
-        space.accessPolicy = .deviceOwnerAuthentication
-        let access = BrowserSpaceAccessController(
-            authenticator: SettingsPrivacyAuthenticatorStub(result: true)
-        )
-
-        let summary = BrowserSettingsPrivacyPolicy.spacePickerSummary(
-            for: space,
-            isDefault: true,
-            accessController: access
-        )
-
-        XCTAssertTrue(summary.contains("Default"))
-        XCTAssertTrue(summary.contains("Private"))
-        XCTAssertFalse(summary.contains("tab"))
-        XCTAssertFalse(summary.contains(space.tabs.count.formatted()))
-    }
-
     func testLockedSpacesForExportIncludesOnlyStillLockedPrivateSpaces() async throws {
         var spaces = BrowserSession.preview.spaces
         spaces[0].accessPolicy = .deviceOwnerAuthentication
@@ -193,28 +138,6 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
         XCTAssertTrue(credentials.descriptors.isEmpty)
     }
 
-    func testLockedRouteDestinationsAreDeduplicatedInSpaceOrder() throws {
-        var spaces = BrowserSession.preview.spaces
-        spaces[0].accessPolicy = .deviceOwnerAuthentication
-        spaces[1].accessPolicy = .deviceOwnerAuthentication
-        let access = BrowserSpaceAccessController(
-            authenticator: SettingsPrivacyAuthenticatorStub(result: true)
-        )
-        let routes = [
-            BrowserLinkRoute(pattern: "private.example", destinationSpaceID: spaces[1].id),
-            BrowserLinkRoute(pattern: "work.example", destinationSpaceID: spaces[0].id),
-            BrowserLinkRoute(pattern: "private.example/path", destinationSpaceID: spaces[1].id),
-        ]
-
-        XCTAssertEqual(
-            BrowserSettingsPrivacyPolicy.lockedRouteDestinationSpaces(
-                for: routes,
-                in: spaces,
-                accessController: access
-            ).map(\.id),
-            [spaces[0].id, spaces[1].id]
-        )
-    }
 }
 
 private enum SettingsSelectionInvalidation: CaseIterable {

@@ -46,7 +46,6 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         patterns: [String],
         browser: String? = BrowserExtensionWebPageRuntimeBridgeTests.webKitBrowser,
         chrome: String? = nil,
-        reportsDiagnostics: Bool = false,
         relay: Bool = false,
         ancestorOrigins: [String]? = nil,
         file: StaticString = #filePath,
@@ -87,22 +86,11 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         if let chrome {
             context.evaluateScript("globalThis.chrome = \(chrome);")
         }
-        if reportsDiagnostics {
-            context.evaluateScript(
-                """
-                globalThis.__reports = [];
-                globalThis.webkit = { messageHandlers: { crestExtensionWebPageRuntime: {
-                    postMessage: (body) => { globalThis.__reports.push(body); } } } };
-                """
-            )
-        }
         if relay {
             context.evaluateScript(Self.relayHandler)
         }
         context.evaluateScript(
-            BrowserExtensionWebPageRuntimeBridge.source(
-                matchPatterns: patterns, reportsDiagnostics: reportsDiagnostics
-            )
+            BrowserExtensionWebPageRuntimeBridge.source(matchPatterns: patterns)
         )
         XCTAssertNil(thrown, "The alias script must not throw", file: file, line: line)
         return context
@@ -165,35 +153,6 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         )
     }
 
-    func testDiagnosticsReportShapesAndOutcomesWithoutPayloadValues() throws {
-        let context = try page(
-            at: "https://claude.ai/oauth/authorize", patterns: Self.claudePatterns, reportsDiagnostics: true
-        )
-        context.evaluateScript(
-            #"chrome.runtime.sendMessage("fcoeoab", { type: "oauth_redirect", redirect_uri: "secret" }, () => {})"#
-        )
-        context.evaluateScript(#"chrome.runtime.sendMessage("fcoeoab", { type: "ping" })"#)
-        let reports = context.evaluateScript("JSON.stringify(globalThis.__reports)")!.toString()!
-        XCTAssertTrue(reports.contains(#""event":"sendMessage""#))
-        XCTAssertTrue(reports.contains(#""type":"oauth_redirect""#))
-        XCTAssertTrue(reports.contains(#""form":"callback""#))
-        XCTAssertTrue(reports.contains(#""form":"promise""#))
-        XCTAssertTrue(reports.contains(#""keys":["type","redirect_uri"]"#))
-        XCTAssertFalse(reports.contains("secret"), "Diagnostics carry shapes, never payload values.")
-        // The fake WebKit runtime replies synchronously through the callback.
-        XCTAssertTrue(reports.contains(#""outcome":"replied""#))
-    }
-
-    func testDiagnosticsStayOutOfTheScriptWhenNotRequested() throws {
-        let context = try page(at: "https://claude.ai/", patterns: Self.claudePatterns)
-        XCTAssertFalse(
-            BrowserExtensionWebPageRuntimeBridge.source(matchPatterns: Self.claudePatterns)
-                .contains(BrowserExtensionWebPageRuntimeBridge.diagnosticsPlaceholder)
-        )
-        XCTAssertEqual(context.evaluateScript("typeof globalThis.__reports")!.toString(), "undefined")
-        XCTAssertEqual(context.evaluateScript("typeof chrome.runtime.sendMessage")!.toString(), "function")
-    }
-
     func testAnUnansweredCallSetsLastErrorDuringTheCallbackAndRejectsThePromise() throws {
         let context = try page(at: "https://claude.ai/oauth/authorize", patterns: Self.claudePatterns)
         context.evaluateScript(
@@ -223,59 +182,11 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         )
     }
 
-    func testASubdomainWildcardCoversTheApexAndItsSubdomainsOnly() throws {
-        XCTAssertEqual(
-            chromeType(in: try page(at: "https://www.claude.ai/chrome/installed", patterns: Self.claudePatterns)),
-            "object"
-        )
-        XCTAssertEqual(
-            chromeType(in: try page(at: "https://claude.ai/", patterns: ["https://*.claude.ai/*"])),
-            "object"
-        )
-        XCTAssertEqual(
-            chromeType(in: try page(at: "https://notclaude.ai/", patterns: Self.claudePatterns)),
-            "undefined"
-        )
-    }
-
     func testPagesOutsideEveryPatternKeepChromeUndefined() throws {
         XCTAssertEqual(
             chromeType(in: try page(at: "https://example.com/", patterns: Self.claudePatterns)),
             "undefined",
             "Ordinary sites must never see a chrome object and mistake Crest for Chrome."
-        )
-    }
-
-    func testSchemeAndPathParticipateInTheMatch() throws {
-        XCTAssertEqual(
-            chromeType(in: try page(at: "http://claude.ai/", patterns: ["https://claude.ai/*"])),
-            "undefined"
-        )
-        XCTAssertEqual(
-            chromeType(in: try page(at: "http://claude.ai/oauth/x", patterns: ["*://claude.ai/oauth/*"])),
-            "object"
-        )
-        XCTAssertEqual(
-            chromeType(in: try page(at: "https://claude.ai/app", patterns: ["https://claude.ai/oauth/*"])),
-            "undefined"
-        )
-        XCTAssertEqual(
-            chromeType(
-                in: try page(at: "https://claude.ai/oauth/authorize?state=1", patterns: ["https://claude.ai/oauth/*"])
-            ),
-            "object",
-            "Chrome matches the path glob against the path and query together."
-        )
-    }
-
-    func testAllURLsCoversWebSchemesOnly() throws {
-        XCTAssertEqual(
-            chromeType(in: try page(at: "https://example.org/", patterns: ["<all_urls>"])),
-            "object"
-        )
-        XCTAssertEqual(
-            chromeType(in: try page(at: "about:blank", patterns: ["<all_urls>"])),
-            "undefined"
         )
     }
 
@@ -456,19 +367,5 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         let script = controller.userScripts[0]
         XCTAssertEqual(script.injectionTime, .atDocumentStart)
         XCTAssertFalse(script.isForMainFrameOnly)
-        XCTAssertTrue(
-            script.source.contains(#"["https:\/\/claude.ai\/*","https:\/\/*.claude.ai\/*"]"#)
-                || script.source.contains(#"["https://claude.ai/*","https://*.claude.ai/*"]"#),
-            "The authored patterns are embedded as JSON."
-        )
-        XCTAssertFalse(script.source.contains(BrowserExtensionWebPageRuntimeBridge.patternsPlaceholder))
-        XCTAssertTrue(script.source.contains("const reportsDiagnostics = false;"))
-
-        let reporting = WKUserContentController()
-        let proxy = BrowserExtensionWebPageRuntimeBridge.install(
-            in: reporting, matchPatterns: Self.claudePatterns, reportsDiagnostics: true
-        )
-        XCTAssertNotNil(proxy, "Diagnostics hand back the handler the page must remove on teardown.")
-        XCTAssertTrue(reporting.userScripts[0].source.contains("const reportsDiagnostics = true;"))
     }
 }

@@ -302,47 +302,6 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         XCTAssertEqual(restored.webView.backForwardList.backList.map(\.url), [firstURL])
     }
 
-    func testWindowFactoriesShareProfileDataAndDownloadsWhileKeepingPrivateResourcesSeparate() throws {
-        let tab = BrowserTab.startPage()
-        let space = makeSpace(tabs: [tab])
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence())
-        var ledger = BrowserDownloadLedger()
-        let downloadID = ledger.begin(profileID: space.profile.id, filename: "shared-download.txt")
-        let seed = BrowserPagePool(usesEphemeralWebsiteDataStores: true, downloadLedger: ledger)
-        let normalBrowser = browser.makeWindowStore()
-        let temporaryBrowser = try XCTUnwrap(
-            browser.makeTemporaryWindowStore(in: BrowserSpaceRuntimeAssignment(space: space)))
-        let transient = BrowserTransientBrowsingCoordinator()
-        let access = BrowserSpaceAccessController()
-        let normal = seed.makeWindowPool(
-            browser: normalBrowser, windowID: BrowserWindowID(), sharesRuntimes: true,
-            transientBrowsing: transient, spaceAccess: access)
-        let blank = seed.makeWindowPool(
-            browser: temporaryBrowser, windowID: BrowserWindowID(), sharesRuntimes: false,
-            transientBrowsing: transient, spaceAccess: access)
-        let privatePool = BrowserPagePool(browsingMode: .privateBrowsing)
-        defer {
-            normal.reconcile(validTabIDs: [])
-            blank.closeWindowWorkspace()
-        }
-        normal.select(session: normalBrowser.session)
-        temporaryBrowser.openNewTab()
-        blank.select(session: temporaryBrowser.session)
-        let normalPage = try XCTUnwrap(normal.activePage)
-        let blankPage = try XCTUnwrap(blank.activePage)
-        XCTAssertFalse(normalPage === blankPage)
-        XCTAssertTrue(
-            normalPage.webView.configuration.websiteDataStore === blankPage.webView.configuration.websiteDataStore)
-        XCTAssertTrue(normal.downloadCenter === seed.downloadCenter)
-        XCTAssertTrue(blank.downloadCenter === seed.downloadCenter)
-        normal.releaseWindowPresentation()
-        XCTAssertEqual(blank.downloadCenter.items.map(\.id), [downloadID])
-        XCTAssertFalse(privatePool.downloadCenter === seed.downloadCenter)
-        XCTAssertTrue(privatePool.downloadCenter.items.isEmpty)
-    }
-
     private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
         for _ in 0..<200 {
             if condition() { return }

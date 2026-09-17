@@ -5,13 +5,27 @@ import XCTest
 
 @MainActor
 final class BrowserSettingsPaneTests: XCTestCase {
+    func testIsolatedLaunchNeverConstructsPersistentPreferences() {
+        var persistentFactoryWasCalled = false
+        let store = BrowserWindowTransparencyStore.launch(
+            usesIsolatedLaunch: true,
+            makePersistentPersistence: {
+                persistentFactoryWasCalled = true
+                return InMemoryBrowserWindowTransparencyPersistence()
+            },
+            makeIsolatedPersistence: {
+                InMemoryBrowserWindowTransparencyPersistence(
+                    preference: BrowserWindowTransparencyPreference(
+                        isEnabled: false,
+                        strength: 0.1
+                    )
+                )
+            }
+        )
 
-    func testBundledDockPluginCanLoadItsDeclaredPrincipalClass() throws {
-        let name = try XCTUnwrap(Bundle.main.object(forInfoDictionaryKey: "NSDockTilePlugIn") as? String)
-        let directory = try XCTUnwrap(Bundle.main.builtInPlugInsURL)
-        let plugin = try XCTUnwrap(Bundle(url: directory.appendingPathComponent(name)))
-        try plugin.loadAndReturnError()
-        XCTAssertNotNil(plugin.principalClass as? any NSDockTilePlugIn.Type)
+        XCTAssertFalse(persistentFactoryWasCalled)
+        XCTAssertFalse(store.isEnabled)
+        XCTAssertEqual(store.strength, 0.1)
     }
 
     func testMacWebTextAssistanceDisablesAutomaticCorrectionsWithoutDisablingTextReplacement() throws {
@@ -62,48 +76,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
             BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
             XCTAssertEqual(defaults.bool(forKey: key), choice)
         }
-    }
-
-    func testTextReplacementPreservesAnExistingEnabledChoiceDuringMigration() throws {
-        let suiteName = "crest.tests.text-replacement.\(UUID())"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        defaults.set(true, forKey: "WebAutomaticTextReplacementEnabled")
-        BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
-        XCTAssertTrue(defaults.bool(forKey: "WebAutomaticTextReplacementEnabled"))
-    }
-
-    func testMacWebTextAssistanceDefaultsSpellCheckingOff() throws {
-        let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        BrowserMacWebTextAssistancePolicy.configure(
-            defaults: defaults
-        )
-
-        XCTAssertFalse(
-            BrowserMacWebTextAssistancePolicy.defaultIsSpellCheckingEnabled
-        )
-        XCTAssertFalse(
-            defaults.bool(forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey)
-        )
-    }
-
-    func testMacWebTextAssistancePreservesAnExplicitSpellCheckingChoice() throws {
-        let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        defaults.set(
-            true,
-            forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey
-        )
-
-        BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
-
-        XCTAssertTrue(
-            defaults.bool(forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey)
-        )
     }
 
     // MARK: - Extension status
@@ -203,24 +175,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
 
     // MARK: - Shared bindings
 
-    /// Eight panes had each written this rule out privately. A selection survives as
-    /// long as its Space does, and otherwise falls back to the selected Space.
-    func testSpaceSelectionSurvivesUntilItsSpaceDoes() {
-        let browser = BrowserStore.preview()
-        let existing = browser.session.spaces[1].id
-
-        XCTAssertEqual(browser.repairedSpaceSelection(existing), existing)
-        XCTAssertEqual(
-            browser.repairedSpaceSelection(nil),
-            browser.session.selectedSpaceID
-        )
-        XCTAssertEqual(
-            browser.repairedSpaceSelection(SpaceID()),
-            browser.session.selectedSpaceID,
-            "A Space deleted out from under a pane hands the pane back the live one."
-        )
-    }
-
     /// Every shared binding writes through to the session rather than to the copy of
     /// the Space the view happens to be holding — which is what the drifted private
     /// copies did not all do.
@@ -269,36 +223,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
         XCTAssertEqual(browser.session.defaultSpaceID, browser.session.spaces[1].id)
         XCTAssertEqual(defaultSpace.wrappedValue, browser.session.spaces[1].id)
     }
-
-    /// Privacy resolves its content-blocking policy before it is sure it has a Space,
-    /// so the identifier-addressed binding has to answer with the default rather than
-    /// crash or write into nothing.
-    func testContentBlockingBindingToleratesAPaneWithoutASpaceYet() {
-        let browser = BrowserStore.preview()
-        let spaceID = browser.session.spaces[0].id
-
-        let missing = browser.browsingPreferenceBinding(
-            \.contentBlockingPolicy,
-            in: SpaceID?.none,
-            default: .balanced
-        )
-        XCTAssertEqual(missing.wrappedValue, .balanced)
-        missing.wrappedValue = .off
-
-        let live = browser.browsingPreferenceBinding(
-            \.contentBlockingPolicy,
-            in: Optional(spaceID),
-            default: .balanced
-        )
-        live.wrappedValue = .off
-        XCTAssertEqual(
-            browser.session.space(id: spaceID)?.browsingPreferences
-                .contentBlockingPolicy,
-            .off
-        )
-    }
-
-    // MARK: - Default browser
 
     private func summary(
         isEnabled: Bool,

@@ -19,6 +19,7 @@ cleanup() {
 trap cleanup EXIT INT TERM HUP
 
 cd "$repository_root"
+python3 -m unittest discover -s Scripts/Tests
 Scripts/bootstrap.sh
 
 xcodebuild \

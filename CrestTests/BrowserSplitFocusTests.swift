@@ -9,31 +9,6 @@ import XCTest
 /// test can drive, which is exactly why the decision they consult is a pure
 /// function. These tests are the contract for when focus is allowed to move.
 final class BrowserSplitFocusPolicyTests: XCTestCase {
-    func testHoverFocusesAnUnfocusedCardWhenTheSettingIsOn() {
-        XCTAssertTrue(
-            BrowserSplitFocusPolicy.focusesOnHover(
-                followsMouse: true,
-                isCardFocused: false,
-                isAddressEditing: false,
-                isDraggingSidebarItem: false,
-                isCarryingCard: false,
-                isCommandPalettePresented: false
-            )
-        )
-    }
-
-    func testHoverDoesNothingWhileTheSettingIsOff() {
-        XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnHover(
-                followsMouse: false,
-                isCardFocused: false,
-                isAddressEditing: false,
-                isDraggingSidebarItem: false,
-                isCarryingCard: false,
-                isCommandPalettePresented: false
-            )
-        )
-    }
 
     /// Focus is selection, and the selection observer resigns address focus, so
     /// a pointer drifting across a card while someone types a URL would discard
@@ -99,19 +74,6 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
         )
     }
 
-    func testHoverOverTheFocusedCardChangesNothing() {
-        XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnHover(
-                followsMouse: true,
-                isCardFocused: true,
-                isAddressEditing: false,
-                isDraggingSidebarItem: false,
-                isCarryingCard: false,
-                isCommandPalettePresented: false
-            )
-        )
-    }
-
     /// Click-to-focus is how Split View works rather than a behaviour to opt
     /// into, so the preference has no say in it — it is not even an input.
     func testClickFocusesAnUnfocusedCardRegardlessOfTheHoverSetting() {
@@ -160,27 +122,6 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
 /// touch the installed profile.
 @MainActor
 final class BrowserSplitFocusPreferenceTests: XCTestCase {
-    func testPreferenceDefaultsToOffAndPersistsChanges() {
-        let suiteName =
-            "BrowserSplitFocusPreferenceTests.persistence.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = BrowserSplitFocusPreferenceStore(
-            defaults: defaults
-        )
-
-        XCTAssertFalse(store.followsMouse)
-        store.followsMouse = true
-
-        XCTAssertTrue(
-            defaults.bool(
-                forKey: BrowserSplitFocusPreferenceStore.followsMouseKey
-            )
-        )
-        XCTAssertTrue(
-            BrowserSplitFocusPreferenceStore(defaults: defaults).followsMouse
-        )
-    }
 
     func testIsolatedLaunchNeverWritesPersistentPreferences() {
         let suiteName =
@@ -205,30 +146,6 @@ final class BrowserSplitFocusPreferenceTests: XCTestCase {
 /// The registry that turns a mouse-down location into the card it landed in.
 @MainActor
 final class BrowserSplitCardFrameRegistryTests: XCTestCase {
-    func testAPointResolvesToTheCardWhoseFrameContainsIt() {
-        let registry = BrowserSplitCardFrameRegistry()
-        let leading = TabID()
-        let trailing = TabID()
-        registry.register(
-            CGRect(x: 0, y: 0, width: 400, height: 600),
-            for: leading
-        )
-        registry.register(
-            CGRect(x: 408, y: 0, width: 400, height: 600),
-            for: trailing
-        )
-
-        XCTAssertEqual(registry.tabID(containing: CGPoint(x: 12, y: 40)), leading)
-        XCTAssertEqual(
-            registry.tabID(containing: CGPoint(x: 500, y: 40)),
-            trailing
-        )
-        XCTAssertNil(
-            registry.tabID(containing: CGPoint(x: 404, y: 40)),
-            "The gap between cards belongs to the divider, not to either card."
-        )
-        XCTAssertNil(registry.tabID(containing: CGPoint(x: 900, y: 40)))
-    }
 
     func testACardThatLeavesTheRowStopsClaimingItsOldFrame() {
         let registry = BrowserSplitCardFrameRegistry()

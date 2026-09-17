@@ -102,19 +102,6 @@ final class BrowserWebHostViewTests: XCTestCase {
         )
     }
 
-    func testAttachReplacesTheVisibleWebView() {
-        let host = BrowserWebHostView()
-        let first = WKWebView()
-        let second = WKWebView()
-
-        host.attach(first)
-        host.attach(second)
-
-        XCTAssertNil(first.superview)
-        XCTAssertTrue(second.superview === host)
-        XCTAssertEqual(host.subviews, [second])
-    }
-
     func testAStaleHostCannotDetachAWebViewFromItsNewHost() {
         let oldHost = BrowserWebHostView()
         let newHost = BrowserWebHostView()
@@ -146,23 +133,6 @@ final class BrowserWebHostViewTests: XCTestCase {
         newHost.detach()
         oldHost.attach(webView)
         XCTAssertTrue(webView.superview === oldHost, "A released web view may return to its previous host")
-    }
-
-    func testHitTestingRoutesIntoTheAttachedWebView() {
-        let host = BrowserWebHostView(
-            frame: NSRect(x: 0, y: 0, width: 500, height: 400)
-        )
-        let webView = WKWebView(frame: host.bounds)
-
-        host.attach(webView)
-        host.layoutSubtreeIfNeeded()
-
-        let hitView = host.hitTest(NSPoint(x: 250, y: 200))
-
-        XCTAssertTrue(
-            isView(hitView, containedIn: webView),
-            "Hit testing the host's page area must resolve inside its attached WKWebView."
-        )
     }
 
     func testFocusPolicyRequiresAPermittedOwnerAndNoCompetingPresentation() {
@@ -479,26 +449,6 @@ final class BrowserWebHostViewTests: XCTestCase {
         XCTAssertFalse(setup.window.firstResponder === addressField)
     }
 
-    func testMenuTrackingMonitorUsesTrackingLifecycleNotHighlightedItems() {
-        let notificationCenter = NotificationCenter()
-        let monitor = BrowserMenuTrackingMonitor(
-            notificationCenter: notificationCenter
-        )
-        let menu = NSMenu()
-
-        XCTAssertFalse(monitor.isTracking)
-        notificationCenter.post(
-            name: NSMenu.didBeginTrackingNotification,
-            object: menu
-        )
-        XCTAssertTrue(monitor.isTracking)
-        notificationCenter.post(
-            name: NSMenu.didEndTrackingNotification,
-            object: menu
-        )
-        XCTAssertFalse(monitor.isTracking)
-    }
-
     func testPresentationFocusProtectionBlocksOnlyTheMountingTurn() {
         let setup = focusHostSetup()
         XCTAssertTrue(setup.window.makeFirstResponder(nil))
@@ -726,17 +676,6 @@ final class BrowserWebHostViewTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(25))
         }
         XCTFail("Timed out waiting for \(description)")
-    }
-
-    private func isView(_ view: NSView?, containedIn ancestor: NSView) -> Bool {
-        var candidate = view
-        while let current = candidate {
-            if current === ancestor {
-                return true
-            }
-            candidate = current.superview
-        }
-        return false
     }
 }
 

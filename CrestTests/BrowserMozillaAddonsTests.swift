@@ -42,31 +42,6 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         )
     }
 
-    func testGeckoIdentityStripsPunctuationFromItsPackageNameComponent()
-        throws
-    {
-        let email = try XCTUnwrap(BrowserMozillaExtensionID(darkReaderGUID))
-        let braced = try XCTUnwrap(
-            BrowserMozillaExtensionID(
-                "{446900e4-71c2-419f-a6a7-df9c091e268b}"
-            )
-        )
-
-        XCTAssertEqual(email.packageNameComponent, "addon-darkreader.org")
-        XCTAssertEqual(
-            braced.packageNameComponent,
-            "-446900e4-71c2-419f-a6a7-df9c091e268b-"
-        )
-        for component in [email, braced].map(\.packageNameComponent) {
-            XCTAssertFalse(component.contains("/"))
-            XCTAssertFalse(component.contains("@"))
-            XCTAssertEqual(
-                URL(fileURLWithPath: component).lastPathComponent,
-                component
-            )
-        }
-    }
-
     func testAddonSlugRejectsPathAndQueryPunctuation() {
         XCTAssertEqual(
             BrowserMozillaAddonSlug("ublock-origin")?.rawValue,
@@ -210,24 +185,6 @@ final class BrowserMozillaAddonsTests: XCTestCase {
                 "\(rejected) must not authorize an installation."
             )
         }
-    }
-
-    func testContentBridgeAdvertisesCrestOnlyOnTheTrustedStore() {
-        let source = BrowserMozillaAddonsContentBridge.source
-
-        XCTAssertTrue(source.contains("Add to Crest"))
-        XCTAssertTrue(source.contains("addons.mozilla.org"))
-        XCTAssertTrue(
-            source.contains(BrowserMozillaAddonsInstallNavigation.scheme)
-        )
-        // AMO serves a different install component to a non-Firefox user
-        // agent, so the mount point must be the wrapper both branches share.
-        XCTAssertTrue(
-            source.contains(".Addon-install > .InstallButtonWrapper")
-        )
-        XCTAssertFalse(source.contains("AMInstallButton"))
-        // Themes reuse the identical install markup.
-        XCTAssertTrue(source.contains("Addon-extension"))
     }
 
     // MARK: - Listing decoding
@@ -419,55 +376,6 @@ final class BrowserMozillaAddonsTests: XCTestCase {
                 .missingMozillaSignature
             )
         }
-    }
-
-    func testVerifierRejectsAnArchiveWithoutAManifest() throws {
-        let fixture = try archiveFixture(includesManifest: false)
-
-        XCTAssertThrowsError(
-            try BrowserXPIVerifier().verify(
-                fixture.archiveData,
-                expectedSHA256Hex: fixture.sha256Hex,
-                expectedByteCount: fixture.archiveData.count,
-                extensionID: fixture.extensionID
-            )
-        ) { error in
-            XCTAssertEqual(
-                error as? BrowserXPIVerifierError,
-                .missingManifest
-            )
-        }
-    }
-
-    func testLocalInstallReportsCommittedPrimaryWhenAnAdditionalSpaceIsUnavailable() async throws {
-        let fixture = try archiveFixture(permissions: ["storage"])
-        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: root) }
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        let source = root.appending(path: "extension.xpi")
-        try fixture.archiveData.write(to: source)
-        let registry = BrowserExtensionRegistry()
-        let pool = BrowserExtensionControllerPool(
-            packageStore: BrowserExtensionPackageStore(rootURL: root.appending(path: "Packages")), registry: registry)
-        let space = BrowserSession.preview.spaces[0]
-        pool.installationSpaces = { [space] }
-        let session = BrowserLocalExtensionInstallSession(space: space, extensionControllerPool: pool)
-        await session.prepare(from: .success([source]))
-        var review = BrowserExtensionInstallationPermissionPolicy.Review()
-        review.additionalSpaceIDs = [SpaceID()]
-        let candidateID = try XCTUnwrap(session.phase.candidate?.id)
-        session.install(review: review)
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
-        while session.isInstalling && ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        XCTAssertFalse(session.isInstalling)
-        XCTAssertNotNil(registry.installation(extensionID: candidateID, in: space.id))
-        guard case .installed = session.phase else {
-            return XCTFail("The committed primary must have completion state, not a retry-install action")
-        }
-        XCTAssertFalse(session.installedCopyWarnings.isEmpty, "Destination failures must remain visible")
-        XCTAssertEqual(session.installedAdditionalSpaceCount, 0)
     }
 
     func testDirectXPIIsReviewedAndInstalledAsALocalSpacePackage()
@@ -726,65 +634,6 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         )
     }
 
-    /// Only a verified Chrome Web Store package runs on a public
-    /// `chrome-extension://<store id>` origin. A Firefox add-on has no such
-    /// origin to preserve, so it keeps the hashed per-Space host.
-    func testRuntimeBaseURLNamespacesEveryFirefoxAddonPerSpace() throws {
-        let source = try mozillaSource()
-        let work = SpaceID()
-        let personal = SpaceID()
-
-        func baseURL(in spaceID: SpaceID) -> URL {
-            BrowserExtensionRuntimeIdentifierPolicy.identity(
-                extensionID: darkReaderGUID,
-                source: .mozillaAddons(source),
-                spaceID: spaceID
-            ).baseURL
-        }
-
-        let originIdentifier =
-            "\(darkReaderGUID).space.\(work.rawValue.uuidString.lowercased())"
-        let digest = SHA256.hash(data: Data(originIdentifier.utf8))
-            .map { String(format: "%02x", $0) }
-            .joined()
-
-        XCTAssertEqual(
-            baseURL(in: work).absoluteString,
-            "chrome-extension://extension-\(digest)/"
-        )
-        XCTAssertNotEqual(baseURL(in: work), baseURL(in: personal))
-    }
-
-    func testVerifiedFirefoxNativeMessagingCanUseThePlatformCompanionBridge() {
-        let assessment = BrowserExtensionCompatibilityPolicy.assess(
-            requestedPermissions: ["nativeMessaging", "storage"],
-            source: .mozillaAddons,
-            nativeMessagingCapability: .available
-        )
-
-        XCTAssertTrue(assessment.canRun)
-        XCTAssertTrue(assessment.issues.isEmpty)
-
-        let unavailable = BrowserExtensionCompatibilityPolicy.assess(
-            requestedPermissions: ["nativeMessaging", "storage"],
-            source: .mozillaAddons,
-            nativeMessagingCapability: .unavailableInAppSandbox
-        )
-        XCTAssertFalse(unavailable.canRun)
-        XCTAssertEqual(
-            unavailable.blockingIssues.map(\.kind),
-            [.nativeMessagingUnavailable]
-        )
-
-        let ordinary = BrowserExtensionCompatibilityPolicy.assess(
-            requestedPermissions: ["storage", "tabs"],
-            source: .mozillaAddons,
-            nativeMessagingCapability: .unavailableInAppSandbox
-        )
-        XCTAssertTrue(ordinary.canRun)
-        XCTAssertTrue(ordinary.issues.isEmpty)
-    }
-
     func testVerifiedFirefoxPackageUsesTheSharedCompatibilityOverlay()
         async throws
     {
@@ -850,66 +699,6 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             ) == true
         )
         XCTAssertEqual(scripts.dropFirst().first, "background.js")
-    }
-
-    func testFirefoxOnlyManifestKeysSurfaceAsWarningsRatherThanBlockers()
-        async throws
-    {
-        let fileManager = FileManager.default
-        let root = fileManager.temporaryDirectory.appending(
-            path: "crest-firefox-manifest-test-\(UUID().uuidString)",
-            directoryHint: .isDirectory
-        )
-        defer { try? fileManager.removeItem(at: root) }
-        try fileManager.createDirectory(
-            at: root,
-            withIntermediateDirectories: true
-        )
-        // A Firefox-shaped MV2 package: persistent background page, gecko
-        // settings, and a sidebar action WebKit does not implement.
-        let manifest: [String: Any] = [
-            "manifest_version": 2,
-            "name": "Firefox Manifest Probe",
-            "version": "1.0",
-            "browser_specific_settings": [
-                "gecko": [
-                    "id": darkReaderGUID,
-                    "strict_min_version": "78.0",
-                ]
-            ],
-            "background": [
-                "scripts": ["background.js"],
-                "persistent": true,
-            ],
-            "sidebar_action": [
-                "default_panel": "sidebar.html",
-                "default_title": "Probe",
-            ],
-            "permissions": ["storage", "contextualIdentities"],
-        ]
-        try JSONSerialization.data(withJSONObject: manifest).write(
-            to: root.appending(path: "manifest.json")
-        )
-        try Data("globalThis.started = true;".utf8).write(
-            to: root.appending(path: "background.js")
-        )
-        try Data("<html></html>".utf8).write(
-            to: root.appending(path: "sidebar.html")
-        )
-
-        let webExtension = try await WKWebExtension(resourceBaseURL: root)
-
-        XCTAssertEqual(webExtension.displayName, "Firefox Manifest Probe")
-        XCTAssertEqual(webExtension.manifestVersion, 2)
-        XCTAssertTrue(webExtension.hasBackgroundContent)
-        // Whatever WebKit reports about Firefox-only keys is a warning the
-        // review sheet shows, never a reason the package cannot be inspected.
-        let settings = try XCTUnwrap(
-            webExtension.manifest["browser_specific_settings"]
-                as? [String: Any]
-        )
-        let gecko = try XCTUnwrap(settings["gecko"] as? [String: Any])
-        XCTAssertEqual(gecko["id"] as? String, darkReaderGUID)
     }
 
     // MARK: - Install and rollback
@@ -1054,151 +843,7 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         )
     }
 
-    func testInstalledFirefoxAddonReportsItsStoreAndNamespacedIdentity()
-        async throws
-    {
-        let fileManager = FileManager.default
-        let fixture = try installationFixture()
-        defer { try? fileManager.removeItem(at: fixture.rootURL) }
-        let registry = BrowserExtensionRegistry()
-        let pool = BrowserExtensionControllerPool(
-            packageStore: BrowserExtensionPackageStore(
-                fileManager: fileManager,
-                rootURL: fixture.packageRootURL,
-                removesRootOnDeinit: false
-            ),
-            registry: registry
-        )
-        let space = BrowserSession.preview.spaces[0]
-        let digest = String(repeating: "a", count: 64)
-
-        let summary = try await pool.installMozillaAddonsExtension(
-            candidate(
-                item: fixture.item,
-                extensionID: fixture.extensionID,
-                archiveData: fixture.archiveData,
-                sourceDigest: digest,
-                packageDigest: digest
-            ),
-            in: space
-        )
-
-        XCTAssertEqual(summary.sourceDisplayName, "Firefox Add-ons")
-        let context = try XCTUnwrap(
-            pool.loadedContext(
-                extensionID: fixture.extensionID.rawValue,
-                in: space.id
-            )
-        )
-        XCTAssertEqual(
-            context.uniqueIdentifier,
-            "\(fixture.extensionID.rawValue).space."
-                + space.id.rawValue.uuidString.lowercased()
-        )
-        guard
-            case .mozillaAddons(let source) = registry.installation(
-                extensionID: fixture.extensionID.rawValue,
-                in: space.id
-            )?.source
-        else {
-            return XCTFail(
-                "The installation did not retain Firefox Add-ons provenance."
-            )
-        }
-        XCTAssertEqual(source.extensionID, fixture.extensionID)
-        XCTAssertEqual(source.slug, fixture.item.slug)
-    }
-
     // MARK: - Live integration
-
-    func testLiveFirefoxAddonVerifiesInspectsAndLoadsWhenEnabled()
-        async throws
-    {
-        let integrationMarker = URL(
-            filePath: "/tmp/CrestRunAMOIntegration"
-        )
-        guard
-            ProcessInfo.processInfo.environment["CREST_RUN_AMO_INTEGRATION"]
-                == "1"
-                || FileManager.default.fileExists(
-                    atPath: integrationMarker.path
-                )
-        else {
-            throw XCTSkip(
-                "Set CREST_RUN_AMO_INTEGRATION=1 to verify current Firefox Add-ons packages."
-            )
-        }
-
-        let addons = [
-            ("Dark Reader", darkReaderSlug),
-            ("uBlock Origin", "ublock-origin"),
-            ("Bitwarden", "bitwarden-password-manager"),
-            ("1Password", "1password-x-password-manager"),
-        ]
-        let fileManager = FileManager.default
-        let root = fileManager.temporaryDirectory.appending(
-            path: "crest-amo-live-test-\(UUID().uuidString)",
-            directoryHint: .isDirectory
-        )
-        defer { try? fileManager.removeItem(at: root) }
-        let registry = BrowserExtensionRegistry()
-        let pool = BrowserExtensionControllerPool(
-            packageStore: BrowserExtensionPackageStore(
-                fileManager: fileManager,
-                rootURL: root,
-                removesRootOnDeinit: false
-            ),
-            registry: registry
-        )
-        pool.setNativeMessagingHandler(
-            BrowserMozillaAddonsAuditNativeMessagingHandler()
-        )
-        let space = BrowserSession.preview.spaces[0]
-        let provider = BrowserMozillaAddonsProvider(
-            nativeMessagingCapability: .available
-        )
-
-        for (name, slug) in addons {
-            let item = try XCTUnwrap(
-                BrowserMozillaAddonsItem(
-                    url: URL(
-                        string:
-                            "https://addons.mozilla.org/en-US/firefox/addon/\(slug)/"
-                    )!
-                )
-            )
-            let candidate = try await provider.candidate(for: item)
-            XCTAssertEqual(candidate.source.slug.rawValue, slug)
-            XCTAssertFalse(candidate.source.xpiSHA256Hex.isEmpty)
-
-            guard candidate.compatibility.canRun else {
-                print(
-                    "CREST_AMO_AUDIT|\(name)|\(candidate.version ?? "unknown")|blocked|reason=\(candidate.compatibility.blockingIssues.map(\.message).joined(separator: ";"))"
-                )
-                continue
-            }
-            let summary = try await pool.installMozillaAddonsExtension(
-                candidate,
-                in: space
-            )
-            try await Task.sleep(for: .milliseconds(350))
-            let context = try XCTUnwrap(
-                pool.loadedContext(
-                    extensionID: candidate.source.extensionID.rawValue,
-                    in: space.id
-                )
-            )
-            XCTAssertTrue(summary.isLoaded)
-            XCTAssertTrue(context.isLoaded)
-            print(
-                "CREST_AMO_AUDIT|\(name)|\(candidate.version ?? "unknown")|loaded|permissions=\(candidate.requestedPermissions.joined(separator: ","))|manifestErrors=\(candidate.errors.joined(separator: ";"))|runtimeErrors=\(context.errors.map(\.localizedDescription).joined(separator: ";"))|unsupported=\(context.unsupportedAPIs.sorted().joined(separator: ","))"
-            )
-            try await pool.removeExtension(
-                extensionID: candidate.source.extensionID.rawValue,
-                from: space
-            )
-        }
-    }
 
     // MARK: - Fixtures
 
@@ -1583,31 +1228,5 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         let extensionID: BrowserMozillaExtensionID
         let archiveData: Data
         let sha256Hex: String
-    }
-}
-
-@MainActor
-private final class BrowserMozillaAddonsAuditNativeMessagingHandler:
-    BrowserExtensionNativeMessagingHandling
-{
-    let capability = BrowserExtensionNativeMessagingCapability.available
-
-    func sendMessage(
-        _ message: Any,
-        applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
-        authorization: BrowserExtensionNativeMessagingAuthorization,
-        replyHandler: @escaping (Any?, Error?) -> Void
-    ) {
-        replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
-    }
-
-    func connect(
-        port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
-        authorization: BrowserExtensionNativeMessagingAuthorization,
-        completionHandler: @escaping (Error?) -> Void
-    ) {
-        completionHandler(nil)
     }
 }

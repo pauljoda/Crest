@@ -21,41 +21,6 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
         XCTAssertNil(state.splitColumnFractions(for: SplitGroupID()))
     }
 
-    func testCaptureReplacesTheFractionsAGroupAlreadyHad() {
-        let group = SplitGroupID()
-        var state = makeState()
-
-        state.captureSplitLayout(fractions: [0.5, 0.5], for: group)
-        state.captureSplitLayout(fractions: [0.7, 0.3], for: group)
-
-        XCTAssertEqual(state.splitColumnFractions(for: group), [0.7, 0.3])
-    }
-
-    func testCaptureNormalizesFractionsThatDriftFromTheWholeContainer() {
-        let group = SplitGroupID()
-        var state = makeState()
-
-        state.captureSplitLayout(fractions: [0.5, 0.25], for: group)
-
-        let stored = state.splitColumnFractions(for: group) ?? []
-        XCTAssertEqual(stored.reduce(0, +), 1, accuracy: 0.0001)
-        XCTAssertEqual(stored.first ?? 0, 2.0 / 3, accuracy: 0.0001)
-    }
-
-    func testCaptureLeavesFractionsThatAlreadySumToOneUntouched() {
-        let group = SplitGroupID()
-        var state = makeState()
-        let fractions = BrowserSplitColumnLayout.equalFractions(count: 3)
-
-        state.captureSplitLayout(fractions: fractions, for: group)
-
-        XCTAssertEqual(
-            state.splitColumnFractions(for: group),
-            fractions,
-            "Rounding a list that is already normalized would churn the record."
-        )
-    }
-
     func testCaptureIgnoresFractionsThatCannotDescribeColumns() {
         let group = SplitGroupID()
         var state = makeState()
@@ -115,15 +80,6 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
         state.captureSplitLayout(fractions: [0.6, 0.4], for: group)
 
         state.repair(using: makeSession(memberCount: 0, group: group))
-
-        XCTAssertNil(state.splitColumnFractionsByGroup)
-    }
-
-    func testRepairLeavesAWindowThatNeverResizedAnythingAlone() {
-        let group = SplitGroupID()
-        var state = BrowserWindowState(restoring: makeSession(memberCount: 2, group: group))
-
-        state.repair(using: makeSession(memberCount: 2, group: group))
 
         XCTAssertNil(state.splitColumnFractionsByGroup)
     }

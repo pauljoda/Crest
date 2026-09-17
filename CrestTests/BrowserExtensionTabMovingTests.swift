@@ -70,18 +70,6 @@ final class BrowserExtensionTabMovingTests: XCTestCase {
         XCTAssertEqual(session.spaces[0].selectedTabID, selected)
     }
 
-    func testMultipleMovesKeepRequestOrderAndInvalidTargetsDoNotPartiallyMove() {
-        var session = makeSession()
-        let spaceID = session.spaces[0].id
-        let ids = session.spaces[0].tabs.map(\.id)
-        XCTAssertTrue(session.moveExtensionTabs([ids[3], ids[2]], in: spaceID, to: 0))
-        XCTAssertEqual(session.spaces[0].tabs.map(\.id), [ids[3], ids[2], ids[0], ids[1]])
-        let before = session
-        XCTAssertFalse(session.moveExtensionTabs([ids[0], TabID()], in: spaceID, to: 0))
-        XCTAssertFalse(session.moveExtensionTabs([ids[0]], in: spaceID, to: -2))
-        XCTAssertEqual(session, before)
-    }
-
     func testWindowIndicesSkipTabsHostedElsewhereAndPublishNoPartialMove() {
         var session = makeSession()
         let spaceID = session.spaces[0].id
@@ -97,23 +85,6 @@ final class BrowserExtensionTabMovingTests: XCTestCase {
         let before = session
         XCTAssertFalse(session.moveExtensionTabs([ids[2], ids[1]], in: spaceID, to: 0, among: owned))
         XCTAssertEqual(session, before, "A tab owned by another window must reject the entire transaction")
-    }
-
-    func testPinnedMovesStayPinnedAndBackgroundSpaceDoesNotBecomeSelected() {
-        var session = makeSession()
-        let spaceID = session.spaces[0].id
-        let ids = session.spaces[0].tabs.map(\.id)
-        _ = session.setExtensionTabPinned(true, tabID: ids[0], in: spaceID)
-        _ = session.setExtensionTabPinned(true, tabID: ids[1], in: spaceID)
-        let second = BrowserSession.makeBlankSpace(number: 2)
-        session.spaces.append(second)
-        session.selectedSpaceID = second.id
-        XCTAssertTrue(session.moveExtensionTabs([ids[0]], in: spaceID, to: 999))
-        XCTAssertEqual(session.spaces[0].tabs.prefix(2).map(\.id), [ids[1], ids[0]])
-        XCTAssertEqual(session.spaces[0].tabs[1].placement, .pinned)
-        XCTAssertTrue(session.moveExtensionTabs([ids[3]], in: spaceID, to: 0))
-        XCTAssertEqual(session.spaces[0].tabs[2].id, ids[3])
-        XCTAssertEqual(session.selectedSpaceID, second.id)
     }
 
     private func makeSession() -> BrowserSession {

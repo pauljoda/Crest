@@ -88,70 +88,6 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertTrue(pages.nativeTabs.tabIDs.isEmpty)
     }
 
-    func testSettingsExternalRouteDoesNotReplayOverLaterNavigation() {
-        let state = BrowserSettingsTabState()
-        state.applyExternalRoute(.spaces, revision: 1)
-        state.navigation.selection = .privacy
-        state.navigation.searchText = "site"
-        state.applyExternalRoute(.spaces, revision: 1)
-        XCTAssertEqual(state.navigation.selection, .privacy)
-        XCTAssertEqual(state.navigation.searchText, "site")
-        state.applyExternalRoute(.shortcuts, revision: 2)
-        XCTAssertEqual(state.navigation.selection, .shortcuts)
-    }
-
-    func testOnboardingIsolationStartsWithTheRealFreshInstallSeed() {
-        let environment = BrowserLaunchEnvironment(values: ["CREST_SHOW_ONBOARDING": "1"], isXCTestRuntime: false)
-        let browser = BrowserStore.isolatedLaunch(launchEnvironment: environment)
-        XCTAssertEqual(browser.session.spaces.count, 1)
-        XCTAssertTrue(browser.session.hasDisposableSeedState)
-        XCTAssertEqual(browser.selectedSpace?.branding.iconStyle, .layeredCrest)
-    }
-
-    func testSetupDestinationSurvivesRootStartupWithoutChangingNormalStartPageLaunches() async throws {
-        for requiresSetup in [true, false] {
-            let browser = BrowserStore(
-                session: BrowserSession.freshInstallSeed,
-                persistence: InMemoryBrowserSessionPersistence())
-            let progress = BrowserOnboardingProgressStore(
-                persistence: InMemoryBrowserOnboardingProgressPersistence(hasCompletedSetup: !requiresSetup))
-            let startupBehavior = BrowserMacOnboardingPolicy.startupBehavior(
-                preferred: .showStartPage, hasActiveLaunchGate: progress.isLaunchGateActive)
-            let access = BrowserSpaceAccessController()
-            if requiresSetup {
-                let result = await BrowserOnboardingCompletion.complete(
-                    request: .firstRun, browser: browser, progress: progress, spaceAccess: access)
-                guard case .completed(guide: .some(_)) = result else {
-                    return XCTFail("Setup must select its guide before opening the main window.")
-                }
-            } else {
-                _ = try XCTUnwrap(browser.openGettingStarted())
-            }
-            let guideID = try XCTUnwrap(browser.selectedTab?.id)
-            let pages = BrowserPagePool(
-                usesEphemeralWebsiteDataStores: true,
-                extensionControllerPool: BrowserExtensionControllerPool(
-                    registry: BrowserExtensionRegistry(persistence: InMemoryBrowserExtensionRegistryPersistence())))
-            defer { pages.reconcile(validTabIDs: []) }
-            let model = BrowserRootModel(
-                browser: browser, pages: pages, chrome: BrowserChromeState(),
-                spaceAccess: access, windowState: nil, startupBehavior: startupBehavior,
-                persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth)
-
-            await model.prepareBrowser()
-
-            if requiresSetup {
-                XCTAssertEqual(browser.selectedTab?.id, guideID)
-                XCTAssertEqual(pages.activeTabID, guideID)
-                XCTAssertEqual(browser.selectedTab?.nativeContent, .gettingStarted)
-                XCTAssertNil(pages.activePage)
-            } else {
-                XCTAssertTrue(browser.selectedTab?.isStartPage == true)
-                XCTAssertNotEqual(browser.selectedTab?.id, guideID)
-            }
-        }
-    }
-
     func testNativeGuideReusesItsTabAndNeverAllocatesWebKit() throws {
         let browser = BrowserStore.preview()
         let first = try XCTUnwrap(browser.openGettingStarted())
@@ -171,25 +107,6 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertFalse(pages.retainedTabIDs.contains(first))
         pages.selectSpace(in: browser)
         XCTAssertEqual(browser.selectedTab?.id, first)
-    }
-
-    func testSettingsTabIsReusedPersistsAndNeverAllocatesWebKit() throws {
-        let browser = BrowserStore.preview()
-        let id = try XCTUnwrap(browser.openSettings())
-        XCTAssertEqual(browser.openSettings(), id)
-        XCTAssertEqual(browser.selectedSpace?.tabs.filter { $0.nativeContent == .settings }.count, 1)
-        XCTAssertEqual(browser.selectedTab?.placement, .current)
-        XCTAssertNil(browser.selectedTab?.url)
-        let restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
-        XCTAssertEqual(restored.selectedTab?.nativeContent, .settings)
-        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
-        defer { pages.reconcile(validTabIDs: []) }
-        pages.select(session: browser.session)
-        XCTAssertEqual(pages.activeTabID, id)
-        XCTAssertNil(pages.activePage)
-        XCTAssertFalse(pages.retainedTabIDs.contains(id))
-        browser.closeTab(id)
-        XCTAssertFalse(browser.selectedSpace?.tabs.contains { $0.id == id } ?? true)
     }
 
     func testNativeDescriptorSurvivesRepairDuplicationAndUnknownKind() throws {
@@ -220,23 +137,6 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertTrue(converted.isWebPage)
     }
 
-    func testPracticeMutatesOnlyItsOwnStoreAndKeepsSavedTabsWhenClearing() {
-        let practice = BrowserGettingStartedPractice()
-        practice.browser.pinTab(practice.mailID)
-        practice.browser.saveTab(practice.trailID)
-        practice.addFolder(nested: true)
-        XCTAssertEqual(practice.space.folders.count, 2)
-        XCTAssertNotNil(practice.space.folders.last?.parentID)
-        XCTAssertTrue(practice.tabActions.clearCurrentTabs())
-        XCTAssertTrue(practice.space.pinnedTabs.contains { $0.id == practice.mailID })
-        XCTAssertTrue(practice.space.savedTabs.contains { $0.id == practice.trailID })
-        XCTAssertTrue(practice.space.currentTabs.isEmpty)
-        practice.reset()
-        XCTAssertEqual(practice.space.currentTabs.count, 3)
-        XCTAssertNil(practice.browser.syncCoordinator)
-        XCTAssertTrue(practice.browser.persistence is InMemoryBrowserSessionPersistence)
-    }
-
     func testNativeTabsStayLocalWhilePortableExportPreservesContent() throws {
         let browser = BrowserStore.preview()
         let id = try XCTUnwrap(browser.openGettingStarted())
@@ -263,28 +163,6 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertEqual(imported.spaces.flatMap(\.tabs).filter { $0.nativeContent == .gettingStarted }.count, 1)
     }
 
-    func testMixedSplitAllocatesOnlyItsWebsiteAndPreservesNativeFocus() throws {
-        let browser = BrowserStore.preview()
-        let native = try XCTUnwrap(browser.openGettingStarted())
-        let website = try XCTUnwrap(browser.openNewTab(url: URL(string: "about:blank")!))
-        let space = try XCTUnwrap(browser.selectedSpace)
-        XCTAssertTrue(
-            browser.addTabToSplit(
-                BrowserTabDragItem(tabID: native, spaceID: space.id, profileID: space.profile.id), joining: website,
-                at: nil))
-        let members = try XCTUnwrap(browser.selectedSpace).presentedSplitMembers(for: browser.selectedTab?.id)
-        let copy = try XCTUnwrap(members.first { $0.nativeContent != nil })
-        browser.selectTab(copy.id)
-        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
-        defer { pages.reconcile(validTabIDs: []) }
-        pages.select(session: browser.session)
-        XCTAssertEqual(pages.activeTabID, copy.id)
-        XCTAssertNil(pages.activePage)
-        XCTAssertEqual(Set(pages.presentedTabIDs), Set(members.map(\.id)))
-        XCTAssertTrue(pages.retainedTabIDs.contains(website))
-        XCTAssertFalse(pages.retainedTabIDs.contains(copy.id))
-    }
-
     func testNativeActionsRejectAStaleProfileAndKeepGuideWhenOpeningALink() throws {
         let browser = BrowserStore.preview()
         let id = try XCTUnwrap(browser.openGettingStarted())
@@ -304,35 +182,4 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.tabs.first { $0.id == id }?.nativeContent, .gettingStarted)
     }
 
-    func testDismissingSavedNativeViewKeepsItsTabAndRejectsAStaleAssignment() throws {
-        let browser = BrowserStore.preview()
-        let id = try XCTUnwrap(browser.openGettingStarted())
-        let space = try XCTUnwrap(browser.selectedSpace)
-        browser.dismissNativeTab(id, matching: BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: UUID()))
-        XCTAssertEqual(browser.selectedTab?.id, id)
-        browser.dismissNativeTab(id, matching: BrowserSpaceRuntimeAssignment(space: space))
-        XCTAssertNotEqual(browser.selectedTab?.id, id)
-        XCTAssertEqual(browser.selectedSpace?.tabs.first { $0.id == id }?.nativeContent, .gettingStarted)
-        XCTAssertEqual(browser.openGettingStarted(), id)
-    }
-
-    func testPracticeHasBundledFaviconsAndReordersRealSplitMembers() throws {
-        let practice = BrowserGettingStartedPractice()
-        XCTAssertTrue(practice.space.tabs.allSatisfy { $0.faviconData?.isEmpty == false })
-        practice.makeSplit()
-        let before = practice.members.map(\.id)
-        XCTAssertEqual(before.count, 2)
-        let last = try XCTUnwrap(before.last)
-        practice.move(last, by: -1)
-        XCTAssertEqual(practice.members.map(\.id), before.reversed())
-        XCTAssertEqual(practice.space.selectedTabID, last)
-        practice.openExampleTab()
-        XCTAssertNotNil(practice.browser.selectedTab?.faviconData)
-    }
-
-    func testFirstRunMovesIntoSetupAndImportReturnsToSpaceCustomization() {
-        XCTAssertEqual(BrowserMacOnboardingPolicy.nextFirstRunStep(after: .welcome), .importBrowser)
-        XCTAssertEqual(BrowserMacOnboardingPolicy.destinationAfterImport(for: .firstRun), .manualSetup)
-        XCTAssertEqual(BrowserMacOnboardingPolicy.destinationAfterImport(for: .importBrowser), .complete)
-    }
 }

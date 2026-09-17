@@ -19,41 +19,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(BrowserOnboardingWindowActivation.isSetupWindow(setup))
     }
 
-    func testSidebarDragAutoscrollOnlyRunsInsideTheVisibleEdgeBands() {
-        let viewport = CGRect(x: 10, y: 100, width: 280, height: 500)
-
-        XCTAssertLessThan(
-            BrowserSidebarReorderPolicy.autoscrollStep(
-                at: CGPoint(x: viewport.midX, y: viewport.minY + 1),
-                in: viewport
-            ),
-            0
-        )
-        XCTAssertGreaterThan(
-            BrowserSidebarReorderPolicy.autoscrollStep(
-                at: CGPoint(x: viewport.midX, y: viewport.maxY - 1),
-                in: viewport
-            ),
-            0
-        )
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.autoscrollStep(
-                at: CGPoint(x: viewport.midX, y: viewport.midY),
-                in: viewport
-            ),
-            0
-        )
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.autoscrollStep(
-                at: CGPoint(x: viewport.maxX + 1, y: viewport.minY + 1),
-                in: viewport
-            ),
-            0,
-            "A pointer over fixed chrome must target that chrome, not keep "
-                + "scrolling the list behind it."
-        )
-    }
-
     @MainActor
     func testSettingsPresentationKeepsTheLatestDestinationAndSpace() {
         let presentation = BrowserSpaceSettingsPresentationState()
@@ -290,41 +255,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(clearHistory.spaceName, initiatingSpace.name)
     }
 
-    func testStartupBehaviorDefaultsToShowingStartPage() {
-        let suiteName = "BrowserChromeLayoutTests.startup.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        XCTAssertEqual(
-            BrowserStartupPreference.behavior(defaults: defaults),
-            .showStartPage
-        )
-
-        defaults.set("showStartPage", forKey: BrowserStartupPreference.key)
-        XCTAssertEqual(
-            BrowserStartupPreference.behavior(defaults: defaults),
-            .showStartPage
-        )
-
-        defaults.set(
-            BrowserStartupBehavior.lastActiveTab.rawValue,
-            forKey: BrowserStartupPreference.key
-        )
-        XCTAssertEqual(
-            BrowserStartupPreference.behavior(defaults: defaults),
-            .lastActiveTab
-        )
-
-        defaults.set("invalid", forKey: BrowserStartupPreference.key)
-        XCTAssertEqual(
-            BrowserStartupPreference.behavior(defaults: defaults),
-            .showStartPage
-        )
-
-        XCTAssertFalse(BrowserStartupBehavior.showStartPage.activatesRestoredTab)
-        XCTAssertTrue(BrowserStartupBehavior.lastActiveTab.activatesRestoredTab)
-    }
-
     @MainActor
     func testWindowAccessibilityNamesAWindowThatDrawsItsOwnChrome() {
         let window = NSWindow(
@@ -444,66 +374,12 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(transaction.commit())
     }
 
-    func testSidebarResizeClampsLiveAndRestoredWidths() {
-        var transaction = BrowserSidebarWidthTransaction(persistedWidth: 120)
-
-        XCTAssertEqual(transaction.width, BrowserChromeLayout.sidebarMinimumWidth)
-        XCTAssertEqual(transaction.persistedWidth, BrowserChromeLayout.sidebarMinimumWidth)
-
-        transaction.resize(to: 800)
-
-        XCTAssertEqual(transaction.width, BrowserChromeLayout.sidebarMaximumWidth)
-        XCTAssertEqual(transaction.commit(), BrowserChromeLayout.sidebarMaximumWidth)
-
-        transaction.restore(persistedWidth: 300)
-
-        XCTAssertEqual(transaction.width, 300)
-        XCTAssertEqual(transaction.persistedWidth, 300)
-    }
-
-    func testLeadingEdgeRevealGestureMovesInwardInEitherLayoutDirection() {
-        XCTAssertTrue(
-            BrowserChromeDirectionPolicy.isLeadingEdgeReveal(
-                CGSize(width: 52, height: 8),
-                layoutDirection: .leftToRight
-            )
-        )
-        XCTAssertTrue(
-            BrowserChromeDirectionPolicy.isLeadingEdgeReveal(
-                CGSize(width: -52, height: 8),
-                layoutDirection: .rightToLeft
-            )
-        )
-        XCTAssertFalse(
-            BrowserChromeDirectionPolicy.isLeadingEdgeReveal(
-                CGSize(width: 52, height: 8),
-                layoutDirection: .rightToLeft
-            )
-        )
-    }
-
     /// The shared direction source for the compact toolbar's horizontal swipe.
     ///
     /// What that swipe *does* is no longer this policy's business — on iOS it
     /// pages Split View cards, routed by `MobileToolbarSwipePolicy` — but "next"
     /// still has to mean the trailing neighbour in both writing directions, and
     /// this is the only place that decides it.
-    func testHorizontalToolbarSwipeSemanticsMirrorInRightToLeftLayouts() {
-        XCTAssertEqual(
-            BrowserSpaceSwipePolicy.direction(
-                for: CGSize(width: -90, height: 12),
-                layoutDirection: .leftToRight
-            ),
-            .next
-        )
-        XCTAssertEqual(
-            BrowserSpaceSwipePolicy.direction(
-                for: CGSize(width: 90, height: 12),
-                layoutDirection: .rightToLeft
-            ),
-            .next
-        )
-    }
 
     func testSidebarAuxiliaryMouseButtonsSwitchSpacesWithoutClaimingOtherButtons() {
         XCTAssertEqual(

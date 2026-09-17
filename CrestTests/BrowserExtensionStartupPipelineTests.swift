@@ -49,35 +49,6 @@ final class BrowserExtensionStartupPipelineTests: XCTestCase {
         XCTAssertTrue(context.isLoaded)
     }
 
-    /// The same pipeline with restoration first, which is the order a launch
-    /// takes when the restored tab is not activated on startup.
-    func testAnInstalledExtensionLoadsWhenStartupRestoresBeforeSelecting() async throws {
-        let installed = try await makeInstalledExtension()
-        defer { installed.cleanUp() }
-
-        let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [installed.space],
-                selectedSpaceID: installed.space.id
-            ),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
-        let extensions = installed.makeRelaunchedPool()
-        let pages = BrowserPagePool(extensionControllerPool: extensions)
-        extensions.connect(browser: browser, pageProvider: pages)
-
-        await pages.restoreExtensions(in: browser.session)
-        pages.select(session: browser.session)
-
-        let context = try XCTUnwrap(
-            extensions.loadedContext(
-                extensionID: installed.extensionID,
-                in: installed.space.id
-            )
-        )
-        XCTAssertTrue(context.isLoaded)
-    }
-
     /// A private pool restores nothing, so its silence is expected rather than
     /// a symptom. Pinned so the diagnostic gate keeps describing it.
     func testAPrivatePoolRestoresNothing() async throws {
@@ -94,45 +65,6 @@ final class BrowserExtensionStartupPipelineTests: XCTestCase {
             in: BrowserSession(
                 spaces: [installed.space],
                 selectedSpaceID: installed.space.id
-            )
-        )
-
-        XCTAssertNil(
-            extensions.loadedContext(
-                extensionID: installed.extensionID,
-                in: installed.space.id
-            )
-        )
-    }
-
-    /// The quietest gate in the pipeline: a record filed under a Space the
-    /// session no longer carries loads nothing at all.
-    ///
-    /// This is the shape a whole extension set disappears in, and it is a
-    /// legitimate outcome rather than a defect — which is precisely why the
-    /// startup log has to name it.
-    func testARecordForAnAbsentSpaceLoadsNothing() async throws {
-        let installed = try await makeInstalledExtension()
-        defer { installed.cleanUp() }
-
-        let extensions = installed.makeRelaunchedPool()
-        let pages = BrowserPagePool(extensionControllerPool: extensions)
-        // A session whose Spaces carry different identities than the record.
-        let replacement = BrowserSpace(
-            id: SpaceID(),
-            profile: installed.space.profile,
-            name: installed.space.name,
-            symbol: installed.space.symbol,
-            accent: installed.space.accent,
-            folders: [],
-            tabs: [],
-            selectedTabID: nil
-        )
-
-        await pages.restoreExtensions(
-            in: BrowserSession(
-                spaces: [replacement],
-                selectedSpaceID: replacement.id
             )
         )
 

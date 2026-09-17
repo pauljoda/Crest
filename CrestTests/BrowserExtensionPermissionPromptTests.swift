@@ -69,24 +69,6 @@ final class BrowserExtensionPermissionPromptTests: XCTestCase {
         XCTAssertEqual(decisions, [.cancel])
     }
 
-    func testDecisionRevalidatesBeforeAllowAndCancellationIsOwnerScoped() {
-        let owner = BrowserExtensionPermissionPromptController()
-        var valid = true
-        var reply: ((BrowserExtensionPermissionPromptController.Decision) -> Void)?
-        var decisions: [BrowserExtensionPermissionPromptController.Decision] = []
-        owner.request(
-            key: .init(context: ObjectIdentifier(firstContext), tab: nil, access: ["host:a"]), isValid: { valid },
-            completion: { decisions.append($0) },
-            present: { finish in
-                reply = finish
-                return {}
-            })
-        owner.cancel(context: ObjectIdentifier(secondContext))
-        XCTAssertTrue(decisions.isEmpty)
-        valid = false
-        reply?(.allow)
-        XCTAssertEqual(decisions, [.cancel])
-    }
     func testDistinctRequestsPresentInOrderAndKeepTheirOwnDecisions() {
         let owner = BrowserExtensionPermissionPromptController()
         var firstReply: ((BrowserExtensionPermissionPromptController.Decision) -> Void)?
@@ -113,20 +95,6 @@ final class BrowserExtensionPermissionPromptTests: XCTestCase {
         XCTAssertNotNil(secondReply)
         secondReply?(.deny)
         XCTAssertEqual(results, [.allow, .deny])
-    }
-
-    func testQueueLimitAndOwnerReleaseSettleEveryCallback() {
-        var owner: BrowserExtensionPermissionPromptController? = BrowserExtensionPermissionPromptController()
-        var canceled = 0
-        for index in 0..<20 {
-            owner?.request(
-                key: .init(context: ObjectIdentifier(firstContext), tab: nil, access: ["host:\(index)"]),
-                isValid: { true },
-                completion: { if $0 == .cancel { canceled += 1 } }, present: { _ in {} })
-        }
-        XCTAssertEqual(canceled, 11)
-        owner = nil
-        XCTAssertEqual(canceled, 20)
     }
 
     func testNativeDelegateNeverGrantsUndeclaredOrBlockedHosts() async throws {

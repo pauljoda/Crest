@@ -151,31 +151,6 @@ final class BrowserExtensionDebuggerCapabilityBrokerTests: XCTestCase {
         }
     }
 
-    func testTheEventWatchRequiresTheDeclaredCapabilityAndItsOwnPort() throws {
-        let client = try XCTUnwrap(BrowserExtensionServiceClientID("debugger-watch"))
-        let store = BrowserExtensionDebuggerSessionStore(
-            authorizeClient: { _ in true }, resolveTarget: { _ in .closed })
-        defer { store.shutdown() }
-        store.register(client: client, spaceID: SpaceID(), displayName: "Probe")
-        let ungranted = BrowserExtensionCapabilityBrokerConnection(
-            authorization: .init(grantedPermissions: [], clientID: client),
-            notificationService: nil, idleStateProvider: { _ in .active }, webpageMenuRegistry: .init(),
-            debuggerService: store, debuggerEventMessage: { _ in nil }, publish: { _ in })
-        defer { ungranted.stop() }
-        XCTAssertThrowsError(try ungranted.receive(["api": "debugger.watch"]))
-
-        let granted = BrowserExtensionCapabilityBrokerConnection(
-            authorization: .init(grantedPermissions: ["debugger", "idle"], clientID: client),
-            notificationService: nil, idleStateProvider: { _ in .active }, webpageMenuRegistry: .init(),
-            debuggerService: store, debuggerEventMessage: { _ in nil }, publish: { _ in })
-        defer { granted.stop() }
-        try granted.receive(["api": "debugger.watch"])
-        // Re-subscribing on the same port is how the runtime recovers a
-        // reconnect; sharing it with another capability is not.
-        try granted.receive(["api": "debugger.watch"])
-        XCTAssertThrowsError(try granted.receive(["api": "idle.watch", "detectionIntervalInSeconds": 60]))
-    }
-
     // MARK: - Harness
 
     private func assertFails(

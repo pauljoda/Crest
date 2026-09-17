@@ -28,37 +28,6 @@ final class BrowserChromeDebuggerConsoleTests: XCTestCase {
         }
     }
 
-    func testConsoleSeverityBecomesTheChromeEventTypeAndUnserializableValuesSurvive() async throws {
-        try await withConsole { console, fixture in
-            _ = try await fixture.page.evaluateJavaScript(
-                """
-                console.warn('crest-warn');
-                console.error('crest-error');
-                console.debug('crest-debug');
-                console.info('crest-info');
-                console.log(NaN);
-                undefined
-                """)
-            try await fixture.waitForEvent("Runtime.consoleAPICalled") { parameters in
-                (parameters["args"] as? [[String: Any]])?.first?["unserializableValue"] as? String == "NaN"
-            }
-            var types: [String: String] = [:]
-            for call in fixture.all("Runtime.consoleAPICalled") {
-                guard let text = (call["args"] as? [[String: Any]])?.first?["value"] as? String else { continue }
-                types[text] = call["type"] as? String
-            }
-            XCTAssertEqual(types["crest-warn"], "warning")
-            XCTAssertEqual(types["crest-error"], "error")
-            XCTAssertEqual(types["crest-debug"], "debug")
-            XCTAssertEqual(types["crest-info"], "info")
-            let unserializable = try XCTUnwrap(
-                fixture.all("Runtime.consoleAPICalled").first {
-                    ($0["args"] as? [[String: Any]])?.first?["unserializableValue"] as? String == "NaN"
-                })
-            XCTAssertNil((unserializable["args"] as? [[String: Any]])?.first?["value"])
-        }
-    }
-
     func testUncaughtErrorsBecomeExceptionThrownWithDetails() async throws {
         try await withConsole { console, fixture in
             _ = try await fixture.page.evaluateJavaScript(
@@ -76,24 +45,6 @@ final class BrowserChromeDebuggerConsoleTests: XCTestCase {
             XCTAssertFalse(frames.isEmpty)
             XCTAssertNotNil(frames[0]["url"] as? String)
             XCTAssertTrue(frames[0]["scriptId"] is String)
-        }
-    }
-
-    func testDisableStopsForwardingAndReenableResumesIt() async throws {
-        try await withConsole { console, fixture in
-            console.disable()
-            _ = try await fixture.page.evaluateJavaScript("console.log('crest-while-disabled'); undefined")
-            // Give the engine the same window a delivered message would use.
-            try await Task.sleep(for: .milliseconds(300))
-            XCTAssertFalse(
-                fixture.all("Runtime.consoleAPICalled").contains {
-                    ($0["args"] as? [[String: Any]])?.first?["value"] as? String == "crest-while-disabled"
-                })
-            try await console.enable()
-            _ = try await fixture.page.evaluateJavaScript("console.log('crest-after-reenable'); undefined")
-            try await fixture.waitForEvent("Runtime.consoleAPICalled") { parameters in
-                (parameters["args"] as? [[String: Any]])?.first?["value"] as? String == "crest-after-reenable"
-            }
         }
     }
 

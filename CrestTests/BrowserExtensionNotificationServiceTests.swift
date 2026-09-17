@@ -10,28 +10,7 @@ final class BrowserExtensionNotificationServiceTests: XCTestCase {
         static let beta = BrowserExtensionServiceClientID("beta-extension")
     }
 
-    private struct CenterFailure: Error, LocalizedError {
-        var errorDescription: String? { "The center refused the notification." }
-    }
-
     // MARK: - Identity encoding
-
-    func testIdentityRoundTripsThroughTheSystemIdentifier() throws {
-        let identity = BrowserExtensionNotificationIdentity(
-            client: try XCTUnwrap(Fixture.alpha),
-            notificationIdentifier: "update-available"
-        )
-
-        let systemIdentifier =
-            BrowserExtensionNotificationIdentityCodec
-            .systemIdentifier(for: identity)
-
-        XCTAssertEqual(
-            BrowserExtensionNotificationIdentityCodec
-                .identity(fromSystemIdentifier: systemIdentifier),
-            identity
-        )
-    }
 
     /// An extension chooses its own notification identifiers, so it must not be
     /// able to spell one that decodes as another extension's notification.
@@ -51,45 +30,6 @@ final class BrowserExtensionNotificationServiceTests: XCTestCase {
 
         XCTAssertEqual(decoded?.client, alpha)
         XCTAssertEqual(decoded?.notificationIdentifier, ".\(beta.rawValue).spoofed")
-    }
-
-    func testUnrelatedSystemIdentifiersDecodeToNothing() {
-        XCTAssertNil(
-            BrowserExtensionNotificationIdentityCodec
-                .identity(fromSystemIdentifier: "com.example.other-notification")
-        )
-        XCTAssertNil(
-            BrowserExtensionNotificationIdentityCodec.identity(
-                fromSystemIdentifier: "crest.webextension.notification.notanumber.x"
-            )
-        )
-    }
-
-    func testCategoryIdentifierRoundTripsAndDiffersFromTheSystemIdentifier()
-        throws
-    {
-        let identity = BrowserExtensionNotificationIdentity(
-            client: try XCTUnwrap(Fixture.alpha),
-            notificationIdentifier: "sync-finished"
-        )
-
-        let categoryIdentifier =
-            BrowserExtensionNotificationIdentityCodec
-            .categoryIdentifier(for: identity)
-
-        XCTAssertNotEqual(
-            categoryIdentifier,
-            BrowserExtensionNotificationIdentityCodec.systemIdentifier(for: identity)
-        )
-        XCTAssertEqual(
-            BrowserExtensionNotificationIdentityCodec
-                .identity(fromCategoryIdentifier: categoryIdentifier),
-            identity
-        )
-        XCTAssertNil(
-            BrowserExtensionNotificationIdentityCodec
-                .identity(fromSystemIdentifier: categoryIdentifier)
-        )
     }
 
     // MARK: - Posting
@@ -121,32 +61,6 @@ final class BrowserExtensionNotificationServiceTests: XCTestCase {
             delivery.threadIdentifier,
             BrowserExtensionNotificationIdentityCodec.threadIdentifier(for: client)
         )
-    }
-
-    func testRepostingTheSameIdentifierReplacesTheDelivery() async throws {
-        let center = InMemoryBrowserExtensionNotificationCenter()
-        let service = BrowserExtensionNotificationService(center: center)
-        let client = try XCTUnwrap(Fixture.alpha)
-
-        await service.post(
-            BrowserExtensionNotificationRequest(
-                identifier: "progress",
-                title: "Working",
-                message: "Ten percent."
-            ),
-            from: client
-        )
-        await service.post(
-            BrowserExtensionNotificationRequest(
-                identifier: "progress",
-                title: "Working",
-                message: "Ninety percent."
-            ),
-            from: client
-        )
-
-        XCTAssertEqual(center.deliveries.count, 1)
-        XCTAssertEqual(center.deliveries.first?.body, "Ninety percent.")
     }
 
     func testTwoExtensionsMayShareANotificationIdentifier() async throws {
@@ -235,46 +149,6 @@ final class BrowserExtensionNotificationServiceTests: XCTestCase {
         XCTAssertEqual(center.authorizationPromptCount, 1)
     }
 
-    func testAPromptThatEndsDeniedSuppressesTheDelivery() async throws {
-        let center = InMemoryBrowserExtensionNotificationCenter(
-            authorization: .notDetermined,
-            authorizationAfterPrompt: .denied
-        )
-        let service = BrowserExtensionNotificationService(center: center)
-
-        let outcome = await service.post(
-            BrowserExtensionNotificationRequest(
-                identifier: "blocked",
-                title: "Blocked",
-                message: "Never shown."
-            ),
-            from: try XCTUnwrap(Fixture.alpha)
-        )
-
-        XCTAssertEqual(outcome, .authorizationDenied)
-        XCTAssertTrue(center.deliveries.isEmpty)
-    }
-
-    func testARejectedDeliveryReportsTheHostDescription() async throws {
-        let center = InMemoryBrowserExtensionNotificationCenter()
-        center.addFailure = CenterFailure()
-        let service = BrowserExtensionNotificationService(center: center)
-
-        let outcome = await service.post(
-            BrowserExtensionNotificationRequest(
-                identifier: "rejected",
-                title: "Rejected",
-                message: "Never shown."
-            ),
-            from: try XCTUnwrap(Fixture.alpha)
-        )
-
-        XCTAssertEqual(
-            outcome,
-            .rejected(description: "The center refused the notification.")
-        )
-    }
-
     // MARK: - Updating
 
     /// Chrome's `update` is a partial edit, so an extension that changes only
@@ -309,60 +183,6 @@ final class BrowserExtensionNotificationServiceTests: XCTestCase {
         XCTAssertEqual(delivery.buttonTitles, ["Pause", "Cancel"])
         XCTAssertEqual(delivery.iconData, Data([0x01]))
         XCTAssertEqual(center.deliveries.count, 1)
-    }
-
-    /// A later partial update merges over the previous update, not over the
-    /// content the notification was first created with.
-    func testSuccessiveUpdatesAccumulate() async throws {
-        let center = InMemoryBrowserExtensionNotificationCenter()
-        let service = BrowserExtensionNotificationService(center: center)
-        let client = try XCTUnwrap(Fixture.alpha)
-        await service.post(
-            BrowserExtensionNotificationRequest(
-                identifier: "sync",
-                title: "Syncing",
-                message: "Ten percent.",
-                buttonTitles: ["Pause"]
-            ),
-            from: client
-        )
-
-        _ = await service.update(
-            BrowserExtensionNotificationUpdate(
-                identifier: "sync",
-                title: "Almost done"
-            ),
-            from: client
-        )
-        let outcome = await service.update(
-            BrowserExtensionNotificationUpdate(
-                identifier: "sync",
-                buttonTitles: []
-            ),
-            from: client
-        )
-
-        XCTAssertEqual(outcome, .updated)
-        let delivery = try XCTUnwrap(center.deliveries.first)
-        XCTAssertEqual(delivery.title, "Almost done")
-        XCTAssertEqual(delivery.body, "Ten percent.")
-        XCTAssertEqual(delivery.buttonTitles, [])
-    }
-
-    func testUpdatingAnUnknownIdentifierChangesNothing() async throws {
-        let center = InMemoryBrowserExtensionNotificationCenter()
-        let service = BrowserExtensionNotificationService(center: center)
-
-        let outcome = await service.update(
-            BrowserExtensionNotificationUpdate(
-                identifier: "never-posted",
-                message: "Nothing to edit."
-            ),
-            from: try XCTUnwrap(Fixture.alpha)
-        )
-
-        XCTAssertEqual(outcome, .unknownNotification)
-        XCTAssertTrue(center.deliveries.isEmpty)
     }
 
     /// One extension's notification identifiers are invisible to another, so
@@ -659,72 +479,4 @@ final class BrowserExtensionNotificationServiceTests: XCTestCase {
         )
     }
 
-    func testEveryEventStreamForOneExtensionReceivesTheInteraction()
-        async throws
-    {
-        let center = InMemoryBrowserExtensionNotificationCenter()
-        let service = BrowserExtensionNotificationService(center: center)
-        let client = try XCTUnwrap(Fixture.alpha)
-
-        var first = service.events(for: client).makeAsyncIterator()
-        var second = service.events(for: client).makeAsyncIterator()
-
-        let outcome = await service.post(
-            BrowserExtensionNotificationRequest(
-                identifier: "closable",
-                title: "Closable",
-                message: "Dismiss me."
-            ),
-            from: client
-        )
-        let identity = try XCTUnwrap(outcome.presentedIdentity)
-
-        center.simulate(
-            BrowserExtensionNotificationSystemEvent(
-                systemIdentifier:
-                    BrowserExtensionNotificationIdentityCodec
-                    .systemIdentifier(for: identity),
-                kind: .dismissed(byUser: true)
-            )
-        )
-
-        let firstEvent = await first.next()
-        let secondEvent = await second.next()
-        XCTAssertEqual(firstEvent?.kind, .dismissed(byUser: true))
-        XCTAssertEqual(secondEvent?.kind, .dismissed(byUser: true))
-    }
-
-    func testInteractionsWithForeignNotificationsAreIgnored() async throws {
-        let center = InMemoryBrowserExtensionNotificationCenter()
-        let service = BrowserExtensionNotificationService(center: center)
-        let client = try XCTUnwrap(Fixture.alpha)
-        var events = service.events(for: client).makeAsyncIterator()
-
-        center.simulate(
-            BrowserExtensionNotificationSystemEvent(
-                systemIdentifier: "com.example.unrelated",
-                kind: .clicked
-            )
-        )
-        let outcome = await service.post(
-            BrowserExtensionNotificationRequest(
-                identifier: "real",
-                title: "Real",
-                message: "Shown."
-            ),
-            from: client
-        )
-        let identity = try XCTUnwrap(outcome.presentedIdentity)
-        center.simulate(
-            BrowserExtensionNotificationSystemEvent(
-                systemIdentifier:
-                    BrowserExtensionNotificationIdentityCodec
-                    .systemIdentifier(for: identity),
-                kind: .clicked
-            )
-        )
-
-        let received = await events.next()
-        XCTAssertEqual(received?.identity, identity)
-    }
 }

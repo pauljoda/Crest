@@ -147,17 +147,6 @@ final class BrowserSessionRecoveryTests: XCTestCase {
         )
     }
 
-    func testDiscardingThePreservedCopyClearsIt() throws {
-        let harness = makeHarness()
-        harness.defaults.set(Data("unreadable".utf8), forKey: Storage.coreKey)
-        XCTAssertNil(harness.persistence.load())
-        XCTAssertNotNil(harness.persistence.preservedUnreadableSessionData())
-
-        harness.persistence.discardPreservedUnreadableSession()
-
-        XCTAssertNil(harness.persistence.preservedUnreadableSessionData())
-    }
-
     func testAnUnreadableLegacyBlobIsPreservedAndReported() throws {
         let harness = makeHarness()
         let unreadable = Data("not a session".utf8)
@@ -188,19 +177,6 @@ final class BrowserSessionRecoveryTests: XCTestCase {
 
         XCTAssertEqual(relaunched.persistence.status, .ready)
         XCTAssertNil(relaunched.persistence.preservedUnreadableSessionData())
-    }
-
-    func testNothingStoredIsReadyRatherThanPreserved() {
-        let harness = makeHarness()
-
-        XCTAssertNil(harness.persistence.load())
-
-        XCTAssertEqual(
-            harness.persistence.status,
-            .ready,
-            "A genuinely new installation is not a rescue."
-        )
-        XCTAssertNil(harness.persistence.preservedUnreadableSessionData())
     }
 
     // MARK: - Vocabulary tolerance

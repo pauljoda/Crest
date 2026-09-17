@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 final class BrowserTabMigrationTests: XCTestCase {
@@ -31,7 +32,7 @@ final class BrowserTabMigrationTests: XCTestCase {
                     "Title": "Second Window",
                     "SelectedTabIndex": 0,
                     "Tabs": [
-                        ["URLString": "https://developer.apple.com/safari/", "TabTitle": "Safari"],
+                        ["URLString": "https://developer.apple.com/safari/", "TabTitle": "Safari"]
                     ],
                 ],
             ],
@@ -99,10 +100,12 @@ final class BrowserTabMigrationTests: XCTestCase {
             importedAt: importedAt
         )
 
-        XCTAssertEqual(first.spaces.map(\.name), [
-            "Imported Chrome Window 2",
-            "Imported Chrome Window 1",
-        ])
+        XCTAssertEqual(
+            first.spaces.map(\.name),
+            [
+                "Imported Chrome Window 2",
+                "Imported Chrome Window 1",
+            ])
         XCTAssertEqual(first.spaces[0].tabs.first?.title, "Other Window")
         XCTAssertEqual(first.spaces[1].tabs.first?.title, "Current")
         XCTAssertEqual(
@@ -120,27 +123,27 @@ final class BrowserTabMigrationTests: XCTestCase {
 
     func testFirefoxMozLZ4RestoresSelectedWindowsTabsAndPinnedState() throws {
         let json = """
-        {
-          "selectedWindow": 2,
-          "windows": [
             {
-              "title": "First",
-              "selected": 2,
-              "tabs": [
-                {"index":1,"entries":[{"url":"https://one.example/","title":"One"}],"lastAccessed":1700000000000},
-                {"index":2,"entries":[{"url":"https://old.example/","title":"Old"},{"url":"https://two.example/","title":"Two"}],"pinned":true,"lastAccessed":1700000100000}
-              ]
-            },
-            {
-              "title": "Selected",
-              "selected": 1,
-              "tabs": [
-                {"index":1,"entries":[{"url":"https://selected.example/","title":"Selected Tab"}]}
+              "selectedWindow": 2,
+              "windows": [
+                {
+                  "title": "First",
+                  "selected": 2,
+                  "tabs": [
+                    {"index":1,"entries":[{"url":"https://one.example/","title":"One"}],"lastAccessed":1700000000000},
+                    {"index":2,"entries":[{"url":"https://old.example/","title":"Old"},{"url":"https://two.example/","title":"Two"}],"pinned":true,"lastAccessed":1700000100000}
+                  ]
+                },
+                {
+                  "title": "Selected",
+                  "selected": 1,
+                  "tabs": [
+                    {"index":1,"entries":[{"url":"https://selected.example/","title":"Selected Tab"}]}
+                  ]
+                }
               ]
             }
-          ]
-        }
-        """
+            """
         let compressed = MozillaLZ4Fixture.encode(Data(json.utf8))
 
         let imported = try BrowserTabMigration.decode(
@@ -189,15 +192,15 @@ final class BrowserTabMigrationTests: XCTestCase {
         )
 
         let firefoxJSON = """
-        {
-          "selectedWindow": 2,
-          "windows": [
-            {"title":"Unsupported"},
-            {"title":"Selected Firefox Window","tabs":[{"entries":[{"url":"https://selected.firefox.example/"}]}]},
-            {"title":"Other Firefox Window","tabs":[{"entries":[{"url":"https://other.firefox.example/"}]}]}
-          ]
-        }
-        """
+            {
+              "selectedWindow": 2,
+              "windows": [
+                {"title":"Unsupported"},
+                {"title":"Selected Firefox Window","tabs":[{"entries":[{"url":"https://selected.firefox.example/"}]}]},
+                {"title":"Other Firefox Window","tabs":[{"entries":[{"url":"https://other.firefox.example/"}]}]}
+              ]
+            }
+            """
 
         let firefoxImport = try BrowserTabMigration.decode(
             Data(firefoxJSON.utf8),
@@ -213,19 +216,19 @@ final class BrowserTabMigrationTests: XCTestCase {
 
     func testArcSidebarSessionImportCreatesCurrentTabsPerArcSpace() throws {
         let json = """
-        {
-          "sidebar": {
-            "containers": [{
-              "items": [
-                "root", {"id":"root","childrenIds":["one","two"],"data":{"itemContainer":{}}},
-                "one", {"id":"one","data":{"tab":{"savedTitle":"Arc","savedURL":"https://arc.net/"}}},
-                "two", {"id":"two","data":{"tab":{"savedTitle":"WebKit","savedURL":"https://webkit.org/"}}}
-              ],
-              "spaces": ["space", {"id":"space","title":"Arc Work","containerIDs":["root"],"newContainerIDs":[]}]
-            }]
-          }
-        }
-        """
+            {
+              "sidebar": {
+                "containers": [{
+                  "items": [
+                    "root", {"id":"root","childrenIds":["one","two"],"data":{"itemContainer":{}}},
+                    "one", {"id":"one","data":{"tab":{"savedTitle":"Arc","savedURL":"https://arc.net/"}}},
+                    "two", {"id":"two","data":{"tab":{"savedTitle":"WebKit","savedURL":"https://webkit.org/"}}}
+                  ],
+                  "spaces": ["space", {"id":"space","title":"Arc Work","containerIDs":["root"],"newContainerIDs":[]}]
+                }]
+              }
+            }
+            """
 
         let imported = try BrowserTabMigration.decode(
             Data(json.utf8),
@@ -241,36 +244,36 @@ final class BrowserTabMigrationTests: XCTestCase {
 
     func testArcSidebarPreservesFavoritesPinnedTodayFoldersIdentityAndPalette() throws {
         let json = """
-        {
-          "sidebar": {
-            "containers": [{
-              "items": [
-                "favorite-root", {"id":"favorite-root","childrenIds":["favorite"],"data":{"itemContainer":{"containerType":{"topApps":{"_0":{"default":true}}}}}},
-                "favorite", {"id":"favorite","data":{"tab":{"savedTitle":"Favorite","savedURL":"https://favorite.example/"}}},
-                "today-root", {"id":"today-root","childrenIds":["today"],"data":{"itemContainer":{"containerType":{"spaceItems":{"_0":"space"}}}}},
-                "today", {"id":"today","data":{"tab":{"savedTitle":"Today","savedURL":"https://today.example/"}}},
-                "pinned-root", {"id":"pinned-root","childrenIds":["folder"],"data":{"itemContainer":{"containerType":{"spaceItems":{"_0":"space"}}}}},
-                "folder", {"id":"folder","title":"Reading","childrenIds":["saved"],"data":{"list":{}}},
-                "saved", {"id":"saved","data":{"tab":{"savedTitle":"Saved","savedURL":"https://saved.example/"}}}
-              ],
-              "spaces": [
-                "space", {
-                  "id":"space",
-                  "title":"Arc Work",
-                  "profile":{"default":true},
-                  "containerIDs":["unpinned","today-root","pinned","pinned-root"],
-                  "newContainerIDs":["unpinned","today-root","pinned","pinned-root"],
-                  "customInfo":{
-                    "iconType":{"emoji_v2":"🏛️"},
-                    "windowTheme":{"primaryColorPalette":{"midTone":{"red":0.2,"green":0.4,"blue":0.7,"alpha":1}}}
-                  }
-                }
-              ],
-              "topAppsContainerIDs":[{"default":true},"favorite-root"]
-            }]
-          }
-        }
-        """
+            {
+              "sidebar": {
+                "containers": [{
+                  "items": [
+                    "favorite-root", {"id":"favorite-root","childrenIds":["favorite"],"data":{"itemContainer":{"containerType":{"topApps":{"_0":{"default":true}}}}}},
+                    "favorite", {"id":"favorite","data":{"tab":{"savedTitle":"Favorite","savedURL":"https://favorite.example/"}}},
+                    "today-root", {"id":"today-root","childrenIds":["today"],"data":{"itemContainer":{"containerType":{"spaceItems":{"_0":"space"}}}}},
+                    "today", {"id":"today","data":{"tab":{"savedTitle":"Today","savedURL":"https://today.example/"}}},
+                    "pinned-root", {"id":"pinned-root","childrenIds":["folder"],"data":{"itemContainer":{"containerType":{"spaceItems":{"_0":"space"}}}}},
+                    "folder", {"id":"folder","title":"Reading","childrenIds":["saved"],"data":{"list":{}}},
+                    "saved", {"id":"saved","data":{"tab":{"savedTitle":"Saved","savedURL":"https://saved.example/"}}}
+                  ],
+                  "spaces": [
+                    "space", {
+                      "id":"space",
+                      "title":"Arc Work",
+                      "profile":{"default":true},
+                      "containerIDs":["unpinned","today-root","pinned","pinned-root"],
+                      "newContainerIDs":["unpinned","today-root","pinned","pinned-root"],
+                      "customInfo":{
+                        "iconType":{"emoji_v2":"🏛️"},
+                        "windowTheme":{"primaryColorPalette":{"midTone":{"red":0.2,"green":0.4,"blue":0.7,"alpha":1}}}
+                      }
+                    }
+                  ],
+                  "topAppsContainerIDs":[{"default":true},"favorite-root"]
+                }]
+              }
+            }
+            """
 
         let imported = try BrowserTabMigration.decode(
             Data(json.utf8),
@@ -293,50 +296,50 @@ final class BrowserTabMigrationTests: XCTestCase {
 
     func testZenSessionPreservesSpacesEssentialsPinnedOpenTabsAndFolders() throws {
         let json = """
-        {
-          "lastCollected": 1700000000000,
-          "spaces": [{
-            "uuid":"work",
-            "name":"Zen Work",
-            "theme":{"type":"gradient","gradientColors":["#244C78","#7A3F75"],"opacity":0.65,"texture":1}
-          }],
-          "folders": [{
-            "id":"reading",
-            "name":"Reading",
-            "parentId":null,
-            "workspaceId":"work"
-          }],
-          "groups": [],
-          "splitViewData": [],
-          "tabs": [
             {
-              "entries":[{"url":"https://essential.example/","title":"Essential"}],
-              "index":1,
-              "lastAccessed":1700000100000,
-              "pinned":true,
-              "zenEssential":true,
-              "zenWorkspace":"work"
-            },
-            {
-              "entries":[{"url":"https://saved.example/","title":"Saved"}],
-              "index":1,
-              "lastAccessed":1700000200000,
-              "pinned":true,
-              "zenEssential":false,
-              "zenWorkspace":"work",
-              "groupId":"reading"
-            },
-            {
-              "entries":[{"url":"https://open.example/","title":"Open"}],
-              "index":1,
-              "lastAccessed":1700000300000,
-              "pinned":false,
-              "zenEssential":false,
-              "zenWorkspace":"work"
+              "lastCollected": 1700000000000,
+              "spaces": [{
+                "uuid":"work",
+                "name":"Zen Work",
+                "theme":{"type":"gradient","gradientColors":["#244C78","#7A3F75"],"opacity":0.65,"texture":1}
+              }],
+              "folders": [{
+                "id":"reading",
+                "name":"Reading",
+                "parentId":null,
+                "workspaceId":"work"
+              }],
+              "groups": [],
+              "splitViewData": [],
+              "tabs": [
+                {
+                  "entries":[{"url":"https://essential.example/","title":"Essential"}],
+                  "index":1,
+                  "lastAccessed":1700000100000,
+                  "pinned":true,
+                  "zenEssential":true,
+                  "zenWorkspace":"work"
+                },
+                {
+                  "entries":[{"url":"https://saved.example/","title":"Saved"}],
+                  "index":1,
+                  "lastAccessed":1700000200000,
+                  "pinned":true,
+                  "zenEssential":false,
+                  "zenWorkspace":"work",
+                  "groupId":"reading"
+                },
+                {
+                  "entries":[{"url":"https://open.example/","title":"Open"}],
+                  "index":1,
+                  "lastAccessed":1700000300000,
+                  "pinned":false,
+                  "zenEssential":false,
+                  "zenWorkspace":"work"
+                }
+              ]
             }
-          ]
-        }
-        """
+            """
 
         let imported = try BrowserTabMigration.decode(
             MozillaLZ4Fixture.encode(Data(json.utf8)),
@@ -362,8 +365,8 @@ final class BrowserTabMigrationTests: XCTestCase {
             """
         }.joined(separator: ",")
         let json = """
-        {"spaces":[{"uuid":"work","name":"Work"}],"folders":[],"tabs":[\(tabs)]}
-        """
+            {"spaces":[{"uuid":"work","name":"Work"}],"folders":[],"tabs":[\(tabs)]}
+            """
 
         let imported = try BrowserTabMigration.decode(
             MozillaLZ4Fixture.encode(Data(json.utf8)),
@@ -376,28 +379,6 @@ final class BrowserTabMigrationTests: XCTestCase {
         XCTAssertEqual(space.savedTabs.count, 2)
         XCTAssertEqual(space.folders.map(\.title), ["Imported Pinned Tabs"])
         XCTAssertTrue(space.savedTabs.allSatisfy { $0.folderID == space.folders[0].id })
-    }
-
-    func testArcChromiumSessionUsesArcSpaceIdentity() throws {
-        var fixture = ChromiumSessionFixture()
-        fixture.appendTab(windowID: 10, tabID: 100, visualIndex: 0)
-        fixture.appendNavigation(
-            tabID: 100,
-            index: 0,
-            url: "https://arc.net/",
-            title: "Arc Session"
-        )
-        fixture.appendMarker()
-
-        let imported = try BrowserTabMigration.decode(
-            fixture.data,
-            source: .arc,
-            importedAt: importedAt
-        )
-
-        XCTAssertEqual(imported.spaces.first?.name, "Imported Arc Tabs")
-        XCTAssertEqual(imported.spaces.first?.symbol, "sidebar.left")
-        XCTAssertEqual(imported.spaces.first?.tabs.first?.title, "Arc Session")
     }
 
     func testEveryTabSessionAdapterUsesSharedURLAndTitleSanitization() throws {
@@ -487,66 +468,73 @@ final class BrowserTabMigrationTests: XCTestCase {
     )] {
         let safariData = try PropertyListSerialization.data(
             fromPropertyList: [
-                "Windows": [[
-                    "Tabs": [[
-                        "URL": "HTTPS://user:secret@safari.example/path#fragment",
-                        "Title": "  Shared\n  Title  ",
-                    ]],
-                ]],
+                "Windows": [
+                    [
+                        "Tabs": [
+                            [
+                                "URL": "HTTPS://user:secret@safari.example/path#fragment",
+                                "Title": "  Shared\n  Title  ",
+                            ]
+                        ]
+                    ]
+                ]
             ],
             format: .binary,
             options: 0
         )
-        let firefoxData = Data("""
-        {
-          "windows": [{
-            "tabs": [{
-              "entries": [{
-                "url": "HTTPS://user:secret@firefox.example/path#fragment",
-                "title": "  Shared\\n  Title  "
+        let firefoxData = Data(
+            """
+            {
+              "windows": [{
+                "tabs": [{
+                  "entries": [{
+                    "url": "HTTPS://user:secret@firefox.example/path#fragment",
+                    "title": "  Shared\\n  Title  "
+                  }]
+                }]
               }]
-            }]
-          }]
-        }
-        """.utf8)
-        let arcData = Data("""
-        {
-          "sidebar": {
-            "containers": [{
-              "items": [
-                "root", {
-                  "id": "root",
-                  "childrenIds": ["tab"],
-                  "data": {"itemContainer": {}}
-                },
-                "tab", {
-                  "id": "tab",
-                  "data": {"tab": {
-                    "savedTitle": "  Shared\\n  Title  ",
-                    "savedURL": "HTTPS://user:secret@arc.example/path#fragment"
-                  }}
-                }
-              ],
-              "spaces": [
-                "space", {"id": "space", "containerIDs": ["root"]}
-              ]
-            }]
-          }
-        }
-        """.utf8)
-        let zenData = Data("""
-        {
-          "spaces": [{"uuid": "space"}],
-          "folders": [],
-          "tabs": [{
-            "zenWorkspace": "space",
-            "entries": [{
-              "url": "HTTPS://user:secret@zen.example/path#fragment",
-              "title": "  Shared\\n  Title  "
-            }]
-          }]
-        }
-        """.utf8)
+            }
+            """.utf8)
+        let arcData = Data(
+            """
+            {
+              "sidebar": {
+                "containers": [{
+                  "items": [
+                    "root", {
+                      "id": "root",
+                      "childrenIds": ["tab"],
+                      "data": {"itemContainer": {}}
+                    },
+                    "tab", {
+                      "id": "tab",
+                      "data": {"tab": {
+                        "savedTitle": "  Shared\\n  Title  ",
+                        "savedURL": "HTTPS://user:secret@arc.example/path#fragment"
+                      }}
+                    }
+                  ],
+                  "spaces": [
+                    "space", {"id": "space", "containerIDs": ["root"]}
+                  ]
+                }]
+              }
+            }
+            """.utf8)
+        let zenData = Data(
+            """
+            {
+              "spaces": [{"uuid": "space"}],
+              "folders": [],
+              "tabs": [{
+                "zenWorkspace": "space",
+                "entries": [{
+                  "url": "HTTPS://user:secret@zen.example/path#fragment",
+                  "title": "  Shared\\n  Title  "
+                }]
+              }]
+            }
+            """.utf8)
         var chromiumFixture = ChromiumSessionFixture()
         chromiumFixture.appendTab(windowID: 1, tabID: 1, visualIndex: 0)
         chromiumFixture.appendNavigation(
@@ -703,8 +691,8 @@ private enum MozillaLZ4Fixture {
     }
 }
 
-private extension Data {
-    mutating func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
+extension Data {
+    fileprivate mutating func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
         var littleEndian = value.littleEndian
         Swift.withUnsafeBytes(of: &littleEndian) { append(contentsOf: $0) }
     }

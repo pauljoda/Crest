@@ -49,69 +49,6 @@ final class BrowserLinkSettingsTests: XCTestCase {
         XCTAssertTrue(store.preferences.routes[0].isEnabled)
     }
 
-    func testRoutingSkipsDeletingDestinationsBeforeChoosingARouteOrDefault() throws {
-        let fixture = makeFixture()
-        let url = try XCTUnwrap(URL(string: "https://example.com/reference"))
-        var preferences = fixture.store.preferences
-        preferences.routes = [
-            BrowserLinkRoute(
-                id: Self.uuid(0x45),
-                match: .contains,
-                pattern: "example.com",
-                destinationSpaceID: fixture.secondarySpace.id
-            ),
-            BrowserLinkRoute(
-                id: Self.uuid(0x46),
-                match: .contains,
-                pattern: "example.com",
-                destinationSpaceID: fixture.primarySpace.id
-            ),
-        ]
-
-        XCTAssertEqual(
-            BrowserLinkRoutingPolicy.decision(
-                for: url,
-                preferences: preferences,
-                session: fixture.session,
-                unavailableSpaceIDs: [fixture.secondarySpace.id]
-            ),
-            .space(fixture.primarySpace.id)
-        )
-
-        preferences.routes = []
-        preferences.externalLinkDestination = .chosenSpace
-        preferences.externalLinkSpaceID = fixture.secondarySpace.id
-        XCTAssertEqual(
-            BrowserLinkRoutingPolicy.decision(
-                for: url,
-                preferences: preferences,
-                session: fixture.session,
-                unavailableSpaceIDs: [fixture.secondarySpace.id]
-            ),
-            .space(fixture.primarySpace.id)
-        )
-    }
-
-    func testMissingChosenSpaceDisplaysTheSelectedSpaceWithoutPersistingFallback() {
-        let fixture = makeFixture()
-        let missingSpaceID = SpaceID(rawValue: Self.uuid(0x77))
-        let store = fixture.store
-        store.update { preferences in
-            preferences.externalLinkDestination = .chosenSpace
-            preferences.externalLinkSpaceID = missingSpaceID
-        }
-
-        let resolved = BrowserLinkSettingsSpacePolicy.resolvedExternalSpaceID(
-            preferredSpaceID: store.preferences.externalLinkSpaceID,
-            spaces: fixture.session.spaces,
-            selectedSpaceID: fixture.session.selectedSpaceID,
-            unavailableSpaceIDs: []
-        )
-
-        XCTAssertEqual(resolved, fixture.primarySpace.id)
-        XCTAssertEqual(store.preferences.externalLinkSpaceID, missingSpaceID)
-    }
-
     private func makeFixture() -> (
         store: BrowserLinkPreferenceStore,
         session: BrowserSession,

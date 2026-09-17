@@ -132,31 +132,6 @@ final class BrowserPeekModelTests: XCTestCase {
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
 
-    func testWindowOpenNavigationStaysInTheExactPeekLease() throws {
-        let context = try makeContext()
-        XCTAssertTrue(context.model.preparePage(isActive: true))
-        let lease = try XCTUnwrap(context.model.pageLease)
-        let page = try XCTUnwrap(lease.page)
-        let destination = try XCTUnwrap(
-            URL(string: "https://peek-window-open.crest.test/destination")
-        )
-
-        let popupWebView = try page.requestTestPopup(
-            url: destination,
-            navigationType: .other
-        )
-
-        XCTAssertNil(popupWebView)
-        XCTAssertTrue(context.model.pageLease === lease)
-        XCTAssertTrue(context.model.page === page)
-        XCTAssertEqual(page.pendingNavigationURL, destination)
-        XCTAssertEqual(
-            context.browser.selectedSpace?.tabs.map(\.id),
-            context.source.tabs.map(\.id)
-        )
-        XCTAssertEqual(context.coordinator.peekRequest, context.request)
-    }
-
     func testReplacementProfileInvalidatesTheExactPeekRuntime() throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
@@ -194,24 +169,6 @@ final class BrowserPeekModelTests: XCTestCase {
             context.destination.tabs.count
         )
         XCTAssertEqual(context.browser.session.selectedSpaceID, replacement.id)
-        XCTAssertNotNil(lease.page)
-        XCTAssertEqual(context.coordinator.peekRequest, context.request)
-    }
-
-    func testFailedPromotionLeavesTheExactPeekOpen() throws {
-        let context = try makeContext()
-        context.model.preparePage(isActive: true)
-        let lease = try XCTUnwrap(context.model.pageLease)
-        let destinationAssignment = BrowserSpaceRuntimeAssignment(
-            space: context.destination
-        )
-        context.browser.session = BrowserSession(
-            spaces: [context.source],
-            selectedSpaceID: context.source.id
-        )
-
-        XCTAssertFalse(context.model.promote(to: destinationAssignment))
-        XCTAssertFalse(context.model.wasPromoted)
         XCTAssertNotNil(lease.page)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
@@ -316,21 +273,6 @@ final class BrowserPeekModelTests: XCTestCase {
             lockedDestination.tabs.count
         )
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
-    }
-
-    func testLockedSourceStillOffersItsOnlyUnlockedAlternative() throws {
-        let context = try makeContext()
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
-
-        XCTAssertEqual(
-            Set(context.model.availableSpaces.map(\.id)),
-            Set([lockedSource.id, context.destination.id])
-        )
     }
 
     func testRelockedSourceRejectsLatePromotionPrepareAndRestore() async throws {

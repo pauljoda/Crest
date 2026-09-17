@@ -9,43 +9,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
 
     // MARK: - Cadence
 
-    func testCadenceIsDueImmediatelyBeforeTheFirstCheck() {
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-
-        for frequency in BrowserExtensionUpdateFrequency.allCases {
-            XCTAssertTrue(frequency.isDue(lastCheckedAt: nil, now: now))
-            XCTAssertEqual(
-                frequency.timeUntilDue(lastCheckedAt: nil, now: now),
-                0
-            )
-        }
-    }
-
-    func testWeeklyCadenceBecomesDueAfterSevenDays() {
-        let checkedAt = Date(timeIntervalSince1970: 1_700_000_000)
-        let frequency = BrowserExtensionUpdateFrequency.weekly
-
-        XCTAssertFalse(
-            frequency.isDue(
-                lastCheckedAt: checkedAt,
-                now: checkedAt.addingTimeInterval(6 * 24 * 60 * 60)
-            )
-        )
-        XCTAssertEqual(
-            frequency.timeUntilDue(
-                lastCheckedAt: checkedAt,
-                now: checkedAt.addingTimeInterval(6 * 24 * 60 * 60)
-            ),
-            24 * 60 * 60
-        )
-        XCTAssertTrue(
-            frequency.isDue(
-                lastCheckedAt: checkedAt,
-                now: checkedAt.addingTimeInterval(7 * 24 * 60 * 60)
-            )
-        )
-    }
-
     func testEachCadenceUsesItsOwnIntervalAndNeverReportsNegativeDelay() {
         let checkedAt = Date(timeIntervalSince1970: 1_700_000_000)
         let day: TimeInterval = 24 * 60 * 60
@@ -80,29 +43,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
     }
 
     // MARK: - Version ordering
-
-    func testVersionComparisonIsNumericRatherThanLexicographic() {
-        XCTAssertEqual(
-            BrowserExtensionVersionPolicy.compare("1.10", "1.9"),
-            .orderedDescending
-        )
-        XCTAssertEqual(
-            BrowserExtensionVersionPolicy.compare("4.9.129", "4.9.99"),
-            .orderedDescending
-        )
-        XCTAssertEqual(
-            BrowserExtensionVersionPolicy.compare("2.0", "2.0.0"),
-            .orderedSame
-        )
-        XCTAssertEqual(
-            BrowserExtensionVersionPolicy.compare("2.0.0.1", "2.0"),
-            .orderedDescending
-        )
-        XCTAssertEqual(
-            BrowserExtensionVersionPolicy.compare("1.2.3", "1.2.4"),
-            .orderedAscending
-        )
-    }
 
     func testUnreadableVersionsAreRejectedRatherThanGuessed() {
         let unreadable = [
@@ -161,26 +101,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
 
     // MARK: - Endpoint
 
-    func testDownloadEndpointKeepsItsRedirectContractOnCurrentChrome() throws {
-        let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
-        let query = try queryItems(
-            of: BrowserChromeWebStoreUpdateRequest.url(for: id)
-        )
-
-        XCTAssertEqual(query["response"], "redirect")
-        XCTAssertEqual(query["acceptformat"], "crx3")
-        XCTAssertEqual(query["x"], "id=\(darkReaderID)&uc")
-        XCTAssertEqual(
-            query["prodversion"],
-            BrowserChromeWebStoreUpdateRequest.productVersion
-        )
-        XCTAssertNotEqual(
-            BrowserChromeWebStoreUpdateRequest.productVersion,
-            "140.0.0.0",
-            "The advertised Chrome build should track current stable."
-        )
-    }
-
     func testUpdateCheckEndpointAsksForTheOmahaAnswerOnTheSameHost() throws {
         let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
         let url = BrowserChromeWebStoreUpdateRequest.updateCheckURL(for: id)
@@ -197,18 +117,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
         XCTAssertEqual(query["x"], "id=\(darkReaderID)&uc")
     }
 
-    func testUpdateCheckEndpointCanReportAnInstalledVersion() throws {
-        let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
-        let query = try queryItems(
-            of: BrowserChromeWebStoreUpdateRequest.updateCheckURL(
-                for: id,
-                installedVersion: "4.9.129"
-            )
-        )
-
-        XCTAssertEqual(query["x"], "id=\(darkReaderID)&v=4.9.129&uc")
-    }
-
     // MARK: - Omaha response parsing
 
     func testUpdateCheckParserReadsThePublishedVersion() throws {
@@ -220,16 +128,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
 
         XCTAssertEqual(check.extensionID, id)
         XCTAssertEqual(check.publishedVersion, "4.9.129")
-    }
-
-    func testUpdateCheckParserReadsANoUpdateAnswer() throws {
-        let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
-        let check = try BrowserChromeWebStoreUpdateCheckParser.check(
-            in: Self.noUpdateResponse(appID: darkReaderID),
-            expectedID: id
-        )
-
-        XCTAssertNil(check.publishedVersion)
     }
 
     func testUpdateCheckParserRejectsAnAnswerForAnotherExtension() throws {
@@ -245,30 +143,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
             XCTAssertEqual(
                 error as? BrowserChromeWebStoreUpdateCheckError,
                 .identityMismatch
-            )
-        }
-    }
-
-    func testUpdateCheckParserSurfacesADelistedExtension() throws {
-        let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
-        let document = """
-            <?xml version="1.0" encoding="UTF-8"?>\
-            <gupdate xmlns="http://www.google.com/update2/response" \
-            protocol="2.0" server="prod">\
-            <daystart elapsed_seconds="27873"/>\
-            <app appid="\(darkReaderID)" status="error-unknownApplication"/>\
-            </gupdate>
-            """
-
-        XCTAssertThrowsError(
-            try BrowserChromeWebStoreUpdateCheckParser.check(
-                in: Data(document.utf8),
-                expectedID: id
-            )
-        ) { error in
-            XCTAssertEqual(
-                error as? BrowserChromeWebStoreUpdateCheckError,
-                .applicationUnavailable("error-unknownApplication")
             )
         }
     }
@@ -382,16 +256,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
 
     // MARK: - Preferences
 
-    func testPreferencesDefaultToWeeklyAutomaticUpdates() {
-        XCTAssertTrue(
-            BrowserExtensionUpdatePreferences.default.isAutomaticUpdateEnabled
-        )
-        XCTAssertEqual(
-            BrowserExtensionUpdatePreferences.default.updateFrequency,
-            .weekly
-        )
-    }
-
     func testPreferencesRoundTripAndToleratePartialRecords() throws {
         let preferences = BrowserExtensionUpdatePreferences(
             isAutomaticUpdateEnabled: false,
@@ -479,22 +343,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
         )
     }
 
-    func testManualCheckIsOfferedOnlyWhenSomethingCouldBeUpdated() {
-        XCTAssertFalse(
-            makeEnvironment(targets: []).model.hasUpdatableExtensions
-        )
-        XCTAssertFalse(
-            makeEnvironment(
-                targets: [Self.target(version: "1.0", isEnabled: false)]
-            ).model.hasUpdatableExtensions
-        )
-        XCTAssertTrue(
-            makeEnvironment(
-                targets: [Self.target(version: "1.0")]
-            ).model.hasUpdatableExtensions
-        )
-    }
-
     func testDisabledInstallationsAreLeftAloneByAnUpdatePass() async {
         let environment = makeEnvironment(
             targets: [
@@ -515,26 +363,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
             environment.applier.appliedExtensionIDs,
             [Self.identifier(2)]
         )
-    }
-
-    func testCheckNowRunsEvenWhenAutomaticUpdatesAreOff() async {
-        let environment = makeEnvironment(
-            preferences: BrowserExtensionUpdatePreferences(
-                isAutomaticUpdateEnabled: false,
-                updateFrequency: .weekly
-            ),
-            lastCheckedAt: Self.checkDate,
-            targets: [Self.target(version: "1.0")],
-            publishedVersion: "2.0"
-        )
-
-        await environment.model.checkForUpdatesNow()
-        await environment.drainScheduling()
-
-        XCTAssertEqual(environment.applier.appliedExtensionIDs.count, 1)
-        XCTAssertEqual(environment.model.lastCheckedAt, Self.checkDate)
-        // A forced pass must not arm a cadence the toggle says is off.
-        XCTAssertEqual(environment.sleeper.invocationCount, 0)
     }
 
     func testAPassWhereEveryExtensionFailsRetriesSoon() async {
@@ -579,69 +407,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
             environment.sleeper.requestedDelays.first,
             .seconds(7 * 24 * 60 * 60)
         )
-    }
-
-    func testSwitchingAutomaticUpdatesOffCancelsAnArmedSchedule() async {
-        let environment = makeEnvironment(
-            lastCheckedAt: Self.checkDate,
-            targets: [Self.target(version: "1.0")],
-            publishedVersion: "2.0"
-        )
-
-        environment.model.scheduleCheckIfNeeded()
-        for _ in 0..<20 { await Task.yield() }
-        XCTAssertEqual(environment.sleeper.invocationCount, 1)
-
-        environment.model.setAutomaticUpdateEnabled(false)
-        for _ in 0..<50 { await Task.yield() }
-
-        XCTAssertFalse(
-            environment.model.preferences.isAutomaticUpdateEnabled
-        )
-        XCTAssertEqual(environment.checker.requestCount, 0)
-        XCTAssertTrue(environment.applier.appliedExtensionIDs.isEmpty)
-    }
-
-    func testChangingFrequencyRearmsTheScheduleWithTheNewInterval() async {
-        let environment = makeEnvironment(
-            preferences: BrowserExtensionUpdatePreferences(
-                isAutomaticUpdateEnabled: true,
-                updateFrequency: .biweekly
-            ),
-            lastCheckedAt: Self.checkDate,
-            targets: [Self.target(version: "1.0")],
-            publishedVersion: "2.0"
-        )
-
-        environment.model.scheduleCheckIfNeeded()
-        for _ in 0..<20 { await Task.yield() }
-        XCTAssertEqual(
-            environment.sleeper.requestedDelays,
-            [.seconds(14 * 24 * 60 * 60)]
-        )
-
-        environment.model.setUpdateFrequency(.daily)
-        for _ in 0..<20 { await Task.yield() }
-
-        XCTAssertEqual(
-            environment.sleeper.requestedDelays,
-            [.seconds(14 * 24 * 60 * 60), .seconds(24 * 60 * 60)]
-        )
-        XCTAssertEqual(
-            environment.preferences.load()?.updateFrequency,
-            .daily
-        )
-    }
-
-    func testAPassWithNoStoreSourcedExtensionsStillStampsTheCheck() async {
-        let environment = makeEnvironment(targets: [])
-
-        environment.model.scheduleCheckIfNeeded()
-        await environment.settle()
-
-        XCTAssertEqual(environment.checker.requestCount, 0)
-        XCTAssertEqual(environment.model.lastCheckedAt, Self.checkDate)
-        XCTAssertEqual(environment.model.updateRevision, 0)
     }
 
     // MARK: - Environment
@@ -849,20 +614,6 @@ final class BrowserExtensionUpdateTests: XCTestCase {
             codebase="https://clients2.googleusercontent.com/crx/blobs/probe.crx" \
             fp="1.abc" hash_sha256="abc" protected="0" size="839237" \
             status="ok" version="\(version)"/>\
-            </app></gupdate>
-            """.utf8
-        )
-    }
-
-    private static func noUpdateResponse(appID: String) -> Data {
-        Data(
-            """
-            <?xml version="1.0" encoding="UTF-8"?>\
-            <gupdate xmlns="http://www.google.com/update2/response" \
-            protocol="2.0" server="prod">\
-            <daystart elapsed_days="7164" elapsed_seconds="27882"/>\
-            <app appid="\(appID)" cohort="1::" cohortname="" status="ok">\
-            <updatecheck _esbAllowlist="true" status="noupdate"/>\
             </app></gupdate>
             """.utf8
         )

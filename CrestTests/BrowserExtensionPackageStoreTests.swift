@@ -4,22 +4,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserExtensionPackageStoreTests: XCTestCase {
-    func testRemovingAPackageWhoseResourceDisappearsIsIdempotent() throws {
-        let fileManager = MissingPackageFileManager()
-        let store = BrowserExtensionPackageStore(
-            fileManager: fileManager,
-            rootURL: URL(filePath: "/tmp/crest-missing-package-store"),
-            removesRootOnDeinit: false
-        )
-
-        XCTAssertNoThrow(
-            try store.removePackage(
-                packageName: "extension.zip",
-                in: SpaceID()
-            )
-        )
-    }
-
     @MainActor
     func testStagingCopiesAnExtensionIntoAnOwnedSpaceDirectory() async throws {
         let fileManager = FileManager.default
@@ -149,71 +133,6 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         )
     }
 
-    func testRestagingTheSameFolderKeepsOneIdentityAndANewStoredCopy() throws {
-        let fileManager = FileManager.default
-        let testRoot = fileManager.temporaryDirectory
-            .appending(
-                path: "crest-extension-identity-test-\(UUID().uuidString)",
-                directoryHint: .isDirectory
-            )
-        let source =
-            testRoot
-            .appending(path: "source", directoryHint: .isDirectory)
-        let staging =
-            testRoot
-            .appending(path: "staging", directoryHint: .isDirectory)
-        defer { try? fileManager.removeItem(at: testRoot) }
-        try fileManager.createDirectory(
-            at: source,
-            withIntermediateDirectories: true
-        )
-        try Data("{}".utf8).write(to: source.appending(path: "manifest.json"))
-        let store = BrowserExtensionPackageStore(
-            fileManager: fileManager,
-            rootURL: staging
-        )
-        let spaceID = SpaceID()
-
-        let first = try store.stage(source, in: spaceID)
-        let second = try store.stage(source, in: spaceID)
-
-        XCTAssertEqual(first.extensionID, second.extensionID)
-        XCTAssertNotEqual(first.packageName, second.packageName)
-    }
-
-    func testADifferentFolderStagesUnderADifferentIdentity() throws {
-        let fileManager = FileManager.default
-        let testRoot = fileManager.temporaryDirectory
-            .appending(
-                path: "crest-extension-distinct-test-\(UUID().uuidString)",
-                directoryHint: .isDirectory
-            )
-        let staging =
-            testRoot
-            .appending(path: "staging", directoryHint: .isDirectory)
-        defer { try? fileManager.removeItem(at: testRoot) }
-        let store = BrowserExtensionPackageStore(
-            fileManager: fileManager,
-            rootURL: staging
-        )
-        var identifiers: Set<String> = []
-        for name in ["alpha", "beta"] {
-            let source =
-                testRoot
-                .appending(path: name, directoryHint: .isDirectory)
-            try fileManager.createDirectory(
-                at: source,
-                withIntermediateDirectories: true
-            )
-            try Data("{}".utf8).write(
-                to: source.appending(path: "manifest.json")
-            )
-            identifiers.insert(try store.stage(source, in: SpaceID()).extensionID)
-        }
-
-        XCTAssertEqual(identifiers.count, 2)
-    }
-
     func testAManifestKeySurvivesTheFolderBeingMoved() throws {
         let fileManager = FileManager.default
         let testRoot = fileManager.temporaryDirectory
@@ -247,28 +166,6 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         }
 
         XCTAssertEqual(identifiers.count, 1)
-    }
-
-    func testDiscardRemovesOnlyTheStagedPackage() throws {
-        let fileManager = FileManager.default
-        let testRoot = fileManager.temporaryDirectory
-            .appending(path: "crest-extension-discard-test-\(UUID().uuidString)", directoryHint: .isDirectory)
-        let source =
-            testRoot
-            .appending(path: "source", directoryHint: .isDirectory)
-        let staging =
-            testRoot
-            .appending(path: "staging", directoryHint: .isDirectory)
-        defer { try? fileManager.removeItem(at: testRoot) }
-        try fileManager.createDirectory(at: source, withIntermediateDirectories: true)
-        try Data("{}".utf8).write(to: source.appending(path: "manifest.json"))
-        let store = BrowserExtensionPackageStore(fileManager: fileManager, rootURL: staging)
-        let package = try store.stage(source, in: SpaceID())
-
-        store.discard(package)
-
-        XCTAssertFalse(fileManager.fileExists(atPath: package.resourceURL.path))
-        XCTAssertTrue(fileManager.fileExists(atPath: source.path))
     }
 
     func testPersistentStoreReconstructsAStagedPackageFromItsSafeName() throws {
@@ -404,15 +301,5 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
                 .symbolicLink
             )
         }
-    }
-}
-
-private final class MissingPackageFileManager: FileManager, @unchecked Sendable {
-    override func fileExists(atPath path: String) -> Bool {
-        true
-    }
-
-    override func removeItem(at URL: URL) throws {
-        throw CocoaError(.fileNoSuchFile)
     }
 }

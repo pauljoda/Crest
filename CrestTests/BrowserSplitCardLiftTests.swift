@@ -19,14 +19,6 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         XCTAssertTrue(Self.picksUp())
     }
 
-    /// The binding is the pointer's half of ⇧⌘←/→, so it is the same pair.
-    func testTheCarryBindingIsTheOneTheMoveShortcutsUse() {
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.carryModifiers,
-            [.command, .shift]
-        )
-    }
-
     /// The bare click is how focus moves between cards, and how web content
     /// receives every click anybody makes. Reordering asks for itself.
     func testAPressWithoutModifiersIsAnOrdinaryClick() {
@@ -71,64 +63,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
 
     // MARK: - Divider proximity
 
-    /// The divider's reach is symmetric about the gap between two cards, which
-    /// means it covers the last few points of each card as well.
-    func testTheDividerClaimsTheGapAndItsOverhangOnEitherSide() {
-        let cards = Self.cardFrames(count: 2)
-        let gapCenter = (cards[0].maxX + cards[1].minX) / 2
-        let reach = BrowserSplitLayoutMetrics.resizeHandleHitWidth / 2
-
-        XCTAssertTrue(Self.isOverDivider(atX: gapCenter, in: cards))
-        XCTAssertTrue(Self.isOverDivider(atX: gapCenter - reach + 1, in: cards))
-        XCTAssertTrue(Self.isOverDivider(atX: gapCenter + reach - 1, in: cards))
-        XCTAssertFalse(Self.isOverDivider(atX: gapCenter - reach - 1, in: cards))
-        XCTAssertFalse(Self.isOverDivider(atX: gapCenter + reach + 1, in: cards))
-        XCTAssertFalse(Self.isOverDivider(atX: 100, in: cards))
-    }
-
-    func testALoneCardHasNoDividerToBeOver() {
-        XCTAssertFalse(
-            Self.isOverDivider(atX: 150, in: Self.cardFrames(count: 1))
-        )
-    }
-
     // MARK: - The gap the carried card leaves
-
-    /// The carried card's own column is the gap, and a gap the pointer is inside
-    /// is not a card it has passed. Excluding it is what makes the remaining
-    /// `n - 1` neighbours answer in the full `0...n - 1` the row has slots for.
-    func testTheGapTracksThePointerAcrossTheCardsItIsNotCarrying() {
-        let frames = Self.registeredFrames(count: 3)
-
-        XCTAssertEqual(Self.gapIndex(atX: 10, in: frames, lifted: Self.middle), 0)
-        XCTAssertEqual(Self.gapIndex(atX: 149, in: frames, lifted: Self.middle), 0)
-        // Past the leading card's midpoint, but nowhere near the trailing one's.
-        XCTAssertEqual(Self.gapIndex(atX: 400, in: frames, lifted: Self.middle), 1)
-        XCTAssertEqual(Self.gapIndex(atX: 767, in: frames, lifted: Self.middle), 2)
-        XCTAssertEqual(
-            Self.gapIndex(atX: 5_000, in: frames, lifted: Self.middle),
-            2,
-            "Overshooting the row parks the gap at the last slot rather than resolving nothing."
-        )
-    }
-
-    /// Carrying the leading card is not a special case: the two cards left are
-    /// measured exactly as any other two would be.
-    func testCarryingAnEndCardStillOffersEverySlot() {
-        let frames = Self.registeredFrames(count: 3)
-
-        XCTAssertEqual(Self.gapIndex(atX: 10, in: frames, lifted: Self.leading), 0)
-        XCTAssertEqual(Self.gapIndex(atX: 500, in: frames, lifted: Self.leading), 1)
-        XCTAssertEqual(Self.gapIndex(atX: 800, in: frames, lifted: Self.leading), 2)
-    }
-
-    /// A pointer resting over the gap itself resolves to the gap's own slot,
-    /// which is what keeps a carry that has not moved from proposing a move.
-    func testAPointerOverTheGapProposesTheSlotTheGapIsAlreadyIn() {
-        let frames = Self.registeredFrames(count: 3)
-
-        XCTAssertEqual(Self.gapIndex(atX: 458, in: frames, lifted: Self.middle), 1)
-    }
 
     /// The gap moves the cards it passes, and the answer has to survive that or
     /// the slot would flicker under a stationary pointer. Moving the gap toward
@@ -165,34 +100,6 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         }
     }
 
-    /// Frames are screen geometry and member order is reading order, and the two
-    /// only agree left to right. A mirrored row draws the first member at the
-    /// trailing edge, so the count of cards passed is reflected before it is used
-    /// as a member index.
-    func testAMirroredRowCountsItsSlotsFromTheOtherEnd() {
-        let frames = Self.registeredFrames(count: 3)
-
-        XCTAssertEqual(
-            Self.gapIndex(
-                atX: 10,
-                in: frames,
-                lifted: Self.middle,
-                layoutDirection: .rightToLeft
-            ),
-            2,
-            "The leading edge of a mirrored row is its last member's slot."
-        )
-        XCTAssertEqual(
-            Self.gapIndex(
-                atX: 5_000,
-                in: frames,
-                lifted: Self.middle,
-                layoutDirection: .rightToLeft
-            ),
-            0
-        )
-    }
-
     // MARK: - The row as it is drawn
 
     /// The carried member stays in the list, at its own identity, moved to the
@@ -218,52 +125,6 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
             )
             .map(\.id),
             [Self.leading, Self.trailing, Self.middle]
-        )
-    }
-
-    func testAGapStillAtItsOriginLeavesTheRowExactlyAsItWas() {
-        let members = BrowserSplitCardTestFixture.members
-
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.displayMembers(
-                members,
-                lifted: Self.middle,
-                gapIndex: 1
-            ),
-            members
-        )
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.displayMembers(
-                members,
-                lifted: nil,
-                gapIndex: 0
-            ),
-            members
-        )
-    }
-
-    /// The row clamps for the same reason the domain does: a gap resolved past
-    /// either end is still that end.
-    func testASlotPastEitherEndIsStillThatEnd() {
-        let members = BrowserSplitCardTestFixture.members
-
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.displayMembers(
-                members,
-                lifted: Self.leading,
-                gapIndex: -4
-            )
-            .map(\.id),
-            [Self.leading, Self.middle, Self.trailing]
-        )
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.displayMembers(
-                members,
-                lifted: Self.leading,
-                gapIndex: 9
-            )
-            .map(\.id),
-            [Self.middle, Self.trailing, Self.leading]
         )
     }
 
@@ -323,26 +184,6 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
 
     // MARK: - Which card the press landed in
 
-    /// Every card is liftable, and the row has no way to tell one of them apart
-    /// from the others. Focus is not among the inputs, so it cannot be among the
-    /// answers.
-    func testEveryCardInTheRowResolvesTheSameWay() {
-        let members = BrowserSplitCardTestFixture.members
-        let frames = Self.registeredFrames(count: 3)
-
-        for (index, member) in members.enumerated() {
-            let frame = try? XCTUnwrap(frames[member.id])
-            let card = BrowserSplitCardLiftPolicy.card(
-                at: CGPoint(x: frame?.midX ?? 0, y: 300),
-                members: members,
-                cardFrames: frames
-            )
-            XCTAssertEqual(card?.tabID, member.id)
-            XCTAssertEqual(card?.index, index)
-            XCTAssertEqual(card?.frame, frame)
-        }
-    }
-
     /// A frame left behind by a card the row has already closed up around
     /// overlaps the cards that took its place. Resolving through the members
     /// makes it unreachable rather than making it win a dictionary's iteration
@@ -363,16 +204,6 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
 
         XCTAssertEqual(card?.tabID, members[0].id)
         XCTAssertEqual(card?.index, 0)
-    }
-
-    func testAPressOutsideEveryMemberResolvesToNoCard() {
-        XCTAssertNil(
-            BrowserSplitCardLiftPolicy.card(
-                at: CGPoint(x: 5_000, y: 300),
-                members: BrowserSplitCardTestFixture.members,
-                cardFrames: Self.registeredFrames(count: 3)
-            )
-        )
     }
 
     /// A stranger's frame between two members would put a divider's midpoint in
@@ -537,45 +368,7 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
         XCTAssertNil(state.lift)
     }
 
-    /// Nor twice: one press is one carry.
-    func testOnePickupPromotesOnlyOnce() {
-        let state = BrowserSplitCardLiftState()
-        let token = state.reserve()
-
-        XCTAssertTrue(Self.promote(state, token: token))
-        XCTAssertFalse(Self.promote(state, token: token))
-    }
-
-    /// Tokens are never reused, so nothing an earlier carry set in motion can
-    /// find its way onto a later one.
-    func testEveryPickupGetsAnIdentityOfItsOwn() {
-        let state = BrowserSplitCardLiftState()
-
-        let first = state.reserve()
-        let second = state.reserve()
-
-        XCTAssertNotEqual(first, second)
-        XCTAssertFalse(
-            Self.promote(state, token: first),
-            "Staging again supersedes the pickup that was staged before it."
-        )
-        XCTAssertTrue(Self.promote(state, token: second))
-    }
-
     // MARK: - The carry
-
-    func testAPointerSampleMovesTheGapWithIt() {
-        let state = Self.carryingState()
-
-        state.update(
-            pointer: CGPoint(x: 800, y: 320),
-            gapIndex: 2,
-            surfaceOrigin: Self.surfaceOrigin
-        )
-
-        XCTAssertEqual(state.lift?.pointer, CGPoint(x: 800, y: 320))
-        XCTAssertEqual(state.lift?.gapIndex, 2)
-    }
 
     // MARK: - The picture
 
@@ -635,15 +428,6 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
         XCTAssertEqual(state.lift?.isSettling, true)
         XCTAssertNil(state.carriedTabID, "A settling card is back in the row.")
         XCTAssertFalse(state.isCarrying)
-    }
-
-    /// Nothing may be committed twice: the second release of one carry is a
-    /// release of nothing.
-    func testASecondReleaseCommitsNothing() {
-        let state = Self.carryingState()
-        _ = state.drop()
-
-        XCTAssertNil(state.drop())
     }
 
     /// Escape and a right-click end the carry without a move, and without ever

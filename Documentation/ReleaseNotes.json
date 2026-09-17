@@ -1429,6 +1429,10 @@
     "quick-window-border-preference": {
       "category": "fixed",
       "message": "Quick Windows follow your browser border size while keeping balanced spacing around their controls"
+    },
+    "focus-regression-tests-on-fragile-contracts": {
+      "category": "internal",
+      "message": "Focus regression coverage on fragile behavioral contracts and run retained script tests in CI."
     }
   }
 }
