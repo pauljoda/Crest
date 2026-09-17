@@ -6,33 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.24</title>
-            <pubDate>Thu, 17 Sep 2026 13:45:57 +0000</pubDate>
+            <title>0.6.25</title>
+            <pubDate>Thu, 17 Sep 2026 15:35:41 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1121</sparkle:version>
-            <sparkle:shortVersionString>0.6.24</sparkle:shortVersionString>
+            <sparkle:version>1122</sparkle:version>
+            <sparkle:shortVersionString>0.6.25</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Quick Windows follow your browser border size while keeping balanced spacing around their controls
+- Image-converter extensions can save JPEGs repeatedly and keep their image menus after restarting Crest
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/616f92d745b82c36cf78daded5e7174d83ab1669...e2dd9187d6a1345c5a1106726e64bdae012d67f0) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.24-2026-09-17-1121-r121.1/Installer-Crest-0.6.24-development-2026-09-17-e2dd918-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/e2dd9187d6a1345c5a1106726e64bdae012d67f0...f0de6ca247b6a769941e70042564aeebb6592011) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.25-2026-09-17-1122-r122.1/Installer-Crest-0.6.25-development-2026-09-17-f0de6ca-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.24-2026-09-17-1121-r121.1/Installer-Crest-0.6.24-development-2026-09-17-e2dd918-arm64.dmg" length="27152180" type="application/octet-stream" sparkle:edSignature="XySEsYyIVQnByI7dEG85uR+fAe9Qu3BDLRnBvOwej9lCNeqf6SW3ncwkdYQPsPqyEQNpd1mSFXtpGLRKchfUBQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.25-2026-09-17-1122-r122.1/Installer-Crest-0.6.25-development-2026-09-17-f0de6ca-arm64.dmg" length="27152692" type="application/octet-stream" sparkle:edSignature="7ODGyVPS5I74NfiKP+1VZSJ0VqfsDdlfY9JPwlwlWXCBKLOkSs33Ri2NFNQwCZT6slYJ4bWzhO2OvQaOW3htAQ=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: s2BD4m3m7X4leh5yRhELySM3AZKscAne7Jo8Ud+kNdsTkycK52nMoGCGSpDsOXrjjUzzUbUJnZ/y1PYtBfEqDg==
-length: 2060
+edSignature: Z1XoJvSSyNI0sAkFdLVz+jMSGY0rGcwrQAzXiQoUVi8f/XUlN7AGouwbtQzPSVWJlhzoHXhI9AbFckhrCZ5JCw==
+length: 2064
 -->
