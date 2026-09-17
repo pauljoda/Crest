@@ -38,6 +38,15 @@ extension BrowserPage: WKUIDelegate {
         pictureInPicture.nativePresentationDidChange(isActive: isActive)
     }
 
+    /// Native PiP's Restore action asks the embedder to reveal its document.
+    /// The ordinary Close action does not send this callback. Fullscreen also
+    /// uses it, so only a still-valid PiP source may change tab selection.
+    @objc(_webViewFullscreenMayReturnToInline:)
+    func webViewFullscreenMayReturnToInline(_ webView: WKWebView) {
+        guard webView === self.webView, pictureInPicture.canRestoreSource else { return }
+        host?.restorePictureInPictureSourcePage(self)
+    }
+
     /// Returns the popup's web view built from WebKit's own configuration, which
     /// is what keeps `window.open()` non-null, `window.opener` connected, and
     /// `about:blank` popups writable. Crest never loads that web view itself:

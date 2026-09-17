@@ -2,17 +2,21 @@ extension BrowserPagePool {
     /// Entering a Space restores resident cards, but does not open its
     /// remembered unloaded tabs on the person's behalf.
     func selectSpace(in browser: BrowserStore) {
-        guard let space = browser.selectedSpace, let tab = browser.selectedTab else {
+        guard let space = browser.selectedSpace else {
             deactivatePagePresentation()
+            return
+        }
+        guard let tab = browser.selectedTab else {
+            leavePagePresentation()
             return
         }
         if browser.consumeMovedTabActivation() {
             select(session: browser.session)
         } else if requiresStartPageOnEntry(to: space) {
             browser.presentStartPageForSpaceEntry()
-            deactivatePagePresentation()
+            leavePagePresentation()
         } else if tab.isStartPage && space.splitGroup(containing: tab.id) == nil {
-            deactivatePagePresentation()
+            leavePagePresentation()
         } else {
             select(session: browser.session)
         }

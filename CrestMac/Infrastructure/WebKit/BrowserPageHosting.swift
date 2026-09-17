@@ -43,6 +43,9 @@ protocol BrowserPageHosting: AnyObject {
     /// Brings the live tab that authored a clicked system notification forward.
     func activateNotificationSourcePage(_ page: BrowserPage)
 
+    /// Reveals the exact live PiP source in its current owning window.
+    func restorePictureInPictureSourcePage(_ page: BrowserPage)
+
     /// Routes a message received by a shared popup content controller to the
     /// page whose web view actually authored it.
     func routeHostedWebNotificationMessage(_ message: WKScriptMessage)

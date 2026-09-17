@@ -25,6 +25,7 @@ final class BrowserPictureInPicturePageController: BrowserAutomaticPictureInPict
     private var timeout: Task<Void, Never>?
 
     var isPictureInPictureActive: Bool { nativeIsActive || !activeDocuments.isEmpty }
+    var canRestoreSource: Bool { acceptsEvents && isPictureInPictureActive }
     var protectsPageResidency: Bool { isPictureInPictureActive || completion != nil }
     var canAutomaticallyEnterPictureInPicture: Bool {
         !candidates.isEmpty && !isPictureInPictureActive && webView != nil
