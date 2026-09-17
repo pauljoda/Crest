@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "optional-unloaded-tab-dimming",
+    "development": "balanced-quick-window-space-padding",
     "nightly": "pdf-preview-download"
   }
 }
