@@ -5,6 +5,90 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
+    func testRestoringMenusForEmbeddedExtensionDoesNotTerminateWebpage() async throws {
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.selectedSpace)
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let pool = BrowserExtensionControllerPool(
+            storedResourcePreparer: BrowserStoreWebExtensionStoredResourcePreparer(),
+            webpageMenuRegistry: registry)
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(searchDirectories: []),
+                webpageMenuRegistry: registry))
+        let root = try fixture(
+            name: "Embedded extension menu restoration",
+            manifest: [
+                "permissions": ["contextMenus"],
+                "background": ["scripts": ["background.js"]],
+                "web_accessible_resources": ["frame.html"],
+            ],
+            files: [
+                "frame.html": "<html><body>Extension frame</body></html>",
+                "background.js": "browser.runtime.onMessage.addListener(() => Promise.resolve('awake'));",
+            ])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let installed = try await pool.loadUnpackedExtension(from: root, in: space)
+        let context = try XCTUnwrap(pool.loadedContext(extensionID: installed.id, in: space.id))
+        try await pool.setPermissionDecision(.allow, for: "contextMenus", extensionID: installed.id, in: space)
+        let client = BrowserExtensionServiceClientID.scoped(extensionID: installed.id, spaceID: space.id)
+        try registry.replaceDefinitions(
+            message: [
+                "api": "contextMenus.replace",
+                "items": [
+                    [
+                        "id": "string:probe", "type": "normal", "title": "Probe", "contexts": ["page"],
+                        "documentUrlPatterns": [], "targetUrlPatterns": [], "enabled": true, "visible": true,
+                    ] as [String: Any]
+                ],
+            ], for: client)
+        let server = try frameServer()
+        defer { server.stop() }
+        try await server.start()
+        let controller = pool.controller(for: space)
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = controller.configuration.defaultWebsiteDataStore
+        configuration.webExtensionController = controller
+        let tab = WKWebView(frame: .zero, configuration: configuration)
+        let observer = NavigationWaiter(controller: nil, originalPreferences: nil)
+        tab.navigationDelegate = observer
+        tab.load(URLRequest(url: server.url(host: "127.0.0.1", path: "/")))
+        try await waitUntilLoaded(tab)
+        let marker = UUID().uuidString
+        let result = try? await tab.callAsyncJavaScript(
+            """
+            globalThis.unsavedMarker = marker;
+            const frame = document.createElement('iframe');
+            frame.src = frameURL;
+            document.body.appendChild(frame);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return globalThis.unsavedMarker;
+            """,
+            arguments: ["marker": marker, "frameURL": context.baseURL.appending(path: "frame.html").absoluteString],
+            contentWorld: .page)
+        XCTAssertEqual(observer.terminations, 0, "Restoring an extension frame must not kill its containing webpage")
+        XCTAssertEqual(result as? String, marker, "The containing webpage must retain its live state")
+        XCTAssertEqual(registry.definitions(for: client).map(\.title), ["Probe"])
+
+        // A top-level extension document still owns privileged menu APIs and
+        // must restore persisted menus even when no background recreates them.
+        let topLevel = WKWebView(frame: .zero, configuration: try XCTUnwrap(context.webViewConfiguration))
+        topLevel.load(URLRequest(url: context.baseURL.appending(path: "frame.html")))
+        try await waitUntilLoaded(topLevel)
+        let restored = try await topLevel.callAsyncJavaScript(
+            """
+            for (let attempt = 0; attempt < 40; ++attempt) {
+                try {
+                    await browser.contextMenus.update('probe', {title: 'Restored Probe'});
+                    return true;
+                } catch { await new Promise(resolve => setTimeout(resolve, 25)); }
+            }
+            return false;
+            """, arguments: [:], contentWorld: .page)
+        XCTAssertEqual(restored as? Bool, true, "Top-level extension menu restoration must remain functional")
+    }
+
     func testBackgroundCanRestartWhileAnIsolatedPanelRemainsOpen() async throws {
         let root = try fixture(
             name: "Panel background recovery",
@@ -325,6 +409,7 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
     private final class NavigationWaiter: NSObject, WKNavigationDelegate {
         let finished = XCTestExpectation(description: "Hosted document and its frames loaded")
         var error: Error?
+        var terminations = 0
         let controller: WKUserContentController?
         let originalPreferences: WKWebpagePreferences?
 
@@ -344,6 +429,8 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
             }
             decisionHandler(.allow, preferences)
         }
+
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { terminations += 1 }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) { finished.fulfill() }
         func webView(

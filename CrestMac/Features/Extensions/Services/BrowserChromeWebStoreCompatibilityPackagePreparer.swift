@@ -3571,6 +3571,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                                 items.set(id, item);
                                 resumeNativeClicks(id);
                             }
+                            // A web-accessible extension frame runs in its
+                            // containing website's unprivileged WebKit process.
+                            // Sending native menus IPC from that process fails
+                            // validation and terminates the whole webpage. Keep
+                            // its local definitions, but let a background or
+                            // top-level extension page restore native menus.
+                            if (!isBackgroundContext && globalThis.top !== globalThis) return;
                             // WebKit also drops its native menu objects when
                             // the app exits. Reconcile them without replaying
                             // onInstalled (which can open welcome pages).
