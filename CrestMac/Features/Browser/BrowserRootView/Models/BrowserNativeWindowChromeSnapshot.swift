@@ -2,6 +2,7 @@ import AppKit
 
 struct BrowserNativeWindowChromeSnapshot {
     let styleMask: NSWindow.StyleMask
+    let isMovable: Bool
     let titlebarAppearsTransparent: Bool
     let titleVisibility: NSWindow.TitleVisibility
     let titlebarSeparatorStyle: NSTitlebarSeparatorStyle

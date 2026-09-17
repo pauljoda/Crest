@@ -24,6 +24,14 @@ struct SidebarChrome: View {
                     capabilities: context.capabilities
                 )
                 .contentTransition(.opacity)
+                .background {
+                    // Only the empty navigation-strip background starts a
+                    // window drag. Controls and tab gestures keep their input.
+                    Color.clear
+                        .contentShape(.rect)
+                        .gesture(WindowDragGesture())
+                        .allowsWindowActivationEvents()
+                }
                 .animation(
                     BrowserVisualAccessibilityPolicy.animation(
                         SpacePagerSettlement.standardAnimation, reduceMotion: reduceMotion),

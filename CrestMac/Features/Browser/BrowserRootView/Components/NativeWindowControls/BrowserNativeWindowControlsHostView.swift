@@ -44,6 +44,10 @@ final class BrowserNativeWindowControlsHostView: NSView {
 
     func applyBrowserChrome() {
         guard let window else { return }
+        // AppKit's automatic titlebar drag can claim the mouse-drag sequence
+        // before the webpage underneath receives it. Sidebar backgrounds use
+        // explicit WindowDragGesture instead; fullscreen owns its native bar.
+        window.isMovable = window.styleMask.contains(.fullScreen) && originalChrome?.isMovable == true
         if !window.styleMask.contains(.fullSizeContentView) {
             window.styleMask.insert(.fullSizeContentView)
         }
@@ -102,6 +106,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
         positionWindowControls()
         nativeButtonOrigins.removeAll()
         window.styleMask = originalChrome.styleMask
+        window.isMovable = originalChrome.isMovable
         window.titleVisibility = originalChrome.titleVisibility
         window.titlebarAppearsTransparent = originalChrome.titlebarAppearsTransparent
         window.titlebarSeparatorStyle = originalChrome.titlebarSeparatorStyle
@@ -120,6 +125,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
         guard let window, originalChrome == nil else { return }
         originalChrome = BrowserNativeWindowChromeSnapshot(
             styleMask: window.styleMask,
+            isMovable: window.isMovable,
             titlebarAppearsTransparent: window.titlebarAppearsTransparent,
             titleVisibility: window.titleVisibility,
             titlebarSeparatorStyle: window.titlebarSeparatorStyle,
