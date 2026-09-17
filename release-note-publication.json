@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "picture-in-picture-return-to-source-tab",
+    "development": "optional-unloaded-tab-dimming",
     "nightly": "pdf-preview-download"
   }
 }
