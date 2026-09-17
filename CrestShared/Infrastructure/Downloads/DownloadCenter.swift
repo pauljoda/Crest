@@ -70,6 +70,7 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var nextExtensionDownloadID = 1
     @ObservationIgnored private var retryContexts: [UUID: BrowserDownloadRetryContext] = [:]
     @ObservationIgnored private var retryLeases: [UUID: BrowserDownloadRetryLease] = [:]
+    @ObservationIgnored private var dataSaveAssignments: [UUID: BrowserSpaceRuntimeAssignment] = [:]
     @ObservationIgnored private var authenticationSessions: [ObjectIdentifier: BrowserHTTPAuthenticationSession] = [:]
     @ObservationIgnored private var lastRetentionSweepAt: Date?
     @ObservationIgnored private let promptForCredentials: CredentialPromptHandler
@@ -182,6 +183,10 @@ final class BrowserDownloadCenter: NSObject {
     }
 
     func cancel(_ itemID: UUID) {
+        if dataSaveAssignments.removeValue(forKey: itemID) != nil {
+            ledger.cancel(itemID, message: "Canceled.")
+            return
+        }
         if retryLeases.removeValue(forKey: itemID) != nil {
             ledger.cancel(itemID, message: "Canceled.")
             return
@@ -196,13 +201,16 @@ final class BrowserDownloadCenter: NSObject {
     }
 
     func clear(_ itemID: UUID) {
-        guard !itemIDs.values.contains(itemID) else { return }
+        guard !itemIDs.values.contains(itemID), dataSaveAssignments[itemID] == nil else { return }
         ledger.remove(itemID)
         retryContexts.removeValue(forKey: itemID)
         retryLeases.removeValue(forKey: itemID)
     }
 
     func deleteRecords(profileID: UUID, spaceID: SpaceID) {
+        dataSaveAssignments = dataSaveAssignments.filter {
+            $0.value != BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
+        }
         let activeKeys = spaceIDs.compactMap { key, owningSpaceID in
             owningSpaceID == spaceID ? key : nil
         }
@@ -302,6 +310,105 @@ final class BrowserDownloadCenter: NSObject {
             suggestedFilenameOverride: suggestedFilenameOverride,
             forcesDestinationPrompt: forcesDestinationPrompt
         )
+    }
+
+    /// Saves bytes supplied by a trusted native user action, such as WebKit's
+    /// PDF toolbar. No network request or automatic-download permission is
+    /// involved, but destination consent and file safeguards still apply.
+    @discardableResult
+    func saveData(
+        _ data: Data,
+        suggestedFilename: String,
+        mimeType: String,
+        originatingURL: URL,
+        assignment: BrowserSpaceRuntimeAssignment,
+        spaceName: String,
+        feedbackSource: BrowserDownloadFeedbackSource? = nil
+    ) async -> UUID {
+        let assessment = BrowserDownloadRiskAssessment.assess(
+            suggestedFilename: suggestedFilename, mimeType: mimeType)
+        let itemID = ledger.begin(profileID: assignment.profileID, filename: assessment.sanitizedFilename)
+        ledger.setRiskAssessment(assessment, for: itemID)
+        dataSaveAssignments[itemID] = assignment
+        if let feedbackSource {
+            presentFeedback(
+                BrowserDownloadFeedbackEvent(
+                    id: itemID, profileID: assignment.profileID, spaceID: assignment.spaceID,
+                    filename: assessment.sanitizedFilename, source: feedbackSource))
+        }
+        await finishSavingData(
+            data, itemID: itemID, assessment: assessment, originatingURL: originatingURL,
+            assignment: assignment, spaceName: spaceName)
+        return itemID
+    }
+
+    private func finishSavingData(
+        _ data: Data,
+        itemID: UUID,
+        assessment: BrowserDownloadRiskAssessment,
+        originatingURL: URL,
+        assignment: BrowserSpaceRuntimeAssignment,
+        spaceName: String
+    ) async {
+        defer { dataSaveAssignments.removeValue(forKey: itemID) }
+        guard dataSaveAssignments[itemID] == assignment else { return }
+        if assessment.requiresConfirmation(isUserInitiated: true) {
+            let approved = await approveRiskyDownload(assessment, originatingURL, spaceName)
+            guard dataSaveAssignments[itemID] == assignment else { return }
+            guard approved else {
+                ledger.cancel(itemID, message: "Canceled before downloading a potentially dangerous file.")
+                return
+            }
+        }
+        let resolution = await resolveDownloadDestination(assessment.sanitizedFilename, assignment.spaceID, false)
+        // Cancellation or removal of the owning Space can happen while a
+        // native panel is open. A late response must never resurrect the save.
+        guard dataSaveAssignments[itemID] == assignment else { return }
+        switch resolution {
+        case .cancelled:
+            ledger.cancel(itemID, message: "Canceled.")
+        case .unavailable:
+            #if os(macOS)
+                ledger.fail(
+                    itemID,
+                    message:
+                        "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
+                )
+            #else
+                ledger.fail(itemID, message: "The Downloads folder is unavailable.")
+            #endif
+        case .destination(let destination, let resourceURL):
+            let scoped = resourceURL?.startAccessingSecurityScopedResource() ?? false
+            defer { if scoped { resourceURL?.stopAccessingSecurityScopedResource() } }
+            do {
+                try saveDataToDestination(
+                    data, itemID: itemID, destination: destination, originatingURL: originatingURL)
+                ledger.finish(itemID, finalByteCount: Int64(data.count))
+            } catch {
+                ledger.fail(itemID, message: error.localizedDescription)
+            }
+        }
+    }
+
+    private func saveDataToDestination(
+        _ data: Data, itemID: UUID, destination: URL, originatingURL: URL
+    ) throws {
+        let fileManager = FileManager.default
+        let applicationSupport = try fileManager.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let stagingDirectory =
+            applicationSupport
+            .appendingPathComponent(ProductIdentity.storageDirectoryName, isDirectory: true)
+            .appendingPathComponent("Download Staging", isDirectory: true)
+        try fileManager.createDirectory(at: stagingDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let staging = BrowserDownloadTransfer.stagingURL(
+            itemID: itemID, suggestedFilename: destination.lastPathComponent, directory: stagingDirectory)
+        defer { try? fileManager.removeItem(at: staging) }
+        ledger.setDestination(destination, for: itemID)
+        try data.write(to: staging, options: .atomic)
+        try BrowserDownloadTransfer.finish(
+            from: staging, to: destination, quarantine: BrowserDownloadQuarantine(sourceURL: originatingURL))
     }
 
     func startExtensionDownload(

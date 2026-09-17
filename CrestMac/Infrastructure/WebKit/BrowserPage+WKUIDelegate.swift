@@ -9,6 +9,28 @@ import os
 extension BrowserPage: BrowserExtensionDebuggerDialogHosting {}
 
 extension BrowserPage: WKUIDelegate {
+    /// The PDF HUD supplies its live document bytes through this desktop
+    /// callback, rather than creating a WKDownload. Keep the supplied data:
+    /// fetching the URL again can lose edits or an authenticated response.
+    @objc(_webView:saveDataToFile:suggestedFilename:mimeType:originatingURL:)
+    func webView(
+        _ webView: WKWebView,
+        saveDataToFile data: Data,
+        suggestedFilename: String,
+        mimeType: String,
+        originatingURL: URL
+    ) {
+        guard webView === self.webView else { return }
+        let assignment = BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
+        let feedbackSource = BrowserMacDownloadFeedbackSource.capture(in: webView)
+        Task { [downloadCenter, spaceName] in
+            await downloadCenter.saveData(
+                data, suggestedFilename: suggestedFilename, mimeType: mimeType,
+                originatingURL: originatingURL, assignment: assignment,
+                spaceName: spaceName, feedbackSource: feedbackSource)
+        }
+    }
+
     /// WebKit's desktop presentation callback also covers entry from its own
     /// video context menu, including videos inside cross-origin frames.
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
