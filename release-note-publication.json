@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "mac-titlebar-webpage-input",
+    "development": "pdf-preview-download",
     "nightly": "bounded-missing-site-icon-requests"
   }
 }
