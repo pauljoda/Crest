@@ -23,7 +23,6 @@ the live status for each issue.
 - [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
 - [ ] [feature: Swipping Tab Gesture On iphone](https://github.com/pauljoda/Crest/issues/54)
 - [ ] [feature: Decouple pinned tab options and regular tab options](https://github.com/pauljoda/Crest/issues/138)
-- [ ] [Clarify local extension replacement and permission continuity](https://github.com/pauljoda/Crest/issues/143)
 - [ ] [Organize shared browsing sessions with Sub-Spaces](https://github.com/pauljoda/Crest/issues/144)
 - [ ] [Choose a default Space using Focus](https://github.com/pauljoda/Crest/issues/145)
 - [ ] [Separate selection outlines from tab highlight colors](https://github.com/pauljoda/Crest/issues/146)
@@ -32,11 +31,13 @@ the live status for each issue.
 - [ ] [Choose which browsing data syncs across devices](https://github.com/pauljoda/Crest/issues/149)
 - [ ] [Restore downloads from the built-in PDF preview](https://github.com/pauljoda/Crest/issues/150)
 - [ ] [Add common browsing actions to the macOS Dock menu](https://github.com/pauljoda/Crest/issues/152)
+- [ ] [Preserve webpage text interaction beneath the hidden title bar](https://github.com/pauljoda/Crest/issues/155)
 
 #### Completed
 
 - [x] [Keep active location access consistent with site permissions](https://github.com/pauljoda/Crest/issues/141)
 - [x] [Keep extension compatibility access aligned with permission choices](https://github.com/pauljoda/Crest/issues/142) — [`22b22c95`](https://github.com/pauljoda/Crest/commit/22b22c959f59d9d1f7a6d7b490f14834fc446129)
+- [x] [Clarify local extension replacement and permission continuity](https://github.com/pauljoda/Crest/issues/143) — [`361a1e92`](https://github.com/pauljoda/Crest/commit/361a1e92cd2652e21746e3e3376a54aad70f1c5b)
 
 <!-- crest-roadmap-sync:end -->
 
