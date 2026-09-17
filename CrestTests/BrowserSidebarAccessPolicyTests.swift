@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import CrestMobile
+@testable import Crest
 
 @MainActor
 final class BrowserSidebarAccessPolicyTests: XCTestCase {

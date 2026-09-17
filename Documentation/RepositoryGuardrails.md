@@ -115,8 +115,8 @@ Use `CREST_ISOLATED_PERSISTENCE_ID=<name>` when a validation profile needs to su
 ## Focused guard tests
 
 The general architecture and vertical checks above are the supported
-repository-wide gates. Their focused regression tests, plus version and product
-site coverage, run with Xcode's bundled Python:
+repository-wide gates. Their focused regression tests, plus the release and
+version contracts, run with Xcode's bundled Python:
 
 ```sh
 python3 -m unittest \
@@ -124,10 +124,14 @@ python3 -m unittest \
   Scripts.Tests.test_direct_distribution_contract \
   Scripts.Tests.test_public_source_contract \
   Scripts.Tests.test_release_note_catalog \
+  Scripts.Tests.test_release_note_publication \
   Scripts.Tests.test_release_notes \
+  Scripts.Tests.test_release_publication_recovery \
+  Scripts.Tests.test_release_workflow \
   Scripts.Tests.test_vertical_feature_contract \
   Scripts.Tests.test_version_contract \
-  Scripts.Tests.test_product_site
+  Scripts.Tests.test_cloudkit_environment_configuration \
+  Scripts.Tests.test_xcode_cloud_configuration
 ```
 
 `Scripts/check-public-source.py` separately inspects the exact Git index and

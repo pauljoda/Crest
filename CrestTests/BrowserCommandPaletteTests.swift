@@ -716,12 +716,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
     }
 }
 
-/// The card's geometry. The launcher sizes itself to its content until it has to
-/// scroll, and a sectioned list has headers to pay for.
-final class BrowserCommandPaletteLayoutTests: XCTestCase {
-
-}
-
 @MainActor
 final class BrowserCommandPaletteModelPerformanceTests: XCTestCase {
     func testQueryChangesKeepTheLastPublishedRowsUntilReplacementIsReady() async throws {
