@@ -14,10 +14,6 @@ enum BrowserQuickWindowLayout {
     static let addressVerticalPadding: CGFloat = 6
     static let horizontalPadding: CGFloat = 10
     static let toolbarTopPadding: CGFloat = horizontalPadding
-    static let pageFrameInset: CGFloat = BrowserChromeLayout.pageFrameInset
-    static let pageBrandSeamWidth: CGFloat = BrowserChromeLayout.pageBrandSeamWidth
-    static let pageCornerRadius: CGFloat = BrowserChromeLayout.pageCornerRadius
-    static let pageContentCornerRadius: CGFloat = BrowserChromeLayout.pageContentCornerRadius
     static let toolbarSpacing: CGFloat = 8
     static let sourceChipHorizontalPadding: CGFloat = 9
     static let windowControlClearance: CGFloat = 92
