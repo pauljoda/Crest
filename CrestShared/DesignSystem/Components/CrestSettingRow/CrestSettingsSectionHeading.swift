@@ -24,7 +24,7 @@ struct CrestSettingsSectionHeading: View {
 }
 
 // Keep native Form sections and settings cards on the same heading treatment.
-extension Section where Parent == CrestSettingsSectionHeading, Footer == EmptyView {
+extension Section where Parent == CrestSettingsSectionHeading, Content: View, Footer == EmptyView {
     @MainActor
     init(
         _ title: LocalizedStringKey, systemImage: String,
