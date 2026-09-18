@@ -3,7 +3,7 @@ import SwiftUI
 
 struct BrowserSettingsView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.spaceContentIsInteractive) private var isActiveSpace
+    @Environment(\.spaceContentPresentation) private var contentPresentation
     let browser: BrowserStore
     let pages: BrowserPagePool
     let cloudSync: BrowserCloudSyncController
@@ -51,9 +51,9 @@ struct BrowserSettingsView: View {
             Divider()
 
             Group {
-                // Inactive Spaces keep their Settings navigation, but don't lay
-                // out an offscreen form for every live appearance update.
-                if isActiveSpace {
+                // Transition participants retain the selected destination even
+                // before they own input. Idle cached Spaces still omit forms.
+                if contentPresentation != .inactive {
                     BrowserSettingsDestinationPage(
                         destination: tabState.navigation.selection,
                         tabAssignment: tabAssignment,
