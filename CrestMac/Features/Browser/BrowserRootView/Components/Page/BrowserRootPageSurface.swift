@@ -8,6 +8,7 @@ import SwiftUI
 /// left here is macOS's half: which surface draws the answer, and what the
 /// pointer may do to it.
 struct BrowserRootPageSurface: View {
+    @Environment(\.spaceContentPresentation) private var contentPresentation
     let model: BrowserRootModel
     let space: BrowserSpace
     let isSelectedSpace: Bool
@@ -15,6 +16,10 @@ struct BrowserRootPageSurface: View {
     let tabPromotionNamespace: Namespace.ID
     var appearance = BrowserChromeAppearance()
     var layoutDirection = LayoutDirection.leftToRight
+
+    private var isInteractive: Bool {
+        isSelectedSpace && contentPresentation == .interactive
+    }
 
     private var selectedTab: BrowserTab? {
         space.tabs.first { $0.id == space.selectedTabID }
@@ -51,9 +56,9 @@ struct BrowserRootPageSurface: View {
                 BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
             }
             .environment(\.browserPagePresentationWindowID, model.windowState?.id)
-            .environment(\.spaceContentIsInteractive, isSelectedSpace)
-            .allowsHitTesting(isSelectedSpace)
-            .accessibilityHidden(!isSelectedSpace)
+            .environment(\.spaceContentIsInteractive, isInteractive)
+            .allowsHitTesting(isInteractive)
+            .accessibilityHidden(!isInteractive)
             .browserSplitContentDropZone(
                 assignment: isSelectedSpace ? presentation.dropAssignment : nil,
                 state: model.sidebarInteraction.sidebarReorderState
@@ -61,7 +66,7 @@ struct BrowserRootPageSurface: View {
             .environment(
                 \.browserWebFocusRestorationGate,
                 BrowserWebFocusRestorationGate(
-                    browserChromeOwnsFocus: !isSelectedSpace || !model.isWindowFocused
+                    browserChromeOwnsFocus: !isInteractive || !model.isWindowFocused
                         || model.isAddressEditing || model.chrome.isCommandPalettePresented,
                     pageChromeOwnsFocus: false))
     }

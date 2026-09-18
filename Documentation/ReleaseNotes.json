@@ -1453,6 +1453,10 @@
     "password-manager-page-reload-loops": {
       "category": "fixed",
       "message": "Prevent password manager popups and login-field suggestions from repeatedly reloading webpages"
+    },
+    "settings-visible-during-space-switches": {
+      "category": "fixed",
+      "message": "Settings remain fully visible while switching between Spaces."
     }
   }
 }

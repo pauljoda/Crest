@@ -114,6 +114,7 @@ final class SpaceContentPagerView<Content: View>: NSView {
                 if preparedDestination != value.destinationID {
                     preparedDestination = value.destinationID
                     prepareHosts(at: value.position, destination: value.destinationID, refresh: false)
+                    updateAccessibility()
                 }
                 return
             }
@@ -174,16 +175,49 @@ final class SpaceContentPagerView<Content: View>: NSView {
         for index in indices.sorted() {
             let space = spaces[index]
             let key = BrowserSpaceRuntimeAssignment(space: space)
+            let contentPresentation = contentPresentation(at: index)
             if let host = hosts[key] {
-                if refresh { host.hostingView.rootView = makeRoot(space, space.id == selectedSpaceID) }
+                let previous = host.hostingView.rootView.contentPresentation
+                if refresh || previous != contentPresentation {
+                    if contentPresentation != .interactive,
+                        let responder = window?.firstResponder as? NSView, responder.isDescendant(of: host)
+                    {
+                        window?.makeFirstResponder(nil)
+                    }
+                    var root = refresh ? makeRoot(space, space.id == selectedSpaceID) : host.hostingView.rootView
+                    root.contentPresentation = contentPresentation
+                    host.hostingView.rootView = root
+                    if previous == .inactive, contentPresentation != .inactive {
+                        // Admit the destination before moving its first frame
+                        // into view, without refreshing roots on progress ticks.
+                        host.hostingView.layoutSubtreeIfNeeded()
+                    }
+                }
             } else {
-                let host = SpacePageHost(root: makeRoot(space, space.id == selectedSpaceID))
+                var root = makeRoot(space, space.id == selectedSpaceID)
+                root.contentPresentation = contentPresentation
+                let host = SpacePageHost(root: root)
                 host.frame = CGRect(origin: origin(for: key, at: position), size: bounds.size)
                 host.hostingView.frame = host.bounds
                 hosts[key] = host
                 addSubview(host)
             }
         }
+    }
+
+    private func contentPresentation(at index: Int) -> SpaceContentPresentation {
+        guard let snapshot else { return .inactive }
+        let id = spaces[index].id
+        if snapshot.phase == .idle {
+            guard id == snapshot.destinationID else { return .inactive }
+            return id == selectedSpaceID ? .interactive : .preview
+        }
+        // Keep the complete release path alive even as position samples advance
+        // or a reversal carries the strip through an intermediate Space.
+        let start = snapshot.transition?.startPosition ?? snapshot.position
+        let end = snapshot.transition?.endPosition ?? snapshot.position
+        let visible = Int(min(start, end).rounded(.down))...Int(max(start, end).rounded(.up))
+        return visible.contains(index) || id == snapshot.destinationID ? .preview : .inactive
     }
 
     private func origin(for key: BrowserSpaceRuntimeAssignment, at position: CGFloat) -> CGPoint {
