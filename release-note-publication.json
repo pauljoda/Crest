@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "settings-visible-during-space-switches",
+    "development": "middle-click-split-title-to-close",
     "nightly": "password-manager-page-reload-loops"
   }
 }
