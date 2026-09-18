@@ -3056,7 +3056,9 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
     }
 
-    func testDisablingExtensionRemovesItsWebpageMenuDefinitions() async throws {
+    func testDisablingExtensionUnloadsRuntimeAndRestoresMenusWhenReenabled()
+        async throws
+    {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory
             .appending(
@@ -3108,7 +3110,27 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             in: work
         )
 
-        XCTAssertTrue(pool.webpageMenuRegistry.definitions(for: clientID).isEmpty)
+        XCTAssertNil(
+            pool.loadedContext(extensionID: summary.id, in: work.id)
+        )
+        XCTAssertEqual(
+            pool.extensions(in: work.id).first?.isEnabled,
+            false
+        )
+
+        try await pool.setExtensionEnabled(
+            true,
+            extensionID: summary.id,
+            in: work
+        )
+
+        XCTAssertNotNil(
+            pool.loadedContext(extensionID: summary.id, in: work.id)
+        )
+        XCTAssertEqual(
+            pool.webpageMenuRegistry.definitions(for: clientID).map(\.id),
+            ["page"]
+        )
     }
 
     func testPermissionChoicesCanBeEditedWhileAnExtensionIsDisabled() async throws {

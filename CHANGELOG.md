@@ -7,6 +7,60 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.33] - 2026-09-18
+
+Crest 0.6.33 is a stability release with stronger permission boundaries, more
+reliable extension and window behavior, and smoother browsing with large
+sessions.
+
+### Added
+
+- Choose extension access during installation and install independent copies in multiple Spaces.
+- Middle-click a split title to close the split and all its tabs.
+- Choose to return saved tabs to their saved URL with one favicon click on Mac.
+
+### Changed
+
+- Find settings and customize Spaces more easily with distinct card headers and icons.
+- See your chosen app icon, app details, and software updates together in a cleaner About page.
+- Keep extensions responsive when browsing with many tabs and windows.
+- Check installed translation languages more efficiently in Settings.
+- Reduce delays when opening and closing large tab folders.
+- Scroll more smoothly through long lists of saved and current tabs.
+- Open and search large browsing histories with fewer pauses.
+- Choose whether unloaded tabs appear dimmed in Look and Feel settings.
+- Quick Window Space indicators now use balanced padding.
+- Choose whether Now Playing appears in the sidebar.
+
+### Fixed
+
+- Rename Spaces without freezing Settings on macOS.
+- Open new tabs and search from empty Spaces on macOS.
+- Keep selected search results visible when navigating with arrow keys.
+- Keep the selected pinned tab's glow from being cut off below the address bar.
+- Keep site controls and permission prompts readable in light-colored Spaces.
+- Keep General settings responsive while checking system permissions.
+- Keep browsing responsive while large sessions and history sync in the background.
+- Drag tabs through long sidebars more reliably, with edge scrolling that follows your display's refresh rate.
+- Move large tab selections between Spaces reliably.
+- Reduce memory growth when repeatedly opening the address bar.
+- Avoid repeated background requests and memory growth on pages without a site icon.
+- Keep the address bar and Back and Forward history in sync when following links within sites such as Reddit.
+- Stop sharing your location immediately when you block or reset a site's location permission.
+- Keep blocked and expired extension permissions disabled after reloads and restarts.
+- Open a single browser window when finishing setup.
+- Honor changed extension permissions and locked Spaces during pending operations.
+- Show successful extension installations when copies in other Spaces cannot be completed.
+- Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state.
+- Keep permissions and private data separate when importing unsigned Firefox extensions.
+- Select webpage text and use controls near the top edge without moving the window.
+- Save the displayed PDF directly from the built-in preview.
+- Quick Windows follow your browser border size while keeping balanced spacing around their controls.
+- Image-converter extensions can save JPEGs repeatedly and keep their image menus after restarting Crest.
+- Return from Picture in Picture to the tab and browser window that started playback.
+- Prevent password manager popups and login-field suggestions from repeatedly reloading webpages.
+- Settings remain fully visible while switching between Spaces.
+
 ## [0.6.3] - 2026-09-14
 
 Crest 0.6 brings more ways to organize, personalize, and work across pages on
@@ -326,7 +380,8 @@ Mac, iPhone, and iPad.
 
 Crest releases before 0.3.0 predate this changelog. Their development history remains available in Git.
 
-[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.6.33...HEAD
+[0.6.33]: https://github.com/pauljoda/Crest/compare/v0.6.8...v0.6.33
 [0.6.3]: https://github.com/pauljoda/Crest/compare/v0.5.7...v0.6.3
 [0.5.7]: https://github.com/pauljoda/Crest/releases/tag/v0.5.7
 [0.4.0]: https://github.com/pauljoda/Crest/releases/tag/v0.4.0

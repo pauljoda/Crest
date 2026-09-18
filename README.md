@@ -126,9 +126,9 @@ open Crest.xcodeproj
 
 ## Releases and updates
 
-Read the [Crest 0.6 release notes](CHANGELOG.md#063---2026-09-14) for the
-changes since 0.5.7, including Crest Studio, Look and Feel, translation,
-extension side panels, and shared Mac windows.
+Read the [Crest 0.6.33 release notes](CHANGELOG.md#0633---2026-09-18) for the
+latest stability, security, extension compatibility, performance, and browsing
+improvements.
 
 macOS releases are distributed directly through GitHub Releases as signed,
 notarized Apple-silicon disk images. Crest uses Sparkle 2 with a native SwiftUI
