@@ -3,6 +3,6 @@
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
     "development": "password-manager-page-reload-loops",
-    "nightly": "pdf-preview-download"
+    "nightly": "password-manager-page-reload-loops"
   }
 }
