@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channels": {
-    "stable": "keep-link-dragging-after-in-page-navigation",
+    "stable": "choose-sidebar-widget-visibility",
     "development": "choose-sidebar-widget-visibility",
     "nightly": "password-manager-page-reload-loops"
   }
