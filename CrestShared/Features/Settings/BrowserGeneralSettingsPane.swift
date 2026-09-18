@@ -6,6 +6,7 @@ struct BrowserGeneralSettingsPane: View {
     let spaceAccess: BrowserSpaceAccessController
 
     @Bindable private var linkPreferences: BrowserLinkPreferenceStore
+    @Environment(\.browserSidebarWidgetRuntime) private var sidebarWidgets
     @State private var defaultBrowser = BrowserDefaultBrowserController()
     @State private var isCheckingDefaultBrowser = true
     @AppStorage(BrowserStartupPreference.key) private var startupBehaviorRawValue =
@@ -47,6 +48,10 @@ struct BrowserGeneralSettingsPane: View {
             BrowserNewTabSettingsSection(preferences: linkPreferences)
 
             BrowserDurableTabSettingsSection(preferences: .shared)
+
+            if let sidebarWidgets {
+                BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
+            }
 
             #if os(macOS)
                 BrowserSplitFocusSettingsSection()
@@ -187,6 +192,41 @@ struct BrowserGeneralSettingsPane: View {
                 ?? .defaultBehavior
         } set: { behavior in
             startupBehaviorRawValue = behavior.rawValue
+        }
+    }
+}
+
+struct BrowserSidebarWidgetSettingsSection: View {
+    let runtime: BrowserSidebarWidgetRuntime
+
+    var body: some View {
+        let registrations = runtime.userControllableRegistrations()
+        if !registrations.isEmpty {
+            Section("Sidebar widgets", systemImage: "rectangle.leftthird.inset.filled") {
+                ForEach(registrations) { registration in
+                    Toggle(
+                        registration.settingsTitle,
+                        isOn: enabledBinding(for: registration.id)
+                    )
+                    .accessibilityIdentifier(
+                        "sidebar-widget-\(registration.id.rawValue)-toggle"
+                    )
+                }
+
+                CrestFormFootnote(
+                    "Choose which optional cards appear at the bottom of the sidebar."
+                )
+            }
+        }
+    }
+
+    private func enabledBinding(
+        for kindID: BrowserSidebarWidgetKindID
+    ) -> Binding<Bool> {
+        Binding {
+            runtime.isWidgetEnabled(kindID)
+        } set: { isEnabled in
+            runtime.setWidgetEnabled(isEnabled, for: kindID)
         }
     }
 }

@@ -48,31 +48,42 @@ enum BrowserSidebarWidgetInstancePolicy: Equatable, Sendable {
     case multiple
 }
 
+enum BrowserSidebarWidgetVisibilityPolicy: Equatable, Sendable {
+    case mandatory
+    case userControllable
+}
+
 struct BrowserSidebarWidgetRegistration: Equatable, Identifiable, Sendable {
     let id: BrowserSidebarWidgetKindID
+    let settingsTitle: String
     let order: Int
     let platforms: BrowserSidebarWidgetPlatform
     let requiredCapabilities: BrowserSidebarWidgetCapabilities
     let instancePolicy: BrowserSidebarWidgetInstancePolicy
+    let visibilityPolicy: BrowserSidebarWidgetVisibilityPolicy
     let backgroundActivityID: String?
 }
 
 extension BrowserSidebarWidgetRegistration {
     static let nowPlaying = Self(
         id: .nowPlaying,
+        settingsTitle: String(localized: "Now Playing"),
         order: 200,
         platforms: .all,
         requiredCapabilities: [.mediaSessions],
         instancePolicy: .multiple,
+        visibilityPolicy: .userControllable,
         backgroundActivityID: "crest.media-session-observation"
     )
 
     static let softwareUpdate = Self(
         id: .softwareUpdate,
+        settingsTitle: String(localized: "Software Update"),
         order: 100,
         platforms: .macOS,
         requiredCapabilities: [.directSoftwareUpdates],
         instancePolicy: .single,
+        visibilityPolicy: .mandatory,
         backgroundActivityID: "crest.software-update-observation"
     )
 }

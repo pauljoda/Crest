@@ -53,7 +53,7 @@ extension BrowserSettingsDestination {
     var searchTerms: LocalizedStringResource {
         switch self {
         case .general:
-            "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair"
+            "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair sidebar widgets Now Playing media cards"
         case .lookAndFeel:
             "appearance theme transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons"
         case .links:

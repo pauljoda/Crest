@@ -298,9 +298,13 @@ struct CrestApp: App {
         {
             softwareUpdates.presentIsolatedSidebarWidgetFixture(fixture)
         }
+        let sidebarWidgetPreferences = BrowserSidebarWidgetPreferenceStore.launch(
+            environment: launchEnvironment
+        )
         let sidebarWidgets = BrowserSidebarWidgetRuntime(
             registrations: [.softwareUpdate, .nowPlaying],
-            sources: [softwareUpdates.widgetSource, mediaSessions]
+            sources: [softwareUpdates.widgetSource, mediaSessions],
+            preferences: sidebarWidgetPreferences
         )
         let pages = BrowserPagePool(
             monitorsMemoryPressure: !usesIsolatedLaunch,
