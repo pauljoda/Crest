@@ -24,6 +24,16 @@
         }
       }
     },
+    "%@ — %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ — %2$@"
+          }
+        }
+      }
+    },
     "%@ — Not Downloaded" : {
 
     },
@@ -107,6 +117,16 @@
         }
       }
     },
+    "%@ (%lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$lld)"
+          }
+        }
+      }
+    },
     "%@ %@" : {
       "localizations" : {
         "ar" : {
@@ -129,6 +149,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "%@ %@ sidebar before import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ sidebar before import"
           }
         }
       }
@@ -251,6 +281,29 @@
         }
       }
     },
+    "%@ is assigned to %@. Replacing it will clear the shortcut from that command." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is assigned to %2$@. Replacing it will clear the shortcut from that command."
+          }
+        }
+      }
+    },
+    "%@ is assigned to %@. Replacing it will clear the shortcut from those commands." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is assigned to %2$@. Replacing it will clear the shortcut from those commands."
+          }
+        }
+      }
+    },
+    "%@ is controlling this tab" : {
+
+    },
     "%@ is Locked" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -258,6 +311,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ مقفلة"
+          }
+        }
+      }
+    },
+    "%@ is reserved by Crest for %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is reserved by Crest for %2$@."
           }
         }
       }
@@ -281,6 +344,9 @@
           }
         }
       }
+    },
+    "%@ opens any web link in Peek. Dismiss with Escape, ⌘W, the close button, or the outside area; ⌘O expands it into a current tab." : {
+
     },
     "%@ per second" : {
 
@@ -348,6 +414,16 @@
         }
       }
     },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
     "%@, already added" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -380,6 +456,16 @@
         }
       }
     },
+    "%@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
     "%@/s" : {
 
     },
@@ -394,6 +480,7 @@
       }
     },
     "%arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -404,6 +491,7 @@
       }
     },
     "%arg · %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -459,6 +547,7 @@
       }
     },
     "%arg Enabled" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -469,6 +558,7 @@
       }
     },
     "%arg folder" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -479,6 +569,7 @@
       }
     },
     "%arg for %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -534,6 +625,7 @@
       }
     },
     "%arg points" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -544,6 +636,7 @@
       }
     },
     "%arg Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -819,6 +912,9 @@
           }
         }
       }
+    },
+    "%lld profiles found · Review them" : {
+
     },
     "%lld pt" : {
 
@@ -1482,6 +1578,15 @@
         }
       }
     },
+    "⇧⌘← / → moves the focused card." : {
+
+    },
+    "×" : {
+
+    },
+    "⌃⌘← / → focuses the previous or next card." : {
+
+    },
     "01 — Appearance" : {
       "localizations" : {
         "ar" : {
@@ -1621,6 +1726,9 @@
     "A little room to read" : {
 
     },
+    "A place for every tab" : {
+
+    },
     "A preset replaces the curated selection and turns off custom lists. You can then adjust any list below to create a custom setup." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1653,6 +1761,9 @@
       }
     },
     "A selected Space is no longer available." : {
+
+    },
+    "A simplified Crest branding preview" : {
 
     },
     "A small symbol with a little personality." : {
@@ -1714,6 +1825,9 @@
         }
       }
     },
+    "Access saved · Ready to review" : {
+
+    },
     "Account" : {
       "localizations" : {
         "ar" : {
@@ -1728,6 +1842,7 @@
 
     },
     "Actions" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1736,6 +1851,12 @@
           }
         }
       }
+    },
+    "Actions for %@" : {
+
+    },
+    "Active in another window" : {
+
     },
     "Active page" : {
 
@@ -1885,7 +2006,13 @@
         }
       }
     },
+    "Add Extension" : {
+
+    },
     "Add folder" : {
+
+    },
+    "Add languages in System Settings → General → Language & Region → Translation Languages, then refresh this list." : {
 
     },
     "Add New Space" : {
@@ -1908,6 +2035,9 @@
           }
         }
       }
+    },
+    "Add Packing list" : {
+
     },
     "Add Primary Color" : {
       "localizations" : {
@@ -2010,6 +2140,15 @@
         }
       }
     },
+    "Adding %@" : {
+
+    },
+    "Adding add-on" : {
+
+    },
+    "Adding extension" : {
+
+    },
     "Additional advertising rules maintained by uBlock Origin." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2031,6 +2170,9 @@
           }
         }
       }
+    },
+    "Additional Spaces: %lld" : {
+
     },
     "Address" : {
       "localizations" : {
@@ -2402,6 +2544,9 @@
         }
       }
     },
+    "AFTER" : {
+
+    },
     "After closing" : {
 
     },
@@ -2435,6 +2580,9 @@
         }
       }
     },
+    "All Categories" : {
+
+    },
     "All details" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2457,6 +2605,9 @@
         }
       }
     },
+    "All Statuses" : {
+
+    },
     "All tabs" : {
 
     },
@@ -2469,6 +2620,15 @@
           }
         }
       }
+    },
+    "Allow %@ to control this Space?" : {
+      "comment" : "Title of the prompt asking to grant an extension debugger access. The placeholder is the extension's name."
+    },
+    "Allow 120 FPS" : {
+
+    },
+    "Allow Access to a Download Folder" : {
+
     },
     "Allow Automatic Pop-ups" : {
 
@@ -2517,6 +2677,12 @@
         }
       }
     },
+    "Allow…" : {
+
+    },
+    "Allowed" : {
+
+    },
     "Already saved" : {
 
     },
@@ -2563,6 +2729,9 @@
       }
     },
     "Animals & Nature" : {
+
+    },
+    "Animate pages when switching Spaces" : {
 
     },
     "Annoyances" : {
@@ -2639,6 +2808,9 @@
       }
     },
     "Apple translates page text on this device. Languages may need to download first; Apple asks before downloading. Downloaded languages are shared with other apps and remain available after Private Browsing ends." : {
+
+    },
+    "Apply Custom Viewport" : {
 
     },
     "Arc" : {
@@ -2776,6 +2948,9 @@
     "Ask questions, compare experiences, and discuss ideas" : {
 
     },
+    "Ask where to save" : {
+
+    },
     "Ask where to save each download" : {
 
     },
@@ -2793,6 +2968,7 @@
       }
     },
     "Authenticate to copy the Crest password for %arg." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2816,6 +2992,7 @@
       }
     },
     "Authenticate to export passwords from %arg." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2839,6 +3016,7 @@
       }
     },
     "Authenticate to reveal the Crest password for %arg." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2945,6 +3123,9 @@
         }
       }
     },
+    "Automatically enter Picture in Picture" : {
+
+    },
     "Automatically Translate" : {
 
     },
@@ -2969,6 +3150,9 @@
           }
         }
       }
+    },
+    "Available destination" : {
+
     },
     "Avoid entering private information until the site fixes its certificate." : {
       "localizations" : {
@@ -3039,6 +3223,9 @@
           }
         }
       }
+    },
+    "Back to review" : {
+
     },
     "Back to welcome" : {
       "extractionState" : "stale",
@@ -3121,6 +3308,7 @@
       }
     },
     "Bands" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3141,6 +3329,7 @@
       }
     },
     "Banners" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3179,6 +3368,7 @@
       }
     },
     "Beetle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3187,6 +3377,9 @@
           }
         }
       }
+    },
+    "BEFORE" : {
+
     },
     "Before content loaded" : {
       "localizations" : {
@@ -3198,7 +3391,11 @@
         }
       }
     },
+    "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends them to Archive in one click; your pinned and saved tabs stay put." : {
+
+    },
     "Bend" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3209,6 +3406,7 @@
       }
     },
     "Bird" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3268,6 +3466,7 @@
       "extractionState" : "manual"
     },
     "Book" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3337,6 +3536,7 @@
 
     },
     "Bordure" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3356,6 +3556,9 @@
           }
         }
       }
+    },
+    "BRANDING PREVIEW" : {
+
     },
     "Branding preview of %@" : {
       "localizations" : {
@@ -3378,6 +3581,9 @@
         }
       }
     },
+    "Bring over browser data only after reviewing exactly what Crest will add." : {
+
+    },
     "Broad tracking protection optimized for Safari." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3396,6 +3602,7 @@
 
     },
     "Browser" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3414,6 +3621,9 @@
           }
         }
       }
+    },
+    "Browser data found · Review it" : {
+
     },
     "Browser import requires a Mac so Crest can read the installed browser’s local files. You’ll review every Space and tab there before importing, and the result will sync to this device with iCloud." : {
       "extractionState" : "stale",
@@ -3448,7 +3658,7 @@
         }
       }
     },
-    "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair" : {
+    "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair sidebar widgets Now Playing media cards" : {
 
     },
     "Browser window preview" : {
@@ -3509,6 +3719,9 @@
         }
       }
     },
+    "Building your review…" : {
+
+    },
     "Built into Crest" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3521,6 +3734,9 @@
       }
     },
     "Built-In" : {
+
+    },
+    "Camera" : {
 
     },
     "Cancel" : {
@@ -3552,6 +3768,15 @@
     "Capsule" : {
 
     },
+    "Capture" : {
+
+    },
+    "Capture in Portrait Mode" : {
+
+    },
+    "Capture Window" : {
+
+    },
     "Castle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3562,6 +3787,12 @@
           }
         }
       }
+    },
+    "Category" : {
+
+    },
+    "Certificate" : {
+
     },
     "Change Color…" : {
 
@@ -3593,6 +3824,9 @@
         }
       }
     },
+    "Changed Only" : {
+
+    },
     "Changes appear live in your sidebar." : {
       "extractionState" : "manual"
     },
@@ -3611,6 +3845,7 @@
       }
     },
     "Charge" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3631,6 +3866,9 @@
         }
       }
     },
+    "Check Access" : {
+
+    },
     "Check Again" : {
       "localizations" : {
         "ar" : {
@@ -3644,6 +3882,9 @@
     "Check Automatically" : {
 
     },
+    "Check for updates automatically" : {
+
+    },
     "Check for Updates Now" : {
       "localizations" : {
         "ar" : {
@@ -3653,6 +3894,12 @@
           }
         }
       }
+    },
+    "Check for Updates…" : {
+
+    },
+    "Check spelling on webpages" : {
+
     },
     "Check that your device’s date and time are correct." : {
       "localizations" : {
@@ -3746,6 +3993,12 @@
         }
       }
     },
+    "Checking the add-on…" : {
+
+    },
+    "Checking the extension…" : {
+
+    },
     "Checking this Space…" : {
       "localizations" : {
         "ar" : {
@@ -3769,7 +4022,11 @@
     "Checks" : {
       "extractionState" : "manual"
     },
+    "Checks the download folder for %@. Other files are approved when you choose them." : {
+
+    },
     "Chevron" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3791,6 +4048,7 @@
       }
     },
     "Chief" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3821,7 +4079,22 @@
         }
       }
     },
+    "Choose a browser session to build an import review." : {
+
+    },
+    "Choose a Chrome CRX or Firefox XPI extension package." : {
+
+    },
+    "Choose a Chrome CRX or Firefox XPI package." : {
+
+    },
     "Choose a name, crest, and theme. Add more Spaces whenever you need them." : {
+
+    },
+    "Choose a name, symbol, and appearance before you begin browsing." : {
+
+    },
+    "Choose a palette for Crest’s Dock icon. Your device controls its light, dark, tinted, or clear appearance." : {
 
     },
     "Choose a palette for Crest’s Home Screen icon. Your device controls its light, dark, tinted, or clear appearance." : {
@@ -3898,6 +4171,15 @@
         }
       }
     },
+    "Choose another shortcut." : {
+
+    },
+    "Choose Another…" : {
+
+    },
+    "Choose App…" : {
+
+    },
     "Choose at least one Space to import." : {
 
     },
@@ -3936,7 +4218,13 @@
         }
       }
     },
+    "Choose Extension Side Panel" : {
+
+    },
     "Choose Folder…" : {
+
+    },
+    "Choose Import Options" : {
 
     },
     "Choose Language" : {
@@ -3964,10 +4252,25 @@
         }
       }
     },
+    "Choose Safari Folder…" : {
+
+    },
+    "Choose Safari’s MagicExtensions folder or one custom extension inside it." : {
+
+    },
     "Choose SF Symbol" : {
 
     },
     "Choose sidebar widget" : {
+
+    },
+    "Choose the extension package itself instead of a symbolic link." : {
+
+    },
+    "Choose the focused card" : {
+
+    },
+    "Choose the permissions and website access to allow in this Space. Uncheck any access you want to block. Some features may not work without it. Optional access is requested separately, and you can change your choices later in Extensions settings. Replacing an extension keeps existing choices unless you change them here." : {
 
     },
     "Choose up to three colors. Every crest layer uses this palette." : {
@@ -3980,6 +4283,9 @@
           }
         }
       }
+    },
+    "Choose what to bring over" : {
+
     },
     "Choose where pinned and saved tabs open after you close them. Switching Spaces or unloading inactive pages keeps your last location." : {
 
@@ -3994,6 +4300,9 @@
         }
       }
     },
+    "Choose which optional cards appear at the bottom of the sidebar." : {
+
+    },
     "Choose your crest" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4004,6 +4313,9 @@
           }
         }
       }
+    },
+    "Chrome CRX and Firefox XPI" : {
+
     },
     "Chrome CRX package" : {
 
@@ -4027,6 +4339,9 @@
           }
         }
       }
+    },
+    "Chrome Web Store signature verified" : {
+
     },
     "clean tidy archive unpinned tabs" : {
       "localizations" : {
@@ -4099,6 +4414,7 @@
       }
     },
     "Clear history for %arg?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4124,7 +4440,13 @@
     "Clear Open Tabs" : {
 
     },
+    "Clear search" : {
+
+    },
     "Clear Search" : {
+
+    },
+    "Clear Shortcut" : {
 
     },
     "Clear Unpinned Tabs" : {
@@ -4136,6 +4458,21 @@
           }
         }
       }
+    },
+    "Click a shortcut, then press a key with Command, Option, Control, or Shift. Crest commands take priority; extension commands apply only to the selected Space." : {
+
+    },
+    "Click anything you don’t want" : {
+
+    },
+    "Click either card. Its border shows which page receives your keyboard commands." : {
+
+    },
+    "Click the name to rename" : {
+
+    },
+    "Click, then press the new shortcut" : {
+
     },
     "Click’s balanced EasyList, EasyPrivacy, and uBlock selection." : {
       "extractionState" : "stale",
@@ -4169,6 +4506,7 @@
       }
     },
     "Close %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4199,6 +4537,7 @@
       }
     },
     "Close Find" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4268,6 +4607,9 @@
           }
         }
       }
+    },
+    "Close Side Panel" : {
+
     },
     "Close Split" : {
       "localizations" : {
@@ -4484,7 +4826,11 @@
     "Compact" : {
 
     },
+    "Compact Phone" : {
+
+    },
     "Compass" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4529,6 +4875,9 @@
       }
     },
     "Confirm what Crest will change before anything is saved." : {
+
+    },
+    "Connection Not Secure" : {
 
     },
     "Content blocking" : {
@@ -4651,6 +5000,9 @@
         }
       }
     },
+    "Cookies, accounts, history, and permissions stay inside their Space." : {
+
+    },
     "Copied locally for 60 seconds" : {
       "localizations" : {
         "ar" : {
@@ -4673,6 +5025,12 @@
           }
         }
       }
+    },
+    "Copy Full Page Capture" : {
+
+    },
+    "Copy Link" : {
+
     },
     "Copy Link URL" : {
       "comment" : "Tab context menu action that copies the address of that tab."
@@ -4759,6 +5117,9 @@
         }
       }
     },
+    "Couldn’t Read Extension Package" : {
+
+    },
     "Couldn’t Save Search Engine" : {
 
     },
@@ -4825,6 +5186,9 @@
           }
         }
       }
+    },
+    "Create folders and nested folders" : {
+
     },
     "Create your first Space" : {
       "localizations" : {
@@ -5026,6 +5390,7 @@
       }
     },
     "Crescent" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5045,6 +5410,9 @@
         }
       }
     },
+    "Crest %@ sidebar after import" : {
+
+    },
     "Crest blocks native companion access for unpacked extensions because their identity can’t be verified. Install the signed Chrome Web Store version instead." : {
       "localizations" : {
         "ar" : {
@@ -5054,6 +5422,9 @@
           }
         }
       }
+    },
+    "Crest can save files in %@." : {
+
     },
     "Crest can’t open this address" : {
       "localizations" : {
@@ -5087,6 +5458,15 @@
       }
     },
     "Crest colors" : {
+
+    },
+    "Crest copies this package into the selected Space. Local packages do not update automatically and do not receive verified native companion access." : {
+
+    },
+    "Crest could not build this %@ Space preview." : {
+
+    },
+    "Crest could not load this icon. Please try again." : {
 
     },
     "Crest could not read %@ data there. Try Allow Access again, or choose the %@ data folder if it moved." : {
@@ -5146,6 +5526,9 @@
         }
       }
     },
+    "Crest could not save to %@. Choose the folder again or review Files & Folders in System Settings." : {
+
+    },
     "Crest could not update its icon. Please try again." : {
 
     },
@@ -5188,6 +5571,9 @@
           }
         }
       }
+    },
+    "Crest couldn’t prepare this extension" : {
+
     },
     "Crest couldn’t read this Space’s passwords." : {
       "localizations" : {
@@ -5295,6 +5681,9 @@
         }
       }
     },
+    "Crest found these browsers on your Mac. You’ll review every Space and tab next." : {
+
+    },
     "Crest iCloud Sync Diagnostics" : {
       "localizations" : {
         "ar" : {
@@ -5326,6 +5715,9 @@
         }
       }
     },
+    "Crest installs its own copy. Safari permissions, profile assignments, and updates are not imported." : {
+
+    },
     "Crest is checking this build and the system’s browser-passkey setting." : {
       "localizations" : {
         "ar" : {
@@ -5336,7 +5728,16 @@
         }
       }
     },
+    "Crest is downloading the add-on from Mozilla and checking it against the checksum, size, and identity Firefox Add-ons published for it." : {
+
+    },
+    "Crest is downloading the signed CRX3 package and verifying its developer and Web Store signatures." : {
+
+    },
     "Crest Is Up to Date" : {
+
+    },
+    "Crest is validating the archive and reading its identity, requested access, and WebKit compatibility." : {
 
     },
     "Crest layer colors" : {
@@ -5349,6 +5750,12 @@
           }
         }
       }
+    },
+    "Crest locates the browser data folder and asks for one-time read access" : {
+
+    },
+    "Crest needs permission to read Safari’s custom extensions folder." : {
+
     },
     "Crest only allows verified Chrome Web Store extensions to contact native companion apps." : {
       "localizations" : {
@@ -5424,6 +5831,9 @@
     },
     "Crest preview" : {
       "extractionState" : "manual"
+    },
+    "Crest reads this catalog from the WebKit framework installed on this Mac. Feature availability and defaults may change when macOS updates." : {
+
     },
     "Crest records where each extension came from and updates only the ones installed from the Chrome Web Store, using the same signature and identity checks as the original install. Extensions you switched off, unpacked extensions, and extensions loaded from an installed app are left alone." : {
       "localizations" : {
@@ -5514,6 +5924,12 @@
         }
       }
     },
+    "Crest syncing privately between a Mac and iPhone" : {
+
+    },
+    "Crest syncs your setup privately with iCloud while preserving the boundaries between Spaces." : {
+
+    },
     "Crest translates page text in place, including headings, links, labels, and buttons. Editable fields, code, embedded pages, and text in images are left unchanged. Translated text may take more space." : {
 
     },
@@ -5565,6 +5981,9 @@
         }
       }
     },
+    "Crest will restore its performance defaults and stop overriding every other WebKit feature." : {
+
+    },
     "Crest will upload this device’s Spaces and browser content over the current iCloud copy. Other devices will receive this version on their next sync." : {
       "localizations" : {
         "ar" : {
@@ -5575,7 +5994,11 @@
         }
       }
     },
+    "Crest works to support extensions from other browsers. Some use browser-specific features that may behave differently or aren't supported yet. If something breaks, report it on GitHub with the extension's name, store link, and what happened." : {
+
+    },
     "Cross" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5611,6 +6034,7 @@
       }
     },
     "Crown" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5629,6 +6053,15 @@
           }
         }
       }
+    },
+    "Current destination" : {
+
+    },
+    "Current Quick Window Space" : {
+
+    },
+    "Current Space" : {
+
     },
     "Current tabs" : {
       "extractionState" : "stale",
@@ -5712,6 +6145,9 @@
           }
         }
       }
+    },
+    "Customize current Spaces or add new Spaces" : {
+
     },
     "Customize existing Spaces or add new Spaces and tabs. Your current browser data stays in place until you save." : {
       "extractionState" : "stale",
@@ -5811,6 +6247,12 @@
         }
       }
     },
+    "Default (Off)" : {
+
+    },
+    "Default (On)" : {
+
+    },
     "Default browser" : {
       "localizations" : {
         "ar" : {
@@ -5868,6 +6310,7 @@
       }
     },
     "Delete “%arg”?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5898,6 +6341,7 @@
       }
     },
     "Delete %arg?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6020,6 +6464,9 @@
     "Design" : {
 
     },
+    "Desktop" : {
+
+    },
     "Destination" : {
       "localizations" : {
         "ar" : {
@@ -6029,6 +6476,9 @@
           }
         }
       }
+    },
+    "Destination Space" : {
+
     },
     "Details" : {
       "localizations" : {
@@ -6044,7 +6494,6 @@
 
     },
     "Develop" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6065,7 +6514,16 @@
         }
       }
     },
+    "Developer Mode" : {
+
+    },
+    "Developer Toolbar" : {
+
+    },
     "developer toolbar viewport preview responsive custom size" : {
+
+    },
+    "Developer Tools" : {
 
     },
     "developer tools inspect element webkit safari" : {
@@ -6077,6 +6535,9 @@
           }
         }
       }
+    },
+    "Developer URL" : {
+
     },
     "Device authentication isn’t available right now." : {
       "extractionState" : "stale",
@@ -6100,6 +6561,7 @@
       }
     },
     "Diagonal" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6108,6 +6570,9 @@
           }
         }
       }
+    },
+    "Dim unloaded tabs" : {
+
     },
     "Direwolf" : {
       "extractionState" : "manual",
@@ -6119,6 +6584,9 @@
           }
         }
       }
+    },
+    "Disabled" : {
+
     },
     "Disables ad and tracker filtering across Crest." : {
       "extractionState" : "stale",
@@ -6138,6 +6606,9 @@
 
     },
     "Dismiss Translation Bar" : {
+
+    },
+    "Distance: 4.2 miles\nDuration: 2 hours\nRoute: lakeside loop" : {
 
     },
     "Divide the field" : {
@@ -6167,6 +6638,9 @@
     "Dock Sidebar" : {
 
     },
+    "Don’t Allow" : {
+
+    },
     "Done" : {
       "localizations" : {
         "ar" : {
@@ -6177,6 +6651,9 @@
         }
       }
     },
+    "Done Customizing" : {
+
+    },
     "Done Selecting" : {
 
     },
@@ -6184,6 +6661,7 @@
       "extractionState" : "manual"
     },
     "Double Ring" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6226,6 +6704,12 @@
     "Download Actions" : {
 
     },
+    "Download and Install" : {
+
+    },
+    "Download and install updates automatically" : {
+
+    },
     "Download both languages in Apple’s Translate app, then refresh this list." : {
 
     },
@@ -6242,10 +6726,16 @@
         }
       }
     },
+    "Download folder: %@. Check Access verifies that Crest can save a file there." : {
+
+    },
     "Download Languages" : {
 
     },
     "Download languages to translate automatically. Tap Translate to continue." : {
+
+    },
+    "Download Languages…" : {
 
     },
     "Download location" : {
@@ -6263,6 +6753,9 @@
           }
         }
       }
+    },
+    "Download started" : {
+
     },
     "Download Update" : {
 
@@ -6312,7 +6805,22 @@
     "Draft" : {
 
     },
+    "Drag a link to pull out Peek. Hold Option to drag the link normally. Turn off to reverse these gestures." : {
+
+    },
+    "Drag a rectangle to copy that part of the page" : {
+
+    },
+    "Drag another tab here" : {
+
+    },
+    "Drag links to Peek" : {
+
+    },
     "Drag one tab at a time to pin it." : {
+
+    },
+    "Drag Packing list from the sidebar onto this page. Or right-click it and choose Split with Current Tab." : {
 
     },
     "Drag the dial to rotate the gradient line." : {
@@ -6325,6 +6833,12 @@
           }
         }
       }
+    },
+    "Drag to capture a portion of this page" : {
+
+    },
+    "Drag to move the window or open Space actions" : {
+
     },
     "Drag to rotate the gradient line" : {
       "extractionState" : "stale",
@@ -6349,6 +6863,7 @@
       }
     },
     "Dragon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6370,6 +6885,7 @@
       }
     },
     "Drop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6443,6 +6959,12 @@
           }
         }
       }
+    },
+    "Each Space gets an independent copy with the permissions you choose. Extension data stays separate." : {
+
+    },
+    "Each Space is its own browser, with its own identity, history, accounts, and site data." : {
+
     },
     "Each Space restores its own extension package, enablement, controller storage, permissions, website access, and compatibility errors." : {
       "extractionState" : "stale",
@@ -6726,6 +7248,9 @@
     "Emoji" : {
 
     },
+    "Empty Quick Window using %@" : {
+
+    },
     "Enable this route" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6836,7 +7361,16 @@
         }
       }
     },
+    "Essentials that are always ready at the top." : {
+
+    },
     "Every accepted credential will be stored only in this Space’s Keychain inventory." : {
+
+    },
+    "Every change appears in the Crest branding preview." : {
+
+    },
+    "Every Crest command will return to its default shortcut." : {
 
     },
     "Every exact site, port, capability, and Space has its own choice. Camera and microphone access also require device-level privacy consent." : {
@@ -6880,7 +7414,13 @@
         }
       }
     },
+    "Everything in its Space" : {
+
+    },
     "Example folder" : {
+
+    },
+    "EXAMPLE PAGE" : {
 
     },
     "example.com" : {
@@ -6892,6 +7432,9 @@
           }
         }
       }
+    },
+    "Existing Space" : {
+
     },
     "Expanded" : {
       "localizations" : {
@@ -7066,7 +7609,16 @@
         }
       }
     },
+    "Extension Settings…" : {
+
+    },
+    "Extension side panel: %@" : {
+
+    },
     "extension sidepanel sidebar panel toggle" : {
+
+    },
+    "Extension Space" : {
 
     },
     "Extensions" : {
@@ -7078,6 +7630,12 @@
           }
         }
       }
+    },
+    "EXTENSIONS FOR CHROME" : {
+
+    },
+    "EXTENSIONS FOR FIREFOX" : {
+
     },
     "Extensions here stay on this device and belong only to the %@ Space." : {
       "localizations" : {
@@ -7177,7 +7735,14 @@
     "Feature Flags" : {
 
     },
+    "Feature Flags Unavailable" : {
+
+    },
+    "Feature state" : {
+
+    },
     "Fess" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7219,6 +7784,7 @@
       }
     },
     "Field Division" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7227,6 +7793,9 @@
           }
         }
       }
+    },
+    "Files & Folders" : {
+
     },
     "Fills the address without opening it. Press Tab or Right Arrow to accept." : {
 
@@ -7274,6 +7843,9 @@
     "Find an emblem" : {
 
     },
+    "Find Extensions" : {
+
+    },
     "Find in Page" : {
       "localizations" : {
         "ar" : {
@@ -7283,6 +7855,9 @@
           }
         }
       }
+    },
+    "Find Safari Web Extensions in installed apps and Safari-created custom extensions, install a Chrome or Firefox package, or choose an unpacked extension. Crest inspects every extension before adding it." : {
+
     },
     "Find your colors" : {
       "extractionState" : "stale",
@@ -7328,6 +7903,9 @@
       }
     },
     "Finish editing name" : {
+
+    },
+    "Finish setting up passkeys in System Settings, then check again." : {
 
     },
     "Finish Setup" : {
@@ -7386,6 +7964,7 @@
 
     },
     "Fish" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7399,6 +7978,7 @@
 
     },
     "Flame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7426,6 +8006,7 @@
 
     },
     "Flower" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7468,6 +8049,9 @@
         }
       }
     },
+    "Focus this card" : {
+
+    },
     "Focus This Split View Card" : {
       "localizations" : {
         "ar" : {
@@ -7477,6 +8061,9 @@
           }
         }
       }
+    },
+    "Focused window transparency" : {
+
     },
     "Folder" : {
 
@@ -7521,6 +8108,9 @@
       }
     },
     "Folders" : {
+
+    },
+    "Folders can hold tabs and other folders. Add Weekends, then put Ideas inside it. You can also use folders below the line for open tabs." : {
 
     },
     "Folders hold tabs and other folders. Add Weekends, then nest Ideas inside it. Folders also work below the line with open tabs." : {
@@ -7658,6 +8248,7 @@
       }
     },
     "Frond" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7666,6 +8257,9 @@
           }
         }
       }
+    },
+    "Full URL" : {
+
     },
     "Games" : {
       "localizations" : {
@@ -7702,6 +8296,9 @@
 
     },
     "Getting Started opens next with practice for tabs and folders." : {
+
+    },
+    "Getting Started opens next with practice for tabs, folders, and Split View." : {
 
     },
     "Getting Started with Crest" : {
@@ -7805,6 +8402,7 @@
       }
     },
     "Hammer" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7815,6 +8413,7 @@
       }
     },
     "Hare" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7823,6 +8422,9 @@
           }
         }
       }
+    },
+    "Height" : {
+
     },
     "Heraldry" : {
       "extractionState" : "manual",
@@ -7836,6 +8438,7 @@
       }
     },
     "Hexagon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7881,6 +8484,9 @@
         }
       }
     },
+    "Hide Side Panel" : {
+
+    },
     "Hide Sidebar" : {
       "localizations" : {
         "ar" : {
@@ -7905,6 +8511,9 @@
 
     },
     "Hides recent changes" : {
+
+    },
+    "Highlights misspelled words without changing what you type. Changes take effect the next time Crest opens." : {
 
     },
     "History" : {
@@ -7980,6 +8589,7 @@
       }
     },
     "Horizontal" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7990,6 +8600,7 @@
       }
     },
     "Horn" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8022,6 +8633,7 @@
       }
     },
     "Hound" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8100,6 +8712,9 @@
           }
         }
       }
+    },
+    "iCloud carries the result. Each Space keeps its own boundary." : {
+
     },
     "iCloud CloudKit account upload download conflict status monitor diagnostics pending records" : {
       "localizations" : {
@@ -8227,6 +8842,9 @@
     "Import" : {
 
     },
+    "IMPORT" : {
+
+    },
     "Import & Continue" : {
       "comment" : "Button that imports the current browser and continues to the next selected browser.",
       "localizations" : {
@@ -8284,6 +8902,9 @@
         }
       }
     },
+    "Import from %@" : {
+
+    },
     "Import from another browser requires Crest for macOS. Once imported, your Spaces and tabs sync to this device with iCloud." : {
       "localizations" : {
         "ar" : {
@@ -8293,6 +8914,9 @@
           }
         }
       }
+    },
+    "Import from Another Browser…" : {
+
     },
     "Import from Arc, Zen, Chrome, or Safari on macOS; reviewed changes sync here with iCloud." : {
       "extractionState" : "stale",
@@ -8304,6 +8928,9 @@
           }
         }
       }
+    },
+    "Import here on your Mac" : {
+
     },
     "Import History…" : {
       "localizations" : {
@@ -8331,6 +8958,9 @@
         }
       }
     },
+    "Import passwords for %@" : {
+
+    },
     "Import Reviewed Data" : {
       "comment" : "Button that imports the reviewed data from the final selected browser.",
       "localizations" : {
@@ -8347,6 +8977,9 @@
           }
         }
       }
+    },
+    "Import this Space" : {
+
     },
     "Import with Crest on macOS" : {
       "extractionState" : "stale",
@@ -8979,6 +9612,9 @@
     "Importing…" : {
 
     },
+    "In Crest" : {
+
+    },
     "In Progress" : {
       "localizations" : {
         "ar" : {
@@ -8999,7 +9635,16 @@
         }
       }
     },
+    "Include all" : {
+
+    },
     "Include exactly one %s or {searchTerms} query placeholder." : {
+
+    },
+    "Include Safari Custom Extensions" : {
+
+    },
+    "Include this Space" : {
 
     },
     "incognito private browsing" : {
@@ -9027,6 +9672,15 @@
 
     },
     "Inside %@" : {
+
+    },
+    "Inspect" : {
+
+    },
+    "Inspect Element" : {
+
+    },
+    "Inspecting extension package…" : {
 
     },
     "Install a copy in other spaces" : {
@@ -9057,7 +9711,34 @@
         }
       }
     },
+    "Install and Relaunch" : {
+
+    },
+    "Install compatible Safari, Chrome, and Firefox extensions on Mac." : {
+
+    },
     "Install Copies" : {
+
+    },
+    "Install Extension Package" : {
+
+    },
+    "Install from an extension store" : {
+
+    },
+    "Install In" : {
+
+    },
+    "Install in Other Spaces" : {
+
+    },
+    "Install in other Spaces…" : {
+
+    },
+    "Install Package…" : {
+
+    },
+    "Installed from this Mac" : {
 
     },
     "Installed in this Space" : {
@@ -9087,6 +9768,9 @@
         }
       }
     },
+    "Into Crest" : {
+
+    },
     "iPad keeps the sidebar, address field, and page frame visible." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9110,6 +9794,7 @@
       }
     },
     "Iron" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9130,7 +9815,16 @@
         }
       }
     },
+    "It is enabled in %lld Spaces. You can manage each copy from Extensions settings." : {
+
+    },
+    "It is enabled only in the %@ Space. You can manage it from Extensions settings." : {
+
+    },
     "Its content is still saved. Update Crest to open it." : {
+
+    },
+    "Its original Space or browser window is no longer available." : {
 
     },
     "Its tabs stay in this section, and any nested folders move up one level." : {
@@ -9164,6 +9858,9 @@
     "Keep current password" : {
 
     },
+    "Keep essential sites pinned, save useful pages for later, and leave only active work open." : {
+
+    },
     "Keep Loaded" : {
       "localizations" : {
         "ar" : {
@@ -9177,6 +9874,9 @@
     "Keep Pages Loaded" : {
 
     },
+    "Keep playing videos visible when you switch tabs. Background videos are skipped, and an existing Picture in Picture session is never replaced." : {
+
+    },
     "Keep the colors comfortable and your tabs easy to read." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9188,10 +9888,14 @@
         }
       }
     },
+    "Keep the sidebar useful" : {
+
+    },
     "Keep work, personal browsing, and projects in separate Spaces." : {
 
     },
     "Key" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9247,6 +9951,9 @@
 
     },
     "Languages confirmed as downloaded appear first. Other choices may need a download; choose a language and tap Translate to let Apple prepare it." : {
+
+    },
+    "Large Phone" : {
 
     },
     "Last attempt" : {
@@ -9322,6 +10029,7 @@
       }
     },
     "Laurel" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9343,6 +10051,7 @@
       }
     },
     "Layered Crest" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9353,6 +10062,7 @@
       }
     },
     "Leaf" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9372,6 +10082,9 @@
           }
         }
       }
+    },
+    "Leave all" : {
+
     },
     "Leave Private Browsing" : {
       "localizations" : {
@@ -9393,6 +10106,9 @@
         }
       }
     },
+    "Let page animations use higher refresh rates on supported displays. May reduce scrolling smoothness." : {
+
+    },
     "Letter style" : {
 
     },
@@ -9403,6 +10119,7 @@
 
     },
     "Lightning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9425,6 +10142,12 @@
     "Line" : {
       "extractionState" : "manual"
     },
+    "Link destination" : {
+
+    },
+    "Link dragging" : {
+
+    },
     "Links" : {
       "localizations" : {
         "ar" : {
@@ -9446,6 +10169,7 @@
       }
     },
     "Lion" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9567,7 +10291,11 @@
         }
       }
     },
+    "Load Unpacked…" : {
+
+    },
     "Loaded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9591,6 +10319,9 @@
     "Loading Languages…" : {
 
     },
+    "Loading Peek" : {
+
+    },
     "Loading Stage" : {
       "localizations" : {
         "ar" : {
@@ -9608,6 +10339,9 @@
 
     },
     "Local Chrome Package" : {
+
+    },
+    "Local Firefox package" : {
 
     },
     "Local Firefox Package" : {
@@ -9644,6 +10378,12 @@
         }
       }
     },
+    "Location" : {
+
+    },
+    "Long press or open the context menu for skin tone variations." : {
+
+    },
     "Long press to choose a skin tone variation." : {
 
     },
@@ -9651,6 +10391,7 @@
 
     },
     "Lozenge" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9674,6 +10415,9 @@
         }
       }
     },
+    "macOS has not returned a location decision. Respond to its prompt, or open System Settings > Privacy & Security > Location Services to allow Crest." : {
+
+    },
     "Make Crest Default Browser" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9684,6 +10428,9 @@
           }
         }
       }
+    },
+    "Make each one recognizable" : {
+
     },
     "Make it recognizable" : {
       "extractionState" : "stale",
@@ -9760,6 +10507,9 @@
         }
       }
     },
+    "Manage Extensions" : {
+
+    },
     "Manage extensions for" : {
       "localizations" : {
         "ar" : {
@@ -9769,6 +10519,9 @@
           }
         }
       }
+    },
+    "Manage Extensions…" : {
+
     },
     "Manage Saved Passwords…" : {
       "localizations" : {
@@ -9781,6 +10534,9 @@
       }
     },
     "Manage Search Engines…" : {
+
+    },
+    "Manage…" : {
 
     },
     "Manual" : {
@@ -9798,6 +10554,7 @@
 
     },
     "Mark" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9818,6 +10575,7 @@
       }
     },
     "Match found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9827,7 +10585,11 @@
         }
       }
     },
+    "Matched in source browser" : {
+
+    },
     "Meadow" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9838,6 +10600,9 @@
       }
     },
     "Meeting notes" : {
+
+    },
+    "Microphone" : {
 
     },
     "Mix your own" : {
@@ -9879,6 +10644,7 @@
       }
     },
     "Mountain" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9898,7 +10664,13 @@
         }
       }
     },
+    "Move left" : {
+
+    },
     "Move Left" : {
+
+    },
+    "Move right" : {
 
     },
     "Move Right" : {
@@ -9908,6 +10680,9 @@
 
     },
     "Move selected pinned tabs within their pinned area or into saved or current tabs." : {
+
+    },
+    "Move Space" : {
 
     },
     "Move Split Card Left" : {
@@ -9931,6 +10706,12 @@
       }
     },
     "Move the pointer to the trailing edge to preview the sidebar" : {
+
+    },
+    "Move this card to either side. Hold ⇧⌘, then click and drag a card to move it in the browser." : {
+
+    },
+    "Move this page here without reloading it." : {
 
     },
     "Move to Current Tabs" : {
@@ -10242,7 +11023,11 @@
     "Next" : {
 
     },
+    "Next chapter" : {
+
+    },
     "Next Match" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10368,6 +11153,9 @@
     "No Earlier Pages" : {
 
     },
+    "No extension actions for this page" : {
+
+    },
     "No Extensions" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10409,6 +11197,9 @@
         }
       }
     },
+    "No Installable Extensions Found" : {
+
+    },
     "No items match the selected filter." : {
       "localizations" : {
         "ar" : {
@@ -10423,6 +11214,7 @@
 
     },
     "No match" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10436,6 +11228,9 @@
 
     },
     "No Matching Emoji" : {
+
+    },
+    "No Matching Feature Flags" : {
 
     },
     "No Matching Passwords" : {
@@ -10517,6 +11312,9 @@
         }
       }
     },
+    "No Supported Browsers Found" : {
+
+    },
     "No supported page text was found. Editable fields, embedded pages, and images are excluded." : {
 
     },
@@ -10544,7 +11342,20 @@
         }
       }
     },
+    "Normal — Preview Off" : {
+
+    },
+    "Not available as a local package" : {
+
+    },
+    "Not available in this Crest build" : {
+
+    },
+    "Not checked" : {
+
+    },
     "Not loaded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10564,6 +11375,12 @@
         }
       }
     },
+    "Not requested" : {
+
+    },
+    "Not Secure" : {
+
+    },
     "Not selected" : {
       "localizations" : {
         "ar" : {
@@ -10573,6 +11390,15 @@
           }
         }
       }
+    },
+    "Nothing to Review" : {
+
+    },
+    "Notifications" : {
+
+    },
+    "Notifications are allowed, but banners are off in System Settings." : {
+
     },
     "Now Playing" : {
 
@@ -10589,6 +11415,7 @@
       }
     },
     "Oak" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10679,6 +11506,9 @@
         }
       }
     },
+    "On Mac, open Settings → Extensions and choose Scan Installed. Crest looks through installed apps for compatible Safari Web Extensions, then lets you review what to add." : {
+
+    },
     "On Mac, WebKit and the system manage Passwords integration directly." : {
       "localizations" : {
         "ar" : {
@@ -10693,6 +11523,7 @@
 
     },
     "One" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10730,6 +11561,12 @@
     "One per row" : {
 
     },
+    "One setup, every device" : {
+
+    },
+    "One-time macOS permission · No folder search" : {
+
+    },
     "Only account and site metadata is shown here. Password values stay in the selected Space’s Data Protection Keychain and never enter Crest session or CloudKit records." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10760,6 +11597,9 @@
           }
         }
       }
+    },
+    "Open an extension's page in either store to install it in Crest on Mac." : {
+
     },
     "Open Another Space" : {
       "extractionState" : "stale",
@@ -10832,6 +11672,7 @@
       }
     },
     "Open First Tab" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10872,6 +11713,7 @@
       }
     },
     "Open in %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10882,6 +11724,7 @@
       }
     },
     "Open in %arg (⌘O)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10960,6 +11803,9 @@
         }
       }
     },
+    "Open Settings" : {
+
+    },
     "Open Space" : {
       "localizations" : {
         "ar" : {
@@ -10982,6 +11828,7 @@
       }
     },
     "Open Tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10990,6 +11837,9 @@
           }
         }
       }
+    },
+    "Open tabs cleared" : {
+
     },
     "Open Translate…" : {
 
@@ -11004,6 +11854,9 @@
         }
       }
     },
+    "Opening %@…" : {
+      "comment" : "Initial page loading status; the value is the destination host."
+    },
     "Opening in another Space reloads the page inside that Space’s independent website-data store." : {
       "localizations" : {
         "ar" : {
@@ -11013,6 +11866,9 @@
           }
         }
       }
+    },
+    "Opening page…" : {
+      "comment" : "Initial status while a web page begins navigating."
     },
     "Opening Passwords" : {
       "localizations" : {
@@ -11131,6 +11987,7 @@
 
     },
     "Ordinary" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11154,6 +12011,9 @@
     "Organize with folders" : {
 
     },
+    "Organize your browsing into Spaces, each with its own tabs and appearance." : {
+
+    },
     "Original page" : {
 
     },
@@ -11174,6 +12034,12 @@
     "Oval" : {
       "extractionState" : "manual"
     },
+    "Package" : {
+
+    },
+    "Packing list" : {
+
+    },
     "Page" : {
       "localizations" : {
         "ar" : {
@@ -11193,6 +12059,9 @@
           }
         }
       }
+    },
+    "Page capture selection" : {
+
     },
     "Page Coverage" : {
 
@@ -11254,10 +12123,14 @@
         }
       }
     },
+    "Pages kept for later without staying open." : {
+
+    },
     "Pages using the default update immediately. Page Zoom commands override it while you browse, and Actual Size returns here." : {
 
     },
     "Pale" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11290,6 +12163,9 @@
           }
         }
       }
+    },
+    "Passkeys" : {
+
     },
     "Passkeys aren’t configured" : {
       "localizations" : {
@@ -11416,6 +12292,7 @@
       }
     },
     "Passwords in %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11470,6 +12347,7 @@
       }
     },
     "Pattern" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11486,6 +12364,7 @@
 
     },
     "Paw" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11505,7 +12384,11 @@
         }
       }
     },
+    "Peek from %@" : {
+
+    },
     "Peek from %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11524,6 +12407,9 @@
           }
         }
       }
+    },
+    "Peek Unavailable" : {
+
     },
     "Pending records" : {
       "extractionState" : "stale",
@@ -11545,6 +12431,9 @@
           }
         }
       }
+    },
+    "Performance" : {
+
     },
     "Permanently delete older records?" : {
       "localizations" : {
@@ -11627,6 +12516,9 @@
         }
       }
     },
+    "Phone" : {
+
+    },
     "Pick one that feels like you. Every detail can change later." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -11645,6 +12537,9 @@
 
     },
     "Pin everyday apps" : {
+
+    },
+    "Pin Extension" : {
 
     },
     "Pin Gmail" : {
@@ -11683,6 +12578,12 @@
         }
       }
     },
+    "Pin to Sidebar" : {
+
+    },
+    "Pin what matters, save what can wait, and close the rest." : {
+
+    },
     "Pine" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11705,6 +12606,7 @@
       }
     },
     "Pinned & Saved" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11715,6 +12617,12 @@
       }
     },
     "Pinned and saved tabs" : {
+
+    },
+    "Pinned apps stay at the top, saved tabs above the line, and open tabs below it." : {
+
+    },
+    "Pinned Extensions" : {
 
     },
     "Pinned fill" : {
@@ -11734,6 +12642,9 @@
     "Pinned tabs cannot join a drag with saved or current tabs. Start the drag again." : {
 
     },
+    "Pinned tabs live at the top and are for your everyday apps. Right-click Gmail and choose Pin Tab, or use the button below." : {
+
+    },
     "Pinned, saved, folder, and current tabs support live reordering." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -11749,6 +12660,7 @@
 
     },
     "Plain" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11800,6 +12712,9 @@
     "Practice again" : {
 
     },
+    "Practice changes affect only this example Space." : {
+
+    },
     "Practice pinning, saving, and organizing tabs after setup." : {
 
     },
@@ -11807,6 +12722,9 @@
 
     },
     "Practice uses an example Space. Your tabs are unchanged." : {
+
+    },
+    "Practice window" : {
 
     },
     "Prefer something simple? Choose a symbol or add an emoji." : {
@@ -11867,7 +12785,10 @@
         }
       }
     },
-    "Preview" : {
+    "Preview of a Crest Work Space" : {
+
+    },
+    "Preview of pinned, saved, and open tabs in a Crest Space" : {
 
     },
     "Preview open" : {
@@ -11892,10 +12813,17 @@
         }
       }
     },
+    "Preview the result before it becomes your browser." : {
+
+    },
+    "Preview Unavailable" : {
+
+    },
     "Previous" : {
 
     },
     "Previous Match" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12032,6 +12960,9 @@
         }
       }
     },
+    "Private iCloud sync" : {
+
+    },
     "Private Space" : {
       "localizations" : {
         "ar" : {
@@ -12041,6 +12972,9 @@
           }
         }
       }
+    },
+    "PRIVATE SYNC" : {
+
     },
     "Proceed Anyway" : {
       "localizations" : {
@@ -12134,6 +13068,7 @@
 
     },
     "Quartered" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12225,7 +13160,14 @@
         }
       }
     },
+    "Quick Window Unavailable" : {
+
+    },
+    "Quick Window using %@" : {
+
+    },
     "Quick Window using %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12389,6 +13331,9 @@
     "Ready to Install" : {
 
     },
+    "Rearrange cards" : {
+
+    },
     "Recipes" : {
 
     },
@@ -12426,6 +13371,9 @@
 
     },
     "Rejected rows" : {
+
+    },
+    "Release Notes" : {
 
     },
     "Reload" : {
@@ -12603,6 +13551,7 @@
       }
     },
     "Remove from %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12772,6 +13721,12 @@
     "Repeats" : {
 
     },
+    "Replace %@ in this Space. Existing access and private storage are retained only when the verified source and publisher match. Review the access below." : {
+
+    },
+    "Replace Existing Shortcut" : {
+
+    },
     "Replace iCloud with This Device" : {
       "localizations" : {
         "ar" : {
@@ -12842,7 +13797,13 @@
         }
       }
     },
+    "Report an extension issue" : {
+
+    },
     "Report an Issue" : {
+
+    },
+    "Report compatibility issues" : {
 
     },
     "Reported by the extension" : {
@@ -12934,6 +13895,12 @@
         }
       }
     },
+    "Reset all Crest shortcuts?" : {
+
+    },
+    "Reset All Feature Flags" : {
+
+    },
     "Reset all Look and Feel settings?" : {
 
     },
@@ -12943,10 +13910,22 @@
     "Reset appearance to starting point" : {
 
     },
+    "Reset Crest" : {
+
+    },
+    "Reset Crest Shortcuts" : {
+
+    },
+    "Reset every WebKit feature flag?" : {
+
+    },
     "Reset practice" : {
 
     },
     "Reset to Default" : {
+
+    },
+    "Reset to Extension Default" : {
 
     },
     "reset zoom zero" : {
@@ -12988,6 +13967,12 @@
     "Restart and Update" : {
 
     },
+    "Restart Crest to apply these changes reliably to every page." : {
+
+    },
+    "Restart setup from the welcome screen" : {
+
+    },
     "Restore %@" : {
       "localizations" : {
         "ar" : {
@@ -12999,6 +13984,7 @@
       }
     },
     "Restore %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13009,6 +13995,9 @@
       }
     },
     "Restores each site's default permission behavior" : {
+
+    },
+    "Restricted by macOS" : {
 
     },
     "Resume last location" : {
@@ -13063,6 +14052,9 @@
         }
       }
     },
+    "Return to saved URL with one favicon click" : {
+
+    },
     "Return to your tabs" : {
 
     },
@@ -13089,6 +14081,21 @@
     "Review" : {
 
     },
+    "Review & Customize Setup…" : {
+
+    },
+    "Review Access and Compatibility" : {
+
+    },
+    "Review another browser and merge selected tabs into your current Spaces" : {
+
+    },
+    "Review before importing" : {
+
+    },
+    "Review Certificate" : {
+
+    },
     "Review Crest Setup" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13101,6 +14108,12 @@
       }
     },
     "Review every valid account. Choose which password to keep, or skip any account." : {
+
+    },
+    "Review its Spaces and tabs" : {
+
+    },
+    "Review Package" : {
 
     },
     "Review Password Import" : {
@@ -13136,6 +14149,7 @@
       "extractionState" : "manual"
     },
     "Rising Sun" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13146,6 +14160,7 @@
       }
     },
     "River" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13257,6 +14272,9 @@
     "Safari Custom Extension" : {
 
     },
+    "Safari keeps extensions it creates in a privacy-protected folder. Choose that folder once so Crest can inspect and copy them." : {
+
+    },
     "Safari Session" : {
       "localizations" : {
         "ar" : {
@@ -13267,7 +14285,14 @@
         }
       }
     },
+    "Safari-created extensions are copied into this Space and reviewed with fresh Crest permissions. Safari content blockers and legacy Safari App Extensions can’t be hosted by another browser." : {
+
+    },
+    "Safari’s custom extension files could not be safely inspected." : {
+
+    },
     "Sailboat" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13278,6 +14303,7 @@
       }
     },
     "Saltire" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13323,6 +14349,9 @@
     "Save A weekend away" : {
 
     },
+    "Save downloads and open files you select." : {
+
+    },
     "Save in %@" : {
       "localizations" : {
         "ar" : {
@@ -13362,6 +14391,9 @@
           }
         }
       }
+    },
+    "Save this tab" : {
+
     },
     "Save to Files…" : {
       "localizations" : {
@@ -13500,6 +14532,9 @@
     "Saved tabs stay above the line until you delete them. The minus button unloads a saved tab while keeping it in your sidebar." : {
 
     },
+    "Saved tabs stay below your pins until you delete them. Save A weekend away and watch it move above the line." : {
+
+    },
     "Saves this permission in the current Space. Retry the action on the site afterward" : {
 
     },
@@ -13524,6 +14559,15 @@
         }
       }
     },
+    "Scan Installed" : {
+
+    },
+    "Scan installed Safari extensions" : {
+
+    },
+    "Scanning Installed Extensions…" : {
+
+    },
     "Scorpion" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13547,6 +14591,7 @@
       }
     },
     "Seal" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13633,6 +14678,9 @@
     "Search Engines" : {
 
     },
+    "Search feature flags" : {
+
+    },
     "Search History…" : {
       "localizations" : {
         "ar" : {
@@ -13647,6 +14695,9 @@
 
     },
     "Search imported passwords" : {
+
+    },
+    "Search or enter a website" : {
 
     },
     "Search or Enter Emoji" : {
@@ -13688,10 +14739,10 @@
         }
       }
     },
-    "Search suggestions" : {
+    "Search shortcuts" : {
 
     },
-    "Search Suggestions" : {
+    "Search suggestions" : {
 
     },
     "Search symbols" : {
@@ -13710,7 +14761,11 @@
     "Search URL" : {
 
     },
+    "Search with %@" : {
+
+    },
     "Searching" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13743,6 +14798,9 @@
           }
         }
       }
+    },
+    "Secure" : {
+
     },
     "Security" : {
       "extractionState" : "stale",
@@ -13777,6 +14835,9 @@
     "Select All Tabs" : {
 
     },
+    "Select an unlocked Space to check its download folder." : {
+
+    },
     "Select Passwords" : {
 
     },
@@ -13784,6 +14845,7 @@
 
     },
     "Select Space %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13804,6 +14866,7 @@
       }
     },
     "Select Tab %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13822,6 +14885,9 @@
           }
         }
       }
+    },
+    "Select this Space, or drag to reorder" : {
+
     },
     "Select this Space, or drop a tab to move it here" : {
       "localizations" : {
@@ -13884,6 +14950,9 @@
           }
         }
       }
+    },
+    "Separate by default" : {
+
     },
     "Separate Selected Splits" : {
 
@@ -13982,6 +15051,9 @@
     "Settings unavailable" : {
       "extractionState" : "manual"
     },
+    "Settings…" : {
+
+    },
     "Setup" : {
       "localizations" : {
         "ar" : {
@@ -13991,6 +15063,12 @@
           }
         }
       }
+    },
+    "Setup could not finish. Review your Spaces and try again." : {
+
+    },
+    "Setup progress" : {
+
     },
     "SF Symbol" : {
       "extractionState" : "manual",
@@ -14063,6 +15141,9 @@
         }
       }
     },
+    "Share your location with websites you allow." : {
+
+    },
     "Share…" : {
       "localizations" : {
         "ar" : {
@@ -14080,6 +15161,7 @@
 
     },
     "Shell" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14090,6 +15172,7 @@
       }
     },
     "Shield" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14108,6 +15191,15 @@
           }
         }
       }
+    },
+    "Shortcut Actions" : {
+
+    },
+    "Shortcut Already in Use" : {
+
+    },
+    "Shortcut for %@" : {
+
     },
     "Shortcuts" : {
       "localizations" : {
@@ -14131,6 +15223,9 @@
           }
         }
       }
+    },
+    "Show Developer Toolbar" : {
+
     },
     "Show Downloads" : {
       "localizations" : {
@@ -14180,6 +15275,9 @@
     "Show Next Spaces" : {
 
     },
+    "Show notifications from websites and extensions you allow." : {
+
+    },
     "Show or Hide Developer Toolbar" : {
 
     },
@@ -14221,6 +15319,9 @@
           }
         }
       }
+    },
+    "Show Side Panel" : {
+
     },
     "Show Sidebar" : {
       "extractionState" : "stale",
@@ -14280,6 +15381,9 @@
     "Side Panel" : {
 
     },
+    "Side Panel Unavailable" : {
+
+    },
     "Sidebar background" : {
 
     },
@@ -14289,7 +15393,13 @@
     "Sidebar on right" : {
 
     },
+    "Sidebar widgets" : {
+
+    },
     "Sidebar Widgets" : {
+
+    },
+    "Sign in to websites using passkeys saved with your system providers." : {
 
     },
     "Sign-in, unlocking, and filling won’t work through the Safari extension in Crest. The compatible route requires 1Password for Mac, the Chrome Web Store extension, the official Crest for Mac release, and adding Crest as a trusted browser in 1Password." : {
@@ -14302,7 +15412,11 @@
         }
       }
     },
+    "Signed Developer" : {
+
+    },
     "Simple Symbol" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14321,6 +15435,9 @@
           }
         }
       }
+    },
+    "Site Controls" : {
+
     },
     "Site Permissions" : {
 
@@ -14344,6 +15461,9 @@
           }
         }
       }
+    },
+    "Site Settings" : {
+
     },
     "Sites will ask before using protected capabilities, opening pop-ups, or starting automatic downloads in this Space." : {
       "extractionState" : "stale",
@@ -14373,7 +15493,16 @@
     "Skip" : {
 
     },
+    "Skip Import" : {
+
+    },
+    "Skip Space" : {
+
+    },
     "Skip this account" : {
+
+    },
+    "Skip this Space" : {
 
     },
     "Skip This Version" : {
@@ -14383,6 +15512,7 @@
 
     },
     "Snowflake" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14428,10 +15558,20 @@
     "Soft" : {
       "extractionState" : "manual"
     },
+    "Software Update" : {
+
+    },
+    "Software update progress" : {
+
+    },
     "Software Update Unavailable" : {
 
     },
+    "Software updates" : {
+
+    },
     "Solid" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14471,6 +15611,9 @@
     "Source" : {
 
     },
+    "Source Space" : {
+
+    },
     "space" : {
       "localizations" : {
         "ar" : {
@@ -14487,6 +15630,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "المساحة"
+          }
+        }
+      }
+    },
+    "Space %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Space %1$lld of %2$lld"
           }
         }
       }
@@ -14556,6 +15709,9 @@
         }
       }
     },
+    "Space in review" : {
+
+    },
     "Space isolation" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14591,7 +15747,19 @@
         }
       }
     },
+    "Space review progress" : {
+
+    },
     "Space settings section" : {
+
+    },
+    "Space skipped" : {
+
+    },
+    "Space Skipped" : {
+
+    },
+    "Space Unavailable" : {
 
     },
     "Space-specific add-ons" : {
@@ -14614,6 +15782,9 @@
         }
       }
     },
+    "SPACES" : {
+
+    },
     "Spanish- and Portuguese-language advertising." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14626,6 +15797,7 @@
       }
     },
     "Sparkles" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14636,6 +15808,7 @@
       }
     },
     "Split" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14750,6 +15923,9 @@
     "Split View needs 2 to 4 tabs. Select fewer tabs or use a smaller split." : {
 
     },
+    "SPLIT VIEW PRACTICE" : {
+
+    },
     "Split View with %lld tabs" : {
       "localizations" : {
         "ar" : {
@@ -14860,6 +16036,7 @@
       }
     },
     "Star" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14935,6 +16112,9 @@
         }
       }
     },
+    "State for %@" : {
+
+    },
     "Status" : {
       "localizations" : {
         "ar" : {
@@ -14944,6 +16124,9 @@
           }
         }
       }
+    },
+    "Step %lld of 3" : {
+
     },
     "Stop" : {
       "localizations" : {
@@ -14999,6 +16182,7 @@
       }
     },
     "Stored only in the %arg Space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15029,6 +16213,7 @@
       }
     },
     "Storm" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15103,6 +16288,7 @@
 
     },
     "Sun" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15113,6 +16299,7 @@
       }
     },
     "Sunburst" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15176,6 +16363,7 @@
       }
     },
     "Switch to Tab" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15357,6 +16545,7 @@
       }
     },
     "System passkeys: %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15376,6 +16565,15 @@
         }
       }
     },
+    "System Permissions" : {
+
+    },
+    "System Settings could not open. Open it from the Apple menu and choose Privacy & Security." : {
+
+    },
+    "System Settings…" : {
+
+    },
     "tab" : {
       "localizations" : {
         "ar" : {
@@ -15385,6 +16583,9 @@
           }
         }
       }
+    },
+    "Tab" : {
+
     },
     "Tab Icon" : {
 
@@ -15418,6 +16619,9 @@
     "Tab scale" : {
 
     },
+    "Tab Selection" : {
+
+    },
     "Tab Unloaded" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -15442,7 +16646,13 @@
         }
       }
     },
+    "TABS" : {
+
+    },
     "Tabs & folders" : {
+
+    },
+    "Tabs and folders" : {
 
     },
     "Tabs and pins" : {
@@ -15598,6 +16808,7 @@
       }
     },
     "The credential belongs to the embedded %arg frame, not %arg." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15652,6 +16863,15 @@
       }
     },
     "The endpoint must return an OpenSearch JSON array. Leave this blank when the engine does not offer suggestions." : {
+
+    },
+    "The extension package exceeds Crest’s safe import limits." : {
+
+    },
+    "The extension side panel stopped responding. Close and reopen it to try again." : {
+
+    },
+    "The Firefox package declares an invalid extension identity." : {
 
     },
     "The first matching route wins. Other links use your default destination." : {
@@ -15757,7 +16977,13 @@
         }
       }
     },
+    "The pages you are actively using now." : {
+
+    },
     "The password is saved in this Space, but the form changed before Crest could fill it." : {
+
+    },
+    "The selected file is not a valid extension package." : {
 
     },
     "The selected items changed. Select them again before continuing." : {
@@ -15811,6 +17037,9 @@
           }
         }
       }
+    },
+    "The Space that opened this Peek is no longer available." : {
+
     },
     "The split changed. Select the whole group again." : {
 
@@ -15893,6 +17122,9 @@
           }
         }
       }
+    },
+    "This build of Crest does not include permission to request browser passkey access." : {
+
     },
     "This Chromium session is profile-encrypted and cannot be safely imported outside its source browser." : {
       "localizations" : {
@@ -15979,6 +17211,12 @@
           }
         }
       }
+    },
+    "This extension wants to read and control the pages in this Space. It will be able to see everything on those pages, including what you type, and act as you on them.\n\nYou can stop it at any time from the banner above a controlled page, or change this in the Space's extension settings." : {
+      "comment" : "Body of the prompt asking to grant an extension debugger access."
+    },
+    "This extension will be installed in %@. Select any additional Spaces below." : {
+
     },
     "This file does not contain any HTTP or HTTPS bookmarks Crest can import." : {
       "localizations" : {
@@ -16080,6 +17318,9 @@
         }
       }
     },
+    "This location belongs only to %@ on this Mac. Opening a finished download opens the file directly; its menu also includes Show in Finder." : {
+
+    },
     "This option becomes available after Apple approves Crest’s managed browser capability." : {
       "localizations" : {
         "ar" : {
@@ -16091,6 +17332,9 @@
       }
     },
     "This package cannot replace an extension from a different source. Remove the existing installation and its data before installing from this source." : {
+
+    },
+    "This package’s publisher is unverified. It will be added as a separate extension with new permissions and empty private storage, even if its Firefox ID matches an installed extension." : {
 
     },
     "This page could not be presented in Reader Mode." : {
@@ -16160,6 +17404,7 @@
 
     },
     "This policy applies only to %arg. Eligible tabs remain recoverable from Archive." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16168,6 +17413,9 @@
           }
         }
       }
+    },
+    "This Quick Window cannot reconnect to its original browsing profile." : {
+
     },
     "This removes %@ from this Space." : {
 
@@ -16261,7 +17509,11 @@
     "This tab needs a newer Crest" : {
 
     },
+    "This version of WebKit cannot isolate extension side panels." : {
+
+    },
     "Three" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16277,6 +17529,9 @@
     "To" : {
 
     },
+    "To focus by hovering, enable Focus Follows Mouse in Split View in Settings → General. Shortcuts can also be changed in Settings." : {
+
+    },
     "Today" : {
       "localizations" : {
         "ar" : {
@@ -16286,6 +17541,9 @@
           }
         }
       }
+    },
+    "Toggle Console" : {
+
     },
     "Toggle Content Blocking" : {
       "localizations" : {
@@ -16298,6 +17556,9 @@
       }
     },
     "Toggle Extension Side Panel" : {
+
+    },
+    "Toggle Network Panel" : {
 
     },
     "toggle recent switch tabs" : {
@@ -16337,6 +17598,7 @@
 
     },
     "Tower" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16401,6 +17663,9 @@
     "Translation Options" : {
 
     },
+    "Transparency" : {
+
+    },
     "Travel" : {
       "localizations" : {
         "ar" : {
@@ -16415,6 +17680,7 @@
 
     },
     "Tree" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16436,6 +17702,7 @@
       }
     },
     "Trim" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16496,6 +17763,9 @@
         }
       }
     },
+    "TRY IT" : {
+
+    },
     "Try Passwords Again" : {
       "localizations" : {
         "ar" : {
@@ -16518,6 +17788,9 @@
           }
         }
       }
+    },
+    "Try Split View" : {
+
     },
     "Try the address again or open a different page." : {
       "localizations" : {
@@ -16583,7 +17856,14 @@
         }
       }
     },
+    "Turn on Location Services for this Mac, then allow Crest." : {
+
+    },
+    "Turn on Move Space to include it in this import." : {
+
+    },
     "Two" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16612,6 +17892,12 @@
           }
         }
       }
+    },
+    "Type Shortcut" : {
+
+    },
+    "Typing" : {
+
     },
     "uBlock Annoyances" : {
       "extractionState" : "stale",
@@ -16690,6 +17976,9 @@
         }
       }
     },
+    "Ultrawide" : {
+
+    },
     "unassigned" : {
       "localizations" : {
         "ar" : {
@@ -16700,6 +17989,9 @@
         }
       }
     },
+    "Unassigned" : {
+
+    },
     "unassigned none no shortcut" : {
       "localizations" : {
         "ar" : {
@@ -16709,6 +18001,9 @@
           }
         }
       }
+    },
+    "Unavailable" : {
+
     },
     "Unavailable in Crest" : {
       "extractionState" : "stale",
@@ -16846,6 +18141,12 @@
     "Unmuted" : {
 
     },
+    "Unpin Extension" : {
+
+    },
+    "Unpin from Sidebar" : {
+
+    },
     "Unsupported APIs" : {
       "localizations" : {
         "ar" : {
@@ -16882,7 +18183,7 @@
         }
       }
     },
-    "Update Available" : {
+    "Update channel" : {
 
     },
     "Update Check Failed" : {
@@ -17067,6 +18368,7 @@
       }
     },
     "Updating %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17167,6 +18469,9 @@
     "Use a public search engine host, not a local or numeric address." : {
 
     },
+    "Use a supported key with Command, Option, Control, or Shift." : {
+
+    },
     "Use an icon instead" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -17177,6 +18482,9 @@
           }
         }
       }
+    },
+    "Use Clear on the line in the practice sidebar." : {
+
     },
     "Use Crest Passwords in this Space" : {
       "localizations" : {
@@ -17213,6 +18521,9 @@
           }
         }
       }
+    },
+    "Use Folder" : {
+
     },
     "Use Folder Icon" : {
 
@@ -17283,6 +18594,12 @@
     "Use Website Icon" : {
 
     },
+    "Use your camera on websites for video calls and other features." : {
+
+    },
+    "Use your microphone on websites for calls and recording." : {
+
+    },
     "Username" : {
       "localizations" : {
         "ar" : {
@@ -17294,6 +18611,9 @@
       }
     },
     "Usernames and passwords cannot be stored in a search template." : {
+
+    },
+    "Verified Chrome Web Store package" : {
 
     },
     "Version" : {
@@ -17309,6 +18629,7 @@
 
     },
     "Vertical" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17321,6 +18642,9 @@
     "Vertical offset" : {
 
     },
+    "Video" : {
+
+    },
     "View & Tools" : {
       "localizations" : {
         "ar" : {
@@ -17330,6 +18654,9 @@
           }
         }
       }
+    },
+    "View pages side by side, change focus, and rearrange cards." : {
+
     },
     "View Password" : {
       "localizations" : {
@@ -17350,7 +18677,23 @@
     "View the Crest Roadmap" : {
 
     },
+    "View the full release notes" : {
+
+    },
+    "Viewport" : {
+
+    },
+    "Viewport Height" : {
+
+    },
+    "Viewport Preview" : {
+
+    },
+    "Viewport Width" : {
+
+    },
     "Vigil" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17402,6 +18745,7 @@
 
     },
     "Waves" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17499,6 +18843,9 @@
     "Weekend plans" : {
 
     },
+    "Weekend trail guide" : {
+
+    },
     "Weekly" : {
       "localizations" : {
         "ar" : {
@@ -17546,7 +18893,13 @@
     "What's New" : {
 
     },
+    "What's New in Crest" : {
+
+    },
     "What's New in Crest %@" : {
+
+    },
+    "When a saved tab shows /, click its favicon once to return to its saved URL. Double-clicking the tab still returns it." : {
 
     },
     "When Crest opens" : {
@@ -17565,10 +18918,16 @@
     "When URL" : {
 
     },
+    "Wide Desktop" : {
+
+    },
     "Widget deck" : {
 
     },
     "Width" : {
+
+    },
+    "Width and height in CSS pixels, from 1 to 8192. Apply to resize the preview." : {
 
     },
     "Willow" : {
@@ -17592,6 +18951,7 @@
 
     },
     "Winter" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17633,13 +18993,22 @@
         }
       }
     },
+    "You approve each destination in the Save dialog." : {
+
+    },
     "You can also download languages in Apple’s Translate app, or manage them in Settings → Apps → Translate → Downloaded Languages." : {
+
+    },
+    "You can also manage languages in System Settings → General → Language & Region → Translation Languages." : {
 
     },
     "You can also swipe inward from the leading edge" : {
 
     },
     "You can also swipe inward from the trailing edge" : {
+
+    },
+    "You can still choose a signed extension app, install a Chrome or Firefox package, or load an unpacked WebExtension." : {
 
     },
     "You can still create and rename Spaces on this device." : {
@@ -17652,6 +19021,9 @@
         }
       }
     },
+    "You can still set up Spaces manually." : {
+
+    },
     "You’re offline" : {
       "localizations" : {
         "ar" : {
@@ -17661,6 +19033,9 @@
           }
         }
       }
+    },
+    "Your browser is ready" : {
+
     },
     "Your example Space" : {
 
@@ -17675,6 +19050,9 @@
           }
         }
       }
+    },
+    "Your pinned and saved tabs are still in the sidebar." : {
+
     },
     "Your Space" : {
       "localizations" : {
@@ -17697,6 +19075,9 @@
         }
       }
     },
+    "Your Spaces and tabs follow you without becoming one shared profile." : {
+
+    },
     "Your Spaces are ready" : {
 
     },
@@ -17710,6 +19091,9 @@
           }
         }
       }
+    },
+    "Yours on every device" : {
+
     },
     "Zen Spaces or Session" : {
       "localizations" : {

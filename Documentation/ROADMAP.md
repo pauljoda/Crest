@@ -32,7 +32,6 @@ the live status for each issue.
 - [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
 - [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
 - [ ] [Clear browsing data by Space and time range](https://github.com/pauljoda/Crest/issues/170)
-- [ ] [Return a saved tab to its root URL with one favicon click](https://github.com/pauljoda/Crest/issues/175)
 - [ ] [Reveal the collapsed iPad sidebar on pointer hover](https://github.com/pauljoda/Crest/issues/176)
 - [ ] [Add privacy-preserving analytics and opt-in diagnostics](https://github.com/pauljoda/Crest/issues/179)
 
@@ -50,6 +49,7 @@ the live status for each issue.
 - [x] [Stop LastPass popups from reloading the active page](https://github.com/pauljoda/Crest/issues/169) — [`c3a4d451`](https://github.com/pauljoda/Crest/commit/c3a4d4514454519b3dd08b934037576f9ff5bbeb)
 - [x] [Balance Quick Window Space indicator padding](https://github.com/pauljoda/Crest/issues/171) — [`4c865709`](https://github.com/pauljoda/Crest/commit/4c8657099291e7384cdd90e43b17f71a851e6194)
 - [x] [Keep Settings content visible while switching Spaces](https://github.com/pauljoda/Crest/issues/174) — [`292694ca`](https://github.com/pauljoda/Crest/commit/292694ca9bf4c0c43b66ef9f1234afedb26002d2)
+- [x] [Return a saved tab to its root URL with one favicon click](https://github.com/pauljoda/Crest/issues/175) — [`52264922`](https://github.com/pauljoda/Crest/commit/52264922f1b6a3c65a84819ee0ecfadbc4cf0de5)
 - [x] [Close an entire split by middle-clicking its title](https://github.com/pauljoda/Crest/issues/177) — [`dbd6a3fe`](https://github.com/pauljoda/Crest/commit/dbd6a3fea879e90b7fb57a76d147910434cd4336)
 
 #### Not planned

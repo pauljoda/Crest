@@ -36,13 +36,31 @@ struct BrowserSidebarWidgetRegistry: Sendable {
             )
     }
 
+    func userControllableRegistrations(
+        platform: BrowserSidebarWidgetPlatform
+    ) -> [BrowserSidebarWidgetRegistration] {
+        registrations.filter { registration in
+            registration.visibilityPolicy == .userControllable
+                && !registration.platforms.intersection(platform).isEmpty
+        }
+    }
+
+    func isEnabled(
+        _ registration: BrowserSidebarWidgetRegistration,
+        disabledKindIdentifiers: Set<String>
+    ) -> Bool {
+        registration.visibilityPolicy == .mandatory
+            || !disabledKindIdentifiers.contains(registration.id.rawValue)
+    }
+
     /// The deck is one global layer, so visibility answers only what this build
     /// can render: the platform, the shell's capabilities, and each kind's
     /// instance policy. Profile and Space never enter the decision.
     func visibleInstances(
         from instances: [BrowserSidebarWidgetInstance],
         platform: BrowserSidebarWidgetPlatform,
-        capabilities: BrowserSidebarWidgetCapabilities
+        capabilities: BrowserSidebarWidgetCapabilities,
+        disabledKindIdentifiers: Set<String> = []
     ) -> [BrowserSidebarWidgetInstance] {
         let eligible = instances.filter { instance in
             guard let registration = registrationsByID[instance.id.kindID]
@@ -52,6 +70,10 @@ struct BrowserSidebarWidgetRegistry: Sendable {
                 platform: platform,
                 capabilities: capabilities
             )
+                && isEnabled(
+                    registration,
+                    disabledKindIdentifiers: disabledKindIdentifiers
+                )
         }
 
         var seenSingleKinds: Set<BrowserSidebarWidgetKindID> = []

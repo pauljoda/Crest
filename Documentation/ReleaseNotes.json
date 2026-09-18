@@ -1465,6 +1465,10 @@
     "single-click-saved-tab-root-return": {
       "category": "new",
       "message": "Choose to return saved tabs to their saved URL with one favicon click on Mac."
+    },
+    "choose-sidebar-widget-visibility": {
+      "category": "improved",
+      "message": "Choose whether Now Playing appears in the sidebar."
     }
   }
 }

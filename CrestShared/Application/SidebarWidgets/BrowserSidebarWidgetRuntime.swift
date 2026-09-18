@@ -24,15 +24,17 @@ struct BrowserSidebarWidgetHostRegistration: Equatable, Sendable {
 
 @Observable
 @MainActor
-final class BrowserSidebarWidgetRuntime {
+final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving {
     let registry: BrowserSidebarWidgetRegistry
 
     private(set) var publishedInstances: [BrowserSidebarWidgetInstance] = []
     private(set) var visibilityRevision = 0
+    private(set) var disabledKindIdentifiers: Set<String>
     /// One deck, one centred card, shared by every Space of every profile.
     private(set) var carouselSelection: BrowserSidebarWidgetID?
 
     @ObservationIgnored private let sourcesByKindID: [BrowserSidebarWidgetKindID: any BrowserSidebarWidgetEventSource]
+    @ObservationIgnored private let preferences: BrowserSidebarWidgetPreferenceStore
     @ObservationIgnored private var hosts: [BrowserWindowID: BrowserSidebarWidgetHostRegistration] = [:]
     @ObservationIgnored private var workerTasks: [BrowserSidebarWidgetKindID: Task<Void, Never>] = [:]
     @ObservationIgnored private var instancesByKindID: [BrowserSidebarWidgetKindID: [BrowserSidebarWidgetInstance]] =
@@ -43,9 +45,12 @@ final class BrowserSidebarWidgetRuntime {
 
     init(
         registrations: [BrowserSidebarWidgetRegistration],
-        sources: [any BrowserSidebarWidgetEventSource]
+        sources: [any BrowserSidebarWidgetEventSource],
+        preferences: BrowserSidebarWidgetPreferenceStore = .shared
     ) {
         registry = BrowserSidebarWidgetRegistry(registrations: registrations)
+        self.preferences = preferences
+        disabledKindIdentifiers = preferences.disabledKindIdentifiers
         var uniqueSources: [BrowserSidebarWidgetKindID: any BrowserSidebarWidgetEventSource] = [:]
         for source in sources {
             precondition(
@@ -59,6 +64,7 @@ final class BrowserSidebarWidgetRuntime {
             uniqueSources[source.kindID] = source
         }
         sourcesByKindID = uniqueSources
+        preferences.register(self)
     }
 
     deinit {
@@ -102,8 +108,49 @@ final class BrowserSidebarWidgetRuntime {
         registry.visibleInstances(
             from: publishedInstances,
             platform: platform,
-            capabilities: capabilities
+            capabilities: capabilities,
+            disabledKindIdentifiers: disabledKindIdentifiers
         )
+    }
+
+    func userControllableRegistrations(
+        platform: BrowserSidebarWidgetPlatform = .current
+    ) -> [BrowserSidebarWidgetRegistration] {
+        registry.userControllableRegistrations(platform: platform)
+    }
+
+    func isWidgetEnabled(_ kindID: BrowserSidebarWidgetKindID) -> Bool {
+        guard let registration = registry.registration(for: kindID) else {
+            return true
+        }
+        return registry.isEnabled(
+            registration,
+            disabledKindIdentifiers: disabledKindIdentifiers
+        )
+    }
+
+    func setWidgetEnabled(
+        _ isEnabled: Bool,
+        for kindID: BrowserSidebarWidgetKindID
+    ) {
+        guard
+            registry.registration(for: kindID)?.visibilityPolicy
+                == .userControllable
+        else { return }
+        preferences.setEnabled(isEnabled, for: kindID)
+    }
+
+    func sidebarWidgetPreferencesDidChange() {
+        disabledKindIdentifiers = preferences.disabledKindIdentifiers
+        for registration in registry.registrations
+        where !registry.isEnabled(
+            registration,
+            disabledKindIdentifiers: disabledKindIdentifiers
+        ) {
+            storeInstances([], for: registration.id)
+        }
+        reconcileCarouselSelection(visibleInstances: publishedInstances)
+        reconcileWorkers()
     }
 
     func perform(
@@ -162,6 +209,10 @@ final class BrowserSidebarWidgetRuntime {
             }
             let shouldRun = hosts.values.contains { host in
                 host.isActive
+                    && registry.isEnabled(
+                        registration,
+                        disabledKindIdentifiers: disabledKindIdentifiers
+                    )
                     && registry.supports(
                         registration,
                         platform: host.platform,
@@ -198,6 +249,14 @@ final class BrowserSidebarWidgetRuntime {
         guard let registration = registry.registration(for: kindID) else {
             return
         }
+        guard
+            registry.isEnabled(
+                registration,
+                disabledKindIdentifiers: disabledKindIdentifiers
+            )
+        else {
+            return
+        }
         let matching = candidates.filter { $0.id.kindID == kindID }
         let normalized: [BrowserSidebarWidgetInstance]
         switch registration.instancePolicy {
@@ -208,8 +267,15 @@ final class BrowserSidebarWidgetRuntime {
             for instance in matching { unique[instance.id] = instance }
             normalized = unique.values.sorted { $0.id.id < $1.id.id }
         }
-        guard instancesByKindID[kindID] != normalized else { return }
-        instancesByKindID[kindID] = normalized
+        storeInstances(normalized, for: kindID)
+    }
+
+    private func storeInstances(
+        _ instances: [BrowserSidebarWidgetInstance],
+        for kindID: BrowserSidebarWidgetKindID
+    ) {
+        guard instancesByKindID[kindID] != instances else { return }
+        instancesByKindID[kindID] = instances
         let next = registry.registrations.flatMap {
             instancesByKindID[$0.id] ?? []
         }

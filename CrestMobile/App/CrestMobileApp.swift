@@ -63,9 +63,13 @@ struct CrestMobileApp: App {
             ? nil
             : BrowserTabStateArchive.production()
         let mediaSessions = BrowserMediaSessionStore()
+        let sidebarWidgetPreferences = BrowserSidebarWidgetPreferenceStore.launch(
+            environment: launchEnvironment
+        )
         let sidebarWidgets = BrowserSidebarWidgetRuntime(
             registrations: [.nowPlaying],
-            sources: [mediaSessions]
+            sources: [mediaSessions],
+            preferences: sidebarWidgetPreferences
         )
         let pages = MobileBrowserPageStore(
             monitorsMemoryPressure: !usesIsolatedLaunch,
