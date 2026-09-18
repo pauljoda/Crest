@@ -113,6 +113,7 @@ struct BrowserSidebarSplitGroupRow: View {
             isChoosingTint: tintPresentation,
             tint: tintBinding,
             activate: activate,
+            closeSplit: closeSplit,
             beginRenaming: beginRenaming,
             beginChangingIcon: beginChangingIcon,
             beginChangingTint: beginChangingTint,
@@ -135,6 +136,18 @@ struct BrowserSidebarSplitGroupRow: View {
                 ?? configuration.members.first?.id
         else { return }
         configuration.select(memberID)
+    }
+
+    private func closeSplit() {
+        guard configuration.canClose, configuration.isCurrentAndUnlocked else { return }
+        // Closing the second-to-last member dissolves the group through the
+        // domain's survivor rule; the final close then takes an ordinary tab.
+        for member in configuration.members {
+            configuration.browser.closeTab(
+                member.id,
+                matching: configuration.assignment
+            )
+        }
     }
 
     private func beginRenaming() {

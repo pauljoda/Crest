@@ -54,16 +54,7 @@ struct BrowserSidebarSplitGroupContextMenu: View {
                     Divider()
 
                     Button("Close Split", systemImage: "xmark", role: .destructive) {
-                        guard configuration.isCurrentAndUnlocked else { return }
-                        // Closing the second-to-last member dissolves the group through
-                        // the domain's survivor rule, which is exactly what should happen
-                        // — the final close then takes an ordinary tab.
-                        for member in configuration.members {
-                            configuration.browser.closeTab(
-                                member.id,
-                                matching: configuration.assignment
-                            )
-                        }
+                        interaction.closeSplit()
                     }
                     .disabled(!configuration.isAvailableForDisplay)
                 }

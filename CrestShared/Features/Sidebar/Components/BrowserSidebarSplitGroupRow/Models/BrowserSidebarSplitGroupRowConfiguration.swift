@@ -204,6 +204,7 @@ struct BrowserSidebarSplitGroupRowInteractionContext {
     let isChoosingTint: Binding<Bool>
     let tint: Binding<BrowserSpaceBrandColor>
     let activate: () -> Void
+    let closeSplit: @MainActor () -> Void
     let beginRenaming: () -> Void
     let beginChangingIcon: () -> Void
     let beginChangingTint: () -> Void

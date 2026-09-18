@@ -49,6 +49,11 @@ struct BrowserSidebarSplitGroupHeader: View {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
+                .modifier(
+                    BrowserPlatformRowAuxiliaryClickModifier(
+                        perform: configuration.canClose ? interaction.closeSplit : nil
+                    )
+                )
                 .accessibilityLabel(configuration.displayMetadata.displayTitle)
                 .accessibilityValue(
                     "Split View with \(configuration.members.count) tabs"
