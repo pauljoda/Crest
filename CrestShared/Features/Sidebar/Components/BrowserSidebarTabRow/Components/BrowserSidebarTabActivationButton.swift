@@ -6,6 +6,7 @@ import SwiftUI
 /// Shared with the split-group member lines, which draw the same label at
 /// their own insets inside a group's container.
 struct BrowserSidebarTabActivationButton: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let tab: BrowserTab
     let spaceID: SpaceID
     let profileID: UUID
@@ -25,7 +26,8 @@ struct BrowserSidebarTabActivationButton: View {
             BrowserSidebarTabLabel(
                 tab: tab, profileID: profileID, isSelected: isSelected,
                 isLoaded: isLoaded, metrics: metrics, leadingInset: leadingInset,
-                restoreSavedLocation: restoreSavedLocation, sidePanelSpaceID: spaceID)
+                restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick,
+                sidePanelSpaceID: spaceID)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: maxHeight)
@@ -61,6 +63,21 @@ struct BrowserSidebarTabActivationButton: View {
         #else
             // Let the system use the available space on either side of the
             // sidebar. A forced side arrow can clip the picker at the screen edge.
+            nil
+        #endif
+    }
+
+    private var faviconPrimaryClick: (() -> Void)? {
+        #if os(macOS)
+            guard BrowserDurableTabPreferenceStore.shared.returnsToSavedURLOnFaviconClick,
+                tab.placement == .saved, tab.isAwayFromSavedLocation,
+                let restoreSavedLocation
+            else { return nil }
+            return {
+                guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
+                restoreSavedLocation()
+            }
+        #else
             nil
         #endif
     }

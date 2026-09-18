@@ -10,6 +10,7 @@ struct BrowserSidebarTabLabelContent: View {
     let metrics: BrowserSidebarTabRowMetrics
     var leadingInset: CGFloat = 0
     var restoreSavedLocation: (() -> Void)?
+    var faviconPrimaryClick: (() -> Void)?
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
     var sidePanelSpaceID: SpaceID?
@@ -29,7 +30,14 @@ struct BrowserSidebarTabLabelContent: View {
                 BrowserSidebarTabFaviconContent(
                     tab: tab, profileID: profileID, metrics: metrics,
                     isProminent: isSelected, isLoaded: isLoaded, sidePanelSpaceID: sidePanelSpaceID,
-                    iconScale: textScale)
+                    iconScale: textScale
+                )
+                #if os(macOS)
+                    .simultaneousGesture(
+                        TapGesture().onEnded { faviconPrimaryClick?() },
+                        including: faviconPrimaryClick == nil ? .none : .all
+                    )
+                #endif
                 if tab.placement == .saved, tab.isAwayFromSavedLocation, let restoreSavedLocation {
                     BrowserTabSavedLocationIndicator(restore: restoreSavedLocation)
                         .browserTabResidency(isLoaded: isLoaded)

@@ -5,6 +5,7 @@ import Observation
 @MainActor
 final class BrowserDurableTabPreferenceStore {
     static let key = "crest.tabs.durable.closePolicy"
+    static let faviconRootReturnKey = "crest.tabs.saved.returnToRootOnFaviconClick"
 
     static let shared: BrowserDurableTabPreferenceStore = {
         let environment = BrowserLaunchEnvironment.current
@@ -24,10 +25,18 @@ final class BrowserDurableTabPreferenceStore {
         }
     }
 
+    var returnsToSavedURLOnFaviconClick: Bool {
+        didSet {
+            guard returnsToSavedURLOnFaviconClick != oldValue else { return }
+            defaults?.set(returnsToSavedURLOnFaviconClick, forKey: Self.faviconRootReturnKey)
+        }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults?
 
     init(defaults: UserDefaults? = nil) {
         self.defaults = defaults
+        returnsToSavedURLOnFaviconClick = defaults?.bool(forKey: Self.faviconRootReturnKey) ?? false
         closePolicy =
             defaults?.string(forKey: Self.key)
             .flatMap(BrowserDurableTabClosePolicy.init(rawValue:)) ?? .resumeLastLocation

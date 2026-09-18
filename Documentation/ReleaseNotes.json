@@ -1461,6 +1461,10 @@
     "middle-click-split-title-to-close": {
       "category": "new",
       "message": "Middle-click a split title to close the split and all its tabs."
+    },
+    "single-click-saved-tab-root-return": {
+      "category": "new",
+      "message": "Choose to return saved tabs to their saved URL with one favicon click on Mac."
     }
   }
 }
