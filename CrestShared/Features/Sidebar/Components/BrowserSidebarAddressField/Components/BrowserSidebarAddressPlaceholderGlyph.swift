@@ -6,6 +6,8 @@ struct BrowserSidebarAddressPlaceholderGlyph: View {
     let isSecure: Bool
     let metrics: BrowserSidebarAddressFieldMetrics
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @ViewBuilder
     var body: some View {
         if let slot = metrics.leadingGlyphSlot {
@@ -22,5 +24,13 @@ struct BrowserSidebarAddressPlaceholderGlyph: View {
         Image(systemName: isSecure ? "lock.fill" : "magnifyingglass")
             .font(metrics.leadingGlyphFont)
             .foregroundStyle(.secondary)
+            .contentTransition(.symbolEffect(.replace))
+            .animation(
+                BrowserVisualAccessibilityPolicy.animation(
+                    CrestMotion.contentState,
+                    reduceMotion: reduceMotion
+                ),
+                value: isSecure
+            )
     }
 }

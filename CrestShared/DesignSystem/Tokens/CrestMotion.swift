@@ -93,7 +93,8 @@ enum CrestMotion {
     static let paletteTransition: TimeInterval = 0.18
     /// Revealing or hiding recovery details after a navigation failure.
     static let recoveryTransition: TimeInterval = 0.18
-    /// Updating the loaded state rendered inside a pinned-tab tile.
+    /// Updating the loaded state rendered inside a pinned-tab tile, or a
+    /// comparable state glyph in browser chrome.
     static let contentStateTransition: TimeInterval = 0.22
     /// Presenting transient confirmation feedback in browser chrome.
     static let feedbackPresentationTransition: TimeInterval = 0.22

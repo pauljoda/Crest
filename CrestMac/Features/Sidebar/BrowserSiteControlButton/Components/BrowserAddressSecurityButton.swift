@@ -10,20 +10,27 @@ struct BrowserAddressSecurityButton: View {
     let page: BrowserPage
     let isSecure: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Button(action: reviewCertificate) {
             BrowserAddressSecurityIcon(isSecure: isSecure)
         }
         .buttonStyle(buttonStyle)
         .foregroundStyle(
-            isSecure ? Color(nsColor: .secondaryLabelColor) : Color.orange
+            isSecure ? Color(nsColor: .secondaryLabelColor) : Color.red
         )
         .disabled(!canReviewCertificate)
-        .accessibilityLabel(
-            canReviewCertificate ? "Review Certificate" : "Connection Not Secure"
-        )
+        .accessibilityLabel(stateDescription)
         .accessibilityIdentifier("browser-address-security")
-        .help(canReviewCertificate ? "Review Certificate" : "Connection Not Secure")
+        .help(stateDescription)
+        .animation(
+            BrowserVisualAccessibilityPolicy.animation(
+                CrestMotion.contentState,
+                reduceMotion: reduceMotion
+            ),
+            value: isSecure
+        )
     }
 
     private var buttonStyle: CrestChromeButtonStyle {
@@ -40,6 +47,14 @@ struct BrowserAddressSecurityButton: View {
             url: page.displayURL,
             hasServerTrust: page.webView.serverTrust != nil
         )
+    }
+
+    /// The lock speaks for the connection, not for the certificate panel. A
+    /// secure page whose server trust WebKit has not published is still secure;
+    /// it simply has nothing to review.
+    private var stateDescription: LocalizedStringKey {
+        guard isSecure else { return "Connection Not Secure" }
+        return canReviewCertificate ? "Review Certificate" : "Connection Secure"
     }
 
     private func reviewCertificate() {
@@ -62,6 +77,7 @@ private struct BrowserAddressSecurityIcon: View {
                     weight: .medium
                 )
             )
+            .contentTransition(.symbolEffect(.replace))
             .frame(
                 width: BrowserAddressSecurityControlPolicy.controlSize,
                 height: BrowserAddressSecurityControlPolicy.controlSize
