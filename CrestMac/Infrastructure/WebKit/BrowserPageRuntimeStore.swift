@@ -86,7 +86,6 @@ final class BrowserPageRuntimeStore {
         runtime.presentationWindowID = pool.windowID
         runtime.routingWindowID = pool.windowID
         pool.bindRuntimeRouting(runtime, tabID: tabID)
-        pool.extensionControllerPool.setExtensionTabOwner(tabID, in: runtime.page.spaceID, windowID: pool.windowID)
         revision &+= 1
     }
 
@@ -100,8 +99,6 @@ final class BrowserPageRuntimeStore {
                 if runtime.presentationWindowID == nil {
                     runtime.routingWindowID = fallback.windowID
                     fallback.bindRuntimeRouting(runtime, tabID: tabID)
-                    fallback.extensionControllerPool.setExtensionTabOwner(
-                        tabID, in: runtime.page.spaceID, windowID: fallback.windowID)
                 }
             }
         }

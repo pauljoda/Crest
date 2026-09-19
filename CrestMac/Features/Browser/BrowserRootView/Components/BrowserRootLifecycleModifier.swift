@@ -6,7 +6,6 @@ struct BrowserRootLifecycleModifier: ViewModifier {
     let persistSidebarWidth: (Double) -> Void
     @Binding var storedSidebarWidth: Double
     @State private var runtimeSessionProjection: BrowserRuntimeSessionProjection
-    @State private var reconciledPageSpaces: [BrowserSpace]?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -33,7 +32,7 @@ struct BrowserRootLifecycleModifier: ViewModifier {
             }
             .onChange(of: model.isWindowFocused, initial: true) {
                 _, isFocused in
-                model.extensionHostWindowFocusChanged(isFocused)
+                model.hostWindowFocusChanged(isFocused)
             }
             .modifier(
                 BrowserRootSelectionObserver(
@@ -68,12 +67,6 @@ struct BrowserRootLifecycleModifier: ViewModifier {
             .onChange(of: model.pages.activePage?.completedNavigationCount) {
                 model.recordCompletedNavigation()
             }
-            .onChange(of: model.pages.activePage?.isLoading) {
-                model.reconcileExtensionTabActivity()
-            }
-            .onChange(of: model.pages.activePage?.readerModeState) {
-                model.reconcileExtensionTabActivity()
-            }
 
         let runtimeObservedContent =
             pageObservedContent
@@ -81,22 +74,7 @@ struct BrowserRootLifecycleModifier: ViewModifier {
                 runtimeSessionProjection = BrowserRuntimeSessionProjection(
                     session: model.browser.session
                 )
-            }
-            .onChange(
-                of: runtimeSessionProjection.extensionState,
-                initial: true
-            ) {
-                let spaces = model.browser.session.spaces
-                if reconciledPageSpaces == spaces {
-                    // Space selection still changes extension window focus
-                    // when a locked or unloaded destination presents no page.
-                    model.reconcileExtensionTabActivity()
-                } else {
-                    // Compare the full Space values: the extension projection
-                    // alone does not carry profile or native-content identity.
-                    model.reconcileExtensions()
-                    reconciledPageSpaces = spaces
-                }
+                model.reconcilePages()
             }
             .onChange(
                 of: runtimeSessionProjection.tabIconState,
@@ -152,7 +130,6 @@ struct BrowserRootLifecycleModifier: ViewModifier {
                     chrome: model.chrome,
                     windowID: model.windowState?.id,
                     spaceAccess: model.spaceAccess,
-                    extensionSidebar: model.extensionSidebar
                 )
             )
     }

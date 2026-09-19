@@ -22,7 +22,6 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     case sync
     case privacy
     case passwords
-    case extensions
     case featureFlags
     case advanced
     case about
@@ -59,7 +58,6 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .sync: "arrow.triangle.2.circlepath.icloud"
         case .privacy: "hand.raised"
         case .passwords: "key.fill"
-        case .extensions: "puzzlepiece.extension"
         case .featureFlags: "flag.2.crossed"
         case .advanced: "switch.2"
         case .about: "info.circle"
@@ -80,7 +78,6 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .sync: CrestBrandPalette.sage
         case .privacy: CrestBrandPalette.inkSoft
         case .passwords: CrestBrandPalette.butter
-        case .extensions: CrestBrandPalette.sky
         case .featureFlags: CrestBrandPalette.coral
         case .advanced: CrestBrandPalette.sage
         case .about: CrestBrandPalette.sky

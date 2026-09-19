@@ -75,7 +75,6 @@ struct BrowserSidebarSpacePage: View {
             capabilities: capabilities,
             openNewTab: openNewTab,
             showHistory: chromeActions.presentHistory,
-            showExtensions: { actions.presentExtensions?(pageSpace) },
             commandSurfaceNamespace: commandSurfaceNamespace,
             tabPromotionNamespace: tabPromotionNamespace,
             editSpace: { actions.presentSpaceSettings(pageSpace) },

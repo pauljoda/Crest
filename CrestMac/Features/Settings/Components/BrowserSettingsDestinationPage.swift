@@ -30,11 +30,8 @@ struct BrowserSettingsDestinationPage: View {
                 setupActions: setupActions,
                 passwordLayout: .macOSPage,
                 passwordSearchText: $searchText,
-                extensionControllerPool: pages.extensionControllerPool,
                 shortcuts: shortcuts,
                 requestedSpaceID: requestedSpaceID,
-                requestedExtensionCommand:
-                    acceptsExternalRoute ? spaceSettingsPresentation.requestedExtensionCommand : nil,
                 requestRevision: acceptsExternalRoute ? spaceSettingsPresentation.revision : 0
             )
         }

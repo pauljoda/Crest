@@ -73,7 +73,6 @@ enum BrowserShortcutCommand:
     case separateSplitTabs
     case moveSplitCardLeft
     case moveSplitCardRight
-    case toggleExtensionSidePanel
     case toggleDeveloperToolbar
     case toggleTranslationToolbar
 

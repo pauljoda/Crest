@@ -75,7 +75,6 @@ enum BrowserPageConfiguration {
     static func make(
         for profile: BrowsingProfile,
         websiteDataStore: WKWebsiteDataStore? = nil,
-        webExtensionController: WKWebExtensionController? = nil,
         contentRuleList: WKContentRuleList? = nil,
         contentRuleLists: [WKContentRuleList] = [],
         preferredContentMode: WKWebpagePreferences.ContentMode = .desktop,
@@ -103,7 +102,6 @@ enum BrowserPageConfiguration {
         configuration.websiteDataStore =
             websiteDataStore
             ?? BrowserWebsiteDataStore.launchScoped(for: profile)
-        configuration.webExtensionController = webExtensionController
         configuration.defaultWebpagePreferences = webpagePreferences
         configuration.preferences = preferences
         configuration.applicationNameForUserAgent = safariCompatibleApplicationName

@@ -1,625 +1,34 @@
 import SwiftUI
-import UserNotifications
 
+#if !CREST_CHROMIUM_HOST
 @main
+#endif
 struct CrestApp: App {
-    @State private var browser: BrowserStore
-    @State private var cloudSync: BrowserCloudSyncController
-    @State private var onboardingProgress: BrowserOnboardingProgressStore
-    @State private var onboardingCoordinator: BrowserOnboardingCoordinator
-    @State private var pages: BrowserPagePool
-    @State private var chrome: BrowserChromeState
-    @State private var transientBrowsing: BrowserTransientBrowsingCoordinator
-    @State private var windowCoordinator: BrowserMacWindowCoordinator
-    @State private var privateBrowser: BrowserStore
-    @State private var privatePages: BrowserPagePool
-    @State private var privateChrome: BrowserChromeState
-    @State private var privateTransientBrowsing: BrowserTransientBrowsingCoordinator
-    @State private var spaceAccess: BrowserSpaceAccessController
-    @State private var shortcuts: BrowserShortcutStore
-    @State private var spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
-    @State private var windowTransparency: BrowserWindowTransparencyStore
-    @State private var splitFocus: BrowserSplitFocusPreferenceStore
-    @State private var softwareUpdates: BrowserSoftwareUpdateService
-    @State private var sidebarWidgets: BrowserSidebarWidgetRuntime
-    @State private var extensionSidebar: BrowserExtensionSidebarStore
-    @State private var extensionDebugger: BrowserExtensionDebuggerSessionStore
-    private let extensionControllerPool: BrowserExtensionControllerPool
-    private let extensionCommandMonitor: BrowserExtensionCommandMonitor
-    private let pagePoolRegistry: BrowserPagePoolRegistry
-    private let systemNowPlaying: BrowserSystemNowPlayingCoordinator?
-    private let startupBehavior: BrowserStartupBehavior
-    private let presentsInstalledApplicationUI: Bool
+    @State private var application = BrowserMacApplication()
 
-    init() {
-        let launchEnvironment = BrowserLaunchEnvironment.current
-        let shouldReset = launchEnvironment.resetsSession
-        let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
-            launchEnvironment
-        )
-        let usesEphemeralProfileStorage =
-            BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(
-                launchEnvironment
-            )
-        BrowserMacWebTextAssistancePolicy.configure()
-        BrowserWebKitFeatureFlagStore.configureForLaunch(
-            usesIsolatedLaunch: usesIsolatedLaunch
-        )
-        let utilityDefaults: UserDefaults? = usesIsolatedLaunch ? nil : .standard
-        presentsInstalledApplicationUI =
-            BrowserLaunchIsolationPolicy.presentsInstalledApplicationUI(
-                launchEnvironment
-            )
-        // Import review and manual setup belong to the currently open wizard.
-        // Retire drafts written by earlier releases before any new window opens.
-        if !usesIsolatedLaunch {
-            BrowserOnboardingLegacyDraftCleanup.clear()
-        }
-        if shouldReset && !usesIsolatedLaunch {
-            BrowserLinkPreferenceStore.shared.reset()
-        }
-        let browser =
-            usesIsolatedLaunch
-            ? BrowserStore.isolatedLaunch(launchEnvironment: launchEnvironment)
-            : BrowserStore.production(launchEnvironment: launchEnvironment)
-        let privateBrowser = BrowserStore.privateBrowsing()
-        let cloudSync =
-            usesIsolatedLaunch
-            ? BrowserCloudSyncController.isolated(browser: browser)
-            : BrowserCloudSyncController(browser: browser)
-        browser.setCloudSyncChangeHandler { [weak cloudSync] in
-            Task { await cloudSync?.localChangesDidStage() }
-        }
-        let transientBrowsing = BrowserTransientBrowsingCoordinator()
-        let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
-        let spaceAccess = BrowserSpaceAccessController()
-        let spaceSettingsPresentation =
-            BrowserSpaceSettingsPresentationState()
-        let permissionCenter =
-            usesIsolatedLaunch
-            ? BrowserSitePermissionCenter()
-            : BrowserSitePermissionCenter.production(reset: shouldReset)
-        let hostedNotificationCenter = BrowserHostedWebNotificationSystemCenter()
-        // Forwarding an extension's own console output is how a hang becomes
-        // readable: nothing throws, and the extension's log lines are the only
-        // trace. It wraps three console functions on every extension page, so
-        // a shipping launch does not carry it — a validation launch, or one
-        // asked for it by environment, does.
-        let capturesExtensionConsole =
-            usesIsolatedLaunch || launchEnvironment.capturesExtensionConsole
-        let extensionControllerPool = Self.launchExtensionControllerPool(
-            launchEnvironment: launchEnvironment,
-            usesIsolatedLaunch: usesIsolatedLaunch,
-            usesEphemeralProfileStorage: usesEphemeralProfileStorage,
-            capturesExtensionConsole: capturesExtensionConsole
-        )
-        extensionControllerPool.installationSpaces = { [weak browser, weak spaceAccess] in
-            guard let browser, let spaceAccess else { return [] }
-            return browser.session.spaces.filter {
-                BrowserSettingsPrivacyPolicy.canRevealSpaceData(in: $0, accessController: spaceAccess)
-            }
-        }
-        let privateExtensionControllerPool = BrowserExtensionControllerPool()
-        let sidebarDefaults: UserDefaults?
-        if usesIsolatedLaunch, let isolationID = launchEnvironment.persistentIsolationID {
-            sidebarDefaults = UserDefaults(
-                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: isolationID))
-        } else {
-            sidebarDefaults = utilityDefaults
-        }
-        let sidebarBehaviorPersistence: any BrowserExtensionSidebarBehaviorPersisting =
-            if let sidebarDefaults {
-                UserDefaultsBrowserExtensionSidebarBehaviorStore(defaults: sidebarDefaults)
-            } else {
-                InMemoryBrowserExtensionSidebarBehaviorStore()
-            }
-        let extensionSidebar = BrowserExtensionSidebarStore(behaviorPersistence: sidebarBehaviorPersistence)
-        extensionControllerPool.setSidebarService(extensionSidebar) {
-            NSApp.userInterfaceLayoutDirection == .rightToLeft ? "left" : "right"
-        }
-        let extensionTabGroups = browser.extensionTabGroups
-        extensionControllerPool.setTabGroupService(extensionTabGroups)
-        // WebKit refuses a `modifyHeaders` rule that names a header outside
-        // its accepted list, so Crest holds that half of the rule instead.
-        // Chrome's dynamic rules survive a relaunch; session rules do not.
-        let declarativeNetRequestPersistence: any BrowserExtensionDeclarativeNetRequestPersisting =
-            if let sidebarDefaults {
-                UserDefaultsBrowserExtensionDeclarativeNetRequestStore(defaults: sidebarDefaults)
-            } else {
-                InMemoryBrowserExtensionDeclarativeNetRequestStore()
-            }
-        let extensionDeclarativeNetRequest = BrowserExtensionDeclarativeNetRequestStore(
-            persistence: declarativeNetRequestPersistence
-        )
-        extensionControllerPool.setDeclarativeNetRequestService(extensionDeclarativeNetRequest)
-        // `chrome.identity.launchWebAuthFlow` runs in a Crest-owned web view
-        // on the Space's own data store, so a provider the person is already
-        // signed in to answers a `prompt=none` re-authorization silently and
-        // an extension that keeps its tokens in `chrome.storage.session`
-        // survives a relaunch without asking for a password.
-        extensionControllerPool.setWebAuthFlowHost(
-            BrowserExtensionWebAuthFlowHost(
-                websiteDataStore: { [weak extensionControllerPool] spaceID in
-                    extensionControllerPool?.extensionWebsiteDataStore(in: spaceID)
-                },
-                profile: { [weak browser] spaceID in
-                    browser?.session.space(id: spaceID)?.profile
-                }
-            )
-        )
-        // WebKit drops the `debugger` permission, so Crest owns the decision,
-        // the prompt, and the live withdrawal behind it.
-        let extensionDebugger = BrowserExtensionDebuggerInstallation.install(
-            pool: extensionControllerPool,
-            browser: browser,
-            spaceAccess: spaceAccess
-        )
-        extensionControllerPool.setNativeMessagingHandler(
-            usesIsolatedLaunch
-                ? BrowserNativeMessagingService(
-                    capability:
-                        BrowserPlatformExtensionNativeMessagingCapability
-                        .currentBuild,
-                    // An isolated launch refuses external native hosts unless
-                    // the run opted in, so a companion process only ever runs
-                    // when a validation asked for it.
-                    resolver: launchEnvironment.allowsExternalNativeHostsInIsolation
-                        ? .production()
-                        : BrowserNativeMessagingHostManifestResolver(
-                            searchDirectories: []
-                        ),
-                    // Crest's own capability broker must match production:
-                    // without a notification center every `notifications`
-                    // call is refused and validation runs diverge from the
-                    // installed app.
-                    notificationService: BrowserExtensionNotificationService(
-                        center: BrowserExtensionNotificationSystemCenter(
-                            center: .current()
-                        )
-                    ),
-                    sidebarService: extensionSidebar,
-                    sidebarEventMessage: { [weak extensionControllerPool] event in
-                        extensionControllerPool?.sidebarEventMessage(event)
-                    },
-                    tabGroupService: extensionControllerPool.extensionTabGroupService,
-                    tabGroupEventMessage: { [weak extensionControllerPool] event in
-                        extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
-                    },
-                    declarativeNetRequestService: extensionDeclarativeNetRequest,
-                    declarativeNetRequestEventMessage: {
-                        [weak extensionControllerPool] rulesets in
-                        extensionControllerPool?.declarativeNetRequestEventMessage(rulesets) ?? [:]
-                    },
-                    debuggerService: extensionDebugger,
-                    debuggerEventMessage: { [weak extensionControllerPool] event in
-                        extensionControllerPool?.debuggerEventMessage(event)
-                    },
-                    // Every extension may hear from a website it named in its
-                    // own `externally_connectable`, so this watch is offered
-                    // to all of them rather than to a permitted few.
-                    externalMessageService:
-                        extensionControllerPool.externalMessageService,
-                    externalMessageEventMessage: {
-                        [weak extensionControllerPool] delivery in
-                        extensionControllerPool?.externalMessageEventMessage(delivery)
-                    },
-                    webpageMenuRegistry:
-                        extensionControllerPool.webpageMenuRegistry
-                )
-                : BrowserNativeMessagingService.production(
-                    sidebarService: extensionSidebar,
-                    sidebarEventMessage: { [weak extensionControllerPool] event in
-                        extensionControllerPool?.sidebarEventMessage(event)
-                    },
-                    tabGroupService: extensionControllerPool.extensionTabGroupService,
-                    tabGroupEventMessage: { [weak extensionControllerPool] event in
-                        extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
-                    },
-                    declarativeNetRequestService: extensionDeclarativeNetRequest,
-                    declarativeNetRequestEventMessage: {
-                        [weak extensionControllerPool] rulesets in
-                        extensionControllerPool?.declarativeNetRequestEventMessage(rulesets) ?? [:]
-                    },
-                    debuggerService: extensionDebugger,
-                    debuggerEventMessage: { [weak extensionControllerPool] event in
-                        extensionControllerPool?.debuggerEventMessage(event)
-                    },
-                    // Every extension may hear from a website it named in its
-                    // own `externally_connectable`, so this watch is offered
-                    // to all of them rather than to a permitted few.
-                    externalMessageService:
-                        extensionControllerPool.externalMessageService,
-                    externalMessageEventMessage: {
-                        [weak extensionControllerPool] delivery in
-                        extensionControllerPool?.externalMessageEventMessage(delivery)
-                    },
-                    webpageMenuRegistry:
-                        extensionControllerPool.webpageMenuRegistry
-                )
-        )
-        extensionControllerPool.setCommandSettingsHandler {
-            route,
-            spaceID in
-            guard let space = browser.session.space(id: spaceID) else { return }
-            spaceSettingsPresentation.presentExtensionCommandSettings(
-                route,
-                assignment: BrowserSpaceRuntimeAssignment(space: space)
-            )
-        }
-        // An isolated launch keeps the updates UI reachable for validation but
-        // starts with the cadence switched off, so a fixture launch never
-        // reaches the Chrome Web Store on its own.
-        let extensionUpdatePreferences: any BrowserExtensionUpdatePreferencesPersisting =
-            usesIsolatedLaunch
-            ? InMemoryBrowserExtensionUpdatePreferencesPersistence(
-                preferences: BrowserExtensionUpdatePreferences(
-                    isAutomaticUpdateEnabled: false
-                )
-            )
-            : UserDefaultsBrowserExtensionUpdatePreferencesPersistence()
-        let extensionUpdateMetadata: any BrowserExtensionUpdateMetadataPersisting =
-            usesIsolatedLaunch
-            ? InMemoryBrowserExtensionUpdateMetadataPersistence()
-            : UserDefaultsBrowserExtensionUpdateMetadataPersistence()
-        extensionControllerPool.setUpdateModel(
-            BrowserExtensionUpdateModel(
-                preferencesPersistence: extensionUpdatePreferences,
-                updateMetadataPersistence: extensionUpdateMetadata,
-                checker: BrowserChromeWebStoreUpdateChecker(),
-                applier: BrowserChromeWebStoreUpdater(
-                    pool: extensionControllerPool,
-                    spaces: { browser.session.spaces }
-                )
-            )
-        )
-        // An isolated launch keeps its WebKit session state behind the same
-        // boundary as Crest's browser-session and sync owners.
-        let tabStateArchive =
-            usesIsolatedLaunch
-            ? nil
-            : BrowserTabStateArchive.production()
-        let mediaSessions = BrowserMediaSessionStore()
-        let systemNowPlaying =
-            presentsInstalledApplicationUI
-            ? BrowserSystemNowPlayingCoordinator(store: mediaSessions)
-            : nil
-        systemNowPlaying?.start()
-        let isolatedSoftwareUpdateFeed =
-            launchEnvironment.isolatedSoftwareUpdateFeedURL
-        let softwareUpdates = BrowserSoftwareUpdateService(
-            isEnabled: presentsInstalledApplicationUI
-                && (!usesIsolatedLaunch || isolatedSoftwareUpdateFeed != nil),
-            preferences: usesIsolatedLaunch ? nil : .standard,
-            defaultChannel: isolatedSoftwareUpdateFeed.map { _ in .development },
-            feedURLOverride: isolatedSoftwareUpdateFeed
-        )
-        if usesIsolatedLaunch,
-            let fixture = launchEnvironment.softwareUpdateWidgetFixture
-        {
-            softwareUpdates.presentIsolatedSidebarWidgetFixture(fixture)
-        }
-        let sidebarWidgetPreferences = BrowserSidebarWidgetPreferenceStore.launch(
-            environment: launchEnvironment
-        )
-        let sidebarWidgets = BrowserSidebarWidgetRuntime(
-            registrations: [.softwareUpdate, .nowPlaying],
-            sources: [softwareUpdates.widgetSource, mediaSessions],
-            preferences: sidebarWidgetPreferences
-        )
-        let pages = BrowserPagePool(
-            monitorsMemoryPressure: !usesIsolatedLaunch,
-            usesEphemeralWebsiteDataStores: usesEphemeralProfileStorage,
-            extensionControllerPool: extensionControllerPool,
-            capturesExtensionConsole: capturesExtensionConsole,
-            permissionCenter: permissionCenter,
-            hostedNotificationCenter: hostedNotificationCenter,
-            mediaSessionStore: mediaSessions,
-            downloadLedger: Self.showcaseDownloadLedger(
-                launchEnvironment: launchEnvironment,
-                browser: browser
-            ),
-            loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
-                try await browser.httpAuthenticationCredential(
-                    for: protectionSpace,
-                    in: spaceID
-                )
-            },
-            saveHTTPAuthenticationCredential: { request, spaceID in
-                try await browser.saveHTTPAuthenticationCredential(
-                    username: request.username,
-                    password: request.password,
-                    protectionSpace: request.protectionSpace,
-                    in: spaceID,
-                    replacing: request.replacing
-                )
-            },
-            tabStateArchive: tabStateArchive,
-            popupTabHost: browser.popupTabHost,
-            openNewTab: { url in browser.openNewTab(url: url) },
-            openModifiedLink: { url, spaceID, selecting in
-                guard
-                    let tabID = browser.openNewTab(
-                        url: url,
-                        in: spaceID,
-                        selecting: selecting
-                    ),
-                    let space = browser.session.space(id: spaceID),
-                    let tab = space.tabs.first(where: { $0.id == tabID })
-                else { return nil }
-                return BrowserModifiedLinkRegistration(
-                    tab: tab,
-                    space: space,
-                    session: browser.session
-                )
-            },
-            backgroundPageDidUpdate: { update in
-                browser.updateTabFromPage(
-                    url: update.url,
-                    title: update.title,
-                    faviconData: update.faviconData,
-                    iconAccent: update.iconAccent,
-                    for: update.tabID,
-                    matching: update.assignment
-                )
-                if let url = update.completedNavigationURL {
-                    browser.recordVisit(
-                        url: url,
-                        title: update.title,
-                        matching: update.assignment
-                    )
-                }
-                return browser.session
-            },
-            openPeek: { request in transientBrowsing.presentPeek(request) },
-            handleLinkDrag: { transientBrowsing.handleLinkDrag($0) },
-            splitLinkHost: browser.splitLinkHost,
-            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
-            activateHostedNotificationSource: { spaceID, tabID in
-                browser.selectSpace(spaceID)
-                browser.selectTab(tabID)
-            }
-        )
-        let privatePages = BrowserPagePool(
-            // A private window can hold as many live web views as a standard one,
-            // and they are the least surprising ones to lose: a private page comes
-            // back by reload because it deliberately archives no session state.
-            monitorsMemoryPressure: !usesIsolatedLaunch,
-            browsingMode: .privateBrowsing,
-            extensionControllerPool: privateExtensionControllerPool,
-            permissionCenter: BrowserSitePermissionCenter(),
-            // The private pool answers to the private store, so a popup from a
-            // private page can only ever land in a private tab.
-            popupTabHost: privateBrowser.popupTabHost,
-            openNewTab: { url in privateBrowser.openNewTab(url: url) },
-            openModifiedLink: { url, spaceID, selecting in
-                guard
-                    let tabID = privateBrowser.openNewTab(
-                        url: url,
-                        in: spaceID,
-                        selecting: selecting
-                    ),
-                    let space = privateBrowser.session.space(id: spaceID),
-                    let tab = space.tabs.first(where: { $0.id == tabID })
-                else { return nil }
-                return BrowserModifiedLinkRegistration(
-                    tab: tab,
-                    space: space,
-                    session: privateBrowser.session
-                )
-            },
-            backgroundPageDidUpdate: { update in
-                privateBrowser.updateTabFromPage(
-                    url: update.url,
-                    title: update.title,
-                    faviconData: update.faviconData,
-                    iconAccent: update.iconAccent,
-                    for: update.tabID,
-                    matching: update.assignment
-                )
-                if let url = update.completedNavigationURL {
-                    privateBrowser.recordVisit(
-                        url: url,
-                        title: update.title,
-                        matching: update.assignment
-                    )
-                }
-                return privateBrowser.session
-            },
-            openPeek: { request in privateTransientBrowsing.presentPeek(request) },
-            handleLinkDrag: { privateTransientBrowsing.handleLinkDrag($0) },
-            splitLinkHost: privateBrowser.splitLinkHost,
-            linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess)
-        )
-        privatePages.connectPictureInPictureSourceSelection(
-            to: privateBrowser,
-            spaceAccess: spaceAccess
-        )
-        browser.tabLinkProvider = pages
-        privateBrowser.tabLinkProvider = privatePages
-        browser.tabCopying = pages
-        privateBrowser.tabCopying = privatePages
-        extensionControllerPool.connect(browser: browser, pageProvider: pages)
-        privateExtensionControllerPool.connect(
-            browser: privateBrowser,
-            pageProvider: privatePages
-        )
-        let windowStatePersistence: any BrowserWindowStatePersisting =
-            if let sidebarDefaults {
-                UserDefaultsBrowserWindowStatePersistence(defaults: sidebarDefaults)
-            } else {
-                InMemoryBrowserWindowStatePersistence()
-            }
-        let onboardingProgress = BrowserOnboardingProgressStore.launchStore(
-            isIsolated: usesIsolatedLaunch,
-            forceWelcome: launchEnvironment.forcesOnboardingWelcome,
-            forceSetup: launchEnvironment.forcesMacOnboardingSetup,
-            persistentIsolationID: launchEnvironment.persistentIsolationID
-        )
-        let startupBehavior = BrowserMacOnboardingPolicy.startupBehavior(
-            preferred: usesIsolatedLaunch ? .lastActiveTab : BrowserStartupPreference.behavior(),
-            hasActiveLaunchGate: onboardingProgress.isLaunchGateActive
-        )
-        let mainWindowState = BrowserWindowStateStore(
-            id: .main,
-            session: browser.session,
-            persistence: windowStatePersistence
-        )
-        _browser = State(initialValue: browser)
-        _cloudSync = State(initialValue: cloudSync)
-        _onboardingProgress = State(initialValue: onboardingProgress)
-        _onboardingCoordinator = State(initialValue: BrowserOnboardingCoordinator())
-        _chrome = State(
-            initialValue: BrowserChromeState(
-                sidebarIsPresented: mainWindowState.sidebarIsPresented ?? true,
-                utilityPresentation: BrowserUtilityPresentationState(
-                    defaults: utilityDefaults
-                )
-            )
-        )
-        _transientBrowsing = State(initialValue: transientBrowsing)
-        _windowCoordinator = State(
-            initialValue: BrowserMacWindowCoordinator(
-                browser: browser, pages: pages, spaceAccess: spaceAccess,
-                windowStatePersistence: windowStatePersistence))
-        _privateBrowser = State(initialValue: privateBrowser)
-        _privateChrome = State(
-            initialValue: BrowserChromeState(
-                utilityPresentation: BrowserUtilityPresentationState(
-                    defaults: utilityDefaults
-                )
-            )
-        )
-        _privateTransientBrowsing = State(initialValue: privateTransientBrowsing)
-        _spaceAccess = State(initialValue: spaceAccess)
-        _spaceSettingsPresentation = State(
-            initialValue: spaceSettingsPresentation
-        )
-        let shortcuts = BrowserShortcutStore.launch(
-            usesIsolatedLaunch: usesIsolatedLaunch,
-            reset: shouldReset
-        )
-        _shortcuts = State(initialValue: shortcuts)
-        _windowTransparency = State(
-            initialValue: BrowserWindowTransparencyStore.launch(
-                usesIsolatedLaunch: usesIsolatedLaunch
-            )
-        )
-        _splitFocus = State(
-            initialValue: BrowserSplitFocusPreferenceStore.launch(
-                usesIsolatedLaunch: usesIsolatedLaunch
-            )
-        )
-        _softwareUpdates = State(initialValue: softwareUpdates)
-        _sidebarWidgets = State(initialValue: sidebarWidgets)
-        _extensionSidebar = State(initialValue: extensionSidebar)
-        _extensionDebugger = State(initialValue: extensionDebugger)
-        _pages = State(initialValue: pages)
-        _privatePages = State(initialValue: privatePages)
-        self.extensionControllerPool = extensionControllerPool
-        extensionCommandMonitor = BrowserExtensionCommandMonitor(
-            browser: browser,
-            extensionControllerPool: extensionControllerPool,
-            shortcuts: shortcuts
-        )
-        pagePoolRegistry = BrowserPagePoolRegistry(primary: pages)
-        self.systemNowPlaying = systemNowPlaying
-        self.startupBehavior = startupBehavior
-    }
-
-    /// The extension pool this launch owns.
-    ///
-    /// A named isolated profile keeps its installed extensions the way the
-    /// installed app does. It already persists its browser session, its
-    /// keychain prefix, and its WebKit storage under one isolated name, so the
-    /// staged packages and the installation registry belong there too:
-    /// otherwise WebKit hands back the extension's storage on the next launch
-    /// while Crest has forgotten that anything was ever installed, and each
-    /// validation relaunch starts by re-adding the extension by hand.
-    /// Ephemeral isolated launches keep the in-memory registry and the
-    /// temporary package root that is discarded with the session.
-    private static func launchExtensionControllerPool(
-        launchEnvironment: BrowserLaunchEnvironment,
-        usesIsolatedLaunch: Bool,
-        usesEphemeralProfileStorage: Bool,
-        capturesExtensionConsole: Bool
-    ) -> BrowserExtensionControllerPool {
-        let storedResourcePreparer =
-            BrowserStoreWebExtensionStoredResourcePreparer(
-                enablesConsoleCapture: capturesExtensionConsole
-            )
-        guard usesIsolatedLaunch else {
-            return .production(
-                storedResourcePreparer: storedResourcePreparer
-            )
-        }
-        if let isolationID = launchEnvironment.persistentIsolationID,
-            let pool = BrowserExtensionControllerPool.isolated(
-                isolationID: isolationID,
-                storedResourcePreparer: storedResourcePreparer
-            )
-        {
-            return pool
-        }
-        return BrowserExtensionControllerPool(
-            storedResourcePreparer: storedResourcePreparer,
-            usesEphemeralWebKitStorage: usesEphemeralProfileStorage
-        )
-    }
-
-    private static func showcaseDownloadLedger(
-        launchEnvironment: BrowserLaunchEnvironment,
-        browser: BrowserStore
-    ) -> BrowserDownloadLedger {
-        guard launchEnvironment.presentsShowcaseSession,
-            let profileID = browser.selectedSpace?.profile.id
-        else { return BrowserDownloadLedger() }
-        return .showcase(profileID: profileID)
-    }
-
-    private func settingsTabContent(
-        browser: BrowserStore, pages: BrowserPagePool,
-        presentation: BrowserSpaceSettingsPresentationState? = nil
-    ) -> BrowserSettingsTabContent {
-        BrowserSettingsTabContent { runtime in
-            BrowserSettingsView(
-                browser: browser.profileSettingsBrowser, pages: pages, cloudSync: cloudSync,
-                spaceAccess: spaceAccess, dataDeleter: pagePoolRegistry, shortcuts: shortcuts,
-                onboardingCoordinator: onboardingCoordinator, spaceSettingsPresentation: spaceSettingsPresentation,
-                usesLiveSidebar: !browser.isTemporaryWorkspace,
-                tabState: runtime.model(BrowserSettingsTabState.self) { BrowserSettingsTabState() },
-                tabAssignment: runtime.assignment
-            )
-        }
-    }
-
-    @ViewBuilder
-    private func browserWindowContent(_ request: BrowserMacWindowRequest) -> some View {
-        if let model = windowCoordinator.model(for: request) {
-            BrowserMacWindowScene(
-                model: model, coordinator: windowCoordinator,
-                extensionControllerPool: extensionControllerPool,
-                pagePoolRegistry: pagePoolRegistry, spaceAccess: spaceAccess,
-                spaceSettingsPresentation: spaceSettingsPresentation,
-                startupBehavior: request == .initial ? startupBehavior : .lastActiveTab,
-                shortcuts: shortcuts, sidebarWidgets: sidebarWidgets, softwareUpdates: softwareUpdates
-            )
-            .environment(
-                \.browserSettingsTabContent,
-                settingsTabContent(
-                    browser: model.browser, pages: model.pages, presentation: model.spaceSettingsPresentation)
-            )
-            .environment(windowTransparency)
-            .environment(splitFocus)
-            .environment(softwareUpdates)
-            .environment(extensionSidebar)
-            .environment(extensionDebugger)
-            .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
-        } else {
-            Color.clear.background(
-                BrowserMacWindowAttachment(
-                    attach: { $0.close() }, focusChanged: { _ in }, close: {}))
-        }
-    }
+    private var browser: BrowserStore { application.browser }
+    private var cloudSync: BrowserCloudSyncController { application.cloudSync }
+    private var onboardingProgress: BrowserOnboardingProgressStore { application.onboardingProgress }
+    private var onboardingCoordinator: BrowserOnboardingCoordinator { application.onboardingCoordinator }
+    private var pages: BrowserPagePool { application.pages }
+    private var chrome: BrowserChromeState { application.chrome }
+    private var transientBrowsing: BrowserTransientBrowsingCoordinator { application.transientBrowsing }
+    private var windowCoordinator: BrowserMacWindowCoordinator { application.windowCoordinator }
+    private var privateBrowser: BrowserStore { application.privateBrowser }
+    private var privatePages: BrowserPagePool { application.privatePages }
+    private var privateChrome: BrowserChromeState { application.privateChrome }
+    private var privateTransientBrowsing: BrowserTransientBrowsingCoordinator { application.privateTransientBrowsing }
+    private var spaceAccess: BrowserSpaceAccessController { application.spaceAccess }
+    private var shortcuts: BrowserShortcutStore { application.shortcuts }
+    private var spaceSettingsPresentation: BrowserSpaceSettingsPresentationState { application.spaceSettingsPresentation }
+    private var windowTransparency: BrowserWindowTransparencyStore { application.windowTransparency }
+    private var splitFocus: BrowserSplitFocusPreferenceStore { application.splitFocus }
+    private var softwareUpdates: BrowserSoftwareUpdateService { application.softwareUpdates }
+    private var sidebarWidgets: BrowserSidebarWidgetRuntime { application.sidebarWidgets }
+    private var pagePoolRegistry: BrowserPagePoolRegistry { application.pagePoolRegistry }
+    private var systemNowPlaying: BrowserSystemNowPlayingCoordinator? { application.systemNowPlaying }
+    private var startupBehavior: BrowserStartupBehavior { application.startupBehavior }
+    private var presentsInstalledApplicationUI: Bool { application.presentsInstalledApplicationUI }
 
     var body: some Scene {
         WindowGroup(
@@ -636,7 +45,7 @@ struct CrestApp: App {
                             coordinator: onboardingCoordinator
                         )
                     } else {
-                        browserWindowContent(request ?? .initial)
+                        application.browserWindowContent(request ?? .initial)
                     }
                 }
                 .task {
@@ -670,7 +79,7 @@ struct CrestApp: App {
         WindowGroup(ProductIdentity.name, id: BrowserSceneID.blankWindow.rawValue, for: BrowserMacWindowRequest.self) {
             $request in
             if presentsInstalledApplicationUI, let request {
-                browserWindowContent(request)
+                application.browserWindowContent(request)
             }
         }
         .defaultSize(
@@ -747,7 +156,7 @@ struct CrestApp: App {
                 .frame(minWidth: 900, minHeight: 600)
                 .preferredColorScheme(.dark)
                 .environment(
-                    \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
+                    \.browserSettingsTabContent, application.settingsTabContent(browser: privateBrowser, pages: privatePages)
                 )
                 .background(
                     BrowserMacWindowAttachment(
@@ -762,7 +171,7 @@ struct CrestApp: App {
                         }
                     )
                 )
-                .onDisappear(perform: closePrivateBrowsingWindow)
+                .onDisappear(perform: application.closePrivateBrowsingWindow)
             } else {
                 EmptyView()
             }
@@ -813,14 +222,6 @@ struct CrestApp: App {
         // browser on every launch after the one that ran it — a window nothing
         // asked for, standing in front of everything the sidebar needs to hit.
         .restorationBehavior(.disabled)
-    }
-
-    private func closePrivateBrowsingWindow() {
-        let closingSession = privateBrowser.session
-        privatePages.closePrivateBrowsingSession(closingSession)
-        privateBrowser.resetPrivateBrowsingSession()
-        privateChrome.dismissCommandPalette()
-        privateTransientBrowsing.dismissPeek()
     }
 
 }

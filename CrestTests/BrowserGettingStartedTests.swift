@@ -102,8 +102,6 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertEqual(pages.presentedTabIDs, [first])
         XCTAssertNil(pages.activePage)
         XCTAssertFalse(pages.retainedTabIDs.contains(first))
-        pages.prepareExtensionSelection(session: browser.session)
-        pages.prepareExtensionTab(for: first, in: browser.session.selectedSpaceID, session: browser.session)
         XCTAssertFalse(pages.retainedTabIDs.contains(first))
         pages.selectSpace(in: browser)
         XCTAssertEqual(browser.selectedTab?.id, first)

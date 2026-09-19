@@ -16,8 +16,6 @@ final class BrowserRootModel {
     let windowState: BrowserWindowStateStore?
     private let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: BrowserStartupBehavior
-    let extensionSidebarWindowID: BrowserWindowID
-    var extensionSidebar: BrowserExtensionSidebarHost?
 
     var address = ""
     var isAddressEditing = false
@@ -38,7 +36,7 @@ final class BrowserRootModel {
             self.isAddressEditing = isEditing
         }
     )
-    var hasRestoredExtensions = false
+    var isPrepared = false
     @ObservationIgnored private var isPreparingBrowser = false
     var isURLCopiedFeedbackVisible = false
     var visiblePageZoomFeedbackLabel: String?
@@ -80,7 +78,6 @@ final class BrowserRootModel {
         pageSession = BrowserPageSessionSynchronizer(browser: browser, spaceAccess: spaceAccess)
         self.windowState = windowState
         layoutPersistence = BrowserWindowLayoutPersistence(windowState: windowState)
-        extensionSidebarWindowID = windowState?.id ?? BrowserWindowID()
         self.startupBehavior = startupBehavior
         sidebarWidthTransaction = BrowserSidebarWidthTransaction(
             persistedWidth: persistedSidebarWidth
@@ -98,50 +95,30 @@ extension BrowserRootModel {
             width: Double(sidebarWidth),
             isPresented: chrome.columnVisibility != .detailOnly
         )
-        guard !hasRestoredExtensions else {
-            BrowserExtensionStartupLog.skippedAlreadyRestored()
-            return
-        }
-        guard !isPreparingBrowser else { return }
+        guard !isPrepared, !isPreparingBrowser else { return }
         isPreparingBrowser = true
         defer { isPreparingBrowser = false }
 
-        // Apply the launch choice before yielding to extension and rule-list startup.
+        // Apply the launch choice before yielding to rule-list startup.
         // Once the window accepts input, the user's current selection takes precedence.
         if startupBehavior == .showStartPage {
             browser.presentStartPageForLaunch()
             address = ""
         }
-        await pages.restoreExtensions(in: browser.session)
         await pages.prepareContentBlocking()
-        hasRestoredExtensions = true
+        isPrepared = true
         synchronizeSelection()
     }
 
-    func reconcileExtensions() {
+    func reconcilePages() {
         pages.reconcile(session: browser.session)
     }
 
-    func extensionHostWindowFocusChanged(_ isFocused: Bool) {
+    func hostWindowFocusChanged(_ isFocused: Bool) {
         // Window scenes route native key-window notifications directly. A new
         // root's initial SwiftUI focus value must not claim a shared page.
         guard !pages.publishesPageMetadataCentrally else { return }
         pages.setWindowFocused(isFocused)
-        if let id = windowState?.id {
-            pages.extensionControllerPool.setHostWindowFocused(isFocused, windowID: id)
-        } else {
-            pages.extensionControllerPool.setHostWindowFocused(isFocused)
-        }
-    }
-
-    /// Republishes tab state that lives on the page rather than in the session,
-    /// so `tabs.onUpdated` reports load progress and reader mode. Deliberately
-    /// narrower than `reconcileExtensions()`, which also re-evaluates page
-    /// residency and is far too heavy for a load beginning or ending.
-    func reconcileExtensionTabActivity() {
-        pages.extensionControllerPool.reconcileExtensionState(
-            in: browser.session
-        )
     }
 
     func reconcileTabIcons() {
@@ -149,7 +126,7 @@ extension BrowserRootModel {
     }
 
     func reconcileContentBlocking() {
-        guard hasRestoredExtensions else { return }
+        guard isPrepared else { return }
         let session = browser.session
         Task { await pages.reconcileContentBlocking(in: session) }
     }
@@ -159,7 +136,7 @@ extension BrowserRootModel {
     }
 
     func reloadContentBlocking() {
-        guard hasRestoredExtensions else { return }
+        guard isPrepared else { return }
         let session = browser.session
         Task { await pages.reloadContentBlocking(in: session) }
     }
@@ -282,16 +259,14 @@ extension BrowserRootModel {
     }
 
     func synchronizeAfterSelectionChange() {
-        extensionSidebar?.reconcile()
-        guard hasRestoredExtensions else { return }
+        guard isPrepared else { return }
         isAddressEditing = false
         AddressFocusAction.resign()
         synchronizeSelection()
     }
 
     func synchronizeAfterSpaceChange() {
-        extensionSidebar?.reconcile()
-        guard hasRestoredExtensions else { return }
+        guard isPrepared else { return }
         isAddressEditing = false
         AddressFocusAction.resign()
         if selectedSpaceIsLocked || !pages.isPresentingSelection(in: browser.session) {
@@ -307,8 +282,7 @@ extension BrowserRootModel {
     }
 
     func synchronizeAfterLockChange() {
-        extensionSidebar?.reconcile()
-        guard hasRestoredExtensions else { return }
+        guard isPrepared else { return }
         synchronizeSelection()
     }
 

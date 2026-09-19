@@ -34,11 +34,11 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
 
         presentation.present(assignment: firstAssignment)
-        presentation.present(.extensions, assignment: secondAssignment)
+        presentation.present(.shortcuts, assignment: secondAssignment)
 
         XCTAssertEqual(presentation.requestedSpaceID, second)
         XCTAssertEqual(presentation.requestedAssignment, secondAssignment)
-        XCTAssertEqual(presentation.requestedDestination, .extensions)
+        XCTAssertEqual(presentation.requestedDestination, .shortcuts)
         XCTAssertEqual(presentation.revision, 2)
     }
 
@@ -51,10 +51,10 @@ final class BrowserChromeLayoutTests: XCTestCase {
             profileID: UUID()
         )
 
-        presentation.present(.extensions, assignment: assignment)
-        presentation.present(.extensions, assignment: assignment)
+        presentation.present(.shortcuts, assignment: assignment)
+        presentation.present(.shortcuts, assignment: assignment)
 
-        XCTAssertEqual(presentation.requestedDestination, .extensions)
+        XCTAssertEqual(presentation.requestedDestination, .shortcuts)
         XCTAssertEqual(presentation.requestedSpaceID, spaceID)
         XCTAssertEqual(presentation.revision, 2)
     }
@@ -97,73 +97,11 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(presentation.requestedSpaceID(in: browser))
     }
 
-    @MainActor
-    func testExtensionCommandSettingsPresentationTargetsShortcuts() throws {
-        let presentation = BrowserSpaceSettingsPresentationState()
-        let spaceID = SpaceID()
-        let assignment = BrowserSpaceRuntimeAssignment(
-            spaceID: spaceID,
-            profileID: UUID()
-        )
-        let route = try XCTUnwrap(
-            BrowserExtensionCommandSettingsRoute(
-                url: URL(
-                    string: "chrome://extensions/configureCommands?command=eimadpbcbfnmbkopoojfekhnkhdbieeh-addSite"
-                )!
-            )
-        )
 
-        presentation.presentExtensionCommandSettings(
-            route,
-            assignment: assignment
-        )
 
-        XCTAssertEqual(presentation.requestedDestination, .shortcuts)
-        XCTAssertEqual(presentation.requestedSpaceID, spaceID)
-        XCTAssertEqual(presentation.requestedExtensionCommand, route)
-        XCTAssertEqual(presentation.revision, 1)
-    }
 
-    func testChromeExtensionCommandURLRoutesToCrestShortcuts() throws {
-        let route = try XCTUnwrap(
-            BrowserExtensionCommandSettingsRoute(
-                url: URL(
-                    string: "chrome://extensions/configureCommands?command=eimadpbcbfnmbkopoojfekhnkhdbieeh-addSite"
-                )!
-            )
-        )
 
-        XCTAssertEqual(
-            route.extensionID,
-            "eimadpbcbfnmbkopoojfekhnkhdbieeh"
-        )
-        XCTAssertEqual(route.commandID, "addSite")
-        XCTAssertNil(
-            BrowserExtensionCommandSettingsRoute(
-                url: URL(string: "https://example.com/extensions")!
-            )
-        )
-    }
 
-    func testWebExtensionShortcutKeysUseWebKitsSupportedCharacters() {
-        XCTAssertEqual(
-            BrowserExtensionShortcutPolicy.activationKey(
-                for: .character("a")
-            ),
-            "a"
-        )
-        XCTAssertEqual(
-            BrowserExtensionShortcutPolicy.activationKey(
-                for: .special(.leftArrow)
-            ),
-            "\u{F702}"
-        )
-        XCTAssertNil(
-            BrowserExtensionShortcutPolicy.activationKey(
-                for: .special(.escape)
-            )
-        )
-    }
 
     func testCertificateReviewRequiresHTTPSAndServerTrust() {
         XCTAssertTrue(
@@ -186,56 +124,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func testExtensionPopupKeepsTheInvokingBrowserWindowAfterFocusChanges() {
-        let browserWindow = NSWindow(
-            contentRect: CGRect(x: 0, y: 0, width: 1_200, height: 800),
-            styleMask: .borderless,
-            backing: .buffered,
-            defer: false
-        )
-        let transientWindow = NSWindow(
-            contentRect: CGRect(x: 0, y: 0, width: 292, height: 420),
-            styleMask: .borderless,
-            backing: .buffered,
-            defer: false
-        )
-        let anchor = BrowserExtensionPopupAnchor(
-            screenPoint: CGPoint(x: 176, y: 742),
-            sourceWindow: browserWindow
-        )
 
-        XCTAssertTrue(
-            anchor.contentView(fallbackWindow: transientWindow)
-                === browserWindow.contentView
-        )
-    }
 
-    @MainActor
-    func testExtensionPopupStaysBoundToTheInvokingViewAfterWindowMoves()
-        throws
-    {
-        let browserWindow = NSWindow(
-            contentRect: CGRect(x: 40, y: 80, width: 1_200, height: 800),
-            styleMask: .borderless,
-            backing: .buffered,
-            defer: false
-        )
-        let iconView = NSView(
-            frame: CGRect(x: 72, y: 710, width: 24, height: 24)
-        )
-        browserWindow.contentView?.addSubview(iconView)
-        let anchor = BrowserExtensionPopupAnchor(sourceView: iconView)
-            .offsetBy(dy: -18)
 
-        browserWindow.setFrameOrigin(CGPoint(x: 320, y: 140))
-
-        let source = try XCTUnwrap(
-            anchor.presentationSource(fallbackWindow: nil)
-        )
-        XCTAssertTrue(source.view === iconView)
-        XCTAssertEqual(source.rect, iconView.bounds)
-    }
 
     func testSidebarClearHistoryKeepsTheInitiatingSpaceAfterSelectionChanges() throws {
         var session = BrowserSession.preview

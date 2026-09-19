@@ -25,6 +25,10 @@ struct CrestMobileApp: App {
     private let monitorsMemoryPressure: Bool
 
     init() {
+        #if CREST_CORE_BACKED
+        setenv("CREST_ISOLATED_SESSION", "1", 1)
+        setenv("CREST_ISOLATED_PERSISTENCE_ID", "core-native-ui-review", 1)
+        #endif
         let launchEnvironment = BrowserLaunchEnvironment.current
         let forceOnboarding = launchEnvironment.forcesOnboardingWelcome
         let shouldReset = launchEnvironment.resetsSession

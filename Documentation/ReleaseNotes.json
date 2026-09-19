@@ -1473,6 +1473,10 @@
     "choose-inactive-tab-scheduling": {
       "category": "improved",
       "message": "Choose whether inactive tabs prioritize lower resource use or faster responsiveness."
+    },
+    "native-control-plane-webkit-checkpoint": {
+      "category": "internal",
+      "message": "Connect the original native browser UI to the portable .NET core and retire WebKit extension support."
     }
   }
 }

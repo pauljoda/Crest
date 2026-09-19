@@ -15,14 +15,6 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     let performanceRunID: String
     let softwareUpdateWidgetFixture: String?
     let isolatedSoftwareUpdateFeedURL: URL?
-    /// Whether extension pages forward their own console output to Crest's
-    /// diagnostics channel. Verbose by design, so it is opt-in per launch.
-    let capturesExtensionConsole: Bool
-    /// Whether an isolated launch may reach the native messaging hosts that
-    /// Chrome and Firefox extensions install on this Mac. Off by default so a
-    /// validation launch never runs a companion process by accident; on only
-    /// when a run needs the real companion.
-    let allowsExternalNativeHostsInIsolation: Bool
     let isXCTestRuntime: Bool
     let isSwiftUIPreviewRuntime: Bool
 
@@ -61,14 +53,6 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
             ]
         isolatedSoftwareUpdateFeedURL = Self.loopbackSoftwareUpdateFeedURL(
             values[Key.softwareUpdateTestFeedURL.rawValue]
-        )
-        capturesExtensionConsole = Self.isEnabled(
-            .extensionConsoleCapture,
-            in: values
-        )
-        allowsExternalNativeHostsInIsolation = Self.isEnabled(
-            .isolatedExternalNativeHosts,
-            in: values
         )
         self.isXCTestRuntime = isXCTestRuntime
         self.isSwiftUIPreviewRuntime = isSwiftUIPreviewRuntime
@@ -121,8 +105,6 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         case performanceRunID = "CREST_PERFORMANCE_RUN_ID"
         case softwareUpdateWidgetFixture = "CREST_UPDATE_WIDGET_FIXTURE"
         case softwareUpdateTestFeedURL = "CREST_UPDATE_TEST_FEED_URL"
-        case extensionConsoleCapture = "CREST_EXTENSION_CONSOLE_CAPTURE"
-        case isolatedExternalNativeHosts = "CREST_ISOLATED_EXTERNAL_NATIVE_HOSTS"
     }
 
     private enum Defaults {

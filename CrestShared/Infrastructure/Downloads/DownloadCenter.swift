@@ -67,7 +67,6 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var userInitiatedOverrideKeys: Set<ObjectIdentifier> = []
     @ObservationIgnored private var requestedFilenames: [ObjectIdentifier: String] = [:]
     @ObservationIgnored private var forceDestinationPromptKeys: Set<ObjectIdentifier> = []
-    @ObservationIgnored private var nextExtensionDownloadID = 1
     @ObservationIgnored private var retryContexts: [UUID: BrowserDownloadRetryContext] = [:]
     @ObservationIgnored private var retryLeases: [UUID: BrowserDownloadRetryLease] = [:]
     @ObservationIgnored private var dataSaveAssignments: [UUID: BrowserSpaceRuntimeAssignment] = [:]
@@ -411,34 +410,6 @@ final class BrowserDownloadCenter: NSObject {
             from: staging, to: destination, quarantine: BrowserDownloadQuarantine(sourceURL: originatingURL))
     }
 
-    func startExtensionDownload(
-        _ request: BrowserExtensionDownloadRequest,
-        in webView: WKWebView,
-        profileID: UUID,
-        spaceID: SpaceID,
-        spaceName: String,
-        isUserInitiated: Bool
-    ) async -> Int {
-        let downloadID = nextExtensionDownloadID
-        nextExtensionDownloadID =
-            nextExtensionDownloadID == Int.max
-            ? 1
-            : nextExtensionDownloadID + 1
-        let download = await webView.startDownload(
-            using: URLRequest(url: request.url)
-        )
-        start(
-            download,
-            in: webView,
-            profileID: profileID,
-            spaceID: spaceID,
-            spaceName: spaceName,
-            isUserInitiated: isUserInitiated,
-            suggestedFilenameOverride: request.filename,
-            forcesDestinationPrompt: request.saveAs
-        )
-        return downloadID
-    }
 
     @discardableResult
     func retryAutomaticDownload(

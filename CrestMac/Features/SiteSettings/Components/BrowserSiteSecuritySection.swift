@@ -33,10 +33,7 @@ struct BrowserSiteSecuritySection: View {
     }
 
     private var canReviewCertificate: Bool {
-        BrowserSiteCertificatePresentationPolicy.isAvailable(
-            url: page.displayURL,
-            hasServerTrust: page.webView.serverTrust != nil
-        )
+        page.canReviewCertificate
     }
 
     private var securityLabel: some View {
@@ -55,10 +52,6 @@ struct BrowserSiteSecuritySection: View {
             reviewCertificate()
             return
         }
-        guard let trust = page.webView.serverTrust else { return }
-        BrowserSiteCertificatePresenter.present(
-            trust: trust,
-            for: page.webView.window
-        )
+        page.reviewCertificate()
     }
 }

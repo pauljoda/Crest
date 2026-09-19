@@ -179,7 +179,7 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(session.spaces.first?.currentTabs.count, workCount)
     }
 
-    func testExtensionCanOpenBackgroundTabWithoutChangingSpaceSelection() throws {
+    func testOpeningBackgroundTabWithoutChangingSpaceSelection() throws {
         var session = BrowserSession.preview
         let originalSpaceID = session.selectedSpaceID
         let originalTabID = session.selectedTab?.id
@@ -201,14 +201,14 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertTrue(session.space(id: personal.id)?.contains(openedID) == true)
     }
 
-    func testExtensionCloseCannotRemovePinnedTab() throws {
+    func testPopupCloseCannotRemovePinnedTab() throws {
         var session = BrowserSession.preview
         let space = try XCTUnwrap(session.selectedSpace)
         let pinned = try XCTUnwrap(space.pinnedTabs.first)
         XCTAssertTrue(session.activateTab(pinned.id, in: space.id))
 
         XCTAssertFalse(
-            session.closeExtensionTab(
+            session.closeTab(
                 pinned.id,
                 in: space.id
             )
@@ -2501,7 +2501,7 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
             let archivedTabID = try XCTUnwrap(
                 session.spaces[spaceIndex].currentTabs.first { !$0.isStartPage }?.id
             )
-            XCTAssertTrue(session.closeExtensionTab(archivedTabID, in: spaceID, at: epoch))
+            XCTAssertTrue(session.closeTab(archivedTabID, in: spaceID, at: epoch))
             session.spaces[spaceIndex].history = (0..<historyEntriesPerSpace).map { index in
                 BrowserHistoryEntry(
                     url: URL(

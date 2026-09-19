@@ -71,10 +71,6 @@ final class BrowserDesktopWebView: WKWebView {
             item.action = #selector(downloadImage(_:))
             item.representedObject = imageDownloadURL
         }
-        BrowserDesktopWebViewMenuPolicy.append(
-            menuHost?.extensionMenuItems(for: context) ?? [],
-            to: menu
-        )
         guard let destination = context.splitViewLinkDestination else { return }
         let item = NSMenuItem(
             title: String(localized: "Open Link in Split View"),

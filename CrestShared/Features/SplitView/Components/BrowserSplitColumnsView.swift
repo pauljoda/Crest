@@ -330,7 +330,7 @@ struct BrowserSplitColumnsView<Content: View, Panel: View>: View {
     private func resolvedPanelWidth(containerWidth: CGFloat) -> CGFloat {
         BrowserSplitPanelLayout.resolvedWidth(
             requestedWidth: panelWidthTransaction.width ?? panel?.requestedWidth
-                ?? BrowserExtensionSidebarLayoutMetrics.defaultWidth,
+                ?? BrowserSplitPanelLayoutMetrics.defaultWidth,
             containerWidth: containerWidth,
             memberCount: members.count + (resolvedPlaceholderIndex == nil ? 0 : 1)
         )

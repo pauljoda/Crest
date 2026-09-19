@@ -135,6 +135,25 @@ final class BrowserWebHostViewTests: XCTestCase {
         XCTAssertTrue(webView.superview === oldHost, "A released web view may return to its previous host")
     }
 
+    func testNativeEngineSurfaceKeepsOwnershipAndLifecycleAcrossHosts() {
+        let view = BrowserNativeSurfaceProbe()
+        let oldHost = BrowserWebHostView()
+        let newHost = BrowserWebHostView()
+        oldHost.attach(view)
+        newHost.attach(view)
+        oldHost.attach(view)
+        oldHost.detach()
+
+        XCTAssertTrue(view.superview === newHost)
+        XCTAssertEqual(view.attachedHosts.map(ObjectIdentifier.init),
+            [ObjectIdentifier(oldHost), ObjectIdentifier(newHost)])
+        XCTAssertTrue(view.detachedHosts.isEmpty,
+            "A stale host must not detach the surface now owned by another window")
+        newHost.detach()
+        XCTAssertNil(view.superview)
+        XCTAssertTrue(view.detachedHosts.first === newHost)
+    }
+
     func testFocusPolicyRequiresAPermittedOwnerAndNoCompetingPresentation() {
         let allowed = BrowserWebFocusRestorationGate(
             browserChromeOwnsFocus: false,
@@ -725,4 +744,12 @@ private final class BrowserFocusRefusingWindow: NSWindow {
         }
         return super.makeFirstResponder(responder)
     }
+}
+
+@MainActor
+private final class BrowserNativeSurfaceProbe: NSView, BrowserNativePageSurfaceLifecycle {
+    var attachedHosts: [BrowserWebHostView] = []
+    var detachedHosts: [BrowserWebHostView] = []
+    func didAttach(to host: BrowserWebHostView) { attachedHosts.append(host) }
+    func willDetach(from host: BrowserWebHostView) { detachedHosts.append(host) }
 }

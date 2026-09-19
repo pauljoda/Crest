@@ -88,25 +88,10 @@ struct BrowserSplitPageSurface: View {
                         model.chrome.startPageFocusRequest,
                     isCommandPalettePresented:
                         model.chrome.isCommandPalettePresented,
-                    fitsBesideExtensionSidebar: isSelectedSpace && model.extensionSidebar?.panel != nil,
                     cardFrames: cardFrames,
                     focusesOnHover: { focusesOnHover(member.id) },
                     onFocusRequest: { if isSelectedSpace { model.focusSplitCard(member.id) } }
                 )
-            },
-            panel: !isSelectedSpace || model.extensionSidebar?.panel == nil
-                ? nil : .init(requestedWidth: model.extensionSidebar?.width ?? 360),
-            onPanelResizeCommit: { model.extensionSidebar?.commitWidth($0) },
-            panelContent: {
-                if isSelectedSpace, let host = model.extensionSidebar, let panel = host.panel {
-                    BrowserExtensionSidebarCard(host: host, panel: panel)
-                        .onGeometryChange(for: CGRect.self) { proxy in
-                            proxy.frame(in: BrowserSplitCardFrameRegistry.coordinateSpace)
-                        } action: {
-                            panelFrame = $0
-                        }
-                        .onDisappear { panelFrame = nil }
-                }
             }
         )
         .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)

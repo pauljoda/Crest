@@ -15,7 +15,6 @@ struct BrowserMacWindowScene: View {
     var chrome: BrowserChromeState { model.chrome }
     var transientBrowsing: BrowserTransientBrowsingCoordinator { model.transientBrowsing }
     var windowState: BrowserWindowStateStore { model.windowState }
-    private let extensionControllerPool: BrowserExtensionControllerPool
     private let pagePoolRegistry: BrowserPagePoolRegistry
     private let spaceAccess: BrowserSpaceAccessController
     private let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
@@ -27,7 +26,6 @@ struct BrowserMacWindowScene: View {
     init(
         model: BrowserMacWindowModel,
         coordinator: BrowserMacWindowCoordinator,
-        extensionControllerPool: BrowserExtensionControllerPool,
         pagePoolRegistry: BrowserPagePoolRegistry,
         spaceAccess: BrowserSpaceAccessController,
         spaceSettingsPresentation: BrowserSpaceSettingsPresentationState,
@@ -38,7 +36,6 @@ struct BrowserMacWindowScene: View {
     ) {
         self.model = model
         self.coordinator = coordinator
-        self.extensionControllerPool = extensionControllerPool
         self.pagePoolRegistry = pagePoolRegistry
         self.spaceAccess = spaceAccess
         self.spaceSettingsPresentation = spaceSettingsPresentation
@@ -100,11 +97,9 @@ struct BrowserMacWindowScene: View {
                     guard coordinator.attach(window, to: id) else { return }
                     activateWindow()
                     pages.setWindowFocused(window.isKeyWindow)
-                    extensionControllerPool.setHostWindowFocused(window.isKeyWindow, windowID: id)
                 },
                 focusChanged: { focused in
                     pages.setWindowFocused(focused)
-                    extensionControllerPool.setHostWindowFocused(focused, windowID: id)
                 },
                 close: closeWindowRuntime)
         )
@@ -147,12 +142,8 @@ struct BrowserMacWindowScene: View {
                 let assignment = spaceSettingsPresentation.requestedAssignment,
                 browser.space(matching: assignment) != nil
             else { return }
-            if let route = spaceSettingsPresentation.requestedExtensionCommand {
-                model.spaceSettingsPresentation.presentExtensionCommandSettings(route, assignment: assignment)
-            } else {
-                model.spaceSettingsPresentation.present(
-                    spaceSettingsPresentation.requestedDestination, assignment: assignment)
-            }
+            model.spaceSettingsPresentation.present(
+                spaceSettingsPresentation.requestedDestination, assignment: assignment)
             browser.selectSpace(assignment.spaceID)
             browser.openSettings()
             pages.select(session: browser.session)
@@ -182,14 +173,6 @@ struct BrowserMacWindowScene: View {
             browser: browser,
             for: id
         )
-        if !registered {
-            registered = true
-            extensionControllerPool.registerWindow(
-                id: id, browser: browser, pageProvider: pages,
-                focus: { [weak model] in model?.window?.makeKeyAndOrderFront(nil) },
-                close: { [weak model] in model?.window?.performClose(nil) })
-        }
-        extensionControllerPool.reconcileExtensionState(in: browser.session)
     }
 
     private func closeWindowRuntime() {
@@ -197,7 +180,6 @@ struct BrowserMacWindowScene: View {
         closed = true
         (browser.interactionObserver as? BrowserSidebarInteractionState)?.cancel()
         sidebarWidgets.removeHost(id: id)
-        extensionControllerPool.unregisterWindow(id: id)
         pagePoolRegistry.unregister(pages, for: id)
         flushPendingPersistence()
         coordinator.closeWindow(id)

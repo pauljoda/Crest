@@ -15,7 +15,7 @@ struct BrowserPlatformWebView: NSViewRepresentable {
     func makeNSView(context: Context) -> BrowserWebHostView {
         let host = BrowserWebHostView()
         host.attach(
-            page.webView,
+            page.nativeView,
             focusRestoration: page.focusRestoration,
             allowsAttachment: allowsAttachment
         )
@@ -28,7 +28,7 @@ struct BrowserPlatformWebView: NSViewRepresentable {
 
     func updateNSView(_ host: BrowserWebHostView, context: Context) {
         host.attach(
-            page.webView,
+            page.nativeView,
             focusRestoration: page.focusRestoration,
             allowsAttachment: allowsAttachment
         )
@@ -46,4 +46,11 @@ struct BrowserPlatformWebView: NSViewRepresentable {
         guard let presentationWindowID, let owner = page.windowRouting?.pool else { return true }
         return owner.windowID == presentationWindowID
     }
+}
+
+// WebKit's hover observer remains with its adapter. Other native engine views
+// use the same host without inheriting WebKit-specific presentation work.
+extension BrowserDesktopWebView: BrowserNativePageSurfaceLifecycle {
+    func didAttach(to host: BrowserWebHostView) { linkHover?.attach(to: host) }
+    func willDetach(from host: BrowserWebHostView) { linkHover?.detach(from: host) }
 }

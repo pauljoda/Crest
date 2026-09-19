@@ -8,6 +8,13 @@ extension BrowserSession {
         fallbackTabID: TabID?,
         returningToSavedURL: Bool
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        return applyCoreEdit("tab.close_durable", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString,
+            "fallbackTabId": fallbackTabID.map { $0.rawValue.uuidString as Any } ?? NSNull(),
+            "returnToSavedURL": returningToSavedURL,
+        ], at: .now) != nil
+        #else
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
             let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: {
                 $0.id == tabID && $0.placement != .current
@@ -22,5 +29,6 @@ extension BrowserSession {
             }
         }
         return true
+        #endif
     }
 }

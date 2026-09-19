@@ -25,7 +25,7 @@ Every persistent Space owns its own browsing state. A Space boundary includes:
 - WebKit website data store, cookies, cache, and sessions
 - tabs, pinned sites, folders, history, archive, and appearance
 - Crest Passwords and credential matching
-- content-blocking, permission, and extension state
+- content-blocking and permission state
 - synchronization records and deletion tombstones
 
 Private Spaces use non-persistent WebKit storage and do not join normal persistence or sync. Quick Window and Peek are transient presentations, but deliberately borrow the selected Space's session boundary when a signed-in preview is useful.
@@ -44,7 +44,7 @@ Import adapters share URL and whitespace sanitation while retaining their own ti
 
 **New Window** opens another view of the same browsing workspace. `BrowserStoreFamily` owns one observable session; each `BrowserStore` retains only its window's selections and projects them over that session. Changes are visible across windows before persistence. Mutations run on the main actor, and family revisions reject stale background sync work. A restored window keeps its own Space and tab selections, including an intentionally empty selection.
 
-Normal windows share a `BrowserPageRuntimeStore`. Each tab has one `BrowserTabRuntime` owning its live WebKit view, suspended configurations, and history. The focused window hosts the live view; other windows showing the same tab use its preview and can take over presentation. Native tab models share the same workspace lifetime. Closing a normal window releases its presentation while retaining shared tabs and their loaded state.
+Normal windows share a `BrowserPageRuntimeStore`. Each tab has one `BrowserTabRuntime` owning its live WebKit view and native history. The focused window hosts the live view; other windows showing the same tab use its preview and can take over presentation. Native tab models share the same workspace lifetime. Closing a normal window releases its presentation while retaining shared tabs and their loaded state.
 
 **Blank Window** creates a temporary workspace with no initial tabs. It borrows the source Space's website profile, credentials, permissions, identity, and settings. Its tabs, pins, folders, history, archive, favicons, and tab-state storage remain local and in memory, with no sync coordinator or window restoration. Settings edit the canonical source profile through a separate selection facade. Source policy changes apply immediately; removing or replacing the source profile ends the temporary workspace. Closing it discards its local browsing records.
 
@@ -74,7 +74,7 @@ Shared infrastructure decides navigation, downloads, content blocking, reader mo
 
 `BrowserReaderModeSession` owns request cancellation and document changes through a document adapter. `BrowserWebKitCredentialSession` shares origin validation and filling while the platform page owns its WebKit host. On macOS, the shared runtime publishes a page's metadata and completed visits once through its current window owner. Other hosts use `BrowserPageSessionSynchronizer` with an exact, unlocked tab assignment; page stores validate the page before supplying its metadata.
 
-Shared page operations own common navigation and media behavior. `BrowserPageContentRuleSession` tracks only Crest's content rules, and `BrowserTabStateCoordinator` owns archive eligibility and pending copies without retaining pages. Platform stores apply a shared reconciliation plan and retain their own presentation and memory-pressure policies. On macOS, each `BrowserTabRuntime` owns a tab's current and suspended WebKit configurations together with their history links, so releasing the tab releases every configuration it retained.
+Shared page operations own common navigation and media behavior. `BrowserPageContentRuleSession` tracks only Crest's content rules, and `BrowserTabStateCoordinator` owns archive eligibility and pending copies without retaining pages. Platform stores apply a shared reconciliation plan and retain their own presentation and memory-pressure policies. On macOS, each `BrowserTabRuntime` owns one live WebKit page. Releasing the tab releases that page and its native history.
 
 ## Platform shape
 

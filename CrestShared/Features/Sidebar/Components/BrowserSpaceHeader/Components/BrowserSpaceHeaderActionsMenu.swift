@@ -72,21 +72,6 @@ struct BrowserSpaceHeaderActionsMenu: View {
             action: actions.showHistory
         )
 
-        if let showExtensions = actions.showExtensions {
-            if isPrivateBrowsing {
-                Label(
-                    "Extensions Off in Private Browsing",
-                    systemImage: "puzzlepiece.extension"
-                )
-                .foregroundStyle(.secondary)
-            } else {
-                Button(
-                    "Extensions",
-                    systemImage: "puzzlepiece.extension",
-                    action: showExtensions
-                )
-            }
-        }
 
         if let showPasswords = actions.showPasswords {
             if isPrivateBrowsing {

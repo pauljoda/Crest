@@ -9,7 +9,6 @@ struct BrowserSidebarTabFaviconContent: View {
     /// that earns full-strength ink.
     var isProminent = false
     var isLoaded = true
-    var sidePanelSpaceID: SpaceID?
     let iconScale: Double
 
     var body: some View {
@@ -18,13 +17,6 @@ struct BrowserSidebarTabFaviconContent: View {
             size: TabFaviconMetrics.defaultSize * BrowserSidebarDensityPolicy.scale(iconScale)
         )
         .browserTabResidency(isLoaded: isLoaded)
-        .overlay(alignment: .bottomTrailing) {
-            if let sidePanelSpaceID {
-                BrowserTabSidePanelBadge(
-                    tabID: tab.id, spaceID: sidePanelSpaceID,
-                    scale: BrowserSidebarDensityPolicy.scale(iconScale))
-            }
-        }
         .modifier(BrowserSidebarTabFaviconColumn(slot: metrics.faviconSlot))
         .foregroundStyle(isProminent ? .primary : .secondary)
     }

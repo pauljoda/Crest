@@ -371,7 +371,3 @@ extension BrowserStore: BrowserCloudSyncWorkflowGateway {
 
     var cloudSyncLocalErrorDescription: String? { localSyncErrorDescription }
 }
-
-// MARK: - Extension Sessions
-
-extension BrowserStore: BrowserExtensionTabWindowSessionHandling {}

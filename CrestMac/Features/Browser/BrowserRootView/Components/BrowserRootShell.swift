@@ -15,7 +15,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(BrowserExtensionSidebarStore.self) private var extensionSidebar: BrowserExtensionSidebarStore?
     @State private var downloadFeedback = BrowserMacDownloadFeedbackState()
     @State private var spacePagerPresentation = SpacePagerPresentation()
 
@@ -133,7 +132,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // One per-window host answers for every row and tile in this shell,
         // so the sidebar reads it from here rather than being handed a value
         // per tab through the tree between them.
-        .environment(\.browserTabSidePanel, model.extensionSidebar)
         .environment(downloadFeedback)
         .environment(\.browserChromeAppearance, appearance)
         .environment(\.spacePagerPresentation, spacePagerPresentation)
@@ -194,15 +192,12 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         }
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .onAppear { model.configureExtensionSidebar(extensionSidebar) }
         .onChange(of: model.browser.session, initial: true) {
             transientBrowsing.reconcilePeeks(in: model.browser.session)
         }
         .onChange(of: transientBrowsing.peekRequests, initial: true) {
             model.pages.retainPeekPages(for: transientBrowsing.peekRequests)
         }
-        .onChange(of: model.extensionSidebar?.panel) { model.extensionSidebar?.reconcile() }
-        .onDisappear { model.extensionSidebar?.release() }
     }
 
 }

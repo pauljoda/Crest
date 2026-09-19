@@ -43,8 +43,6 @@ struct BrowserSiteControlPopoverStyle: ViewModifier {
                     BrowserSiteQuickActionButton(title: "Reload", systemImage: "arrow.clockwise", action: {})
                     BrowserSiteQuickActionButton(title: "Capture", systemImage: "camera", action: {}).disabled(true)
                 }
-                BrowserSiteExtensionsHeader(manageExtensions: {})
-                Text("No extension actions for this page").font(.caption).foregroundStyle(.secondary)
                 Divider()
                 Label("Secure", systemImage: "lock.fill").foregroundStyle(.green)
                 Text("Permissions").font(.caption.weight(.semibold)).foregroundStyle(.secondary)

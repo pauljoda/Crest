@@ -17,7 +17,7 @@ extension BrowserSystemPermission {
         case .camera: "Use your camera on websites for video calls and other features."
         case .microphone: "Use your microphone on websites for calls and recording."
         case .location: "Share your location with websites you allow."
-        case .notifications: "Show notifications from websites and extensions you allow."
+        case .notifications: "Show notifications from websites you allow."
         case .passkeys: "Sign in to websites using passkeys saved with your system providers."
         case .files: "Save downloads and open files you select."
         }

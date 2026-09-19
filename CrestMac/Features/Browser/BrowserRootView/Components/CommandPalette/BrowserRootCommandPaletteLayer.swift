@@ -74,7 +74,6 @@ struct BrowserRootCommandPaletteLayer: View {
             spaceAccess: model.spaceAccess,
             targetWindowID: model.windowState?.id,
             layoutDirection: layoutDirection,
-            extensionSidebar: model.extensionSidebar
         )
     }
 }

@@ -7,5 +7,4 @@ struct BrowserCommandContext {
     let chrome: BrowserChromeState
     let windowID: BrowserWindowID?
     let spaceAccess: BrowserSpaceAccessController
-    var extensionSidebar: BrowserExtensionSidebarHost? = nil
 }

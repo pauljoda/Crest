@@ -95,19 +95,7 @@ final class BrowserWindowTitleTests: XCTestCase {
         XCTAssertEqual(model.address, "Destination address draft")
     }
 
-    func testExtensionCommandsUseWindowIdentityNotPageTitle() {
-        let browserWindow = NSWindow()
-        browserWindow.identifier = NSUserInterfaceItemIdentifier(BrowserSceneID.browser.rawValue)
-        browserWindow.title = "A webpage title"
-        XCTAssertTrue(BrowserExtensionCommandMonitor.acceptsWindow(browserWindow))
-        for role in BrowserSceneID.allCases where role != .browser {
-            let other = NSWindow()
-            other.identifier = NSUserInterfaceItemIdentifier(role.rawValue)
-            other.title = ProductIdentity.name
-            XCTAssertFalse(BrowserExtensionCommandMonitor.acceptsWindow(other))
-        }
-        XCTAssertFalse(BrowserExtensionCommandMonitor.acceptsWindow(nil))
-    }
+
 
     private func makeModel(browser: BrowserStore? = nil) -> BrowserRootModel {
         let alpha = BrowserTab(title: "Alpha", url: URL(string: "https://alpha.crest.test"), placement: .current)

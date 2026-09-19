@@ -43,10 +43,7 @@ struct BrowserAddressSecurityButton: View {
     }
 
     private var canReviewCertificate: Bool {
-        BrowserSiteCertificatePresentationPolicy.isAvailable(
-            url: page.displayURL,
-            hasServerTrust: page.webView.serverTrust != nil
-        )
+        page.canReviewCertificate
     }
 
     /// The lock speaks for the connection, not for the certificate panel. A
@@ -58,11 +55,7 @@ struct BrowserAddressSecurityButton: View {
     }
 
     private func reviewCertificate() {
-        guard let trust = page.webView.serverTrust else { return }
-        BrowserSiteCertificatePresenter.present(
-            trust: trust,
-            for: page.webView.window
-        )
+        page.reviewCertificate()
     }
 }
 

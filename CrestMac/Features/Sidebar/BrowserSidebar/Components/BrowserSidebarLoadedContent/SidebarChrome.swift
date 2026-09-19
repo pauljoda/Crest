@@ -49,7 +49,6 @@ struct SidebarChrome: View {
                         activateAddress: activateAddress,
                         submitAddress: submitAddress,
                         commandSurfaceNamespace: commandSurfaceNamespace,
-                        showExtensions: { context.chromeActions.presentExtensions?(space) },
                         siteControlPresentationChanged: {
                             context.utilityPresentation.setSiteControlPresented($0)
                         },

@@ -395,11 +395,6 @@ struct BrowserCommands: Commands {
                 action: actions.toggleSidebar
             )
             .keyboardShortcut(shortcut(.toggleSidebar))
-            Button("Toggle Extension Side Panel", systemImage: "sidebar.trailing") {
-                focusedContext?.extensionSidebar?.toggle()
-            }
-            .keyboardShortcut(shortcut(.toggleExtensionSidePanel))
-            .disabled(focusedContext?.extensionSidebar?.canToggle != true)
         }
 
         CommandGroup(replacing: .help) {
@@ -452,7 +447,6 @@ struct BrowserCommands: Commands {
             spaceAccess: focusedContext?.spaceAccess ?? spaceAccess,
             targetWindowID: focusedContext?.windowID,
             layoutDirection: layoutDirection,
-            extensionSidebar: focusedContext?.extensionSidebar
         )
     }
 

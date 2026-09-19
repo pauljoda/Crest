@@ -5,29 +5,21 @@ struct BrowserShortcutSettingsView: View {
     @State private var model: BrowserShortcutSettingsModel
 
     private let requestedSpaceID: SpaceID?
-    private let requestedExtensionCommand: BrowserExtensionCommandSettingsRoute?
     private let requestRevision: Int
 
     init(
         shortcuts: BrowserShortcutStore,
         browser: BrowserStore,
-        extensionControllerPool: BrowserExtensionControllerPool,
         requestedSpaceID: SpaceID? = nil,
-        requestedExtensionCommand:
-            BrowserExtensionCommandSettingsRoute? = nil,
         requestRevision: Int = 0
     ) {
         self.init(
             model: BrowserShortcutSettingsModel(
                 shortcuts: shortcuts,
                 browser: browser,
-                extensionCommands: extensionControllerPool,
-                searchProvider: BrowserShortcutPresentationCatalog(),
-                selectedExtensionSpaceID:
-                    requestedSpaceID ?? browser.session.selectedSpaceID
+                searchProvider: BrowserShortcutPresentationCatalog()
             ),
             requestedSpaceID: requestedSpaceID,
-            requestedExtensionCommand: requestedExtensionCommand,
             requestRevision: requestRevision
         )
     }
@@ -35,13 +27,10 @@ struct BrowserShortcutSettingsView: View {
     init(
         model: BrowserShortcutSettingsModel,
         requestedSpaceID: SpaceID? = nil,
-        requestedExtensionCommand:
-            BrowserExtensionCommandSettingsRoute? = nil,
         requestRevision: Int = 0
     ) {
         _model = State(initialValue: model)
         self.requestedSpaceID = requestedSpaceID
-        self.requestedExtensionCommand = requestedExtensionCommand
         self.requestRevision = requestRevision
     }
 
@@ -49,7 +38,6 @@ struct BrowserShortcutSettingsView: View {
         BrowserShortcutSettingsContent(
             model: tabState?.retainShortcuts(model) ?? model,
             requestedSpaceID: requestedSpaceID,
-            requestedExtensionCommand: requestedExtensionCommand,
             requestRevision: requestRevision
         )
     }
@@ -61,7 +49,6 @@ private struct BrowserShortcutSettingsContent: View {
     @State private var showsResetConfirmation = false
 
     let requestedSpaceID: SpaceID?
-    let requestedExtensionCommand: BrowserExtensionCommandSettingsRoute?
     let requestRevision: Int
 
     var body: some View {
@@ -71,8 +58,6 @@ private struct BrowserShortcutSettingsContent: View {
         ) {
             BrowserShortcutSettingsControls(
                 searchText: $model.searchText,
-                selectedExtensionSpaceID: $model.selectedExtensionSpaceID,
-                spaces: model.spaces,
                 canReset: model.hasCrestCustomizations,
                 requestReset: { showsResetConfirmation = true }
             )
@@ -133,14 +118,6 @@ private struct BrowserShortcutSettingsContent: View {
         .onChange(of: locale.identifier, initial: true) {
             model.updateSearchProvider(
                 BrowserShortcutPresentationCatalog(locale: locale)
-            )
-        }
-        .onChange(of: requestRevision, initial: true) {
-            model.applyDeepLink(
-                requestedSpaceID: requestedSpaceID,
-                extensionID: requestedExtensionCommand?.extensionID,
-                commandID: requestedExtensionCommand?.commandID,
-                revision: requestRevision
             )
         }
     }

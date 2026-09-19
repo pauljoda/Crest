@@ -11,7 +11,6 @@ extension BrowserSettingsDestination {
         case .sync: "Sync"
         case .privacy: "Privacy & Permissions"
         case .passwords: "Passwords"
-        case .extensions: "Extensions"
         case .featureFlags: "Feature Flags"
         case .advanced: "Advanced"
         case .about: "About"
@@ -39,7 +38,6 @@ extension BrowserSettingsDestination {
         case .sync: "iCloud setup and status"
         case .privacy: "Site access and data"
         case .passwords: "Credentials and autofill"
-        case .extensions: "Space-specific add-ons"
         case .featureFlags: "WebKit experiments"
         case .advanced: "Import, export, and runtime"
         case .about: "Version, updates, and support"
@@ -68,8 +66,6 @@ extension BrowserSettingsDestination {
             "content blocking ads trackers camera microphone site access history cookies data"
         case .passwords:
             "credentials autofill iCloud Keychain passkeys synchronization"
-        case .extensions:
-            "WebExtension add-ons permissions storage"
         case .featureFlags:
             "WebKit experimental preview testable developer stable runtime flags features"
         case .advanced:

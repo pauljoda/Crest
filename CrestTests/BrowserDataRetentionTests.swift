@@ -5,6 +5,38 @@ import XCTest
 
 @MainActor
 final class BrowserDataRetentionTests: XCTestCase {
+    func testLargeHistoryRetentionPreservesExactCutoffRecordsAndOrder() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 80_000_000)
+        let cutoff = now.addingTimeInterval(-86_400)
+        var session = BrowserSession.preview
+        let retained = Set([0, 511, 512, 1024])
+        session.spaces[0].browsingPreferences.dataRetention.history = .oneDay
+        session.spaces[0].history = (0..<1025).map { index in
+            Self.history(title: String(index), visitedAt: retained.contains(index) ? cutoff : cutoff.addingTimeInterval(-1))
+        }
+        XCTAssertTrue(session.applyDataRetentionPolicies(now: now))
+        XCTAssertEqual(session.spaces[0].history.map(\.title), ["0", "511", "512", "1024"])
+        XCTAssertFalse(session.applyDataRetentionPolicies(now: now))
+    }
+
+    func testHistoryRangeDeletionUsesLastVisitAndHalfOpenBoundsWithinItsSpace() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 10_000)
+        let end = start.addingTimeInterval(10)
+        var session = BrowserSession.preview
+        let spaceID = session.spaces[0].id
+        session.spaces[0].history = [
+            Self.history(title: "Before", visitedAt: start.addingTimeInterval(-1)),
+            Self.history(title: "Start", visitedAt: start),
+            Self.history(title: "Inside", visitedAt: end.addingTimeInterval(-1)),
+            Self.history(title: "End", visitedAt: end),
+        ]
+        session.spaces[1].history = [Self.history(title: "Other Space", visitedAt: start)]
+        XCTAssertTrue(session.removeHistory(from: start, until: end, in: spaceID))
+        XCTAssertEqual(session.spaces[0].history.map(\.title), ["Before", "End"])
+        XCTAssertEqual(session.spaces[1].history.map(\.title), ["Other Space"])
+        XCTAssertFalse(session.removeHistory(from: end, until: start, in: spaceID))
+    }
+
     func testLegacyBrowsingPreferencesKeepEveryStoredCategoryForever() throws {
         let encoded = try JSONEncoder().encode(BrowserSpaceBrowsingPreferences.default)
         var object = try XCTUnwrap(

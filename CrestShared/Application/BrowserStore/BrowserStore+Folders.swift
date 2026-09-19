@@ -1,7 +1,6 @@
 import Foundation
 
 extension BrowserStore {
-    var extensionTabGroups: BrowserExtensionTabGroupStore { family.extensionTabGroups }
 
     @discardableResult
     func createTabFolder(_ tabs: [TabID], in spaceID: SpaceID, detachesSplitMembers: Bool = false) -> FolderID? {

@@ -13,7 +13,7 @@ extension BrowserSession {
         disposableSeedMarker = try values.decodeIfPresent(UUID.self, forKey: .disposableSeedMarker)
         // Read the earlier extension-owned format once. Only folders and tab
         // membership are written back; no parallel group collection survives.
-        let legacy = try values.decodeIfPresent([BrowserExtensionTabGroup].self, forKey: .currentTabFolders) ?? []
+        let legacy = try values.decodeIfPresent([BrowserLegacyTabGroup].self, forKey: .currentTabFolders) ?? []
         for group in legacy {
             guard let index = spaces.firstIndex(where: { $0.id == group.spaceID }),
                 !spaces[index].folders.contains(where: { $0.id == group.folderID })

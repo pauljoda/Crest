@@ -9,7 +9,6 @@ struct SpaceSidebarContent: View {
     let capabilities: BrowserInteractionCapabilities
     let openNewTab: () -> Void
     let showHistory: () -> Void
-    let showExtensions: () -> Void
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
@@ -52,7 +51,6 @@ struct SpaceSidebarContent: View {
                         openNewTab: openNewTab,
                         beginCreatingFolder: beginCreatingFolder,
                         showHistory: showHistory,
-                        showExtensions: showExtensions,
                         editingFolderRequest: $editingFolderRequest,
                         tabPromotionNamespace: tabPromotionNamespace,
                         editSpace: editSpace,

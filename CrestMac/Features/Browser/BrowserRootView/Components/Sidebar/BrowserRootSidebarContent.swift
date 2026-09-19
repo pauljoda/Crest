@@ -70,7 +70,6 @@ struct BrowserRootSidebarContent: View {
         return BrowserSidebarChromeActions(
             presentSpaceSettings: presentSpaceSettings(for:),
             presentHistory: { model.chrome.utilityPresentation.present(.history) },
-            presentExtensions: presentExtensions(for:),
             createSpace: create
         )
     }
@@ -83,14 +82,6 @@ struct BrowserRootSidebarContent: View {
         model.pages.select(session: model.browser.session)
     }
 
-    private func presentExtensions(for space: BrowserSpace) {
-        spaceSettingsPresentation.present(
-            .extensions,
-            assignment: BrowserSpaceRuntimeAssignment(space: space)
-        )
-        model.browser.openSettings()
-        model.pages.select(session: model.browser.session)
-    }
 
     private func createSpace() {
         model.browser.addSpace()

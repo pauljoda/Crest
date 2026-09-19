@@ -83,49 +83,7 @@ final class BrowserSettingsPaneTests: XCTestCase {
     /// Both shells used to derive an extension's colour by switching on its English
     /// status *string*. The condition decides once, and the label and colour both
     /// read from the decision.
-    func testExtensionStatusFollowsTheConditionRatherThanItsLabel() {
-        XCTAssertEqual(
-            BrowserExtensionStatus(summary(isEnabled: false, isLoaded: true)),
-            .off
-        )
-        XCTAssertEqual(
-            BrowserExtensionStatus(
-                summary(isEnabled: false, isLoaded: false, errors: ["broken"])
-            ),
-            .off,
-            "A disabled extension reports being off before it reports a problem."
-        )
-        XCTAssertEqual(
-            BrowserExtensionStatus(summary(isEnabled: true, isLoaded: false)),
-            .needsAttention
-        )
-        XCTAssertEqual(
-            BrowserExtensionStatus(
-                summary(isEnabled: true, isLoaded: true, errors: ["broken"])
-            ),
-            .needsAttention
-        )
-        XCTAssertEqual(
-            BrowserExtensionStatus(summary(isEnabled: true, isLoaded: true)),
-            .on
-        )
-        XCTAssertEqual(
-            BrowserExtensionStatus(
-                summary(
-                    isEnabled: true,
-                    isLoaded: false,
-                    compatibilityAssessment:
-                        BrowserExtensionCompatibilityPolicy.assess(
-                            requestedPermissions: ["nativeMessaging"],
-                            source: .unpackedPackage,
-                            nativeMessagingCapability: .available
-                        )
-                )
-            ),
-            .needsAttention
-        )
 
-    }
 
     // MARK: - Passwords
 
@@ -224,25 +182,5 @@ final class BrowserSettingsPaneTests: XCTestCase {
         XCTAssertEqual(defaultSpace.wrappedValue, browser.session.spaces[1].id)
     }
 
-    private func summary(
-        isEnabled: Bool,
-        isLoaded: Bool,
-        errors: [String] = [],
-        compatibilityAssessment: BrowserExtensionCompatibilityAssessment =
-            .compatible
-    ) -> BrowserExtensionSummary {
-        BrowserExtensionSummary(
-            id: "extension",
-            displayName: "Extension",
-            version: "1.0",
-            requestedPermissions: [],
-            requestedHosts: [],
-            unsupportedAPIs: [],
-            errors: errors,
-            isEnabled: isEnabled,
-            isLoaded: isLoaded,
-            permissionSnapshot: BrowserExtensionPermissionSnapshot(),
-            compatibilityAssessment: compatibilityAssessment
-        )
-    }
+
 }

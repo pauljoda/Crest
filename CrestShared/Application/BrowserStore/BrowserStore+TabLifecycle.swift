@@ -165,53 +165,6 @@ extension BrowserStore {
     }
 
     @discardableResult
-    func openExtensionTab(
-        url: URL?,
-        in spaceID: SpaceID,
-        pinned: Bool,
-        requestedIndex: Int?,
-        shouldSelect: Bool
-    ) -> TabID? {
-        let title = url?.host() ?? url?.absoluteString ?? BrowserTab.startPageTitle
-        guard
-            let tabID = session.openTab(
-                title: title,
-                url: url,
-                symbol: url == nil ? BrowserTab.startPageSymbol : "globe",
-                in: spaceID,
-                placement: pinned ? .pinned : .current,
-                requestedIndex: requestedIndex,
-                shouldSelect: shouldSelect
-            )
-        else {
-            return nil
-        }
-        persist(scope: .core)
-        return tabID
-    }
-
-    func moveExtensionTabs(_ ids: [TabID], in spaceID: SpaceID, to index: Int, among windowTabs: Set<TabID>? = nil)
-        -> Bool
-    {
-        let before = session
-        guard session.moveExtensionTabs(ids, in: spaceID, to: index, among: windowTabs) else { return false }
-        if session != before { persist(scope: .core) }
-        return true
-    }
-
-    @discardableResult
-    func activateExtensionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
-        guard session.activateTab(id, in: spaceID) else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
-        return true
-    }
-
-    @discardableResult
-    func closeExtensionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
-        closeTab(id, in: spaceID)
-    }
-
-    @discardableResult
     func closeTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
         guard let space = session.space(id: spaceID),
             space.tabs.contains(where: { $0.id == id })
@@ -221,7 +174,7 @@ extension BrowserStore {
             ? dismissalFallbackTabID(afterDismissing: id, in: space)
             : nil
         guard
-            session.closeExtensionTab(
+            session.closeTab(
                 id,
                 in: spaceID,
                 fallbackTabID: fallbackID
@@ -229,57 +182,6 @@ extension BrowserStore {
         else { return false }
         persist(deletionReason: .superseded, scope: .core)
         return true
-    }
-
-    @discardableResult
-    func loadExtensionURL(_ url: URL, in tabID: TabID, spaceID: SpaceID) -> Bool {
-        guard session.updateExtensionTab(tabID, in: spaceID, url: url) else {
-            return false
-        }
-        persist(syncUrgency: .coalesced, scope: .core)
-        return true
-    }
-
-    @discardableResult
-    func setExtensionTabPinned(
-        _ pinned: Bool,
-        tabID: TabID,
-        in spaceID: SpaceID
-    ) -> Bool {
-        guard
-            session.setExtensionTabPinned(
-                pinned,
-                tabID: tabID,
-                in: spaceID
-            )
-        else {
-            return false
-        }
-        persist(syncUrgency: .coalesced, scope: .core)
-        return true
-    }
-
-    @discardableResult
-    func duplicateExtensionTab(
-        _ id: TabID,
-        in spaceID: SpaceID,
-        pinned: Bool,
-        requestedIndex: Int?,
-        shouldSelect: Bool
-    ) -> TabID? {
-        guard
-            let duplicateID = session.duplicateTab(
-                id,
-                in: spaceID,
-                placement: pinned ? .pinned : .current,
-                requestedIndex: requestedIndex,
-                shouldSelect: shouldSelect
-            )
-        else {
-            return nil
-        }
-        persist(scope: .favicon(for: duplicateID))
-        return duplicateID
     }
 
     @discardableResult

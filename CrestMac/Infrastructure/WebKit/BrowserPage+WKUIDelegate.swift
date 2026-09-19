@@ -6,7 +6,6 @@ import UniformTypeIdentifiers
 import WebKit
 import os
 
-extension BrowserPage: BrowserExtensionDebuggerDialogHosting {}
 
 extension BrowserPage: WKUIDelegate {
     /// The PDF HUD supplies its live document bytes through this desktop
@@ -97,14 +96,6 @@ extension BrowserPage: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping @MainActor @Sendable () -> Void
     ) {
-        guard
-            !interceptDebuggerDialog(
-                .alert,
-                message: message,
-                frame: frame,
-                resolve: { _, _ in completionHandler() }
-            )
-        else { return }
         dialogPresenter.presentAlert(
             message: message,
             request: frame.request,
@@ -118,14 +109,6 @@ extension BrowserPage: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
-        guard
-            !interceptDebuggerDialog(
-                .confirm,
-                message: message,
-                frame: frame,
-                resolve: { accept, _ in completionHandler(accept) }
-            )
-        else { return }
         dialogPresenter.presentConfirm(
             message: message,
             request: frame.request,
@@ -140,47 +123,11 @@ extension BrowserPage: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping @MainActor @Sendable (String?) -> Void
     ) {
-        if BrowserExtensionClipboardBridge.shared.handlePrompt(
-            prompt, webView: webView, frame: frame, reply: completionHandler)
-        {
-            return
-        }
-        guard
-            !interceptDebuggerDialog(
-                .prompt,
-                message: prompt,
-                defaultPrompt: defaultText ?? "",
-                frame: frame,
-                resolve: { _, text in completionHandler(text) }
-            )
-        else { return }
         dialogPresenter.presentPrompt(
             message: prompt,
             defaultText: defaultText,
             request: frame.request,
             completion: completionHandler
-        )
-    }
-
-    /// Offers a dialog to an attached debugger session before Crest presents
-    /// it. Returns true when the session took it, which means the page stays
-    /// blocked until that session answers or the session ends.
-    private func interceptDebuggerDialog(
-        _ kind: BrowserExtensionDebuggerDialogKind,
-        message: String,
-        defaultPrompt: String? = nil,
-        frame: WKFrameInfo,
-        resolve: @escaping (Bool, String?) -> Void
-    ) -> Bool {
-        guard let interceptor = debuggerDialogInterceptor else { return false }
-        return interceptor.intercept(
-            BrowserExtensionDebuggerDialog(
-                kind: kind,
-                message: message,
-                defaultPrompt: defaultPrompt,
-                url: frame.request.url ?? webView.url
-            ),
-            resolve: resolve
         )
     }
 

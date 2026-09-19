@@ -40,6 +40,228 @@ packages:
 # SystemCapabilities blocks duplicated that, serialized in nondeterministic
 # dictionary order, and churned project.pbxproj on every generate.
 targets:
+  CrestControlPlaneMobile:
+    type: application
+    platform: iOS
+    sources:
+      - path: CrestShared
+        excludes:
+          - Resources/CrestIcon/Sources
+          - Resources/CrestIcon/Validation
+      - path: CrestMobile
+        excludes:
+          - App/CrestMobileApp.swift
+      - path: CrestNative/Apple
+        excludes:
+          - Composition/ControlPlane.entitlements
+          - Tests
+      - path: CrestEngines/WebKit
+    dependencies:
+      - sdk: WebKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.control-plane.mobile
+        PRODUCT_NAME: CrestControlPlaneMobile
+        PRODUCT_MODULE_NAME: CrestControlPlaneMobile
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Crest Control Plane
+        INFOPLIST_KEY_NSFaceIDUsageDescription: Authenticate to unlock protected Spaces in Crest.
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsMultipleScenes: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        IPHONEOS_DEPLOYMENT_TARGET: "26.1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
+        CREST_CORE_FRAMEWORK_DIR: "$(PROJECT_DIR)/CrestCore/artifacts/$(PLATFORM_NAME)"
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(CREST_CORE_FRAMEWORK_DIR)"
+        OTHER_LDFLAGS: "$(inherited) -framework CrestCoreABI"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
+        SWIFT_EMIT_LOC_STRINGS: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: Crest
+    postBuildScripts:
+      - name: Embed portable control plane
+        script: |
+          set -eu
+          mkdir -p "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH"
+          ditto "$CREST_CORE_FRAMEWORK_DIR/CrestCoreABI.framework" "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/CrestCoreABI.framework"
+          if [ "$CODE_SIGNING_ALLOWED" != "NO" ]; then
+            codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/CrestCoreABI.framework"
+          fi
+        inputFiles:
+          - "$(CREST_CORE_FRAMEWORK_DIR)/CrestCoreABI.framework/CrestCoreABI"
+        outputFiles:
+          - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCoreABI.framework/CrestCoreABI"
+    scheme: {}
+  CrestControlPlane:
+    type: application
+    platform: macOS
+    sources:
+      - path: CrestShared
+        excludes:
+          - Resources/CrestIcon/Sources
+          - Resources/CrestIcon/Validation
+      - path: CrestMac
+        excludes:
+          - App/CrestApp.swift
+      - path: CrestNative/Apple
+        excludes:
+          - Tests
+      - path: CrestEngines/WebKit
+    dependencies:
+      - package: Sparkle
+        product: Sparkle
+      - sdk: WebKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.control-plane
+        PRODUCT_NAME: CrestControlPlane
+        PRODUCT_MODULE_NAME: CrestControlPlane
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Crest Control Plane
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        CODE_SIGN_ENTITLEMENTS: CrestNative/Apple/Composition/ControlPlane.entitlements
+        CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"
+        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
+        OTHER_LDFLAGS: '$(inherited) "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"'
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        SWIFT_EMIT_LOC_STRINGS: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: Crest
+    postBuildScripts:
+      - name: Embed portable control plane
+        script: |
+          set -eu
+          mkdir -p "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH"
+          cp "$CREST_CORE_LIBRARY_DIR/CrestCore.Native.dylib" "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/CrestCore.Native.dylib"
+        inputFiles:
+          - "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"
+        outputFiles:
+          - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCore.Native.dylib"
+    scheme:
+      testTargets:
+        - CrestControlPlaneTests
+  CrestChromiumUI:
+    type: framework
+    platform: macOS
+    sources:
+      - path: CrestMac/Infrastructure/WebKit/BrowserWebHostView.swift
+      - path: CrestNative/Apple/CoreClient
+      - path: CrestNative/Apple/Composition/ControlPlaneModel.swift
+      - path: CrestNative/Apple/Composition/ControlPlaneApp.swift
+      - path: CrestNative/Apple/Composition/CoreRecordsView.swift
+      - path: CrestEngines/Chromium/Apple
+        excludes:
+          - CrestChromiumHost.h
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.chromium-ui
+        PRODUCT_MODULE_NAME: CrestChromiumUI
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CHROMIUM_HOST"
+        SWIFT_OBJC_BRIDGING_HEADER: "$(PROJECT_DIR)/CrestEngines/Chromium/Apple/CrestChromiumHost.h"
+        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
+        CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"
+        OTHER_LDFLAGS: '$(inherited) "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"'
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @loader_path/../../.."
+        SWIFT_EMIT_LOC_STRINGS: NO
+    scheme: {}
+  CrestControlPlaneTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: CrestNative/Apple/Tests
+    dependencies:
+      - target: CrestControlPlane
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.control-plane.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CrestControlPlane.app/Contents/MacOS/CrestControlPlane"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        SWIFT_EMIT_LOC_STRINGS: NO
+  CrestNativeCore:
+    type: application
+    platform: macOS
+    sources:
+      - path: Documentation/ReleaseNotes.json
+        buildPhase: resources
+      - path: CrestShared
+        excludes:
+          - Resources/CrestIcon/Sources
+          - Resources/CrestIcon/Validation
+      - path: CrestMac
+    dependencies:
+      - target: CrestDockTilePlugin
+        embed: true
+        link: false
+        codeSign: true
+        copy:
+          destination: plugins
+      - package: Sparkle
+        product: Sparkle
+      - sdk: AuthenticationServices.framework
+      - sdk: CloudKit.framework
+      - sdk: CoreLocation.framework
+      - sdk: LocalAuthentication.framework
+      - sdk: MediaPlayer.framework
+      - sdk: UserNotifications.framework
+      - sdk: WebKit.framework
+      - sdk: Security.framework
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: CrestNative/Apple/Composition/ControlPlane.entitlements
+        # Release scripts supply the app profile without provisioning bundled plug-ins.
+        PROVISIONING_PROFILE_SPECIFIER: "$(CREST_PROVISIONING_PROFILE_SPECIFIER)"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: CrestMac/Configuration/Crest-Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: Crest
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil"
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core
+        PRODUCT_MODULE_NAME: Crest
+        PRODUCT_NAME: CrestNativeCore
+        CREST_DEFAULT_UPDATE_CHANNEL: stable
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CORE_BACKED"
+        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
+        CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"
+        OTHER_LDFLAGS: '$(inherited) "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"'
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        SWIFT_EMIT_LOC_STRINGS: NO
+    postBuildScripts:
+      - name: Embed portable control plane
+        script: |
+          set -eu
+          mkdir -p "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH"
+          cp "$CREST_CORE_LIBRARY_DIR/CrestCore.Native.dylib" "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/CrestCore.Native.dylib"
+          codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/CrestCore.Native.dylib"
+        inputFiles:
+          - "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"
+        outputFiles:
+          - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCore.Native.dylib"
+    scheme:
+      testTargets:
+        - CrestNativeCoreTests
+  CrestNativeCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: CrestTests/AddressResolverTests.swift
+      - path: CrestTests/BrowserSessionTests.swift
+      - path: CrestTests/BrowserDataRetentionTests.swift
+      - path: CrestTests/BrowserWebHostViewTests.swift
+      - path: CrestTests/BrowserCurrentTabFolderTests.swift
+      - path: CrestTests/BrowserSplitGroupSessionTests.swift
+      - path: CrestTests/BrowserSplitTabCopyTests.swift
+    dependencies:
+      - target: CrestNativeCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core.tests
+        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CrestNativeCore.app/Contents/MacOS/CrestNativeCore"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        SWIFT_EMIT_LOC_STRINGS: NO
   Crest:
     type: application
     platform: macOS
@@ -116,6 +338,62 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.tests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Crest.app/Contents/MacOS/Crest"
+  CrestMobileNativeCore:
+    type: application
+    platform: iOS
+    # Scheme BuildableName is derived from productName, not the PRODUCT_NAME
+    # build setting. Keep both as Crest so `xcodegen generate` reproduces the
+    # committed schemes instead of emitting CrestMobile.app.
+    productName: CrestNativeCore
+    sources:
+      - path: Documentation/ReleaseNotes.json
+        buildPhase: resources
+      - path: CrestShared
+        excludes:
+          - Resources/CrestIcon/Sources
+          - Resources/CrestIcon/Validation
+      - path: CrestMobile
+    dependencies:
+      - sdk: AuthenticationServices.framework
+      - sdk: CloudKit.framework
+      - sdk: CoreLocation.framework
+      - sdk: LocalAuthentication.framework
+      - sdk: WebKit.framework
+      - sdk: Security.framework
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: CrestMobile/Configuration/CrestMobile-Info.plist
+        IPHONEOS_DEPLOYMENT_TARGET: "26.1"
+        CREST_MOBILE_BUNDLE_IDENTIFIER: com.pauldavis.crest.mobile-native-core
+        PRODUCT_BUNDLE_IDENTIFIER: "$(CREST_MOBILE_BUNDLE_IDENTIFIER)"
+        PRODUCT_MODULE_NAME: CrestMobile
+        PRODUCT_NAME: CrestNativeCore
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: Crest
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CORE_BACKED"
+        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
+        CREST_CORE_FRAMEWORK_DIR: "$(PROJECT_DIR)/CrestCore/artifacts/$(PLATFORM_NAME)"
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(CREST_CORE_FRAMEWORK_DIR)"
+        OTHER_LDFLAGS: "$(inherited) -framework CrestCoreABI"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
+        SWIFT_EMIT_LOC_STRINGS: NO
+    postBuildScripts:
+      - name: Embed portable control plane
+        script: |
+          set -eu
+          mkdir -p "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH"
+          ditto "$CREST_CORE_FRAMEWORK_DIR/CrestCoreABI.framework" "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/CrestCoreABI.framework"
+          if [ "$CODE_SIGNING_ALLOWED" != "NO" ]; then
+            codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" "$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/CrestCoreABI.framework"
+          fi
+        inputFiles:
+          - "$(CREST_CORE_FRAMEWORK_DIR)/CrestCoreABI.framework/CrestCoreABI"
+        outputFiles:
+          - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCoreABI.framework/CrestCoreABI"
+    scheme: {}
   CrestMobile:
     type: application
     platform: iOS

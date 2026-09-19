@@ -6,7 +6,7 @@ struct BrowserPagePoolWindowRuntime {
     let pages: BrowserPagePool
 
     var activeWebContentView: NSView? {
-        pages.activePage?.webView
+        pages.activePage?.nativeView
     }
 
     var activeWebContentFrame: CGRect? {

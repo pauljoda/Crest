@@ -1,5 +1,4 @@
 import AppKit
-import WebKit
 
 /// The page inside a Split View card, as WebKit already has it drawn.
 ///
@@ -36,10 +35,6 @@ enum BrowserSplitCardSnapshotLoader {
         of page: BrowserPage,
         then deliver: @escaping @MainActor (NSImage?) -> Void
     ) {
-        let configuration = WKSnapshotConfiguration()
-        configuration.afterScreenUpdates = false
-        page.webView.takeSnapshot(with: configuration) { image, _ in
-            MainActor.assumeIsolated { deliver(image) }
-        }
+        page.captureViewport(completion: deliver)
     }
 }

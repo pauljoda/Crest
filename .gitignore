@@ -25,6 +25,11 @@ build/
 .build/
 .swiftpm/
 
+# Portable core products
+CrestCore/**/bin/
+CrestCore/**/obj/
+CrestCore/artifacts/
+
 # Local environment files
 .env
 .env.*

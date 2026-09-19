@@ -267,10 +267,9 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
         XCTAssertTrue(context.pool.containsResidentPage(for: backgroundTab.id))
         let backgroundWebView = try XCTUnwrap(
-            context.pool.extensionWebView(
-                for: backgroundTab.id,
-                in: context.spaceID
-            )
+            context.pool.residentPage(matching: BrowserTabRuntimeAssignment(
+                tabID: backgroundTab.id, spaceID: context.spaceID,
+                profileID: try XCTUnwrap(context.store.session.space(id: context.spaceID)).profile.id))?.webView
         )
         try await waitForURL(destinationURL, in: backgroundWebView)
         XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
@@ -294,7 +293,9 @@ final class BrowserPagePoolTests: XCTestCase {
         for tab in context.openedTabs {
             XCTAssertTrue(context.pool.containsResidentPage(for: tab.id))
             let webView = try XCTUnwrap(
-                context.pool.extensionWebView(for: tab.id, in: context.spaceID)
+                context.pool.residentPage(matching: BrowserTabRuntimeAssignment(
+                tabID: tab.id, spaceID: context.spaceID,
+                profileID: try XCTUnwrap(context.store.session.space(id: context.spaceID)).profile.id))?.webView
             )
             try await waitForURL(try XCTUnwrap(tab.url), in: webView)
         }
@@ -344,7 +345,9 @@ final class BrowserPagePoolTests: XCTestCase {
         context.open(destinationURL, selecting: false)
         let backgroundTab = try XCTUnwrap(context.openedTabs.first)
         let webView = try XCTUnwrap(
-            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+            context.pool.residentPage(matching: BrowserTabRuntimeAssignment(
+                tabID: backgroundTab.id, spaceID: context.spaceID,
+                profileID: try XCTUnwrap(context.store.session.space(id: context.spaceID)).profile.id))?.webView
         )
 
         webView.loadSimulatedRequest(
@@ -375,7 +378,9 @@ final class BrowserPagePoolTests: XCTestCase {
         context.open(initialURL, selecting: false)
         let backgroundTab = try XCTUnwrap(context.openedTabs.first)
         let webView = try XCTUnwrap(
-            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+            context.pool.residentPage(matching: BrowserTabRuntimeAssignment(
+                tabID: backgroundTab.id, spaceID: context.spaceID,
+                profileID: try XCTUnwrap(context.store.session.space(id: context.spaceID)).profile.id))?.webView
         )
         try await waitForLoad(initialURL, in: webView)
         let page = try XCTUnwrap(webView.navigationDelegate as? BrowserPage)
@@ -406,7 +411,9 @@ final class BrowserPagePoolTests: XCTestCase {
         context.open(destinationURL, selecting: false)
         let backgroundTab = try XCTUnwrap(context.openedTabs.first)
         let webView = try XCTUnwrap(
-            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+            context.pool.residentPage(matching: BrowserTabRuntimeAssignment(
+                tabID: backgroundTab.id, spaceID: context.spaceID,
+                profileID: try XCTUnwrap(context.store.session.space(id: context.spaceID)).profile.id))?.webView
         )
         try await waitForLoad(destinationURL, in: webView)
         let page = try XCTUnwrap(webView.navigationDelegate as? BrowserPage)
@@ -434,7 +441,9 @@ final class BrowserPagePoolTests: XCTestCase {
         context.open(destinationURL, selecting: false)
         let backgroundTab = try XCTUnwrap(context.openedTabs.first)
         let webView = try XCTUnwrap(
-            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+            context.pool.residentPage(matching: BrowserTabRuntimeAssignment(
+                tabID: backgroundTab.id, spaceID: context.spaceID,
+                profileID: try XCTUnwrap(context.store.session.space(id: context.spaceID)).profile.id))?.webView
         )
         try await waitForLoad(destinationURL, in: webView)
         await Task.yield()
@@ -759,7 +768,7 @@ final class BrowserPagePoolTests: XCTestCase {
             browser: browser, pages: pool, chrome: chrome,
             spaceAccess: BrowserSpaceAccessController(), windowState: nil,
             startupBehavior: .lastActiveTab, persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth)
-        model.hasRestoredExtensions = true
+        model.isPrepared = true
         defer { pool.reconcile(validTabIDs: []) }
         pool.select(session: browser.session)
         let previousPage = try XCTUnwrap(pool.activePage)
@@ -881,7 +890,7 @@ final class BrowserPagePoolTests: XCTestCase {
             )
             let preparation = Task { await model.prepareBrowser() }
             await fulfillment(of: [started], timeout: 2)
-            XCTAssertFalse(model.hasRestoredExtensions)
+            XCTAssertFalse(model.isPrepared)
             if behavior == .showStartPage {
                 XCTAssertTrue(
                     browser.selectedTab?.isStartPage == true, "Apply the startup choice before waiting for services.")
@@ -1718,7 +1727,9 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(context.store.selectedTab?.id, sourceID)
         XCTAssertEqual(context.pool.activeTabID, sourceID)
         let tab = try XCTUnwrap(context.store.selectedSpace?.tabs.first { $0.id != sourceID })
-        XCTAssertTrue(context.pool.extensionWebView(for: tab.id, in: context.opener.spaceID) === popup)
+        XCTAssertTrue(context.pool.residentPage(matching: BrowserTabRuntimeAssignment(
+                tabID: tab.id, spaceID: context.opener.spaceID,
+                profileID: try XCTUnwrap(context.store.session.space(id: context.opener.spaceID)).profile.id))?.webView === popup)
         XCTAssertTrue(popup.configuration.websiteDataStore === configuration.websiteDataStore)
         context.store.selectTab(tab.id)
         context.pool.select(session: context.store.session)

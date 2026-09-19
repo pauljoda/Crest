@@ -47,7 +47,7 @@ extension BrowserPage: WKNavigationDelegate {
         refreshNavigationState()
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         Task { [weak self] in
-            guard let self, self.extensionBaseURL == nil,
+            guard let self,
                 self.webView.url?.scheme == "https",
                 self.webView.window?.isKeyWindow == true, NSApp.isActive
             else { return }
@@ -70,22 +70,6 @@ extension BrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
-        if let item = BrowserChromeWebStoreInstallNavigation.item(
-            for: navigationAction.request.url,
-            currentURL: webView.url
-        ) {
-            decisionHandler(.cancel)
-            beginChromeWebStoreInstall(for: item)
-            return
-        }
-        if let item = BrowserMozillaAddonsInstallNavigation.item(
-            for: navigationAction.request.url,
-            currentURL: webView.url
-        ) {
-            decisionHandler(.cancel)
-            mozillaAddonsInstall.begin(for: item)
-            return
-        }
         let appInitiated = isAppInitiated(navigationAction)
         switch navigationDecider.decision(
             for: navigationAction,
@@ -160,18 +144,6 @@ extension BrowserPage: WKNavigationDelegate {
         case .foregroundTab:
             openModifiedLink(navigationAction.request, spaceID, true)
             decisionHandler(.cancel)
-            return
-        }
-        if BrowserExtensionExternalNavigationPolicy
-            .shouldReplaceCurrentTabRuntime(
-                currentURL: webView.url,
-                destinationURL: navigationAction.request.url,
-                isTopLevel: isTopLevelNavigation(navigationAction),
-                isAppInitiated: appInitiated
-            ), let destinationURL = navigationAction.request.url
-        {
-            decisionHandler(.cancel)
-            host?.replaceExtensionPageNavigation(self, with: destinationURL)
             return
         }
         if navigationAction.targetFrame?.isMainFrame == true {

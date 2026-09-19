@@ -2,17 +2,9 @@ import SwiftUI
 
 struct BrowserSiteControlContent: View {
     let configuration: BrowserSiteControlConfiguration
-    let actions: [BrowserExtensionActionPresentation]
     @Binding var permissionsExpansion: Bool
     let dismiss: () -> Void
-    let manageExtensions: () -> Void
-    let performExtensionAction: (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) -> Void
-    let togglePinned: (BrowserExtensionActionPresentation) -> Void
     let reviewCertificate: () -> Void
-    var presentExtensionMenu:
-        (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) ->
-            Void = { _, _ in }
-
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             BrowserSiteControlHeader(page: configuration.page)
@@ -28,13 +20,6 @@ struct BrowserSiteControlContent: View {
             BrowserSiteQuickActions(
                 page: configuration.page,
                 dismiss: dismiss
-            )
-            BrowserSiteExtensionsSection(
-                actions: actions,
-                manageExtensions: manageExtensions,
-                perform: performExtensionAction,
-                togglePinned: togglePinned,
-                presentMenu: presentExtensionMenu
             )
             Divider()
             BrowserSiteSettingsContent(

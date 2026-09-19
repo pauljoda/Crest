@@ -38,29 +38,7 @@ struct BrowserShortcutPresentationCatalog: BrowserShortcutSearchProviding {
         )
     }
 
-    func matches(
-        _ command: BrowserShortcutExtensionCommand,
-        query: String
-    ) -> Bool {
-        BrowserShortcutSearchPolicy.containsTrimmedPhrase(
-            query: query,
-            fields: [
-                command.extensionDisplayName,
-                command.title,
-                command.commandID,
-                command.shortcut?.displayString(locale: locale)
-                    ?? BrowserShortcutLocalization.string(
-                        "unassigned",
-                        locale: locale
-                    ),
-                command.shortcut?.spokenDescription(locale: locale)
-                    ?? BrowserShortcutLocalization.string(
-                        "no shortcut",
-                        locale: locale
-                    ),
-            ]
-        )
-    }
+
 }
 
 enum BrowserShortcutLocalization {
@@ -158,7 +136,6 @@ extension BrowserShortcutCommand {
         case .saveWebArchive: "Save Web Archive"
         case .printPage: "Print Page"
         case .toggleSidebar: "Show or Hide Sidebar"
-        case .toggleExtensionSidePanel: "Toggle Extension Side Panel"
         case .showHistory: "Show History"
         case .showArchive: "Show Archive"
         case .showDownloads: "Show Downloads"
@@ -224,7 +201,6 @@ extension BrowserShortcutCommand {
         case .newBlankWindow: "temporary disposable unsynced window"
         case .newQuickWindow: "little arc quick lookup"
         case .showHistory: "visited pages history"
-        case .toggleExtensionSidePanel: "extension sidepanel sidebar panel toggle"
         case .showArchive: "closed tabs archive"
         case .showDownloads: "download files transfers"
         case .toggleReaderMode: "reader reading mode"

@@ -12,7 +12,6 @@ struct SpaceSidebarAddressBand: View {
     let activateAddress: () -> Void
     let submitAddress: () -> Void
     let commandSurfaceNamespace: Namespace.ID
-    let showExtensions: () -> Void
     let siteControlPresentationChanged: (Bool) -> Void
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
 
@@ -88,9 +87,7 @@ struct SpaceSidebarAddressBand: View {
             page: page,
             space: space,
             selectedTabID: space.selectedTabID,
-            extensionControllerPool: pages.extensionControllerPool,
             permissionCenter: pages.permissionCenter,
-            manageExtensions: showExtensions,
             presentationChanged: siteControlPresentationChanged,
             contextMenuPresentationChanged:
                 siteControlContextMenuPresentationChanged

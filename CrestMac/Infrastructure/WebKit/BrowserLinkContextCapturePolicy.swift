@@ -102,10 +102,10 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
         } else {
             encodedMediaType = nil
         }
-        let mediaType: BrowserExtensionWebpageMenuMediaType?
+        let mediaType: BrowserContextMenuMediaType?
         if let encodedMediaType = encodedMediaType as? String {
             guard
-                let parsedMediaType = BrowserExtensionWebpageMenuMediaType(
+                let parsedMediaType = BrowserContextMenuMediaType(
                     rawValue: encodedMediaType
                 )
             else { return nil }
@@ -164,7 +164,7 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
 struct BrowserLinkContext: Equatable, Sendable {
     let linkURL: URL?
     let sourceURL: URL?
-    let mediaType: BrowserExtensionWebpageMenuMediaType?
+    let mediaType: BrowserContextMenuMediaType?
     let documentURL: URL?
     let selectionText: String?
     let isEditable: Bool
@@ -173,4 +173,8 @@ struct BrowserLinkContext: Equatable, Sendable {
     var imageURL: URL? {
         mediaType == .image ? sourceURL : nil
     }
+}
+
+enum BrowserContextMenuMediaType: String, Sendable {
+    case image, video, audio
 }

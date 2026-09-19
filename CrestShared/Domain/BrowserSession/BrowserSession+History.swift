@@ -60,6 +60,16 @@ extension BrowserSession {
         inSpaceAt spaceIndex: Int,
         at date: Date
     ) {
+        #if CREST_CORE_BACKED
+        let index = spaces[spaceIndex].history.firstIndex { $0.url == normalizedURL }
+        guard let mutation = BrowserCorePolicy.recordVisit(url: normalizedURL, title: title, at: date,
+            previous: index.map { spaces[spaceIndex].history[$0] }) else { return }
+        if let index { spaces[spaceIndex].history.remove(at: index) }
+        spaces[spaceIndex].history.insert(mutation.entry, at: 0)
+        if spaces[spaceIndex].history.count > mutation.maximumEntries {
+            spaces[spaceIndex].history.removeLast(spaces[spaceIndex].history.count - mutation.maximumEntries)
+        }
+        #else
         let resolvedTitle =
             title.flatMap { $0.isEmpty ? nil : $0 }
             ?? normalizedURL.host()
@@ -88,6 +98,7 @@ extension BrowserSession {
                 spaces[spaceIndex].history.count - Self.maximumHistoryEntriesPerSpace
             )
         }
+        #endif
     }
 
     @discardableResult
@@ -150,9 +161,16 @@ extension BrowserSession {
         }
 
         let originalCount = spaces[spaceIndex].history.count
+        #if CREST_CORE_BACKED
+        guard let indices = BrowserCorePolicy.historyIndices(
+            dates: spaces[spaceIndex].history.map(\.lastVisitedAt), from: startDate, until: endDate
+        ) else { return false }
+        for index in indices.reversed() { spaces[spaceIndex].history.remove(at: index) }
+        #else
         spaces[spaceIndex].history.removeAll { entry in
             entry.lastVisitedAt >= startDate && entry.lastVisitedAt < endDate
         }
+        #endif
         return spaces[spaceIndex].history.count != originalCount
     }
 }
@@ -189,6 +207,16 @@ extension BrowserSession {
         guard let archiveIndex = spaces[spaceIndex].archivedTabs.firstIndex(where: { $0.id == tabID }) else {
             return
         }
+        #if CREST_CORE_BACKED
+        let source = spaces[spaceIndex].archivedTabs[archiveIndex].tab
+        guard let tab = BrowserCoreSessionEditing.tabValue(source),
+            applyCoreEdit("tab.restore_archive", in: spaces[spaceIndex].id,
+                arguments: ["tab": tab], at: date) != nil else { return }
+        spaces[spaceIndex].archivedTabs.remove(at: archiveIndex)
+        if let restoredIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }) {
+            spaces[spaceIndex].tabs[restoredIndex].faviconData = source.faviconData
+        }
+        #else
         var tab = spaces[spaceIndex].archivedTabs.remove(at: archiveIndex).tab
         tab.placement = .current
         tab.folderID = nil
@@ -200,6 +228,7 @@ extension BrowserSession {
             ?? spaces[spaceIndex].tabs.endIndex
         spaces[spaceIndex].tabs.insert(tab, at: insertionIndex)
         spaces[spaceIndex].selectedTabID = tab.id
+        #endif
     }
 
     private mutating func cleanupCurrentTabs(
@@ -207,6 +236,9 @@ extension BrowserSession {
         olderThan lifetime: TimeInterval,
         now: Date
     ) {
+        #if CREST_CORE_BACKED
+        applyCoreEdit("tab.cleanup", in: spaces[index].id, arguments: ["lifetime": lifetime], at: now)
+        #else
         let selectedID = spaces[index].selectedTabID
         let expiredTabs = spaces[index].tabs.filter { tab in
             tab.placement == .current
@@ -232,6 +264,7 @@ extension BrowserSession {
         if selectedID != nil {
             ensureSelection(in: spaces[index].id)
         }
+        #endif
     }
 
 }
@@ -246,16 +279,32 @@ extension BrowserSession {
             let retention = spaces[index].browsingPreferences.dataRetention
             if let lifetime = retention.history.lifetime {
                 let originalCount = spaces[index].history.count
+                #if CREST_CORE_BACKED
+                if let removals = BrowserCorePolicy.expiredIndices(
+                    dates: spaces[index].history.map(\.lastVisitedAt), now: now, lifetime: lifetime
+                ) {
+                    for removal in removals.reversed() { spaces[index].history.remove(at: removal) }
+                }
+                #else
                 spaces[index].history.removeAll {
                     now.timeIntervalSince($0.lastVisitedAt) > lifetime
                 }
+                #endif
                 removedRecords = removedRecords || spaces[index].history.count != originalCount
             }
             if let lifetime = retention.archive.lifetime {
                 let originalCount = spaces[index].archivedTabs.count
+                #if CREST_CORE_BACKED
+                if let removals = BrowserCorePolicy.expiredIndices(
+                    dates: spaces[index].archivedTabs.map(\.archivedAt), now: now, lifetime: lifetime
+                ) {
+                    for removal in removals.reversed() { spaces[index].archivedTabs.remove(at: removal) }
+                }
+                #else
                 spaces[index].archivedTabs.removeAll {
                     now.timeIntervalSince($0.archivedAt) > lifetime
                 }
+                #endif
                 removedRecords =
                     removedRecords || spaces[index].archivedTabs.count != originalCount
             }

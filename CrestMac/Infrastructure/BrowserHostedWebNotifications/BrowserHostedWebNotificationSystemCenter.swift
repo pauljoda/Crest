@@ -15,7 +15,7 @@ final class BrowserHostedWebNotificationSystemCenter:
     nonisolated static let systemIdentifierPrefix = "crest.hosted-page.notification."
 
     private let center: UNUserNotificationCenter
-    private let responder = BrowserExtensionNotificationSystemResponder.shared
+    private let responder = BrowserHostedWebNotificationSystemResponder.shared
     private var eventHandlers: [String: @MainActor (BrowserHostedWebNotificationEvent) -> Void] = [:]
     private var terminationObserver: NSObjectProtocol?
 

@@ -180,7 +180,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(temporary.selectedTab?.placement, .current)
         XCTAssertNil(temporary.selectedTab?.folderID)
         XCTAssertNil(temporary.selectedTab?.savedURL)
-        _ = try source.extensionTabGroups.group([companionTab.id], in: companion.id, into: nil)
         source.persist(scope: .core)
         XCTAssertNil(source.selectedTab)
         XCTAssertTrue(try XCTUnwrap(source.selectedSpace).tabs.isEmpty)

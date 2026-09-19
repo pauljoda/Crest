@@ -19,7 +19,7 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(destination.title).font(.title2.weight(.semibold))
-                    BrowserSettingsSectionGrid(allowsColumns: ![.passwords, .about, .extensions].contains(destination))
+                    BrowserSettingsSectionGrid(allowsColumns: ![.passwords, .about].contains(destination))
                     {
                         content
                     }

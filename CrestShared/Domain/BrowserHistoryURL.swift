@@ -2,6 +2,9 @@ import Foundation
 
 enum BrowserHistoryURL {
     static func normalized(_ url: URL) -> URL? {
+        #if CREST_CORE_BACKED
+        return BrowserCorePolicy.normalizedHistoryURL(url)
+        #else
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
             return nil
         }
@@ -10,5 +13,6 @@ enum BrowserHistoryURL {
         }
         components.fragment = nil
         return components.url
+        #endif
     }
 }

@@ -170,7 +170,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
 
         XCTAssertTrue(
-            session.setExtensionTabPinned(
+            session.setTabPinned(
                 true,
                 tabID: head.id,
                 in: space.id,

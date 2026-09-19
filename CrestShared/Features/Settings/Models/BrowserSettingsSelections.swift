@@ -7,8 +7,6 @@ import SwiftUI
 final class BrowserSettingsSelections {
     var privacySpaceID: SpaceID?
     var passwordSpaceID: SpaceID?
-    var extensionSpaceID: SpaceID?
-    var extensionRouteRevision = 0
 }
 
 private struct BrowserSettingsSelectionsKey: EnvironmentKey {

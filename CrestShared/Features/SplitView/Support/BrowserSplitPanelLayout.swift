@@ -1,6 +1,6 @@
 import CoreGraphics
 
-enum BrowserExtensionSidebarLayoutMetrics {
+enum BrowserSplitPanelLayoutMetrics {
     static let defaultWidth: CGFloat = 360
     static let minimumWidth: CGFloat = 280
     static let maximumWidth: CGFloat = 600
@@ -23,7 +23,7 @@ enum BrowserSplitPanelLayout {
         return max(
             0,
             min(
-                BrowserExtensionSidebarLayoutMetrics.clampedWidth(requestedWidth),
+                BrowserSplitPanelLayoutMetrics.clampedWidth(requestedWidth),
                 containerWidth - memberMinimum - gaps
             ))
     }
@@ -34,7 +34,7 @@ enum BrowserSplitPanelLayout {
     }
 
     static func widthAfterResize(initialWidth: CGFloat, delta: CGFloat) -> CGFloat {
-        guard delta.isFinite else { return BrowserExtensionSidebarLayoutMetrics.clampedWidth(initialWidth) }
-        return BrowserExtensionSidebarLayoutMetrics.clampedWidth(initialWidth - delta)
+        guard delta.isFinite else { return BrowserSplitPanelLayoutMetrics.clampedWidth(initialWidth) }
+        return BrowserSplitPanelLayoutMetrics.clampedWidth(initialWidth - delta)
     }
 }

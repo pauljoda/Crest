@@ -13,7 +13,6 @@ struct BrowserSidebarTabLabelContent: View {
     var faviconPrimaryClick: (() -> Void)?
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
-    var sidePanelSpaceID: SpaceID?
     @Environment(\.browserInteractionCapabilities) private var capabilities
     let textScale: Double
 
@@ -29,7 +28,7 @@ struct BrowserSidebarTabLabelContent: View {
             HStack(spacing: 3) {
                 BrowserSidebarTabFaviconContent(
                     tab: tab, profileID: profileID, metrics: metrics,
-                    isProminent: isSelected, isLoaded: isLoaded, sidePanelSpaceID: sidePanelSpaceID,
+                    isProminent: isSelected, isLoaded: isLoaded,
                     iconScale: textScale
                 )
                 #if os(macOS)

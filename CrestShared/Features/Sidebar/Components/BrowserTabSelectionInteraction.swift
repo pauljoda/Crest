@@ -29,8 +29,6 @@ struct BrowserTabSelectionAccessibility: ViewModifier {
     let isActive: Bool
     let isLoaded: Bool
 
-    @Environment(\.browserTabSidePanel) private var sidePanel
-
     private var selected: Bool { browser?.tabMultiSelection.contains(tabID) == true }
 
     func body(content: Content) -> some View {
@@ -44,9 +42,7 @@ struct BrowserTabSelectionAccessibility: ViewModifier {
         var parts = [BrowserChromeAccessibility.tabValue(isLoaded: isLoaded)]
         if isActive { parts.append(String(localized: "Active page")) }
         if selected { parts.append(String(localized: "Selected for tab actions")) }
-        return BrowserTabSidePanelAccessibility.value(
-            parts.joined(separator: ", "),
-            panelTitle: sidePanel?.sidePanelPresentation(forTab: tabID, in: spaceID)?.title)
+        return parts.joined(separator: ", ")
     }
 }
 

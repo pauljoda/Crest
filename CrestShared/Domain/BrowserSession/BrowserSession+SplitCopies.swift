@@ -10,6 +10,28 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> [(source: TabID, copy: TabID)]? {
+        #if CREST_CORE_BACKED
+        guard spaceID == selectedSpaceID, let original = space(id: spaceID),
+            let target = original.tabs.first(where: { $0.id == targetTabID }),
+            let result = applyCoreEdit("split.join", in: spaceID, arguments: [
+                "tabId": tabID.rawValue.uuidString, "targetId": targetTabID.rawValue.uuidString,
+                "index": memberIndex as Any? ?? NSNull(), "ids": (0..<6).map { _ in UUID().uuidString }
+            ], at: date)
+        else { return nil }
+        let copies = result.copies.map { (source: TabID(rawValue: $0.source), copy: TabID(rawValue: $0.copy)) }
+        let destinationID = copies.first(where: { $0.source == targetTabID })?.copy ?? targetTabID
+        if target.placement != .current, let oldGroupID = target.splitGroupID,
+            let metadata = original.splitGroupMetadata(for: oldGroupID),
+            let index = spaces.firstIndex(where: { $0.id == spaceID }),
+            let groupID = spaces[index].splitGroup(containing: destinationID) {
+            spaces[index].splitGroups.removeAll { $0.id == groupID }
+            spaces[index].splitGroups.append(BrowserSplitGroupMetadata(
+                id: groupID, customTitle: metadata.customTitle, titleModifiedAt: date,
+                customIconSymbol: metadata.customIconSymbol, iconModifiedAt: date,
+                tint: metadata.tint, tintModifiedAt: date))
+        }
+        return copies
+        #else
         guard spaceID == selectedSpaceID, tabID != targetTabID,
             let space = space(id: spaceID),
             let source = space.tabs.first(where: { $0.id == tabID }),
@@ -74,5 +96,6 @@ extension BrowserSession {
         }
         self = draft
         return copies
+            #endif
     }
 }

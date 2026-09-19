@@ -73,6 +73,9 @@ struct BrowserSearchProvider: Equatable, Hashable, Identifiable, Sendable {
     let builtIn: BuiltIn?
     private let searchURLTemplate: String
     private let suggestionURLTemplate: String?
+    #if CREST_CORE_BACKED
+    var coreSearchURLTemplate: String { searchURLTemplate }
+    #endif
 
     static let google = builtIn(
         .google,

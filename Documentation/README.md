@@ -14,15 +14,13 @@ build and release requirements for contributors.
 - [Distribution](Distribution.md) covers release channels, signing,
   notarization, appcasts, and release verification.
 
-## Browser and extension behavior
+## Browser behavior
 
 - [Content blocking](Architecture/ContentBlocking.md)
 - [Desktop Picture in Picture](Architecture/DesktopPictureInPicture.md)
 - [Link opening](LinkOpeningPolicy.md)
 - [Native tab content](NativeTabs.md)
-- [Extension compatibility](ExtensionCompatibility.md)
-- [Extension API compatibility matrix](ExtensionAPICompatibilityMatrix.md)
-- [Extension emulation services](ExtensionEmulationServices.md)
+- [Portable control plane](Architecture/ControlPlane.md)
 
 ## Project participation
 

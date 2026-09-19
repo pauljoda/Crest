@@ -23,11 +23,6 @@ struct PinnedTabSelectionButton: View {
                 .font(.system(size: 17 * BrowserSidebarDensityPolicy.scale(iconScale), weight: .medium))
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
                 .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
-                .overlay(alignment: .bottomTrailing) {
-                    BrowserTabSidePanelBadge(
-                        tabID: tab.id, spaceID: spaceID,
-                        scale: BrowserSidebarDensityPolicy.scale(iconScale))
-                }
                 .frame(maxWidth: .infinity)
                 .frame(
                     height: BrowserSidebarDensityPolicy.pinHeight(scale: iconScale, touch: capabilities.supportsTouch)

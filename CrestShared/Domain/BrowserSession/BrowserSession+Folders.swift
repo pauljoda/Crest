@@ -15,6 +15,15 @@ extension BrowserSession {
         before siblingID: FolderID? = nil, location: BrowserFolderLocation? = nil,
         beforeTabID: TabID? = nil, at date: Date = .now
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        applyCoreEdit("folder.move", in: spaceID, arguments: [
+            "folderId": folderID.rawValue.uuidString,
+            "parentId": parentID?.rawValue.uuidString as Any? ?? NSNull(),
+            "beforeFolderId": siblingID?.rawValue.uuidString as Any? ?? NSNull(),
+            "before": beforeTabID?.rawValue.uuidString as Any? ?? NSNull(),
+            "placement": location?.rawValue as Any? ?? NSNull()
+        ], at: date)?.changed ?? false
+        #else
         guard canMoveFolder(folderID, in: spaceID, into: parentID),
             let index = spaces.firstIndex(where: { $0.id == spaceID }),
             let source = spaces[index].folders.first(where: { $0.id == folderID })
@@ -109,9 +118,10 @@ extension BrowserSession {
         guard next != space else { return false }
         spaces[index] = next
         return true
+            #endif
     }
 
-    /// A common folder-membership transaction for menus, drops and extensions.
+    /// A common folder-membership transaction for menus and drops.
     /// Split members travel together unless an individual-tab drop detaches them.
     @discardableResult
     mutating func fileTabs(
@@ -119,6 +129,15 @@ extension BrowserSession {
         location: BrowserFolderLocation, before requestedAnchorID: TabID? = nil,
         beforeFolderID: FolderID? = nil, detachesSplitMembers: Bool = false, at date: Date = .now
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        applyCoreEdit("tabs.file", in: spaceID, arguments: [
+            "tabIds": tabIDs.map { $0.rawValue.uuidString }, "placement": location.rawValue,
+            "folderId": folderID?.rawValue.uuidString as Any? ?? NSNull(),
+            "before": requestedAnchorID?.rawValue.uuidString as Any? ?? NSNull(),
+            "beforeFolderId": beforeFolderID?.rawValue.uuidString as Any? ?? NSNull(),
+            "detach": detachesSplitMembers
+        ], at: date)?.changed ?? false
+        #else
         guard !tabIDs.isEmpty, let index = spaces.firstIndex(where: { $0.id == spaceID }) else { return false }
         let space = spaces[index]
         let byID = Dictionary(uniqueKeysWithValues: space.tabs.map { ($0.id, $0) })
@@ -190,6 +209,7 @@ extension BrowserSession {
         spaces[index].folders = folders
         if detachesSplitMembers { normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date) }
         return true
+            #endif
     }
 
     @discardableResult

@@ -15,11 +15,6 @@ protocol BrowserDesktopWebViewMenuHost: AnyObject {
     /// the same report is never handed to a second menu.
     func takeMenuContext() -> BrowserDesktopWebViewMenuContext?
 
-    /// Extension-owned native items that match this one consumed page capture.
-    func extensionMenuItems(
-        for context: BrowserDesktopWebViewMenuContext
-    ) -> [NSMenuItem]
-
     /// Opens `url` as a new card beside the tab this page presents.
     func openLinkInSplitView(_ url: URL)
 
@@ -39,7 +34,6 @@ protocol BrowserDesktopWebViewMenuHost: AnyObject {
 struct BrowserDesktopWebViewMenuContext: Equatable, Sendable {
     let splitViewLinkDestination: URL?
     let imageDownloadURL: URL?
-    let extensionContext: BrowserExtensionWebpageMenuContext?
     var linkDestinations: BrowserDesktopLinkDestinations? = nil
     var selectionSearch: BrowserSelectionSearchDestination? = nil
 }

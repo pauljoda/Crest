@@ -140,41 +140,7 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
         XCTAssertFalse(page.isAppInitiated(replay))
     }
 
-    func testANewWindowRequestFromAnExtensionPageIsNotATopLevelNavigation() throws {
-        let page = try makePage()
-        let extensionURL = try XCTUnwrap(
-            URL(string: "crest-extension://abcdef/options.html")
-        )
-        let destinationURL = try XCTUnwrap(URL(string: "https://example.com/docs"))
-        let newWindowAction = NewWindowNavigationAction(url: destinationURL)
 
-        XCTAssertNil(
-            newWindowAction.targetFrame,
-            "WebKit reports no target frame for a new-window request."
-        )
-        XCTAssertFalse(
-            page.isTopLevelNavigation(newWindowAction),
-            "A missing target frame is a new window, not this page's main frame."
-        )
-        XCTAssertFalse(
-            BrowserExtensionExternalNavigationPolicy.shouldReplaceCurrentTabRuntime(
-                currentURL: extensionURL,
-                destinationURL: destinationURL,
-                isTopLevel: page.isTopLevelNavigation(newWindowAction),
-                isAppInitiated: false
-            ),
-            "A target=\"_blank\" link on an extension page must not be cancelled and reloaded in place."
-        )
-        XCTAssertTrue(
-            BrowserExtensionExternalNavigationPolicy.shouldReplaceCurrentTabRuntime(
-                currentURL: extensionURL,
-                destinationURL: destinationURL,
-                isTopLevel: true,
-                isAppInitiated: false
-            ),
-            "A top-level navigation away from an extension page replaces that runtime in its existing tab."
-        )
-    }
 
     private func makePage() throws -> BrowserPage {
         let tab = BrowserTab.startPage()

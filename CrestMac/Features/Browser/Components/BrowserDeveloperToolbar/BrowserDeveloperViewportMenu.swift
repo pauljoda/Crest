@@ -87,7 +87,7 @@ struct BrowserDeveloperViewportMenu: View {
     }
 
     private func populateCustomSize() {
-        let size = page.developerViewport?.size ?? page.webView.bounds.size
+        let size = page.developerViewport?.size ?? page.viewportSize
         width = String(Int(size.width.rounded()))
         height = String(Int(size.height.rounded()))
     }

@@ -1,5 +1,4 @@
 import AppKit
-import WebKit
 import os
 
 struct BrowserWebFocusRestorationGate: Equatable {
@@ -81,22 +80,22 @@ struct BrowserWebFocusRestorationPolicy {
     }
 }
 
-/// Remembers WebKit's public AppKit responder, never a DOM node.
+/// Remembers the engine's public AppKit responder, never a DOM node.
 ///
-/// WebKit keeps the focused element, caret, and selection in a resident view
+/// An engine keeps the focused element, caret, and selection in a resident view
 /// while Crest moves that view between SwiftUI hosts. Restoring the same native
-/// responder lets WebKit resume its own editing session without scripting the
+/// responder lets it resume its own editing session without scripting the
 /// page or bypassing its security-sensitive focus rules.
 @MainActor
 final class BrowserWebFocusRestorationController {
-    private weak var webView: WKWebView?
+    private weak var webView: NSView?
     private weak var candidate: NSView?
-    private weak var permittedOutgoingWebView: WKWebView?
+    private weak var permittedOutgoingWebView: NSView?
     private(set) var hasPendingRestoration = false
     private var presentationFocusProtectionGeneration = 0
     private(set) var allowsNativeFocusAcquisition = true
 
-    init(webView: WKWebView) {
+    init(webView: NSView) {
         self.webView = webView
     }
 
@@ -128,7 +127,7 @@ final class BrowserWebFocusRestorationController {
         hasPendingRestoration = false
     }
 
-    func requestRestoration(displacing outgoingWebView: WKWebView? = nil) {
+    func requestRestoration(displacing outgoingWebView: NSView? = nil) {
         guard validCandidate() != nil else {
             hasPendingRestoration = false
             permittedOutgoingWebView = nil
@@ -148,7 +147,7 @@ final class BrowserWebFocusRestorationController {
         // SwiftUI can replay an NSViewRepresentable's prior focus during the
         // layout that mounts an active tab. Suppress only that presentation
         // turn when chrome already owns focus; the next user event is free to
-        // focus WebKit normally.
+        // focus the page normally.
         presentationFocusProtectionGeneration &+= 1
         allowsNativeFocusAcquisition = false
         return presentationFocusProtectionGeneration
@@ -177,7 +176,7 @@ final class BrowserWebFocusRestorationController {
             return false
         }
         guard let candidateWindow = candidate.window else {
-            // The same live WebKit view may not have completed its new host
+            // The same live engine view may not have completed its new host
             // attachment yet. `viewDidMoveToWindow` supplies the next chance.
             return false
         }
@@ -258,14 +257,22 @@ final class BrowserWebFocusRestorationController {
     }
 }
 
+/// Optional engine hooks. The host owns AppKit attachment and focus; an
+/// adapter owns engine-specific observers such as WebKit's link-hover overlay.
+@MainActor
+protocol BrowserNativePageSurfaceLifecycle: AnyObject {
+    func didAttach(to host: BrowserWebHostView)
+    func willDetach(from host: BrowserWebHostView)
+}
+
 @MainActor
 final class BrowserWebHostView: NSView {
     private static let lifecycleSignposter = OSSignposter(
         subsystem: "com.pauldavis.crest",
-        category: "WebKitLifecycle"
+        category: "BrowserSurfaceLifecycle"
     )
 
-    private weak var hostedWebView: WKWebView?
+    private weak var hostedWebView: NSView?
     private(set) weak var focusRestoration: BrowserWebFocusRestorationController?
     private var focusRestorationGate = BrowserWebFocusRestorationGate.suppressed
     private var isPageActive = false
@@ -280,9 +287,9 @@ final class BrowserWebHostView: NSView {
             return
         }
 
-        // WebKit has already offered this key to the page and its input
+        // The engine has already offered this key to the page and its input
         // context. Preserve native fallback handlers without interpreting or
-        // dispatching the key to WebKit again. Only the terminal, unhandled
+        // dispatching the key to the engine again. Only the terminal, unhandled
         // key-down feedback is unnecessary in a browsing view.
         let fallback = BrowserWebKeyboardFallback()
         var tail: NSResponder = self
@@ -305,7 +312,7 @@ final class BrowserWebHostView: NSView {
 
     override func resizeSubviews(withOldSize oldSize: NSSize) {
         // SwiftUI can give an entering or departing host an empty frame. Do
-        // not send that transient viewport to WebKit's rendering process.
+        // not send that transient viewport to the engine's rendering process.
         layoutHostedWebView()
     }
 
@@ -319,7 +326,7 @@ final class BrowserWebHostView: NSView {
     }
 
     func attach(
-        _ webView: WKWebView,
+        _ webView: NSView,
         focusRestoration: BrowserWebFocusRestorationController? = nil,
         allowsAttachment: Bool = true
     ) {
@@ -344,31 +351,31 @@ final class BrowserWebHostView: NSView {
         }
 
         let attachInterval = Self.lifecycleSignposter.beginInterval(
-            "Attach WKWebView"
+            "Attach Page View"
         )
         defer {
             Self.lifecycleSignposter.endInterval(
-                "Attach WKWebView",
+                "Attach Page View",
                 attachInterval
             )
         }
 
         let detachInterval = Self.lifecycleSignposter.beginInterval(
-            "Detach Previous WKWebView"
+            "Detach Previous Page View"
         )
         detach()
         Self.lifecycleSignposter.endInterval(
-            "Detach Previous WKWebView",
+            "Detach Previous Page View",
             detachInterval
         )
         self.focusRestoration = focusRestoration
 
         let removeInterval = Self.lifecycleSignposter.beginInterval(
-            "Remove WKWebView From Parent"
+            "Remove Page View From Parent"
         )
         webView.removeFromSuperview()
         Self.lifecycleSignposter.endInterval(
-            "Remove WKWebView From Parent",
+            "Remove Page View From Parent",
             removeInterval
         )
 
@@ -383,15 +390,15 @@ final class BrowserWebHostView: NSView {
         }
 
         let addInterval = Self.lifecycleSignposter.beginInterval(
-            "Add WKWebView Subview"
+            "Add Page View Subview"
         )
         addSubview(webView)
         Self.lifecycleSignposter.endInterval(
-            "Add WKWebView Subview",
+            "Add Page View Subview",
             addInterval
         )
         hostedWebView = webView
-        (webView as? BrowserDesktopWebView)?.linkHover?.attach(to: self)
+        (webView as? any BrowserNativePageSurfaceLifecycle)?.didAttach(to: self)
     }
 
     func updateFocusPresentation(
@@ -421,7 +428,7 @@ final class BrowserWebHostView: NSView {
     func detach() {
         guard let hostedWebView else { return }
         if hostedWebView.superview === self {
-            (hostedWebView as? BrowserDesktopWebView)?.linkHover?.detach(from: self)
+            (hostedWebView as? any BrowserNativePageSurfaceLifecycle)?.willDetach(from: self)
             hostedWebView.removeFromSuperview()
         }
         self.hostedWebView = nil

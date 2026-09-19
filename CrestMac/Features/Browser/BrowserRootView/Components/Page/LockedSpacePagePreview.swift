@@ -1,6 +1,5 @@
 import CoreImage
 import SwiftUI
-import WebKit
 
 /// Only processed pixels reach the locked surface. It never mounts a WebKit
 /// view, and a missing snapshot leaves the opaque access screen in place.
@@ -33,7 +32,7 @@ struct LockedSpacePagePreview: View {
                     let page = pages.residentPage(
                         matching: BrowserTabRuntimeAssignment(
                             tabID: tab.id, spaceID: space.id, profileID: space.profile.id)),
-                    let image = await snapshot(page.webView)
+                    let image = await snapshot(page)
                 else { continue }
                 let blurred = await Task.detached(priority: .utility) { Self.obscure(image) }.value
                 guard !Task.isCancelled else { return }
@@ -43,12 +42,9 @@ struct LockedSpacePagePreview: View {
         }
     }
 
-    private func snapshot(_ webView: WKWebView) async -> CGImage? {
-        let configuration = WKSnapshotConfiguration()
-        configuration.afterScreenUpdates = false
-        configuration.snapshotWidth = 256
+    private func snapshot(_ page: BrowserPage) async -> CGImage? {
         return await withCheckedContinuation { continuation in
-            webView.takeSnapshot(with: configuration) { image, _ in
+            page.captureViewport(width: 256) { image in
                 continuation.resume(returning: image?.cgImage(forProposedRect: nil, context: nil, hints: nil))
             }
         }

@@ -1466,15 +1466,13 @@ final class BrowserStoreTests: XCTestCase {
             )
         )
         let pinnedTabID = try XCTUnwrap(
-            firstWindow.openExtensionTab(
-                url: try XCTUnwrap(URL(string: "https://pinned.crest.test")),
-                in: firstWindow.session.selectedSpaceID,
-                pinned: true,
-                requestedIndex: nil,
-                shouldSelect: false
+            firstWindow.session.openTab(
+                title: "Pinned", url: try XCTUnwrap(URL(string: "https://pinned.crest.test")),
+                in: firstWindow.session.selectedSpaceID, placement: .pinned, shouldSelect: false
             )
         )
 
+        firstWindow.persist(scope: .core)
         await firstWindow.flushPendingSyncPersistence()
         await secondWindow.flushPendingSyncPersistence()
 

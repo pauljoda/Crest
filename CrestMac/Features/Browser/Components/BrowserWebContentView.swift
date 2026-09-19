@@ -10,7 +10,6 @@ struct BrowserWebContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            BrowserWebPageDebuggerBanner(page: page, pages: pages)
 
             GeometryReader { geometry in
                 let layout = BrowserDeveloperViewportLayout(
@@ -56,14 +55,6 @@ struct BrowserWebContentView: View {
         .onChange(of: page.developerCaptureFeedbackRevision) { _, revision in
             dismissDeveloperFeedback(after: revision)
         }
-        .sheet(isPresented: chromeWebStoreInstallPresentation) {
-            BrowserChromeWebStoreInstallView(page: page)
-        }
-        .sheet(isPresented: mozillaAddonsInstallPresentation) {
-            BrowserMozillaAddonsInstallView(
-                session: page.mozillaAddonsInstall
-            )
-        }
     }
 
     private var focusRestorationGate: BrowserWebFocusRestorationGate {
@@ -75,8 +66,6 @@ struct BrowserWebContentView: View {
                 || page.credentialFillRequest != nil
                 || page.credentialSaveCandidate != nil
                 || page.isRegionCapturePresented
-                || page.isChromeWebStoreInstallPresented
-                || page.mozillaAddonsInstall.isPresented
                 || page.navigationFailure != nil
                 || page.webContentFailureMessage != nil
         )
@@ -94,27 +83,7 @@ struct BrowserWebContentView: View {
         )
     }
 
-    private var chromeWebStoreInstallPresentation: Binding<Bool> {
-        Binding(
-            get: { isSelectedSpace && page.isChromeWebStoreInstallPresented },
-            set: { isPresented in
-                if !isPresented {
-                    page.dismissChromeWebStoreInstall()
-                }
-            }
-        )
-    }
 
-    private var mozillaAddonsInstallPresentation: Binding<Bool> {
-        Binding(
-            get: { isSelectedSpace && page.mozillaAddonsInstall.isPresented },
-            set: { isPresented in
-                if !isPresented {
-                    page.mozillaAddonsInstall.dismiss()
-                }
-            }
-        )
-    }
 
     private var isSelectedSpace: Bool {
         browser.selectedSpace?.id == page.spaceID && browser.selectedSpace?.profile.id == page.profileID

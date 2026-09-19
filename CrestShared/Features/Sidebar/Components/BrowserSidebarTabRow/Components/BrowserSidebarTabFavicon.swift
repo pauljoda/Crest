@@ -9,14 +9,13 @@ struct BrowserSidebarTabFavicon: View {
     /// that earns full-strength ink.
     var isProminent = false
     var isLoaded = true
-    var sidePanelSpaceID: SpaceID?
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var iconScale = 1.0
 
     var body: some View {
         BrowserSidebarTabFaviconContent(
             tab: tab, profileID: profileID, metrics: metrics, isProminent: isProminent,
-            isLoaded: isLoaded, sidePanelSpaceID: sidePanelSpaceID, iconScale: iconScale
+            isLoaded: isLoaded, iconScale: iconScale
         )
     }
 }

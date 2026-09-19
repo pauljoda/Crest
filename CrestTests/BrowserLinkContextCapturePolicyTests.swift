@@ -241,56 +241,6 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func testExtensionRowsAppendWithoutReplacingNativeDownloadOrSplitRows() {
-        let menu = NSMenu()
-        let native = NSMenuItem(
-            title: "Copy Image",
-            action: nil,
-            keyEquivalent: ""
-        )
-        let download = NSMenuItem(
-            title: "Download Image",
-            action: nil,
-            keyEquivalent: ""
-        )
-        download.identifier =
-            BrowserDesktopWebViewMenuPolicy.downloadImageIdentifier
-        menu.items = [native, download]
-        let extensionItem = NSMenuItem(
-            title: "Convert Image",
-            action: nil,
-            keyEquivalent: ""
-        )
-        let splitItem = NSMenuItem(
-            title: "Open Link in Split View",
-            action: nil,
-            keyEquivalent: ""
-        )
-
-        BrowserDesktopWebViewMenuPolicy.append(
-            [extensionItem],
-            to: menu
-        )
-        BrowserDesktopWebViewMenuPolicy.append([splitItem], to: menu)
-
-        XCTAssertEqual(
-            menu.items.map { $0.isSeparatorItem ? "-" : $0.title },
-            [
-                "Copy Image",
-                "Download Image",
-                "-",
-                "Convert Image",
-                "-",
-                "Open Link in Split View",
-            ]
-        )
-        XCTAssertTrue(menu.items[0] === native)
-        XCTAssertTrue(menu.items[1] === download)
-        XCTAssertTrue(menu.items[3] === extensionItem)
-        XCTAssertTrue(menu.items[5] === splitItem)
-    }
-
     private func makeBody(
         href: String? = nil,
         imageURL: String? = nil,

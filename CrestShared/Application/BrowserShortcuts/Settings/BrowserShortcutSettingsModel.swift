@@ -8,29 +8,19 @@ final class BrowserShortcutSettingsModel {
     private let browser: BrowserStore
 
     var searchText = ""
-    var selectedExtensionSpaceID: SpaceID?
     private(set) var validationIssue: BrowserShortcutValidationIssue?
     private(set) var pendingConflict: BrowserShortcutPendingConflict?
-    private(set) var scrollRequest: BrowserShortcutScrollRequest?
-    private var consumedRouteRevision = 0
 
-    @ObservationIgnored
-    private let extensionCommands: any BrowserShortcutExtensionCommandManaging
-    private var searchProvider: any BrowserShortcutSearchProviding
+    @ObservationIgnored private var searchProvider: any BrowserShortcutSearchProviding
 
     init(
         shortcuts: BrowserShortcutStore,
         browser: BrowserStore,
-        extensionCommands: any BrowserShortcutExtensionCommandManaging,
-        searchProvider: any BrowserShortcutSearchProviding,
-        selectedExtensionSpaceID: SpaceID? = nil
+        searchProvider: any BrowserShortcutSearchProviding
     ) {
         self.shortcuts = shortcuts
         self.browser = browser
-        self.extensionCommands = extensionCommands
         self.searchProvider = searchProvider
-        self.selectedExtensionSpaceID =
-            selectedExtensionSpaceID ?? browser.session.selectedSpaceID
     }
 
     var isPresentingConflict: Bool {
@@ -78,32 +68,6 @@ final class BrowserShortcutSettingsModel {
         }
     }
 
-    var extensionCommandGroups: [BrowserShortcutExtensionCommandGroup] {
-        guard let spaceID = selectedExtensionSpaceID,
-            let space = browser.session.space(id: spaceID)
-        else {
-            return []
-        }
-        let matchingCommands = extensionCommands.commands(in: spaceID)
-            .filter { searchProvider.matches($0, query: searchText) }
-        return Dictionary(grouping: matchingCommands, by: \.extensionID)
-            .values
-            .compactMap { commands in
-                guard let first = commands.first else { return nil }
-                return BrowserShortcutExtensionCommandGroup(
-                    extensionID: first.extensionID,
-                    extensionName: first.extensionDisplayName,
-                    spaceID: spaceID,
-                    spaceName: space.name,
-                    commands: commands
-                )
-            }
-            .sorted {
-                $0.extensionName.localizedStandardCompare($1.extensionName)
-                    == .orderedAscending
-            }
-    }
-
     func updateSearchProvider(
         _ searchProvider: any BrowserShortcutSearchProviding
     ) {
@@ -134,42 +98,6 @@ final class BrowserShortcutSettingsModel {
         }
     }
 
-    func record(
-        _ shortcut: BrowserShortcut?,
-        for command: BrowserShortcutExtensionCommand,
-        in spaceID: SpaceID
-    ) {
-        guard let shortcut else {
-            extensionCommands.setShortcut(
-                nil,
-                commandID: command.commandID,
-                extensionID: command.extensionID,
-                in: spaceID
-            )
-            validationIssue = nil
-            return
-        }
-        guard extensionCommands.supports(shortcut) else {
-            validationIssue = .invalidShortcut
-            return
-        }
-        let crestConflicts = shortcuts.commands(assignedTo: shortcut)
-        guard crestConflicts.isEmpty else {
-            validationIssue = .reservedByCrest(
-                shortcut: shortcut,
-                commands: crestConflicts
-            )
-            return
-        }
-        extensionCommands.setShortcut(
-            shortcut,
-            commandID: command.commandID,
-            extensionID: command.extensionID,
-            in: spaceID
-        )
-        validationIssue = nil
-    }
-
     func replacePendingConflict() {
         guard let pendingConflict else { return }
         _ = shortcuts.assign(
@@ -190,18 +118,6 @@ final class BrowserShortcutSettingsModel {
         validationIssue = nil
     }
 
-    func reset(
-        _ command: BrowserShortcutExtensionCommand,
-        in spaceID: SpaceID
-    ) {
-        extensionCommands.resetShortcut(
-            commandID: command.commandID,
-            extensionID: command.extensionID,
-            in: spaceID
-        )
-        validationIssue = nil
-    }
-
     func resetAllCrestShortcuts() {
         shortcuts.resetAll()
         validationIssue = nil
@@ -215,30 +131,5 @@ final class BrowserShortcutSettingsModel {
         validationIssue = nil
     }
 
-    func applyDeepLink(
-        requestedSpaceID: SpaceID?,
-        extensionID: String?,
-        commandID: String?,
-        revision: Int
-    ) {
-        guard revision > consumedRouteRevision else { return }
-        consumedRouteRevision = revision
-        if let requestedSpaceID,
-            browser.session.space(id: requestedSpaceID) != nil
-        {
-            selectedExtensionSpaceID = requestedSpaceID
-        }
-        searchText = ""
-        guard let extensionID, let commandID else {
-            scrollRequest = nil
-            return
-        }
-        scrollRequest = BrowserShortcutScrollRequest(
-            revision: revision,
-            targetID: BrowserShortcutExtensionCommandID(
-                extensionID: extensionID,
-                commandID: commandID
-            )
-        )
-    }
+
 }

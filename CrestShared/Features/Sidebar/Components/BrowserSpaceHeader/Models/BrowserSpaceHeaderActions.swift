@@ -1,16 +1,6 @@
 import Foundation
 
-/// Everything a Space header's menu can offer, as the shell's own closures.
-///
-/// The two shells' menus diverge by what each can actually reach rather than
-/// by which one they are: only the windowed shell manages extensions from
-/// here, only the compact one reaches passwords, settings, and a second
-/// window. So the menu is not a fixed list with platform holes cut in it — it
-/// is exactly the closures that arrived, and a shell that gains a feature gets
-/// the item by passing one rather than by editing the menu.
-///
-/// The four that every shell has stay non-optional, because a Space header
-/// without a way to open a tab or clean up is not a header anyone shipped.
+/// Native actions supplied by the platform shell to a Space header.
 struct BrowserSpaceHeaderActions {
     /// Opens a new tab in this Space.
     let openNewTab: () -> Void
@@ -25,11 +15,6 @@ struct BrowserSpaceHeaderActions {
 
     /// Opens the history list.
     let showHistory: () -> Void
-
-    /// Opens extension management. Nil where the shell has no extension UI of
-    /// its own. Where it is present and private browsing is on, the item
-    /// becomes the disabled note that says why.
-    var showExtensions: (() -> Void)?
 
     /// Opens saved passwords. Nil where the shell reaches them elsewhere.
     /// Where it is present and private browsing is on, the item becomes the

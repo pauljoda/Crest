@@ -4,6 +4,8 @@ struct BrowserSyncPreferences: Codable, Equatable, Sendable {
     var savedStructure: Bool
     var currentTabs: Bool
     var historyAndArchive: Bool
+    // Retained only for decoding and round-tripping existing sync preferences.
+    // WebKit extensions no longer contribute records or settings.
     var extensionSettings: Bool
 
     static let `default` = BrowserSyncPreferences(

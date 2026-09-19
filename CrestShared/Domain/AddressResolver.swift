@@ -12,6 +12,9 @@ enum AddressResolver {
         _ input: String,
         searchProvider: BrowserSearchProvider = .google
     ) -> BrowserAddressIntent? {
+        #if CREST_CORE_BACKED
+        return BrowserCorePolicy.addressIntent(input, provider: searchProvider)
+        #else
         let value = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
         if let explicitURL = explicitURL(from: value) { return .open(explicitURL) }
@@ -19,6 +22,7 @@ enum AddressResolver {
         if let domainURL = domainURL(from: value) { return .open(domainURL) }
         guard let url = searchProvider.searchURL(for: value) else { return nil }
         return .search(query: value, provider: searchProvider, url: url)
+        #endif
     }
 
     private static func explicitURL(from value: String) -> URL? {

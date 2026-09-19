@@ -20,7 +20,6 @@ struct SpaceSidebarBrowsingContent: View {
     let openNewTab: () -> Void
     let beginCreatingFolder: () -> Void
     let showHistory: () -> Void
-    let showExtensions: () -> Void
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
@@ -58,7 +57,6 @@ struct SpaceSidebarBrowsingContent: View {
                 openNewTab: openNewTab,
                 createFolder: beginCreatingFolder,
                 showHistory: showHistory,
-                showExtensions: showExtensions,
                 cleanup: browser.cleanupCurrentTabs,
                 toggleSavedTabs: toggleSavedTabs
             )

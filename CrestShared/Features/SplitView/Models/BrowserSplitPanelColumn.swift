@@ -11,7 +11,7 @@ struct BrowserSplitPanelWidthTransaction: Equatable {
     private var initialWidth: CGFloat?
 
     mutating func resize(startingAt requestedWidth: CGFloat, delta: CGFloat) {
-        let initial = initialWidth ?? BrowserExtensionSidebarLayoutMetrics.clampedWidth(requestedWidth)
+        let initial = initialWidth ?? BrowserSplitPanelLayoutMetrics.clampedWidth(requestedWidth)
         initialWidth = initial
         width = BrowserSplitPanelLayout.widthAfterResize(initialWidth: initial, delta: delta)
     }

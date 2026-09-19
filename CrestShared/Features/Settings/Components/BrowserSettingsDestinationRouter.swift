@@ -9,8 +9,7 @@ import SwiftUI
 /// in a `BrowserSettingsPage`, touch shows it as it comes.
 ///
 /// A destination a shell cannot host arrives here as absent data rather than as
-/// a missing case. No extension controller pool means no Extensions pane, and no
-/// shortcut store means no Shortcuts pane — the same answer
+/// a missing case. No shortcut store means no Shortcuts pane — the same answer
 /// `BrowserPlatformSettingsDestinationCatalog` already gives the shells' lists.
 struct BrowserSettingsDestinationRouter: View {
     let destination: BrowserSettingsDestination
@@ -31,12 +30,9 @@ struct BrowserSettingsDestinationRouter: View {
     /// What a shell that keeps the password manager elsewhere does when the pane
     /// is asked for it.
     var managePasswords: (() -> Void)? = nil
-    /// Absent where the shell has no extensions surface.
-    var extensionControllerPool: BrowserExtensionControllerPool? = nil
     /// Absent where the shell has no rebindable command table.
     var shortcuts: BrowserShortcutStore? = nil
     var requestedSpaceID: SpaceID? = nil
-    var requestedExtensionCommand: BrowserExtensionCommandSettingsRoute? = nil
     var requestRevision = 0
 
     @ViewBuilder
@@ -52,13 +48,11 @@ struct BrowserSettingsDestinationRouter: View {
                 spaceAccess: spaceAccess
             )
         case .shortcuts:
-            if let shortcuts, let extensionControllerPool {
+            if let shortcuts {
                 BrowserPlatformShortcutSettingsPane(
                     shortcuts: shortcuts,
                     browser: browser,
-                    extensionControllerPool: extensionControllerPool,
                     requestedSpaceID: requestedSpaceID,
-                    requestedExtensionCommand: requestedExtensionCommand,
                     requestRevision: requestRevision
                 )
             }
@@ -89,16 +83,6 @@ struct BrowserSettingsDestinationRouter: View {
                 searchText: passwordSearchText,
                 manage: managePasswords
             )
-        case .extensions:
-            if let extensionControllerPool {
-                BrowserExtensionSettingsPane(
-                    browser: browser,
-                    spaceAccess: spaceAccess,
-                    extensionControllerPool: extensionControllerPool,
-                    requestedSpaceID: requestedSpaceID,
-                    requestRevision: requestRevision
-                )
-            }
         case .featureFlags:
             BrowserPlatformWebKitFeatureFlagSettingsPane()
         case .advanced:

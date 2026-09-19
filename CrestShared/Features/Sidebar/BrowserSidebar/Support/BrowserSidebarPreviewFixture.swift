@@ -135,7 +135,6 @@ enum BrowserSidebarPreviewFixture {
         BrowserSidebarChromeActions(
             presentSpaceSettings: { _ in },
             presentHistory: {},
-            presentExtensions: { _ in },
             presentPasswords: {},
             presentArchive: {},
             presentDownloads: {},

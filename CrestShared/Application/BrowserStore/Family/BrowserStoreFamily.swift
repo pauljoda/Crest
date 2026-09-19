@@ -9,7 +9,6 @@ final class BrowserStoreFamily {
     }
 
     private var stores: [WeakStore] = []
-    let extensionTabGroups = BrowserExtensionTabGroupStore()
     /// The single owner of browsing data. Window stores project their local
     /// selection over this value; none retains a second authoritative session.
     private(set) var authoritativeSession: BrowserSession
@@ -26,13 +25,6 @@ final class BrowserStoreFamily {
         authoritativeSession = session
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
-        extensionTabGroups.sessionSnapshot = { [weak self] in self?.currentSession }
-        extensionTabGroups.commitSession = { [weak self] next in
-            guard let self, let store = stores.compactMap(\.value).first else { return }
-            replaceSession(next, from: store, adoptingSelection: false)
-            store.persist(syncUrgency: .coalesced, scope: .core)
-        }
-        extensionTabGroups.repair(using: session)
     }
 
     /// Temporary tabs retain their own organization, but profile identity and
@@ -98,7 +90,6 @@ final class BrowserStoreFamily {
         precondition(revision == syncRevision)
         // Mutations already updated the one shared graph. Persistence advances
         // its sync revision without copying it back into every window.
-        extensionTabGroups.repair(using: authoritativeSession)
         return revision
     }
 

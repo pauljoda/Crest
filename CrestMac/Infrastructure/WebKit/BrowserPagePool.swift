@@ -12,10 +12,6 @@ final class BrowserPagePool:
     BrowserPageHosting,
     BrowserDefaultPageZoomObserving
 {
-    private struct ExtensionOffscreenDocumentKey: Hashable {
-        let spaceID: SpaceID
-        let extensionBaseURL: URL
-    }
 
     @ObservationIgnored private static let lifecycleSignposter = OSSignposter(
         subsystem: "com.pauldavis.crest",
@@ -81,11 +77,8 @@ final class BrowserPagePool:
     var publishesPageMetadataCentrally: Bool { runtimeStore.publishesPageMetadataCentrally }
     var contentBlockingErrorDescription: String? { contentBlocking.errorDescription }
     let downloadCenter: BrowserDownloadCenter
-    let extensionControllerPool: BrowserExtensionControllerPool
     /// Mirrors the runtime's console capture: web pages then report their
     /// calls into an installed extension to the diagnostics log.
-    let capturesExtensionConsole: Bool
-    @ObservationIgnored private let extensionWebpageMenuProvider: BrowserExtensionWebpageMenuProvider
     let permissionCenter: BrowserSitePermissionCenter
     var serverTrustOverrides: BrowserServerTrustOverrideStore { profileDataStores.serverTrustOverrides }
 
@@ -114,17 +107,9 @@ final class BrowserPagePool:
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
     @ObservationIgnored private let usesEphemeralWebsiteDataStores: Bool
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
-    @ObservationIgnored private let chromeWebStoreProvider: BrowserChromeWebStoreProvider
-    @ObservationIgnored private let mozillaAddonsProvider: BrowserMozillaAddonsProvider
     @ObservationIgnored private let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
     @ObservationIgnored private let openNewTab: (URL) -> Void
-    @ObservationIgnored var extensionSidebarDocuments: [BrowserExtensionSidebarKey: BrowserExtensionSidebarDocument] =
-        [:]
-
-    func openExtensionSidebarLink(_ url: URL, in spaceID: SpaceID) {
-        openModifiedLink(URLRequest(url: url), in: spaceID, selecting: true)
-    }
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
@@ -149,11 +134,6 @@ final class BrowserPagePool:
     @ObservationIgnored private var peekPageLeases:
         [UUID: (request: BrowserPeekRequest, lease: BrowserTransientPageLease)] = [:]
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
-    /// Pages announced to extensions that no tab in the session owns, resolved
-    /// for the adapters WebKit asks about them.
-    @ObservationIgnored private var transientExtensionPages: [TabID: BrowserPage] = [:]
-    @ObservationIgnored private var extensionOffscreenDocuments:
-        [ExtensionOffscreenDocumentKey: BrowserExtensionOffscreenDocument] = [:]
     private var spacesReleasingData: Set<SpaceID> {
         get { runtimeStore.spacesReleasingData }
         set { runtimeStore.spacesReleasingData = newValue }
@@ -177,12 +157,6 @@ final class BrowserPagePool:
         usesEphemeralWebsiteDataStores: Bool =
             BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(.current),
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
-        extensionControllerPool: BrowserExtensionControllerPool = BrowserExtensionControllerPool(),
-        capturesExtensionConsole: Bool = false,
-        chromeWebStoreProvider: BrowserChromeWebStoreProvider =
-            BrowserChromeWebStoreProvider(),
-        mozillaAddonsProvider: BrowserMozillaAddonsProvider =
-            BrowserMozillaAddonsProvider(),
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         hostedNotificationCenter:
             (any BrowserHostedWebNotificationCentering)? = nil,
@@ -231,13 +205,6 @@ final class BrowserPagePool:
         self.monitorsMemoryPressure = monitorsMemoryPressure
         self.contentRuleListProvider = contentRuleListProvider
         tabState = owner.tabState
-        self.extensionControllerPool = extensionControllerPool
-        self.capturesExtensionConsole = capturesExtensionConsole
-        extensionWebpageMenuProvider = BrowserExtensionWebpageMenuProvider(
-            extensionControllerPool: extensionControllerPool
-        )
-        self.chromeWebStoreProvider = chromeWebStoreProvider
-        self.mozillaAddonsProvider = mozillaAddonsProvider
         self.permissionCenter = permissionCenter
         self.hostedNotificationCenter = hostedNotificationCenter
         self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
@@ -365,7 +332,6 @@ final class BrowserPagePool:
                 tab: tab,
                 automaticallyOpensPeek: BrowserLinkPreferenceStore.shared.preferences.automaticallyOpensPeek)
         }
-        extensionControllerPool.setExtensionTabOwner(tab.id, in: space.id, windowID: windowID)
         residencyRevision &+= 1
         return true
     }
@@ -394,8 +360,6 @@ final class BrowserPagePool:
         releaseWindowPresentation()
         reconcile(validTabIDs: [])
         releaseAllTransientPages()
-        releaseAllExtensionOffscreenDocuments()
-        closeExtensionSidebars()
     }
 
     func setRuntimeCreationBlocked(_ blocked: Bool, in spaceID: SpaceID) {
@@ -437,7 +401,6 @@ final class BrowserPagePool:
             readerModeState: current.readerModeState, completedNavigationURL: completedURL,
             processTerminationCount: current.processTerminationCount)
         guard let session = backgroundPageDidUpdate(update) else { return }
-        extensionControllerPool.reconcileExtensionState(in: session)
         if completedURL != nil, let space = session.space(id: page.spaceID), space.profile.id == page.profileID {
             Task { @MainActor [weak self] in await self?.styleVisitedLinks(in: space) }
         }
@@ -456,9 +419,9 @@ final class BrowserPagePool:
             runtimeStore: owner, windowID: windowID, profileDataStores: profileDataStores,
             monitorsMemoryPressure: monitorsMemoryPressure, browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
-            pageZoomPreferences: pageZoomPreferences, extensionControllerPool: extensionControllerPool,
-            capturesExtensionConsole: capturesExtensionConsole, chromeWebStoreProvider: chromeWebStoreProvider,
-            mozillaAddonsProvider: mozillaAddonsProvider, permissionCenter: permissionCenter,
+            pageZoomPreferences: pageZoomPreferences,
+
+            permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter, mediaSessionStore: mediaSessionStore,
             downloadCenter: downloadCenter,
             loadHTTPAuthenticationCredential: { [weak browser] protectionSpace, spaceID in
@@ -585,299 +548,10 @@ final class BrowserPagePool:
         return runtime.page
     }
 
-    func extensionWebView(
-        for tabID: TabID,
-        in spaceID: SpaceID
-    ) -> WKWebView? {
-        extensionPage(for: tabID, in: spaceID)?.webView
-    }
-
-    func startExtensionDownload(
-        _ request: BrowserExtensionDownloadRequest,
-        for tabID: TabID,
-        in spaceID: SpaceID,
-        isUserInitiated: Bool
-    ) async throws -> Int {
-        guard let page = extensionPage(for: tabID, in: spaceID) else {
-            throw BrowserExtensionDownloadExecutionError.unavailable
-        }
-        return await downloadCenter.startExtensionDownload(
-            request,
-            in: page.webView,
-            profileID: page.profileID,
-            spaceID: page.spaceID,
-            spaceName: page.spaceName,
-            isUserInitiated: isUserInitiated
-        )
-    }
-
-    /// The page-world `chrome.runtime` alias and its relay for one
-    /// Crest-hosted extension document.
-    ///
-    /// A browser tab gets the alias from `BrowserPage`. A side panel or
-    /// offscreen document is a web view Crest builds from WebKit's extension
-    /// configuration, with a private navigation content controller. Its bridge
-    /// admits only the owning extension and never joins the Space's shared
-    /// injected content.
-    func hostedDocumentRuntimeBridge(
-        for configuration: BrowserExtensionPageConfiguration,
-        in spaceID: SpaceID,
-        contentController: WKUserContentController
-    ) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? {
-        guard !browsingMode.isPrivate else { return nil }
-        return BrowserExtensionHostedDocumentRuntimeBridge.install(
-            for: configuration,
-            in: contentController,
-            reportsDiagnostics: capturesExtensionConsole
-        ) { [weak self] extensionID in
-            guard let pool = self?.extensionControllerPool,
-                pool.loadedContext(extensionID: extensionID, in: spaceID) === configuration.context
-            else { return nil }
-            return BrowserExtensionHostedDocumentRuntimeBridge.target(
-                extensionID: extensionID,
-                in: spaceID,
-                pool: pool
-            )
-        }
-    }
-
-    func createExtensionOffscreenDocument(
-        at url: URL,
-        extensionBaseURL: URL,
-        in spaceID: SpaceID
-    ) async throws {
-        let key = ExtensionOffscreenDocumentKey(
-            spaceID: spaceID,
-            extensionBaseURL: extensionBaseURL
-        )
-        guard extensionOffscreenDocuments[key] == nil else {
-            throw BrowserExtensionOffscreenDocumentError.alreadyExists
-        }
-        guard
-            let configuration =
-                extensionControllerPool
-                .extensionPageConfiguration(for: url, in: spaceID),
-            configuration.baseURL == extensionBaseURL
-        else {
-            throw BrowserExtensionOffscreenDocumentError.unavailable
-        }
-        let document = try BrowserExtensionOffscreenDocument(
-            configuration: configuration.webViewConfiguration,
-            // An offscreen document frames websites too, and an externally
-            // connectable site expects `chrome.runtime` in every frame Chrome
-            // would give it one.
-            installRuntimeBridge: { contentController in
-                hostedDocumentRuntimeBridge(
-                    for: configuration, in: spaceID, contentController: contentController)
-            }
-        )
-        extensionOffscreenDocuments[key] = document
-        do {
-            try await document.load(url)
-        } catch {
-            if extensionOffscreenDocuments[key] === document {
-                extensionOffscreenDocuments[key] = nil
-            }
-            document.close()
-            throw error
-        }
-    }
-
-    func closeExtensionOffscreenDocument(
-        extensionBaseURL: URL,
-        in spaceID: SpaceID
-    ) {
-        let key = ExtensionOffscreenDocumentKey(
-            spaceID: spaceID,
-            extensionBaseURL: extensionBaseURL
-        )
-        extensionOffscreenDocuments.removeValue(forKey: key)?.close()
-    }
-
-    func hasExtensionOffscreenDocument(
-        extensionBaseURL: URL,
-        in spaceID: SpaceID
-    ) -> Bool {
-        extensionOffscreenDocuments[
-            ExtensionOffscreenDocumentKey(
-                spaceID: spaceID,
-                extensionBaseURL: extensionBaseURL
-            )
-        ] != nil
-    }
-
-    func extensionOffscreenDocument(
-        extensionBaseURL: URL,
-        in spaceID: SpaceID
-    ) -> BrowserExtensionHostedDocument? {
-        guard
-            let document = extensionOffscreenDocuments[
-                ExtensionOffscreenDocumentKey(
-                    spaceID: spaceID,
-                    extensionBaseURL: extensionBaseURL
-                )
-            ],
-            let url = document.url
-        else {
-            return nil
-        }
-        return BrowserExtensionHostedDocument(
-            contextID: document.contextID,
-            url: url,
-            tabID: nil
-        )
-    }
-
-    func loadExtensionURL(
-        _ url: URL,
-        for tabID: TabID,
-        in spaceID: SpaceID,
-        session: BrowserSession
-    ) {
-        // An unloaded background tab keeps the URL in the session and receives
-        // the right configuration when it is next presented. Only a resident
-        // tab has a live WebKit runtime to navigate now.
-        guard let currentPage = tabRuntimes[tabID]?.page,
-            let space = session.space(id: spaceID),
-            let tab = space.tabs.first(where: { $0.id == tabID }),
-            tab.nativeContent == nil
-        else { return }
-        let replacesExtensionRuntime =
-            currentPage.extensionBaseURL != nil
-            && extensionControllerPool.extensionPageConfiguration(
-                for: url,
-                in: spaceID
-            ) == nil
-        let destinationPage = page(for: tab, space: space)
-        if replacesExtensionRuntime {
-            clearRuntimeNavigation(for: tabID)
-        }
-        destinationPage.load(url)
-    }
-
-    func extensionReaderModeState(
-        for tabID: TabID,
-        in spaceID: SpaceID
-    ) -> BrowserReaderModeState {
-        extensionPage(for: tabID, in: spaceID)?.readerModeState ?? .unavailable
-    }
-
-    func setExtensionReaderModeActive(
-        _ isActive: Bool,
-        for tabID: TabID,
-        in spaceID: SpaceID
-    ) async throws {
-        guard let page = extensionPage(for: tabID, in: spaceID) else {
-            throw BrowserReaderModeError.articleUnavailable
-        }
-        try await page.setReaderModeActive(isActive)
-    }
-
-    func extensionWindowGeometry(
-        in spaceID: SpaceID
-    ) -> BrowserExtensionWindowGeometry {
-        guard let window = hostingWindow(for: spaceID) else {
-            return .unavailable
-        }
-        let state: WKWebExtension.WindowState =
-            if window.isMiniaturized {
-                .minimized
-            } else if window.styleMask.contains(.fullScreen) {
-                .fullscreen
-            } else if window.isZoomed {
-                .maximized
-            } else {
-                .normal
-            }
-        return BrowserExtensionWindowGeometry(
-            frame: window.frame,
-            screenFrame: window.screen?.frame ?? NSScreen.main?.frame ?? .null,
-            state: state
-        )
-    }
-
-    /// A registered shell is authoritative even when its workspace is empty
-    /// or another window owns the selected tab's WebKit view.
-    private func hostingWindow(for spaceID: SpaceID) -> NSWindow? {
-        if let presentationWindow { return presentationWindow }
-        guard !publishesPageMetadataCentrally else { return nil }
-        if let activePage, activePage.spaceID == spaceID,
-            let window = activePage.webView.window
-        {
-            return window
-        }
-        return tabRuntimes.values.lazy.map(\.page).first {
-            $0.spaceID == spaceID && $0.webView.window != nil
-        }?.webView.window
-    }
-
-    private func extensionPage(
-        for tabID: TabID,
-        in spaceID: SpaceID
-    ) -> BrowserPage? {
-        guard let page = tabRuntimes[tabID]?.page ?? transientExtensionPages[tabID],
-            page.spaceID == spaceID
-        else {
-            return nil
-        }
-        return page
-    }
-
-    func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
-        guard let space = session.space(id: spaceID), let tab = space.tabs.first(where: { $0.id == tabID }),
-            !isRuntimeCreationBlocked(in: spaceID), tab.nativeContent == nil
-        else { return }
-        let page = page(for: tab, space: space)
-        if !presentedTabIDs.contains(tabID) {
-            // A new background page has no SwiftUI host to size it. Give it
-            // the current Space's viewport before navigation runs scripts.
-            if page.webView.bounds.isEmpty, let activePage,
-                activePage.spaceID == spaceID, !activePage.webView.bounds.isEmpty
-            {
-                page.webView.setFrameSize(activePage.webView.bounds.size)
-            }
-            observeBackgroundPage(page, for: tabID, in: space)
-        }
-    }
-
-    func prepareExtensionSelection(session: BrowserSession) {
-        guard let tab = session.selectedTab, tab.nativeContent == nil,
-            let space = session.selectedSpace,
-            !isRuntimeCreationBlocked(in: space.id)
-        else {
-            return
-        }
-        _ = page(for: tab, space: space)
-        activate(tab.id, at: .now)
-    }
-
-    var canGoBack: Bool {
-        guard let activeTabID else { return false }
-        return activePage?.canGoBack == true
-            || tabRuntimes[activeTabID]?.backPage != nil
-    }
-
-    var canGoForward: Bool {
-        guard let activeTabID else { return false }
-        return activePage?.canGoForward == true
-            || tabRuntimes[activeTabID]?.forwardPage != nil
-    }
-
-    var backHistory: [BrowserNavigationHistoryItem] {
-        runtimeHistory(
-            local: activePage?.backHistory ?? [],
-            crossingTo: activeTabID.flatMap { tabRuntimes[$0]?.backPage },
-            continuation: \BrowserPage.backHistory
-        )
-    }
-
-    var forwardHistory: [BrowserNavigationHistoryItem] {
-        runtimeHistory(
-            local: activePage?.forwardHistory ?? [],
-            crossingTo: activeTabID.flatMap { tabRuntimes[$0]?.forwardPage },
-            continuation: \BrowserPage.forwardHistory
-        )
-    }
+    var canGoBack: Bool { activePage?.canGoBack == true }
+    var canGoForward: Bool { activePage?.canGoForward == true }
+    var backHistory: [BrowserNavigationHistoryItem] { activePage?.backHistory ?? [] }
+    var forwardHistory: [BrowserNavigationHistoryItem] { activePage?.forwardHistory ?? [] }
 
     var hasActivePage: Bool {
         activePage?.url != nil
@@ -911,12 +585,6 @@ final class BrowserPagePool:
 
     /// Builds and presents the cards `tab` brings on screen without navigating
     /// any of them, answering the cards whose first load is still owed.
-    ///
-    /// Creation and navigation are separate steps so a caller that has
-    /// extensions attached can announce the new cards as tabs in between.
-    /// WebKit resolves a content script's `runtime` messages by mapping its web
-    /// view onto an announced tab, and a document-start script that runs before
-    /// its card is announced is rejected rather than queued.
     private func presentCards(
         tab: BrowserTab?,
         space: BrowserSpace?,
@@ -971,7 +639,6 @@ final class BrowserPagePool:
             for: registration.tab.id,
             in: registration.space
         )
-        extensionControllerPool.reconcileExtensionState(in: registration.session)
         page.load(request)
         if selecting { select(session: registration.session) }
         reconcileCredentialAccess(in: registration.session)
@@ -1049,7 +716,6 @@ final class BrowserPagePool:
             processTerminationCount: current.processTerminationCount
         )
         guard let session = backgroundPageDidUpdate(update) else { return }
-        extensionControllerPool.reconcileExtensionState(in: session)
         if completedNavigationURL != nil,
             let space = session.space(id: assignment.spaceID),
             space.profile.id == assignment.profileID
@@ -1091,10 +757,6 @@ final class BrowserPagePool:
             space: session.selectedSpace,
             at: time
         )
-        // Announce the cards before they navigate, so every new web view gets
-        // the same standing with extensions that an ordinary tab open provides
-        // by the time its content scripts run.
-        extensionControllerPool.reconcileExtensionState(in: session)
         startInitialNavigations(cards)
         reconcileCredentialAccess(in: session)
     }
@@ -1131,19 +793,6 @@ final class BrowserPagePool:
         presentedTabIDs = []
     }
 
-    func restoreExtensions(in session: BrowserSession) async {
-        guard !browsingMode.isPrivate else {
-            BrowserExtensionStartupLog.skippedPrivateBrowsing()
-            return
-        }
-        await extensionControllerPool.restoreEnabledExtensions(
-            in: session.spaces
-        )
-        // Only now: an update pass replaces the very packages restoration has
-        // just loaded, so arming the cadence any earlier would race it.
-        extensionControllerPool.startExtensionUpdatesIfNeeded()
-    }
-
     func prepareContentBlocking() async {
         await contentBlocking.prepare()
     }
@@ -1160,13 +809,7 @@ final class BrowserPagePool:
                 activation: update.activation(for: page.spaceID, isPresented: isPresentedPage)
             )
         }
-        for page in tabRuntimes.values.flatMap(\.suspendedPages) {
-            page.applyContentBlocking(
-                policy: update.policy(for: page.spaceID),
-                balancedRuleLists: contentBlocking.balancedRuleLists ?? [],
-                activation: .onNextNavigation
-            )
-        }
+
         pruneTransientLeases()
         for lease in transientLeases.values.compactMap(\.value) {
             lease.applyContentBlocking(
@@ -1228,7 +871,6 @@ final class BrowserPagePool:
             )
         }
         tabState.prune(keeping: reconciliation.retainedTabIDsByProfileID)
-        extensionControllerPool.reconcileExtensionState(in: session)
         reconcileCredentialAccess(in: session)
     }
 
@@ -1246,11 +888,7 @@ final class BrowserPagePool:
                 enabledBySpaceID[page.spaceID] ?? false
             )
         }
-        for page in tabRuntimes.values.flatMap(\.suspendedPages) {
-            page.setCredentialAccessEnabled(
-                enabledBySpaceID[page.spaceID] ?? false
-            )
-        }
+
         pruneTransientLeases()
         for lease in transientLeases.values.compactMap(\.value) {
             lease.setCredentialAccessEnabled(
@@ -1316,14 +954,6 @@ final class BrowserPagePool:
         defer { spacesDeletingData.remove(space.id) }
 
         await releaseWindowRuntime(for: space)
-        if !browsingMode.isPrivate {
-            let extensionControllerProbe =
-                try await extensionControllerPool
-                .deleteData(for: space)
-            await BrowserSpaceDataReleaseBarrier.waitForRetainedViews(
-                [extensionControllerProbe]
-            )
-        }
         await BrowserFaviconFallbackLoader.shared.removeAll(
             for: space.profile.id
         )
@@ -1350,7 +980,6 @@ final class BrowserPagePool:
                 runtime.page.spaceID == space.id || runtime.page.profileID == space.profile.id ? tabID : nil
             }
         ).union(nativeTabIDs)
-        releaseExtensionOffscreenDocuments(in: space.id)
         let pageReleaseProbes =
             releasePages(for: tabIDs)
             + releaseTransientPages(in: space.id)
@@ -1371,7 +1000,6 @@ final class BrowserPagePool:
         releasePages(for: Set(tabRuntimes.keys).union(nativeTabs.tabIDs))
         nativeTabs.reconcile(validTabIDs: [])
         releaseAllTransientPages()
-        releaseAllExtensionOffscreenDocuments()
         for space in session.spaces {
             downloadCenter.deleteRecords(
                 profileID: space.profile.id,
@@ -1457,88 +1085,23 @@ final class BrowserPagePool:
             guard let self,
                 canHostTransientPage(matching: assignment)
             else { return nil }
-            let page = makePage(
-                space: space,
-                extensionConfiguration:
-                    extensionControllerPool.extensionPageConfiguration(
-                        for: url,
-                        in: space.id
-                    )
-            )
+            let page = makePage(space: space)
             page.opensModifiedLinksInForeground = opensModifiedLinksInForeground
             return page
         }
         guard let initialPage = makeTransientPage() else { return nil }
-        // Announce the page before the lease's initializer navigates it. WebKit
-        // injects content scripts during that load and answers their `runtime`
-        // messages only for a web view it can map onto an announced tab, so a
-        // page announced afterwards leaves its first script unanswered for the
-        // life of the document — the state a reload is otherwise needed to clear.
-        announceTransientExtensionPage(
-            initialPage,
-            as: tabID,
-            url: url,
-            in: space.id
-        )
-        guard let page = transientExtensionPages[tabID] else { return nil }
         let lease = BrowserTransientPageLease(
-            extensionTabID: tabID,
-            page: page,
+            page: initialPage,
             url: url,
             contentBlockingPolicy:
                 space.browsingPreferences.contentBlockingPolicy,
             balancedContentRuleLists: contentBlocking.balancedRuleLists ?? [],
             rebuild: makeTransientPage,
             userActivity: onUserActivity,
-            onDownloadOnlyNavigation: onDownloadOnlyNavigation,
-            extensionPageDidChange: { [weak self] page in
-                guard let self else { return }
-                if let page {
-                    announceTransientExtensionPage(
-                        page,
-                        as: tabID,
-                        url: url,
-                        in: space.id
-                    )
-                } else {
-                    withdrawTransientExtensionPage(tabID, in: space.id)
-                }
-            }
+            onDownloadOnlyNavigation: onDownloadOnlyNavigation
         )
         transientLeases[lease.id] = WeakBrowserTransientPageLease(lease)
         return lease
-    }
-
-    /// Makes `page` resolvable under `tabID` and tells extensions it exists.
-    ///
-    /// Resolution is established first: WebKit asks the adapter for its web view
-    /// while handling the announcement, and an adapter that cannot answer is a
-    /// tab extensions can see but not reach.
-    private func announceTransientExtensionPage(
-        _ page: BrowserPage,
-        as tabID: TabID,
-        url: URL,
-        in spaceID: SpaceID
-    ) {
-        transientExtensionPages[tabID] = page
-        extensionControllerPool.registerTransientExtensionTab(
-            BrowserExtensionTransientTab(id: tabID, url: url),
-            in: spaceID,
-            windowID: windowID
-        )
-    }
-
-    private func withdrawTransientExtensionPage(
-        _ tabID: TabID,
-        in spaceID: SpaceID
-    ) {
-        guard transientExtensionPages.removeValue(forKey: tabID) != nil else {
-            return
-        }
-        extensionControllerPool.unregisterTransientExtensionTab(
-            tabID,
-            in: spaceID
-        )
     }
 
     @discardableResult
@@ -1693,8 +1256,6 @@ final class BrowserPagePool:
     func routeHostedWebNotificationMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
             let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
-                ?? tabRuntimes.values.lazy.flatMap(\.suspendedPages)
-                .first(where: { $0.webView === sourceWebView })
         else { return }
         page.receiveHostedWebNotificationMessage(message)
     }
@@ -1702,8 +1263,6 @@ final class BrowserPagePool:
     func routeGeolocationMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
             let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
-                ?? tabRuntimes.values.lazy.flatMap(\.suspendedPages)
-                .first(where: { $0.webView === sourceWebView })
         else { return }
         page.receiveGeolocationMessage(message)
     }
@@ -1711,8 +1270,6 @@ final class BrowserPagePool:
     func routeBlockedPopupMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
             let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
-                ?? tabRuntimes.values.lazy.flatMap(\.suspendedPages)
-                .first(where: { $0.webView === sourceWebView })
         else { return }
         page.receiveBlockedPopupMessage(message)
     }
@@ -1720,80 +1277,15 @@ final class BrowserPagePool:
     func routeMediaSessionMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
             let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
-                ?? tabRuntimes.values.lazy.flatMap(\.suspendedPages)
-                .first(where: { $0.webView === sourceWebView })
         else { return }
         page.receiveMediaSessionMessage(message)
     }
 
-    func replaceExtensionPageNavigation(
-        _ page: BrowserPage,
-        with destinationURL: URL
-    ) {
-        guard let tabID = tabID(for: page),
-            tabRuntimes[tabID]?.page === page,
-            page.extensionBaseURL != nil
-        else { return }
-        _ = extensionControllerPool.replaceExtensionPageNavigation(
-            destinationURL,
-            tabID: tabID,
-            spaceID: page.spaceID
-        )
-    }
 
-    func goBack() {
-        guard let activeTabID, let page = activePage else { return }
-        if page.canGoBack {
-            page.goBack()
-            return
-        }
-        crossRuntimeHistoryBackward(for: activeTabID)
-    }
-
-    func goForward() {
-        guard let activeTabID, let page = activePage else { return }
-        if page.canGoForward {
-            page.goForward()
-            return
-        }
-        crossRuntimeHistoryForward(for: activeTabID)
-    }
-
-    func goBack(to item: BrowserNavigationHistoryItem) {
-        guard let activeTabID, let page = activePage else { return }
-        let localCount = page.backHistory.count
-        guard item.depth > localCount else {
-            page.goBack(toDepth: item.depth)
-            return
-        }
-        guard
-            let destinationPage = crossRuntimeHistoryBackward(
-                for: activeTabID
-            )
-        else { return }
-        let destinationDepth = item.depth - localCount - 1
-        if destinationDepth > 0 {
-            destinationPage.goBack(toDepth: destinationDepth)
-        }
-    }
-
-    func goForward(to item: BrowserNavigationHistoryItem) {
-        guard let activeTabID, let page = activePage else { return }
-        let localCount = page.forwardHistory.count
-        guard item.depth > localCount else {
-            page.goForward(toDepth: item.depth)
-            return
-        }
-        guard
-            let destinationPage = crossRuntimeHistoryForward(
-                for: activeTabID
-            )
-        else { return }
-        let destinationDepth = item.depth - localCount - 1
-        if destinationDepth > 0 {
-            destinationPage.goForward(toDepth: destinationDepth)
-        }
-    }
+    func goBack() { activePage?.goBack() }
+    func goForward() { activePage?.goForward() }
+    func goBack(to item: BrowserNavigationHistoryItem) { activePage?.goBack(toDepth: item.depth) }
+    func goForward(to item: BrowserNavigationHistoryItem) { activePage?.goForward(toDepth: item.depth) }
 
     /// Explicit durable close differs from residency eviction only when the
     /// person chose to return to the saved URL on the next open.
@@ -1878,12 +1370,10 @@ final class BrowserPagePool:
     /// gate ordinary and transient content until authentication succeeds.
     func relockProtectedSpace(_ space: BrowserSpace) {
         guard space.accessPolicy.requiresAuthentication else { return }
-        closeExtensionSidebars(inSpace: space.id)
         // A background Space can still remember its editor after departure.
         // Locking ends that focus session even though its pages stay resident.
         let retainedPages =
             tabRuntimes.values.flatMap(\.allPages)
-            + Array(transientExtensionPages.values)
             + transientLeases.values.compactMap { $0.value?.page }
         for page in retainedPages where page.spaceID == space.id {
             page.focusRestoration.invalidate()
@@ -1958,7 +1448,6 @@ final class BrowserPagePool:
         var visited: Set<ObjectIdentifier> = []
         let retainedPages =
             tabRuntimes.values.flatMap(\.allPages)
-            + Array(transientExtensionPages.values)
             + transientLeases.values.compactMap { $0.value?.page }
         for page in retainedPages
         where visited.insert(ObjectIdentifier(page)).inserted {
@@ -2047,22 +1536,11 @@ final class BrowserPagePool:
     }
 
     private func page(for tab: BrowserTab, space: BrowserSpace) -> BrowserPage {
-        let extensionConfiguration = tab.url.flatMap {
-            extensionControllerPool.extensionPageConfiguration(
-                for: $0,
-                in: space.id
-            )
-        }
         if let existingPage = tabRuntimes[tab.id]?.page {
             if existingPage.spaceID == space.id,
                 existingPage.profileID == space.profile.id
             {
-                let page = page(
-                    matching: extensionConfiguration,
-                    for: tab.id,
-                    replacing: existingPage,
-                    in: space
-                )
+                let page = existingPage
                 page.setCredentialAccessEnabled(
                     space.credentialPreferences.isEnabled
                 )
@@ -2085,8 +1563,7 @@ final class BrowserPagePool:
         }
         let page = makePage(
             space: space,
-            tabID: tab.id,
-            extensionConfiguration: extensionConfiguration
+            tabID: tab.id
         )
         page.updateNavigationContext(
             tab: tab,
@@ -2098,35 +1575,11 @@ final class BrowserPagePool:
         return page
     }
 
-    private func page(
-        matching extensionConfiguration: BrowserExtensionPageConfiguration?,
-        for tabID: TabID,
-        replacing currentPage: BrowserPage,
-        in space: BrowserSpace
-    ) -> BrowserPage {
-        guard !currentPage.matches(extensionConfiguration), let runtime = tabRuntimes[tabID] else {
-            return currentPage
-        }
-        let replacement =
-            runtime.suspendedPages.first { $0.matches(extensionConfiguration) }
-            ?? makePage(space: space, tabID: tabID, extensionConfiguration: extensionConfiguration)
-        runtime.replaceCurrentPage(with: replacement)
-        if let owner = runtime.routingWindowID,
-            let pool = runtimeStore.registeredPools.first(where: { $0.windowID == owner })
-        {
-            pool.bindRuntimeRouting(runtime, tabID: tabID)
-        }
-        residencyRevision &+= 1
-        return replacement
-    }
-
-    /// Builds a page for `space`. Popup and extension-page configurations are
-    /// both supplied by WebKit and must be used exactly as handed over.
+    /// Popups retain WebKit's configuration to preserve their opener and request.
     private func makePage(
         space: BrowserSpace,
         tabID: TabID? = nil,
-        adoptedConfiguration: WKWebViewConfiguration? = nil,
-        extensionConfiguration: BrowserExtensionPageConfiguration? = nil
+        adoptedConfiguration: WKWebViewConfiguration? = nil
     ) -> BrowserPage {
         let interval = Self.lifecycleSignposter.beginInterval("Create Browser Page")
         defer {
@@ -2137,77 +1590,26 @@ final class BrowserPagePool:
         let routing = BrowserPageWindowRouting(pool: self)
         let page = BrowserPage(
             configuration: adoptedConfiguration
-                ?? extensionConfiguration?.webViewConfiguration
                 ?? BrowserPageConfiguration.make(
                     for: space.profile,
                     websiteDataStore: websiteDataStore(for: space.profile),
-                    webExtensionController: browsingMode.isPrivate
-                        ? nil
-                        : extensionControllerPool.controller(for: space),
                     contentRuleLists: contentRuleLists
                 ),
             dialogPresenter: dialogPresenter,
             downloadCenter: downloadCenter,
             permissionCenter: permissionCenter,
-            hostedNotificationCenter: extensionConfiguration == nil
-                ? hostedNotificationCenter
-                : nil,
+            hostedNotificationCenter: hostedNotificationCenter,
             serverTrustOverrides: serverTrustOverrides,
             mediaSessionStore: tabID == nil ? nil : mediaSessionStore,
             spaceID: space.id,
             profileID: space.profile.id,
             spaceName: space.name,
-            extensionBaseURL: extensionConfiguration?.baseURL,
-            extensionContext: extensionConfiguration?.context,
             contentRuleLists: contentRuleLists,
-            externallyConnectableMatchPatterns: browsingMode.isPrivate
-                ? []
-                : extensionControllerPool.externallyConnectableMatchPatterns(
-                    in: space.id
-                ),
-            capturesExtensionConsole: capturesExtensionConsole,
-            ownsUserContentController: adoptedConfiguration == nil
-                && extensionConfiguration == nil,
+            ownsUserContentController: adoptedConfiguration == nil,
             allowsCredentialAccess: !browsingMode.isPrivate,
             isCredentialAccessEnabled:
                 space.credentialPreferences.isEnabled,
             defaultPageZoom: pageZoomPreferences.defaultZoom,
-            allowsChromeWebStoreExtensions: !browsingMode.isPrivate,
-            prepareChromeWebStoreExtension: {
-                [chromeWebStoreProvider, extensionControllerPool] item in
-                var candidate = try await chromeWebStoreProvider.candidate(for: item)
-                let previous = extensionControllerPool.persistenceController.installation(
-                    extensionID: candidate.id, in: space.id)
-                if BrowserExtensionInstallationSource.chromeWebStore(candidate.source).authenticatesContinuity(
-                    from: previous?.source)
-                {
-                    candidate.accessReview.previousSnapshot = previous?.permissionSnapshot
-                }
-                return candidate
-            },
-            installChromeWebStoreExtension: {
-                [extensionControllerPool] candidate in
-                try await extensionControllerPool
-                    .installChromeWebStoreExtension(candidate, in: space)
-            },
-            allowsMozillaAddonsExtensions: !browsingMode.isPrivate,
-            prepareMozillaAddonsExtension: {
-                [mozillaAddonsProvider, extensionControllerPool] item in
-                var candidate = try await mozillaAddonsProvider.candidate(for: item)
-                let previous = extensionControllerPool.persistenceController.installation(
-                    extensionID: candidate.id, in: space.id)
-                if BrowserExtensionInstallationSource.mozillaAddons(candidate.source).authenticatesContinuity(
-                    from: previous?.source)
-                {
-                    candidate.accessReview.previousSnapshot = previous?.permissionSnapshot
-                }
-                return candidate
-            },
-            installMozillaAddonsExtension: {
-                [extensionControllerPool] candidate in
-                try await extensionControllerPool
-                    .installMozillaAddonsExtension(candidate, in: space)
-            },
             loadHTTPAuthenticationCredential: { [weak routing] protectionSpace in
                 try await routing?.pool?.loadHTTPAuthenticationCredential(protectionSpace, space.id)
             },
@@ -2221,21 +1623,8 @@ final class BrowserPagePool:
             openPeek: { [weak routing] in routing?.pool?.openPeek($0) },
             handleLinkDrag: { [weak routing] in routing?.pool?.handleLinkDrag($0) },
             splitLinkHost: splitLinkHost,
-            linkDestinationHost: linkDestinationHost,
-            extensionWebpageMenuItems: {
-                [extensionWebpageMenuProvider] context in
-                guard let tabID else { return [] }
-                return extensionWebpageMenuProvider.items(
-                    for: tabID,
-                    in: space.id,
-                    context: context
-                )
-            }
+            linkDestinationHost: linkDestinationHost
         )
-        page.additionalExtensionSpaces = { [weak extensionControllerPool] extensionID in
-            extensionControllerPool?.copyDestinations(extensionID: extensionID, excluding: space.id) ?? []
-        }
-        page.mozillaAddonsInstall.additionalSpaces = page.additionalExtensionSpaces
         page.host = self
         page.windowRouting = routing
         return page
@@ -2252,75 +1641,6 @@ final class BrowserPagePool:
         } else {
             runtimeStore.install(BrowserTabRuntime(page: page), for: tabID, from: self)
         }
-    }
-
-    private func clearRuntimeNavigation(for tabID: TabID) {
-        tabRuntimes[tabID]?.clearHistory()
-    }
-
-    private func runtimeHistory(
-        local: [BrowserNavigationHistoryItem],
-        crossingTo page: BrowserPage?,
-        continuation: KeyPath<BrowserPage, [BrowserNavigationHistoryItem]>
-    ) -> [BrowserNavigationHistoryItem] {
-        guard let page,
-            let url = page.url ?? page.webView.url
-        else { return local }
-        var history = local
-        history.append(
-            BrowserNavigationHistoryItem(
-                depth: history.count + 1,
-                title: page.title.isEmpty ? url.absoluteString : page.title,
-                url: url
-            )
-        )
-        history.append(
-            contentsOf: page[keyPath: continuation].map { item in
-                BrowserNavigationHistoryItem(
-                    depth: history.count + item.depth,
-                    title: item.title,
-                    url: item.url
-                )
-            }
-        )
-        return history
-    }
-
-    @discardableResult
-    private func crossRuntimeHistoryBackward(for tabID: TabID) -> BrowserPage? {
-        guard let destinationPage = tabRuntimes[tabID]?.backPage,
-            let currentPage = swapActiveRuntime(
-                for: tabID,
-                to: destinationPage
-            )
-        else { return nil }
-        tabRuntimes[tabID]?.backPage = nil
-        tabRuntimes[tabID]?.forwardPage = currentPage
-        residencyRevision &+= 1
-        return destinationPage
-    }
-
-    @discardableResult
-    private func crossRuntimeHistoryForward(for tabID: TabID) -> BrowserPage? {
-        guard let destinationPage = tabRuntimes[tabID]?.forwardPage,
-            let currentPage = swapActiveRuntime(
-                for: tabID,
-                to: destinationPage
-            )
-        else { return nil }
-        tabRuntimes[tabID]?.forwardPage = nil
-        tabRuntimes[tabID]?.backPage = currentPage
-        residencyRevision &+= 1
-        return destinationPage
-    }
-
-    /// Swaps one retained configuration back into the live tab without loading
-    /// either page. The caller owns the history direction and observation bump.
-    private func swapActiveRuntime(
-        for tabID: TabID,
-        to destinationPage: BrowserPage
-    ) -> BrowserPage? {
-        tabRuntimes[tabID]?.swap(to: destinationPage)
     }
 
     private func contentRuleLists(for space: BrowserSpace) -> [WKContentRuleList] {
@@ -2517,17 +1837,8 @@ final class BrowserPagePool:
             // presented" — a card of the split on screen, focused or not.
             // Every candidate here is off screen, so it is answered `false`.
             // The name stays until the decision type is revisited.
-            let runtimePages =
-                [candidate.page]
-                + (tabRuntimes[candidate.tabID]?.suspendedPages ?? [])
-            var allRuntimesAllowAutomaticUnload = true
-            for page in runtimePages {
-                let decision = await residencyDecisionProvider(page, false)
-                if !decision.allowsAutomaticUnload {
-                    allRuntimesAllowAutomaticUnload = false
-                    break
-                }
-            }
+            let decision = await residencyDecisionProvider(candidate.page, false)
+            let allRuntimesAllowAutomaticUnload = decision.allowsAutomaticUnload
             // Re-checked after the await: a page can be selected back onto the
             // screen while WebKit is answering for it.
             guard tabRuntimes[candidate.tabID]?.page === candidate.page,
@@ -2602,23 +1913,7 @@ final class BrowserPagePool:
         peekPageLeases.removeAll()
     }
 
-    private func releaseExtensionOffscreenDocuments(in spaceID: SpaceID) {
-        closeExtensionSidebars(inSpace: spaceID)
-        let matchingKeys = extensionOffscreenDocuments.keys.filter {
-            $0.spaceID == spaceID
-        }
-        for key in matchingKeys {
-            extensionOffscreenDocuments.removeValue(forKey: key)?.close()
-        }
-    }
 
-    private func releaseAllExtensionOffscreenDocuments() {
-        closeExtensionSidebars()
-        for document in extensionOffscreenDocuments.values {
-            document.close()
-        }
-        extensionOffscreenDocuments.removeAll()
-    }
 
     private func pruneTransientLeases() {
         transientLeases = transientLeases.filter { $0.value.value != nil }
@@ -2641,122 +1936,6 @@ final class BrowserPagePool:
         }
         memoryPressureSource = source
         source.resume()
-    }
-}
-
-@MainActor
-private final class BrowserExtensionOffscreenDocument: NSObject,
-    WKNavigationDelegate
-{
-    /// This document's `runtime.getContexts` identity, and the URL it holds.
-    /// Both live and die with the document, as a Chrome context ID does.
-    let contextID = UUID().uuidString
-    private(set) var url: URL?
-    private let webView: WKWebView
-    private var runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle?
-    private let contentController = WKUserContentController()
-    private var loadContinuation: CheckedContinuation<Void, any Error>?
-
-    init(
-        configuration: WKWebViewConfiguration,
-        installRuntimeBridge: (WKUserContentController) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? = { _ in
-            nil
-        }
-    ) throws {
-        guard BrowserExtensionHostedContentIsolationPolicy.isSupported else {
-            throw BrowserExtensionOffscreenDocumentError.unavailable
-        }
-        runtimeBridge = installRuntimeBridge(contentController)
-        webView = WKWebView(frame: .zero, configuration: configuration)
-        super.init()
-        webView.navigationDelegate = self
-        webView.isInspectable = true
-    }
-
-    func webView(
-        _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
-        preferences: WKWebpagePreferences,
-        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
-    ) {
-        guard BrowserExtensionHostedContentIsolationPolicy.apply(contentController, to: preferences) else {
-            decisionHandler(.cancel, preferences)
-            return
-        }
-        decisionHandler(.allow, preferences)
-    }
-
-    func load(_ url: URL) async throws {
-        guard loadContinuation == nil else {
-            throw BrowserExtensionOffscreenDocumentError.alreadyExists
-        }
-        self.url = url
-        try await withCheckedThrowingContinuation { continuation in
-            loadContinuation = continuation
-            guard webView.load(URLRequest(url: url)) != nil else {
-                finishLoading(
-                    .failure(BrowserExtensionOffscreenDocumentError.unavailable)
-                )
-                return
-            }
-        }
-    }
-
-    func close() {
-        runtimeBridge?.release()
-        runtimeBridge = nil
-        webView.stopLoading()
-        finishLoading(
-            .failure(BrowserExtensionOffscreenDocumentError.unavailable)
-        )
-        webView.navigationDelegate = nil
-    }
-
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
-        finishLoading(.success(()))
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        didFail navigation: WKNavigation?,
-        withError error: any Error
-    ) {
-        finishLoading(
-            .failure(
-                BrowserExtensionOffscreenDocumentError.loadFailed(
-                    error.localizedDescription
-                )
-            )
-        )
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        didFailProvisionalNavigation navigation: WKNavigation?,
-        withError error: any Error
-    ) {
-        finishLoading(
-            .failure(
-                BrowserExtensionOffscreenDocumentError.loadFailed(
-                    error.localizedDescription
-                )
-            )
-        )
-    }
-
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        finishLoading(
-            .failure(
-                BrowserExtensionOffscreenDocumentError.loadFailed(
-                    "The extension web content process stopped."
-                )
-            )
-        )
-    }
-
-    private func finishLoading(_ result: Result<Void, any Error>) {
-        guard let loadContinuation else { return }
-        self.loadContinuation = nil
-        loadContinuation.resume(with: result)
     }
 }
 

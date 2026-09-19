@@ -1,0 +1,233 @@
+--- a/chrome/browser/ui/views/frame/browser_window_factory.cc
++++ b/chrome/browser/ui/views/frame/browser_window_factory.cc
+@@ -5,6 +5,10 @@
+ #include <memory>
+ 
+ #include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_browser_window.h"
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+ #include "chrome/browser/ui/browser_window_deleter.h"
+ #include "chrome/browser/ui/fullscreen/browser_window_fullscreen_controller.h"
+ #include "chrome/browser/ui/views/frame/browser_native_widget_factory.h"
+@@ -30,6 +34,11 @@
+ BrowserWindow::CreateBrowserWindow(Browser* browser,
+                                    bool user_gesture,
+                                    bool in_tab_dragging) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled() && (browser->is_type_normal() || browser->is_type_popup())) {
++    return std::unique_ptr<BrowserWindow, BrowserWindowDeleter>(new CrestBrowserWindow(browser));
++  }
++#endif
+   if (webui_browser::IsWebUIBrowserEnabled() && browser->is_type_normal()) {
+     return std::unique_ptr<BrowserWindow, BrowserWindowDeleter>(
+         new WebUIBrowserWindow(browser));
+--- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
+@@ -19,6 +19,9 @@
+ #include "base/supports_user_data.h"
+ #include "base/version.h"
+ #include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+ #include "chrome/browser/apps/platform_apps/install_chrome_app.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/custom_handlers/protocol_handler_registry_factory.h"
+@@ -251,6 +254,13 @@
+     bool restore_tabbed_browser) {
+   DCHECK(profile);
+   profile_ = profile;
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) {
++    Browser* browser = Browser::Create(Browser::CreateParams(profile, false));
++    browser->GetWindow()->Show();
++    return;
++  }
++#endif
+ 
+ #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
+   // Check for DSE integrity if flag is enabled.
+--- a/chrome/browser/app_controller_mac.mm
++++ b/chrome/browser/app_controller_mac.mm
+@@ -73,6 +73,7 @@
+ #include "chrome/browser/tab_group_sync/tab_group_sync_service_factory.h"
+ #include "chrome/browser/task_manager/task_manager_metrics_recorder.h"
+ #include "chrome/browser/ui/browser.h"
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #include "chrome/browser/ui/browser_command_controller.h"
+ #include "chrome/browser/ui/browser_commands.h"
+ #include "chrome/browser/ui/browser_live_tab_context.h"
+@@ -930,6 +931,9 @@
+ }
+ 
+ - (void)tryToTerminateApplication {
++  if (crest::DeferQuit()) {
++    return;
++  }
+   if ([self confirmQuitIfNeeded] == ConfirmQuitResultAborted) {
+     return;
+   }
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -3448,6 +3448,11 @@
+       "browser_mac.h",
+       "fullscreen_util_mac.cc",
+       "fullscreen_util_mac.h",
++      "crest/crest_browser_window.h",
++      "crest/crest_browser_window.mm",
++      "crest/crest_chrome_hooks.h",
++      "crest/crest_chrome_host.mm",
++      "crest/CrestChromiumHost.h",
+       "views/certificate_viewer_mac_views.mm",
+       "views/frame/browser_frame_view_factory_mac.mm",
+       "views/frame/browser_frame_view_mac.h",
+--- a/chrome/browser/ui/tabs/tab_features.cc
++++ b/chrome/browser/ui/tabs/tab_features.cc
+@@ -9,6 +9,10 @@
+ #include "base/feature_list.h"
+ #include "base/memory/ptr_util.h"
+ #include "base/no_destructor.h"
++#include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+ #include "chrome/browser/accessibility_annotator/content_annotator/content_annotator_service_factory.h"
+ #include "chrome/browser/accessibility_annotator/content_annotator/content_annotator_tab_helper.h"
+ #include "chrome/browser/actor/actor_keyed_service.h"
+@@ -477,11 +481,18 @@
+ 
+   // Create the ReadAnythingController first to ensure it exists before
+   // any potential consumers, like the side panel controller.
+-  if (features::IsImmersiveReadAnythingEnabled()) {
++  // Crest owns its native reader UI and does not instantiate a Views
++  // SidePanelCoordinator. Do not register Chrome's side-panel lifecycle hooks
++  // against that absent coordinator (including activated-tab detachment).
++  bool has_chrome_reader_ui = true;
++#if BUILDFLAG(IS_MAC)
++  has_chrome_reader_ui = !crest::IsEnabled();
++#endif
++  if (has_chrome_reader_ui && features::IsImmersiveReadAnythingEnabled()) {
+     read_anything_controller_ =
+         GetUserDataFactory().CreateInstance<ReadAnythingController>(
+             tab, &tab, side_panel_registry_.get());
+-  } else {
++  } else if (has_chrome_reader_ui) {
+     // TODO(crbug.com/447418049): This will be removed in the future when
+     // ownership of this controller is migrated to ReadAnythingController.
+     read_anything_side_panel_controller_ =
+--- a/chrome/app/chrome_exe_main_mac.cc
++++ b/chrome/app/chrome_exe_main_mac.cc
+@@ -19,6 +19,8 @@
+ #include <unistd.h>
+ 
+ #include <memory>
++#include <string>
++#include <string_view>
+ 
+ #include "base/allocator/early_zone_registration_apple.h"
+ #include "base/compiler_specific.h"
+@@ -155,6 +157,35 @@
+   if (rv != 0) {
+     FatalError("_NSGetExecutablePath: get path failed.");
+   }
++
++#if !defined(HELPER_EXECUTABLE)
++  // Packaged Crest experiments must never fall back to Chromium's default
++  // user profile when Finder or an automation tool launches without arguments.
++  // This runs before loading the framework or creating any browser services.
++  const std::string executable(exec_path.get());
++  const auto directory = executable.substr(0, executable.find_last_of('/'));
++  const auto marker = directory + "/../Resources/Crest-Isolated-Experiment";
++  if (access(marker.c_str(), F_OK) == 0) {
++    bool isolated_profile = false;
++    bool crest_host = false;
++    for (int i = 1; i < argc; ++i) {
++      const std::string_view argument(UNSAFE_TODO(argv[i]));
++      if (argument.starts_with("--user-data-dir=/") &&
++          argument.size() > std::string_view("--user-data-dir=/").size()) {
++        isolated_profile = true;
++      }
++      crest_host |= argument == "--crest-control-plane";
++    }
++    const auto host_framework =
++        directory + "/../Frameworks/CrestChromiumUI.framework";
++    if (!isolated_profile ||
++        (access(host_framework.c_str(), F_OK) == 0 && !crest_host)) {
++      fprintf(stderr, "Crest experiment requires an explicit absolute "
++                      "--user-data-dir and its host mode.\n");
++      return 64;
++    }
++  }
++#endif
+ 
+ #if defined(HELPER_EXECUTABLE)
+   sandbox::SeatbeltExecServer::CreateFromArgumentsResult seatbelt =
+--- a/chrome/browser/ui/startup/startup_browser_creator.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator.cc
+@@ -1558,6 +1558,15 @@
+     bool ignore_profile_picker) {
+   ProfileManager* profile_manager = g_browser_process->profile_manager();
+   const base::FilePath& user_data_dir = profile_manager->user_data_dir();
++#if BUILDFLAG(IS_MAC)
++  // Crest's core restores its Spaces and owns profile selection. The bootstrap
++  // profile never presents Chrome's profile picker or restores Chrome tabs.
++  if (command_line.HasSwitch("crest-control-plane")) {
++    return {.path = profiles::GetDefaultProfileDir(user_data_dir),
++            .mode = StartupProfileMode::kBrowserWindow};
++  }
++#endif
++
+ // If the browser is launched due to activation on Windows native notification,
+ // the profile id encoded in the notification launch id should be chosen over
+ // all others.
+--- a/components/os_crypt/common/keychain_password_mac.mm
++++ b/components/os_crypt/common/keychain_password_mac.mm
+@@ -9,6 +9,7 @@
+ #include <atomic>
+ 
+ #include "base/apple/osstatus_logging.h"
++#include "base/apple/foundation_util.h"
+ #include "base/apple/scoped_cftyperef.h"
+ #include "base/base64.h"
+ #include "base/containers/span.h"
+@@ -41,6 +42,22 @@
+ const char kDefaultServiceName[] = "Chromium Safe Storage";
+ const char kDefaultAccountName[] = "Chromium";
+ #endif
++
++// A profile directory does not namespace OSCrypt's macOS keychain item.
++// Keep packaged Crest experiments separate from Chromium, Chrome, and Crest's
++// credential vault. Normal Chromium builds retain their upstream names.
++std::string CrestKeychainName(bool service) {
++  const auto bundle = base::apple::BaseBundleID();
++  if (bundle == "com.pauldavis.crest.control-plane.chromium") {
++    return service ? "Crest Chromium Experiment Safe Storage"
++                   : "com.pauldavis.crest.control-plane.chromium";
++  }
++  if (bundle == "com.pauldavis.crest.chromium-baseline") {
++    return service ? "Crest Chromium Baseline Safe Storage"
++                   : "com.pauldavis.crest.chromium-baseline";
++  }
++  return service ? kDefaultServiceName : kDefaultAccountName;
++}
+ 
+ // These values are persisted to logs. Entries should not be renumbered and
+ // numeric values should never be reused.
+@@ -110,13 +127,13 @@
+ 
+ // static
+ KeychainPassword::KeychainNameType& KeychainPassword::GetServiceName() {
+-  static KeychainNameContainerType service_name(kDefaultServiceName);
++  static KeychainNameContainerType service_name(CrestKeychainName(true));
+   return *service_name;
+ }
+ 
+ // static
+ KeychainPassword::KeychainNameType& KeychainPassword::GetAccountName() {
+-  static KeychainNameContainerType account_name(kDefaultAccountName);
++  static KeychainNameContainerType account_name(CrestKeychainName(false));
+   return *account_name;
+ }
+ 

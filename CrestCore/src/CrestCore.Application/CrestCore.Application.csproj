@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../CrestCore.Domain/CrestCore.Domain.csproj" />
+    <ProjectReference Include="../CrestCore.Contracts/CrestCore.Contracts.csproj" />
+  </ItemGroup>
+</Project>

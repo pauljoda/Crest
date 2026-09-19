@@ -28,6 +28,20 @@ extension BrowserSession {
         location: BrowserFolderLocation = .saved,
         in spaceID: SpaceID
     ) -> FolderID? {
+        #if CREST_CORE_BACKED
+        let id = FolderID()
+        guard applyCoreEdit("folder.create", in: spaceID, arguments: [
+            "folderId": id.rawValue.uuidString, "title": title, "placement": location.rawValue,
+            "parentId": parentID?.rawValue.uuidString as Any? ?? NSNull()
+        ], at: .now) != nil,
+            let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
+            let index = spaces[spaceIndex].folders.firstIndex(where: { $0.id == id })
+        else { return nil }
+        let trimmedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        spaces[spaceIndex].folders[index].symbol = trimmedSymbol.isEmpty ? "folder" : trimmedSymbol
+        spaces[spaceIndex].folders[index].color = color
+        return id
+        #else
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
             spaces[spaceIndex].folders.count < BrowserSpace.maximumFolderCount
         else {
@@ -62,6 +76,7 @@ extension BrowserSession {
         }
         spaces[spaceIndex].folders.insert(folder, at: insertionIndex)
         return folder.id
+            #endif
     }
 
     @discardableResult
@@ -70,6 +85,11 @@ extension BrowserSession {
         in spaceID: SpaceID,
         title: String
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        applyCoreEdit("folder.rename", in: spaceID, arguments: [
+            "folderId": folderID.rawValue.uuidString, "title": title
+        ], at: .now)?.changed ?? false
+        #else
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
             let folderIndex = spaces[spaceIndex].folders.firstIndex(where: {
                 $0.id == folderID
@@ -80,6 +100,7 @@ extension BrowserSession {
         guard spaces[spaceIndex].folders[folderIndex].title != resolvedTitle else { return false }
         spaces[spaceIndex].folders[folderIndex].title = resolvedTitle
         return true
+            #endif
     }
 
     @discardableResult
@@ -126,6 +147,11 @@ extension BrowserSession {
         isCollapsed: Bool,
         at date: Date = .now
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        applyCoreEdit("folder.collapse", in: spaceID, arguments: [
+            "folderId": folderID.rawValue.uuidString, "collapsed": isCollapsed
+        ], at: date)?.changed ?? false
+        #else
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
             let folderIndex = spaces[spaceIndex].folders.firstIndex(where: {
                 $0.id == folderID
@@ -138,6 +164,7 @@ extension BrowserSession {
         spaces[spaceIndex].folders[folderIndex].isCollapsed = isCollapsed
         spaces[spaceIndex].folders[folderIndex].collapseModifiedAt = date
         return true
+            #endif
     }
 
     func canMoveFolder(
@@ -173,6 +200,10 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        applyCoreEdit("folder.delete", in: spaceID,
+            arguments: ["folderId": folderID.rawValue.uuidString], at: date)?.changed ?? false
+        #else
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
             let folderIndex = spaces[spaceIndex].folders.firstIndex(where: {
                 $0.id == folderID
@@ -194,6 +225,7 @@ extension BrowserSession {
                 folders: spaces[spaceIndex].folders
             ).foldersInDisplayOrder
         return true
+            #endif
     }
 
 }
@@ -311,10 +343,14 @@ extension BrowserSession {
     }
 
     mutating func selectTab(_ tabID: TabID, at date: Date = .now) {
+        #if CREST_CORE_BACKED
+        _ = activateTab(tabID, in: selectedSpaceID, at: date)
+        #else
         guard let spaceIndex = selectedSpaceIndex else { return }
         guard let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }) else { return }
         spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = date
         spaces[spaceIndex].selectedTabID = tabID
+            #endif
     }
 
     mutating func clearTabSelection(in spaceID: SpaceID) {

@@ -62,27 +62,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
-    private(set) var chromeWebStoreInstallItem: BrowserChromeWebStoreItem?
-    @ObservationIgnored var additionalExtensionSpaces: @MainActor (String) -> [BrowserSpace] = { _ in [] }
-    private(set) var chromeWebStoreCandidate: BrowserChromeWebStoreCandidate?
-    private(set) var isPreparingChromeWebStoreExtension = false
-    private(set) var isInstallingChromeWebStoreExtension = false
-    private(set) var chromeWebStoreInstallErrorDescription: String?
-    private(set) var installedChromeWebStoreExtensionName: String?
-    private(set) var installedChromeWebStoreCompatibilityIssues: [String] = []
-    /// Owns the whole addons.mozilla.org review-and-install flow, so the page
-    /// carries one reference instead of another parallel set of phase flags.
-    let mozillaAddonsInstall: BrowserMozillaAddonsInstallSession
-
     /// The pool that owns this page. Weak because the pool owns the page.
     @ObservationIgnored weak var host: (any BrowserPageHosting)?
     @ObservationIgnored var windowRouting: BrowserPageWindowRouting?
-
-    /// Set while a debugger session is attached to this page and has enabled
-    /// the protocol's Page domain. It answers the page's JavaScript dialogs in
-    /// place of the user, so it is installed by that session alone and cleared
-    /// the moment the session ends.
-    @ObservationIgnored var debuggerDialogInterceptor: BrowserExtensionDebuggerDialogInterceptor?
 
     /// True when web content opened this page through `window.open()`. It gates
     /// `window.close()`, which may only close what script itself opened.
@@ -117,10 +99,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored let spaceID: SpaceID
     @ObservationIgnored let profileID: UUID
     @ObservationIgnored let spaceName: String
-    /// The extension origin whose context supplied this page's WebKit
-    /// configuration. Nil identifies an ordinary browsing page.
-    @ObservationIgnored let extensionBaseURL: URL?
-    @ObservationIgnored private var extensionBackgroundActivityLease: BrowserExtensionBackgroundActivityLease?
     @ObservationIgnored let navigationDecider: BrowserNavigationDecider
     @ObservationIgnored let popupCoordinator: BrowserPopupCoordinator
     @ObservationIgnored let externalSchemeCoordinator: BrowserExternalSchemeCoordinator
@@ -153,12 +131,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored var splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored var linkDestinationHost: BrowserLinkDestinationHost
-    @ObservationIgnored let extensionWebpageMenuItems: @MainActor (BrowserExtensionWebpageMenuContext) -> [NSMenuItem]
-    @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
     @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
-    @ObservationIgnored private var extensionWebPageRuntimeProxy: BrowserExtensionWebPageRuntimeDiagnosticsProxy?
     @ObservationIgnored private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
     @ObservationIgnored var mediaSessionCoordinator: BrowserMediaSessionPageCoordinator?
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
@@ -172,35 +147,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
     @ObservationIgnored private let contentRuleSession: BrowserPageContentRuleSession
-    @ObservationIgnored private let prepareChromeWebStoreExtension:
-        @MainActor (BrowserChromeWebStoreItem) async throws
-            -> BrowserChromeWebStoreCandidate
-    @ObservationIgnored private let installChromeWebStoreExtension:
-        @MainActor (BrowserChromeWebStoreCandidate) async throws
-            -> BrowserExtensionSummary
-    @ObservationIgnored private var chromeWebStoreTask: Task<Void, Never>?
-
     var displayURL: URL? {
         navigationFailure?.failingURL ?? pendingNavigationURL ?? url
-    }
-
-    func matches(
-        _ extensionConfiguration: BrowserExtensionPageConfiguration?
-    ) -> Bool {
-        switch (extensionBaseURL, extensionConfiguration?.baseURL) {
-        case (nil, nil):
-            true
-        case (let currentBaseURL?, let requestedBaseURL?):
-            currentBaseURL.scheme?.caseInsensitiveCompare(
-                requestedBaseURL.scheme ?? ""
-            ) == .orderedSame
-                && currentBaseURL.host?.caseInsensitiveCompare(
-                    requestedBaseURL.host ?? ""
-                ) == .orderedSame
-                && currentBaseURL.port == requestedBaseURL.port
-        default:
-            false
-        }
     }
 
     // Session-only presentation state belongs to the live page, including in splits.
@@ -239,40 +187,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         spaceID: SpaceID,
         profileID: UUID,
         spaceName: String,
-        extensionBaseURL: URL? = nil,
-        extensionContext: WKWebExtensionContext? = nil,
         contentRuleList: WKContentRuleList? = nil,
         contentRuleLists: [WKContentRuleList] = [],
-        externallyConnectableMatchPatterns: [String] = [],
-        capturesExtensionConsole: Bool = false,
         ownsUserContentController: Bool = true,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
         defaultPageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel,
-        allowsChromeWebStoreExtensions: Bool = false,
-        prepareChromeWebStoreExtension:
-            @escaping @MainActor (BrowserChromeWebStoreItem) async throws
-            -> BrowserChromeWebStoreCandidate = { _ in
-                throw BrowserExtensionControllerPoolError
-                    .unsupportedInstallationSource
-            },
-        installChromeWebStoreExtension:
-            @escaping @MainActor (BrowserChromeWebStoreCandidate) async throws
-            -> BrowserExtensionSummary = { _ in
-                throw BrowserExtensionControllerPoolError
-                    .unsupportedInstallationSource
-            },
-        allowsMozillaAddonsExtensions: Bool = false,
-        prepareMozillaAddonsExtension:
-            @escaping BrowserMozillaAddonsInstallSession.Prepare = { _ in
-                throw BrowserExtensionControllerPoolError
-                    .unsupportedInstallationSource
-            },
-        installMozillaAddonsExtension:
-            @escaping BrowserMozillaAddonsInstallSession.Install = { _ in
-                throw BrowserExtensionControllerPoolError
-                    .unsupportedInstallationSource
-            },
         loadHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
         saveHTTPAuthenticationCredential:
@@ -283,9 +203,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         handleLinkDrag: @escaping (BrowserPeekInteractionEvent) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
-        extensionWebpageMenuItems:
-            @escaping @MainActor (BrowserExtensionWebpageMenuContext)
-            -> [NSMenuItem] = { _ in [] },
         opensExternalURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
     ) {
         let pageInterval = Self.lifecycleSignposter.beginInterval("Initialize Browser Page")
@@ -307,29 +224,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         self.spaceID = spaceID
         self.profileID = profileID
         self.spaceName = spaceName
-        self.extensionBaseURL = extensionBaseURL
-        extensionBackgroundActivityLease = extensionContext.map {
-            BrowserExtensionBackgroundActivityLease(
-                context: $0,
-                isActive: { true }
-            )
-        }
         self.ownsUserContentController = ownsUserContentController
         let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
             defaultPageZoom
         )
         self.defaultPageZoom = normalizedDefaultPageZoom
         pageZoom = normalizedDefaultPageZoom
-        self.prepareChromeWebStoreExtension =
-            prepareChromeWebStoreExtension
-        self.installChromeWebStoreExtension =
-            installChromeWebStoreExtension
-        mozillaAddonsInstall = BrowserMozillaAddonsInstallSession(
-            spaceID: spaceID,
-            spaceName: spaceName,
-            prepare: prepareMozillaAddonsExtension,
-            install: installMozillaAddonsExtension
-        )
         contentRuleSession = BrowserPageContentRuleSession(
             ruleLists: contentRuleLists,
             additionalRuleList: contentRuleList
@@ -339,7 +239,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         self.handleLinkDrag = handleLinkDrag
         self.splitLinkHost = splitLinkHost
         self.linkDestinationHost = linkDestinationHost
-        self.extensionWebpageMenuItems = extensionWebpageMenuItems
         let httpAuthenticationSession = BrowserHTTPAuthenticationSession(
             spaceID: spaceID,
             allowsCredentialSaving: allowsCredentialAccess
@@ -410,7 +309,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
         webView.allowsLinkPreview = true
-        if extensionBaseURL == nil, let mediaSessionStore {
+        if let mediaSessionStore {
             let coordinator = BrowserMediaSessionPageCoordinator(
                 webView: webView,
                 endpoint: self,
@@ -462,7 +361,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 self?.receiveLinkContextMessage(message)
             }
         }
-        if extensionBaseURL == nil {
+        do {
             if ownsUserContentController {
                 blockedPopupMessageProxy = BrowserBlockedPopupContentBridge.install(
                     in: webView.configuration.userContentController
@@ -499,17 +398,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 }
             }
         }
-        // Extension pages already carry `chrome`; a popup runs its opener's
-        // scripts. Only a web page Crest configured itself needs the alias.
-        if extensionBaseURL == nil, ownsUserContentController {
-            extensionWebPageRuntimeProxy = BrowserExtensionWebPageRuntimeBridge.install(
-                in: webView.configuration.userContentController,
-                matchPatterns: externallyConnectableMatchPatterns,
-                reportsDiagnostics: capturesExtensionConsole
-            )
-        }
         if let hostedNotificationCenter,
-            extensionBaseURL == nil,
             ownsUserContentController
         {
             _ = hostedNotificationCenter
@@ -520,23 +409,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                     self?.receiveHostedWebNotificationMessage(message)
                 }
         }
-        if allowsChromeWebStoreExtensions, ownsUserContentController {
-            chromeWebStoreMessageProxy =
-                BrowserChromeWebStoreContentBridge.install(
-                    in: webView.configuration.userContentController
-                ) { [weak self] message in
-                    self?.receiveChromeWebStoreMessage(message)
-                }
-        }
-        if allowsMozillaAddonsExtensions, ownsUserContentController {
-            BrowserMozillaAddonsContentBridge.install(
-                in: webView.configuration.userContentController
-            )
-            mozillaAddonsInstall.reportInstalled = { [weak self] slug in
-                await self?.markMozillaAddonInstalled(slug)
-            }
-        }
-        extensionBackgroundActivityLease?.start()
     }
 
     /// Records that web content opened this page and that WebKit still owes it a
@@ -659,13 +531,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         (webView as? BrowserDesktopWebView)?.linkHover = nil
         (webView as? BrowserDesktopWebView)?.linkDrag = nil
         focusRestoration.invalidate()
-        extensionBackgroundActivityLease?.cancel()
-        extensionBackgroundActivityLease = nil
         mediaSessionCoordinator?.prepareForRemoval()
         pictureInPicture.invalidate()
-        chromeWebStoreTask?.cancel()
-        chromeWebStoreTask = nil
-        mozillaAddonsInstall.cancel()
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
@@ -682,11 +549,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             // here would silence them for the opener too.
             credentialMessageProxy = nil
             linkContextMessageProxy = nil
-            chromeWebStoreMessageProxy = nil
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
             blockedPopupMessageProxy = nil
-            extensionWebPageRuntimeProxy = nil
             geolocationCoordinator = nil
             hostedNotificationMessageProxy = nil
             mediaSessionMessageProxy = nil
@@ -710,16 +575,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 )
         }
         linkContextMessageProxy = nil
-        if chromeWebStoreMessageProxy != nil {
-            webView.configuration.userContentController
-                .removeScriptMessageHandler(
-                    forName: BrowserChromeWebStoreContentBridge
-                        .messageHandlerName,
-                    contentWorld: BrowserChromeWebStoreContentBridge
-                        .contentWorld
-                )
-        }
-        chromeWebStoreMessageProxy = nil
         if userActivityMessageProxy != nil {
             webView.configuration.userContentController
                 .removeScriptMessageHandler(
@@ -744,14 +599,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 )
         }
         blockedPopupMessageProxy = nil
-        if extensionWebPageRuntimeProxy != nil {
-            webView.configuration.userContentController
-                .removeScriptMessageHandler(
-                    forName: BrowserExtensionWebPageRuntimeBridge.diagnosticsHandlerName,
-                    contentWorld: BrowserExtensionWebPageRuntimeBridge.contentWorld
-                )
-        }
-        extensionWebPageRuntimeProxy = nil
         geolocationCoordinator = nil
         if hostedNotificationMessageProxy != nil {
             webView.configuration.userContentController
@@ -773,72 +620,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         mediaSessionMessageProxy = nil
         mediaSessionCoordinator = nil
         userActivityHandler = nil
-    }
-
-    private(set) var installedChromeWebStoreAdditionalSpaceCount = 0
-    private(set) var installedChromeWebStoreCopyWarnings: [String] = []
-
-    var isChromeWebStoreInstallPresented: Bool {
-        chromeWebStoreInstallItem != nil
-    }
-
-    var chromeWebStoreInstallSpaceName: String { spaceName }
-
-    func dismissChromeWebStoreInstall() {
-        guard !isInstallingChromeWebStoreExtension else { return }
-        chromeWebStoreTask?.cancel()
-        chromeWebStoreTask = nil
-        chromeWebStoreInstallItem = nil
-        chromeWebStoreCandidate = nil
-        installedChromeWebStoreCompatibilityIssues = []
-        isPreparingChromeWebStoreExtension = false
-        chromeWebStoreInstallErrorDescription = nil
-        installedChromeWebStoreExtensionName = nil
-    }
-
-    func installPreparedChromeWebStoreExtension(review: BrowserExtensionInstallationPermissionPolicy.Review = .init()) {
-        guard var candidate = chromeWebStoreCandidate,
-            !isInstallingChromeWebStoreExtension
-        else {
-            return
-        }
-        candidate.accessReview = review
-        chromeWebStoreInstallErrorDescription = nil
-        isInstallingChromeWebStoreExtension = true
-        chromeWebStoreTask?.cancel()
-        chromeWebStoreTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            do {
-                let completion = try await BrowserExtensionInstallationCompletion.perform(
-                    additionalSpaceCount: review.additionalSpaceIDs.count
-                ) { try await installChromeWebStoreExtension(candidate) }
-                let summary = completion.summary
-                guard !Task.isCancelled else { return }
-                isInstallingChromeWebStoreExtension = false
-                installedChromeWebStoreAdditionalSpaceCount = completion.additionalSpaceCount
-                installedChromeWebStoreCopyWarnings = completion.copyWarnings
-                installedChromeWebStoreExtensionName = summary.displayName
-                installedChromeWebStoreCompatibilityIssues = candidate
-                    .compatibility.issues.map(\.message)
-                chromeWebStoreCandidate = nil
-                await markChromeWebStoreExtensionInstalled(candidate.id)
-            } catch is CancellationError {
-                isInstallingChromeWebStoreExtension = false
-            } catch {
-                isInstallingChromeWebStoreExtension = false
-                chromeWebStoreInstallErrorDescription =
-                    error.localizedDescription
-            }
-        }
-    }
-
-    func retryChromeWebStorePreparation() {
-        guard let item = chromeWebStoreInstallItem,
-            !isInstallingChromeWebStoreExtension
-        else {
-            return
-        }
-        beginChromeWebStoreInstall(for: item)
     }
 
     func applyContentBlocking(
@@ -1522,86 +1303,5 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         )
     }
 
-    private func receiveChromeWebStoreMessage(
-        _ scriptMessage: WKScriptMessage
-    ) {
-        guard
-            isOwnScriptMessage(scriptMessage),
-            scriptMessage.name
-                == BrowserChromeWebStoreContentBridge.messageHandlerName,
-            scriptMessage.frameInfo.isMainFrame,
-            scriptMessage.frameInfo.securityOrigin.protocol == "https",
-            scriptMessage.frameInfo.securityOrigin.host
-                == "chromewebstore.google.com",
-            let body = scriptMessage.body as? [String: Any],
-            (body["version"] as? NSNumber)?.intValue == 1,
-            let encodedID = body["extensionID"] as? String,
-            let messageID = BrowserChromeExtensionID(encodedID),
-            let encodedURL = body["url"] as? String,
-            let messageURL = URL(string: encodedURL),
-            let messageItem = BrowserChromeWebStoreItem(url: messageURL),
-            let currentURL = webView.url,
-            let currentItem = BrowserChromeWebStoreItem(url: currentURL),
-            messageItem.id == messageID,
-            currentItem.id == messageID
-        else {
-            return
-        }
-        beginChromeWebStoreInstall(for: currentItem)
-    }
-
-    func beginChromeWebStoreInstall(
-        for item: BrowserChromeWebStoreItem
-    ) {
-        chromeWebStoreTask?.cancel()
-        chromeWebStoreInstallItem = item
-        chromeWebStoreCandidate = nil
-        installedChromeWebStoreExtensionName = nil
-        installedChromeWebStoreCompatibilityIssues = []
-        chromeWebStoreInstallErrorDescription = nil
-        isInstallingChromeWebStoreExtension = false
-        isPreparingChromeWebStoreExtension = true
-        chromeWebStoreTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            do {
-                let candidate = try await prepareChromeWebStoreExtension(item)
-                guard !Task.isCancelled,
-                    chromeWebStoreInstallItem?.id == candidate.item.id
-                else {
-                    return
-                }
-                chromeWebStoreCandidate = candidate
-                isPreparingChromeWebStoreExtension = false
-            } catch is CancellationError {
-                isPreparingChromeWebStoreExtension = false
-            } catch {
-                isPreparingChromeWebStoreExtension = false
-                chromeWebStoreInstallErrorDescription =
-                    error.localizedDescription
-            }
-        }
-    }
-
-    private func markChromeWebStoreExtensionInstalled(
-        _ extensionID: String
-    ) async {
-        _ = try? await webView.callAsyncJavaScript(
-            "globalThis.__crestChromeWebStoreBridge?.setInstalled(extensionID);",
-            arguments: ["extensionID": extensionID],
-            in: nil,
-            contentWorld: BrowserChromeWebStoreContentBridge.contentWorld
-        )
-    }
-
-    private func markMozillaAddonInstalled(
-        _ slug: BrowserMozillaAddonSlug
-    ) async {
-        _ = try? await webView.callAsyncJavaScript(
-            "globalThis.__crestMozillaAddonsBridge?.setInstalled(slug);",
-            arguments: ["slug": slug.rawValue],
-            in: nil,
-            contentWorld: BrowserMozillaAddonsContentBridge.contentWorld
-        )
-    }
 
 }

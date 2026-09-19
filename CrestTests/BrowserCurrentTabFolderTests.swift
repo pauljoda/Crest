@@ -160,7 +160,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
 
     func testEmptyFolderBoundarySurvivesAnchorAndLastMemberRemoval() throws {
         for initiallyEmpty in [false, true] {
-            for operation in ["delete", "close", "extensionClose", "move", "pin", "extensionMove"] {
+            for operation in ["delete", "close", "popupClose", "move", "pin"] {
                 var space = BrowserSession.makeBlankSpace(number: 1)
                 var folder = BrowserFolder(title: "Empty", location: .current)
                 let moving = BrowserTab(
@@ -176,20 +176,15 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                 switch operation {
                 case "delete": XCTAssertTrue(session.deleteTab(moving.id, in: space.id))
                 case "close": session.closeTab(moving.id)
-                case "extensionClose": XCTAssertTrue(session.closeExtensionTab(moving.id, in: space.id))
+                case "popupClose": XCTAssertTrue(session.closeTab(moving.id, in: space.id))
                 case "move": XCTAssertTrue(session.moveTab(moving.id, to: .current))
-                case "extensionMove": XCTAssertTrue(session.moveExtensionTabs([moving.id], in: space.id, to: -1))
-                default: XCTAssertTrue(session.setExtensionTabPinned(true, tabID: moving.id, in: space.id))
+                default: XCTAssertTrue(session.setTabPinned(true, tabID: moving.id, in: space.id))
                 }
                 let result = try XCTUnwrap(session.space(id: space.id))
-                // An extension deliberately moving a singleton group carries
-                // the folder itself, unlike moving its tab out through the UI.
-                if operation != "extensionMove" || initiallyEmpty {
-                    XCTAssertEqual(
-                        BrowserSidebarFolderListItem.items(
-                            tabs: result.tabs, tree: result.folderTree, location: .current
-                        ).first?.id, .folder(folder.id), operation)
-                }
+                XCTAssertEqual(
+                    BrowserSidebarFolderListItem.items(
+                        tabs: result.tabs, tree: result.folderTree, location: .current
+                    ).first?.id, .folder(folder.id), operation)
             }
         }
     }
@@ -279,32 +274,9 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertEqual(session.space(id: space.id)?.tabs.map(\.id), [moving.id, current.id])
     }
 
-    func testUIAndExtensionShareRestoredNamesColorsAndOrderedMembershipAcrossWindows() throws {
-        let browser = makeBrowser()
-        let other = browser.makeWindowStore()
-        let space = try XCTUnwrap(browser.selectedSpace)
-        let tabs = space.currentTabs.map(\.id)
-        let id = try XCTUnwrap(other.createTabFolder([tabs[0], tabs[2]], in: space.id))
-        XCTAssertEqual(browser.selectedSpace?.currentTabs.map(\.id), [tabs[0], tabs[2], tabs[1], tabs[3]])
-        XCTAssertTrue(other.extensionTabGroups === browser.extensionTabGroups)
-        let group = try XCTUnwrap(browser.extensionTabGroups.groups(in: space.id).first { $0.folderID == id })
-        _ = try browser.extensionTabGroups.update(
-            group.id, in: space.id, title: "Claude Research", color: .orange, isCollapsed: true)
-        XCTAssertEqual(browser.selectedSpace?.folders.first { $0.id == id }?.title, "Claude Research")
-        let restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
-        XCTAssertEqual(restored, browser.session)
-        XCTAssertEqual(restored.space(id: space.id)?.tabs.filter { $0.folderID == id }.map(\.id), [tabs[0], tabs[2]])
-    }
 
-    func testPromotionKeepsTheExistingFolderIdentity() throws {
-        let browser = makeBrowser()
-        let space = try XCTUnwrap(browser.selectedSpace)
-        let id = try XCTUnwrap(browser.createTabFolder([space.currentTabs[0].id], in: space.id))
-        let group = try XCTUnwrap(browser.extensionTabGroups.groups(in: space.id).first)
-        XCTAssertTrue(browser.moveFolder(id, matching: .init(space: space), to: .saved))
-        XCTAssertEqual(browser.selectedSpace?.folders.first { $0.id == id }?.location, .saved)
-        XCTAssertEqual(browser.extensionTabGroups.groups(in: space.id).first?.id, group.id)
-    }
+
+
 
     func testSavedSubtreeMovesBothDirectionsAndRestoresWithoutLosingIdentityOrSplitMembership() throws {
         let browser = makeBrowser()
@@ -388,7 +360,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let browser = makeBrowser()
         let space = try XCTUnwrap(browser.selectedSpace)
         let id = FolderID()
-        let legacy = BrowserExtensionTabGroup(
+        let legacy = BrowserLegacyTabGroup(
             id: .init(rawValue: 42), folderID: id, spaceID: space.id,
             tabs: Array(space.currentTabs.prefix(2).map(\.id)), title: "Legacy", color: .orange, isCollapsed: true)
         var document = try XCTUnwrap(
@@ -486,18 +458,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertEqual(imported.tabs.first { $0.title == space.currentTabs[0].title }?.folderID, importedChild.id)
     }
 
-    func testFolderMovePublishesItsNewPositionToExtensions() async throws {
-        let browser = makeBrowser()
-        let space = try XCTUnwrap(browser.selectedSpace)
-        let id = try XCTUnwrap(browser.createTabFolder([space.currentTabs[0].id], in: space.id))
-        let client = BrowserExtensionServiceClientID("move-test")!
-        browser.extensionTabGroups.register(client: client, spaceID: space.id)
-        var events = browser.extensionTabGroups.events(for: client).makeAsyncIterator()
-        XCTAssertTrue(browser.moveFolder(id, matching: .init(space: space), to: .current))
-        let moved = await events.next()
-        XCTAssertEqual(moved?.kind, .moved)
-        XCTAssertEqual(moved?.group.folderID, id)
-    }
+
 
     private func makeBrowser() -> BrowserStore {
         var space = BrowserSession.makeBlankSpace(number: 1)

@@ -3,9 +3,7 @@ import SwiftUI
 
 struct BrowserShortcutSettingsControls: View {
     @Binding var searchText: String
-    @Binding var selectedExtensionSpaceID: SpaceID?
 
-    let spaces: [BrowserSpace]
     let canReset: Bool
     let requestReset: () -> Void
 
@@ -34,14 +32,6 @@ struct BrowserShortcutSettingsControls: View {
 
     private var actions: some View {
         HStack(spacing: 12) {
-            if spaces.count > 1 {
-                Picker(BrowserShortcutSettingsPresentation.extensionSpace, selection: $selectedExtensionSpaceID) {
-                    ForEach(spaces) { Text($0.name).tag(Optional($0.id)) }
-                }
-                .labelsHidden()
-                .frame(width: BrowserShortcutSettingsMetrics.spacePickerWidth)
-                .accessibilityLabel(Text(BrowserShortcutSettingsPresentation.extensionSpace))
-            }
             Button(
                 BrowserShortcutSettingsPresentation.resetCrest,
                 systemImage: "arrow.counterclockwise", action: requestReset
