@@ -113,7 +113,8 @@ extension BrowserStore {
         localSyncErrorDescription = nil
         let revision = family.publish(session, from: self)
         syncCoordinator?.advanceStoreRevision(to: revision)
-        persistence.save(session)
+        do { try family.save(session, to: persistence) }
+        catch { localSyncErrorDescription = String(describing: error) }
     }
 
     func makeWindowStore(
@@ -169,7 +170,7 @@ extension BrowserStore {
             storeRevision: revision
         )
         family.publish(session, from: self, at: revision)
-        persistence.save(session)
+        try family.save(session, to: persistence)
         localSyncErrorDescription = nil
     }
 
@@ -195,7 +196,7 @@ extension BrowserStore {
             storeRevision: revision
         )
         family.publish(session, from: self, at: revision)
-        persistence.save(session)
+        try family.save(session, to: persistence)
         localSyncErrorDescription = nil
     }
 
@@ -255,7 +256,8 @@ extension BrowserStore {
     ) {
         let storeRevision = family.publish(session, from: self)
         syncCoordinator?.advanceStoreRevision(to: storeRevision)
-        persistence.save(session, scope: scope)
+        do { try family.save(session, to: persistence, scope: scope) }
+        catch { localSyncErrorDescription = String(describing: error); return }
         guard let syncCoordinator, !session.hasDisposableSeedState else { return }
 
         syncStageGeneration += 1

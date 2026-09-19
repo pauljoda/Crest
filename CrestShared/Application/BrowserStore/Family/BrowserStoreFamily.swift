@@ -9,9 +9,12 @@ final class BrowserStoreFamily {
     }
 
     private var stores: [WeakStore] = []
-    /// The single owner of browsing data. Window stores project their local
-    /// selection over this value; none retains a second authoritative session.
+    #if CREST_CORE_BACKED
+    private let core: BrowserCoreSessionAuthority
+    var authoritativeSession: BrowserSession { core.projection }
+    #else
     private(set) var authoritativeSession: BrowserSession
+    #endif
     let temporarySourceAssignment: BrowserSpaceRuntimeAssignment?
     let temporarySettingsBrowser: BrowserStore?
     private(set) var syncRevision: BrowserStoreSyncRevision = .initial
@@ -22,7 +25,11 @@ final class BrowserStoreFamily {
         session: BrowserSession, temporarySourceAssignment: BrowserSpaceRuntimeAssignment? = nil,
         temporarySettingsBrowser: BrowserStore? = nil
     ) {
+        #if CREST_CORE_BACKED
+        core = BrowserCoreSessionAuthority(session: session)
+        #else
         authoritativeSession = session
+        #endif
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
     }
@@ -51,24 +58,53 @@ final class BrowserStoreFamily {
 
     func replaceSession(_ session: BrowserSession, from source: BrowserStore, adoptingSelection: Bool = true) {
         let previous = authoritativeSession
+        #if CREST_CORE_BACKED
+        do { try core.replace(with: session) }
+        catch { source.localSyncErrorDescription = "Core session update failed: \(error)"; return }
+        #else
         authoritativeSession = session
+        #endif
         reconcileStores(after: previous, from: adoptingSelection ? source : nil)
     }
 
     /// Installs both prepared graphs before any window reconciles its selection.
     /// This is synchronous on the main actor, so a transfer has no partial
     /// source/destination state across an actor suspension.
+    @discardableResult
     static func replaceSessions(
         source: BrowserStore, sourceSession: BrowserSession,
         destination: BrowserStore, destinationSession: BrowserSession
-    ) {
+    ) -> Bool {
         precondition(source.family !== destination.family)
         let previousSource = source.family.authoritativeSession
         let previousDestination = destination.family.authoritativeSession
+        #if CREST_CORE_BACKED
+        do {
+            try BrowserCoreSessionAuthority.replacePair(
+                source: source.family.core, sourceSession: sourceSession,
+                destination: destination.family.core, destinationSession: destinationSession)
+        } catch {
+            source.localSyncErrorDescription = "Core workspace transfer failed: \(error)"
+            destination.localSyncErrorDescription = source.localSyncErrorDescription
+            return false
+        }
+        #else
         source.family.authoritativeSession = sourceSession
         destination.family.authoritativeSession = destinationSession
+        #endif
         source.family.reconcileStores(after: previousSource, from: source)
         destination.family.reconcileStores(after: previousDestination, from: destination)
+        return true
+    }
+
+    func save(_ session: BrowserSession, to persistence: any BrowserSessionPersisting,
+        scope: BrowserSessionSaveScope = .everything) throws {
+        #if CREST_CORE_BACKED
+        let snapshot = try core.checkpoint(for: session)
+        persistence.save(session, scope: scope, checkpoint: snapshot)
+        #else
+        persistence.save(session, scope: scope)
+        #endif
     }
 
     private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?) {

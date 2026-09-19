@@ -64,7 +64,7 @@ extension BrowserStore {
             session.selectSpace(session.spaces[replacementIndex].id)
             let revision = family.publish(session, from: self)
             syncCoordinator?.advanceStoreRevision(to: revision)
-            persistence.save(session, scope: .core)
+            try family.save(session, to: persistence, scope: .core)
         }
 
         try await dataDeleter.deleteData(for: space)

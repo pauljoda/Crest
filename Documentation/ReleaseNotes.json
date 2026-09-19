@@ -1477,6 +1477,10 @@
     "native-control-plane-webkit-checkpoint": {
       "category": "internal",
       "message": "Connect the original native browser UI to the portable .NET core and retire WebKit extension support."
+    },
+    "core-session-ownership-and-checkpoints": {
+      "category": "internal",
+      "message": "Move native browser session ownership, atomic workspace edits, and save snapshots into the portable core."
     }
   }
 }

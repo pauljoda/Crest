@@ -70,6 +70,32 @@ CREST_API crest_status_t CREST_CALL crest_core_edit_session(
     const uint8_t* input_utf8, size_t input_length,
     uint8_t* destination, size_t capacity, size_t* out_length);
 
+/* Native-UI session authority. All calls are exception-contained. Inputs and
+ * checkpoint parts are <= 64 MiB; no native objects, disk I/O or callbacks.
+ * Commits require the last accepted revision. Pair commits publish both or
+ * neither, including when the second proposal is invalid. A checkpoint pins an
+ * immutable revision; worker threads can read it while editing continues.
+ * Native projections exclude favicon bytes, which remain platform assets.
+ * Destroy/release only after the caller has drained its own references/calls.
+ */
+CREST_API crest_status_t CREST_CALL crest_session_create(
+    const uint8_t* session, size_t length, uint64_t* out_session, uint64_t* out_revision);
+CREST_API crest_status_t CREST_CALL crest_session_commit(
+    uint64_t session, uint64_t expected_revision, const uint8_t* delta, size_t length, uint64_t* out_revision);
+CREST_API crest_status_t CREST_CALL crest_session_commit_pair(
+    uint64_t source, uint64_t source_revision, const uint8_t* source_delta, size_t source_length,
+    uint64_t destination, uint64_t destination_revision, const uint8_t* destination_delta, size_t destination_length,
+    uint64_t* out_source_revision, uint64_t* out_destination_revision);
+CREST_API crest_status_t CREST_CALL crest_session_checkpoint(
+    uint64_t session, uint64_t revision, const uint8_t* selection, size_t length, uint64_t* out_checkpoint);
+/* part is "core" or a Space UUID for its history. Capacity probing never
+ * consumes the immutable part. Part names are <= 64 UTF-8 bytes. */
+CREST_API crest_status_t CREST_CALL crest_session_read_checkpoint(
+    uint64_t checkpoint, const uint8_t* part, size_t part_length,
+    uint8_t* destination, size_t capacity, size_t* out_length);
+CREST_API crest_status_t CREST_CALL crest_session_destroy(uint64_t session);
+CREST_API crest_status_t CREST_CALL crest_session_release_checkpoint(uint64_t checkpoint);
+
 /* Copies retained configuration; sets *out_core to 0 on failure.
  * Caller initializes struct_size to sizeof(crest_core_options_v1).
  * options and out_core must be non-null. Does not start the executor.

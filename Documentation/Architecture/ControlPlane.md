@@ -11,8 +11,23 @@ closing, deletion, placement, filing, renaming, residency preferences, folders,
 split groups, archive restoration, and automatic tab cleanup execute through the core.
 Address intent, history visit policy,
 history-range deletion, and history/archive retention also use the library.
-The existing store family remains the single session owner during this migration;
-the synchronous library boundary retains no competing copy.
+Each store family has one `BrowserCoreSessionAuthority`. The .NET authority owns
+committed session records and revisions; Swift retains an accepted read projection
+for the existing UI. Native edits cross as changes to individual records and
+collection order, without resending unchanged history or favicon bytes. Revision
+checks reject stale proposals. Transfers between families commit both graphs
+before either native window reconciles its selection.
+
+The core captures immutable checkpoints and encodes the session and per-Space
+history on the native persistence worker. Editing can continue while an older
+checkpoint is being saved. The existing storage adapter retains the established
+UserDefaults keys, load/recovery path, scoped writes and favicon side store.
+Per-window selection is projected into each checkpoint, including deliberately
+empty windows. Private and temporary families remain backed by memory storage.
+
+This moves live state ownership and checkpoint serialization into the core.
+Remaining native domain operations still submit prepared value changes; replacing
+those proposals with semantic core commands is a separate part of the migration.
 
 `crest_core_edit_session` receives one compact Space and returns an atomic edit.
 It excludes images, history and existing archive records. The native projection
@@ -28,8 +43,9 @@ Record-removal calls send batches of timestamps and receive indices; they carry
 no page objects, URLs, titles, profile data, or complete session snapshots. The
 native caller validates all batches before applying a category's removals. Its
 existing persistence scopes and sync tombstone rules remain in use.
-Stateful ownership will move behind the existing store/page interfaces in coherent
-sections. The original UI, layout, and interaction behavior remain the frontend.
+Engine effects and the remaining command orchestration move behind the existing
+store/page interfaces in coherent sections. The original UI, layout, and
+interaction behavior remain the frontend.
 The standalone control-plane targets below are contract harnesses, not a
 replacement product UI. New product integration belongs in the existing UI target.
 
@@ -45,6 +61,7 @@ targets continue to use their existing composition roots.
 | `CrestCore.Application` | Serialized command processing, native effects, correlation, projections, bounded queues |
 | `CrestCore.Contracts` | Strict JSON parsing, provider descriptors, protocol validation |
 | `CrestCore.Native` | Exception-contained Native AOT C exports and numeric handles |
+| `CrestShared/Infrastructure/ControlPlane` | Original UI adapters, accepted session projections and checkpoint handles |
 | `CrestNative/Apple/CoreClient` | Swift message transport and read-only projection types |
 | `CrestNative/Apple/Composition` | Experimental native app, composition, and surface attachment |
 | `CrestEngines/WebKit` | Adapter around the existing `BrowserPage` and `MobileBrowserPage` |
@@ -67,16 +84,19 @@ profile migration or feature-complete replacement for Crest.
 
 ## Migration boundaries
 
+The table includes facilities implemented in the standalone kernel. Its remaining
+integration column describes work still needed in the original UI composition.
+
 | Existing owner | Core destination | Remaining integration |
 | --- | --- | --- |
-| `BrowserStore+TabLifecycle`, `BrowserSession+Tabs` | Tab commands and organization now used by the original UI | Full state ownership and native page effects |
+| `BrowserStore+TabLifecycle`, `BrowserSession+Tabs` | Tab commands, organization and accepted session ownership now used by the original UI | Direct commands against the owned session and native page effects |
 | `BrowserStoreSelection`, `BrowserWindowState` | Durable window-scoped selection, acknowledged group handoff and destination failure rollback | Full window chrome bindings |
-| `BrowserStore+Workspaces`, `BrowserStoreFamily` | Persistent, private and borrowed workspace authority, canonical policy reconciliation, mobile mode switching, profile release ordering and same-profile tab transfers | Full native UI integration |
+| `BrowserStore+Workspaces`, `BrowserStoreFamily` | Core session ownership and atomic cross-family edits in the original UI; workspace lifecycle in the kernel | Move native workspace orchestration and profile lifetime behind core commands |
 | `BrowserStore+Spaces`, `BrowserSession+Organization`, address/search policy | Space/profile, organization, address resolution, search/content-blocking preferences and resumable deletion | Full branding and production profile deletion adapters |
 | `BrowserStore+Folders`, split-group domain | Nested folders, tab boundaries, subtree moves, filing, duplication, split mutations and multiple native page presentation | Batch close, appearance commands and full native UI bindings |
 | Page pools and platform page stores | Registered page/profile ports | Wrap both platform pools, preserve scene/runtime lifetime and recovery |
 | Chromium extensions | Engine-owned extension runtime | Native host integration; WebKit extension support is removed |
-| Persistence and sync coordinators | Legacy Codable compatibility, revisioned saves, Space tombstones and native byte storage | Production import, sync reconciliation and full one-writer cutover |
+| Persistence and sync coordinators | Original UI saves immutable core checkpoints in the existing Codable format; kernel provides revisioned saves and Space tombstones | Production import, core restore/migration rules and sync reconciliation |
 | Permission/credential/download services | Core policy with native continuations | Preserve document/origin scope and native consent flows |
 
 `BrowserSessionKernel` routes windows and native pages to their owning workspace.

@@ -14,7 +14,7 @@ public unsafe struct CoreOptionsV1
     public nuint ConfigurationLength;
 }
 
-public static unsafe class Exports
+public static unsafe partial class Exports
 {
     private static readonly ConcurrentDictionary<ulong, CoreRuntime> Cores = new();
     private static long nextHandle;

@@ -119,6 +119,14 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
     }
 
     func save(_ session: BrowserSession, scope: BrowserSessionSaveScope) {
+        enqueueSave(session, scope: scope, checkpoint: nil)
+    }
+
+    func save(_ session: BrowserSession, scope: BrowserSessionSaveScope, checkpoint: any BrowserSessionCheckpoint) {
+        enqueueSave(session, scope: scope, checkpoint: checkpoint)
+    }
+
+    private func enqueueSave(_ session: BrowserSession, scope: BrowserSessionSaveScope, checkpoint: (any BrowserSessionCheckpoint)?) {
         saveQueue.async { [self] in
             latestSession = session
             var writes: [(key: String, data: Data)] = []
@@ -126,7 +134,7 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
 
             if scope.writesCore {
                 let core = Self.core(of: session)
-                if core != lastWrittenCore, let data = encoder(core) {
+                if core != lastWrittenCore, let data = checkpoint.map({ $0.coreData() }) ?? encoder(core) {
                     lastWrittenCore = core
                     writes.append((Self.coreKey, data))
                 }
@@ -134,7 +142,7 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
             }
             for space in session.spaces where scope.history.covers(space.id) {
                 guard space.history != lastWrittenHistory[space.id],
-                    let data = try? JSONEncoder().encode(space.history)
+                    let data = checkpoint.map({ $0.historyData(in: space.id) }) ?? (try? JSONEncoder().encode(space.history))
                 else { continue }
                 lastWrittenHistory[space.id] = space.history
                 writes.append((Self.historyKey(for: space.id), data))

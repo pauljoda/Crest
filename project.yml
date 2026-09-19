@@ -252,11 +252,16 @@ targets:
       - path: CrestTests/BrowserCurrentTabFolderTests.swift
       - path: CrestTests/BrowserSplitGroupSessionTests.swift
       - path: CrestTests/BrowserSplitTabCopyTests.swift
+      - path: CrestTests/BrowserStoreTests.swift
+      - path: CrestTests/BrowserStoreWorkspaceTests.swift
+      - path: CrestTests/BrowserCoreSessionAuthorityTests.swift
+      - path: CrestTests/SuspendingBrowserSpaceDataDeleter.swift
     dependencies:
       - target: CrestNativeCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core.tests
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CORE_BACKED"
         SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CrestNativeCore.app/Contents/MacOS/CrestNativeCore"

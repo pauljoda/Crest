@@ -126,10 +126,10 @@ extension BrowserStore {
         if selecting {
             destinationSession.activateTab(id, in: targetSpace.id)
         }
-        BrowserStoreFamily.replaceSessions(
+        guard BrowserStoreFamily.replaceSessions(
             source: self, sourceSession: sourceSession,
             destination: destination, destinationSession: destinationSession
-        )
+        ) else { return false }
         tabSelectionHistory = history
         tabSelectionHistory.reconcile(session: session)
         tabMultiSelection.clear()
