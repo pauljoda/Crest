@@ -1469,6 +1469,10 @@
     "choose-sidebar-widget-visibility": {
       "category": "improved",
       "message": "Choose whether Now Playing appears in the sidebar."
+    },
+    "choose-inactive-tab-scheduling": {
+      "category": "improved",
+      "message": "Choose whether inactive tabs prioritize lower resource use or faster responsiveness."
     }
   }
 }

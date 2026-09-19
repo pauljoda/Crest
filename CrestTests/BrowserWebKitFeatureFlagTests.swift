@@ -159,6 +159,60 @@ final class BrowserWebKitFeatureFlagTests: XCTestCase {
         XCTAssertFalse(store.allows120FPS)
     }
 
+    func testInactiveSchedulingPolicyPersistsAndAppliesToNewPreferences() {
+        let registry = StubBrowserWebKitFeatureFlagRegistry(features: [])
+        let flagPersistence = InMemoryBrowserWebKitFeatureFlagPersistence()
+        let schedulingPersistence =
+            InMemoryBrowserInactiveSchedulingPolicyPersistence()
+        let store = BrowserWebKitFeatureFlagStore(
+            registry: registry,
+            persistence: flagPersistence,
+            inactiveSchedulingPersistence: schedulingPersistence
+        )
+        let preferences = WKPreferences()
+
+        XCTAssertEqual(store.inactiveSchedulingPolicy, .suspend)
+        XCTAssertFalse(store.requiresRestart)
+
+        store.setInactiveSchedulingPolicy(.throttle)
+        store.apply(to: preferences)
+
+        XCTAssertEqual(store.inactiveSchedulingPolicy, .throttle)
+        XCTAssertEqual(schedulingPersistence.policy, .throttle)
+        XCTAssertEqual(preferences.inactiveSchedulingPolicy, .throttle)
+        XCTAssertTrue(store.requiresRestart)
+
+        let relaunchedStore = BrowserWebKitFeatureFlagStore(
+            registry: registry,
+            persistence: flagPersistence,
+            inactiveSchedulingPersistence: schedulingPersistence
+        )
+        XCTAssertEqual(relaunchedStore.inactiveSchedulingPolicy, .throttle)
+    }
+
+    func testInactiveSchedulingPolicyUserDefaultsPersistenceUsesSuspendFallback() throws {
+        let suiteName = "crest.tests.webkit-inactive-scheduling.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let persistence =
+            UserDefaultsBrowserInactiveSchedulingPolicyPersistence(
+                defaults: defaults
+            )
+
+        XCTAssertEqual(persistence.load(), .suspend)
+
+        persistence.save(.throttle)
+        XCTAssertEqual(persistence.load(), .throttle)
+
+        defaults.set(
+            "unexpected",
+            forKey:
+                UserDefaultsBrowserInactiveSchedulingPolicyPersistence
+                .currentKey
+        )
+        XCTAssertEqual(persistence.load(), .suspend)
+    }
+
     func testResetAllRestoresCrestPerformanceDefaults() {
         let registry = StubBrowserWebKitFeatureFlagRegistry(
             features: [.preferNear60FPS, .scrollAnimator, .preview]

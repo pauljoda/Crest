@@ -5,6 +5,57 @@ protocol BrowserWebKitFeatureFlagPersisting: AnyObject {
     func save(_ overrides: [String: BrowserWebKitFeatureFlagOverride])
 }
 
+protocol BrowserInactiveSchedulingPolicyPersisting: AnyObject {
+    func load() -> BrowserInactiveSchedulingPolicy
+    func save(_ policy: BrowserInactiveSchedulingPolicy)
+}
+
+final class UserDefaultsBrowserInactiveSchedulingPolicyPersistence:
+    BrowserInactiveSchedulingPolicyPersisting
+{
+    static let currentKey = "crest.webkit-inactive-scheduling-policy.v1"
+
+    private let defaults: UserDefaults
+    private let key: String
+
+    init(defaults: UserDefaults = .standard, key: String = currentKey) {
+        self.defaults = defaults
+        self.key = key
+    }
+
+    func load() -> BrowserInactiveSchedulingPolicy {
+        guard
+            let rawValue = defaults.string(forKey: key),
+            let policy = BrowserInactiveSchedulingPolicy(rawValue: rawValue)
+        else {
+            return .suspend
+        }
+        return policy
+    }
+
+    func save(_ policy: BrowserInactiveSchedulingPolicy) {
+        defaults.set(policy.rawValue, forKey: key)
+    }
+}
+
+final class InMemoryBrowserInactiveSchedulingPolicyPersistence:
+    BrowserInactiveSchedulingPolicyPersisting
+{
+    private(set) var policy: BrowserInactiveSchedulingPolicy
+
+    init(policy: BrowserInactiveSchedulingPolicy = .suspend) {
+        self.policy = policy
+    }
+
+    func load() -> BrowserInactiveSchedulingPolicy {
+        policy
+    }
+
+    func save(_ policy: BrowserInactiveSchedulingPolicy) {
+        self.policy = policy
+    }
+}
+
 final class UserDefaultsBrowserWebKitFeatureFlagPersistence:
     BrowserWebKitFeatureFlagPersisting
 {

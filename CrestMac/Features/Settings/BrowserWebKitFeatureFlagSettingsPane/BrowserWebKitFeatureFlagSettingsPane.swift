@@ -99,6 +99,8 @@ private struct BrowserWebKitPerformanceSettings: View {
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+                inactiveSchedulingPolicyPicker
+
                 if store.canConfigureAllow120FPS {
                     performanceToggle(
                         "Allow 120 FPS",
@@ -115,6 +117,32 @@ private struct BrowserWebKitPerformanceSettings: View {
             Label("Performance", systemImage: "gauge.with.dots.needle.67percent")
         }
         .accessibilityIdentifier("webkit-performance-settings")
+    }
+
+    private var inactiveSchedulingPolicyPicker: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+            Picker(
+                "Background tab activity",
+                selection: Binding(
+                    get: { store.inactiveSchedulingPolicy },
+                    set: { store.setInactiveSchedulingPolicy($0) }
+                )
+            ) {
+                Text("Suspend").tag(BrowserInactiveSchedulingPolicy.suspend)
+                Text("Throttle").tag(BrowserInactiveSchedulingPolicy.throttle)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier(
+                "webkit-performance-background-tab-activity"
+            )
+
+            Text(
+                "Suspend pauses inactive tabs. Throttle lets them continue limited work, which may improve responsiveness while using more resources. Changes apply to new tabs; restart Crest to apply to all open tabs."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private func performanceToggle(

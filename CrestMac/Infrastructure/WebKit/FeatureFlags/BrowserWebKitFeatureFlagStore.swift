@@ -1,6 +1,22 @@
 import Observation
 import WebKit
 
+enum BrowserInactiveSchedulingPolicy: String, CaseIterable, Identifiable {
+    case suspend
+    case throttle
+
+    var id: Self { self }
+
+    fileprivate var webKitValue: WKPreferences.InactiveSchedulingPolicy {
+        switch self {
+        case .suspend:
+            .suspend
+        case .throttle:
+            .throttle
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class BrowserWebKitFeatureFlagStore {
@@ -22,6 +38,7 @@ final class BrowserWebKitFeatureFlagStore {
     let availabilityFailure: String?
 
     private(set) var overrides: [String: BrowserWebKitFeatureFlagOverride]
+    private(set) var inactiveSchedulingPolicy: BrowserInactiveSchedulingPolicy
     private(set) var requiresRestart = false
 
     @ObservationIgnored
@@ -31,13 +48,19 @@ final class BrowserWebKitFeatureFlagStore {
     private let registry: any BrowserWebKitFeatureFlagRegistryProviding
     @ObservationIgnored
     private let persistence: any BrowserWebKitFeatureFlagPersisting
+    @ObservationIgnored
+    private let inactiveSchedulingPersistence: any BrowserInactiveSchedulingPolicyPersisting
 
     init(
         registry: any BrowserWebKitFeatureFlagRegistryProviding,
-        persistence: any BrowserWebKitFeatureFlagPersisting
+        persistence: any BrowserWebKitFeatureFlagPersisting,
+        inactiveSchedulingPersistence:
+            any BrowserInactiveSchedulingPolicyPersisting =
+            InMemoryBrowserInactiveSchedulingPolicyPersistence()
     ) {
         self.registry = registry
         self.persistence = persistence
+        self.inactiveSchedulingPersistence = inactiveSchedulingPersistence
         features = registry.features
         availabilityFailure = registry.availabilityFailure
         let availableKeys = Set(features.map(\.key))
@@ -47,6 +70,7 @@ final class BrowserWebKitFeatureFlagStore {
         overrides = crestDefaultOverrides.merging(persistence.load()) {
             _, persistedOverride in persistedOverride
         }
+        inactiveSchedulingPolicy = inactiveSchedulingPersistence.load()
     }
 
     static func configureForLaunch(usesIsolatedLaunch: Bool) {
@@ -54,7 +78,10 @@ final class BrowserWebKitFeatureFlagStore {
             registry: BrowserWebKitFeatureFlagRegistry(),
             persistence: usesIsolatedLaunch
                 ? InMemoryBrowserWebKitFeatureFlagPersistence()
-                : UserDefaultsBrowserWebKitFeatureFlagPersistence()
+                : UserDefaultsBrowserWebKitFeatureFlagPersistence(),
+            inactiveSchedulingPersistence: usesIsolatedLaunch
+                ? InMemoryBrowserInactiveSchedulingPolicyPersistence()
+                : UserDefaultsBrowserInactiveSchedulingPolicyPersistence()
         )
     }
 
@@ -123,7 +150,17 @@ final class BrowserWebKitFeatureFlagStore {
     }
 
     func apply(to preferences: WKPreferences) {
+        preferences.inactiveSchedulingPolicy = inactiveSchedulingPolicy.webKitValue
         registry.apply(overrides, to: preferences)
+    }
+
+    func setInactiveSchedulingPolicy(
+        _ policy: BrowserInactiveSchedulingPolicy
+    ) {
+        guard inactiveSchedulingPolicy != policy else { return }
+        inactiveSchedulingPolicy = policy
+        inactiveSchedulingPersistence.save(policy)
+        requiresRestart = true
     }
 
     private func persistChange() {

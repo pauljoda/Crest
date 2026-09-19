@@ -92,8 +92,8 @@ enum BrowserPageConfiguration {
         // default; each page enables them only for an explicitly allowed site.
         // User-activated new tabs and windows are unaffected by this setting.
         preferences.javaScriptCanOpenWindowsAutomatically = false
-        // Resident background tabs stay alive for instant host swaps, while
-        // WebKit suspends their JavaScript and layout when detached from a window.
+        // Resident background tabs stay alive for instant host swaps. macOS may
+        // replace this default with the user's background-activity preference.
         preferences.inactiveSchedulingPolicy = .suspend
         #if os(macOS)
             BrowserWebKitFeatureFlagStore.active.apply(to: preferences)
