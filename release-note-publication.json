@@ -3,6 +3,6 @@
   "channels": {
     "stable": "choose-sidebar-widget-visibility",
     "development": "choose-sidebar-widget-visibility",
-    "nightly": "password-manager-page-reload-loops"
+    "nightly": "choose-inactive-tab-scheduling"
   }
 }

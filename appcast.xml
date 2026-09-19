@@ -6,6 +6,41 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.6.34</title>
+            <pubDate>Sat, 19 Sep 2026 12:38:15 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1133</sparkle:version>
+            <sparkle:shortVersionString>0.6.34</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### New
+
+- Middle-click a split title to close the split and all its tabs.
+- Choose to return saved tabs to their saved URL with one favicon click on Mac.
+
+### Improved
+
+- Choose whether Now Playing appears in the sidebar.
+- Choose whether inactive tabs prioritize lower resource use or faster responsiveness.
+
+### Fixed
+
+- Settings remain fully visible while switching between Spaces.
+
+---
+
+Nightly builds contain the newest changes and may be less reliable than stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/c3a4d4514454519b3dd08b934037576f9ff5bbeb...f6dea9d91064bdf84198de6a4764118d798203e5) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.34-2026-09-19-1133-r133.1/Installer-Crest-0.6.34-nightly-2026-09-19-f6dea9d-arm64.dmg)
+
+[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.34-2026-09-19-1133-r133.1/Installer-Crest-0.6.34-nightly-2026-09-19-f6dea9d-arm64.dmg" length="27161899" type="application/octet-stream" sparkle:edSignature="8/GjkJFsb9EXSD5QgSn0JpaznumgzYc4dkt/kCHn4LI1iYgHVizeV0IE+VuIcJ32ukHBojiOWjqjS/4nUSKCCQ=="/>
+        </item>
+        <item>
             <title>0.6.33</title>
             <pubDate>Fri, 18 Sep 2026 21:01:06 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -48,76 +83,9 @@ Stable releases are signed, notarized, and ready for everyday use.
 ]]></description>
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.33/Installer-Crest-0.6.33-arm64.dmg" length="27149556" type="application/octet-stream" sparkle:edSignature="AKgEI1YX5lURUdgLYhcKq0nnEhj55f2kEHFW953BMiBouz2BQOdGWtJPB4ysnX2RDHDeNHIdnCuyRPn9xUR1CA=="/>
         </item>
-        <item>
-            <title>0.6.29</title>
-            <pubDate>Fri, 18 Sep 2026 13:06:56 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1127</sparkle:version>
-            <sparkle:shortVersionString>0.6.29</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-### Improved
-
-- Choose whether unloaded tabs appear dimmed in Look and Feel settings
-- Quick Window Space indicators now use balanced padding.
-
-### Fixed
-
-- Quick Windows follow your browser border size while keeping balanced spacing around their controls
-- Image-converter extensions can save JPEGs repeatedly and keep their image menus after restarting Crest
-- Return from Picture in Picture to the tab and browser window that started playback
-- Prevent password manager popups and login-field suggestions from repeatedly reloading webpages
-
----
-
-Nightly builds contain the newest changes and may be less reliable than stable releases.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/616f92d745b82c36cf78daded5e7174d83ab1669...c3a4d4514454519b3dd08b934037576f9ff5bbeb) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.29-2026-09-18-1127-r127.1/Installer-Crest-0.6.29-nightly-2026-09-18-c3a4d45-arm64.dmg)
-
-[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.29-2026-09-18-1127-r127.1/Installer-Crest-0.6.29-nightly-2026-09-18-c3a4d45-arm64.dmg" length="27136813" type="application/octet-stream" sparkle:edSignature="pji7S3IxUDkvGQ+rQCX5rV9QBVEsfYlK/2oGEpvAX81YXhmx8KqRsqIDsTHEuH/w5OVQa6FOpweLoXaclhUjDA=="/>
-        </item>
-        <item>
-            <title>0.6.8</title>
-            <pubDate>Tue, 15 Sep 2026 15:25:03 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1106</sparkle:version>
-            <sparkle:shortVersionString>0.6.8</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-### Improved
-
-- Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse
-- Check and repair macOS permissions in General settings, verify download folder access, and stop requesting passkey access during ordinary browsing
-- Reduce pauses during iCloud sync by avoiding repeated sorting work in large browsing histories
-- Choose which downloaded languages translate automatically and their destination languages in General settings
-- Gray out language mappings while automatic translation is off and restore their controls when it is enabled
-
-### Fixed
-
-- Translate automatically without pop-ups, turn off translation offers, and manage download and location permissions from site controls without saving accidental blocks
-- Keep the tab you select while Crest starts instead of returning to the Start Page when extensions finish loading
-- Keep dragging links into Peek available after following an in-page link
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/db691fbc3472fd45b3b4fc5062c75abe381b151d...69ea275c3b4020c24b543d5a8b0cc53611f35869) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.6.8/Installer-Crest-0.6.8-arm64.dmg)
-
-[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.8/Installer-Crest-0.6.8-arm64.dmg" length="26905844" type="application/octet-stream" sparkle:edSignature="1L8YsihjU115Qx7nd0w9Xx8cUWp9xFOoS9IJhr4RW/5c7pppPsdGnglWieTOevgsbzRZT4LQ2zJFihDgBVzyCA=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 58XE4m5j1Gz1CNjhvQueFEqwakwjmW1QUhAhEfIYnlkmxo7Vh/uoXExXr1961x/g7XNLlm7Thw1joRcBQcwGAQ==
-length: 6981
+edSignature: M3V0TK+Oac744XbgzvDOW1SFt1cDfW4FNeAMxHLGYbNcACYilslT3AE9Z+A8GaslyP+cWB7qHo52/GVWYeumDg==
+length: 4604
 -->
