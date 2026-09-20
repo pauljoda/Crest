@@ -1493,6 +1493,10 @@
     "native-chromium-extensions-and-page-controls": {
       "category": "internal",
       "message": "Restore native extension controls, permission review, and Space installation for Chromium, and connect private browsing, popups, Find, zoom, and site permissions."
+    },
+    "core-space-commands-sync-rules-crest-branding": {
+      "category": "internal",
+      "message": "Move Space and folder changes, sync conflicts, and stable ordering into the portable core, and restore Crest icon customization in the Chromium host."
     }
   }
 }

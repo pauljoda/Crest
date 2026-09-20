@@ -7,7 +7,17 @@ enum BrowserSyncOrderTokenAllocator {
     static func allocate<ID: Hashable>(
         ids: [ID],
         existingTokens: [ID: String]
-    ) -> [ID: String] {
+    ) throws -> [ID: String] {
+        #if CREST_CORE_BACKED
+        let tokens: [String] = try BrowserCoreSync.evaluate([
+            "version": 1, "operation": "order.allocate",
+            "tokens": ids.map { existingTokens[$0] as Any? ?? NSNull() }
+        ])
+        guard tokens.count == ids.count else { throw BrowserSyncError.invalidField("orderTokens") }
+        // Projection validates record identities and reports the offending ID.
+        // Avoid trapping here before that validation can reject a duplicate.
+        return Dictionary(zip(ids, tokens), uniquingKeysWith: { _, last in last })
+        #else
         guard !ids.isEmpty else { return [:] }
 
         let candidates: [(desiredIndex: Int, id: ID, value: UInt64)] =
@@ -54,6 +64,7 @@ enum BrowserSyncOrderTokenAllocator {
             result[ids[previousIndex + 1 + offset]] = encode(value)
         }
         return result
+        #endif
     }
 
     static func isValidEncodedToken(_ token: String) -> Bool {

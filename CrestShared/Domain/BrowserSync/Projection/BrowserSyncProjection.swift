@@ -11,7 +11,7 @@ enum BrowserSyncProjection {
         let spaceRecordIDs = session.spaces.map {
             BrowserSyncRecordID(kind: .space, value: $0.id.rawValue)
         }
-        let spaceTokens = BrowserSyncOrderTokenAllocator.allocate(
+        let spaceTokens = try BrowserSyncOrderTokenAllocator.allocate(
             ids: spaceRecordIDs,
             existingTokens: existingTokens
         )
@@ -63,7 +63,7 @@ enum BrowserSyncProjection {
                         BrowserSyncRecordID(kind: .folder, value: $0.id.rawValue)
                     }
                     folderTokens.merge(
-                        BrowserSyncOrderTokenAllocator.allocate(
+                        try BrowserSyncOrderTokenAllocator.allocate(
                             ids: siblingRecordIDs,
                             existingTokens: existingTokens
                         ),
@@ -100,7 +100,7 @@ enum BrowserSyncProjection {
             let tabRecordIDs = includedTabs.map {
                 BrowserSyncRecordID(kind: .tab, value: $0.id.rawValue)
             }
-            let tabTokens = BrowserSyncOrderTokenAllocator.allocate(
+            let tabTokens = try BrowserSyncOrderTokenAllocator.allocate(
                 ids: tabRecordIDs,
                 existingTokens: existingTokens
             )
@@ -148,7 +148,7 @@ enum BrowserSyncProjection {
                 let archiveRecordIDs = includedArchive.map {
                     BrowserSyncRecordID(kind: .archive, value: $0.id.rawValue)
                 }
-                let archiveTokens = BrowserSyncOrderTokenAllocator.allocate(
+                let archiveTokens = try BrowserSyncOrderTokenAllocator.allocate(
                     ids: archiveRecordIDs,
                     existingTokens: existingTokens
                 )

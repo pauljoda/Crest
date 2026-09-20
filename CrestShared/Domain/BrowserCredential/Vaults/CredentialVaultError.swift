@@ -10,4 +10,5 @@ enum CredentialVaultError: Error, Equatable, Sendable {
     case spaceMismatch(expected: SpaceID, actual: SpaceID)
     case malformedStoredCredential
     case atomicReplacementRestoreFailed
+    case preferenceUpdateFailed
 }

@@ -24,6 +24,13 @@ public sealed class LegacySessionDocument
     {
         if (tabs.TryGetValue(source.Value, out var value)) tabs[destination.Value] = (JsonObject)value.DeepClone();
     }
+    internal bool SetFolderMetadata(FolderId id, string field, JsonNode value)
+    {
+        if (!folders.TryGetValue(id.Value, out var metadata)) folders[id.Value] = metadata = new();
+        if (JsonNode.DeepEquals(metadata[field], value)) return false;
+        metadata[field] = value.DeepClone();
+        return true;
+    }
     internal void TransferTabMetadata(TabId tab, LegacySessionDocument destination)
     {
         if (tabs.TryGetValue(tab.Value, out var value)) destination.tabs[tab.Value] = (JsonObject)value.DeepClone();

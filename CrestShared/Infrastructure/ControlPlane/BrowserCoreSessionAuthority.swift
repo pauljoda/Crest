@@ -11,10 +11,14 @@ final class BrowserCoreSessionAuthority {
     @ObservationIgnored private var revision: UInt64
     @ObservationIgnored private let owner: SessionHandle
 
-    init(session: BrowserSession) {
+    init(session: BrowserSession, workspaceKind: String = "persistent") {
         projection = session
         do {
-            let data = try JSONEncoder().encode(Self.compact(session))
+            guard var input = try Self.value(Self.compact(session)) as? [String: Any] else {
+                throw CoreError.rejected(CREST_INVALID_ARGUMENT)
+            }
+            input["coreWorkspaceKind"] = workspaceKind
+            let data = try JSONSerialization.data(withJSONObject: input)
             var handle: UInt64 = 0; var initialRevision: UInt64 = 0
             let result = data.withUnsafeBytes {
                 crest_session_create($0.bindMemory(to: UInt8.self).baseAddress, data.count, &handle, &initialRevision)
@@ -75,6 +79,47 @@ final class BrowserCoreSessionAuthority {
             "arguments": arguments, "window": try Self.selection(for: window),
             "now": date.timeIntervalSinceReferenceDate,
         ])
+        return try commitCommand(data) { output in
+            let result = try BrowserCoreSessionEditing.decode(output, preservingAssetsFrom: self.projection.spaces[index])
+            var next = self.projection
+            next.selectedSpaceID = window.selectedSpaceID
+            for i in next.spaces.indices {
+                next.spaces[i].selectedTabID = window.space(id: next.spaces[i].id)?.selectedTabID
+            }
+            next.applyCoreResult(result, at: index)
+            return (next, result)
+        }
+    }
+
+    func executeSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
+        window: BrowserSession, at date: Date) throws -> Bool {
+        let space = spaceID.flatMap { window.space(id: $0) }
+        let data = try JSONSerialization.data(withJSONObject: [
+            "version": 1, "operation": operation,
+            "spaceId": spaceID?.rawValue.uuidString as Any? ?? NSNull(),
+            "profileId": space?.profile.id.uuidString as Any? ?? NSNull(),
+            "arguments": arguments, "window": try Self.selection(for: window),
+            "now": date.timeIntervalSinceReferenceDate,
+        ])
+        return try commitCommand(data) { output in
+            struct Result: Decodable { let session: BrowserSession }
+            var next = try JSONDecoder().decode(Result.self, from: output).session
+            for index in next.spaces.indices {
+                guard let existing = self.projection.space(id: next.spaces[index].id) else { continue }
+                guard next.spaces[index].profile == existing.profile else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+                // Space commands return only metadata for existing Spaces.
+                // Collections and native assets are unchanged in the authority.
+                next.spaces[index].tabs = existing.tabs
+                next.spaces[index].folders = existing.folders
+                next.spaces[index].history = existing.history
+                next.spaces[index].archivedTabs = existing.archivedTabs
+            }
+            return (next, next != window)
+        }
+    }
+
+    private func commitCommand<Result>(_ data: Data,
+        decode: (Data) throws -> (BrowserSession, Result)) throws -> Result {
         var command: UInt64 = 0
         let prepared = data.withUnsafeBytes {
             crest_session_prepare_command(owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &command)
@@ -92,13 +137,7 @@ final class BrowserCoreSessionAuthority {
             crest_session_read_command(command, $0.bindMemory(to: UInt8.self).baseAddress, capacity, &length)
         }
         guard read == CREST_OK else { throw CoreError.rejected(read) }
-        let result = try BrowserCoreSessionEditing.decode(output, preservingAssetsFrom: projection.spaces[index])
-        var next = projection
-        next.selectedSpaceID = window.selectedSpaceID
-        for i in next.spaces.indices {
-            next.spaces[i].selectedTabID = window.space(id: next.spaces[i].id)?.selectedTabID
-        }
-        next.applyCoreResult(result, at: index)
+        let (next, result) = try decode(output)
         var accepted: UInt64 = 0
         let committed = crest_session_commit_command(command, &accepted)
         guard committed == CREST_OK else { throw CoreError.rejected(committed) }

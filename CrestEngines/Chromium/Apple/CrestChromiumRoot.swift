@@ -24,6 +24,7 @@ final class CrestChromiumRoot: NSObject {
         guard instance == nil else { return }
         let root = CrestChromiumRoot(host: host)
         instance = root
+        BrowserMacAppIconPreference.restore()
         root.openWindow(.initial)
         root.eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             handleShortcutEvent(event) ? nil : event

@@ -22,11 +22,13 @@ final class BrowserStoreFamily {
     @ObservationIgnored private var lastCleanupSweepAt: Date?
 
     init(
-        session: BrowserSession, temporarySourceAssignment: BrowserSpaceRuntimeAssignment? = nil,
+        session: BrowserSession, browsingMode: BrowserBrowsingMode = .standard,
+        temporarySourceAssignment: BrowserSpaceRuntimeAssignment? = nil,
         temporarySettingsBrowser: BrowserStore? = nil
     ) {
         #if CREST_CORE_BACKED
-        core = BrowserCoreSessionAuthority(session: session)
+        core = BrowserCoreSessionAuthority(session: session,
+            workspaceKind: temporarySourceAssignment != nil ? "temporary" : browsingMode.isPrivate ? "private" : "persistent")
         #else
         authoritativeSession = session
         #endif
@@ -68,6 +70,19 @@ final class BrowserStoreFamily {
     }
 
     #if CREST_CORE_BACKED
+    func executeSpace(_ operation: String, in spaceID: SpaceID? = nil, arguments: [String: Any],
+        from source: BrowserStore, at date: Date = .now) -> Bool {
+        let previous = authoritativeSession
+        do {
+            let changed = try core.executeSpace(operation, in: spaceID, arguments: arguments, window: source.session, at: date)
+            reconcileStores(after: previous, from: source)
+            return changed
+        } catch {
+            source.localSyncErrorDescription = "Core Space command failed: \(error)"
+            return false
+        }
+    }
+
     func execute(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
         from source: BrowserStore, at date: Date) -> BrowserCoreSessionEditing.Result? {
         let previous = authoritativeSession

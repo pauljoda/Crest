@@ -15,6 +15,8 @@ public sealed partial class NativeSessionAuthority
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
             var request = Parse(bytes);
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+            if (request["operation"]!.GetValue<string>().StartsWith("space.", StringComparison.Ordinal))
+                return PrepareSpaceCommand(expected, request);
             var spaceId = Id(request["spaceId"]);
             var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == spaceId);
             if (Id(request["profileId"]) != Id(original.Metadata["profile"]!["id"]))

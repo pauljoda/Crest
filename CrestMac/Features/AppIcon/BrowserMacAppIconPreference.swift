@@ -2,7 +2,14 @@ import AppKit
 
 @MainActor
 enum BrowserMacAppIconPreference {
+    #if CREST_CHROMIUM_HOST
+    // The Dock plug-in runs outside the browser process, including after quit.
+    // App artwork uses the isolated app's domain, not an environment-only
+    // browsing profile name that the Dock cannot discover.
+    static let defaults = UserDefaults.standard
+    #else
     static let defaults = BrowserFolderAppearancePreference.defaults
+    #endif
     private static var restored = false
     private static var appearanceObserver: BrowserMacAppIconAppearanceObserver?
 

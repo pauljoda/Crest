@@ -55,6 +55,15 @@ def main():
         if not sparkle.is_dir():
             parser.error("The native UI build must supply Sparkle.framework beside CrestChromiumUI.framework")
         subprocess.run(["ditto", str(sparkle), str(frameworks / "Sparkle.framework")], check=True)
+        icon = resources / "Crest.icns"
+        dock_plugin = ui.parent / "CrestDockTilePlugin.docktileplugin"
+        if not icon.is_file() or not dock_plugin.is_dir():
+            parser.error("The native UI build must supply Crest.icns and CrestDockTilePlugin.docktileplugin")
+        plugins = output / "Contents/PlugIns"
+        plugins.mkdir(exist_ok=True)
+        subprocess.run(["ditto", str(dock_plugin), str(plugins / dock_plugin.name)], check=True)
+        # Chromium's native menus also resolve its legacy app.icns resource.
+        shutil.copy2(icon, resources / "app.icns")
     (resources / "Crest-Isolated-Experiment").write_text("Explicit experimental profile required.\n")
     shutil.copy2(repo / "CrestEngines/Chromium/ThirdParty/Mori-LICENSE", resources / "Crest-Mori-LICENSE.txt")
     info_path = output / "Contents/Info.plist"
@@ -63,12 +72,23 @@ def main():
     info["CFBundleIdentifier"] = "com.pauldavis.crest.chromium-baseline" if args.baseline else "com.pauldavis.crest.control-plane.chromium"
     info["CFBundleDisplayName"] = "Crest Chromium Baseline" if args.baseline else "Crest Chromium Experiment"
     info["CFBundleName"] = info["CFBundleDisplayName"]
+    if not args.baseline:
+        with (ui / "Resources/Info.plist").open("rb") as stream:
+            ui_info = plistlib.load(stream)
+        info["CrestChromiumEngineVersion"] = info["CFBundleShortVersionString"]
+        info["CFBundleShortVersionString"] = ui_info["CFBundleShortVersionString"]
+        info["CFBundleVersion"] = ui_info["CFBundleVersion"]
+        info["CFBundleIconFile"] = "Crest"
+        info["CFBundleIconName"] = "Crest"
+        info["NSDockTilePlugIn"] = "CrestDockTilePlugin.docktileplugin"
+        info["CrestAppIconPreferenceDomain"] = info["CFBundleIdentifier"]
     # This experiment must not register as the system HTTP/HTTPS handler.
     info.pop("CFBundleURLTypes", None)
     info.pop("CFBundleDocumentTypes", None)
     with info_path.open("wb") as stream:
         plistlib.dump(info, stream)
-    targets = [] if args.baseline else [frameworks / "CrestCore.Native.dylib", frameworks / "CrestChromiumUI.framework"]
+    targets = [] if args.baseline else [frameworks / "CrestCore.Native.dylib", frameworks / "CrestChromiumUI.framework",
+                                      output / "Contents/PlugIns/CrestDockTilePlugin.docktileplugin"]
     targets += sorted((p for p in frameworks.rglob("*.app") if not p.is_symlink()), key=lambda p: len(p.parts), reverse=True)
     targets += sorted((p for p in frameworks.glob("*.framework") if p.name != "CrestChromiumUI.framework"), key=lambda p: len(p.parts), reverse=True)
     for target in [*targets, output]:

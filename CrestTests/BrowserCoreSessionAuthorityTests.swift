@@ -5,6 +5,33 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
+    func testSpaceCommandsPreserveNativeRecordsAndPublishAcrossWindows() throws {
+        var session = BrowserSession.preview
+        let icon = Data([3, 2, 1])
+        session.spaces[0].tabs[0].faviconData = icon
+        let store = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let other = store.makeWindowStore(restoresTabSelection: false)
+        let id = session.spaces[0].id
+        store.updateSpaceIdentity(id, name: "  Research  ", symbol: " ", accent: .teal)
+        XCTAssertEqual(other.session.space(id: id)?.name, "Research")
+        XCTAssertEqual(other.session.space(id: id)?.tabs[0].faviconData, icon)
+        XCTAssertNil(other.session.space(id: id)?.selectedTabID)
+        store.setDefaultSpace(id)
+        store.addSpace()
+        XCTAssertEqual(store.session.spaces.count, session.spaces.count + 1)
+        XCTAssertEqual(other.session.spaces.count, store.session.spaces.count)
+        XCTAssertEqual(other.session.selectedSpaceID, id)
+        XCTAssertEqual(store.session.defaultSpaceID, id)
+        XCTAssertEqual(store.session.spaces.last?.name, "Space 3")
+        let folderID = try XCTUnwrap(store.addFolder(title: "Research", color: .teal, in: id))
+        XCTAssertEqual(other.session.space(id: id)?.folders.first { $0.id == folderID }?.color, .teal)
+        XCTAssertTrue(store.setFolderSymbol(folderID, in: id, symbol: "book"))
+        XCTAssertTrue(store.setFolderColor(folderID, in: id, color: .gold))
+        XCTAssertEqual(other.session.space(id: id)?.folders.first { $0.id == folderID }?.symbol, "book")
+        XCTAssertEqual(other.session.space(id: id)?.folders.first { $0.id == folderID }?.color, .gold)
+        XCTAssertNil(store.localSyncErrorDescription)
+    }
+
     func testDirectCommandsKeepWindowSelectionAssetsAndSavedProjectionConsistent() throws {
         var original = BrowserSession.preview
         let spaceID = original.spaces[0].id

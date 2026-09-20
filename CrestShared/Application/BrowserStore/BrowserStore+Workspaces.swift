@@ -31,7 +31,8 @@ extension BrowserStore {
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
             family: BrowserStoreFamily(
-                session: workspace, temporarySourceAssignment: assignment, temporarySettingsBrowser: settingsBrowser),
+                session: workspace, browsingMode: browsingMode,
+                temporarySourceAssignment: assignment, temporarySettingsBrowser: settingsBrowser),
             linkPreferences: linkPreferences
         )
     }

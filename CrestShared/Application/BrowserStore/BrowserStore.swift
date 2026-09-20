@@ -67,7 +67,7 @@ final class BrowserStore {
             syncCoordinator: syncCoordinator,
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
-            family: BrowserStoreFamily(session: session),
+            family: BrowserStoreFamily(session: session, browsingMode: browsingMode),
             linkPreferences: linkPreferences
         )
     }

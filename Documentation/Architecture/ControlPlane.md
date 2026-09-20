@@ -1,5 +1,121 @@
 # Portable browser control plane
 
+## Migration completion contract
+
+Finish the original Crest UI on one portable browser core, with Chromium on
+macOS and WebKit on iPhone and iPad. Keep WebKit available as a registered engine.
+Preserve existing browser organization, Space isolation, native interaction and
+customization. Desktop and mobile must converge through the same sync rules even
+when they render pages with different engines. Deliver Crest-branded review
+builds and a reproducible packaging path without replacing the installed app or
+publishing a release as part of this migration.
+
+The working Chromium host establishes that the rendering approach is viable.
+It does not complete core ownership, sync, platform services or shipping
+composition. `CrestChromiumUI`, `CrestNativeCore` and `CrestMobileNativeCore` use
+the original views with `CREST_CORE_BACKED`; the normal `Crest` and `CrestMobile`
+targets still have their previous composition. The live native app uses
+`NativeSessionAuthority`; `BrowserSessionKernel` and its registered adapters
+remain a separate integration path. Completion requires one production authority
+and one capability contract, rather than maintaining two implementations of
+browser behavior.
+
+### Ownership after migration
+
+| Owner | Responsibilities |
+| --- | --- |
+| .NET Domain and Application | Session and workspace rules; Spaces, profiles, tabs, folders, splits, history and archive; durable commands; sync projection, ordering, conflict and deletion policy; restore and migration rules; authorization decisions based on platform results |
+| Engine adapter | Native page creation, rendering, input, navigation, engine history, page observations, origin permissions, downloads, popups and extension execution where supported |
+| Apple platform services | CloudKit transport and account state, filesystem storage, Keychain and system authentication, OS permission dialogs, native download destinations, app lifecycle, signing and packaging |
+| Existing SwiftUI/AppKit UI | Current layout and interaction, read projections, presentation state and commands; native card attachment and window presentation |
+
+Native rendering, pointer input, scrolling and compositing stay in the engine.
+They do not make round trips through JSON or the .NET command processor. A core
+command owns the semantic transition; correlated adapter completions report
+native work without becoming a second writer of browser state. Native image
+assets and opaque engine data stay outside semantic records.
+
+### Work order and acceptance
+
+| Step | Work | Completion evidence |
+| --- | --- | --- |
+| 1. Finish core ownership | Move remaining Space, branding, preference, workspace, transfer, import, cleanup and restore decisions from Swift proposals to semantic commands. Consolidate the authority and kernel paths around the real UI. Keep existing checkpoint compatibility and fail atomically when a command cannot commit. | Mac and mobile native UI perform the same operations against the core. Multiple windows reconcile correctly; restart restores accepted state. Remaining Swift mutations are presentation or adapter work, with no parallel domain implementation. |
+| 2. Move sync semantics | Port the existing record model, projection, order tokens, merge, materialization and tombstone policy to the core. Retain native CloudKit transport and account handling. Preserve wire compatibility and local-only records. | Focused record tests cover concurrent edits, delayed batches, explicit deletion, retention, older clients and restart. Chromium Mac and WebKit mobile then converge through real CloudKit in an isolated sync namespace, verified from records as well as UI. |
+| 3. Finish engine and service integration | Use the same registered page/profile contracts in the real UI. Complete tab/window before-unload, Crest download ledger integration, favicons, restoration, profile deletion, transfers and recovery. Inventory current reader, translation, capture, print, media, authentication, notification and page-action callers; adapt each supported feature and remove dormant WebKit objects from the Chromium path. | Exercise each migrated user flow in the native app. Capability declarations match actual adapter behavior and govern UI availability. Close cancellation, private/locked Space boundaries and interrupted operations preserve state. Unsupported engine features have explicit product behavior. |
+| 4. Complete native extensions | Preserve the restored toolbar, Site Controls, permission review, multi-Space installation and native Settings. Complete applicable action context menus, commands, extension-created windows and side panels. Keep Chromium responsible for verification, runtime permissions, updates and execution. Resolve iCloud Passwords through valid Crest signing and Apple's helper requirements. | uBlock Origin Lite filters real requests and retains profile settings. iCloud Passwords completes pairing and autofill with the properly entitled build and user participation where required. Installation, copying, removal and private access preserve Space ownership. |
+| 5. Finish Crest identity and lifecycle | Package the Crest default icon, alternate artwork and Dock tile plug-in. Restore saved icon preferences at Chromium startup. Replace app-facing Chromium menu/About identity with Crest while retaining required engine attribution. Wire external links, reopen, quit, saved windows, browser registration and the intended update path into the host. | Finder, running Dock and Dock after quit use Crest artwork. Default/custom choices survive relaunch and appearance changes. App/menu version and identity are correct. External links and lifecycle actions reach the native Crest UI. |
+| 6. Complete app composition and migration | Make the core the normal app composition on both platforms. Keep isolated review identities and explicit profile roots. Provide a safe import/upgrade path for existing Crest state, with recovery copies and no implicit WebKit-to-Chromium cookie or credential conversion. Document reproducible builds, required entitlements and engine distribution requirements. Remove obsolete experiment UI and duplicate migration paths once the real app covers their contracts. | Fresh install, existing-session upgrade, restart, offline editing, sync reconnect and private browsing work on Mac and mobile. Original UI remains intact. Relevant retained tests and release builds pass; temporary build outputs are cleaned. Every remaining external dependency is named, and unfinished requirements remain open. |
+
+The Chromium packager includes Crest's default and alternate icon resources and
+Dock tile plug-in. The native root restores the icon preference at startup. The
+preference uses the experimental app's own domain so the Dock plug-in can read it
+outside the browser process. The outer bundle reports Crest's version while the
+engine framework retains its Chromium version. Remaining identity work includes
+the app menus, external links and normal distribution composition.
+
+Validate coherent user flows as they are wired into the app. Retain focused tests
+for state, persistence, synchronization, ownership and authorization. Do not make
+another synthetic UI or repeat long engine benchmarks for unrelated changes.
+Recheck performance when changes affect engine flags, scheduling or page
+attachment. Commit complete sections with the repository's version and release
+note requirements.
+
+### Cross-engine sync contract
+
+The existing CloudKit format is engine independent: Space and profile identifiers,
+Space appearance and browsing preferences, folders, HTTP/HTTPS tabs and their
+saved/pinned placement, split membership, history and archive. Existing user sync
+preferences still decide which optional record categories participate. CloudKit
+record identifiers, logical clocks, device identifiers, supported schema versions
+and encrypted payload encoding must survive the move to the core.
+
+The same tab ID and URL can therefore become a Chromium page on Mac and a WebKit
+page on mobile. A profile UUID is the shared logical identity; its on-device
+Chromium directory or WebKit data store is an adapter detail. Engine selection
+and capabilities belong to the local platform. A device must not delete a shared
+record merely because it lacks a capability.
+
+Cookies, sessions with websites, raw engine history stacks, caches, open native
+page handles, device permissions, extension packages and their granted access do
+not enter browser-record sync. Native Settings/Start pages, `chrome://`,
+`chrome-extension://`, files and other non-HTTP/HTTPS tabs stay local and survive
+incoming merges. Private and temporary workspace records do not upload. A locked
+Space's records may participate in existing sync policy without creating pages or
+bypassing the local authentication requirement.
+
+Chromium extension installation and copying currently operate within local Space
+profiles. The old `extensionSettings` sync preference remains decode-compatible
+but contributes no extension records. Mobile must not install Chromium extensions
+or revive WebKit extension emulation. Any later extension-list sync needs an
+explicit portable intent model and local permission review; it is not implicit in
+this browser-record migration.
+
+The main sync ownership gap is `BrowserSyncCoordinator.merge`: it currently stages
+the local session, merges records, materializes a Swift session and applies
+retention before submitting that result to the core authority. These rules must
+move together so an accepted session and its pending sync changes cannot diverge.
+Preserve ordering between local edits, incoming batches, durable checkpoints,
+pending uploads and acknowledgements, including crash recovery. Keep explicit
+deletion distinct from absence, retention and superseded records, and preserve
+unknown fields supported by the compatibility contract.
+
+The experimental Chromium launch creates an isolated CloudKit controller and
+does not start production sync. Removing that protection is not a sync migration.
+Add an explicitly configured test container or record zone and provisioned app
+identities for live cross-device validation. Keep sample sessions and test
+tombstones out of the installed app's journal and cloud records. Simulator builds
+and an idle sync indicator cannot substitute for two-client record convergence.
+
+### Completion gate
+
+Do not close the migration after a successful Chromium launch or extension demo.
+It is complete when the real desktop and mobile compositions share core behavior,
+cross-engine sync has live convergence evidence, retained user features have their
+engine/platform adapters, Crest identity and customization work, and existing
+sessions upgrade without loss. Keep external signing, provisioning or device
+access requirements visible; do not mark those requirements complete on the
+strength of unit tests or an unrelated successful build.
+
 ## Existing UI migration
 
 `CrestNativeCore` and `CrestMobileNativeCore` build the existing platform entry
@@ -31,12 +147,24 @@ those proposals with semantic core commands is a separate part of the migration.
 
 The store's tab opening, activation, closing, deletion, current-tab clearing,
 renaming and residency actions now send commands directly to that authority.
-Folder renaming, collapse, deletion, moves and tab filing use the same path.
+Folder creation, appearance, renaming, collapse, deletion, moves and tab filing use the same path.
 Requests contain arguments and window selection rather than an encoded Space.
 The core prepares the edit against its owned records, the native adapter decodes
 the resulting projection, and a revision-checked commit publishes both sides.
 Abandoned preparations do not change state. Favicon bytes stay native, and
 existing history and archive records do not cross the command boundary.
+
+Space creation, identity, appearance, preferences, default selection, saved-tab
+disclosure, reordering and removal also use the authority's commands. Profile
+identity is checked before editing; borrowed workspaces cannot change their source
+profiles. The core enforces new private Space defaults and prevents removal of
+the last Space. Native profile cleanup and authentication remain platform work.
+
+`crest_core_evaluate_sync` runs wire-compatible conflict resolution and stable
+fractional ordering in the core. Record identity is validated on both sides of
+the boundary. The existing Swift journal, projection and materializer still
+orchestrate these decisions; moving that transaction and its persistence into
+the authority remains required before enabling cross-engine cloud sync.
 
 Value-only operations still use `crest_core_edit_session`, which receives one
 compact Space and returns an atomic edit.
@@ -105,7 +233,7 @@ integration column describes work still needed in the original UI composition.
 | `BrowserStore+Spaces`, `BrowserSession+Organization`, address/search policy | Space/profile, organization, address resolution, search/content-blocking preferences and resumable deletion | Full branding and production profile deletion adapters |
 | `BrowserStore+Folders`, split-group domain | Nested folders, tab boundaries, subtree moves, filing, duplication, split mutations and multiple native page presentation | Batch close, appearance commands and full native UI bindings |
 | Page pools and platform page stores | Registered page/profile ports | Wrap both platform pools, preserve scene/runtime lifetime and recovery |
-| Chromium extensions | Engine-owned extension runtime | Native host integration; WebKit extension support is removed |
+| Chromium extensions | Engine-owned extension runtime with restored native toolbar, Site Controls, installer and Settings | Remaining extension UI parity, commands, windows, side panels and credential-helper signing; WebKit extension support is removed |
 | Persistence and sync coordinators | Original UI saves immutable core checkpoints in the existing Codable format; kernel provides revisioned saves and Space tombstones | Production import, core restore/migration rules and sync reconciliation |
 | Permission/credential/download services | Core policy with native continuations | Preserve document/origin scope and native consent flows |
 

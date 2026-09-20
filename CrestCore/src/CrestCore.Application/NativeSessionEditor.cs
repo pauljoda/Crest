@@ -98,7 +98,18 @@ public static class NativeSessionEditor
                 changed = space.MoveSplitMember(Id("tabId"), index!.Value, now);
                 break;
             case "folder.create":
-                space.AddFolder(Folder("folderId")!.Value, args["title"]!.GetValue<string>(), Placement("placement"), Folder("parentId"));
+                var createdFolder = Folder("folderId")!.Value;
+                space.AddFolder(createdFolder, args["title"]!.GetValue<string>(), Placement("placement"), Folder("parentId"));
+                if (args["color"] is { } color) document.SetFolderMetadata(createdFolder, "color", color.AsObject());
+                if (args["symbol"] is { } symbol) document.SetFolderMetadata(createdFolder, "symbol", FolderSymbol(symbol));
+                break;
+            case "folder.color":
+            case "folder.symbol":
+                var styledFolder = Folder("folderId")!.Value;
+                if (!space.Folders.Any(f => f.Id == styledFolder)) throw new BrowserRuleException("unknown_folder");
+                var field = operation == "folder.color" ? "color" : "symbol";
+                changed = document.SetFolderMetadata(styledFolder, field,
+                    field == "color" ? args["value"]!.AsObject() : FolderSymbol(args["value"]!));
                 break;
             case "folder.rename":
                 var folderId = Folder("folderId")!.Value; var folderTitle = args["title"]!.GetValue<string>().Trim();
@@ -152,6 +163,12 @@ public static class NativeSessionEditor
         return Encoding.UTF8.GetBytes(new JsonObject
         { ["space"] = output, ["tabId"] = result?.Value.ToString(), ["selectSpace"] = selectSpace,
             ["copies"] = copies, ["changed"] = changed }.ToJsonString());
+    }
+    private static JsonNode FolderSymbol(JsonNode value)
+    {
+        string symbol = value.GetValue<string>();
+        if (symbol.Length == 0 || Encoding.UTF8.GetByteCount(symbol) > 128) throw new BrowserRuleException("invalid_folder_symbol");
+        return JsonValue.Create(symbol)!;
     }
     private sealed class SuppliedIds(JsonArray values) : IIdSource
     {

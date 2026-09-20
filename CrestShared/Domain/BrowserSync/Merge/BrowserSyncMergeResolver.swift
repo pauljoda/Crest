@@ -5,6 +5,9 @@ enum BrowserSyncMergeResolver {
         _ first: BrowserSyncRecord,
         _ second: BrowserSyncRecord
     ) throws -> BrowserSyncRecord {
+        #if CREST_CORE_BACKED
+        return try BrowserCoreSync.resolve(first, second)
+        #else
         if first.tombstone?.reason == .explicitDelete {
             return first
         }
@@ -132,6 +135,7 @@ enum BrowserSyncMergeResolver {
         default:
             return newer
         }
+        #endif
     }
 
     private static func latestSavedTabsDisclosure(

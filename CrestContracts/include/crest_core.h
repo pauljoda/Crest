@@ -70,6 +70,13 @@ CREST_API crest_status_t CREST_CALL crest_core_edit_session(
     const uint8_t* input_utf8, size_t input_length,
     uint8_t* destination, size_t capacity, size_t* out_length);
 
+/* Pure sync-record evaluation. Preserves the engine-independent wire format.
+ * Buffers <= 16 MiB. No cloud I/O, callbacks, retained state or native objects.
+ * Capacity probing does not mutate records or advance logical clocks. */
+CREST_API crest_status_t CREST_CALL crest_core_evaluate_sync(
+    const uint8_t* input_utf8, size_t input_length,
+    uint8_t* destination, size_t capacity, size_t* out_length);
+
 /* Native-UI session authority. All calls are exception-contained. Inputs and
  * checkpoint parts are <= 64 MiB; no native objects, disk I/O or callbacks.
  * Commits require the last accepted revision. Pair commits publish both or

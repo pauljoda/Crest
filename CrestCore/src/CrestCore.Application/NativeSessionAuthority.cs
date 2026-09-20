@@ -13,6 +13,7 @@ public sealed partial class NativeSessionAuthority
     public const int MaximumBytes = 64 * 1024 * 1024;
     internal static readonly object Gate = new();
     private SessionDocument document;
+    private readonly BrowserWorkspaceKind workspaceKind;
     internal sealed record SessionDocument(JsonObject Metadata, IReadOnlyList<SpaceDocument> Spaces);
     internal sealed record SpaceDocument(JsonObject Metadata, IReadOnlyDictionary<string, IReadOnlyList<JsonNode>> Sections);
     public ulong Revision { get; private set; } = 1;
@@ -20,7 +21,14 @@ public sealed partial class NativeSessionAuthority
     public NativeSessionAuthority(ReadOnlySpan<byte> bytes)
     {
         var input = Parse(bytes);
-        document = new(Fields(input, ["spaces"]), input["spaces"]!.AsArray().Select(node =>
+        workspaceKind = input["coreWorkspaceKind"]?.GetValue<string>() switch
+        {
+            null or "persistent" => BrowserWorkspaceKind.Persistent,
+            "private" => BrowserWorkspaceKind.Private,
+            "temporary" => BrowserWorkspaceKind.Temporary,
+            _ => throw new BrowserRuleException("invalid_workspace_kind")
+        };
+        document = new(Fields(input, ["spaces", "coreWorkspaceKind"]), input["spaces"]!.AsArray().Select(node =>
             new SpaceDocument(Fields(node!.AsObject(), Sections), Sections.ToDictionary(section => section,
                 section => (IReadOnlyList<JsonNode>)node[section]!.AsArray().Select(item => item!.DeepClone()).ToArray()))).ToArray());
         Validate(document);

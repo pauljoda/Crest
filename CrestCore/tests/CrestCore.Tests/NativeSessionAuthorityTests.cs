@@ -87,4 +87,90 @@ public sealed partial class BrowserContractsTests
         Assert.True(JsonNode.DeepEquals(space["history"], JsonNode.Parse(checkpoint.Read(fixture.Space.Value.ToString()))));
         Assert.True(JsonNode.DeepEquals(space["branding"], saved["branding"]));
     }
+
+    private static byte[] SpaceCommand(JsonNode session, string operation, JsonObject arguments, JsonNode? target = null)
+    {
+        target ??= session["spaces"]![0]!;
+        return Bytes(new JsonObject
+        {
+            ["version"] = 1, ["operation"] = operation, ["arguments"] = arguments,
+            ["spaceId"] = target["id"]!.DeepClone(), ["profileId"] = target["profile"]!["id"]!.DeepClone(),
+            ["window"] = JsonNode.Parse(Selection(session)), ["now"] = 800000002.0
+        });
+    }
+
+    [Fact]
+    public void SpaceCommandsPreserveCollectionsAndCannotApplyToReplacedProfiles()
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var original = authority.Checkpoint(1, Selection(session));
+        var pending = authority.PrepareCommand(1, SpaceCommand(session, "space.identity", new()
+        { ["name"] = "  Research  ", ["symbol"] = "  ", ["accent"] = "teal" }));
+        Assert.Equal(1UL, authority.Revision);
+        var projection = JsonNode.Parse(pending.Output)!["session"]!;
+        Assert.Empty(projection["spaces"]![0]!["tabs"]!.AsArray());
+        pending.Commit();
+        var saved = JsonNode.Parse(authority.Checkpoint(2, Selection(session)).Read("core"))!;
+        Assert.Equal("Research", saved["spaces"]![0]!["name"]!.GetValue<string>());
+        Assert.Equal("square.grid.2x2", saved["spaces"]![0]!["symbol"]!.GetValue<string>());
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(original.Read("core"))!["spaces"]![0]!["tabs"], saved["spaces"]![0]!["tabs"]));
+        Assert.Equal(original.Read(fixture.Space.Value.ToString()), authority.Checkpoint(2, Selection(session)).Read(fixture.Space.Value.ToString()));
+        var invalid = JsonNode.Parse(SpaceCommand(session, "space.access", new() { ["value"] = "open" }))!;
+        invalid["profileId"] = Guid.NewGuid().ToString();
+        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2, Bytes(invalid)));
+        Assert.Equal(2UL, authority.Revision);
+    }
+
+    [Fact]
+    public void SpaceRemovalRetainsOtherSpacesAndRejectsTheLastSpace()
+    {
+        var session = SavedSession().Document["session"]!;
+        var second = session["spaces"]![0]!.DeepClone();
+        second["id"] = SwiftId(Guid.NewGuid()); second["profile"]!["id"] = Guid.NewGuid().ToString();
+        second["tabs"] = new JsonArray(); second["selectedTabID"] = null;
+        session["spaces"]!.AsArray().Add(second);
+        session["defaultSpaceID"] = session["spaces"]![0]!["id"]!.DeepClone();
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var command = authority.PrepareCommand(1, SpaceCommand(session, "space.remove", new()));
+        command.Commit();
+        var projection = JsonNode.Parse(command.Output)!["session"]!;
+        Assert.Single(projection["spaces"]!.AsArray());
+        Assert.True(JsonNode.DeepEquals(second["id"], projection["selectedSpaceID"]));
+        Assert.True(JsonNode.DeepEquals(second["id"], projection["defaultSpaceID"]));
+        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2, SpaceCommand(projection, "space.remove", new())));
+    }
+
+    [Fact]
+    public void PrivateSpaceCreationEnforcesPrivateDefaultsAndBorrowedWorkspaceCannotCreate()
+    {
+        var session = SavedSession().Document["session"]!;
+        var template = session["spaces"]![0]!.DeepClone();
+        template["id"] = SwiftId(Guid.NewGuid()); template["profile"]!["id"] = Guid.NewGuid().ToString();
+        template["folders"] = new JsonArray(); template["history"] = new JsonArray(); template["archivedTabs"] = new JsonArray();
+        template["tabs"]![0]!["id"] = SwiftId(Guid.NewGuid()); template["tabs"]![0]!["url"] = null;
+        template["selectedTabID"] = template["tabs"]![0]!["id"]!.DeepClone();
+        session["coreWorkspaceKind"] = "private";
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var command = authority.PrepareCommand(1, SpaceCommand(session, "space.create", new() { ["template"] = template }));
+        command.Commit();
+        var projection = JsonNode.Parse(command.Output)!["session"]!;
+        var added = projection["spaces"]![1]!;
+        Assert.Equal("Private 2", added["name"]!.GetValue<string>());
+        Assert.Equal("duckDuckGo", added["browsingPreferences"]!["selectedSearchProviderID"]!.GetValue<string>());
+        Assert.Equal("never", added["browsingPreferences"]!["currentTabCleanupPolicy"]!.GetValue<string>());
+        Assert.False(added["credentialPreferences"]!["syncsCrestPasswordsWithICloud"]!.GetValue<bool>());
+        Assert.Null(projection["coreWorkspaceKind"]);
+        session["coreWorkspaceKind"] = "temporary";
+        var borrowed = new NativeSessionAuthority(Bytes(session));
+        Assert.Throws<BrowserRuleException>(() => borrowed.PrepareCommand(1,
+            SpaceCommand(session, "space.identity", new() { ["name"] = "Changed", ["symbol"] = "globe", ["accent"] = "teal" })));
+    }
+
+    [Fact]
+    public void SpaceReorderingUsesOriginalOffsetsAndClampsTheInsertionPoint()
+    {
+        Assert.Equal(new[] { "b", "d", "a", "c" }, SpaceOrganizationPolicy.Move(new[] { "a", "b", "c", "d" }, [2, 0, 2, -1, 9], 4));
+        Assert.Equal(new[] { "c", "a", "b" }, SpaceOrganizationPolicy.Move(new[] { "a", "b", "c" }, [2], int.MinValue));
+    }
 }
