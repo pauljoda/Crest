@@ -75,6 +75,11 @@ struct BrowserSettingsDestinationRouter: View {
                 contentBlockingErrorDescription:
                     contentBlockingErrorDescription
             )
+        #if CREST_CHROMIUM_HOST
+        case .extensions:
+            BrowserExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess,
+                requestedSpaceID: requestedSpaceID, requestRevision: requestRevision)
+        #endif
         case .passwords:
             BrowserPasswordSettingsPane(
                 browser: browser,

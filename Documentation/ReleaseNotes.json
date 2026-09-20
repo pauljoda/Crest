@@ -1489,6 +1489,10 @@
     "native-chromium-ui-and-optimized-engine": {
       "category": "internal",
       "message": "Run Chromium in the original native Crest UI with the portable core and release engine optimizations."
+    },
+    "native-chromium-extensions-and-page-controls": {
+      "category": "internal",
+      "message": "Restore native extension controls, permission review, and Space installation for Chromium, and connect private browsing, popups, Find, zoom, and site permissions."
     }
   }
 }

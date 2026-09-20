@@ -30,5 +30,25 @@
   "components/os_crypt/common/keychain_password_mac.mm": {
     "before": "a41705c2fb8188800d01bdfeb9218ca75150cebdaedcb3df96831b03d7e9cef3",
     "after": "9da11a2148d0bf3100a47fe57ce4c59248747bbee67cba66a677508d82216a19"
+  },
+  "chrome/browser/ui/views/permissions/permission_prompt_factory.cc": {
+    "before": "e13f55d1a822e180a046d8bf330f2cc11ebafd1cdb799d9f5180c185bcb6cbc1",
+    "after": "ee1c4be322f588e402d5db98ab084ee993356032cf16468eb13203095944011c"
+  },
+  "chrome/browser/profiles/profile.cc": {
+    "before": "40685c5ebfb47d9e3881c0f484829d45a131d79aa2094fdf4cb0d4ae41974701",
+    "after": "4b3571439a3d686aa3c4adefb30f0c12ab29f5a0f8ab06dd9362b151c0fd65d7"
+  },
+  "chrome/browser/ui/views/extensions/extension_install_dialog_view.cc": {
+    "before": "5b5154f3e878edeb0f641587fd000e77b92e10833997e578609739fe122ce406",
+    "after": "83c85ee2eace94d12b4b444df34af613f53a012b3492db6e45d597f511656157"
+  },
+  "chrome/browser/extensions/api/messaging/launch_context_posix.cc": {
+    "before": "f308ded59a78d966ad0e5c7bdda3b51f7a4d42fc674dc3082f4f38ef9d791f31",
+    "after": "fa9678a2253dbfbe91fd59a63209d47e73b7c9f5765ad3bdb95b9031c5ab56c5"
+  },
+  "extensions/browser/updater/extension_downloader.cc": {
+    "before": "569ea004873e5ef742f1cddb4c7b1285c3ccee9e3eddcc043932a4bd23dc8ff8",
+    "after": "bd20661f4483dce51cb43690c975ec6044f383ea705e4c0a3b46aa93e526e350"
   }
 }

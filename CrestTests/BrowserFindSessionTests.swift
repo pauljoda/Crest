@@ -1,4 +1,3 @@
-import WebKit
 import XCTest
 
 @testable import Crest
@@ -63,7 +62,7 @@ final class BrowserFindSessionTests: XCTestCase {
 private final class BrowserFindExecutorSpy: BrowserFindExecuting {
     struct Request {
         let query: String
-        let configuration: WKFindConfiguration
+        let configuration: BrowserFindConfiguration
         let completion: @MainActor (Bool) -> Void
     }
 
@@ -71,7 +70,7 @@ private final class BrowserFindExecutorSpy: BrowserFindExecuting {
 
     func performFind(
         _ query: String,
-        configuration: WKFindConfiguration,
+        configuration: BrowserFindConfiguration,
         completion: @escaping @MainActor (Bool) -> Void
     ) {
         requests.append(

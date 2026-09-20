@@ -4,7 +4,7 @@ import AppKit
 /// Owns the WebContents behind the original Crest page card. The shell and
 /// portable session retain their tab identities; this object owns only a page.
 @MainActor
-final class ChromiumNativePage {
+final class ChromiumNativePage: BrowserFindExecuting {
     let id = UUID().uuidString
     let surface = ChromiumNativePageView()
     var isPrivateBrowsing = false
@@ -12,6 +12,7 @@ final class ChromiumNativePage {
     private let observer: (String, [String: Any]) -> Void
     private var host: (any CrestChromiumEngineHost)?
     private var requestedURL: URL?
+    private var zoom: CGFloat = 1
     private var creating = false
     private var created = false
     private var disposed = false
@@ -44,17 +45,89 @@ final class ChromiumNativePage {
             return
         }
         guard !creating else { return }
-        // Private windows are not registered in this first host. Never fall
-        // through to a persistent Chromium profile for a private page.
-        guard !isPrivateBrowsing else { observer("creation_failed", [:]); return }
+        let sourceProfile = isPrivateBrowsing ? CrestChromiumRoot.privateSourceProfileID : nil
+        guard !isPrivateBrowsing || sourceProfile != nil else { observer("creation_failed", [:]); return }
         creating = true
         if !host.createPage(id, profile: profileID.uuidString, window: windowID,
-            privateMode: false, sourceProfile: nil, observer: { [weak self] event, values in
+            privateMode: isPrivateBrowsing, sourceProfile: sourceProfile?.uuidString, observer: { [weak self] event, values in
                 MainActor.assumeIsolated { self?.receive(event, values: values) }
             }) {
             creating = false
             observer("creation_failed", [:])
         }
+    }
+
+    func adopt(_ token: String) -> Bool {
+        guard !created, !creating, !disposed, let host = CrestChromiumRoot.engineHost else { return false }
+        self.host = host
+        creating = true
+        let accepted = host.adoptPage(token, asPage: id, profile: profileID.uuidString) { [weak self] event, values in
+            MainActor.assumeIsolated { self?.receive(event, values: values) }
+        }
+        if !accepted { creating = false }
+        return accepted
+    }
+
+    func performFind(_ query: String, configuration: BrowserFindConfiguration,
+                     completion: @escaping @MainActor (Bool) -> Void) {
+        guard created, !disposed, let host,
+            host.find(inPage: id, query: query, backwards: configuration.backwards,
+                caseSensitive: configuration.caseSensitive, completion: { found in
+                    MainActor.assumeIsolated { completion(found) }
+                }) else { completion(false); return }
+    }
+
+    struct SitePermission: Identifiable {
+        let id: String
+        let label: String
+        var value: Int
+        let supportsAsk: Bool
+    }
+    var permissions: [SitePermission] {
+        (host?.permissions(forPage: id) ?? []).compactMap { item in
+            guard let id = item["id"] as? String, let label = item["label"] as? String,
+                let value = item["value"] as? Int else { return nil }
+            return SitePermission(id: id, label: label, value: value, supportsAsk: item["supportsAsk"] as? Bool ?? false)
+        }
+    }
+    func setPermission(_ permission: String, value: Int) -> Bool {
+        host?.setPermission(permission, page: id, value: value) ?? false
+    }
+
+    struct ExtensionAction: Identifiable {
+        let id: String
+        let name: String
+        let badge: String
+        let icon: NSImage?
+        let pinned: Bool
+    }
+
+    var extensions: [ExtensionAction] {
+        guard created, !disposed else { return [] }
+        return (host?.extensions(forPage: id) ?? []).compactMap { item in
+            guard let id = item["id"] as? String, let name = item["name"] as? String else { return nil }
+            return ExtensionAction(id: id, name: name, badge: item["badge"] as? String ?? "", icon: item["icon"] as? NSImage, pinned: item["pinned"] as? Bool ?? false)
+        }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    func runExtension(_ extensionID: String, anchor: BrowserExtensionPopupAnchor? = nil) {
+        guard created, !disposed else { return }
+        if host?.runExtension(extensionID, page: id, anchor: anchor?.replacingSourceWindow(surface.window).screenPoint ?? NSEvent.mouseLocation) != true {
+            CrestChromiumRoot.showNativeNotice("This extension action is unavailable on this page.", icon: "puzzlepiece.extension")
+        }
+    }
+
+    static func webStoreExtensionID(_ url: URL?) -> String? {
+        guard let url, url.scheme == "https", url.host == "chromewebstore.google.com",
+            url.pathComponents.count >= 3, url.pathComponents[1] == "detail",
+            let id = url.pathComponents.last, id.count == 32,
+            id.allSatisfy({ ("a"..."p").contains(String($0)) }) else { return nil }
+        return id
+    }
+
+    func setZoom(_ zoom: CGFloat) {
+        self.zoom = zoom
+        if created { _ = host?.command("engine.zoom", page: id, url: String(Double(zoom))) }
     }
 
     func detach() { if created { host?.didDetachPage(id) } }
@@ -84,6 +157,7 @@ final class ChromiumNativePage {
             created = true
             creating = false
             attachIfPossible()
+            setZoom(zoom)
             navigatePendingURL()
         } else if event == "creation_failed" {
             creating = false

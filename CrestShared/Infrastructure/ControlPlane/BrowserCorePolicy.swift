@@ -8,8 +8,14 @@ import os
 enum BrowserCorePolicy {
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "CorePolicy")
     static func addressIntent(_ input: String, provider: BrowserSearchProvider) -> BrowserAddressIntent? {
+        #if CREST_CHROMIUM_HOST
+        let allowsInternalPages = true
+        #else
+        let allowsInternalPages = false
+        #endif
         guard let response = evaluate([
             "version": 1, "operation": "address.intent", "input": input,
+            "allowsInternalPages": allowsInternalPages,
             "searchTemplate": provider.coreSearchURLTemplate
         ]), let text = response["url"] as? String, let url = URL(string: text) else { return nil }
         if let query = response["searchQuery"] as? String { return .search(query: query, provider: provider, url: url) }

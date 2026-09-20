@@ -231,3 +231,79 @@
    return *account_name;
  }
  
+--- a/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
++++ b/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
+@@ -36,2 +36,4 @@
+ #if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#include "chrome/browser/ui/crest/crest_permission_prompt.h"
+ #include "chrome/browser/ui/views/permissions/permission_prompt_notifications_mac.h"
+@@ -277,2 +279,5 @@
+     permissions::PermissionPrompt::Delegate* delegate) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) return crest::CreatePermissionPrompt(web_contents, delegate);
++#endif
+   if (delegate->ShouldDropCurrentRequestIfCannotShowQuietly() &&
+--- a/chrome/browser/profiles/profile.cc
++++ b/chrome/browser/profiles/profile.cc
+@@ -121,2 +121,10 @@
+ bool Profile::OTRProfileID::AllowsBrowserWindows() const {
++#if BUILDFLAG(IS_MAC)
++  // Crest private workspaces retain independent OTR contexts under the source
++  // Space's profile instead of sharing Chromium's primary incognito context.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane") &&
++      base::StartsWith(profile_id_, "Crest::Private::", base::CompareCase::SENSITIVE)) {
++    return true;
++  }
++#endif
+   // Non-Primary OTR profiles are not supposed to create Browser windows.
+--- a/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc
++++ b/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc
+@@ -5,2 +5,6 @@
+ #include "chrome/browser/ui/views/extensions/extension_install_dialog_view.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#include "chrome/browser/ui/crest/crest_extension_prompt.h"
++#endif
+
+@@ -85,2 +89,8 @@
+   DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) {
++    crest::ShowExtensionPrompt(std::move(show_params), std::move(done_callback), std::move(prompt));
++    return;
++  }
++#endif
+
+--- a/chrome/browser/extensions/api/messaging/launch_context_posix.cc
++++ b/chrome/browser/extensions/api/messaging/launch_context_posix.cc
+@@ -49,2 +49,12 @@
+   }
++
++#if BUILDFLAG(IS_MAC)
++  // Apple supplies this system host in Chrome's global directory. Discover only
++  // that host; Chromium still validates its manifest and allowed extension IDs.
++  if (result.empty() && host_name == "com.apple.passwordmanager" &&
++      base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    base::FilePath apple_manifest("/Library/Google/Chrome/NativeMessagingHosts/com.apple.passwordmanager.json");
++    if (base::PathExists(apple_manifest)) result = apple_manifest;
++  }
++#endif
+
+--- a/extensions/browser/updater/extension_downloader.cc
++++ b/extensions/browser/updater/extension_downloader.cc
+@@ -348,4 +348,14 @@
+   pending_tasks_.clear();
+
++#if BUILDFLAG(IS_MAC)
++  // Restore manifest-declared extension updates for Crest's native host. Keep
++  // the upstream baseline unchanged and retain normal signature/permission checks.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    for (auto& fetch_list : fetches_preparing) {
++      for (auto& fetch : fetch_list.second)
++        StartUpdateCheck(std::move(fetch));
++    }
++  }
++#endif
+ }
+

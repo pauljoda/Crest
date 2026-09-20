@@ -7,8 +7,13 @@ public sealed record AddressResolution(string Url, string? SearchQuery)
         string value = input.Trim();
         if (value.Length == 0) return null;
         if (value.Length > 4096) throw new BrowserRuleException("invalid_address");
-        if (allowsInternalPages && (value == "about:blank" || value.StartsWith("chrome://", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase))) return new(value, null);
+        if (value == "about:blank" || value.StartsWith("chrome://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!allowsInternalPages) return new(provider.Search(value), value);
+            BrowserWorkspace.ValidateUrl(value, allowsInternalPages: true);
+            return new(value, null);
+        }
         if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && explicitUrl.Scheme is "http" or "https"
             && explicitUrl.Host.Length > 0) return new(value, null);
         if (!value.Any(char.IsWhiteSpace))

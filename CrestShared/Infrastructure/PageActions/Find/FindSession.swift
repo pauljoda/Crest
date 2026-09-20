@@ -1,5 +1,4 @@
 import Observation
-import WebKit
 
 @Observable
 @MainActor
@@ -59,13 +58,13 @@ final class BrowserFindSession {
     }
 
     private func clear(using executor: any BrowserFindExecuting) {
-        executor.performFind("", configuration: WKFindConfiguration()) { _ in }
+        executor.performFind("", configuration: BrowserFindConfiguration()) { _ in }
     }
 
     private static func configuration(
         for direction: BrowserFindDirection
-    ) -> WKFindConfiguration {
-        let configuration = WKFindConfiguration()
+    ) -> BrowserFindConfiguration {
+        var configuration = BrowserFindConfiguration()
         configuration.backwards = direction == .backward
         configuration.caseSensitive = false
         configuration.wraps = true

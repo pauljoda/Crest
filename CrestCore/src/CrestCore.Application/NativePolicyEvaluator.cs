@@ -56,13 +56,14 @@ public static class NativePolicyEvaluator
                 ["maximumEntries"] = HistoryPolicy.MaximumEntries
             });
         }
-        Protocol.Members(request, "version", "operation", "input", "searchTemplate");
+        Protocol.Members(request, "version", "operation", "input", "searchTemplate", "allowsInternalPages");
         if (Protocol.Text(request, "operation") != "address.intent") throw new ProtocolException("unknown_policy");
         // An empty address is a successful no-navigation decision.
         var input = request.GetProperty("input").GetString() ?? throw new ProtocolException("invalid_input");
         var template = Protocol.Text(request, "searchTemplate", 2048);
         var provider = SearchProvider.Custom(Guid.Parse("00000000-0000-0000-0000-000000000001"), "Native provider", template, null);
-        var intent = AddressResolution.Resolve(input, provider);
+        bool allowsInternalPages = request.TryGetProperty("allowsInternalPages", out var internalPages) && internalPages.GetBoolean();
+        var intent = AddressResolution.Resolve(input, provider, allowsInternalPages);
         return Encode(new JsonObject
         {
             ["url"] = intent?.Url, ["searchQuery"] = intent?.SearchQuery

@@ -143,6 +143,49 @@ native windows. `ChromiumNativePage` supplies the WebContents view inside the
 existing page card. Complete capability validation and distributable packaging
 remain part of the integration work.
 
+Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
+Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`
+contains those engine-independent views; `ChromiumExtensionStore` supplies
+profile-scoped Chromium state and native install presentation. Registry, action,
+toolbar, and icon observers refresh the UI without polling. Pinning is stored in
+Chromium's per-profile toolbar preferences.
+
+On a Chrome Web Store listing, **Install Extension…** in Site Controls downloads
+the CRX3 package from Google's update service. Chromium verifies the publisher
+proof and expected ID before Crest shows the original install review layout.
+The review displays Chromium's permission warnings and offers website-access
+withholding where supported. Required API permissions use Chromium's install
+consent semantics rather than the retired WebKit permission emulation.
+Selected additional Spaces install the same downloaded package, each with its own
+signature check and separate extension data. Consent is reused only when the
+verified extension identity, version, and warnings match. Locked, deleted, or
+replaced Space profiles cannot receive a copy.
+
+The native Extensions settings pane retains Space selection, extension artwork,
+disclosure rows, enable/remove controls, options pages, and copying to other
+Spaces. Chromium's manager is available for detailed permissions, developer-mode
+unpacked installs, and engine-specific controls. The store's own Add to Chrome
+button remains unavailable in the ungoogled baseline. Crest mode also restores
+Chromium's declared-URL extension update requests; signature and permission
+checks remain owned by Chromium.
+
+Apple installs its iCloud Passwords native-messaging manifest in Chrome's system
+directory. In Crest mode only, the host checks that location specifically for
+`com.apple.passwordmanager` when the regular Chromium lookup finds no manifest.
+Chromium still validates the manifest's allowed extension IDs, and Apple's helper
+still controls authentication and access to the password vault. Crest does not
+copy Chrome's profile, change Apple's helper, or read passwords itself.
+Apple's signed helper also checks the parent browser's identity. A browser needs
+an Apple-approved identity or the managed
+`com.apple.developer.web-browser.public-key-credential` entitlement with a
+matching provisioning profile. Crest's production App ID has that capability;
+the separate experimental bundle needs its own Apple approval. Merely adding the
+entitlement to an experimental signature does not make it authorized.
+
+Private windows use separate off-the-record profiles, and extension actions are
+filtered by Chromium's incognito authorization. Extension side panels and complete
+extension-created window routing remain integration work.
+
 Packaged experiments require `--signing-identity` with a stable Apple Development
 or Developer ID identity. Ad-hoc signing changes the keychain trust identity on
 rebuilds and is rejected. The host and baseline use separate Crest-named Safe

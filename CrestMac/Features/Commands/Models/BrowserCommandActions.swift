@@ -189,7 +189,11 @@ struct BrowserCommandActions {
     }
 
     func openPrivateWindow() {
+        #if CREST_CHROMIUM_HOST
+        CrestChromiumRoot.openPrivateNativeWindow()
+        #else
         openWindow(id: BrowserSceneID.privateBrowser.rawValue)
+        #endif
     }
 
     func openQuickWindow() {

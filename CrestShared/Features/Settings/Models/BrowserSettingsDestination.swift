@@ -22,6 +22,9 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     case sync
     case privacy
     case passwords
+    #if CREST_CHROMIUM_HOST
+    case extensions
+    #endif
     case featureFlags
     case advanced
     case about
@@ -57,6 +60,9 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .spaces: "square.grid.2x2"
         case .sync: "arrow.triangle.2.circlepath.icloud"
         case .privacy: "hand.raised"
+        #if CREST_CHROMIUM_HOST
+        case .extensions: "puzzlepiece.extension"
+        #endif
         case .passwords: "key.fill"
         case .featureFlags: "flag.2.crossed"
         case .advanced: "switch.2"
@@ -77,6 +83,9 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .spaces: CrestBrandPalette.coral
         case .sync: CrestBrandPalette.sage
         case .privacy: CrestBrandPalette.inkSoft
+        #if CREST_CHROMIUM_HOST
+        case .extensions: CrestBrandPalette.sage
+        #endif
         case .passwords: CrestBrandPalette.butter
         case .featureFlags: CrestBrandPalette.coral
         case .advanced: CrestBrandPalette.sage

@@ -10,6 +10,9 @@ extension BrowserSettingsDestination {
         case .spaces: "Spaces"
         case .sync: "Sync"
         case .privacy: "Privacy & Permissions"
+        #if CREST_CHROMIUM_HOST
+        case .extensions: "Extensions"
+        #endif
         case .passwords: "Passwords"
         case .featureFlags: "Feature Flags"
         case .advanced: "Advanced"
@@ -37,6 +40,9 @@ extension BrowserSettingsDestination {
         case .spaces: "Profiles and appearance"
         case .sync: "iCloud setup and status"
         case .privacy: "Site access and data"
+        #if CREST_CHROMIUM_HOST
+        case .extensions: "Space extensions and permissions"
+        #endif
         case .passwords: "Credentials and autofill"
         case .featureFlags: "WebKit experiments"
         case .advanced: "Import, export, and runtime"
@@ -64,6 +70,10 @@ extension BrowserSettingsDestination {
             "iCloud CloudKit account upload download conflict status monitor diagnostics pending records"
         case .privacy:
             "content blocking ads trackers camera microphone site access history cookies data"
+        #if CREST_CHROMIUM_HOST
+        case .extensions:
+            "extensions permissions Chromium Chrome Web Store install copies Spaces"
+        #endif
         case .passwords:
             "credentials autofill iCloud Keychain passkeys synchronization"
         case .featureFlags:

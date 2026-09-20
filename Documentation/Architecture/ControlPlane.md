@@ -155,7 +155,8 @@ on their next navigation. Native compilation failures remain visible and retryab
 The new WebKit adapter retains the existing popup delegate and adopts its exact
 native page, preserving the opener and original request. Its registration still
 declares extensions unavailable. WebKit extension installation, emulation,
-runtime coordination and extension UI have been removed. Before-unload,
+runtime coordination have been removed. The Chromium host reuses the native
+extension presentation components with Chromium-owned profile state. Before-unload,
 download and permission integration through the asynchronous adapter remain
 unverified; their native browsing implementations remain in the actual app.
 Chromium registration must likewise reflect the capabilities of the actual built
@@ -224,14 +225,31 @@ original UI resources and Sparkle dependency; isolated startup disables updates
 and CloudKit. Chromium quit requests run native before-unload and download checks,
 then flush native persistence before disposing pages.
 
-This is the first native UI integration, with several deliberate migration gaps.
-The macOS menu bar still comes from Chromium, with primary keyboard commands
-routed to Crest. Private windows and popup adoption are not connected to the
-original UI composition: unowned popup offers are rejected, and private pages
-cannot fall through to persistent profiles. The lower host already has adoption
-and off-the-record ports for the next integration. WebKit-specific page tools,
-permissions, downloads, favicon observations, opaque history restoration,
-profile deletion, and extensions still need their Chromium adapters. A dormant
+The original private-window composition uses a separate in-memory Chromium
+profile for each private Space. Closing that window releases its pages and
+profile; reopening starts a fresh session. Popup adoption attaches the existing
+WebContents to a core tab, preserving opener relationships and document state.
+Unowned or stale popup offers are rejected.
+
+Find uses an engine-neutral configuration, while Chromium supplies page search,
+zoom and DevTools. Site Controls reads and changes Chromium's origin permissions;
+permission requests use native sheets attached to the owning Crest window.
+Extension actions use the active page's profile and Chromium's real action runner,
+popup host, service workers and permission enforcement. Private windows only
+expose extensions explicitly enabled for incognito use. Crest's original toolbar,
+Site Controls grid, and install Space picker consume an observable native model;
+Chromium owns action execution, installation, permissions, updates, and pin state.
+Native Extensions settings provide Space-scoped management and copying, with a
+link to Chromium's advanced manager. CRX verification precedes the native consent
+review, and additional Space installations reuse only the explicitly reviewed
+package and permission identity.
+
+There are still migration gaps. The macOS menu bar comes from Chromium, with
+primary keyboard commands routed to Crest. Download transfers work through
+Chromium but have not reached Crest's download ledger. Individual tab/window
+closure still needs the same before-unload preflight as application quit.
+Other WebKit-specific page tools, favicon observations, opaque history restoration,
+profile deletion and extension side panels need their Chromium adapters. A dormant
 WKWebView remains behind compatibility APIs while these callers move; it does not
 load the Chromium page. Profile capabilities must describe this actual integration
 before features are advertised as supported.

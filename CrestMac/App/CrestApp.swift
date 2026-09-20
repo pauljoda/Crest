@@ -137,41 +137,7 @@ struct CrestApp: App {
 
         Window("Private Browsing", id: BrowserSceneID.privateBrowser.rawValue) {
             if presentsInstalledApplicationUI {
-                BrowserRootView(
-                    browser: privateBrowser,
-                    pages: privatePages,
-                    chrome: privateChrome,
-                    transientBrowsing: privateTransientBrowsing,
-                    startupBehavior: .lastActiveTab,
-                    shortcuts: shortcuts
-                )
-                .modifier(BrowserChromeAppearancePersistence())
-                .environment(windowTransparency)
-                .environment(splitFocus)
-                .environment(softwareUpdates)
-                .environment(
-                    \.browserSidebarWidgetRuntime,
-                    sidebarWidgets
-                )
-                .frame(minWidth: 900, minHeight: 600)
-                .preferredColorScheme(.dark)
-                .environment(
-                    \.browserSettingsTabContent, application.settingsTabContent(browser: privateBrowser, pages: privatePages)
-                )
-                .background(
-                    BrowserMacWindowAttachment(
-                        attach: { window in
-                            privatePages.bindNativeWindow(window)
-                            privatePages.setWindowFocused(window.isKeyWindow)
-                        },
-                        focusChanged: { privatePages.setWindowFocused($0) },
-                        close: {
-                            privatePages.setWindowFocused(false)
-                            privatePages.bindNativeWindow(nil)
-                        }
-                    )
-                )
-                .onDisappear(perform: application.closePrivateBrowsingWindow)
+                application.privateWindowContent
             } else {
                 EmptyView()
             }

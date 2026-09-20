@@ -673,13 +673,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     @discardableResult
     func showWebInspector() -> Bool {
-        BrowserWebInspectorAccess.show(
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { chromiumPage.command("engine.inspect"); return true }
+        #endif
+        return BrowserWebInspectorAccess.show(
             inspectorOwner: webView,
             isInspectable: webView.isInspectable
         )
     }
 
     func toggleDeveloperPanel(_ panel: BrowserDeveloperPanel) {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { chromiumPage.command("engine.inspect"); return }
+        #endif
         let result = BrowserWebInspectorAccess.toggle(
             panel,
             currentPanel: developerPanel,
@@ -773,12 +779,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         developerCaptureFeedback = nil
     }
 
+    private var findExecutor: any BrowserFindExecuting {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { return chromiumPage }
+        #endif
+        return webView
+    }
+
     func dismissFind() {
-        findSession.dismiss(using: webView)
+        findSession.dismiss(using: findExecutor)
     }
 
     func find(_ query: String, direction: BrowserFindDirection = .forward) {
-        findSession.find(query, direction: direction, using: webView)
+        findSession.find(query, direction: direction, using: findExecutor)
     }
 
     @discardableResult
@@ -1121,6 +1134,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             return false
         }
         pageZoom = zoom
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { chromiumPage.setZoom(renderedPageZoom); return true }
+        #endif
         webView.pageZoom = renderedPageZoom
         return true
     }
@@ -1202,6 +1218,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 committedNavigationCount += 1
             }
             if wasLoading, !isLoading, committedNavigationCount > 0 { completedNavigationCount += 1 }
+        case "closed":
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                host?.closeWebContentInitiatedPage(self)
+            }
         case "creation_failed":
             isLoading = false
             webContentFailureMessage = "Chromium couldn’t create this page."

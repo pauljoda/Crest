@@ -21,6 +21,11 @@ struct BrowserSiteControlContent: View {
                 page: configuration.page,
                 dismiss: dismiss
             )
+            #if CREST_CHROMIUM_HOST
+            if let native = configuration.page.chromiumPage {
+                ChromiumExtensionControls(page: native, space: configuration.space, url: configuration.page.url, dismiss: dismiss)
+            }
+            #endif
             Divider()
             BrowserSiteSettingsContent(
                 page: configuration.page,

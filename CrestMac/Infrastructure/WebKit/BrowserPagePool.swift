@@ -1169,6 +1169,42 @@ final class BrowserPagePool:
     /// configuration from the opener's, so it already carries the opener's
     /// `websiteDataStore` and web extension controller. The Space lookup only
     /// confirms the tab landed in the opener's own profile.
+    #if CREST_CHROMIUM_HOST
+    /// Retain Chromium's original WebContents, including its opener, history,
+    /// JavaScript state and extension tab identity, in the shared tab runtime.
+    func adoptChromiumPage(_ values: [String: Any]) -> Bool {
+        guard let token = values["adoptionId"] as? String,
+            let profile = (values["profileId"] as? String).flatMap(UUID.init(uuidString:)) else { return false }
+        let sourceID = values["sourcePageId"] as? String
+        let opener: BrowserPage?
+        if let sourceID {
+            opener = tabRuntimes.values.compactMap(\.page).first { $0.chromiumPage?.id == sourceID }
+        } else {
+            guard values["windowId"] as? String == windowID.rawValue.uuidString else { return false }
+            opener = activePage
+        }
+        guard let opener, opener.profileID == profile,
+            !isRuntimeCreationBlocked(in: opener.spaceID),
+            let registration = popupTabHost.openTab(
+                (values["url"] as? String).flatMap(URL.init(string:)), opener.spaceID,
+                values["foreground"] as? Bool ?? true),
+            registration.space.profile.id == profile else { return false }
+        let page = makePage(space: registration.space, tabID: registration.tab.id)
+        page.markOpenedAsPopup()
+        page.updateNavigationContext(tab: registration.tab, automaticallyOpensPeek: false)
+        guard page.chromiumPage?.adopt(token) == true else {
+            page.prepareForSpaceDeletion()
+            popupTabHost.closeTab(registration.tab.id, registration.space.id)
+            return false
+        }
+        retainResidentPage(page, for: registration.tab.id)
+        residencyRevision &+= 1
+        if values["foreground"] as? Bool ?? true { activate(registration.tab.id, at: .now) }
+        else { observeBackgroundPage(page, for: registration.tab.id, in: registration.space) }
+        return true
+    }
+    #endif
+
     func adoptPopupWebView(
         configuration: WKWebViewConfiguration,
         requestedURL: URL?,

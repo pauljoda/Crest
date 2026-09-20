@@ -3,10 +3,54 @@
 
 #include <algorithm>
 #include <map>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <set>
 #include "base/check.h"
+#include "chrome/browser/ui/crest/crest_permission_prompt.h"
+#include "chrome/browser/ui/crest/crest_extension_prompt.h"
+#include "extensions/browser/crx_installer.h"
+#include "chrome/browser/extensions/extension_action_dispatcher.h"
+#include "chrome/browser/ui/toolbar/toolbar_actions_model.h"
+#include "extensions/browser/extension_registrar.h"
+#include "extensions/browser/extension_registry_observer.h"
+#include "extensions/browser/extension_icon_image.h"
+#include "extensions/browser/extension_system.h"
+#include "extensions/browser/management_policy.h"
+#include "extensions/browser/disable_reason.h"
+#include "extensions/browser/uninstall_reason.h"
+#include "extensions/common/manifest_handlers/icons_handler.h"
+#include "extensions/common/manifest_handlers/options_page_info.h"
+#include "extensions/common/permissions/permissions_data.h"
+#include "extensions/common/permissions/permission_message.h"
+
+#include "extensions/browser/install/crx_install_error.h"
+#include "components/version_info/version_info.h"
+#include "chrome/browser/content_settings/host_content_settings_map_factory.h"
+#include "components/content_settings/core/browser/host_content_settings_map.h"
+#include "components/permissions/permission_request.h"
+#include "components/permissions/permission_uma_util.h"
+#include "chrome/browser/devtools/devtools_window.h"
+#include "chrome/browser/extensions/extension_action_runner.h"
+#include "chrome/browser/extensions/extension_view.h"
+#include "chrome/browser/extensions/extension_view_host.h"
+#include "chrome/browser/extensions/extension_view_host_factory.h"
+#include "extensions/browser/extension_action.h"
+#include "extensions/browser/extension_action_manager.h"
+#include "extensions/browser/extension_host_observer.h"
+#include "extensions/browser/extension_registry.h"
+#include "extensions/browser/extension_util.h"
+#include "extensions/common/extension.h"
+#include "extensions/common/manifest.h"
+#include "components/sessions/content/session_tab_helper.h"
+#include "content/public/browser/render_frame_host.h"
+#include "content/public/browser/render_widget_host_view.h"
+#include "components/find_in_page/find_tab_helper.h"
+#include "components/find_in_page/find_result_observer.h"
+#include "components/find_in_page/find_types.h"
+#include "components/zoom/zoom_controller.h"
+#include "third_party/blink/public/common/page/page_zoom.h"
 #include "base/functional/bind.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/download/download_core_service.h"
@@ -43,13 +87,147 @@
 
 namespace {
 using Observation = void (^)(NSString*, NSDictionary<NSString*, id>*);
+// AppKit hosting follows Mori's native ExtensionView bridge (MIT; see
+// ThirdParty/Mori-LICENSE). Each instance belongs to one Crest page/profile.
+class ExtensionPopup final : public extensions::ExtensionView,
+                             public extensions::ExtensionHostObserver {
+ public:
+  ExtensionPopup(std::unique_ptr<extensions::ExtensionViewHost> host, NSWindow* owner, NSPoint anchor)
+      : host_(std::move(host)), owner_(owner), anchor_(anchor) {
+    host_->set_view(this);
+    host_->AddObserver(this);
+    auto weak = weak_factory_.GetWeakPtr();
+    host_->SetCloseHandler(base::BindOnce([](base::WeakPtr<ExtensionPopup> popup, extensions::ExtensionHost*) {
+      dispatch_async(dispatch_get_main_queue(), ^{ if (popup) popup->Close(); });
+    }, weak));
+    panel_ = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 360, 320)
+        styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskFullSizeContentView
+        backing:NSBackingStoreBuffered defer:NO];
+    panel_.titleVisibility = NSWindowTitleHidden;
+    panel_.titlebarAppearsTransparent = YES;
+    panel_.releasedWhenClosed = NO;
+    panel_.floatingPanel = YES;
+    NSView* view = host_->host_contents()->GetNativeView().GetNativeNSView();
+    view.frame = panel_.contentView.bounds;
+    view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [panel_.contentView addSubview:view];
+    resign_observer_ = [[NSNotificationCenter defaultCenter]
+        addObserverForName:NSWindowDidResignKeyNotification object:panel_ queue:NSOperationQueue.mainQueue
+        usingBlock:^(NSNotification*) {
+          dispatch_async(dispatch_get_main_queue(), ^{ if (weak) weak->Close(); });
+        }];
+    host_->CreateRendererSoon();
+  }
+  ~ExtensionPopup() override { Close(); }
+  void Close() {
+    weak_factory_.InvalidateWeakPtrs();
+    if (resign_observer_) [[NSNotificationCenter defaultCenter] removeObserver:resign_observer_];
+    resign_observer_ = nil;
+    [owner_ removeChildWindow:panel_];
+    [panel_ orderOut:nil];
+    panel_ = nil;
+    if (host_) { host_->RemoveObserver(this); host_.reset(); }
+  }
+  gfx::NativeView GetNativeView() override { return host_ ? host_->host_contents()->GetNativeView() : gfx::NativeView(); }
+  void ResizeDueToAutoResize(content::WebContents*, const gfx::Size& size) override {
+    [panel_ setContentSize:NSMakeSize(std::clamp(size.width(), 25, 800), std::clamp(size.height(), 25, 600))];
+    Position();
+  }
+  void RenderFrameCreated(content::RenderFrameHost* frame) override {
+    if (auto* view = frame->GetView()) view->EnableAutoResize(gfx::Size(25, 25), gfx::Size(800, 600));
+  }
+  bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent&) override { return false; }
+  void OnLoaded() override {
+    Position();
+    [owner_ addChildWindow:panel_ ordered:NSWindowAbove];
+    [panel_ makeKeyAndOrderFront:nil];
+    if (host_) host_->host_contents()->Focus();
+  }
+  void OnExtensionHostDestroyed(extensions::ExtensionHost* host) override {
+    if (host_.get() == host) host_.release();
+    Close();
+  }
+ private:
+  void Position() {
+    if (!panel_ || !owner_) return;
+    NSRect screen = owner_.screen.visibleFrame;
+    CGFloat x = std::clamp(anchor_.x, NSMinX(screen), NSMaxX(screen) - NSWidth(panel_.frame));
+    CGFloat y = std::clamp(anchor_.y, NSMinY(screen) + NSHeight(panel_.frame), NSMaxY(screen));
+    [panel_ setFrameTopLeftPoint:NSMakePoint(x, y)];
+  }
+  std::unique_ptr<extensions::ExtensionViewHost> host_;
+  NSWindow* __weak owner_;
+  NSPoint anchor_;
+  NSPanel* __strong panel_ = nil;
+  id __strong resign_observer_ = nil;
+  base::WeakPtrFactory<ExtensionPopup> weak_factory_{this};
+};
+class NativePermissionPrompt final : public permissions::PermissionPrompt {
+ public:
+  NativePermissionPrompt(NSWindow* window, Delegate* delegate)
+      : delegate_(delegate->GetWeakPtr()), window_(window) {
+    alert_ = [[NSAlert alloc] init];
+    alert_.messageText = base::SysUTF8ToNSString(delegate->GetRequestingOrigin().spec());
+    NSMutableArray* requests = [NSMutableArray array];
+    for (const auto& request : delegate->Requests())
+      [requests addObject:base::SysUTF16ToNSString(request->GetMessageTextFragment())];
+    alert_.informativeText = [requests componentsJoinedByString:@"\n"];
+    [alert_ addButtonWithTitle:@"Allow"];
+    [alert_ addButtonWithTitle:@"Block"];
+    [alert_ addButtonWithTitle:@"Not Now"];
+    auto weak = weak_factory_.GetWeakPtr();
+    [alert_ beginSheetModalForWindow:window completionHandler:^(NSModalResponse response) {
+      if (!weak || !weak->delegate_) return;
+      weak->responded_ = true;
+      auto current_delegate = weak->delegate_;
+      if (response == NSAlertFirstButtonReturn) current_delegate->Accept(std::monostate());
+      else if (response == NSAlertSecondButtonReturn) current_delegate->Deny(std::monostate());
+      else current_delegate->Dismiss(std::monostate());
+    }];
+  }
+  ~NativePermissionPrompt() override {
+    weak_factory_.InvalidateWeakPtrs();
+    if (!responded_ && alert_.window.sheetParent) [window_ endSheet:alert_.window returnCode:NSModalResponseCancel];
+  }
+  bool UpdateAnchor() override { return true; }
+  TabSwitchingBehavior GetTabSwitchingBehavior() override { return kDestroyPromptButKeepRequestPending; }
+  permissions::PermissionPromptDisposition GetPromptDisposition() const override { return permissions::PermissionPromptDisposition::ANCHORED_BUBBLE; }
+  bool IsAskPrompt() const override { return true; }
+  std::optional<gfx::Rect> GetViewBoundsInScreen() const override { return std::nullopt; }
+  bool ShouldFinalizeRequestAfterDecided() const override { return true; }
+  std::vector<permissions::ElementAnchoredBubbleVariant> GetPromptVariants() const override { return {}; }
+  std::optional<permissions::feature_params::PermissionElementPromptPosition> GetPromptPosition() const override { return std::nullopt; }
+ private:
+  base::WeakPtr<Delegate> delegate_;
+  NSWindow* __weak window_;
+  NSAlert* __strong alert_;
+  bool responded_ = false;
+  base::WeakPtrFactory<NativePermissionPrompt> weak_factory_{this};
+};
+struct SitePermission {
+  const char* key;
+  const char* label;
+  ContentSettingsType type;
+  bool supports_ask;
+};
+const SitePermission kSitePermissions[] = {
+  {"camera", "Camera", ContentSettingsType::MEDIASTREAM_CAMERA, true},
+  {"microphone", "Microphone", ContentSettingsType::MEDIASTREAM_MIC, true},
+  {"location", "Location", ContentSettingsType::GEOLOCATION, true},
+  {"notifications", "Notifications", ContentSettingsType::NOTIFICATIONS, true},
+  {"popups", "Automatic Pop-ups", ContentSettingsType::POPUPS, false},
+  {"downloads", "Automatic Downloads", ContentSettingsType::AUTOMATIC_DOWNLOADS, true}
+};
 struct Page;
 struct BrowserOwner;
 struct NativeAdoption {
   base::WeakPtr<content::WebContents> contents;
   std::string profile;
 };
+class ExtensionStateObserver;
 struct HostState {
+  std::map<std::string, std::unique_ptr<ExtensionStateObserver>> extension_observers;
+  void (^extension_review)(NSDictionary<NSString*, id>*, NSWindow*, void (^)(BOOL, BOOL));
   Browser* bootstrap = nullptr;
   Profile* root_profile = nullptr;
   bool started = false;
@@ -69,15 +247,188 @@ struct HostState {
 };
 HostState& State() { static base::NoDestructor<HostState> state; return *state; }
 
-struct Page final : content::WebContentsObserver {
+// Profile-scoped change and icon observation adapted from Mori (MIT).
+class ExtensionStateObserver
+    : public extensions::ExtensionRegistryObserver,
+      public extensions::ExtensionActionDispatcher::Observer,
+      public ToolbarActionsModel::Observer,
+      public extensions::IconImage::Observer {
+ public:
+  static ExtensionStateObserver* Ensure(Profile* profile, const std::string& id) {
+    auto& observers = State().extension_observers;
+    if (!observers.contains(id)) observers[id] = std::unique_ptr<ExtensionStateObserver>(new ExtensionStateObserver(profile));
+    return observers[id].get();
+  }
+  ~ExtensionStateObserver() override {
+    extensions::ExtensionRegistry::Get(profile_)->RemoveObserver(this);
+    if (dispatcher_observed_) extensions::ExtensionActionDispatcher::Get(profile_)->RemoveObserver(this);
+    if (auto* model = ToolbarActionsModel::Get(profile_)) model->RemoveObserver(this);
+  }
+  // The best currently-loaded icon for an extension, preferring the action's
+  // dynamic (chrome.action.setIcon) and declarative icons for `tab_id`, then
+  // the manifest icon, then the action's default icon.
+  NSImage* IconFor(const extensions::Extension& extension,
+                   extensions::ExtensionAction* action,
+                   int tab_id) {
+    if (action) {
+      gfx::Image explicit_icon = action->GetExplicitlySetIcon(tab_id);
+      if (!explicit_icon.IsEmpty()) {
+        return explicit_icon.ToNSImage();
+      }
+      gfx::Image declarative_icon = action->GetDeclarativeIcon(tab_id);
+      if (!declarative_icon.IsEmpty()) {
+        return declarative_icon.ToNSImage();
+      }
+    }
+    auto it = icons_.find(extension.id());
+    if (it != icons_.end()) {
+      gfx::Image manifest_icon = it->second->image();
+      if (!manifest_icon.IsEmpty()) {
+        return manifest_icon.ToNSImage();
+      }
+    }
+    if (action) {
+      gfx::Image default_icon = action->GetDefaultIconImage();
+      if (!default_icon.IsEmpty()) {
+        return default_icon.ToNSImage();
+      }
+    }
+    return nil;
+  }
+
+  // extensions::ExtensionRegistryObserver:
+  void OnExtensionLoaded(content::BrowserContext* browser_context,
+                         const extensions::Extension* extension) override {
+    RebuildIcons();
+    PostExtensionsChanged();
+  }
+  void OnExtensionUnloaded(content::BrowserContext* browser_context,
+                           const extensions::Extension* extension,
+                           extensions::UnloadedExtensionReason reason) override {
+    RebuildIcons();
+    PostExtensionsChanged();
+  }
+  void OnExtensionInstalled(content::BrowserContext* browser_context,
+                            const extensions::Extension* extension,
+                            bool is_update) override {
+    RebuildIcons();
+    PostExtensionsChanged();
+  }
+  void OnExtensionUninstalled(content::BrowserContext* browser_context,
+                              const extensions::Extension* extension,
+                              extensions::UninstallReason reason) override {
+    RebuildIcons();
+    PostExtensionsChanged();
+  }
+
+  // extensions::ExtensionActionDispatcher::Observer:
+  void OnExtensionActionUpdated(
+      extensions::ExtensionAction* extension_action,
+      content::WebContents* web_contents,
+      content::BrowserContext* browser_context) override {
+    PostExtensionsChanged();
+  }
+  void OnShuttingDown() override { dispatcher_observed_ = false; }
+
+  // ToolbarActionsModel::Observer:
+  void OnToolbarActionAdded(const ToolbarActionsModel::ActionId& id) override {
+    PostExtensionsChanged();
+  }
+  void OnToolbarActionRemoved(
+      const ToolbarActionsModel::ActionId& id) override {
+    PostExtensionsChanged();
+  }
+  void OnToolbarActionUpdated(
+      const ToolbarActionsModel::ActionId& id) override {
+    PostExtensionsChanged();
+  }
+  void OnToolbarModelInitialized() override { PostExtensionsChanged(); }
+  void OnToolbarPinnedActionsChanged() override { PostExtensionsChanged(); }
+
+  // extensions::IconImage::Observer:
+  void OnExtensionIconImageChanged(extensions::IconImage* image) override {
+    PostExtensionsChanged();
+  }
+
+ private:
+  explicit ExtensionStateObserver(Profile* profile) : profile_(profile) {
+    extensions::ExtensionRegistry::Get(profile_)->AddObserver(this);
+    extensions::ExtensionActionDispatcher::Get(profile_)->AddObserver(this);
+    dispatcher_observed_ = true;
+    if (ToolbarActionsModel* model = ToolbarActionsModel::Get(profile_)) {
+      model->AddObserver(this);
+    }
+    RebuildIcons();
+  }
+
+  static void PostExtensionsChanged() {
+    // Coalesce changes and publish after registry/toolbar mutations finish.
+    static bool queued = false;
+    if (queued) return;
+    queued = true;
+    dispatch_async(dispatch_get_main_queue(), ^{
+      queued = false;
+      if (State().browser_observation && !State().disposing)
+        State().browser_observation(@{@"extensionsChanged": @YES});
+    });
+  }
+
+  // Keeps one async-loading manifest icon per installed extension. IconImage
+  // self-invalidates when its extension unloads, so the map is rebuilt on
+  // every registry change.
+  void RebuildIcons() {
+    auto* registry = extensions::ExtensionRegistry::Get(profile_);
+    std::map<std::string, std::unique_ptr<extensions::IconImage>> next;
+    for (const extensions::ExtensionSet* set :
+         {&registry->enabled_extensions(), &registry->disabled_extensions()}) {
+      for (const auto& extension : *set) {
+        if (!extension->is_extension()) {
+          continue;
+        }
+        auto existing = icons_.find(extension->id());
+        if (existing != icons_.end() &&
+            existing->second->is_valid()) {
+          next[extension->id()] = std::move(existing->second);
+          continue;
+        }
+        next[extension->id()] = std::make_unique<extensions::IconImage>(
+            profile_, extension.get(),
+            extensions::IconsInfo::GetIcons(extension.get()), 32,
+            gfx::ImageSkia(), this);
+      }
+    }
+    icons_ = std::move(next);
+  }
+
+  raw_ptr<Profile> profile_;
+  bool dispatcher_observed_ = false;
+  std::map<std::string, std::unique_ptr<extensions::IconImage>> icons_;
+};
+
+
+struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
        Observation observer)
       : content::WebContentsObserver(contents), browser(owner),
-        profile(std::move(profile_id)), observation([observer copy]) {}
+        profile(std::move(profile_id)), observation([observer copy]) {
+    find_helper = find_in_page::FindTabHelper::FromWebContents(contents);
+    if (find_helper) find_helper->AddObserver(this);
+  }
+  ~Page() override { if (find_helper) find_helper->RemoveObserver(this); }
+  find_in_page::FindTabHelper* find_helper = nullptr;
+  void (^find_completion)(BOOL) = nil;
+  void OnFindTabHelperDestroyed(find_in_page::FindTabHelper*) override { find_helper = nullptr; find_completion = nil; }
+  void OnFindResultAvailable(content::WebContents*) override {
+    if (!find_helper || !find_completion || !find_helper->find_result().final_update()) return;
+    auto completion = find_completion;
+    find_completion = nil;
+    completion(find_helper->find_result().number_of_matches() > 0);
+  }
   Browser* browser;
   std::string profile;
   Observation observation;
   bool closing = false;
+  std::unique_ptr<ExtensionPopup> extension_popup;
   void Publish(bool committed = false, NSString* failure = nil) {
     if (!web_contents() || State().disposing) return;
     auto& controller = web_contents()->GetController();
@@ -108,6 +459,7 @@ struct Page final : content::WebContentsObserver {
     if (!proceed) BeforeUnloadDialogCancelled();
   }
   void WebContentsDestroyed() override {
+    extension_popup.reset();
     Observe(nullptr);
     if (!State().disposing) observation(@"closed", @{});
   }
@@ -183,6 +535,7 @@ Browser* BrowserFor(const std::string& profile_id, const std::string& window_id)
   auto found = state.profiles.find(profile_id);
   if (found == state.profiles.end()) return nullptr;
   Profile* profile = found->second;
+  if (Browser::GetCreationStatusForProfile(profile) != BrowserWindowInterface::CreationStatus::kOk) return nullptr;
   state.creating_window = window_id;
   Browser* browser = Browser::Create(Browser::CreateParams(profile, false));
   state.creating_window.clear();
@@ -266,10 +619,9 @@ Page* FindPage(NSString* identifier) {
     if (owner->strip && owner->strip->GetIndexOfWebContents(contents) >= 0) { browser = owner->browser; break; }
   if (!browser) return NO;
   auto page = std::make_unique<Page>(contents, browser, found->second.profile, observer);
-  Page* adopted = page.get();
   state.pages.emplace(key, std::move(page)); state.adoptions.erase(found);
   observer(@"created", @{});
-  adopted->Publish();
+  if (Page* adopted = FindPage(pageID)) adopted->Publish();
   return YES;
 }
 - (void)rejectAdoption:(NSString*)adoptionID {
@@ -304,7 +656,7 @@ Page* FindPage(NSString* identifier) {
       [](std::string page_id, std::string profile_id, std::string window_id,
          bool private_mode, Observation observer, Profile* profile) {
         auto& state = State();
-        state.creating_pages.erase(page_id);
+        if (!state.creating_pages.erase(page_id)) return;
         if (!profile || state.disposing) { observer(@"creation_failed", @{}); return; }
         if (!state.profiles.contains(profile_id)) {
           // The regular source owns the OTR profile and must outlive it. No
@@ -312,9 +664,10 @@ Page* FindPage(NSString* identifier) {
           state.profile_leases[profile_id] = std::make_unique<ScopedProfileKeepAlive>(
               profile, ProfileKeepAliveOrigin::kAppWindow);
           state.profiles[profile_id] = private_mode ? profile->GetOffTheRecordProfile(
-              Profile::OTRProfileID::CreateUnique("crest-" + profile_id), true) : profile;
+              Profile::OTRProfileID::CreateUnique("Crest::Private::" + profile_id), true) : profile;
         }
         Browser* browser = BrowserFor(profile_id, window_id);
+        if (!browser) { observer(@"creation_failed", @{}); return; }
         NavigateParams params(browser, GURL("about:blank"), ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
         params.disposition = WindowOpenDisposition::NEW_BACKGROUND_TAB;
         params.window_action = NavigateParams::WindowAction::kNoAction;
@@ -381,6 +734,20 @@ Page* FindPage(NSString* identifier) {
     controller.Reload(content::ReloadType::NORMAL, true);
   } else if ([command isEqualToString:@"engine.stop"]) {
     contents->Stop();
+  } else if ([command isEqualToString:@"engine.extensions"]) {
+    if (page->browser->GetProfile()->IsOffTheRecord()) return NO;
+    NavigateParams params(page->browser, GURL("chrome://extensions/"), ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
+    params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+    params.window_action = NavigateParams::WindowAction::kNoAction;
+    Navigate(&params);
+  } else if ([command isEqualToString:@"engine.inspect"]) {
+    DevToolsWindow::OpenDevToolsWindow(contents, DevToolsOpenedByAction::kMainMenuOrMainShortcut);
+  } else if ([command isEqualToString:@"engine.zoom"]) {
+    const double factor = url.doubleValue;
+    auto* zoom = zoom::ZoomController::FromWebContents(contents);
+    if (!zoom || !std::isfinite(factor) || factor < 0.25 || factor > 5) return NO;
+    zoom->SetZoomMode(zoom::ZoomController::ZOOM_MODE_ISOLATED);
+    zoom->SetZoomLevel(blink::ZoomFactorToZoomLevel(factor));
   } else if ([command isEqualToString:@"engine.close_page"]) {
     const int index = page->browser->tab_strip_model()->GetIndexOfWebContents(contents);
     if (index < 0 || page->closing) return NO;
@@ -389,11 +756,202 @@ Page* FindPage(NSString* identifier) {
   } else { return NO; }
   return YES;
 }
+- (NSArray<NSDictionary<NSString*, id>*>*)permissionsForPage:(NSString*)pageID {
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents()) return @[];
+  GURL origin = page->web_contents()->GetLastCommittedURL().DeprecatedGetOriginAsURL();
+  if (!origin.SchemeIsHTTPOrHTTPS()) return @[];
+  auto* settings = HostContentSettingsMapFactory::GetForProfile(page->browser->GetProfile());
+  NSMutableArray* result = [NSMutableArray array];
+  for (const auto& permission : kSitePermissions) {
+    ContentSetting value = settings->GetContentSetting(origin, origin, permission.type);
+    [result addObject:@{ @"id": base::SysUTF8ToNSString(permission.key), @"label": base::SysUTF8ToNSString(permission.label),
+        @"value": @(value), @"supportsAsk": @(permission.supports_ask) }];
+  }
+  return result;
+}
+- (BOOL)setPermission:(NSString*)permissionID page:(NSString*)pageID value:(NSInteger)value {
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents()) return NO;
+  GURL origin = page->web_contents()->GetLastCommittedURL().DeprecatedGetOriginAsURL();
+  if (!origin.SchemeIsHTTPOrHTTPS()) return NO;
+  for (const auto& permission : kSitePermissions) {
+    if (base::SysNSStringToUTF8(permissionID) != permission.key) continue;
+    if (value != CONTENT_SETTING_ALLOW && value != CONTENT_SETTING_BLOCK &&
+        !(permission.supports_ask && value == CONTENT_SETTING_ASK)) return NO;
+    HostContentSettingsMapFactory::GetForProfile(page->browser->GetProfile())
+        ->SetContentSettingDefaultScope(origin, GURL(), permission.type, static_cast<ContentSetting>(value));
+    return YES;
+  }
+  return NO;
+}
+- (NSArray<NSDictionary<NSString*, id>*>*)extensionsForPage:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents()) return @[];
+  Profile* profile = page->browser->GetProfile();
+  auto* registry = extensions::ExtensionRegistry::Get(profile);
+  auto* actions = extensions::ExtensionActionManager::Get(profile);
+  if (!registry || !actions) return @[];
+  const int tab = sessions::SessionTabHelper::IdForTab(page->web_contents()).id();
+  NSMutableArray* result = [NSMutableArray array];
+  for (const auto& extension : registry->enabled_extensions()) {
+    if (!extension->is_extension() || extensions::Manifest::IsComponentLocation(extension->location()) ||
+        (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(extension->id(), profile))) continue;
+    auto* action = actions->GetExtensionAction(*extension);
+    if (!action) continue;
+    auto* model = ToolbarActionsModel::Get(profile);
+    NSImage* icon = ExtensionStateObserver::Ensure(profile, page->profile)->IconFor(*extension, action, tab);
+    [result addObject:@{ @"id": base::SysUTF8ToNSString(extension->id()),
+        @"name": base::SysUTF8ToNSString(extension->name()), @"icon": icon ?: (id)NSNull.null,
+        @"pinned": @(model && model->IsActionPinned(extension->id())),
+        @"badge": base::SysUTF8ToNSString(action->GetExplicitlySetBadgeText(tab)) }];
+  }
+  return result;
+}
+- (BOOL)runExtension:(NSString*)extensionID page:(NSString*)pageID anchor:(NSPoint)anchor {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents()) return NO;
+  Profile* profile = page->browser->GetProfile();
+  const auto id = base::SysNSStringToUTF8(extensionID);
+  const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(id);
+  if (!extension || (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, profile))) return NO;
+  auto* contents = page->web_contents();
+  const int index = page->browser->tab_strip_model()->GetIndexOfWebContents(contents);
+  if (index < 0) return NO;
+  page->browser->tab_strip_model()->ActivateTabAt(index);
+  auto* runner = extensions::ExtensionActionRunner::GetForWebContents(contents);
+  if (!runner) return NO;
+  // This path is invoked only by the user's native extension action button.
+  const auto result = runner->RunAction(extension, true);
+  if (result == extensions::ExtensionAction::ShowAction::kNone) return YES;
+  if (result != extensions::ExtensionAction::ShowAction::kShowPopup) return NO;
+  auto* action = extensions::ExtensionActionManager::Get(profile)->GetExtensionAction(*extension);
+  if (!action) return NO;
+  auto popup = extensions::ExtensionViewHostFactory::CreatePopupHost(*extension,
+      action->GetPopupUrl(sessions::SessionTabHelper::IdForTab(contents).id()), page->browser);
+  NSWindow* window = crest::WindowForBrowser(page->browser);
+  if (!popup || !window) return NO;
+  page->extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), window, anchor);
+  return YES;
+}
+- (NSString*)engineVersion { return base::SysUTF8ToNSString(version_info::GetVersionNumber()); }
+- (void)setExtensionReview:(void (^)(NSDictionary<NSString*, id>*, NSWindow*, void (^)(BOOL, BOOL)))review {
+  State().extension_review = [review copy];
+}
+- (void)prepareExtensionProfile:(NSString*)profileID completion:(void (^)(BOOL))completion {
+  const auto id = base::SysNSStringToUTF8(profileID);
+  if (!base::Uuid::ParseCaseInsensitive(id).is_valid() || State().disposing) { completion(NO); return; }
+  if (State().profiles.contains(id)) { completion(!State().profiles[id]->IsOffTheRecord()); return; }
+  auto* manager = g_browser_process->profile_manager();
+  manager->CreateProfileAsync(manager->user_data_dir().AppendASCII("Crest-" + id), base::BindOnce(
+    [](std::string id, void (^done)(BOOL), Profile* profile) {
+      if (!profile || State().disposing) { done(NO); return; }
+      if (!State().profiles.contains(id)) {
+        State().profiles[id] = profile;
+        State().profile_leases[id] = std::make_unique<ScopedProfileKeepAlive>(profile, ProfileKeepAliveOrigin::kAppWindow);
+      }
+      ExtensionStateObserver::Ensure(profile, id);
+      done(YES);
+    }, id, [completion copy]));
+}
+- (NSArray<NSDictionary<NSString*, id>*>*)extensionsForProfile:(NSString*)profileID {
+  const auto profile_id = base::SysNSStringToUTF8(profileID);
+  auto found = State().profiles.find(profile_id);
+  if (found == State().profiles.end() || found->second->IsOffTheRecord()) return @[];
+  auto* profile = found->second;
+  auto* registry = extensions::ExtensionRegistry::Get(profile);
+  auto* observer = ExtensionStateObserver::Ensure(profile, profile_id);
+  NSMutableArray* result = [NSMutableArray array];
+  for (const auto& extension : registry->GenerateInstalledExtensionsSet()) {
+    if (!extension->is_extension() || extensions::Manifest::IsComponentLocation(extension->location())) continue;
+    auto* action = extensions::ExtensionActionManager::Get(profile)->GetExtensionAction(*extension);
+    NSMutableArray* warnings = [NSMutableArray array];
+    for (const auto& permission : extension->permissions_data()->GetPermissionMessages())
+      [warnings addObject:base::SysUTF16ToNSString(permission.message())];
+    NSImage* icon = observer->IconFor(*extension, action, -1);
+    [result addObject:@{@"id": base::SysUTF8ToNSString(extension->id()),
+      @"name": base::SysUTF8ToNSString(extension->name()), @"version": base::SysUTF8ToNSString(extension->version().GetString()),
+      @"description": base::SysUTF8ToNSString(extension->manifest()->FindStringPath("description") ? *extension->manifest()->FindStringPath("description") : std::string()), @"icon": icon ?: (id)NSNull.null,
+      @"enabled": @(registry->enabled_extensions().Contains(extension->id())), @"permissions": warnings,
+      @"webStore": @(extension->from_webstore()),
+      @"options": base::SysUTF8ToNSString(extensions::OptionsPageInfo::GetOptionsPage(extension.get()).spec())}];
+  }
+  return result;
+}
+- (BOOL)extensionCommand:(NSString*)command extension:(NSString*)extensionID profile:(NSString*)profileID window:(NSString*)windowID {
+  const auto id = base::SysNSStringToUTF8(extensionID);
+  auto found = State().profiles.find(base::SysNSStringToUTF8(profileID));
+  if (found == State().profiles.end() || found->second->IsOffTheRecord()) return NO;
+  auto* profile = found->second;
+  auto* extension = extensions::ExtensionRegistry::Get(profile)->GetInstalledExtension(id);
+  if ([command isEqualToString:@"manage"] || [command isEqualToString:@"details"] || [command isEqualToString:@"options"] || [command isEqualToString:@"store"]) {
+    GURL url([command isEqualToString:@"store"] ? "https://chromewebstore.google.com/" : "chrome://extensions/");
+    if ([command isEqualToString:@"details"]) { if (!extension) return NO; url = GURL("chrome://extensions/?id=" + id); }
+    if ([command isEqualToString:@"options"]) { if (!extension) return NO; url = extensions::OptionsPageInfo::GetOptionsPage(extension); if (!url.is_valid()) return NO; }
+    auto* browser = BrowserFor(base::SysNSStringToUTF8(profileID), base::SysNSStringToUTF8(windowID));
+    if (!browser) return NO;
+    NavigateParams params(browser, url, ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
+    params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+    params.window_action = NavigateParams::WindowAction::kNoAction;
+    Navigate(&params); return YES;
+  }
+  if (!extension || !extensions::ExtensionSystem::Get(profile)->management_policy()->UserMayModifySettings(extension, nullptr)) return NO;
+  auto* registrar = extensions::ExtensionRegistrar::Get(profile);
+  if ([command isEqualToString:@"enable"]) registrar->EnableExtension(id);
+  else if ([command isEqualToString:@"disable"]) registrar->DisableExtension(id, {extensions::disable_reason::DISABLE_USER_ACTION});
+  else if ([command isEqualToString:@"remove"]) { std::u16string error; return registrar->UninstallExtension(id, extensions::UNINSTALL_REASON_USER_INITIATED, &error); }
+  else if ([command isEqualToString:@"pin"] || [command isEqualToString:@"unpin"]) {
+    auto* model = ToolbarActionsModel::Get(profile);
+    if (!model || !model->HasAction(id) || model->IsActionForcePinned(id)) return NO;
+    model->SetActionVisibility(id, [command isEqualToString:@"pin"]);
+  } else return NO;
+  return YES;
+}
+- (BOOL)installExtension:(NSString*)extensionID package:(NSString*)path profile:(NSString*)profileID window:(NSString*)windowID
+              completion:(void (^)(BOOL, NSString*))completion {
+  CHECK(NSThread.isMainThread);
+  const std::string id = base::SysNSStringToUTF8(extensionID);
+  auto found = State().profiles.find(base::SysNSStringToUTF8(profileID));
+  NSWindow* window = [NSClassFromString(@"CrestRoot") windowForIdentifier:windowID];
+  if (found == State().profiles.end() || found->second->IsOffTheRecord() || !window ||
+      id.size() != 32 || id.find_first_not_of("abcdefghijklmnop") != std::string::npos) return NO;
+  auto prompt = std::make_unique<ExtensionInstallPrompt>(found->second, gfx::NativeWindow(window),
+      std::make_unique<extensions::InstallPromptData>(extensions::InstallPromptData::UNSET_PROMPT_TYPE));
+  prompt->SetSkipPostInstallUI(true);
+  auto installer = extensions::CrxInstaller::Create(found->second, std::move(prompt));
+  installer->set_expected_id(id);
+  installer->set_is_gallery_install(true);
+  installer->set_delete_source(true);
+  // Each target profile independently verifies CRX3 signature and publisher proof.
+  installer->AddInstallerCallback(base::BindOnce(^(const std::optional<extensions::CrxInstallError>& error) {
+    completion(!error, error ? base::SysUTF16ToNSString(error->message()) : @"");
+  }));
+  installer->InstallCrx(base::FilePath(base::SysNSStringToUTF8(path)));
+  return YES;
+}
+- (BOOL)findInPage:(NSString*)pageID query:(NSString*)query backwards:(BOOL)backwards
+     caseSensitive:(BOOL)caseSensitive completion:(void (^)(BOOL))completion {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->find_helper) return NO;
+  page->find_completion = nil;
+  if (!query.length) {
+    page->find_helper->StopFinding(find_in_page::SelectionAction::kClear);
+    completion(NO);
+  } else {
+    page->find_completion = [completion copy];
+    page->find_helper->StartFinding(base::SysNSStringToUTF16(query), !backwards, caseSensitive, true);
+  }
+  return YES;
+}
 - (void)disposePages:(NSArray<NSString*>*)pageIDs windows:(NSArray<NSString*>*)windowIDs
     releaseProfiles:(NSArray<NSString*>*)profileIDs {
   CHECK(NSThread.isMainThread);
   auto& state = State();
   for (NSString* identifier in pageIDs) {
+    state.creating_pages.erase(base::SysNSStringToUTF8(identifier));
     auto found = state.pages.find(base::SysNSStringToUTF8(identifier));
     if (found == state.pages.end()) continue;
     auto* contents = found->second->web_contents();
@@ -434,6 +992,7 @@ Page* FindPage(NSString* identifier) {
       if (strip->empty()) browser->SynchronouslyDestroyBrowser();
       else for (int index = strip->count() - 1; index >= 0; --index) strip->DetachAndDeleteWebContentsAt(index);
     }
+    state.extension_observers.erase(id);
     state.profiles.erase(found);
     if (profile->IsOffTheRecord()) ProfileDestroyer::DestroyOTRProfileWhenAppropriate(profile);
     state.profile_leases.erase(id);
@@ -459,6 +1018,7 @@ Page* FindPage(NSString* identifier) {
   }
   for (const auto& [id, profile] : state.profiles)
     if (profile->IsOffTheRecord()) ProfileDestroyer::DestroyOTRProfileWhenAppropriate(profile);
+  state.extension_observers.clear();
   state.profiles.clear();
   state.profile_leases.clear();
 }
@@ -484,6 +1044,92 @@ Page* FindPage(NSString* identifier) {
 @end
 
 namespace crest {
+void ShowExtensionPrompt(
+    std::unique_ptr<ExtensionInstallPromptShowParams> params,
+    ExtensionInstallPrompt::DoneCallback callback,
+    std::unique_ptr<extensions::InstallPromptData> prompt) {
+  using Result = extensions::ExtensionInstallPromptClient::Result;
+  using Payload = ExtensionInstallPrompt::DoneCallbackPayload;
+  NSWindow* window = params->GetParentWindow().GetNativeNSWindow();
+  if (!window || window.attachedSheet || params->WasParentDestroyed() || prompt->requires_parent_permission()) {
+    std::move(callback).Run(Payload(Result::ABORTED));
+    return;
+  }
+  struct PendingPrompt {
+    std::unique_ptr<ExtensionInstallPromptShowParams> params;
+    ExtensionInstallPrompt::DoneCallback callback;
+    std::unique_ptr<extensions::InstallPromptData> prompt;
+  };
+  auto pending = std::make_shared<PendingPrompt>(std::move(params), std::move(callback), std::move(prompt));
+  if (State().extension_review && pending->prompt->extension() &&
+      pending->prompt->type() == extensions::InstallPromptData::INSTALL_PROMPT) {
+    auto* extension = pending->prompt->extension();
+    NSMutableArray* permissions = [NSMutableArray array];
+    const auto permission_details = pending->prompt->GetPermissions();
+    for (size_t i = 0; i < pending->prompt->GetPermissionCount(); ++i) {
+      [permissions addObject:base::SysUTF16ToNSString(pending->prompt->GetPermission(i))];
+      if (i < permission_details.details.size() && !permission_details.details[i].empty())
+        [permissions addObject:base::SysUTF16ToNSString(permission_details.details[i])];
+    }
+    NSDictionary* values = @{@"id": base::SysUTF8ToNSString(extension->id()),
+      @"name": base::SysUTF8ToNSString(extension->name()), @"version": base::SysUTF8ToNSString(extension->version().GetString()),
+      @"description": base::SysUTF8ToNSString(extension->manifest()->FindStringPath("description") ? *extension->manifest()->FindStringPath("description") : std::string()), @"permissions": permissions,
+      @"icon": pending->prompt->icon().IsEmpty() ? (id)NSNull.null : pending->prompt->icon().ToNSImage(),
+      @"canWithhold": @(extensions::util::CanWithholdPermissionsFromExtension(*extension)),
+      @"withhold": @(pending->prompt->ShouldWithheldPermissionsOnDialogAccept())};
+    State().extension_review(values, window, ^(BOOL accepted, BOOL withhold) {
+      if (!pending->callback) return;
+      Result result = Result::USER_CANCELED;
+      if (pending->params->WasParentDestroyed()) result = Result::ABORTED;
+      else if (accepted) { result = withhold ? Result::ACCEPTED_WITH_WITHHELD_PERMISSIONS : Result::ACCEPTED; pending->prompt->OnDialogAccepted(); }
+      else pending->prompt->OnDialogCanceled();
+      std::move(pending->callback).Run(Payload(result));
+    });
+    return;
+  }
+  NSAlert* alert = [[NSAlert alloc] init];
+  alert.messageText = base::SysUTF16ToNSString(pending->prompt->GetDialogTitle());
+  NSMutableArray* messages = [NSMutableArray array];
+  if (pending->prompt->GetPermissionCount()) {
+    [messages addObject:base::SysUTF16ToNSString(pending->prompt->GetPermissionsHeading())];
+    for (size_t i = 0; i < pending->prompt->GetPermissionCount(); ++i)
+      [messages addObject:base::SysUTF16ToNSString(pending->prompt->GetPermission(i))];
+  }
+  const bool withhold = pending->prompt->ShouldWithheldPermissionsOnDialogAccept();
+  if (withhold) [messages addObject:@"Website access is withheld until you grant it in extension settings."];
+  alert.informativeText = [messages componentsJoinedByString:@"\n\n"];
+  NSString* accept = base::SysUTF16ToNSString(pending->prompt->GetAcceptButtonLabel());
+  if (accept.length) [alert addButtonWithTitle:accept];
+  [alert addButtonWithTitle:base::SysUTF16ToNSString(pending->prompt->GetAbortButtonLabel())];
+  if (accept.length) {
+    alert.buttons.firstObject.enabled = NO;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 500 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+      alert.buttons.firstObject.enabled = YES;
+    });
+  }
+  id closed = [[NSNotificationCenter defaultCenter] addObserverForName:NSWindowWillCloseNotification
+      object:window queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification*) {
+    if (alert.window.sheetParent) [alert.window.sheetParent endSheet:alert.window returnCode:NSModalResponseCancel];
+  }];
+  [alert beginSheetModalForWindow:window completionHandler:^(NSModalResponse response) {
+    [[NSNotificationCenter defaultCenter] removeObserver:closed];
+    Result result = Result::USER_CANCELED;
+    if (pending->params->WasParentDestroyed()) result = Result::ABORTED;
+    else if (accept.length && response == NSAlertFirstButtonReturn) {
+      result = withhold ? Result::ACCEPTED_WITH_WITHHELD_PERMISSIONS : Result::ACCEPTED;
+      pending->prompt->OnDialogAccepted();
+    } else pending->prompt->OnDialogCanceled();
+    std::move(pending->callback).Run(Payload(result));
+  }];
+}
+std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
+    content::WebContents* contents, permissions::PermissionPrompt::Delegate* delegate) {
+  if (delegate->ShouldDropCurrentRequestIfCannotShowQuietly()) return nullptr;
+  BrowserWindowInterface* browser = GlobalBrowserCollection::GetInstance()->FindBrowserWithTab(contents);
+  NSWindow* window = browser ? WindowForBrowser(browser->GetBrowserForMigrationOnly()) : nil;
+  if (!window || window.attachedSheet) return nullptr;
+  return std::make_unique<NativePermissionPrompt>(window, delegate);
+}
 bool IsEnabled() { return base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane"); }
 void OnBrowserWindowCreated(Browser* browser) {
   if (!State().bootstrap) {

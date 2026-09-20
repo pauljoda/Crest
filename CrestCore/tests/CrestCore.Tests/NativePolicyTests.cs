@@ -24,6 +24,20 @@ public sealed class NativePolicyTests
         Assert.Equal(url, values["url"]?.GetValue<string>());
         Assert.Equal(query, values["searchQuery"]?.GetValue<string>());
     }
+    [Theory]
+    [InlineData("chrome://extensions/")]
+    [InlineData("chrome-extension://abcdefghijklmnopabcdefghijklmnop/options.html")]
+    public void InternalAddressesRequireTheSelectedEngineCapability(string address)
+    {
+        var request = new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = address,
+            ["searchTemplate"] = "https://kagi.com/search?q=%s" };
+        var disabled = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
+        Assert.Equal(address, disabled["searchQuery"]!.GetValue<string>());
+        request["allowsInternalPages"] = true;
+        var enabled = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
+        Assert.Equal(address, enabled["url"]!.GetValue<string>());
+        Assert.Null(enabled["searchQuery"]);
+    }
     [Fact]
     public void PurePolicyRejectsUnknownVersionsAndOperations()
     {

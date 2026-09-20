@@ -339,7 +339,7 @@ final class BrowserMacApplication {
             BrowserSettingsView(
                 browser: browser.profileSettingsBrowser, pages: pages, cloudSync: cloudSync,
                 spaceAccess: spaceAccess, dataDeleter: pagePoolRegistry, shortcuts: shortcuts,
-                onboardingCoordinator: onboardingCoordinator, spaceSettingsPresentation: spaceSettingsPresentation,
+                onboardingCoordinator: onboardingCoordinator, spaceSettingsPresentation: presentation ?? spaceSettingsPresentation,
                 usesLiveSidebar: !browser.isTemporaryWorkspace,
                 tabState: runtime.model(BrowserSettingsTabState.self) { BrowserSettingsTabState() },
                 tabAssignment: runtime.assignment
@@ -370,6 +370,48 @@ final class BrowserMacApplication {
             Color.clear.background(
                 BrowserMacWindowAttachment(
                     attach: { $0.close() }, focusChanged: { _ in }, close: {}))
+        }
+    }
+
+    var privateWindowContent: some View {
+        BrowserRootView(
+            browser: privateBrowser,
+            pages: privatePages,
+            chrome: privateChrome,
+            transientBrowsing: privateTransientBrowsing,
+            startupBehavior: .lastActiveTab,
+            shortcuts: shortcuts
+        )
+        .modifier(BrowserChromeAppearancePersistence())
+        .environment(windowTransparency)
+        .environment(splitFocus)
+        .environment(softwareUpdates)
+        .environment(
+            \.browserSidebarWidgetRuntime,
+            sidebarWidgets
+        )
+        .frame(minWidth: 900, minHeight: 600)
+        .preferredColorScheme(.dark)
+        .environment(
+            \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
+        )
+        .background(
+            BrowserMacWindowAttachment(
+                attach: { window in
+                    self.privatePages.bindNativeWindow(window)
+                    self.privatePages.setWindowFocused(window.isKeyWindow)
+                },
+                focusChanged: { self.privatePages.setWindowFocused($0) },
+                close: {
+                    self.privatePages.setWindowFocused(false)
+                    self.privatePages.bindNativeWindow(nil)
+                }
+            )
+        )
+        .onDisappear {
+            #if !CREST_CHROMIUM_HOST
+            self.closePrivateBrowsingWindow()
+            #endif
         }
     }
 

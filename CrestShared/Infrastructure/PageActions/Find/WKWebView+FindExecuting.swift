@@ -3,10 +3,14 @@ import WebKit
 extension WKWebView: BrowserFindExecuting {
     func performFind(
         _ query: String,
-        configuration: WKFindConfiguration,
+        configuration: BrowserFindConfiguration,
         completion: @escaping @MainActor (Bool) -> Void
     ) {
-        find(query, configuration: configuration) { result in
+        let native = WKFindConfiguration()
+        native.backwards = configuration.backwards
+        native.caseSensitive = configuration.caseSensitive
+        native.wraps = configuration.wraps
+        find(query, configuration: native) { result in
             completion(result.matchFound)
         }
     }
