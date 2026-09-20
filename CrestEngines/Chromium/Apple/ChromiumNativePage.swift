@@ -13,6 +13,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     var observer: (String, [String: Any]) -> Void
     private var host: (any CrestChromiumEngineHost)?
     private var requestedURL: URL?
+    private var pendingInteractionState: Data?
     private var zoom: CGFloat = 1
     private var creating = false
     private var created = false
@@ -25,6 +26,22 @@ final class ChromiumNativePage: BrowserPageEngine {
     }
 
     var nativeView: NSView { surface }
+    var interactionState: Data? {
+        guard created, !disposed, let host, let state = host.interactionState(forPage: id) else { return nil }
+        return BrowserEngineInteractionState(engine: "chromium", version: host.engineVersion(), payload: state).encoded()
+    }
+
+    func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
+        guard !disposed, let host = host ?? CrestChromiumRoot.engineHost,
+            let payload = BrowserEngineInteractionState.payload(state, engine: "chromium", version: host.engineVersion()) else { return false }
+        if created {
+            return host.restorePage(id, interactionState: payload, expectedURL: ChromiumInternalURL.engine(url.absoluteString))
+        }
+        requestedURL = url
+        pendingInteractionState = payload
+        attachIfPossible()
+        return true
+    }
     private(set) var backHistory: [BrowserNavigationHistoryItem] = []
     private(set) var forwardHistory: [BrowserNavigationHistoryItem] = []
     func mediaActivity() async -> BrowserPageMediaActivity? {
@@ -58,6 +75,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     func stop() { command("engine.stop") }
 
     func load(_ url: URL) {
+        pendingInteractionState = nil
         requestedURL = url
         if created { navigatePendingURL() }
         else { attachIfPossible() }
@@ -184,6 +202,10 @@ final class ChromiumNativePage: BrowserPageEngine {
     private func navigatePendingURL() {
         guard let requestedURL else { return }
         self.requestedURL = nil
+        let state = pendingInteractionState
+        pendingInteractionState = nil
+        if let state, host?.restorePage(id, interactionState: state,
+            expectedURL: ChromiumInternalURL.engine(requestedURL.absoluteString)) == true { return }
         _ = host?.command("engine.navigate", page: id, url: ChromiumInternalURL.engine(requestedURL.absoluteString))
     }
 

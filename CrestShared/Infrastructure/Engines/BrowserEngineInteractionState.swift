@@ -1,0 +1,26 @@
+import Foundation
+
+/// Engine payloads remain local, opaque and outside the portable session/sync
+/// document. A renderer must never receive another engine's serialized state.
+struct BrowserEngineInteractionState: Codable, Equatable {
+    private static let magic = Data("CRESTPAGE1\0".utf8)
+    let engine: String
+    let version: String
+    let payload: Data
+
+    func encoded() -> Data? {
+        guard !payload.isEmpty, let body = try? JSONEncoder().encode(self) else { return nil }
+        return Self.magic + body
+    }
+
+    static func payload(_ data: Data, engine: String, version: String) -> Data? {
+        if data.starts(with: magic) {
+            guard let state = try? JSONDecoder().decode(Self.self, from: data.dropFirst(magic.count)),
+                state.engine == engine, state.version == version, !state.payload.isEmpty else { return nil }
+            return state.payload
+        }
+        // Existing archives predate engine tagging and contain only WebKit data.
+        // The outer archive has already checked its OS build and destination.
+        return engine == "webkit" && !data.isEmpty ? data : nil
+    }
+}

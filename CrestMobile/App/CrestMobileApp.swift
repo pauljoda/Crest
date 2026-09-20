@@ -60,12 +60,9 @@ struct CrestMobileApp: App {
             usesIsolatedLaunch
             ? BrowserSitePermissionCenter()
             : BrowserSitePermissionCenter.production(reset: shouldReset)
-        // An isolated launch keeps its WebKit session state behind the same
+        // An isolated launch keeps its engine session state behind the same
         // boundary as Crest's browser-session and sync owners.
-        let tabStateArchive =
-            usesIsolatedLaunch
-            ? nil
-            : BrowserTabStateArchive.production()
+        let tabStateArchive = BrowserTabStateArchive.forLaunch(launchEnvironment)
         let mediaSessions = BrowserMediaSessionStore()
         let sidebarWidgetPreferences = BrowserSidebarWidgetPreferenceStore.launch(
             environment: launchEnvironment

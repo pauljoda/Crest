@@ -1,7 +1,7 @@
 import Foundation
 
 /// Owns session-state eligibility and pending copies without retaining pages.
-/// The platform supplies a page only while capturing its opaque WebKit state.
+/// The platform supplies a page only while capturing its opaque engine state.
 @MainActor
 final class BrowserTabStateCoordinator {
     private let archive: (any BrowserTabStateArchiving)?

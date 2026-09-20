@@ -477,40 +477,24 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         pageEngine.load(request)
     }
 
-    /// WebKit's own opaque per-view session state: the back/forward list and the
-    /// scroll position of every entry in it.
-    ///
-    /// Nil until a document has committed. A web view that never loaded still
-    /// answers `interactionState` with an empty session, and archiving that would
-    /// replace a real state with one that restores nothing.
+    /// The adapter's tagged, opaque history. Uncommitted pages return nil so
+    /// an empty renderer cannot overwrite a useful archive.
     var interactionState: Data? {
-        guard let webView = webKitView else { return nil }
-        guard webView.backForwardList.currentItem != nil else { return nil }
-        return webView.interactionState as? Data
+        pageEngine.interactionState
     }
 
-    /// Restores a previously archived `interactionState` instead of starting `url`
-    /// afresh, and reports whether WebKit took it.
-    ///
-    /// WebKit performs the navigation itself once the state is installed, so this
-    /// replaces `load(_:)` rather than preceding it. Invalid state is discarded
-    /// silently by WebKit — no exception, nothing loaded — which is exactly the
-    /// signal used here: a web view left without a current back/forward item did
-    /// not restore, and the caller falls back to an ordinary load.
+    /// Lets the adapter restore its own history instead of starting `url` afresh.
+    /// Rejected state falls back to an ordinary load; an adapter that queues page
+    /// creation also owns that fallback if restoration fails after attachment.
     @discardableResult
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
-        guard let webView = webKitView else { return false }
-        #if CREST_CHROMIUM_HOST
-        if chromiumPage != nil { return false }
-        #endif
         // WebKit owns an adopted popup's first navigation, and an adopted popup
         // has no archived state of its own to restore in the first place.
         guard !isAwaitingPopupNavigation, !wasOpenedAsPopup else { return false }
         appInitiatedURL = url
         prepareForNavigation(to: url)
-        navigationHistory = BrowserPageNavigationHistory()
-        webView.interactionState = state
-        guard webView.backForwardList.currentItem != nil else {
+        if webKitView != nil { navigationHistory = BrowserPageNavigationHistory() }
+        guard pageEngine.restoreInteractionState(state, expecting: url) else {
             pendingNavigationURL = nil
             return false
         }
@@ -1233,6 +1217,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     #if CREST_CHROMIUM_HOST
     private func receiveChromiumEvent(_ event: String, values: [String: Any]) {
         switch event {
+        case "favicon":
+            guard let rawURL = values["url"] as? String, let source = URL(string: rawURL),
+                let url, BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url) else { return }
+            faviconData = values["data"] as? Data
         case "changed":
             let wasLoading = isLoading
             let destination = (values["url"] as? String).flatMap(URL.init(string:))

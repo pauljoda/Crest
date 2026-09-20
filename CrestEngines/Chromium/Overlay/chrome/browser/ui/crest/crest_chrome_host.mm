@@ -9,6 +9,13 @@
 #include <set>
 #include <vector>
 #include "base/check.h"
+#include "base/apple/foundation_util.h"
+#include "base/pickle.h"
+#include "components/favicon/content/content_favicon_driver.h"
+#include "components/favicon/core/favicon_driver_observer.h"
+#include "components/sessions/content/content_serialized_navigation_builder.h"
+#include "components/sessions/core/serialized_navigation_entry.h"
+#include "content/public/browser/restore_type.h"
 #include "chrome/browser/ui/crest/crest_permission_prompt.h"
 #include "chrome/browser/ui/crest/crest_extension_prompt.h"
 #include "extensions/browser/crx_installer.h"
@@ -424,15 +431,38 @@ class ExtensionStateObserver
 
 void AdvancePageClosePreparation(uint64_t generation, bool allowed);
 
-struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver {
+struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
+                    favicon::FaviconDriverObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
        Observation observer)
       : content::WebContentsObserver(contents), browser(owner),
         profile(std::move(profile_id)), observation([observer copy]) {
     find_helper = find_in_page::FindTabHelper::FromWebContents(contents);
     if (find_helper) find_helper->AddObserver(this);
+    if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents)) driver->AddObserver(this);
   }
-  ~Page() override { if (find_helper) find_helper->RemoveObserver(this); }
+  ~Page() override {
+    if (find_helper) find_helper->RemoveObserver(this);
+    RemoveFaviconObservation();
+  }
+  void RemoveFaviconObservation() {
+    if (web_contents())
+      if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents())) driver->RemoveObserver(this);
+  }
+  void PublishFavicon(const gfx::Image& image) {
+    if (!web_contents() || State().disposing) return;
+    auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents());
+    if (!driver) return;
+    auto png = image.IsEmpty() ? nullptr : image.As1xPNGBytes();
+    id data = NSNull.null;
+    if (png && png->size() > 0 && png->size() <= 512 * 1024)
+      data = [NSData dataWithBytes:png->front() length:png->size()];
+    observation(@"favicon", @{ @"url": base::SysUTF8ToNSString(driver->GetActiveURL().spec()), @"data": data });
+  }
+  void OnFaviconUpdated(favicon::FaviconDriver*, NotificationIconType,
+                       const GURL&, bool, const gfx::Image& image) override {
+    PublishFavicon(image);
+  }
   find_in_page::FindTabHelper* find_helper = nullptr;
   void (^find_completion)(BOOL) = nil;
   void OnFindTabHelperDestroyed(find_in_page::FindTabHelper*) override { find_helper = nullptr; find_completion = nil; }
@@ -475,7 +505,11 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     return result;
   }
   void DidStartLoading() override { Publish(); }
-  void DidStopLoading() override { Publish(); }
+  void DidStopLoading() override {
+    Publish();
+    if (web_contents())
+      if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents())) PublishFavicon(driver->GetFavicon());
+  }
   void TitleWasSet(content::NavigationEntry*) override { Publish(); }
   void DidFinishNavigation(content::NavigationHandle* navigation) override {
     if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted()) ++navigation_revision;
@@ -495,6 +529,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     if (!proceed) BeforeUnloadDialogCancelled();
   }
   void WebContentsDestroyed() override {
+    RemoveFaviconObservation();
     if (State().close_preflight) {
       const auto generation = State().close_generation;
       dispatch_async(dispatch_get_main_queue(), ^{ AdvancePageClosePreparation(generation, false); });
@@ -522,7 +557,7 @@ struct BrowserOwner final : TabStripModelObserver {
     for (const auto& inserted : change.GetInsert()->contents) {
       auto weak = inserted.contents->GetWeakPtr();
       const bool foreground = selection.new_contents == inserted.contents;
-      // Navigate() registers core-created pages before this next UI-thread turn.
+      // Core-created pages are registered before this next UI-thread turn.
       dispatch_async(dispatch_get_main_queue(), ^{ OfferNativePage(weak, foreground); });
     }
   }
@@ -856,12 +891,16 @@ Page* FindPage(NSString* identifier) {
         }
         Browser* browser = BrowserFor(profile_id, window_id);
         if (!browser) { observer(@"creation_failed", @{}); return; }
-        NavigateParams params(browser, GURL("about:blank"), ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
-        params.disposition = WindowOpenDisposition::NEW_BACKGROUND_TAB;
-        params.window_action = NavigateParams::WindowAction::kNoAction;
-        Navigate(&params);
-        auto* contents = params.navigated_or_inserted_contents.get();
-        if (!contents) { observer(@"creation_failed", @{}); return; }
+        // Keep the controller's initial entry until the adapter supplies its
+        // first URL or restored history. Navigating to about:blank here races
+        // restoration and can leave a spurious Back entry in ordinary tabs.
+        content::WebContents::CreateParams params(state.profiles[profile_id]);
+        params.initially_hidden = true;
+        params.desired_renderer_state = content::WebContents::CreateParams::kNoRendererProcess;
+        auto owned_contents = content::WebContents::Create(params);
+        auto* contents = owned_contents.get();
+        browser->tab_strip_model()->AddWebContents(std::move(owned_contents), -1,
+            ui::PAGE_TRANSITION_AUTO_TOPLEVEL, AddTabTypes::ADD_NONE);
         state.pages.emplace(page_id, std::make_unique<Page>(contents, browser, profile_id, observer));
         observer(@"created", @{});
       }, key, profile_id, base::SysNSStringToUTF8(windowID), static_cast<bool>(privateMode), [observer copy]));
@@ -871,6 +910,63 @@ Page* FindPage(NSString* identifier) {
   CHECK(NSThread.isMainThread);
   Page* page = FindPage(pageID);
   return page && page->web_contents() ? page->web_contents()->GetNativeView().GetNativeNSView() : nil;
+}
+- (NSData*)interactionStateForPage:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents()) return nil;
+  auto& controller = page->web_contents()->GetController();
+  if (controller.IsInitialNavigation() || !controller.GetLastCommittedEntry() ||
+      controller.GetEntryCount() > 100 || controller.GetLastCommittedEntryIndex() < 0) return nil;
+  base::Pickle pickle;
+  pickle.WriteString("crest.navigation.v1");
+  pickle.WriteString(page->profile);
+  pickle.WriteInt(controller.GetLastCommittedEntryIndex());
+  pickle.WriteInt(controller.GetEntryCount());
+  for (int i = 0; i < controller.GetEntryCount(); ++i) {
+    auto navigation = sessions::ContentSerializedNavigationBuilder::FromNavigationEntry(i, controller.GetEntryAtIndex(i));
+    base::Pickle entry;
+    // Chromium's session serializer sanitizes password data before writing.
+    navigation.WriteToPickle(64 * 1024, &entry);
+    pickle.WriteData(entry.AsBytes());
+    if (pickle.AsBytes().size() > 2 * 1024 * 1024) return nil;
+  }
+  return [NSData dataWithBytes:pickle.AsBytes().data() length:pickle.AsBytes().size()];
+}
+- (BOOL)restorePage:(NSString*)pageID interactionState:(NSData*)data expectedURL:(NSString*)url {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents() || !data.length || data.length > 2 * 1024 * 1024) return NO;
+  auto& controller = page->web_contents()->GetController();
+  // Restoration is only for a new native page, never a replacement of live work.
+  if (!controller.IsInitialNavigation()) return NO;
+  auto iterator = base::PickleIterator::WithData(base::apple::NSDataToSpan(data));
+  std::string magic, profile;
+  int selected, count;
+  if (!iterator.ReadString(&magic) || magic != "crest.navigation.v1" ||
+      !iterator.ReadString(&profile) || profile != page->profile ||
+      !iterator.ReadInt(&selected) || !iterator.ReadInt(&count) || count < 1 || count > 100 ||
+      selected < 0 || selected >= count) return NO;
+  std::vector<sessions::SerializedNavigationEntry> saved;
+  for (int i = 0; i < count; ++i) {
+    auto bytes = iterator.ReadData();
+    if (!bytes || bytes->size() > 68 * 1024) return NO;
+    auto entry = base::PickleIterator::WithData(*bytes);
+    sessions::SerializedNavigationEntry navigation;
+    if (!navigation.ReadFromPickle(&entry) || !navigation.virtual_url().is_valid()) return NO;
+    saved.push_back(std::move(navigation));
+  }
+  const GURL expected(base::SysNSStringToUTF8(url));
+  if (!iterator.ReachedEnd() || !expected.is_valid() ||
+      saved[selected].virtual_url().GetWithoutRef() != expected.GetWithoutRef()) return NO;
+  auto entries = sessions::ContentSerializedNavigationBuilder::ToNavigationEntries(saved, page->web_contents()->GetBrowserContext());
+  if (entries.size() != saved.size() || std::any_of(entries.begin(), entries.end(), [](const auto& entry) { return !entry; })) return NO;
+  page->web_contents()->Stop();
+  controller.DiscardNonCommittedEntries();
+  controller.Restore(selected, content::RestoreType::kRestored, &entries);
+  controller.LoadIfNecessary();
+  page->Publish();
+  return YES;
 }
 - (BOOL)preparePage:(NSString*)pageID forWindow:(NSString*)windowID {
   CHECK(NSThread.isMainThread);

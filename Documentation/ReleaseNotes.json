@@ -1553,6 +1553,10 @@
     "chromium-native-downloads": {
       "category": "improved",
       "message": "Track Chromium downloads in Crest, cancel transfers, and save files using each Space’s download folder preferences."
+    },
+    "chromium-history-and-site-icons": {
+      "category": "improved",
+      "message": "Restore Chromium Back and Forward history after restarting Crest and show site icons in tabs."
     }
   }
 }

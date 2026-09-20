@@ -19,6 +19,8 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     func navigateHistory(by offset: Int)
     func reload(bypassingCache: Bool)
     func stop()
+    var interactionState: Data? { get }
+    func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool
     func mediaActivity() async -> BrowserPageMediaActivity?
     #if os(macOS)
     /// Transfer ownership before releasing the presenting window.
@@ -26,6 +28,11 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void)
     #endif
     func setZoom(_ zoom: CGFloat)
+}
+
+extension BrowserPageEngine {
+    var interactionState: Data? { nil }
+    func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool { false }
 }
 
 struct BrowserPageMediaActivity {

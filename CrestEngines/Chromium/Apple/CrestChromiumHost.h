@@ -16,6 +16,8 @@ NS_ASSUME_NONNULL_BEGIN
          observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
 - (void)rejectAdoption:(NSString *)adoptionID;
 - (nullable NSView *)viewForPage:(NSString *)pageID;
+- (nullable NSData *)interactionStateForPage:(NSString *)pageID;
+- (BOOL)restorePage:(NSString *)pageID interactionState:(NSData *)state expectedURL:(NSString *)url;
 - (BOOL)preparePage:(NSString *)pageID forWindow:(NSString *)windowID;
 - (void)didAttachPage:(NSString *)pageID window:(NSString *)windowID;
 - (void)didDetachPage:(NSString *)pageID;

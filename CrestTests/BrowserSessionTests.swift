@@ -1660,6 +1660,45 @@ final class BrowserSessionTests: XCTestCase {
 
 final class BrowserTabStateArchiveTests: XCTestCase {
 
+    func testEngineStateRejectsOtherEnginesAndVersionsWhileKeepingLegacyWebKitArchives() throws {
+        let payload = Data("opaque engine history".utf8)
+        let chromium = try XCTUnwrap(BrowserEngineInteractionState(
+            engine: "chromium", version: "1", payload: payload).encoded())
+        let webkit = try XCTUnwrap(BrowserEngineInteractionState(
+            engine: "webkit", version: "os-1", payload: payload).encoded())
+
+        XCTAssertEqual(BrowserEngineInteractionState.payload(chromium, engine: "chromium", version: "1"), payload)
+        XCTAssertEqual(BrowserEngineInteractionState.payload(webkit, engine: "webkit", version: "os-1"), payload)
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: "webkit", version: "1"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(webkit, engine: "chromium", version: "os-1"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: "chromium", version: "2"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: "chromium", version: "1"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: "webkit", version: "1"))
+        XCTAssertEqual(BrowserEngineInteractionState.payload(payload, engine: "webkit", version: "os-1"), payload)
+        XCTAssertNil(BrowserEngineInteractionState.payload(payload, engine: "chromium", version: "1"))
+        XCTAssertNil(BrowserEngineInteractionState(engine: "chromium", version: "1", payload: Data()).encoded())
+    }
+
+    func testNamedReviewArchivesStaySeparateFromProductionAndEphemeralLaunches() throws {
+        func environment(_ identity: String) -> BrowserLaunchEnvironment {
+            BrowserLaunchEnvironment(values: ["CREST_ISOLATED_SESSION": "1",
+                "CREST_ISOLATED_PERSISTENCE_ID": identity], isXCTestRuntime: false)
+        }
+        let first = try XCTUnwrap(BrowserTabStateArchive.forLaunch(environment("review-one")))
+        let same = try XCTUnwrap(BrowserTabStateArchive.forLaunch(environment("review-one")))
+        let other = try XCTUnwrap(BrowserTabStateArchive.forLaunch(environment("review-two")))
+        XCTAssertEqual(first.rootDirectory, same.rootDirectory)
+        XCTAssertNotEqual(first.rootDirectory, other.rootDirectory)
+        XCTAssertNotEqual(first.rootDirectory, BrowserTabStateArchive.production()?.rootDirectory)
+        XCTAssertNil(BrowserTabStateArchive.forLaunch(BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_SESSION": "1"], isXCTestRuntime: false)))
+        XCTAssertNil(BrowserTabStateArchive.forLaunch(BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_PERSISTENCE_ID": "review-one"], isXCTestRuntime: true)))
+        XCTAssertNil(BrowserTabStateArchive.forLaunch(BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_PERSISTENCE_ID": "review-one"], isXCTestRuntime: false,
+            isSwiftUIPreviewRuntime: true)))
+    }
+
     func testStateFromAnotherOSBuildOrFormatIsNotRestorable() throws {
         let payload = Data("session".utf8)
         let foreignBuild = try XCTUnwrap(

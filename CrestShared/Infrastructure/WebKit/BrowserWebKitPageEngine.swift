@@ -12,6 +12,20 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
 
     init(webView: WKWebView) { self.webView = webView }
 
+    var interactionState: Data? {
+        guard webView.backForwardList.currentItem != nil,
+            let state = webView.interactionState as? Data else { return nil }
+        return BrowserEngineInteractionState(engine: "webkit",
+            version: BrowserTabStateEnvelope.currentOSBuild, payload: state).encoded()
+    }
+
+    func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
+        guard let payload = BrowserEngineInteractionState.payload(state, engine: "webkit",
+            version: BrowserTabStateEnvelope.currentOSBuild) else { return false }
+        webView.interactionState = payload
+        return webView.backForwardList.currentItem != nil
+    }
+
     var backHistory: [BrowserNavigationHistoryItem] {
         history.backItems.reversed().enumerated().map { Self.item($0.element, depth: $0.offset + 1) }
     }

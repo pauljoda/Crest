@@ -903,7 +903,7 @@ final class BrowserPagePool:
         }
     }
 
-    /// Writes out the WebKit session state of every resident page. The app calls
+    /// Writes out the engine session state of every resident page. The app calls
     /// this when a scene stops being active, so state survives a quit before an
     /// inactive page reaches its idle deadline.
     func archiveResidentTabStates() {
@@ -1718,10 +1718,8 @@ final class BrowserPagePool:
         guard !page.isAwaitingPopupNavigation else { return }
         guard page.url == nil, page.pendingNavigationURL == nil, let url = tab.url else { return }
         let interval = Self.lifecycleSignposter.beginInterval("Start Initial Navigation")
-        // Restoring WebKit's session state performs its own navigation, so it
-        // replaces the plain load rather than preceding it. Anything WebKit will
-        // not take — absent, written by another OS build, or no longer describing
-        // where the tab points — falls through to the plain load.
+        // The adapter restores its own navigation state instead of a plain load.
+        // Missing or incompatible archives fall back to the tab's current URL.
         if let state = archivedInteractionState(
             for: tab,
             spaceID: page.spaceID,

@@ -325,6 +325,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
                     for quick in Array(instance.quickWindows.values) { quick.window.closeAfterApproval() }
                     for id in Array(instance.windows.keys) {
                         guard let model = instance.application.windowCoordinator.existingModel(for: id) else { continue }
+                        model.pages.archiveResidentTabStates()
                         await model.browser.flushPendingSyncPersistence()
                         await model.windowState.flushPendingPersistence()
                         await model.pages.flushPendingTabStateWrites()

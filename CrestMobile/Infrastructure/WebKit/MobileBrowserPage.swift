@@ -399,8 +399,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     /// answers `interactionState` with an empty session, and archiving that would
     /// replace a real state with one that restores nothing.
     var interactionState: Data? {
-        guard webView.backForwardList.currentItem != nil else { return nil }
-        return webView.interactionState as? Data
+        pageEngine.interactionState
     }
 
     /// Restores a previously archived `interactionState` instead of starting `url`
@@ -420,8 +419,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         appInitiatedURL = url
         prepareForNavigation(to: url)
         navigationHistory = BrowserPageNavigationHistory()
-        webView.interactionState = state
-        guard webView.backForwardList.currentItem != nil else {
+        guard pageEngine.restoreInteractionState(state, expecting: url) else {
             pendingNavigationURL = nil
             return false
         }

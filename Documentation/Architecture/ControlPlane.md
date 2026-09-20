@@ -437,8 +437,9 @@ no `@main` and does not replace Chromium's application delegate. The temporary
 Back, Forward, reload, stop, title, URL and loading observations cross the native
 host port. The existing pools still own page lifetimes and window presentation.
 Engine effects have not yet moved to the asynchronous core dispatcher in this
-composition. The separate `ChromiumAdapter` remains the kernel adapter for the
-contract harness.
+composition and do not need that additional hop: page operations use the shared
+native engine port, while portable session changes remain core-owned. The separate
+`ChromiumAdapter` remains the kernel adapter for the contract harness.
 
 Each Space uses a regular Chromium profile under the explicit experimental
 user-data directory. Crest's native session uses its own isolated defaults suite,
@@ -486,9 +487,18 @@ engine download history while preserving completed files. Destination selection 
 override. Explicit warning decisions are checked against the current engine
 verdict; policy blocks and known malware cannot be approved through this bridge.
 
+Chromium publishes favicon changes into the existing native tab projection.
+Opaque navigation archives carry an engine and version tag, remain local to the
+profile, and never enter the portable session or CloudKit records. Chromium uses
+its sanitized session-entry serializer; WebKit keeps its own interaction state,
+including support for older untagged WebKit archives. An incompatible archive
+falls back to the tab's saved URL. Named review launches keep separate archives;
+private and ephemeral sessions do not persist them. Quit captures resident pages
+before flushing writes and disposing the engine.
+
 There are still migration gaps.
-Other WebKit-specific page tools, favicon observations, opaque history restoration,
-profile deletion and extension side panels need their Chromium adapters.
+Other WebKit-specific page tools, profile deletion and extension side panels need
+their Chromium adapters.
 Profile capabilities must describe this actual integration
 before features are advertised as supported.
 
