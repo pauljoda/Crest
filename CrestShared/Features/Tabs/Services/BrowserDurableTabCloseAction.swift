@@ -17,7 +17,12 @@ struct BrowserDurableTabCloseAction {
             tab.placement != .current
         else { return false }
         let returnsToRoot = preferences.closePolicy == .returnToSavedURL && tab.savedSiteURL != nil
-        guard closePage(assignment, returnsToRoot) else { return false }
-        return browser.closeDurableTab(assignment, returningToSavedURL: returnsToRoot)
+        return browser.performPageDismissal(of: [assignment]) {
+            guard BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),
+                in: browser, accessController: spaceAccess) != nil,
+                closePage(assignment, returnsToRoot) else { return false }
+            return browser.closeDurableTab(assignment, returningToSavedURL: returnsToRoot)
+        }
     }
 }

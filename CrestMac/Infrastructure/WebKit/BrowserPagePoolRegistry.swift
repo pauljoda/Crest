@@ -21,13 +21,18 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
         }
     }
 
+    private weak var spaceAccess: BrowserSpaceAccessController?
+    private let closePreparation: (any BrowserPageClosePreparing)?
     private let primary: BrowserPagePool
     private var pools: [ObjectIdentifier: WeakPool] = [:]
     private var windowRuntimes: [BrowserWindowID: WeakWindowRuntime] = [:]
     private var spacesDeletingData: Set<SpaceID> = []
 
-    init(primary: BrowserPagePool) {
+    init(primary: BrowserPagePool, spaceAccess: BrowserSpaceAccessController? = nil,
+        closePreparation: (any BrowserPageClosePreparing)? = nil) {
         self.primary = primary
+        self.spaceAccess = spaceAccess
+        self.closePreparation = closePreparation
     }
 
     func register(_ pool: BrowserPagePool) {
@@ -41,6 +46,7 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
         for windowID: BrowserWindowID
     ) {
         register(pool)
+        browser.family.pageDismissalAuthorizer = self
         windowRuntimes[windowID] = WeakWindowRuntime(
             browser: browser,
             pages: pool
@@ -83,5 +89,43 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
             await pool.releaseWindowRuntime(for: space)
         }
         try await primary.deleteData(for: space)
+    }
+}
+
+extension BrowserPagePoolRegistry: BrowserPageDismissalAuthorizing {
+    func performDismissal(of assignments: [BrowserTabRuntimeAssignment], in browser: BrowserStore,
+        operation: @escaping @MainActor () -> Bool) -> Bool {
+        func ownedPages() -> [BrowserPage] {
+            var seen = Set<ObjectIdentifier>()
+            return windowRuntimes.values.compactMap { runtime -> BrowserPagePool? in
+                runtime.browser?.family === browser.family ? runtime.pages : nil
+            }.flatMap { pool in assignments.compactMap { pool.residentPage(matching: $0) } }
+                .filter { seen.insert(ObjectIdentifier($0)).inserted }
+        }
+        func isAvailable() -> Bool {
+            assignments.allSatisfy { assignment in
+                guard let space = browser.space(matching: BrowserSpaceRuntimeAssignment(
+                    spaceID: assignment.spaceID, profileID: assignment.profileID)),
+                    !spacesDeletingData.contains(space.id) else { return false }
+                return spaceAccess?.isLocked(space) != true
+            }
+        }
+        guard isAvailable() else { return false }
+        let pages = ownedPages()
+        guard !pages.isEmpty, let closePreparation else { return operation() }
+        let identities = Set(pages.map { ObjectIdentifier($0) })
+        var committed = false
+        closePreparation.prepareToClose(pages.map { $0.pageEngine }) { [weak self, weak browser] allowed in
+            guard let self, let browser, allowed, isAvailable(),
+                Set(ownedPages().map { ObjectIdentifier($0) }) == identities else { return }
+            committed = operation()
+            guard committed else { return }
+            for runtime in self.windowRuntimes.values where runtime.browser?.family === browser.family {
+                guard let store = runtime.browser, let pool = runtime.pages else { continue }
+                pool.reconcile(session: store.session)
+                pool.select(session: store.session)
+            }
+        }
+        return committed
     }
 }

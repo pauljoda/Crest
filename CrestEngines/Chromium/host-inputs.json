@@ -50,5 +50,9 @@
   "extensions/browser/updater/extension_downloader.cc": {
     "before": "569ea004873e5ef742f1cddb4c7b1285c3ccee9e3eddcc043932a4bd23dc8ff8",
     "after": "bd20661f4483dce51cb43690c975ec6044f383ea705e4c0a3b46aa93e526e350"
+  },
+  "chrome/browser/ui/unload_controller.cc": {
+    "before": "bb281f7c66c1dd87cec88bd827762e962e74f5c641c21e291a40309cb3ee5317",
+    "after": "3ba4e5d7b813450b6dc2eb970ad9f36e94cc193f5e507546e3ddaa3bffdef5c6"
   }
 }

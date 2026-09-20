@@ -1545,6 +1545,10 @@
     "crest-native-chromium-commands": {
       "category": "improved",
       "message": "Use Crest menus and customized shortcuts with Chromium, including Blank Windows and Quick Windows."
+    },
+    "chromium-page-close-confirmation": {
+      "category": "fixed",
+      "message": "Keep Chromium tabs and windows open when a page asks you to stay, preserving unsaved work when closing is canceled."
     }
   }
 }

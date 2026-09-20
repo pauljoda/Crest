@@ -91,6 +91,80 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertEqual(context.browser.session, original)
     }
 
+    func testDeferredCloseOnlyArchivesAfterApproval() throws {
+        let context = try makeContext(placement: .current)
+        let gate = DeferredDismissal()
+        context.browser.family.pageDismissalAuthorizer = gate
+        let original = context.browser.session
+        XCTAssertFalse(context.browser.closeTab(context.tab.id))
+        XCTAssertEqual(context.browser.session, original)
+        XCTAssertFalse(gate.resolve(false))
+        XCTAssertEqual(context.browser.session, original)
+        XCTAssertFalse(context.browser.closeTab(context.tab.id))
+        XCTAssertTrue(gate.resolve(true))
+        XCTAssertFalse(context.browser.selectedSpace!.tabs.contains { $0.id == context.tab.id })
+        XCTAssertTrue(context.browser.selectedSpace!.archivedTabs.contains { $0.id == context.tab.id })
+        XCTAssertEqual(context.persistence.session, context.browser.session)
+    }
+
+    func testDeferredClearDoesNotCloseTabsOpenedWhileConfirmationWasPending() throws {
+        let context = try makeContext(placement: .current)
+        let gate = DeferredDismissal()
+        context.browser.family.pageDismissalAuthorizer = gate
+        let space = try XCTUnwrap(context.browser.selectedSpace)
+        XCTAssertFalse(context.browser.clearCurrentTabs(matching: BrowserSpaceRuntimeAssignment(space: space)))
+        let newTab = try XCTUnwrap(context.browser.openNewTab(url: URL(string: "https://example.net/new")!))
+        let beforeReply = context.browser.session
+        XCTAssertFalse(gate.resolve(true))
+        XCTAssertEqual(context.browser.session, beforeReply)
+        XCTAssertTrue(context.browser.selectedSpace!.tabs.contains { $0.id == newTab })
+    }
+
+    func testDeferredCloseRechecksTheTabAssignment() throws {
+        let context = try makeContext(placement: .current)
+        let gate = DeferredDismissal()
+        context.browser.family.pageDismissalAuthorizer = gate
+        XCTAssertFalse(context.browser.closeTab(context.tab.id))
+        context.browser.family.pageDismissalAuthorizer = nil
+        context.browser.deleteTab(context.tab.id, in: context.assignment.spaceID)
+        let beforeReply = context.browser.session
+        XCTAssertFalse(gate.resolve(true))
+        XCTAssertEqual(context.browser.session, beforeReply)
+    }
+
+    func testDurablePageIsNotRetiredWhenCloseIsCanceled() throws {
+        let context = try makeContext(placement: .saved)
+        let gate = DeferredDismissal()
+        context.browser.family.pageDismissalAuthorizer = gate
+        var retired = 0
+        let action = BrowserDurableTabCloseAction(browser: context.browser,
+            spaceAccess: BrowserSpaceAccessController(), preferences: BrowserDurableTabPreferenceStore(),
+            closePage: { _, _ in retired += 1; return true })
+        let original = context.browser.session
+        XCTAssertFalse(action.perform(context.assignment))
+        XCTAssertEqual(retired, 0)
+        XCTAssertFalse(gate.resolve(false))
+        XCTAssertEqual(retired, 0)
+        XCTAssertEqual(context.browser.session, original)
+        XCTAssertFalse(action.perform(context.assignment))
+        XCTAssertTrue(gate.resolve(true))
+        XCTAssertEqual(retired, 1)
+    }
+
+    private final class DeferredDismissal: BrowserPageDismissalAuthorizing {
+        var pending: (@MainActor () -> Bool)?
+        func performDismissal(of assignments: [BrowserTabRuntimeAssignment], in browser: BrowserStore,
+            operation: @escaping @MainActor () -> Bool) -> Bool {
+            pending = operation
+            return false
+        }
+        func resolve(_ allowed: Bool) -> Bool {
+            let operation = pending
+            pending = nil
+            return allowed && operation?() == true
+        }
+    }
+
     private func makeContext(placement: TabPlacement) throws -> Context {
         let root = try XCTUnwrap(URL(string: "https://example.com/root"))
         let child = try XCTUnwrap(URL(string: "https://example.com/child"))

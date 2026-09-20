@@ -36,6 +36,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)disposePages:(NSArray<NSString *> *)pageIDs windows:(NSArray<NSString *> *)windowIDs
     releaseProfiles:(NSArray<NSString *> *)profileIDs;
 - (void)completeQuit;
+- (void)prepareToClosePages:(NSArray<NSString *> *)pageIDs windows:(NSArray<NSString *> *)windowIDs
+                completion:(void (^)(BOOL allowed))completion NS_SWIFT_NAME(prepareToClose(pages:windows:completion:));
 - (void)prepareToQuit:(void (^)(BOOL allowed))completion NS_SWIFT_NAME(prepareToQuit(_:));
 - (void)cancelQuitPreparation;
 @end

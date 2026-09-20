@@ -337,3 +337,29 @@
 +#endif
  }
 
+--- a/chrome/browser/ui/unload_controller.cc
++++ b/chrome/browser/ui/unload_controller.cc
+@@ -3,6 +3,10 @@
+ // found in the LICENSE file.
+
+ #include "chrome/browser/ui/unload_controller.h"
++
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+
+ #include <algorithm>
+
+@@ -220,6 +224,12 @@
+ void UnloadController::BeforeUnloadFired(content::WebContents* web_contents,
+                                          bool proceed,
+                                          bool* proceed_to_fire_unload) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled() && crest::CompletePageClosePreparation(web_contents, proceed)) {
++    *proceed_to_fire_unload = false;
++    return;
++  }
++#endif
+   if ((browser_->GetType() == BrowserWindowInterface::Type::TYPE_DEVTOOLS) &&
+       DevToolsWindow::HandleBeforeUnload(web_contents, proceed,
+                                          proceed_to_fire_unload)) {

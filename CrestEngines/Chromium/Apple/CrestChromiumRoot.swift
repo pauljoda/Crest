@@ -5,7 +5,7 @@ import SwiftUI
 /// Chromium owns the process and AppController. Crest owns the same window
 /// composition, stores, and SwiftUI views used by its WebKit application.
 @objc(CrestRoot) @MainActor
-final class CrestChromiumRoot: NSObject {
+final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     static let extensions = ChromiumExtensionStore()
     private static var instance: CrestChromiumRoot?
     static var engineHost: (any CrestChromiumEngineHost)? { instance?.host }
@@ -14,10 +14,10 @@ final class CrestChromiumRoot: NSObject {
     private var windows: [BrowserWindowID: NSWindow] = [:]
     private var quickWindows: [UUID: QuickWindow] = [:]
     private final class QuickWindow {
-        let window: NSWindow
+        let window: CrestChromiumWindow
         let model: BrowserQuickWindowModel
         let request: QuickRequest
-        init(window: NSWindow, model: BrowserQuickWindowModel, request: QuickRequest) {
+        init(window: CrestChromiumWindow, model: BrowserQuickWindowModel, request: QuickRequest) {
             self.window = window; self.model = model; self.request = request
         }
     }
@@ -49,6 +49,7 @@ final class CrestChromiumRoot: NSObject {
         guard instance == nil else { return }
         let root = CrestChromiumRoot(host: host)
         instance = root
+        BrowserMacWindowPresentation.host = root
         BrowserMacAppIconPreference.restore()
         root.openWindow(.initial)
         root.browserMenu = CrestChromiumMenu(shortcuts: root.application.shortcuts,
@@ -67,7 +68,7 @@ final class CrestChromiumRoot: NSObject {
 
     private init(host: any CrestChromiumEngineHost) {
         self.host = host
-        application = BrowserMacApplication()
+        application = BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host))
         super.init()
         host.setExtensionReview { values, window, reply in
             MainActor.assumeIsolated { Self.extensions.review(values, window: window, reply: reply) }
@@ -117,13 +118,7 @@ final class CrestChromiumRoot: NSObject {
         model.pages.select(session: model.browser.session)
     }
 
-    static func openNativeWindow(_ request: BrowserMacWindowRequest) { instance?.openWindow(request) }
-
-    static func openPrivateNativeWindow() { instance?.openPrivateWindow() }
-
-    static func openNativeQuickWindow(_ request: BrowserQuickWindowRequest) { instance?.openQuickWindow(request) }
-
-    private func openQuickWindow(_ request: BrowserQuickWindowRequest) {
+    func openQuickWindow(_ request: BrowserQuickWindowRequest) {
         if let existing = quickWindows.values.first(where: { $0.request.value == request }) {
             existing.window.makeKeyAndOrderFront(nil); return
         }
@@ -140,13 +135,17 @@ final class CrestChromiumRoot: NSObject {
                     guard let current, current.value.hasSamePresentationIdentity(as: expected) else { return false }
                     current.value = revised; return true
                 }))
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: BrowserQuickWindowLayout.defaultWidth,
+        let window = CrestChromiumWindow(contentRect: NSRect(x: 0, y: 0, width: BrowserQuickWindowLayout.defaultWidth,
             height: BrowserQuickWindowLayout.defaultHeight),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.identifier = NSUserInterfaceItemIdentifier(request.id.uuidString)
         window.title = "Quick Window"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        window.approveClose = { [weak self, weak window] completion in
+            guard let self, let window else { completion(false); return }
+            self.prepareWindowClose(window, completion: completion)
+        }
         window.isReleasedWhenClosed = false
         window.isRestorable = false
         window.tabbingMode = .disallowed
@@ -169,19 +168,25 @@ final class CrestChromiumRoot: NSObject {
         window.makeKeyAndOrderFront(nil)
     }
 
-    private func openPrivateWindow() {
+    func openPrivateWindow() {
         if let privateWindow { privateWindow.makeKeyAndOrderFront(nil); return }
         guard let source = activeModel?.browser.selectedSpace?.profile.id
             ?? application.browser.selectedSpace?.profile.id else { return }
         privateSourceProfile = source
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820),
+        let window = CrestChromiumWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
         privateWindow = window
+        application.pagePoolRegistry.register(application.privatePages, browser: application.privateBrowser,
+            for: application.privatePages.windowID)
         window.identifier = NSUserInterfaceItemIdentifier(application.privatePages.windowID.rawValue.uuidString)
         window.title = "Private Browsing"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        window.approveClose = { [weak self, weak window] completion in
+            guard let self, let window else { completion(false); return }
+            self.prepareWindowClose(window, completion: completion)
+        }
         window.isReleasedWhenClosed = false
         window.isRestorable = false
         window.tabbingMode = .disallowed
@@ -192,10 +197,10 @@ final class CrestChromiumRoot: NSObject {
         window.makeKeyAndOrderFront(nil)
     }
 
-    private func openWindow(_ request: BrowserMacWindowRequest) {
+    func openWindow(_ request: BrowserMacWindowRequest) {
         if let existing = windows[request.id] { existing.makeKeyAndOrderFront(nil); return }
         guard application.windowCoordinator.model(for: request) != nil else { return }
-        let window = NSWindow(
+        let window = CrestChromiumWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
@@ -204,6 +209,10 @@ final class CrestChromiumRoot: NSObject {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.contentMinSize = NSSize(width: 720, height: 500)
+        window.approveClose = { [weak self, weak window] completion in
+            guard let self, let window else { completion(false); return }
+            self.prepareWindowClose(window, completion: completion)
+        }
         window.isReleasedWhenClosed = false
         windows[request.id] = window
         window.contentViewController = NSHostingController(rootView: application.browserWindowContent(request))
@@ -233,6 +242,16 @@ final class CrestChromiumRoot: NSObject {
             openWindow: EnvironmentValues().openWindow, spaceAccess: application.spaceAccess, targetWindowID: model.id)
     }
 
+    private func prepareWindowClose(_ window: NSWindow, completion: @escaping (Bool) -> Void) {
+        guard !quitting, let id = window.identifier?.rawValue else { completion(false); return }
+        var ids = [id]
+        if window === privateWindow {
+            ids += quickWindows.values.filter { $0.model.browser.isPrivateBrowsing }
+                .compactMap { $0.window.identifier?.rawValue }
+        }
+        host.prepareToClose(pages: [], windows: ids, completion: completion)
+    }
+
     @objc private func windowClosed(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
         if let id = quickWindows.first(where: { $0.value.window === window })?.key,
@@ -244,8 +263,9 @@ final class CrestChromiumRoot: NSObject {
             return
         }
         if window === privateWindow {
-            for quick in Array(quickWindows.values) where quick.model.browser.isPrivateBrowsing { quick.window.close() }
+            for quick in Array(quickWindows.values) where quick.model.browser.isPrivateBrowsing { quick.window.closeAfterApproval() }
             let profiles = application.privateBrowser.session.spaces.map { $0.profile.id.uuidString }
+            application.pagePoolRegistry.unregister(application.privatePages, for: application.privatePages.windowID)
             application.closePrivateBrowsingWindow()
             host.disposePages([], windows: [application.privatePages.windowID.rawValue.uuidString], releaseProfiles: profiles)
             privateWindow = nil
@@ -278,7 +298,7 @@ final class CrestChromiumRoot: NSObject {
             MainActor.assumeIsolated {
                 guard allowed else { instance.quitting = false; return }
                 Task { @MainActor in
-                    for quick in Array(instance.quickWindows.values) { quick.window.close() }
+                    for quick in Array(instance.quickWindows.values) { quick.window.closeAfterApproval() }
                     for id in Array(instance.windows.keys) {
                         guard let model = instance.application.windowCoordinator.existingModel(for: id) else { continue }
                         await model.browser.flushPendingSyncPersistence()

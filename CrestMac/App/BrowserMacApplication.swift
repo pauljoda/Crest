@@ -30,7 +30,7 @@ final class BrowserMacApplication {
     let startupBehavior: BrowserStartupBehavior
     let presentsInstalledApplicationUI: Bool
 
-    init() {
+    init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil) {
         #if CREST_CORE_BACKED
         setenv("CREST_ISOLATED_SESSION", "1", 1)
         #if CREST_CHROMIUM_HOST
@@ -316,7 +316,8 @@ final class BrowserMacApplication {
         self.sidebarWidgets = sidebarWidgets
         self.pages = pages
         self.privatePages = privatePages
-        pagePoolRegistry = BrowserPagePoolRegistry(primary: pages)
+        pagePoolRegistry = BrowserPagePoolRegistry(primary: pages, spaceAccess: spaceAccess,
+            closePreparation: pageClosePreparation)
         self.systemNowPlaying = systemNowPlaying
         self.startupBehavior = startupBehavior
     }

@@ -6,6 +6,7 @@
 #endif
 
 class Browser;
+namespace content { class WebContents; }
 
 namespace crest {
 // Enabled only by the explicitly selected Crest host command-line switch.
@@ -15,6 +16,8 @@ void OnBrowserWindowDestroyed(Browser* browser);
 void EnsureCrestUIStarted(Browser* browser);
 // Chrome's AppController retains its lifecycle role. A quit waits for core saves.
 bool DeferQuit();
+// Consumes the result of a native close preflight without destroying the page.
+bool CompletePageClosePreparation(content::WebContents* contents, bool proceed);
 #ifdef __OBJC__
 NSWindow* WindowForBrowser(Browser* browser);
 #endif

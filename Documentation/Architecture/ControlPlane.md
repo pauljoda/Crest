@@ -133,6 +133,16 @@ history on both Apple platforms. `ChromiumNativePage` implements that same port
 using the Chromium host. History entries remain read projections; traversal and
 cache-bypassing reloads run in the engine's navigation controller.
 
+Native page operations do not require a .NET round trip. The UI calls a shared
+native port, and the selected engine implements it. .NET remains responsible for
+shared session state and policy. The process host presents windows through
+`BrowserMacWindowPresenting`; batch page confirmation uses the optional
+`BrowserPageClosePreparing` service injected by the composition. Chromium's
+before-unload confirmation leaves pages alive until the session accepts the
+close. Canceling it preserves the tab, archive and renderer. Engine-specific
+calls belong inside the adapter or its process composition, not shared commands
+or views.
+
 Each desktop composition constructs exactly one native engine. Chromium pages
 have no WebKit view; WebKit document controllers are optional and are only
 created for a WebKit page. Chromium snapshots come from its compositor, and

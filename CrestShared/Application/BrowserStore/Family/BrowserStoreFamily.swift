@@ -20,6 +20,7 @@ final class BrowserStoreFamily {
     private(set) var syncRevision: BrowserStoreSyncRevision = .initial
     private(set) var deletingSpaceIDs: Set<SpaceID> = []
     @ObservationIgnored private var lastCleanupSweepAt: Date?
+    @ObservationIgnored weak var pageDismissalAuthorizer: (any BrowserPageDismissalAuthorizing)?
 
     init(
         session: BrowserSession, browsingMode: BrowserBrowsingMode = .standard,

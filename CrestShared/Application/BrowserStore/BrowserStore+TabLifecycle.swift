@@ -162,22 +162,22 @@ extension BrowserStore {
 
     @discardableResult
     func closeTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
+        closeTab(id, in: spaceID, resetArchivePlacement: true)
+    }
+
+    private func closeTab(_ id: TabID, in spaceID: SpaceID, resetArchivePlacement: Bool) -> Bool {
         guard let space = session.space(id: spaceID),
-            space.tabs.contains(where: { $0.id == id })
-        else { return false }
-        let fallbackID =
-            space.selectedTabID == id
-            ? dismissalFallbackTabID(afterDismissing: id, in: space)
-            : nil
-        guard
-            closeSessionTab(
-                id,
-                in: spaceID,
-                fallbackTabID: fallbackID
-            )
-        else { return false }
-        persist(deletionReason: .superseded, scope: .core)
-        return true
+            space.tabs.contains(where: { $0.id == id }) else { return false }
+        let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: spaceID, profileID: space.profile.id)
+        return performPageDismissal(of: [assignment]) { [weak self] in
+            guard let self, let current = self.session.space(id: spaceID) else { return false }
+            let fallbackID = current.selectedTabID == id
+                ? self.dismissalFallbackTabID(afterDismissing: id, in: current) : nil
+            guard self.closeSessionTab(id, in: spaceID, fallbackTabID: fallbackID,
+                resetArchivePlacement: resetArchivePlacement) else { return false }
+            self.persist(deletionReason: .superseded, scope: .core)
+            return true
+        }
     }
 
     @discardableResult
@@ -196,21 +196,16 @@ extension BrowserStore {
 // MARK: - Metadata
 
 extension BrowserStore {
-    func closeTab(_ id: TabID) {
+    @discardableResult
+    func closeTab(_ id: TabID) -> Bool {
         guard let space = selectedSpace,
-            space.currentTabs.contains(where: { $0.id == id })
-        else { return }
-        let fallbackID =
-            space.selectedTabID == id
-            ? dismissalFallbackTabID(afterDismissing: id, in: space)
-            : nil
-        guard closeSessionTab(id, in: space.id, fallbackTabID: fallbackID, resetArchivePlacement: false) else { return }
-        persist(deletionReason: .superseded, scope: .core)
+            space.currentTabs.contains(where: { $0.id == id }) else { return false }
+        return closeTab(id, in: space.id, resetArchivePlacement: false)
     }
 
     func deleteTab(_ id: TabID, in spaceID: SpaceID) {
-        guard deleteSessionTab(id, in: spaceID) else { return }
-        persist(deletionReason: .explicitDelete, scope: .core)
+        guard let space = session.space(id: spaceID) else { return }
+        _ = deleteTab(id, matching: BrowserSpaceRuntimeAssignment(space: space))
     }
 
     @discardableResult
@@ -228,11 +223,16 @@ extension BrowserStore {
     func clearCurrentTabs(
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard space(matching: assignment) != nil,
-            clearSessionTabs(in: assignment.spaceID)
-        else { return false }
-        persist(deletionReason: .superseded, scope: .core)
-        return true
+        guard let space = space(matching: assignment) else { return false }
+        let ids = Set(space.currentTabs.map(\.id))
+        let tabs = ids.map { BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profile.id) }
+        return performPageDismissal(of: tabs) { [weak self] in
+            guard let self, let current = self.space(matching: assignment),
+                Set(current.currentTabs.map(\.id)) == ids,
+                self.clearSessionTabs(in: assignment.spaceID) else { return false }
+            self.persist(deletionReason: .superseded, scope: .core)
+            return true
+        }
     }
 
     @discardableResult
@@ -240,12 +240,12 @@ extension BrowserStore {
         _ id: TabID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard let space = space(matching: assignment),
-            space.tabs.contains(where: { $0.id == id }),
-            deleteSessionTab(id, in: assignment.spaceID)
-        else { return false }
-        persist(deletionReason: .explicitDelete, scope: .core)
-        return true
+        let tab = BrowserTabRuntimeAssignment(tabID: id, spaceID: assignment.spaceID, profileID: assignment.profileID)
+        return performPageDismissal(of: [tab]) { [weak self] in
+            guard let self, self.deleteSessionTab(id, in: assignment.spaceID) else { return false }
+            self.persist(deletionReason: .explicitDelete, scope: .core)
+            return true
+        }
     }
 
     @discardableResult
@@ -406,7 +406,7 @@ extension BrowserStore {
             tab.placement == .current,
             !tab.isStartPage
         else { return nil }
-        closeTab(tab.id)
+        guard closeTab(tab.id) else { return nil }
         return tab.id
     }
 

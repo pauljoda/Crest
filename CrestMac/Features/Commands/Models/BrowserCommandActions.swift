@@ -200,12 +200,9 @@ struct BrowserCommandActions {
     }
 
     func openNewWindow() {
-        #if CREST_CHROMIUM_HOST
-        CrestChromiumRoot.openNativeWindow(.normal(sourceWindowID: targetWindowID))
-        #else
-        openWindow(
-            id: BrowserSceneID.browser.rawValue, value: BrowserMacWindowRequest.normal(sourceWindowID: targetWindowID))
-        #endif
+        let request = BrowserMacWindowRequest.normal(sourceWindowID: targetWindowID)
+        if let host = BrowserMacWindowPresentation.host { host.openWindow(request) }
+        else { openWindow(id: BrowserSceneID.browser.rawValue, value: request) }
     }
 
     func openBlankWindow() {
@@ -214,30 +211,21 @@ struct BrowserCommandActions {
         }
         let request = BrowserMacWindowRequest.temporary(
             sourceWindowID: targetWindowID, assignment: BrowserSpaceRuntimeAssignment(space: space))
-        #if CREST_CHROMIUM_HOST
-        CrestChromiumRoot.openNativeWindow(request)
-        #else
-        openWindow(id: BrowserSceneID.blankWindow.rawValue, value: request)
-        #endif
+        if let host = BrowserMacWindowPresentation.host { host.openWindow(request) }
+        else { openWindow(id: BrowserSceneID.blankWindow.rawValue, value: request) }
     }
 
     func openPrivateWindow() {
-        #if CREST_CHROMIUM_HOST
-        CrestChromiumRoot.openPrivateNativeWindow()
-        #else
-        openWindow(id: BrowserSceneID.privateBrowser.rawValue)
-        #endif
+        if let host = BrowserMacWindowPresentation.host { host.openPrivateWindow() }
+        else { openWindow(id: BrowserSceneID.privateBrowser.rawValue) }
     }
 
     func openQuickWindow() {
         guard let space = browser.selectedSpace else { return }
         let request = BrowserQuickWindowRequest.empty(
             spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID)
-        #if CREST_CHROMIUM_HOST
-        CrestChromiumRoot.openNativeQuickWindow(request)
-        #else
-        openWindow(id: BrowserSceneID.quickWindow.rawValue, value: request)
-        #endif
+        if let host = BrowserMacWindowPresentation.host { host.openQuickWindow(request) }
+        else { openWindow(id: BrowserSceneID.quickWindow.rawValue, value: request) }
     }
 
     func closeKeyWindow() {

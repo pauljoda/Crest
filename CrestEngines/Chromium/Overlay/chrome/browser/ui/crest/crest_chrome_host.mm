@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <set>
+#include <vector>
 #include "base/check.h"
 #include "chrome/browser/ui/crest/crest_permission_prompt.h"
 #include "chrome/browser/ui/crest/crest_extension_prompt.h"
@@ -231,6 +232,13 @@ struct HostState {
   bool started = false;
   bool disposing = false;
   bool quitting = false;
+  uint64_t close_generation = 0;
+  void (^close_preflight)(BOOL);
+  std::vector<std::string> close_pages;
+  std::map<std::string, uint64_t> close_revisions;
+  std::set<std::string> close_windows;
+  std::string close_pending;
+  size_t close_index = 0;
   uint64_t quit_generation = 0;
   Browser* quit_browser = nullptr;
   void (^quit_preflight)(BOOL);
@@ -404,6 +412,8 @@ class ExtensionStateObserver
 };
 
 
+void AdvancePageClosePreparation(uint64_t generation, bool allowed);
+
 struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
        Observation observer)
@@ -426,6 +436,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   std::string profile;
   Observation observation;
   bool closing = false;
+  uint64_t navigation_revision = 0;
   std::unique_ptr<ExtensionPopup> extension_popup;
   void Publish(bool committed = false, NSString* failure = nil) {
     if (!web_contents() || State().disposing) return;
@@ -457,6 +468,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   void DidStopLoading() override { Publish(); }
   void TitleWasSet(content::NavigationEntry*) override { Publish(); }
   void DidFinishNavigation(content::NavigationHandle* navigation) override {
+    if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted()) ++navigation_revision;
     if (navigation->IsInPrimaryMainFrame())
       Publish(navigation->HasCommitted() && !navigation->IsErrorPage(),
               navigation->IsErrorPage() ? @"navigation_failed" : nil);
@@ -473,6 +485,10 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     if (!proceed) BeforeUnloadDialogCancelled();
   }
   void WebContentsDestroyed() override {
+    if (State().close_preflight) {
+      const auto generation = State().close_generation;
+      dispatch_async(dispatch_get_main_queue(), ^{ AdvancePageClosePreparation(generation, false); });
+    }
     extension_popup.reset();
     Observe(nullptr);
     if (!State().disposing) observation(@"closed", @{});
@@ -556,6 +572,50 @@ Browser* BrowserFor(const std::string& profile_id, const std::string& window_id)
   state.browsers.emplace(key, std::make_unique<BrowserOwner>(browser, window_id));
   return browser;
 }
+// A batch retains all WebContents until the native semantic operation accepts it.
+// In particular, approving the first tab never destroys it if a later tab vetoes.
+void FinishPageClosePreparation(uint64_t generation, bool allowed) {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    auto& state = State();
+    if (state.close_generation != generation || !state.close_preflight) return;
+    bool current = allowed && !state.disposing;
+    for (const auto& [id, revision] : state.close_revisions) {
+      auto found = state.pages.find(id);
+      if (found == state.pages.end() || !found->second->web_contents() ||
+          found->second->navigation_revision != revision) current = false;
+    }
+    for (const auto& [id, page] : state.pages) {
+      for (const auto& [key, owner] : state.browsers) {
+        if (owner->browser == page->browser && state.close_windows.contains(owner->window) &&
+            !state.close_revisions.contains(id)) current = false;
+      }
+    }
+    auto completion = state.close_preflight;
+    state.close_preflight = nil;
+    state.close_pages.clear(); state.close_revisions.clear(); state.close_windows.clear();
+    state.close_pending.clear(); state.close_index = 0;
+    completion(current);
+  });
+}
+void AdvancePageClosePreparation(uint64_t generation, bool allowed) {
+  auto& state = State();
+  if (state.close_generation != generation || !state.close_preflight) return;
+  if (!allowed || state.disposing) { FinishPageClosePreparation(generation, false); return; }
+  while (state.close_index < state.close_pages.size()) {
+    const std::string id = state.close_pages[state.close_index++];
+    auto found = state.pages.find(id);
+    if (found == state.pages.end() || !found->second->web_contents()) {
+      FinishPageClosePreparation(generation, false); return;
+    }
+    auto* contents = found->second->web_contents();
+    if (!contents->NeedToFireBeforeUnloadOrUnloadEvents()) continue;
+    state.close_pending = id;
+    contents->DispatchBeforeUnload(false);
+    return;
+  }
+  FinishPageClosePreparation(generation, true);
+}
+
 void ResetQuitPreparation() {
   GlobalBrowserCollection::GetInstance()->ForEach([](BrowserWindowInterface* browser) {
     UnloadController::From(browser)->ResetTryToCloseWindow();
@@ -1091,10 +1151,29 @@ Page* FindPage(NSString* identifier) {
   state.profiles.clear();
   state.profile_leases.clear();
 }
+- (void)prepareToClosePages:(NSArray<NSString*>*)pageIDs windows:(NSArray<NSString*>*)windowIDs
+                completion:(void (^)(BOOL))completion {
+  CHECK(NSThread.isMainThread);
+  auto& state = State();
+  if (state.close_preflight || state.quit_preflight || state.disposing) { completion(NO); return; }
+  std::set<std::string> selected;
+  for (NSString* id in pageIDs) selected.insert(base::SysNSStringToUTF8(id));
+  for (NSString* id in windowIDs) state.close_windows.insert(base::SysNSStringToUTF8(id));
+  for (const auto& [id, page] : state.pages) {
+    bool matches = selected.contains(id);
+    for (const auto& [key, owner] : state.browsers)
+      if (owner->browser == page->browser && state.close_windows.contains(owner->window)) matches = true;
+    if (!matches || !page->web_contents()) continue;
+    state.close_pages.push_back(id);
+    state.close_revisions.emplace(id, page->navigation_revision);
+  }
+  state.close_preflight = [completion copy];
+  AdvancePageClosePreparation(++state.close_generation, true);
+}
 - (void)prepareToQuit:(void (^)(BOOL))completion {
   CHECK(NSThread.isMainThread);
   auto& state = State();
-  if (state.quit_preflight || state.disposing) { completion(NO); return; }
+  if (state.quit_preflight || state.close_preflight || state.disposing) { completion(NO); return; }
   state.quit_preflight = [completion copy];
   ContinueQuitPreparation(++state.quit_generation, true);
 }
@@ -1113,6 +1192,16 @@ Page* FindPage(NSString* identifier) {
 @end
 
 namespace crest {
+bool CompletePageClosePreparation(content::WebContents* contents, bool proceed) {
+  auto& state = State();
+  if (!state.close_preflight || state.close_pending.empty()) return false;
+  auto found = state.pages.find(state.close_pending);
+  if (found == state.pages.end() || found->second->web_contents() != contents) return false;
+  state.close_pending.clear();
+  const auto generation = state.close_generation;
+  dispatch_async(dispatch_get_main_queue(), ^{ AdvancePageClosePreparation(generation, proceed); });
+  return true;
+}
 void ShowExtensionPrompt(
     std::unique_ptr<ExtensionInstallPromptShowParams> params,
     ExtensionInstallPrompt::DoneCallback callback,
