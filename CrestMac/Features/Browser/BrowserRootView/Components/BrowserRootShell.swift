@@ -119,7 +119,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             }
 
             if let visibleInteractionHint {
-                BrowserPageInteractionHintView(hint: visibleInteractionHint)
+                BrowserURLCopyFeedbackView(
+                    visibleInteractionHint.title,
+                    systemImage: visibleInteractionHint.systemImage
+                )
             }
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
@@ -230,38 +233,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .onDisappear { model.extensionSidebar?.release() }
     }
 
-}
-
-private struct BrowserPageInteractionHintView: View {
-    let hint: BrowserPageInteractionHint
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    var body: some View {
-        Label(hint.title, systemImage: hint.systemImage)
-            .font(.callout.weight(.semibold))
-            .padding(.horizontal, BrowserRootMetrics.urlCopyFeedbackHorizontalPadding)
-            .frame(height: BrowserRootMetrics.urlCopyFeedbackHeight)
-            .glassEffect(.regular, in: .capsule)
-            .shadow(
-                color: .black.opacity(
-                    reduceTransparency ? 0 : CrestOpacity.controlShadow
-                ),
-                radius: BrowserRootMetrics.urlCopyFeedbackShadowRadius,
-                y: BrowserRootMetrics.urlCopyFeedbackShadowYOffset
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.top, BrowserRootMetrics.urlCopyFeedbackTopInset)
-            .allowsHitTesting(false)
-            .accessibilityAddTraits(.isStaticText)
-            .transition(
-                reduceMotion
-                    ? .opacity
-                    : .move(edge: .top).combined(with: .opacity)
-            )
-            .zIndex(BrowserRootMetrics.feedbackZIndex)
-    }
 }
 
 extension BrowserPageInteractionHint {

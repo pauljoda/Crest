@@ -1,11 +1,22 @@
 import SwiftUI
 
 struct BrowserURLCopyFeedbackView: View {
+    let title: LocalizedStringKey
+    let systemImage: String
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
+    init(
+        _ title: LocalizedStringKey = "URL Copied",
+        systemImage: String = "checkmark.circle.fill"
+    ) {
+        self.title = title
+        self.systemImage = systemImage
+    }
+
     var body: some View {
-        Label("URL Copied", systemImage: "checkmark.circle.fill")
+        Label(title, systemImage: systemImage)
             .font(.callout.weight(.semibold))
             .padding(
                 .horizontal,
