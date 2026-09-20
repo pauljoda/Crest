@@ -5,6 +5,63 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
+    func testDeletionIntentSurvivesAdapterFailureAndRestartThenCommitsItsTombstoneWithTheSession() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("session.sqlite")
+        let icons = InMemoryBrowserFaviconStore()
+        let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: icons)
+        let original = BrowserSession.preview
+        let target = original.spaces[0]
+        var initialJournal = BrowserSyncJournal()
+        try initialJournal.stage(session: original)
+        try storage.migrateIfNeeded(session: original, journal: initialJournal)
+        let sync = BrowserSyncCoordinator(persistence: storage.journalPersistence)
+        let store = BrowserStore(session: original, persistence: storage, syncCoordinator: sync)
+        let other = store.makeWindowStore()
+        let failing = DeletionAdapter { space in
+            let intent = try XCTUnwrap(storage.load()?.spaceDeletions?.first)
+            XCTAssertEqual(intent.spaceID, space.id)
+            XCTAssertEqual(intent.profileID, space.profile.id)
+            XCTAssertTrue(other.deletingSpaceIDs.contains(space.id))
+            XCTAssertNotEqual(other.selectedSpace?.id, space.id)
+            throw DeletionFailure.interrupted
+        }
+        do { try await store.deleteSpace(target.id, dataDeleter: failing); XCTFail("Expected adapter failure") }
+        catch DeletionFailure.interrupted { }
+        XCTAssertTrue(store.deletingSpaceIDs.contains(target.id))
+        let saved = try XCTUnwrap(storage.load())
+        XCTAssertNotNil(saved.space(id: target.id))
+        var staleWindow = saved
+        staleWindow.selectedSpaceID = target.id
+        let pages = BrowserPagePool()
+        pages.select(session: staleWindow)
+        XCTAssertNil(pages.activePage, "A restored window must not reopen a pending profile")
+        let reopened = try BrowserTransactionalSessionPersistence(url: url, favicons: icons)
+        let restartedSync = BrowserSyncCoordinator(persistence: reopened.journalPersistence)
+        let restarted = BrowserStore(session: saved, persistence: reopened, syncCoordinator: restartedSync)
+        XCTAssertTrue(restarted.deletingSpaceIDs.contains(target.id))
+        XCTAssertNotEqual(restarted.selectedSpace?.id, target.id)
+        let succeeding = DeletionAdapter { space in XCTAssertEqual(space.profile.id, target.profile.id) }
+        await restarted.resumePendingSpaceDeletions(dataDeleter: succeeding)
+        XCTAssertEqual(succeeding.calls, [target.id])
+        XCTAssertNil(restarted.session.space(id: target.id))
+        XCTAssertNil(restarted.session.spaceDeletions)
+        XCTAssertEqual(reopened.load(), restarted.session)
+        XCTAssertEqual(try reopened.journalPersistence.load(), restartedSync.journal)
+        let tombstones = restartedSync.journal.records.filter { $0.spaceID == target.id && $0.tombstone != nil }
+        XCTAssertFalse(tombstones.isEmpty)
+        XCTAssertTrue(tombstones.allSatisfy { $0.tombstone?.reason == .explicitDelete })
+    }
+
+    private enum DeletionFailure: Error { case interrupted }
+    private final class DeletionAdapter: BrowserSpaceDataDeleting {
+        var calls: [SpaceID] = []
+        let action: (BrowserSpace) throws -> Void
+        init(action: @escaping (BrowserSpace) throws -> Void) { self.action = action }
+        func deleteData(for space: BrowserSpace) async throws { calls.append(space.id); try action(space) }
+    }
+
     func testTransactionalStorageRollsBackBothPartsAndRecoversTheCommittedPair() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

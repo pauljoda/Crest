@@ -48,6 +48,21 @@ public sealed partial class NativeSessionAuthority
             return Revision;
         }
     }
+
+    internal NativeSessionReplacement ReserveCommand(NativeSessionCommand command, ReadOnlySpan<byte> selection)
+    {
+        lock (Gate)
+        {
+            RequireWritable();
+            if (command.ExpectedRevision != Revision)
+                throw new CrestCore.Domain.BrowserRuleException("stale_session_revision");
+            var nextRevision = checked(Revision + 1);
+            var checkpoint = new NativeSessionCheckpoint(command.Document, Parse(selection));
+            _ = checkpoint.Read("core");
+            replacement = new(this, command.Document, nextRevision, checkpoint);
+            return replacement;
+        }
+    }
 }
 
 public sealed class NativeSessionReplacement : IDisposable

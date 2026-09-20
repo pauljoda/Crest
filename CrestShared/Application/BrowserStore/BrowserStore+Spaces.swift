@@ -58,6 +58,11 @@ extension BrowserStore {
         }
         defer { family.finishDeletingSpace(id) }
 
+        #if CREST_CORE_BACKED
+        let operationID = session.spaceDeletions?.first(where: { $0.spaceID == id })?.operationID ?? UUID()
+        try family.executeSpaceDurably("space.deletion.begin", in: id,
+            arguments: ["operationID": operationID.uuidString], from: self)
+        #else
         if session.selectedSpaceID == id,
             let index = session.spaces.firstIndex(where: { $0.id == id })
         {
@@ -70,6 +75,7 @@ extension BrowserStore {
             syncCoordinator?.advanceStoreRevision(to: revision)
             try family.save(session, to: persistence, scope: .core)
         }
+        #endif
 
         try await dataDeleter.deleteData(for: space)
         try await credentialVault.deleteAll(in: id)
@@ -81,16 +87,27 @@ extension BrowserStore {
             throw BrowserSpaceDeletionError.spaceChangedDuringDeletion
         }
         #if CREST_CORE_BACKED
-        guard family.executeSpace("space.remove", in: id, arguments: [:], from: self) else {
-            throw BrowserSpaceDeletionError.spaceChangedDuringDeletion
-        }
+        try family.executeSpaceDurably("space.remove", in: id,
+            arguments: ["operationID": operationID.uuidString], deletionReason: .explicitDelete, from: self)
         #else
         guard session.removeSpace(id) != nil else {
             throw BrowserSpaceDeletionError.cannotDeleteLastSpace
         }
         #endif
         BrowserLinkPreferenceStore.shared.removeReferences(to: id)
+        #if !CREST_CORE_BACKED
         persist(deletionReason: .explicitDelete, scope: .core)
+        #endif
+    }
+
+    func resumePendingSpaceDeletions(dataDeleter: any BrowserSpaceDataDeleting) async {
+        #if CREST_CORE_BACKED
+        for intent in session.spaceDeletions ?? [] {
+            guard !family.isActivelyDeletingSpace(intent.spaceID) else { continue }
+            do { try await deleteSpace(intent.spaceID, dataDeleter: dataDeleter) }
+            catch { localSyncErrorDescription = "Space cleanup needs another attempt: \(error.localizedDescription)" }
+        }
+        #endif
     }
 
     func importPortableArchive(_ imported: BrowserPortableImport) throws {

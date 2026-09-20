@@ -95,6 +95,7 @@ final class BrowserStore {
         self.cloudSyncChangeHandler = cloudSyncChangeHandler
         localSyncErrorDescription = nil
         family.register(self)
+        selection.reconcile(using: family.currentSession, excluding: family.deletingSpaceIDs)
     }
 }
 
@@ -109,7 +110,14 @@ extension BrowserStore {
         credentialSaveOperations.removeAll()
         family.resetDeletionState()
         interactionObserver?.browserWillResetSession()
+        #if CREST_CORE_BACKED
+        do {
+            let template = try BrowserCoreSync.value(BrowserSession.privateBrowsing().spaces[0])
+            guard family.executeSpace("space.reset_private", arguments: ["template": template], from: self) else { return }
+        } catch { localSyncErrorDescription = String(describing: error); return }
+        #else
         session = .privateBrowsing()
+        #endif
         localSyncErrorDescription = nil
         let revision = family.publish(session, from: self)
         syncCoordinator?.advanceStoreRevision(to: revision)

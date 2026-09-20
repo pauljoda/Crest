@@ -210,7 +210,10 @@ struct CrestMobileApp: App {
                     \.browserSidebarWidgetRuntime,
                     sidebarWidgets
                 )
-                .task { await cloudSync.start() }
+                .task {
+                    await browser.resumePendingSpaceDeletions(dataDeleter: pageStoreRegistry)
+                    await cloudSync.start()
+                }
             } else {
                 EmptyView()
             }

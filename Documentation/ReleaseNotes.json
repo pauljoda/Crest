@@ -1561,6 +1561,10 @@
     "chromium-space-profile-cleanup": {
       "category": "fixed",
       "message": "Delete Chromium website and extension data with its Space, while keeping other Spaces and downloaded files."
+    },
+    "resumable-space-data-cleanup": {
+      "category": "fixed",
+      "message": "Resume interrupted Space deletion after restarting Crest and keep pending cleanup unavailable for browsing."
     }
   }
 }

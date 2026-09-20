@@ -150,6 +150,9 @@ CREST_API crest_status_t CREST_CALL crest_session_read_command(
     uint64_t command, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_session_commit_command(uint64_t command, uint64_t* out_revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t command);
+/* Reserve a prepared semantic command for durable storage before publication. */
+CREST_API crest_status_t CREST_CALL crest_session_reserve_command(uint64_t command,
+    const uint8_t *selection, size_t selection_length, uint64_t *replacement, uint64_t *checkpoint);
 
 // Reserve a validated replacement while the platform writes one durable session
 // and journal transaction. Release cancels an uncommitted reservation. The

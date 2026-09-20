@@ -87,4 +87,47 @@ public sealed partial class BrowserContractsTests
         Assert.Empty(JsonNode.Parse(transition.Journal.Read())!["pendingRecordIDs"]!.AsArray());
         Assert.NotNull(session["disposableSeedMarker"]);
     }
+
+    [Fact]
+    public void CloudReplacementCannotDiscardLocallyAuthorizedCleanup()
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
+        session["spaceDeletions"] = new JsonArray(new JsonObject
+        {
+            ["spaceID"] = session["spaces"]![0]!["id"]!.DeepClone(),
+            ["profileID"] = session["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
+            ["operationID"] = Guid.NewGuid().ToString("D")
+        });
+        var initial = JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()));
+        var journal = new NativeSyncJournal(Bytes(initial));
+        var transition = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject
+        {
+            ["version"] = 1, ["operation"] = "replace", ["session"] = session.DeepClone(),
+            ["preferences"] = SyncProjectionPreferences(), ["records"] = new JsonArray(), ["now"] = 800000000.0
+        }));
+        var result = transition.Materialization["session"]!;
+        Assert.True(JsonNode.DeepEquals(session["spaceDeletions"], result["spaceDeletions"]));
+        Assert.Equal(2, result["spaces"]!.AsArray().Count);
+        var kept = result["spaces"]!.AsArray().Single(s => JsonNode.DeepEquals(s!["id"], session["spaces"]![0]!["id"]));
+        Assert.True(JsonNode.DeepEquals(session["spaces"]![0], kept));
+        Assert.False(JsonNode.DeepEquals(result["selectedSpaceID"], kept!["id"]));
+        var repaired = NativeSessionMaintenance.Repair(result.AsObject(), 800000000.0)["session"]!;
+        Assert.True(JsonNode.DeepEquals(result["spaceDeletions"], repaired["spaceDeletions"]));
+        var tombstone = new JsonObject
+        {
+            ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.Value.ToString("D") },
+            ["spaceID"] = SwiftId(fixture.Space.Value),
+            ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
+            ["tombstone"] = new JsonObject { ["reason"] = "explicitDelete", ["deletedAt"] = 800000000.0 }
+        };
+        var merged = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject
+        {
+            ["version"] = 1, ["operation"] = "merge", ["session"] = session.DeepClone(),
+            ["preferences"] = SyncProjectionPreferences(), ["records"] = new JsonArray(tombstone), ["now"] = 800000000.0
+        }));
+        var record = JsonNode.Parse(merged.Journal.Read())!["records"]!.AsArray().Single(r =>
+            r!["id"]!["kind"]!.GetValue<string>() == "space" && Guid.Parse(r["id"]!["value"]!.GetValue<string>()) == fixture.Space.Value)!;
+        Assert.Equal("explicitDelete", record["tombstone"]!["reason"]!.GetValue<string>());
+        Assert.Single(merged.Materialization["session"]!["spaceDeletions"]!.AsArray());
+    }
 }

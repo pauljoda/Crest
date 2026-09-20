@@ -102,12 +102,12 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
     /// Core validation/reservation has already succeeded. SQLite COMMIT is the
     /// durability boundary; only afterward may the caller publish either value.
     func commit(_ session: BrowserSession, checkpoint: any BrowserSessionCheckpoint,
-        journal: BrowserSyncJournal) throws {
+        journal: BrowserSyncJournal? = nil) throws {
         try queue.sync {
-            let journalData = try journal.encodedSnapshot()
+            let journalData = try journal?.encodedSnapshot()
             try transaction {
                 try writeSession(session, scope: .everything, checkpoint: checkpoint)
-                try write("journal", data: journalData)
+                if let journalData { try write("journal", data: journalData) }
             }
             saveError = nil
             reconcileFavicons(session, scope: .everything)

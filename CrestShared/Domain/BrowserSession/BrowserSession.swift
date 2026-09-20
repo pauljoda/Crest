@@ -5,6 +5,14 @@ struct BrowserSession: Codable, Equatable, Sendable {
     var selectedSpaceID: SpaceID
     var defaultSpaceID: SpaceID? = nil
     var disposableSeedMarker: UUID? = nil
+    /// Local cleanup work. These intents never become CloudKit records.
+    var spaceDeletions: [BrowserSpaceDeletionIntent]? = nil
+}
+
+struct BrowserSpaceDeletionIntent: Codable, Equatable, Sendable {
+    let spaceID: SpaceID
+    let profileID: UUID
+    let operationID: UUID
 }
 
 // MARK: - Factories
@@ -109,7 +117,8 @@ extension BrowserSession {
     }
 
     var selectedSpace: BrowserSpace? {
-        spaces.first { $0.id == selectedSpaceID }
+        guard spaceDeletions?.contains(where: { $0.spaceID == selectedSpaceID }) != true else { return nil }
+        return spaces.first { $0.id == selectedSpaceID }
     }
 
     var selectedTab: BrowserTab? {

@@ -128,6 +128,17 @@ final class BrowserCoreSessionAuthority {
 
     func executeSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
         window: BrowserSession, at date: Date) throws -> Bool {
+        let prepared = try prepareSpace(operation, in: spaceID, arguments: arguments, window: window, at: date)
+        var accepted: UInt64 = 0
+        let result = crest_session_commit_command(prepared.handle, &accepted)
+        guard result == CREST_OK else { throw CoreError.rejected(result) }
+        revision = accepted
+        projection = prepared.session
+        return projection != window
+    }
+
+    func prepareSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
+        window: BrowserSession, at date: Date) throws -> PreparedSpace {
         let space = spaceID.flatMap { window.space(id: $0) }
         let data = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": operation,
@@ -136,7 +147,9 @@ final class BrowserCoreSessionAuthority {
             "arguments": arguments, "window": try Self.selection(for: window),
             "now": date.timeIntervalSinceReferenceDate,
         ])
-        return try commitCommand(data) { output in
+        let handle = try prepareCommand(data)
+        do {
+            let output = try readCommand(handle)
             struct Result: Decodable { let session: BrowserSession }
             var next = try JSONDecoder().decode(Result.self, from: output).session
             for index in next.spaces.indices {
@@ -149,18 +162,67 @@ final class BrowserCoreSessionAuthority {
                 next.spaces[index].history = existing.history
                 next.spaces[index].archivedTabs = existing.archivedTabs
             }
-            return (next, next != window)
+            return PreparedSpace(handle: handle, session: next)
+        } catch {
+            crest_session_release_command(handle)
+            throw error
         }
+    }
+
+    final class PreparedSpace {
+        fileprivate let handle: UInt64
+        let session: BrowserSession
+        fileprivate init(handle: UInt64, session: BrowserSession) { self.handle = handle; self.session = session }
+        deinit { crest_session_release_command(handle) }
+    }
+
+    func commitDurably(_ command: PreparedSpace, sync: BrowserCoreSyncTransaction? = nil,
+        persist: (any BrowserSessionCheckpoint) throws -> Void) throws {
+        let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: command.session))
+        var replacement: UInt64 = 0, checkpoint: UInt64 = 0
+        let reserved = selection.withUnsafeBytes {
+            crest_session_reserve_command(command.handle, $0.bindMemory(to: UInt8.self).baseAddress,
+                selection.count, &replacement, &checkpoint)
+        }
+        guard reserved == CREST_OK else { throw CoreError.rejected(reserved) }
+        defer { crest_session_release_replacement(replacement) }
+        let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
+        if let sync {
+            let bound = crest_session_bind_sync_replacement(replacement, sync.handle)
+            guard bound == CREST_OK else { throw CoreError.rejected(bound) }
+        }
+        try persist(snapshot)
+        var accepted: UInt64 = 0
+        precondition(crest_session_commit_replacement(replacement, &accepted) == CREST_OK,
+            "Lost core command storage reservation")
+        revision = accepted
+        projection = command.session
     }
 
     private func commitCommand<Result>(_ data: Data,
         decode: (Data) throws -> (BrowserSession, Result)) throws -> Result {
+        let command = try prepareCommand(data)
+        defer { crest_session_release_command(command) }
+        let output = try readCommand(command)
+        let (next, result) = try decode(output)
+        var accepted: UInt64 = 0
+        let committed = crest_session_commit_command(command, &accepted)
+        guard committed == CREST_OK else { throw CoreError.rejected(committed) }
+        revision = accepted
+        projection = next
+        return result
+    }
+
+    private func prepareCommand(_ data: Data) throws -> UInt64 {
         var command: UInt64 = 0
         let prepared = data.withUnsafeBytes {
             crest_session_prepare_command(owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &command)
         }
         guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
-        defer { crest_session_release_command(command) }
+        return command
+    }
+
+    private func readCommand(_ command: UInt64) throws -> Data {
         var length = 0
         let measured = crest_session_read_command(command, nil, 0, &length)
         guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 4 * 1024 * 1024 else {
@@ -172,13 +234,7 @@ final class BrowserCoreSessionAuthority {
             crest_session_read_command(command, $0.bindMemory(to: UInt8.self).baseAddress, capacity, &length)
         }
         guard read == CREST_OK else { throw CoreError.rejected(read) }
-        let (next, result) = try decode(output)
-        var accepted: UInt64 = 0
-        let committed = crest_session_commit_command(command, &accepted)
-        guard committed == CREST_OK else { throw CoreError.rejected(committed) }
-        revision = accepted
-        projection = next
-        return result
+        return output
     }
 
     func checkpoint(for window: BrowserSession) throws -> BrowserCoreSessionCheckpoint {

@@ -31,6 +31,7 @@ public static class NativeSyncMaterializer
         var deleted = records.Where(r => Text(r["id"]?["kind"]) == "folder" && r["tombstone"] is not null)
             .Select(r => new FolderId(Id(r["id"]!["value"]))).ToHashSet();
         var localSpaces = Items(session, "spaces").ToDictionary(n => Id(n!["id"]), n => n!);
+        var pending = (session["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
         var spaces = new JsonArray();
         HashSet<Guid> profiles = [];
         foreach (var remote in Ordered(Payloads(records, "space")))
@@ -39,6 +40,7 @@ public static class NativeSyncMaterializer
             if (!profiles.Add(profile)) throw Error("duplicateProfile", profile);
             localSpaces.TryGetValue(id, out var local);
             if (local is not null && Id(local["profile"]!["id"]) != profile) throw Error("immutableProfileChanged", id);
+            if (pending.Contains(id) && local is not null) { spaces.Add(local.DeepClone()); continue; }
             var folders = Folders(id, records, policy, local, owners, deleted);
             var tabs = Tabs(id, records, policy, local, folders, owners, deleted);
             var archive = Archive(id, records, policy, local, tabs, now);
@@ -62,6 +64,12 @@ public static class NativeSyncMaterializer
             if (local?["selectedTabID"] is { } selected && tabs.Any(t => Id(t["id"]) == Id(selected)))
                 value["selectedTabID"] = selected.DeepClone();
             spaces.Add((JsonNode)value);
+        }
+        foreach (var id in pending.Where(id => !spaces.Any(s => Id(s!["id"]) == id)))
+        {
+            var local = localSpaces[id];
+            if (!profiles.Add(Id(local["profile"]!["id"]))) throw Error("duplicateProfile", Id(local["profile"]!["id"]));
+            spaces.Add(local.DeepClone());
         }
         var result = session.DeepClone().AsObject();
         if (spaces.Count == 0) return result;

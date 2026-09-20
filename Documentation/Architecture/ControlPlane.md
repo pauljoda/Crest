@@ -347,9 +347,9 @@ service cleanup have separate correlated acknowledgments; failure retains a
 pending Space that can be retried. Completed tombstones remain in the checkpoint
 and reject stale Space/profile records. WebKit implements deletion for its
 isolated in-memory profiles. The native Chromium cleanup port described below
-is separate from this message-based path. The native app still needs the same
-durable core intent and coordinated service recovery before deletion is complete
-across both integration paths.
+is separate from this message-based path. The native app now saves a matching
+core-owned deletion intent and resumes its local adapters at launch. Consolidating
+the two application paths and capability contracts remains migration work.
 
 The standalone harness uses a small contract-testing UI. Product migration uses
 the original Crest UI in the NativeCore targets. In the harness, native feature tabs
@@ -507,10 +507,21 @@ service. It waits for browsing-data removal and the durable engine deletion
 marker before returning success. Chromium can finish removing the profile
 directory on its next startup. Completed download files remain on disk.
 
-The native app still needs a durable core deletion intent and restart recovery
-for the whole operation, including credential cleanup and the final Space
-tombstone. The engine's cleanup marker covers its own files; it does not make
-that complete cross-service transition atomic.
+The native app saves a core-owned Space/profile/operation intent before native
+cleanup starts. That Space becomes unavailable across its windows; stale edits,
+profile replacement and deletion of the last available Space are rejected by the
+core. Cleanup retries are idempotent, and launch resumes saved intents through the
+selected engine and credential adapters. A failed adapter keeps the intent for
+another attempt. Private session reset discards its in-memory intents and creates
+fresh profile identities.
+
+Prepared semantic commands reserve publication while Apple storage writes. Final
+Space removal and its explicit sync tombstones share one SQLite transaction, then
+the core publishes both accepted values. A failed storage commit publishes
+neither. Pending cleanup remains local during sync merge or replacement and never
+republishes a remote tombstone as an active Space. Incoming deletions that start
+on another device still need local profile cleanup orchestration; this path
+currently resumes deletions authorized on this device.
 
 There are still migration gaps.
 Other WebKit-specific page tools and extension side panels need

@@ -117,11 +117,15 @@ public sealed class NativeSyncJournal
         {
             var desired = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
             var session = args["session"] as JsonObject;
+            var cleaning = (session?["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
             var payloads = session is null ? args["payloads"]!.AsArray()
                 : NativeSyncProjection.Project(session, fields["preferences"]!, records.Values);
             foreach (var node in payloads)
             {
                 var payload = node!.AsObject();
+                // Pending cleanup is local recovery state. It neither edits
+                // remote records nor revives an incoming deletion tombstone.
+                if (cleaning.Contains(Id(PayloadSpace(payload)))) continue;
                 var id = PayloadId(payload);
                 next.TryGetValue(Name(id), out var previous);
                 var previousPayload = previous is null ? null : Payload(previous);
@@ -145,6 +149,7 @@ public sealed class NativeSyncJournal
                 queued.Clear();
                 foreach (string id in next.Keys.Union(desired.Keys).Order(StringComparer.Ordinal).ToArray())
                 {
+                    if (next.TryGetValue(id, out var cleaningRecord) && cleaning.Contains(Id(cleaningRecord["spaceID"]))) continue;
                     if (desired.TryGetValue(id, out var payload)) next[id] = Save(payload);
                     else
                     {
@@ -170,6 +175,7 @@ public sealed class NativeSyncJournal
                 }
                 foreach (var (id, record) in next.ToArray())
                 {
+                    if (cleaning.Contains(Id(record["spaceID"]))) continue;
                     if (Payload(record) is not { } payload || !Includes(fields["preferences"]!, payload) || desired.ContainsKey(id)) continue;
                     string? reason;
                     if (!Portable(payload)) reason = "superseded";

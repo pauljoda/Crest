@@ -6,6 +6,10 @@ namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority
 {
+    private static JsonArray Deletions(JsonObject metadata) => metadata["spaceDeletions"] as JsonArray ?? new();
+    private static JsonNode? PendingDeletion(JsonObject metadata, Guid id)
+        => Deletions(metadata).FirstOrDefault(d => Id(d!["spaceID"]) == id);
+
     private NativeSessionCommand PrepareSpaceCommand(ulong expected, JsonObject request)
     {
         SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
@@ -22,15 +26,26 @@ public sealed partial class NativeSessionAuthority
             return new SpaceDocument(fields, s.Sections);
         }).ToList();
         Guid? created = null;
-        if (operation == "space.create")
+        if (operation is "space.create" or "space.reset_private")
         {
+            if (operation == "space.reset_private")
+            {
+                if (workspaceKind != BrowserWorkspaceKind.Private) throw new BrowserRuleException("not_private_workspace");
+                var fresh = args["template"]!;
+                if (spaces.Any(s => Id(s.Metadata["id"]) == Id(fresh["id"])
+                    || Id(s.Metadata["profile"]!["id"]) == Id(fresh["profile"]!["id"])))
+                    throw new BrowserRuleException("duplicate_space_profile");
+                spaces.Clear();
+                metadata.Remove("spaceDeletions"); metadata.Remove("defaultSpaceID");
+            }
             var supplied = args["template"]!.AsObject();
             var id = Id(supplied["id"]);
             var profile = Id(supplied["profile"]!["id"]);
             if (spaces.Any(s => Id(s.Metadata["id"]) == id || Id(s.Metadata["profile"]!["id"]) == profile))
                 throw new BrowserRuleException("duplicate_space_profile");
             var fields = Fields(supplied, Sections);
-            fields["name"] = (workspaceKind == BrowserWorkspaceKind.Private ? "Private " : "Space ") + (spaces.Count + 1);
+            fields["name"] = operation == "space.reset_private" ? "Private" :
+                (workspaceKind == BrowserWorkspaceKind.Private ? "Private " : "Space ") + (spaces.Count + 1);
             var sections = Sections.ToDictionary(section => section,
                 section => (IReadOnlyList<JsonNode>)supplied[section]!.AsArray().Select(n => n!.DeepClone()).ToArray());
             if (sections["history"].Count != 0 || sections["archivedTabs"].Count != 0 || sections["folders"].Count != 0
@@ -68,8 +83,29 @@ public sealed partial class NativeSessionAuthority
             if (Id(request["profileId"]) != Id(space.Metadata["profile"]!["id"]))
                 throw new BrowserRuleException("wrong_profile_identity");
             var fields = space.Metadata;
+            var pending = PendingDeletion(metadata, id);
+            if (pending is not null && operation is not ("space.deletion.begin" or "space.remove"))
+                throw new BrowserRuleException("space_deletion_in_progress");
             switch (operation)
             {
+                case "space.deletion.begin":
+                    var operationId = Id(args["operationID"]);
+                    if (pending is not null)
+                    {
+                        if (Id(pending["operationID"]) != operationId)
+                            throw new BrowserRuleException("wrong_deletion_operation");
+                        break;
+                    }
+                    SpaceOrganizationPolicy.RequireRemovable(spaces.Count - Deletions(metadata).Count);
+                    var deletions = Deletions(metadata);
+                    if (metadata["spaceDeletions"] is null) metadata["spaceDeletions"] = deletions;
+                    deletions.Add((JsonNode)new JsonObject { ["spaceID"] = fields["id"]!.DeepClone(),
+                        ["profileID"] = fields["profile"]!["id"]!.DeepClone(),
+                        ["operationID"] = operationId.ToString("D") });
+                    if (Id(metadata["selectedSpaceID"]) == id)
+                        metadata["selectedSpaceID"] = spaces.First(s => PendingDeletion(metadata, Id(s.Metadata["id"])) is null)
+                            .Metadata["id"]!.DeepClone();
+                    break;
                 case "space.identity":
                     fields["name"] = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>());
                     fields["symbol"] = SpaceOrganizationPolicy.Symbol(args["symbol"]!.GetValue<string>());
@@ -105,8 +141,12 @@ public sealed partial class NativeSessionAuthority
                     }
                     break;
                 case "space.remove":
+                    if (pending is null || Id(pending["operationID"]) != Id(args["operationID"]))
+                        throw new BrowserRuleException("wrong_deletion_operation");
                     SpaceOrganizationPolicy.RequireRemovable(spaces.Count);
                     spaces.RemoveAt(index);
+                    Deletions(metadata).Remove(pending);
+                    if (Deletions(metadata).Count == 0) metadata.Remove("spaceDeletions");
                     if (Id(metadata["selectedSpaceID"]) == id)
                         metadata["selectedSpaceID"] = spaces[Math.Min(index, spaces.Count - 1)].Metadata["id"]!.DeepClone();
                     if (metadata["defaultSpaceID"] is { } defaultId && Id(defaultId) == id)

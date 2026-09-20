@@ -4,6 +4,7 @@ import Foundation
 /// Schedules platform work for the core session's sync component. This adapter
 /// neither orders browser revisions nor accepts journal mutations itself.
 final class BrowserSyncCoordinator: @unchecked Sendable {
+    private enum CommandError: Error { case superseded }
     typealias Installation = (BrowserSession, BrowserSyncJournal, any BrowserSyncJournalPersisting, BrowserCoreSyncTransaction) throws -> Void
     let core: BrowserCoreSyncAuthority
     let status: BrowserSyncCoordinatorStatus
@@ -39,6 +40,24 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         try await Task.detached(priority: .utility) {
             try self.stage(session: session, deletionReason: deletionReason, at: date, storeRevision: storeRevision)
         }.value
+    }
+
+    /// A semantic command has already prepared this session. Stage its journal
+    /// under the same mutation lock and let the owner commit both durably.
+    func installLocalCommand(_ session: BrowserSession, deletionReason: BrowserSyncTombstoneReason,
+        at date: Date, revision: BrowserStoreSyncRevision, install: Installation) throws {
+        try mutationLock.withLock {
+            guard let transaction = try core.prepare([
+                "version": 1, "operation": "stage", "arguments": [
+                    "session": try value(session), "deletionReason": deletionReason.rawValue,
+                    "now": date.timeIntervalSinceReferenceDate
+                ]
+            ], revision: revision), try transaction.seal() else {
+                throw CommandError.superseded
+            }
+            try install(session, transaction.journal, persistence, transaction)
+            transaction.publish()
+        }
     }
 
     func merge(remoteRecords: [BrowserSyncRecord], into localSession: BrowserSession, at date: Date = .now,

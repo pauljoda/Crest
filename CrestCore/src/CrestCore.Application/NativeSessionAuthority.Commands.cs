@@ -11,6 +11,7 @@ public sealed partial class NativeSessionAuthority
     {
         lock (Gate)
         {
+            RequireWritable();
             if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
             var request = Parse(bytes);
@@ -18,6 +19,8 @@ public sealed partial class NativeSessionAuthority
             if (request["operation"]!.GetValue<string>().StartsWith("space.", StringComparison.Ordinal))
                 return PrepareSpaceCommand(expected, request);
             var spaceId = Id(request["spaceId"]);
+            if (PendingDeletion(document.Metadata, spaceId) is not null)
+                throw new BrowserRuleException("space_deletion_in_progress");
             var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == spaceId);
             if (Id(request["profileId"]) != Id(original.Metadata["profile"]!["id"]))
                 throw new BrowserRuleException("wrong_profile_identity");
@@ -87,4 +90,5 @@ public sealed class NativeSessionCommand
         NativeSessionAuthority.SessionDocument document, byte[] output)
     { this.owner = owner; ExpectedRevision = revision; Document = document; Output = output; }
     public ulong Commit() => owner.CommitCommand(this);
+    public NativeSessionReplacement Reserve(ReadOnlySpan<byte> selection) => owner.ReserveCommand(this, selection);
 }

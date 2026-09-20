@@ -63,6 +63,15 @@ public sealed partial class NativeSessionAuthority
             foreach (var tab in space.Sections["tabs"])
                 if (!tabs.Add(Id(tab!["id"]))) throw new BrowserRuleException("duplicate_tab");
         }
+        var pendingIds = new HashSet<Guid>();
+        foreach (var deletion in Deletions(value.Metadata))
+        {
+            var id = Id(deletion!["spaceID"]);
+            var profile = Id(deletion["profileID"]);
+            _ = Id(deletion["operationID"]);
+            if (!pendingIds.Add(id) || !spaces.Any(s => Id(s.Metadata["id"]) == id && Id(s.Metadata["profile"]!["id"]) == profile))
+                throw new BrowserRuleException("invalid_deletion_intent");
+        }
         // An empty temporary workspace and a briefly stale window selection are
         // valid native states. Window reconciliation handles their presentation.
     }
@@ -74,6 +83,8 @@ public sealed partial class NativeSessionAuthority
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
         var metadata = delta["metadata"] is JsonObject suppliedMetadata ? Fields(suppliedMetadata, ["spaces"]) : document.Metadata;
+        if (!JsonNode.DeepEquals(metadata["spaceDeletions"], document.Metadata["spaceDeletions"]))
+            throw new BrowserRuleException("deletion_requires_command");
         var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));
         foreach (var node in delta["spaces"]!.AsArray())
         {
@@ -104,6 +115,16 @@ public sealed partial class NativeSessionAuthority
         if (spaceOrder.Distinct().Count() != spaceOrder.Length || spaceOrder.Any(id => !byId.ContainsKey(id)))
             throw new BrowserRuleException("invalid_space_order");
         var next = new SessionDocument(metadata, spaceOrder.Select(id => byId[id]).ToArray());
+        foreach (var deletion in Deletions(document.Metadata))
+        {
+            var id = Id(deletion!["spaceID"]);
+            var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == id);
+            var retained = next.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == id);
+            if (retained is null || !JsonNode.DeepEquals(Fields(original.Metadata, ["selectedTabID"]), Fields(retained.Metadata, ["selectedTabID"]))
+                || Sections.Any(section => original.Sections[section].Count != retained.Sections[section].Count
+                    || original.Sections[section].Zip(retained.Sections[section]).Any(pair => !JsonNode.DeepEquals(pair.First, pair.Second))))
+                throw new BrowserRuleException("space_deletion_in_progress");
+        }
         Validate(next);
         return next;
     }

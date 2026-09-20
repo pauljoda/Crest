@@ -18,7 +18,10 @@ final class BrowserStoreFamily {
     let temporarySourceAssignment: BrowserSpaceRuntimeAssignment?
     let temporarySettingsBrowser: BrowserStore?
     private(set) var syncRevision: BrowserStoreSyncRevision = .initial
-    private(set) var deletingSpaceIDs: Set<SpaceID> = []
+    private var activeSpaceDeletions: Set<SpaceID> = []
+    var deletingSpaceIDs: Set<SpaceID> {
+        activeSpaceDeletions.union(authoritativeSession.spaceDeletions?.map(\.spaceID) ?? [])
+    }
     @ObservationIgnored private var lastCleanupSweepAt: Date?
     @ObservationIgnored weak var pageDismissalAuthorizer: (any BrowserPageDismissalAuthorizing)?
 
@@ -108,6 +111,38 @@ final class BrowserStoreFamily {
             source.localSyncErrorDescription = "Core Space command failed: \(error)"
             return false
         }
+    }
+
+    func executeSpaceDurably(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
+        deletionReason: BrowserSyncTombstoneReason = .superseded, from source: BrowserStore, at date: Date = .now) throws {
+        let previous = authoritativeSession
+        let command = try core.prepareSpace(operation, in: spaceID, arguments: arguments, window: source.session, at: date)
+        let revision = reserveSyncRevision()
+        if let sync = source.syncCoordinator {
+            sync.advanceStoreRevision(to: revision)
+            try sync.installLocalCommand(command.session, deletionReason: deletionReason, at: date, revision: revision) {
+                session, journal, journalPersistence, transaction in
+                try self.core.commitDurably(command, sync: transaction) { checkpoint in
+                    if let storage = source.persistence as? BrowserTransactionalSessionPersistence {
+                        guard storage.owns(journalPersistence) else { throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint }
+                        try storage.commit(session, checkpoint: checkpoint, journal: journal)
+                    } else {
+                        try journalPersistence.save(journal)
+                        source.persistence.save(session, scope: .everything, checkpoint: checkpoint)
+                    }
+                }
+            }
+        } else {
+            try core.commitDurably(command) { checkpoint in
+                if let storage = source.persistence as? BrowserTransactionalSessionPersistence {
+                    try storage.commit(command.session, checkpoint: checkpoint)
+                } else {
+                    source.persistence.save(command.session, scope: .everything, checkpoint: checkpoint)
+                }
+            }
+        }
+        reconcileStores(after: previous, from: source)
+        source.cloudSyncChangeHandler?()
     }
 
     func execute(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
@@ -217,14 +252,16 @@ final class BrowserStoreFamily {
     }
 
     func beginDeletingSpace(_ id: SpaceID) -> Bool {
-        deletingSpaceIDs.insert(id).inserted
+        activeSpaceDeletions.insert(id).inserted
     }
 
+    func isActivelyDeletingSpace(_ id: SpaceID) -> Bool { activeSpaceDeletions.contains(id) }
+
     func finishDeletingSpace(_ id: SpaceID) {
-        deletingSpaceIDs.remove(id)
+        activeSpaceDeletions.remove(id)
     }
 
     func resetDeletionState() {
-        deletingSpaceIDs.removeAll()
+        activeSpaceDeletions.removeAll()
     }
 }

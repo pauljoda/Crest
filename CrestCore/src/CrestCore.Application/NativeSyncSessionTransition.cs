@@ -39,6 +39,22 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         var retained = NativeSessionMaintenance.Retain(repaired["session"]!.AsObject(), now);
         bool removed = retained["changed"]!.GetValue<bool>();
         repaired["session"] = retained["session"]!.DeepClone();
+        // Cleanup already authorized on this device must survive remote deletion,
+        // replacement and retention until its local adapters acknowledge it.
+        if (local["spaceDeletions"] is JsonArray pending && pending.Count > 0)
+        {
+            var result = repaired["session"]!.AsObject();
+            result["spaceDeletions"] = pending.DeepClone();
+            var spaces = result["spaces"]!.AsArray();
+            foreach (var intent in pending)
+            {
+                var id = NativeSessionAuthority.Id(intent!["spaceID"]);
+                var original = local["spaces"]!.AsArray().Single(s => NativeSessionAuthority.Id(s!["id"]) == id)!;
+                var existing = spaces.FirstOrDefault(s => NativeSessionAuthority.Id(s!["id"]) == id);
+                if (existing is not null) spaces[spaces.IndexOf(existing)] = original.DeepClone();
+                else spaces.Add(original.DeepClone());
+            }
+        }
         if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? "retention" : "superseded");
         return new(next, repaired);
     }
