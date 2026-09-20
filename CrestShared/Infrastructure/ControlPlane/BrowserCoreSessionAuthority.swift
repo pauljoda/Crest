@@ -45,6 +45,7 @@ final class BrowserCoreSessionAuthority {
     /// The reservation excludes core writes until storage succeeds. A failed
     /// write releases it without changing the projection or accepted revision.
     func replaceDurably(with next: BrowserSession,
+        sync: BrowserCoreSyncTransaction? = nil,
         persist: (any BrowserSessionCheckpoint) throws -> Void) throws {
         let delta = try delta(to: next) ?? Data(#"{"version":1,"spaces":[]}"#.utf8)
         let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: next))
@@ -57,6 +58,10 @@ final class BrowserCoreSessionAuthority {
         guard result == CREST_OK else { throw CoreError.rejected(result) }
         defer { crest_session_release_replacement(replacement) }
         let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
+        if let sync {
+            let bound = crest_session_bind_sync_replacement(replacement, sync.handle)
+            guard bound == CREST_OK else { throw CoreError.rejected(bound) }
+        }
         try persist(snapshot)
         var accepted: UInt64 = 0
         let committed = crest_session_commit_replacement(replacement, &accepted)
@@ -65,6 +70,11 @@ final class BrowserCoreSessionAuthority {
         precondition(committed == CREST_OK, "Lost core storage reservation")
         revision = accepted
         projection = next
+    }
+
+    func attachSync(_ sync: BrowserCoreSyncAuthority) throws {
+        let result = crest_session_attach_sync(owner.value, sync.handle)
+        guard result == CREST_OK else { throw CoreError.rejected(result) }
     }
 
     static func replacePair(

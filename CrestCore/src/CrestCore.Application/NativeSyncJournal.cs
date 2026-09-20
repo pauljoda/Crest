@@ -15,6 +15,7 @@ public sealed class NativeSyncJournal
     private readonly HashSet<string> pending;
     private readonly Lazy<byte[]> encoded;
     internal IEnumerable<JsonObject> Records => records.Values;
+    internal JsonNode Preferences => metadata["preferences"]!.DeepClone();
 
     public NativeSyncJournal(ReadOnlySpan<byte> bytes)
     {

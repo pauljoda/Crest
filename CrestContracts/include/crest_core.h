@@ -160,6 +160,21 @@ CREST_API crest_status_t CREST_CALL crest_session_reserve_replacement(
 CREST_API crest_status_t CREST_CALL crest_session_commit_replacement(uint64_t replacement, uint64_t *revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_replacement(uint64_t replacement);
 
+// A session's sync component owns journal publication and local revision order.
+// Prepare returning zero handles means the captured local revision is stale.
+// Seal rechecks staleness before storage; commit follows successful storage.
+CREST_API crest_status_t CREST_CALL crest_sync_authority_create(uint64_t journal, uint64_t *authority);
+CREST_API crest_status_t CREST_CALL crest_sync_authority_release(uint64_t authority);
+CREST_API crest_status_t CREST_CALL crest_session_attach_sync(uint64_t session, uint64_t authority);
+CREST_API crest_status_t CREST_CALL crest_sync_authority_advance(uint64_t authority, uint64_t revision);
+CREST_API crest_status_t CREST_CALL crest_sync_authority_prepare(uint64_t authority,
+    int32_t has_revision, uint64_t revision, const uint8_t *input, size_t length,
+    uint64_t *transaction, uint64_t *journal, uint64_t *query);
+CREST_API crest_status_t CREST_CALL crest_sync_transaction_seal(uint64_t transaction, int32_t *accepted);
+CREST_API crest_status_t CREST_CALL crest_sync_transaction_commit(uint64_t transaction);
+CREST_API crest_status_t CREST_CALL crest_sync_transaction_release(uint64_t transaction);
+CREST_API crest_status_t CREST_CALL crest_session_bind_sync_replacement(uint64_t replacement, uint64_t transaction);
+
 /* Copies retained configuration; sets *out_core to 0 on failure.
  * Caller initializes struct_size to sizeof(crest_core_options_v1).
  * options and out_core must be non-null. Does not start the executor.

@@ -198,12 +198,20 @@ retained for rollback. Local saves, incoming sync and upload acknowledgments use
 one serial storage queue. Startup stages restored local edits before cloud work,
 including edits saved before their coalesced sync projection completed.
 
-The Swift sync coordinator still owns journal scheduling and its immutable handle
-separately from the session authority. Consolidating that ownership, preserving
-unknown record fields through restaging, and proving live cross-engine CloudKit
-convergence remain required. An unreadable transactional store currently stops
-startup with the file preserved; a native recovery flow is still needed. Native
-presentation codecs continue to normalize platform glyphs and branding values.
+`NativeSyncAuthority` is attached to the persistent session authority and owns the
+accepted journal, the latest local revision and pending publication. Private and
+temporary workspaces cannot attach it, and one sync owner cannot serve unrelated
+store families. Preparing a candidate does not publish it. The core rechecks its
+revision before storage; an edit arriving during storage advances the revision
+barrier without waiting for encoding or allowing a later stale snapshot to win.
+Incoming merges bind their journal transaction to the session replacement, so
+both core values publish under the same lock after SQLite commits. Swift retains
+read projections and schedules native background work and storage.
+
+Preserving unknown record fields through restaging and proving live cross-engine
+CloudKit convergence remain required. An unreadable transactional store currently
+stops startup with the file preserved; a native recovery flow is still needed.
+Native presentation codecs continue to normalize platform glyphs and branding values.
 
 Value-only operations still use `crest_core_edit_session`, which receives one
 compact Space and returns an atomic edit.

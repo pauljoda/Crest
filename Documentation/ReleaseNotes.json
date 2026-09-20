@@ -1517,6 +1517,10 @@
     "transactional-core-session-sync-storage": {
       "category": "internal",
       "message": "Commit incoming browser sessions and sync journals together, preserve the accepted session when storage fails, and migrate core-backed builds to transactional local storage."
+    },
+    "core-owned-sync-publication": {
+      "category": "internal",
+      "message": "Make the portable session own sync publication and revision ordering, reject stale background snapshots, and publish incoming session and journal changes together."
     }
   }
 }

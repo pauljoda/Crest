@@ -54,6 +54,12 @@ final class BrowserStoreFamily {
     }
 
     func register(_ store: BrowserStore) {
+        #if CREST_CORE_BACKED
+        if let sync = store.syncCoordinator {
+            do { try core.attachSync(sync.core) }
+            catch { preconditionFailure("Cannot attach sync to the core session: \(error)") }
+        }
+        #endif
         stores.removeAll { $0.value == nil }
         stores.append(WeakStore(value: store))
     }
@@ -71,9 +77,9 @@ final class BrowserStoreFamily {
 
     #if CREST_CORE_BACKED
     func installSyncedSession(_ session: BrowserSession, journal: BrowserSyncJournal,
-        journalPersistence: any BrowserSyncJournalPersisting, from source: BrowserStore) throws {
+        journalPersistence: any BrowserSyncJournalPersisting, transaction: BrowserCoreSyncTransaction, from source: BrowserStore) throws {
         let previous = authoritativeSession
-        try core.replaceDurably(with: session) { checkpoint in
+        try core.replaceDurably(with: session, sync: transaction) { checkpoint in
             if let storage = source.persistence as? BrowserTransactionalSessionPersistence {
                 guard storage.owns(journalPersistence) else {
                     throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint

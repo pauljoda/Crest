@@ -165,8 +165,8 @@ extension BrowserStore {
         let revision = family.reserveSyncRevision()
         syncCoordinator.advanceStoreRevision(to: revision)
         #if CREST_CORE_BACKED
-        _ = try syncCoordinator.merge(remoteRecords: records, into: session, storeRevision: revision) { next, journal, journalPersistence in
-            try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, from: self)
+        _ = try syncCoordinator.merge(remoteRecords: records, into: session, storeRevision: revision) { next, journal, journalPersistence, transaction in
+            try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, transaction: transaction, from: self)
         }
         family.publish(session, from: self, at: revision)
         #else
@@ -198,8 +198,8 @@ extension BrowserStore {
         let revision = family.reserveSyncRevision()
         syncCoordinator.advanceStoreRevision(to: revision)
         #if CREST_CORE_BACKED
-        _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session, storeRevision: revision) { next, journal, journalPersistence in
-            try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, from: self)
+        _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session, storeRevision: revision) { next, journal, journalPersistence, transaction in
+            try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, transaction: transaction, from: self)
         }
         family.publish(session, from: self, at: revision)
         #else

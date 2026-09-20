@@ -6,7 +6,7 @@ enum BrowserStoreSyncStageUrgency {
 struct BrowserStoreSyncRevision: Comparable, Sendable {
     static let initial = BrowserStoreSyncRevision(value: 0)
 
-    private let value: UInt64
+    let value: UInt64
 
     func successor() -> BrowserStoreSyncRevision {
         precondition(value < UInt64.max, "Browser store sync revision exhausted")

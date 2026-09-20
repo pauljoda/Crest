@@ -70,15 +70,20 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     }
 
     private mutating func adopt(_ prepared: BrowserCoreSyncJournal) throws {
-        var next = try JSONDecoder().decode(Self.self, from: prepared.read())
+        let next = try Self.acceptingCoreSnapshot(prepared)
         guard next.deviceID == deviceID, next.schemaVersion == schemaVersion else {
             throw BrowserSyncError.invalidField("journalIdentity")
         }
-        next.core = prepared
         self = next
     }
 
-    private func validateIncoming(_ incoming: [BrowserSyncRecord], checksSpace: Bool) throws {
+    static func acceptingCoreSnapshot(_ prepared: BrowserCoreSyncJournal) throws -> Self {
+        var next = try JSONDecoder().decode(Self.self, from: prepared.read())
+        next.core = prepared
+        return next
+    }
+
+    func validateIncoming(_ incoming: [BrowserSyncRecord], checksSpace: Bool) throws {
         guard incoming.count <= Self.maximumRecordCount else { throw BrowserSyncError.recordLimitExceeded(incoming.count) }
         let local = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.spaceID) })
         var seen: Set<BrowserSyncRecordID> = []

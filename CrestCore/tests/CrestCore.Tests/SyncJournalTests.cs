@@ -20,6 +20,61 @@ public sealed partial class BrowserContractsTests
     });
 
     [Fact]
+    public void SyncOwnerRejectsSupersededPreparationsAndRetainsNewerRevisionDuringStorage()
+    {
+        var record = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 9, Guid.NewGuid());
+        var document = JournalDocument(record);
+        var initial = new NativeSyncJournal(Bytes(document));
+        var owner = new NativeSyncAuthority(initial);
+        var request = JournalCommand(document, "acknowledge", new()
+        { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
+        using (var stale = owner.Prepare(1, request)!)
+        {
+            owner.Advance(2);
+            Assert.Same(initial, owner.Snapshot);
+            Assert.False(stale.Seal());
+        }
+        Assert.Null(owner.Prepare(1, request));
+        using var saving = owner.Prepare(2, request)!;
+        Assert.True(saving.Seal());
+        owner.Advance(3); // Main-thread edit while the native worker saves.
+        Assert.Same(initial, owner.Snapshot);
+        saving.Commit();
+        Assert.Empty(JsonNode.Parse(owner.Snapshot.Read())!["pendingRecordIDs"]!.AsArray());
+        Assert.Null(owner.Prepare(2, request));
+        using var latest = owner.Prepare(3, request)!;
+        Assert.True(latest.Seal());
+    }
+
+    [Fact]
+    public void SessionAndSyncPublishTogetherAndCannotAttachToAnotherOrPrivateWorkspace()
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!;
+        var record = SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 9, Guid.NewGuid());
+        var document = JournalDocument(record);
+        var initial = new NativeSyncJournal(Bytes(document));
+        var sync = new NativeSyncAuthority(initial);
+        var owner = new NativeSessionAuthority(Bytes(session));
+        owner.AttachSync(sync);
+        owner.AttachSync(sync); // A second window shares this family.
+        Assert.Throws<BrowserRuleException>(() => new NativeSessionAuthority(Bytes(session)).AttachSync(sync));
+        var privateSession = session.DeepClone().AsObject(); privateSession["coreWorkspaceKind"] = "private";
+        Assert.Throws<BrowserRuleException>(() => new NativeSessionAuthority(Bytes(privateSession)).AttachSync(new(initial)));
+        var request = JournalCommand(document, "acknowledge", new()
+        { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
+        using var transaction = sync.Prepare(1, request)!;
+        Assert.True(transaction.Seal());
+        using var replacement = owner.ReserveReplacement(1, RenameDelta(session, "Durable synced tab"), Selection(session));
+        replacement.BindSync(transaction);
+        Assert.Same(initial, sync.Snapshot);
+        Assert.Equal(1UL, owner.Revision);
+        replacement.Commit();
+        Assert.Equal(2UL, owner.Revision);
+        Assert.Same(transaction.Journal, sync.Snapshot);
+        transaction.Commit(); // Native projection publishes after paired commit.
+    }
+
+    [Fact]
     public void JournalTransitionFailureKeepsOriginalClockPendingIDsAndRecords()
     {
         var record = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 1, Guid.NewGuid());

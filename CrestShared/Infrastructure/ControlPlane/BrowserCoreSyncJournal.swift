@@ -5,7 +5,7 @@ import Foundation
 /// A core snapshot never changes after creation. Swift value copies can safely
 /// share its handle while each mutation prepares an independent next snapshot.
 final class BrowserCoreSyncJournal: @unchecked Sendable {
-    private let handle: UInt64
+    let handle: UInt64
     private let preferences: BrowserSyncPreferences
     private static let byteLimit = 64 * 1024 * 1024
 
@@ -24,7 +24,7 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
         self.preferences = preferences
     }
 
-    private init(handle: UInt64, preferences: BrowserSyncPreferences) {
+    init(handle: UInt64, preferences: BrowserSyncPreferences) {
         self.handle = handle
         self.preferences = preferences
     }

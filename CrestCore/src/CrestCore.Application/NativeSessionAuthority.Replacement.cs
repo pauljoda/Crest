@@ -2,6 +2,19 @@ namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority
 {
+    private NativeSyncAuthority? sync;
+    public void AttachSync(NativeSyncAuthority value)
+    {
+        lock (Gate)
+        {
+            if (workspaceKind != CrestCore.Domain.BrowserWorkspaceKind.Persistent
+                || sync is not null && !ReferenceEquals(sync, value)
+                || value.Session is not null && !ReferenceEquals(value.Session, this))
+                throw new CrestCore.Domain.BrowserRuleException("invalid_sync_session_owner");
+            sync = value; value.Session = this;
+        }
+    }
+
     /// Reserves a validated revision while the platform commits durable storage.
     /// Other writes are rejected until commit or cancellation. No platform I/O
     /// occurs under the core lock, and cancellation leaves the authority intact.
@@ -26,7 +39,11 @@ public sealed partial class NativeSessionAuthority
         {
             if (!ReferenceEquals(replacement, value))
                 throw new CrestCore.Domain.BrowserRuleException("invalid_session_transaction");
-            if (commit) { document = value.Document; Revision = value.Revision; }
+            if (commit)
+            {
+                value.SyncTransaction?.Commit();
+                document = value.Document; Revision = value.Revision;
+            }
             replacement = null;
             return Revision;
         }
@@ -40,9 +57,19 @@ public sealed class NativeSessionReplacement : IDisposable
     internal NativeSessionAuthority.SessionDocument Document { get; }
     internal ulong Revision { get; }
     public NativeSessionCheckpoint Checkpoint { get; }
+    internal NativeSyncTransaction? SyncTransaction { get; private set; }
     internal NativeSessionReplacement(NativeSessionAuthority owner, NativeSessionAuthority.SessionDocument document,
         ulong revision, NativeSessionCheckpoint checkpoint)
     { this.owner = owner; Document = document; Revision = revision; Checkpoint = checkpoint; }
+    public void BindSync(NativeSyncTransaction value)
+    {
+        lock (NativeSessionAuthority.Gate)
+        {
+            if (completed || SyncTransaction is not null || !value.IsSealed || !ReferenceEquals(value.Owner.Session, owner))
+                throw new CrestCore.Domain.BrowserRuleException("invalid_sync_session_owner");
+            SyncTransaction = value;
+        }
+    }
     public ulong Commit()
     {
         lock (NativeSessionAuthority.Gate)
