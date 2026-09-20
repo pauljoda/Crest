@@ -19,16 +19,25 @@ public sealed partial class NativeSessionAuthority
     /// Other writes are rejected until commit or cancellation. No platform I/O
     /// occurs under the core lock, and cancellation leaves the authority intact.
     public NativeSessionReplacement ReserveReplacement(ulong expected, ReadOnlySpan<byte> delta,
-        ReadOnlySpan<byte> selection)
+        ReadOnlySpan<byte> selection, NativeSyncTransaction? transaction = null)
     {
         lock (Gate)
         {
-            var next = Prepare(expected, delta);
+            System.Text.Json.Nodes.JsonNode? authorizedDeletions = null;
+            if (transaction is not null)
+            {
+                if (!transaction.IsReadyToCommit || !ReferenceEquals(transaction.Owner.Session, this) || transaction.Materialization is null)
+                    throw new CrestCore.Domain.BrowserRuleException("invalid_sync_session_owner");
+                authorizedDeletions = transaction.MaterializedSpaceDeletions;
+            }
+            var next = Prepare(expected, delta, authorizedDeletions);
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(next, Parse(selection));
             // Validate the selection and serialization before granting the lease.
             _ = checkpoint.Read("core");
-            replacement = new(this, next, nextRevision, checkpoint);
+            var reserved = new NativeSessionReplacement(this, next, nextRevision, checkpoint);
+            if (transaction is not null) reserved.BindSync(transaction);
+            replacement = reserved;
             return replacement;
         }
     }
@@ -80,7 +89,7 @@ public sealed class NativeSessionReplacement : IDisposable
     {
         lock (NativeSessionAuthority.Gate)
         {
-            if (completed || SyncTransaction is not null || !value.IsSealed || !ReferenceEquals(value.Owner.Session, owner))
+            if (completed || SyncTransaction is not null || !value.IsReadyToCommit || !ReferenceEquals(value.Owner.Session, owner))
                 throw new CrestCore.Domain.BrowserRuleException("invalid_sync_session_owner");
             SyncTransaction = value;
         }

@@ -102,8 +102,11 @@ extension BrowserStore {
 
     func resumePendingSpaceDeletions(dataDeleter: any BrowserSpaceDataDeleting) async {
         #if CREST_CORE_BACKED
-        for intent in session.spaceDeletions ?? [] {
-            guard !family.isActivelyDeletingSpace(intent.spaceID) else { continue }
+        var attempted: Set<SpaceID> = []
+        while let intent = (session.spaceDeletions ?? []).first(where: {
+            !attempted.contains($0.spaceID) && !family.isActivelyDeletingSpace($0.spaceID)
+        }) {
+            attempted.insert(intent.spaceID)
             do { try await deleteSpace(intent.spaceID, dataDeleter: dataDeleter) }
             catch { localSyncErrorDescription = "Space cleanup needs another attempt: \(error.localizedDescription)" }
         }

@@ -519,9 +519,13 @@ Prepared semantic commands reserve publication while Apple storage writes. Final
 Space removal and its explicit sync tombstones share one SQLite transaction, then
 the core publishes both accepted values. A failed storage commit publishes
 neither. Pending cleanup remains local during sync merge or replacement and never
-republishes a remote tombstone as an active Space. Incoming deletions that start
-on another device still need local profile cleanup orchestration; this path
-currently resumes deletions authorized on this device.
+republishes a remote tombstone as an active Space. An accepted explicit Space
+deletion from another device creates the same local intent for the existing
+profile. A sealed sync reservation persists the intent and accepted journal
+together before the registered engine adapter runs. Absence from a cloud
+snapshot, retention, and child-record deletions do not authorize profile cleanup.
+Adapter failures retain the intent for the next sync or launch; windows cannot
+reopen that profile while cleanup is pending.
 
 There are still migration gaps.
 Other WebKit-specific page tools and extension side panels need

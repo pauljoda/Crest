@@ -76,14 +76,14 @@ public sealed partial class NativeSessionAuthority
         // valid native states. Window reconciliation handles their presentation.
     }
 
-    private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes)
+    private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null)
     {
         RequireWritable();
         if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
         var metadata = delta["metadata"] is JsonObject suppliedMetadata ? Fields(suppliedMetadata, ["spaces"]) : document.Metadata;
-        if (!JsonNode.DeepEquals(metadata["spaceDeletions"], document.Metadata["spaceDeletions"]))
+        if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
             throw new BrowserRuleException("deletion_requires_command");
         var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));
         foreach (var node in delta["spaces"]!.AsArray())
@@ -115,7 +115,10 @@ public sealed partial class NativeSessionAuthority
         if (spaceOrder.Distinct().Count() != spaceOrder.Length || spaceOrder.Any(id => !byId.ContainsKey(id)))
             throw new BrowserRuleException("invalid_space_order");
         var next = new SessionDocument(metadata, spaceOrder.Select(id => byId[id]).ToArray());
-        foreach (var deletion in Deletions(document.Metadata))
+        foreach (var existing in Deletions(document.Metadata))
+            if (!Deletions(metadata).Any(d => SameDeletionIntent(d!, existing!)))
+                throw new BrowserRuleException("deletion_requires_command");
+        foreach (var deletion in Deletions(metadata))
         {
             var id = Id(deletion!["spaceID"]);
             var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == id);

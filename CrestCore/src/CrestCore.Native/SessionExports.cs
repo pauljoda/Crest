@@ -194,6 +194,34 @@ public static unsafe partial class Exports
             return SessionError(e);
         }
     }
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_reserve_sync_replacement", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionReserveSyncReplacement(ulong handle, ulong expected, ulong transaction, byte* delta, nuint count,
+        byte* selection, nuint selectionCount, ulong* replacement, ulong* checkpoint)
+    {
+        if (replacement == null || checkpoint == null) return CoreStatus.InvalidArgument;
+        *replacement = 0; *checkpoint = 0;
+        if (!ValidSessionInput(delta, count) || !ValidSessionInput(selection, selectionCount)) return CoreStatus.InvalidArgument;
+        if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
+        if (!SyncTransactions.TryGetValue(transaction, out var sync)) return CoreStatus.InvalidHandle;
+        NativeSessionReplacement? value = null;
+        ulong id = 0, snapshot = 0;
+        try
+        {
+            value = session.ReserveReplacement(expected, new(delta, (int)count), new(selection, (int)selectionCount), sync);
+            id = checked((ulong)Interlocked.Increment(ref nextHandle));
+            snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
+            if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))
+                throw new InvalidOperationException("handle_collision");
+            *replacement = id; *checkpoint = snapshot;
+            return CoreStatus.Ok;
+        }
+        catch (Exception e)
+        {
+            SessionReplacements.TryRemove(id, out _); Checkpoints.TryRemove(snapshot, out _);
+            value?.Dispose();
+            return SessionError(e);
+        }
+    }
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_replacement", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionCommitReplacement(ulong handle, ulong* revision)
     {

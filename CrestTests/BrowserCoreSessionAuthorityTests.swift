@@ -54,6 +54,49 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertTrue(tombstones.allSatisfy { $0.tombstone?.reason == .explicitDelete })
     }
 
+    func testRemoteSpaceDeletionDurablySchedulesTheRegisteredAdapterAndRetriesFailure() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storage = try BrowserTransactionalSessionPersistence(url: directory.appendingPathComponent("session.sqlite"), favicons: InMemoryBrowserFaviconStore())
+        let original = BrowserSession.preview
+        let target = original.spaces[0]
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: original)
+        try storage.migrateIfNeeded(session: original, journal: journal)
+        let sync = BrowserSyncCoordinator(persistence: storage.journalPersistence)
+        let store = BrowserStore(session: original, persistence: storage, syncCoordinator: sync)
+        let other = store.makeWindowStore()
+        var fail = true
+        let adapter = DeletionAdapter { space in
+            XCTAssertEqual(space.profile.id, target.profile.id)
+            XCTAssertEqual(storage.load()?.spaceDeletions?.first?.spaceID, target.id)
+            XCTAssertTrue(try XCTUnwrap(storage.journalPersistence.load()).records.contains { $0.spaceID == target.id && $0.id.kind == .space && $0.tombstone?.reason == .explicitDelete })
+            XCTAssertTrue(other.deletingSpaceIDs.contains(target.id))
+            XCTAssertNotEqual(other.selectedSpace?.id, target.id)
+            if fail { throw DeletionFailure.interrupted }
+        }
+        store.family.configureSpaceDataCleanup(adapter, from: store)
+        var remote = original
+        remote.spaces.removeAll { $0.id == target.id }
+        remote.selectedSpaceID = remote.spaces[0].id
+        var incoming = journal
+        try incoming.stage(session: remote, deletionReason: .explicitDelete)
+        try store.mergeRemoteSyncRecords(incoming.records)
+        XCTAssertTrue(adapter.calls.isEmpty, "Cleanup must be scheduled after the durable sync commit")
+        await store.family.spaceCleanupTask?.value
+        XCTAssertEqual(adapter.calls, [target.id])
+        XCTAssertNotNil(storage.load()?.spaceDeletions?.first)
+        fail = false
+        try store.mergeRemoteSyncRecords(incoming.records)
+        await store.family.spaceCleanupTask?.value
+        XCTAssertEqual(adapter.calls, [target.id, target.id])
+        XCTAssertNil(store.session.space(id: target.id))
+        XCTAssertNil(store.session.spaceDeletions)
+        XCTAssertEqual(storage.load(), store.session)
+        XCTAssertEqual(try storage.journalPersistence.load(), sync.journal)
+        XCTAssertEqual(other.session.spaces.map(\.id), store.session.spaces.map(\.id))
+    }
+
     private enum DeletionFailure: Error { case interrupted }
     private final class DeletionAdapter: BrowserSpaceDataDeleting {
         var calls: [SpaceID] = []

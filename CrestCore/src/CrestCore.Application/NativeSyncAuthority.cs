@@ -75,8 +75,10 @@ public sealed class NativeSyncTransaction : IDisposable
     internal ulong? SourceRevision { get; }
     internal bool IsSealed { get; set; }
     private bool completed, committed;
+    internal bool IsReadyToCommit => IsSealed && !completed;
     public NativeSyncJournal Journal { get; private set; }
     public byte[]? Materialization { get; private set; }
+    internal JsonNode? MaterializedSpaceDeletions { get; private set; }
     internal NativeSyncTransaction(NativeSyncAuthority owner, ulong? revision, NativeSyncJournal journal)
     { Owner = owner; SourceRevision = revision; Journal = journal; }
 
@@ -89,6 +91,7 @@ public sealed class NativeSyncTransaction : IDisposable
         {
             var result = NativeSyncSessionTransition.Prepare(Journal, Encoding.UTF8.GetBytes(request.ToJsonString()));
             Journal = result.Journal;
+            MaterializedSpaceDeletions = result.Materialization["session"]!["spaceDeletions"]?.DeepClone();
             Materialization = NativeSyncQuery.Success(result.Materialization);
         }
         else Journal = Journal.Apply(Encoding.UTF8.GetBytes(request.ToJsonString()));

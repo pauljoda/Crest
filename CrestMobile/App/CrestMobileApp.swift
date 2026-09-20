@@ -211,7 +211,7 @@ struct CrestMobileApp: App {
                     sidebarWidgets
                 )
                 .task {
-                    await browser.resumePendingSpaceDeletions(dataDeleter: pageStoreRegistry)
+                    browser.family.configureSpaceDataCleanup(pageStoreRegistry, from: browser)
                     await cloudSync.start()
                 }
             } else {

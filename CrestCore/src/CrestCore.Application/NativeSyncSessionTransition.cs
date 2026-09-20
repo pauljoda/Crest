@@ -31,6 +31,22 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         { ["session"] = session.DeepClone(), ["deletionReason"] = reason, ["now"] = now });
         if (!replacing && local["disposableSeedMarker"] is null) Stage(local, "superseded");
         Apply(replacing ? "replace" : "merge", new JsonObject { ["records"] = incoming.DeepClone() });
+        // Only an accepted explicit Space tombstone authorizes deleting this
+        // device's profile. Missing records, tab deletion and retention do not.
+        local = local.DeepClone().AsObject();
+        var pendingIds = (local["spaceDeletions"] as JsonArray ?? new())
+            .Select(n => NativeSessionAuthority.Id(n!["spaceID"])).ToHashSet();
+        foreach (var record in next.Records.Where(r => r!["id"]?["kind"]?.GetValue<string>() == "space"
+            && r["tombstone"]?["reason"]?.GetValue<string>() == "explicitDelete"))
+        {
+            var id = NativeSessionAuthority.Id(record!["id"]!["value"]);
+            var space = local["spaces"]!.AsArray().FirstOrDefault(s => NativeSessionAuthority.Id(s!["id"]) == id);
+            if (space is null || !pendingIds.Add(id)) continue;
+            var intents = local["spaceDeletions"] as JsonArray;
+            if (intents is null) local["spaceDeletions"] = intents = new JsonArray();
+            intents.Add((JsonNode)new JsonObject { ["spaceID"] = space["id"]!.DeepClone(),
+                ["profileID"] = space["profile"]!["id"]!.DeepClone(), ["operationID"] = Guid.NewGuid().ToString("D") });
+        }
         var raw = replacing && incoming.Count == 0
             ? new JsonObject { ["spaces"] = new JsonArray() }
             : NativeSyncMaterializer.Materialize(local, preferences,

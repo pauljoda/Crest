@@ -130,4 +130,98 @@ public sealed partial class BrowserContractsTests
         Assert.Equal("explicitDelete", record["tombstone"]!["reason"]!.GetValue<string>());
         Assert.Single(merged.Materialization["session"]!["spaceDeletions"]!.AsArray());
     }
+    [Theory]
+    [InlineData("merge", "space", "explicitDelete", true)]
+    [InlineData("replace", "space", "explicitDelete", true)]
+    [InlineData("merge", "space", "retention", false)]
+    [InlineData("replace", "space", "superseded", false)]
+    [InlineData("merge", "tab", "explicitDelete", false)]
+    [InlineData("replace", "absent", "explicitDelete", false)]
+    public void OnlyAcceptedExplicitSpaceDeletionAuthorizesLocalCleanup(string operation, string kind, string reason, bool expected)
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
+        var before = Bytes(session);
+        var journal = new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()))));
+        var incoming = new JsonArray();
+        if (kind != "absent") incoming.Add((JsonNode)new JsonObject
+        {
+            ["id"] = new JsonObject { ["kind"] = kind, ["value"] = (kind == "space" ? fixture.Space.Value : fixture.Tab.Value).ToString("D") },
+            ["spaceID"] = SwiftId(fixture.Space.Value),
+            ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
+            ["tombstone"] = new JsonObject { ["reason"] = reason, ["deletedAt"] = 800000000.0 }
+        });
+        var transition = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject
+        {
+            ["version"] = 1, ["operation"] = operation, ["session"] = session.DeepClone(),
+            ["preferences"] = SyncProjectionPreferences(), ["records"] = incoming, ["now"] = 800000000.0
+        }));
+        Assert.Equal(before, Bytes(session));
+        var result = transition.Materialization["session"]!;
+        Assert.Equal(expected, result["spaceDeletions"] is JsonArray { Count: 1 });
+        if (!expected) return;
+        var intent = result["spaceDeletions"]![0]!;
+        Assert.True(JsonNode.DeepEquals(session["spaces"]![0]!["profile"]!["id"], intent["profileID"]));
+        Assert.Equal(2, result["spaces"]!.AsArray().Count); // Keep one usable Space when the last remote Space is deleted.
+        var frozen = result["spaces"]!.AsArray().Single(s => JsonNode.DeepEquals(s!["id"], intent["spaceID"]));
+        Assert.True(JsonNode.DeepEquals(session["spaces"]![0], frozen));
+        Assert.False(JsonNode.DeepEquals(result["selectedSpaceID"], intent["spaceID"]));
+        var tombstone = JsonNode.Parse(transition.Journal.Read())!["records"]!.AsArray().Single(r =>
+            r!["id"]!["kind"]!.GetValue<string>() == "space" && Guid.Parse(r["id"]!["value"]!.GetValue<string>()) == fixture.Space.Value)!;
+        Assert.Equal("explicitDelete", tombstone["tombstone"]!["reason"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void RemoteCleanupRequiresTheSealedOwningSyncTransactionAndPublishesAtomically()
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!;
+        var owner = new NativeSessionAuthority(Bytes(session));
+        var sync = new NativeSyncAuthority(new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid())))));
+        owner.AttachSync(sync);
+        using var transaction = sync.Prepare(1, Bytes(new JsonObject
+        {
+            ["version"] = 1, ["operation"] = "merge", ["session"] = session.DeepClone(), ["now"] = 800000000.0,
+            ["records"] = new JsonArray(new JsonObject
+            {
+                ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.Value.ToString("D") },
+                ["spaceID"] = SwiftId(fixture.Space.Value),
+                ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
+                ["tombstone"] = new JsonObject { ["reason"] = "explicitDelete", ["deletedAt"] = 800000000.0 }
+            })
+        }))!;
+        var result = JsonNode.Parse(transaction.Materialization!)!["value"]!["session"]!;
+        byte[] Delta(JsonNode value)
+        {
+            string[] sections = ["tabs", "folders", "archivedTabs", "history"];
+            var metadata = value.DeepClone().AsObject(); metadata.Remove("spaces");
+            var spaces = new JsonArray();
+            foreach (var space in value["spaces"]!.AsArray())
+            {
+                var fields = space!.DeepClone().AsObject();
+                var change = new JsonObject { ["id"] = space["id"]!.DeepClone() };
+                foreach (var section in sections)
+                { fields.Remove(section); change[section] = new JsonObject { ["replace"] = space[section]?.DeepClone() ?? new JsonArray() }; }
+                change["metadata"] = fields; spaces.Add((JsonNode)change);
+            }
+            return Bytes(new JsonObject { ["version"] = 1, ["metadata"] = metadata, ["spaces"] = spaces,
+                ["spaceOrder"] = new JsonArray(value["spaces"]!.AsArray().Select(s => s!["id"]!.DeepClone()).ToArray()) });
+        }
+        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(1, Delta(result), Selection(result), transaction));
+        Assert.True(transaction.Seal());
+        Assert.Throws<BrowserRuleException>(() => owner.Commit(1, Delta(result)));
+        var foreign = new NativeSessionAuthority(Bytes(session));
+        Assert.Throws<BrowserRuleException>(() => foreign.ReserveReplacement(1, Delta(result), Selection(result), transaction));
+        var altered = result.DeepClone(); altered["spaceDeletions"]![0]!["operationID"] = Guid.NewGuid().ToString("D");
+        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(1, Delta(altered), Selection(result), transaction));
+        result["spaceDeletions"]![0]!["operationID"] = result["spaceDeletions"]![0]!["operationID"]!.GetValue<string>().ToUpperInvariant();
+        var before = sync.Snapshot.Read();
+        using (owner.ReserveReplacement(1, Delta(result), Selection(result), transaction)) { }
+        Assert.Equal(1UL, owner.Revision);
+        Assert.Equal(before, sync.Snapshot.Read());
+        using var accepted = owner.ReserveReplacement(1, Delta(result), Selection(result), transaction);
+        Assert.Single(JsonNode.Parse(accepted.Checkpoint.Read("core"))!["spaceDeletions"]!.AsArray());
+        accepted.Commit();
+        Assert.Equal(transaction.Journal.Read(), sync.Snapshot.Read());
+        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(2, Delta(result), Selection(result), transaction));
+    }
+
 }

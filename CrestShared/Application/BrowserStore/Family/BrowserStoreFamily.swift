@@ -22,6 +22,9 @@ final class BrowserStoreFamily {
     var deletingSpaceIDs: Set<SpaceID> {
         activeSpaceDeletions.union(authoritativeSession.spaceDeletions?.map(\.spaceID) ?? [])
     }
+    @ObservationIgnored private weak var spaceDataDeleter: (any BrowserSpaceDataDeleting)?
+    @ObservationIgnored private weak var spaceCleanupStore: BrowserStore?
+    @ObservationIgnored private(set) var spaceCleanupTask: Task<Void, Never>?
     @ObservationIgnored private var lastCleanupSweepAt: Date?
     @ObservationIgnored weak var pageDismissalAuthorizer: (any BrowserPageDismissalAuthorizing)?
 
@@ -38,6 +41,25 @@ final class BrowserStoreFamily {
         #endif
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
+    }
+
+    /// Composition supplies the engine adapter once. Sync schedules it only
+    /// after the core intent and accepted journal have committed together.
+    func configureSpaceDataCleanup(_ dataDeleter: any BrowserSpaceDataDeleting, from store: BrowserStore) {
+        spaceDataDeleter = dataDeleter
+        spaceCleanupStore = store
+        scheduleSpaceDataCleanup()
+    }
+
+    private func scheduleSpaceDataCleanup() {
+        #if CREST_CORE_BACKED
+        guard spaceCleanupTask == nil, !(authoritativeSession.spaceDeletions ?? []).isEmpty,
+            let dataDeleter = spaceDataDeleter, let store = spaceCleanupStore else { return }
+        spaceCleanupTask = Task { [weak self] in
+            await store.resumePendingSpaceDeletions(dataDeleter: dataDeleter)
+            self?.spaceCleanupTask = nil
+        }
+        #endif
     }
 
     /// Temporary tabs retain their own organization, but profile identity and
@@ -98,6 +120,7 @@ final class BrowserStoreFamily {
             }
         }
         reconcileStores(after: previous, from: source)
+        scheduleSpaceDataCleanup()
     }
 
     func executeSpace(_ operation: String, in spaceID: SpaceID? = nil, arguments: [String: Any],

@@ -6,6 +6,18 @@ namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority
 {
+    private static bool SameDeletionIntent(JsonNode left, JsonNode right) =>
+        Id(left["spaceID"]) == Id(right["spaceID"]) && Id(left["profileID"]) == Id(right["profileID"])
+        && Id(left["operationID"]) == Id(right["operationID"]);
+    private static bool EqualDeletionIntents(JsonNode? left, JsonNode? right)
+    {
+        if (left is not null and not JsonArray || right is not null and not JsonArray)
+            throw new BrowserRuleException("invalid_deletion_intent");
+        var a = left as JsonArray ?? new(); var b = right as JsonArray ?? new();
+        // Swift and .NET format UUID casing differently; identity is a UUID,
+        // not the spelling chosen by the platform's encoder.
+        return a.Count == b.Count && a.All(x => b.Any(y => SameDeletionIntent(x!, y!)));
+    }
     private static JsonArray Deletions(JsonObject metadata) => metadata["spaceDeletions"] as JsonArray ?? new();
     private static JsonNode? PendingDeletion(JsonObject metadata, Guid id)
         => Deletions(metadata).FirstOrDefault(d => Id(d!["spaceID"]) == id);

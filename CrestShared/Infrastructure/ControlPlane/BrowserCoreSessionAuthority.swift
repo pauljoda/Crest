@@ -51,17 +51,18 @@ final class BrowserCoreSessionAuthority {
         let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: next))
         var replacement: UInt64 = 0, checkpoint: UInt64 = 0
         let result = delta.withUnsafeBytes { bytes in selection.withUnsafeBytes { window in
-            crest_session_reserve_replacement(owner.value, revision,
+            if let sync {
+                return crest_session_reserve_sync_replacement(owner.value, revision, sync.handle,
+                    bytes.bindMemory(to: UInt8.self).baseAddress, delta.count,
+                    window.bindMemory(to: UInt8.self).baseAddress, selection.count, &replacement, &checkpoint)
+            }
+            return crest_session_reserve_replacement(owner.value, revision,
                 bytes.bindMemory(to: UInt8.self).baseAddress, delta.count,
                 window.bindMemory(to: UInt8.self).baseAddress, selection.count, &replacement, &checkpoint)
         } }
         guard result == CREST_OK else { throw CoreError.rejected(result) }
         defer { crest_session_release_replacement(replacement) }
         let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
-        if let sync {
-            let bound = crest_session_bind_sync_replacement(replacement, sync.handle)
-            guard bound == CREST_OK else { throw CoreError.rejected(bound) }
-        }
         try persist(snapshot)
         var accepted: UInt64 = 0
         let committed = crest_session_commit_replacement(replacement, &accepted)

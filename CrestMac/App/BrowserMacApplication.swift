@@ -320,7 +320,7 @@ final class BrowserMacApplication {
             closePreparation: pageClosePreparation)
         self.systemNowPlaying = systemNowPlaying
         self.startupBehavior = startupBehavior
-        Task { await browser.resumePendingSpaceDeletions(dataDeleter: self.pagePoolRegistry) }
+        browser.family.configureSpaceDataCleanup(pagePoolRegistry, from: browser)
     }
 
     private static func showcaseDownloadLedger(

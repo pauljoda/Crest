@@ -160,6 +160,11 @@ CREST_API crest_status_t CREST_CALL crest_session_reserve_command(uint64_t comma
 CREST_API crest_status_t CREST_CALL crest_session_reserve_replacement(
     uint64_t session, uint64_t expected_revision, const uint8_t *delta, size_t delta_length,
     const uint8_t *selection, size_t selection_length, uint64_t *replacement, uint64_t *checkpoint);
+// A sealed incoming sync transaction may introduce core-authorized local cleanup
+// intents. This reservation binds that transaction before returning a checkpoint.
+CREST_API crest_status_t CREST_CALL crest_session_reserve_sync_replacement(
+    uint64_t session, uint64_t expected_revision, uint64_t transaction, const uint8_t *delta, size_t delta_length,
+    const uint8_t *selection, size_t selection_length, uint64_t *replacement, uint64_t *checkpoint);
 CREST_API crest_status_t CREST_CALL crest_session_commit_replacement(uint64_t replacement, uint64_t *revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_replacement(uint64_t replacement);
 

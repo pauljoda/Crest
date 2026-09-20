@@ -1565,6 +1565,10 @@
     "resumable-space-data-cleanup": {
       "category": "fixed",
       "message": "Resume interrupted Space deletion after restarting Crest and keep pending cleanup unavailable for browsing."
+    },
+    "cross-device-space-data-cleanup": {
+      "category": "fixed",
+      "message": "Clean up local website and extension data when a Space is deleted on another device, and retry interrupted cleanup safely."
     }
   }
 }
