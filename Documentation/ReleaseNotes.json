@@ -1525,6 +1525,14 @@
     "isolated-cross-engine-cloud-sync": {
       "category": "internal",
       "message": "Enable provisioned desktop and mobile review profiles to share an isolated CloudKit zone, adopt existing cloud Spaces on first launch, and avoid false sync edits from UUID casing or timestamp encoding."
+    },
+    "preserve-additive-sync-payload-fields": {
+      "category": "internal",
+      "message": "Preserve additive CloudKit payload fields through native transport, core-owned edits and journal restart while honoring cleared settings and deleted items."
+    },
+    "space-menu-icon-proportions": {
+      "category": "fixed",
+      "message": "Keep Space crests from stretching in settings menus and pickers."
     }
   }
 }

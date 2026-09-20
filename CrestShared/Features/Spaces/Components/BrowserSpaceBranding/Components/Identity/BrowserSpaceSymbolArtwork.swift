@@ -16,9 +16,10 @@ struct BrowserSpaceSymbolArtwork: View {
     var body: some View {
         Group {
             if let renderedArtwork {
+                // The renderer already supplies this exact point size. Native
+                // picker cells stretch resizable images to their label width.
                 renderedArtwork.image
                     .renderingMode(.original)
-                    .resizable()
                     .interpolation(.high)
             } else {
                 if let emoji = BrowserIconSymbol.emoji(from: space.symbol) {

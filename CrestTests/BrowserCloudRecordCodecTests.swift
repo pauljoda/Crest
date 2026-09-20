@@ -5,6 +5,49 @@ import XCTest
 @testable import Crest
 
 final class BrowserCloudRecordCodecTests: XCTestCase {
+    #if CREST_CORE_BACKED
+    func testAdditiveCloudPayloadSurvivesCoreEditAndJournalRestart() throws {
+        let session = BrowserSession.preview
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: session)
+        let codec = BrowserCloudRecordCodec()
+        let records = try journal.records.map { try codec.encode($0) }
+        let recordID = BrowserSyncRecordID(kind: .space, value: session.spaces[0].id.rawValue)
+        let cloud = try XCTUnwrap(records.first { $0.recordID.recordName == recordID.recordName })
+        let original = try XCTUnwrap(cloud.encryptedValues["payload"] as? Data)
+        var raw = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        var body = try XCTUnwrap(raw["value"] as? [String: Any])
+        var branding = try XCTUnwrap(body["branding"] as? [String: Any])
+        var crest = try XCTUnwrap(branding["crest"] as? [String: Any])
+        raw["futureEnvelope"] = ["values": [true, "retained", NSNull()] as [Any]]
+        body["futureSpace"] = NSNumber(value: UInt64.max)
+        crest["futureCrest"] = ["enabled": true]
+        branding["crest"] = crest
+        body["branding"] = branding
+        raw["value"] = body
+        cloud.encryptedValues["payload"] = try JSONSerialization.data(withJSONObject: raw) as CKRecordValue
+        // A newer writer must advance the record version along with its data.
+        cloud["logicalClock"] = NSNumber(value: journal.logicalClock + 1)
+
+        var merged = try journal.prepareSession(session, remoteRecords: records.map { try codec.decode($0) }, at: .now)
+        merged.spaces[0].name = "Renamed by the older client"
+        try journal.stage(session: merged)
+        let restored = try BrowserSyncJournal.decodeSnapshot(journal.encodedSnapshot())
+        let saved = try XCTUnwrap(restored.records.first { $0.id == recordID })
+        let uploaded = try codec.encode(saved)
+        let data = try XCTUnwrap(uploaded.encryptedValues["payload"] as? Data)
+        let result = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let value = try XCTUnwrap(result["value"] as? [String: Any])
+        let resultBranding = try XCTUnwrap(value["branding"] as? [String: Any])
+        let resultCrest = try XCTUnwrap(resultBranding["crest"] as? [String: Any])
+        XCTAssertEqual(value["name"] as? String, "Renamed by the older client")
+        XCTAssertEqual((value["futureSpace"] as? NSNumber)?.uint64Value, UInt64.max)
+        XCTAssertEqual((resultCrest["futureCrest"] as? [String: Bool])?["enabled"], true)
+        XCTAssertNotNil(result["futureEnvelope"])
+        XCTAssertEqual(try codec.decode(uploaded), saved)
+    }
+    #endif
+
     func testEveryAllowlistedRecordRoundTripsThroughCloudKit() throws {
         var session = BrowserSession.preview
         let rootFolder = try XCTUnwrap(session.spaces[0].folders.first)
@@ -262,6 +305,19 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         XCTAssertEqual(decoded, source)
         XCTAssertNil(decoded.payload)
         XCTAssertEqual(decoded.tombstone?.reason, .explicitDelete)
+
+        let data = try XCTUnwrap(cloudRecord.encryptedValues["tombstone"] as? Data)
+        var raw = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        raw["futureDeletionMetadata"] = ["source": "newer-client"]
+        cloudRecord.encryptedValues["tombstone"] = try JSONSerialization.data(withJSONObject: raw) as CKRecordValue
+        let withAdditions = try codec.decode(cloudRecord)
+        let restored = try JSONDecoder().decode(BrowserSyncRecord.self, from: JSONEncoder().encode(withAdditions))
+        let uploaded = try codec.encode(restored)
+        let uploadedData = try XCTUnwrap(uploaded.encryptedValues["tombstone"] as? Data)
+        let uploadedRaw = try XCTUnwrap(JSONSerialization.jsonObject(with: uploadedData) as? [String: Any])
+        XCTAssertEqual((uploadedRaw["futureDeletionMetadata"] as? [String: String])?["source"], "newer-client")
+        XCTAssertEqual(restored.tombstone, source.tombstone)
+        XCTAssertNil(restored.payload)
     }
 
     func testReviewZonesCannotReadOrReuseProductionRecords() throws {

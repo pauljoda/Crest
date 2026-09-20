@@ -58,12 +58,12 @@ struct BrowserCloudRecordCodec: Sendable {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
             encoder.dateEncodingStrategy = .secondsSince1970
-            if let payload = source.payload {
-                record.encryptedValues[Field.payload] = try encoder.encode(payload) as CKRecordValue
+            if source.payload != nil {
+                record.encryptedValues[Field.payload] = try source.encodedPayload(using: encoder) as CKRecordValue?
                 record.encryptedValues[Field.tombstone] = nil
-            } else if let tombstone = source.tombstone {
+            } else if source.tombstone != nil {
                 record.encryptedValues[Field.payload] = nil
-                record.encryptedValues[Field.tombstone] = try encoder.encode(tombstone) as CKRecordValue
+                record.encryptedValues[Field.tombstone] = try source.encodedTombstone(using: encoder) as CKRecordValue?
             }
         } catch {
             throw BrowserCloudRecordCodecError.payloadEncodingFailed
@@ -113,9 +113,19 @@ struct BrowserCloudRecordCodec: Sendable {
 
         let payload: BrowserSyncPayload?
         let tombstone: BrowserSyncTombstone?
+        let payloadAdditions: BrowserSyncJSON?
+        let tombstoneAdditions: BrowserSyncJSON?
         do {
             payload = try payloadData.map { try decoder.decode(BrowserSyncPayload.self, from: $0) }
             tombstone = try tombstoneData.map { try decoder.decode(BrowserSyncTombstone.self, from: $0) }
+            if let payload, let payloadData {
+                payloadAdditions = try JSONDecoder().decode(BrowserSyncJSON.self, from: payloadData)
+                    .additions(to: .encoded(payload))
+            } else { payloadAdditions = nil }
+            if let tombstone, let tombstoneData {
+                tombstoneAdditions = try JSONDecoder().decode(BrowserSyncJSON.self, from: tombstoneData)
+                    .additions(to: .encoded(tombstone))
+            } else { tombstoneAdditions = nil }
         } catch {
             throw BrowserCloudRecordCodecError.payloadDecodingFailed
         }
@@ -125,7 +135,9 @@ struct BrowserCloudRecordCodec: Sendable {
             spaceID: SpaceID(rawValue: spaceUUID),
             version: BrowserSyncVersion(logicalClock: clock, deviceID: deviceID),
             payload: payload,
-            tombstone: tombstone
+            tombstone: tombstone,
+            payloadAdditions: payloadAdditions,
+            tombstoneAdditions: tombstoneAdditions
         )
         try result.validate()
         return result

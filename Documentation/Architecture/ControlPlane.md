@@ -212,8 +212,15 @@ Sync compares UUID fields by identity and timestamps by their exact binary date
 value. Different JSON number spellings from native encoders do not create edits;
 logical clocks retain integer precision and ordinary strings remain case-sensitive.
 
-Preserving unknown record fields through restaging and proving live cross-engine
-CloudKit convergence remain required. An unreadable transactional store currently
+Native record projections preserve additive encrypted payload fields through
+CloudKit decoding, journal persistence and uploads. Core restaging carries those
+fields forward using the supported payload vocabulary. Known optional fields
+can still be cleared, and group/provider metadata follows member identity rather
+than array position. Deleted members and tombstoned payloads are not resurrected.
+New incompatible schemas still require a newer client.
+
+Live cross-engine CloudKit validation must compare record identities and versions,
+including fresh-profile adoption and repeated merges. An unreadable transactional store currently
 stops startup with the file preserved; a native recovery flow is still needed.
 Native presentation codecs continue to normalize platform glyphs and branding values.
 

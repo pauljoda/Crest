@@ -83,11 +83,14 @@ public sealed class NativeSyncJournal
             if (clock == ulong.MaxValue) throw new BrowserRuleException("sync_clock_exhausted");
             return new() { ["logicalClock"] = ++clock, ["deviceID"] = fields["deviceID"]!.DeepClone() };
         }
-        JsonObject Save(JsonObject payload) => new()
+        JsonObject Save(JsonObject payload)
         {
-            ["id"] = PayloadId(payload), ["spaceID"] = PayloadSpace(payload).DeepClone(),
-            ["payload"] = payload.DeepClone(), ["version"] = Version()
-        };
+            var id = PayloadId(payload);
+            var result = next.TryGetValue(Name(id), out var previous) ? previous.DeepClone().AsObject() : new JsonObject();
+            result["id"] = id; result["spaceID"] = PayloadSpace(payload).DeepClone();
+            result["payload"] = payload.DeepClone(); result["version"] = Version(); result.Remove("tombstone");
+            return result;
+        }
         JsonObject Delete(JsonObject previous, string reason)
         {
             double now = args["now"]!.GetValue<double>();
@@ -119,6 +122,21 @@ public sealed class NativeSyncJournal
             foreach (var node in payloads)
             {
                 var payload = node!.AsObject();
+                var id = PayloadId(payload);
+                next.TryGetValue(Name(id), out var previous);
+                var previousPayload = previous is null ? null : Payload(previous);
+                // Closing/restoring changes the record kind, not the tab's
+                // identity. Carry its additive fields across that transition.
+                string kind = payload["type"]!.GetValue<string>();
+                if (previousPayload is null && kind is "tab" or "archive"
+                    && next.TryGetValue((kind == "tab" ? "archive:" : "tab:") + Id(id["value"]).ToString("D"), out var counterpart)
+                    && Payload(counterpart) is { } other)
+                {
+                    var oldTab = kind == "tab" ? Value(other)["tab"]! : Value(other);
+                    previousPayload = new JsonObject { ["type"] = kind,
+                        ["value"] = kind == "tab" ? oldTab.DeepClone() : new JsonObject { ["tab"] = oldTab.DeepClone() } };
+                }
+                payload = NativeSyncCompatibility.Preserve(payload, previousPayload);
                 if (!desired.TryAdd(Name(PayloadId(payload)), payload)) throw new BrowserRuleException("duplicate_sync_record");
             }
             if (desired.Count > MaximumRecords) throw new BrowserRuleException("sync_record_limit");
