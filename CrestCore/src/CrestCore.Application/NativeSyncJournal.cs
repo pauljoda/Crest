@@ -14,6 +14,7 @@ public sealed class NativeSyncJournal
     private readonly Dictionary<string, JsonObject> records;
     private readonly HashSet<string> pending;
     private readonly Lazy<byte[]> encoded;
+    internal IEnumerable<JsonObject> Records => records.Values;
 
     public NativeSyncJournal(ReadOnlySpan<byte> bytes)
     {

@@ -21,9 +21,10 @@ public static class NativeSyncQuery
             {
                 "project" => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
                     request["records"]!.AsArray().Select(n => n!.AsObject())),
-                "materialize" => NativeSyncMaterializer.Materialize(request["session"]!.AsObject(), request["preferences"]!,
-                    NativeSyncEvaluator.Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject()))
-                        .Select(n => n!.AsObject()).ToArray(), request["now"]!.GetValue<double>()),
+                "materialize" => Materialize(request),
+                "session.repair" => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
+                    request["emptySpace"] as JsonObject),
+                "session.retain" => NativeSessionMaintenance.Retain(request["session"]!.AsObject(), request["now"]!.GetValue<double>()),
                 _ => throw new BrowserRuleException("unknown_sync_operation")
             };
             result = new() { ["value"] = value };
@@ -37,6 +38,22 @@ public static class NativeSyncQuery
         return bytes;
     }
 
+    private static JsonObject Materialize(JsonObject request)
+    {
+        double now = request["now"]!.GetValue<double>();
+        var session = NativeSyncMaterializer.Materialize(request["session"]!.AsObject(), request["preferences"]!,
+            NativeSyncEvaluator.Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject()))
+                .Select(n => n!.AsObject()).ToArray(), now);
+        return NativeSessionMaintenance.Repair(session, now, request["emptySpace"] as JsonObject);
+    }
+
     public static byte[] Failure(NativeSyncDocumentException error) => Encoding.UTF8.GetBytes(new JsonObject
     { ["error"] = new JsonObject { ["code"] = error.Code, ["value"] = error.Value } }.ToJsonString());
+
+    public static byte[] Success(JsonNode value)
+    {
+        var bytes = Encoding.UTF8.GetBytes(new JsonObject { ["value"] = value }.ToJsonString());
+        if (bytes.Length > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        return bytes;
+    }
 }

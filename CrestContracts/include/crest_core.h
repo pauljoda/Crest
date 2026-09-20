@@ -95,6 +95,13 @@ CREST_API crest_status_t CREST_CALL crest_sync_journal_apply_checked(
 CREST_API crest_status_t CREST_CALL crest_sync_journal_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_journal_release(uint64_t handle);
+/* Prepares a matched session and journal after staging, merging, repair and
+ * retention. On success both handles are owned by the caller. On semantic
+ * failure only out_query may be returned, containing a typed error envelope.
+ * The source journal and session authority are never mutated by preparation. */
+CREST_API crest_status_t CREST_CALL crest_sync_session_prepare(
+    uint64_t journal, const uint8_t* input, size_t input_length,
+    uint64_t* out_journal, uint64_t* out_query);
 
 /* Prepared sync queries evaluate once and retain immutable JSON results.
  * Worker-safe, 64 MiB input/output limit; each handle must be released.

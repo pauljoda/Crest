@@ -153,6 +153,12 @@ extension BrowserSession {
     /// data issue. First occurrences retain their stable identity; later collisions are
     /// reidentified without copying website data.
     mutating func repairRuntimeIntegrity() {
+        #if CREST_CORE_BACKED
+        // No page or startup save may use an unaccepted repair. Operational
+        // sync errors use the throwing bridge before the coordinator commits.
+        do { self = try BrowserCoreSync.repair(self) }
+        catch { preconditionFailure("Core session repair failed before publication: \(error)") }
+        #else
         if spaces.isEmpty {
             let space = Self.makeBlankSpace(number: 1)
             spaces = [space]
@@ -342,6 +348,7 @@ extension BrowserSession {
             defaultSpaceID = selectedSpaceID
         }
         ensureSelection(in: selectedSpaceID)
+        #endif
     }
 
 }

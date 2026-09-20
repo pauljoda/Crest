@@ -5,6 +5,21 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders)
 {
     public const int MaximumDepth = 16;
     public const int MaximumCount = 500;
+    public static IReadOnlyList<BrowserFolder> RepairPreorder(IReadOnlyList<BrowserFolder> source)
+    {
+        List<BrowserFolder> accepted = [];
+        Dictionary<FolderId, (int Depth, TabPlacement Location)> parents = [];
+        foreach (var folder in source.Take(MaximumCount))
+        {
+            var parent = folder.ParentId;
+            if (parent is not { } requested || requested == folder.Id || !parents.TryGetValue(requested, out var found)
+                || found.Depth + 1 >= MaximumDepth) parent = null;
+            var repaired = folder with { ParentId = parent, Location = parent is { } p ? parents[p].Location : folder.Location };
+            accepted.Add(repaired);
+            parents[folder.Id] = (parent is { } id ? parents[id].Depth + 1 : 0, repaired.Location);
+        }
+        return new FolderTree(accepted).DisplayOrder();
+    }
     public BrowserFolder Folder(FolderId id) => folders.FirstOrDefault(f => f.Id == id)
         ?? throw new BrowserRuleException("unknown_folder");
     public IEnumerable<BrowserFolder> Children(FolderId? id) => folders.Where(f => f.ParentId == id);

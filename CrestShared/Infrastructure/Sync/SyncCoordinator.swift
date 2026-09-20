@@ -91,6 +91,9 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
             storeRevision: storeRevision,
             staleResult: localSession
         ) { journal in
+            #if CREST_CORE_BACKED
+            return try journal.prepareSession(localSession, remoteRecords: remoteRecords, at: date)
+            #else
             // Incoming batches can arrive before a coalesced local edit stages.
             // Preserve that edit in the same transaction before materialization.
             if !localSession.hasDisposableSeedState {
@@ -105,6 +108,7 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
                 at: date
             )
             return materialized
+            #endif
         }
     }
 
@@ -136,6 +140,10 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
             storeRevision: storeRevision,
             staleResult: localSession
         ) { journal in
+            #if CREST_CORE_BACKED
+            return try journal.prepareSession(localSession, remoteRecords: remoteRecords, replacing: true,
+                emptySpace: remoteRecords.isEmpty ? Self.blankSession().spaces[0] : nil, at: date)
+            #else
             try journal.replaceWithCloud(remoteRecords)
             var materialized =
                 if remoteRecords.isEmpty {
@@ -152,6 +160,7 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
                 )
             }
             return materialized
+            #endif
         }
     }
 

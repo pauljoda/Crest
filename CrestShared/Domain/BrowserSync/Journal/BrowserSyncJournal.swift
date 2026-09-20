@@ -56,6 +56,20 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     private mutating func applyCore(_ operation: String, arguments: [String: Any]) throws {
         let owner = try core ?? BrowserCoreSyncJournal(self)
         let prepared = try owner.applying(operation, preferences: preferences, arguments: arguments)
+        try adopt(prepared)
+    }
+
+    mutating func prepareSession(_ session: BrowserSession, remoteRecords: [BrowserSyncRecord], replacing: Bool = false,
+                                 emptySpace: BrowserSpace? = nil, at date: Date) throws -> BrowserSession {
+        try validateIncoming(remoteRecords, checksSpace: !replacing)
+        let owner = try core ?? BrowserCoreSyncJournal(self)
+        let prepared = try owner.preparingSession(session, records: remoteRecords, preferences: preferences,
+            replacing: replacing, emptySpace: emptySpace, at: date)
+        try adopt(prepared.journal)
+        return prepared.session
+    }
+
+    private mutating func adopt(_ prepared: BrowserCoreSyncJournal) throws {
         var next = try JSONDecoder().decode(Self.self, from: prepared.read())
         guard next.deviceID == deviceID, next.schemaVersion == schemaVersion else {
             throw BrowserSyncError.invalidField("journalIdentity")

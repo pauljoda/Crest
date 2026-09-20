@@ -5,6 +5,22 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
+    func testCoreRepairPreservesAssetOwnershipWhenIdentitiesCollide() throws {
+        var first = BrowserSession.preview.spaces[0]
+        first.tabs = [first.tabs[0]]
+        first.tabs[0].faviconData = Data([1])
+        var second = first
+        second.tabs[0].faviconData = Data([2])
+        let original = BrowserSession(spaces: [first, second], selectedSpaceID: first.id)
+        let repaired = try BrowserCoreSync.repair(original)
+        XCTAssertNotEqual(repaired.spaces[0].id, repaired.spaces[1].id)
+        XCTAssertNotEqual(repaired.spaces[0].profile.id, repaired.spaces[1].profile.id)
+        XCTAssertNotEqual(repaired.spaces[0].tabs[0].id, repaired.spaces[1].tabs[0].id)
+        XCTAssertEqual(repaired.spaces[0].tabs[0].faviconData, Data([1]))
+        XCTAssertEqual(repaired.spaces[1].tabs[0].faviconData, Data([2]))
+        XCTAssertEqual(original.spaces[0].id, original.spaces[1].id)
+    }
+
     func testSpaceCommandsPreserveNativeRecordsAndPublishAcrossWindows() throws {
         var session = BrowserSession.preview
         let icon = Data([3, 2, 1])

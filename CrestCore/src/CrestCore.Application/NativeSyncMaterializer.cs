@@ -65,6 +65,7 @@ public static class NativeSyncMaterializer
         }
         var result = session.DeepClone().AsObject();
         if (spaces.Count == 0) return result;
+        result.Remove("disposableSeedMarker");
         result["spaces"] = spaces;
         if (!spaces.Any(s => Id(s!["id"]) == Id(session["selectedSpaceID"])))
             result["selectedSpaceID"] = spaces[0]!["id"]!.DeepClone();

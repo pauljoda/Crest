@@ -5,23 +5,83 @@ import Foundation
 enum BrowserCoreSync {
     static func materialize(_ session: BrowserSession, preferences: BrowserSyncPreferences,
                             records: [BrowserSyncRecord]) throws -> BrowserSession {
-        var result: BrowserSession = try query([
+        var request: [String: Any] = [
             "version": 1, "operation": "materialize", "session": try value(BrowserCoreSessionAuthority.compact(session)),
             "preferences": try value(preferences), "records": try value(records), "now": Date.now.timeIntervalSinceReferenceDate
+        ]
+        if session.spaces.isEmpty { request["emptySpace"] = try value(BrowserSession.makeBlankSpace(number: 1)) }
+        let result: RepairedSession = try query(request)
+        return try reattachingAssets(result, from: session, byPosition: false)
+    }
+
+    static func repair(_ session: BrowserSession) throws -> BrowserSession {
+        var request: [String: Any] = [
+            "version": 1, "operation": "session.repair", "session": try value(BrowserCoreSessionAuthority.compact(session)),
+            "now": Date.now.timeIntervalSinceReferenceDate
+        ]
+        if session.spaces.isEmpty { request["emptySpace"] = try value(BrowserSession.makeBlankSpace(number: 1)) }
+        let result: RepairedSession = try query(request)
+        return try reattachingAssets(result, from: session, byPosition: true)
+    }
+
+    static func retain(_ session: BrowserSession, at date: Date) throws -> (session: BrowserSession, changed: Bool) {
+        let retained: RetainedSession = try query([
+            "version": 1, "operation": "session.retain", "session": try value(BrowserCoreSessionAuthority.compact(session)),
+            "now": date.timeIntervalSinceReferenceDate
         ])
-        // Image bytes stay native. The core carries their source URL and styling
-        // metadata; reattach only the receiving Space's existing live-tab asset.
-        for spaceIndex in result.spaces.indices {
-            guard let local = session.space(id: result.spaces[spaceIndex].id) else { continue }
-            let tabs = Dictionary(uniqueKeysWithValues: local.tabs.map { ($0.id, $0) })
-            for tabIndex in result.spaces[spaceIndex].tabs.indices {
-                let id = result.spaces[spaceIndex].tabs[tabIndex].id
-                result.spaces[spaceIndex].tabs[tabIndex].faviconData = tabs[id]?.faviconData
+        var result = retained.session
+        // Retention changes only history/archive, so live assets retain their
+        // exact positional ownership, including deliberately empty windows.
+        guard result.spaces.count == session.spaces.count else { throw CoreSyncError.rejected(CREST_INVALID_MESSAGE) }
+        for si in result.spaces.indices {
+            guard result.spaces[si].id == session.spaces[si].id, result.spaces[si].tabs.count == session.spaces[si].tabs.count
+            else { throw CoreSyncError.rejected(CREST_INVALID_MESSAGE) }
+            for ti in result.spaces[si].tabs.indices {
+                guard result.spaces[si].tabs[ti].id == session.spaces[si].tabs[ti].id else { throw CoreSyncError.rejected(CREST_INVALID_MESSAGE) }
+                result.spaces[si].tabs[ti].faviconData = session.spaces[si].tabs[ti].faviconData
+            }
+            let archive = Dictionary(session.spaces[si].archivedTabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for ai in result.spaces[si].archivedTabs.indices {
+                let id = result.spaces[si].archivedTabs[ai].id
+                result.spaces[si].archivedTabs[ai].tab.faviconData = archive[id]?.tab.faviconData
             }
         }
-        // The legacy session codec still owns general checkpoint repair during
-        // migration. Shared-record interpretation and materialization are core-owned.
-        result.repairRuntimeIntegrity()
+        return (result, retained.changed)
+    }
+
+    private struct RetainedSession: Decodable { let session: BrowserSession; let changed: Bool }
+    private struct RepairedSession: Decodable { let session: BrowserSession; let assets: [AssetSource] }
+    private struct AssetSource: Decodable {
+        let spaceIndex: Int
+        let tabIndex: Int
+        let sourceSpaceID: SpaceID
+        let sourceTabID: TabID
+    }
+
+    static func consumeMaterializedSession(_ handle: UInt64, from source: BrowserSession) throws -> BrowserSession {
+        let repaired: RepairedSession = try readQuery(handle)
+        return try reattachingAssets(repaired, from: source, byPosition: false)
+    }
+
+    private static func reattachingAssets(_ repaired: RepairedSession, from source: BrowserSession, byPosition: Bool) throws -> BrowserSession {
+        var result = repaired.session
+        let bySpace = Dictionary(source.spaces.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let byTab = bySpace.mapValues { space in Dictionary(space.tabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }) }
+        for asset in repaired.assets {
+            let si = asset.spaceIndex, ti = asset.tabIndex
+            guard result.spaces.indices.contains(si), result.spaces[si].tabs.indices.contains(ti)
+            else { throw CoreSyncError.rejected(CREST_INVALID_MESSAGE) }
+            let original: BrowserTab?
+            if byPosition {
+                original = source.spaces.indices.contains(si) && source.spaces[si].tabs.indices.contains(ti) ? source.spaces[si].tabs[ti] : nil
+            } else {
+                original = byTab[asset.sourceSpaceID]?[asset.sourceTabID]
+            }
+            result.spaces[si].tabs[ti].faviconData = original?.faviconData
+            if original?.faviconData != nil, result.spaces[si].tabs[ti].faviconURL == nil {
+                result.spaces[si].tabs[ti].faviconURL = original?.url
+            }
+        }
         return result
     }
 

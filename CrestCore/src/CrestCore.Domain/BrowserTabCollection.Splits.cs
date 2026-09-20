@@ -112,29 +112,7 @@ public sealed partial class BrowserTabCollection
 
     internal void RepairSplitMembership()
     {
-        var retired = new HashSet<Guid>();
-        Guid? run = null; TabPlacement placement = default; FolderId? folder = null; int length = 0;
-        foreach (var tab in tabs)
-        {
-            if (tab.SplitGroupId is not { } group || tab.Placement == TabPlacement.Pinned)
-            {
-                if (run is { } old) retired.Add(old);
-                if (tab.Placement == TabPlacement.Pinned) tab.SetSplit(null);
-                run = null; length = 0; continue;
-            }
-            if (run != group)
-            {
-                if (run is { } old) retired.Add(old);
-                run = null; length = 0;
-                if (retired.Contains(group)) { tab.SetSplit(null); continue; }
-                run = group; placement = tab.Placement; folder = tab.FolderId; length = 1; continue;
-            }
-            if (tab.Placement != placement || tab.FolderId != folder)
-            {
-                tab.SetSplit(null); retired.Add(group); run = null; length = 0; continue;
-            }
-            if (length >= MaximumSplitMembers) { tab.SetSplit(null); continue; }
-            length++;
-        }
+        var groups = SplitMembershipPolicy.Repair(tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
+        for (int index = 0; index < tabs.Count; index++) tabs[index].SetSplit(groups[index]);
     }
 }

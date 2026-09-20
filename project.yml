@@ -267,6 +267,7 @@ targets:
     sources:
       - path: CrestTests/AddressResolverTests.swift
       - path: CrestTests/BrowserSessionTests.swift
+      - path: CrestTests/BrowserSessionRecoveryTests.swift
       - path: CrestTests/BrowserDataRetentionTests.swift
       - path: CrestTests/BrowserWebHostViewTests.swift
       - path: CrestTests/BrowserCurrentTabFolderTests.swift

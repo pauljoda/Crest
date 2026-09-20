@@ -90,11 +90,11 @@ or revive WebKit extension emulation. Any later extension-list sync needs an
 explicit portable intent model and local permission review; it is not implicit in
 this browser-record migration.
 
-The main sync ownership gap is `BrowserSyncCoordinator.merge`: it orders core
-staging, record merging and materialization, then applies native session repair
-and retention before submitting the session to the core authority. These steps
-must become one transaction so an accepted session and its pending sync changes
-cannot diverge.
+`NativeSyncSessionTransition` prepares local staging, record merging,
+materialization, repair and retention as one core operation. The main remaining
+gap is publication: `BrowserSyncCoordinator.merge` still saves the prepared journal
+before submitting the matching session to the session authority. Durable storage
+and authority publication must accept the pair together so they cannot diverge.
 Preserve ordering between local edits, incoming batches, durable checkpoints,
 pending uploads and acknowledgements, including crash recovery. Keep explicit
 deletion distinct from absence, retention and superseded records, and preserve
@@ -179,11 +179,21 @@ resolution holds back incomplete subtrees and rejects cross-Space ancestry.
 Prepared query handles evaluate once and return typed identity-bearing errors.
 Native favicon image bytes stay outside the core and are reattached by the adapter.
 
-General checkpoint repair and retention still run in Swift. The sync coordinator
-still saves the journal before submitting the materialized session to the session
-authority. Coupling those accepted states, migrating the remaining rules, preserving
-unknown record fields through restaging, and adding crash recovery are required
-before enabling cross-engine cloud sync.
+`NativeSessionMaintenance` repairs checkpoint identities, folder structure,
+selection, pin limits and split membership, and applies history/archive retention.
+The same domain split policy serves command edits and checkpoint repair. A repair
+returns native asset references separately from semantic records, preserving each
+tab's images when duplicate identities are replaced. Startup must accept repair
+before creating pages or saving the session; rejected sync preparation leaves the
+original session and journal untouched. Replacing a disposable seed with real
+cloud Spaces clears the seed marker.
+
+`crest_sync_session_prepare` returns a matched session result and immutable journal
+handle after all merge rules succeed. The coordinator still persists the journal
+before authority publication. Coupling those accepted states, preserving unknown
+record fields through restaging, and adding crash recovery remain prerequisites
+for enabling cross-engine cloud sync. Native presentation codecs continue to
+normalize platform glyphs and branding values.
 
 Value-only operations still use `crest_core_edit_session`, which receives one
 compact Space and returns an atomic edit.

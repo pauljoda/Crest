@@ -274,6 +274,17 @@ extension BrowserSession {
 extension BrowserSession {
     @discardableResult
     mutating func applyDataRetentionPolicies(now: Date = .now) -> Bool {
+        #if CREST_CORE_BACKED
+        do {
+            let result = try BrowserCoreSync.retain(self, at: now)
+            self = result.session
+            return result.changed
+        } catch {
+            // A rejected maintenance request leaves the complete snapshot in
+            // place. Sync uses the throwing transaction boundary instead.
+            return false
+        }
+        #else
         var removedRecords = false
         for index in spaces.indices {
             let retention = spaces[index].browsingPreferences.dataRetention
@@ -310,5 +321,6 @@ extension BrowserSession {
             }
         }
         return removedRecords
+        #endif
     }
 }
