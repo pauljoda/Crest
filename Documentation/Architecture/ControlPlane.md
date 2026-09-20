@@ -118,6 +118,20 @@ sessions upgrade without loss. Keep external signing, provisioning or device
 access requirements visible; do not mark those requirements complete on the
 strength of unit tests or an unrelated successful build.
 
+## Native engine boundary
+
+The existing desktop and mobile page facades use `BrowserPageEngine` for native
+view ownership, loads, Back/Forward history, reload, stop, zoom and Find.
+`BrowserWebKitPageEngine` owns WebKit's supplemental same-document navigation
+history on both Apple platforms. `ChromiumNativePage` implements that same port
+using the Chromium host. History entries remain read projections; traversal and
+cache-bypassing reloads run in the engine's navigation controller.
+
+Other page services and registration still need consolidation. The Chromium
+facade currently retains WebKit service objects, and the original message-based
+adapter/kernel remains separate. Migrating navigation does not complete those
+ownership changes.
+
 ## Existing UI migration
 
 `CrestNativeCore` and `CrestMobileNativeCore` build the existing platform entry

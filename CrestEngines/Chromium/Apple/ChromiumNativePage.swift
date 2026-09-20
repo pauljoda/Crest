@@ -1,10 +1,11 @@
 #if CREST_CHROMIUM_HOST
 import AppKit
+import Observation
 
 /// Owns the WebContents behind the original Crest page card. The shell and
 /// portable session retain their tab identities; this object owns only a page.
-@MainActor
-final class ChromiumNativePage: BrowserFindExecuting {
+@Observable @MainActor
+final class ChromiumNativePage: BrowserPageEngine {
     let id = UUID().uuidString
     let surface = ChromiumNativePageView()
     var isPrivateBrowsing = false
@@ -22,6 +23,22 @@ final class ChromiumNativePage: BrowserFindExecuting {
         self.observer = observer
         surface.page = self
     }
+
+    var nativeView: NSView { surface }
+    private(set) var backHistory: [BrowserNavigationHistoryItem] = []
+    private(set) var forwardHistory: [BrowserNavigationHistoryItem] = []
+    func load(_ request: URLRequest) {
+        guard let url = request.url else { return }
+        load(url)
+    }
+    func navigateHistory(by offset: Int) {
+        guard created, !disposed, offset != 0 else { return }
+        _ = host?.command("engine.history", page: id, url: String(offset))
+    }
+    func reload(bypassingCache: Bool) {
+        command(bypassingCache ? "engine.reload_from_origin" : "engine.reload")
+    }
+    func stop() { command("engine.stop") }
 
     func load(_ url: URL) {
         requestedURL = url
@@ -153,8 +170,23 @@ final class ChromiumNativePage: BrowserFindExecuting {
         _ = host?.command("engine.navigate", page: id, url: ChromiumInternalURL.engine(requestedURL.absoluteString))
     }
 
+    private func history(_ value: Any?) -> [BrowserNavigationHistoryItem] {
+        (value as? [[String: Any]] ?? []).compactMap { item in
+            guard let depth = item["depth"] as? Int, depth > 0,
+                let rawURL = item["url"] as? String,
+                let url = URL(string: ChromiumInternalURL.presented(rawURL)) else { return nil }
+            let title = (item["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return BrowserNavigationHistoryItem(depth: depth,
+                title: title.isEmpty ? url.host() ?? url.absoluteString : title, url: url)
+        }
+    }
+
     private func receive(_ event: String, values: [String: Any]) {
         guard !disposed else { return }
+        if event == "changed" {
+            backHistory = history(values["backHistory"])
+            forwardHistory = history(values["forwardHistory"])
+        }
         if event == "created" {
             created = true
             creating = false

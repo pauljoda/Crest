@@ -18,6 +18,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     let spaceID: SpaceID
     let profileID: UUID
     let webView: WKWebView
+    @ObservationIgnored lazy var pageEngine: any BrowserPageEngine = BrowserWebKitPageEngine(webView: webView)
 
     /// The store that owns this page. Weak because the store owns the page.
     weak var host: (any MobileBrowserPageHosting)?
@@ -45,7 +46,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
-    var navigationHistory = BrowserPageNavigationHistory()
+    var navigationHistory: BrowserPageNavigationHistory {
+        get { (pageEngine as! BrowserWebKitPageEngine).history }
+        set { (pageEngine as! BrowserWebKitPageEngine).history = newValue }
+    }
     private(set) var showsProcessFailure = false
     var isFindPresented: Bool { findSession.isPresented }
     var findQuery: String { findSession.query }
@@ -374,7 +378,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         url = request.url
         appInitiatedURL = request.url
         prepareForNavigation(to: request.url)
-        webView.load(request)
+        pageEngine.load(request)
     }
 
     func routeModifiedLink(_ url: URL, selecting: Bool) {
@@ -598,7 +602,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     func retryAfterProcessFailure() {
         processRecovery.reset()
         showsProcessFailure = false
-        webView.reload()
+        pageEngine.reload(bypassingCache: false)
     }
 
     func presentFind() {
@@ -606,11 +610,11 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     }
 
     func dismissFind() {
-        findSession.dismiss(using: webView)
+        findSession.dismiss(using: pageEngine)
     }
 
     func find(_ query: String, direction: BrowserFindDirection = .forward) {
-        findSession.find(query, direction: direction, using: webView)
+        findSession.find(query, direction: direction, using: pageEngine)
     }
 
     @discardableResult
@@ -932,7 +936,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
             return false
         }
         pageZoom = zoom
-        webView.pageZoom = zoom
+        pageEngine.setZoom(zoom)
         return true
     }
 

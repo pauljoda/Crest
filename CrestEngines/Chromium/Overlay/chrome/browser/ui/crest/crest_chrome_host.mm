@@ -74,6 +74,7 @@
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
 #include "components/tabs/public/tab_interface.h"
 #include "content/public/browser/navigation_controller.h"
+#include "content/public/browser/navigation_entry.h"
 #include "content/public/browser/navigation_handle.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_contents_observer.h"
@@ -429,7 +430,23 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       @"title": base::SysUTF16ToNSString(web_contents()->GetTitle()),
       @"isLoading": @(web_contents()->IsLoading()),
       @"canGoBack": @(controller.CanGoBack()), @"canGoForward": @(controller.CanGoForward()),
+      @"backHistory": History(-1), @"forwardHistory": History(1),
       @"committed": @(committed), @"failure": failure ?: (id)NSNull.null });
+  }
+  NSArray* History(int direction) {
+    auto& controller = web_contents()->GetController();
+    NSMutableArray* result = [NSMutableArray array];
+    const int current = controller.GetCurrentEntryIndex();
+    for (int depth = 1; depth <= 50; ++depth) {
+      const int index = current + direction * depth;
+      if (index < 0 || index >= controller.GetEntryCount()) break;
+      auto* entry = controller.GetEntryAtIndex(index);
+      if (!entry) break;
+      [result addObject:@{ @"depth": @(depth),
+        @"title": base::SysUTF16ToNSString(entry->GetTitle()),
+        @"url": base::SysUTF8ToNSString(entry->GetVirtualURL().spec()) }];
+    }
+    return result;
   }
   void DidStartLoading() override { Publish(); }
   void DidStopLoading() override { Publish(); }
@@ -722,8 +739,14 @@ Page* FindPage(NSString* identifier) {
     if (controller.CanGoBack()) controller.GoBack();
   } else if ([command isEqualToString:@"engine.forward"]) {
     if (controller.CanGoForward()) controller.GoForward();
-  } else if ([command isEqualToString:@"engine.reload"]) {
-    controller.Reload(content::ReloadType::NORMAL, true);
+  } else if ([command isEqualToString:@"engine.history"]) {
+    const int offset = url.intValue;
+    if (offset == 0 || !controller.CanGoToOffset(offset)) return NO;
+    controller.GoToOffset(offset);
+  } else if ([command isEqualToString:@"engine.reload"] ||
+             [command isEqualToString:@"engine.reload_from_origin"]) {
+    controller.Reload([command isEqualToString:@"engine.reload_from_origin"]
+        ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
   } else if ([command isEqualToString:@"engine.stop"]) {
     contents->Stop();
   } else if ([command isEqualToString:@"engine.extensions"]) {

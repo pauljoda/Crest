@@ -18,6 +18,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     #if CREST_CHROMIUM_HOST
     @ObservationIgnored var chromiumPage: ChromiumNativePage?
     #endif
+    @ObservationIgnored lazy var pageEngine: any BrowserPageEngine = {
+        #if CREST_CHROMIUM_HOST
+        return chromiumPage!
+        #else
+        return BrowserWebKitPageEngine(webView: webView)
+        #endif
+    }()
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored let pictureInPicture: BrowserPictureInPicturePageController
     @ObservationIgnored lazy var linkHover = BrowserLinkHoverController(webView: webView)
@@ -48,7 +55,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
-    var navigationHistory = BrowserPageNavigationHistory()
+    var navigationHistory: BrowserPageNavigationHistory {
+        get { (pageEngine as? BrowserWebKitPageEngine)?.history ?? BrowserPageNavigationHistory() }
+        set { (pageEngine as? BrowserWebKitPageEngine)?.history = newValue }
+    }
     var webContentFailureMessage: String?
     var isFindPresented: Bool { findSession.isPresented }
     var findQuery: String { findSession.query }
@@ -157,7 +167,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     // Session-only presentation state belongs to the live page, including in splits.
     private var developerToolbarVisibilityOverride: Bool?
     var developerViewport: BrowserDeveloperViewport? {
-        didSet { webView.pageZoom = renderedPageZoom }
+        didSet { pageEngine.setZoom(renderedPageZoom) }
     }
 
     var renderedPageZoom: CGFloat { developerViewport == nil ? pageZoom : 1 }
@@ -436,13 +446,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             pendingNavigationURL = destination
             webContentFailureMessage = nil
             isLoading = true
-            chromiumPage.load(destination)
+            pageEngine.load(request)
             return
         }
         #endif
         appInitiatedURL = request.url
         prepareForNavigation(to: request.url)
-        webView.load(request)
+        pageEngine.load(request)
     }
 
     /// Replays a request WebKit classified as web-content navigation in this
@@ -452,7 +462,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         if chromiumPage != nil { load(request); return }
         #endif
         prepareForNavigation(to: request.url)
-        webView.load(request)
+        pageEngine.load(request)
     }
 
     /// WebKit's own opaque per-view session state: the back/forward list and the
@@ -664,7 +674,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     func retryAfterProcessFailure() {
         processRecovery.reset()
         webContentFailureMessage = nil
-        webView.reload()
+        pageEngine.reload(bypassingCache: false)
     }
 
     func presentFind() {
@@ -780,10 +790,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     private var findExecutor: any BrowserFindExecuting {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { return chromiumPage }
-        #endif
-        return webView
+        pageEngine
     }
 
     func dismissFind() {
@@ -1134,10 +1141,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             return false
         }
         pageZoom = zoom
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { chromiumPage.setZoom(renderedPageZoom); return true }
-        #endif
-        webView.pageZoom = renderedPageZoom
+        pageEngine.setZoom(renderedPageZoom)
         return true
     }
 

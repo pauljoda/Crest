@@ -1533,6 +1533,10 @@
     "space-menu-icon-proportions": {
       "category": "fixed",
       "message": "Keep Space crests from stretching in settings menus and pickers."
+    },
+    "native-engine-navigation-port": {
+      "category": "improved",
+      "message": "Use Chromium's page history in the native Back and Forward menus and honor reloads that bypass the cache."
     }
   }
 }

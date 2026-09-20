@@ -3,69 +3,32 @@ import WebKit
 
 extension BrowserPlatformPage {
     func goBack() {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { chromiumPage.command("engine.back"); return }
-        #endif
         refreshNavigationState()
         if navigationFailure != nil {
             returnFromNavigationFailure()
             return
         }
-        if let item = navigationHistory.backItems.last {
-            webView.go(to: item)
-        } else {
-            webView.goBack()
-        }
+        pageEngine.navigateHistory(by: -1)
     }
 
     func goForward() {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { chromiumPage.command("engine.forward"); return }
-        #endif
         refreshNavigationState()
-        if let item = navigationHistory.forwardItems.first {
-            webView.go(to: item)
-        } else {
-            webView.goForward()
-        }
+        pageEngine.navigateHistory(by: 1)
     }
 
-    var backHistory: [BrowserNavigationHistoryItem] {
-        navigationHistory.backItems.reversed().enumerated().map { index, item in
-            BrowserNavigationHistoryItem(
-                depth: index + 1,
-                title: Self.navigationTitle(for: item),
-                url: item.url
-            )
-        }
-    }
-
-    var forwardHistory: [BrowserNavigationHistoryItem] {
-        navigationHistory.forwardItems.enumerated().map { index, item in
-            BrowserNavigationHistoryItem(
-                depth: index + 1,
-                title: Self.navigationTitle(for: item),
-                url: item.url
-            )
-        }
-    }
+    var backHistory: [BrowserNavigationHistoryItem] { pageEngine.backHistory }
+    var forwardHistory: [BrowserNavigationHistoryItem] { pageEngine.forwardHistory }
 
     func goBack(toDepth depth: Int) {
-        refreshNavigationState()
-        let items = navigationHistory.backItems
-        let index = items.count - depth
-        guard items.indices.contains(index) else { return }
+        guard depth > 0, backHistory.contains(where: { $0.depth == depth }) else { return }
         clearNavigationFailure()
-        webView.go(to: items[index])
+        pageEngine.navigateHistory(by: -depth)
     }
 
     func goForward(toDepth depth: Int) {
-        refreshNavigationState()
-        let items = navigationHistory.forwardItems
-        let index = depth - 1
-        guard items.indices.contains(index) else { return }
+        guard depth > 0, forwardHistory.contains(where: { $0.depth == depth }) else { return }
         clearNavigationFailure()
-        webView.go(to: items[index])
+        pageEngine.navigateHistory(by: depth)
     }
 
     /// Intercepted, same-document navigations have no didFinish callback.
@@ -83,12 +46,7 @@ extension BrowserPlatformPage {
         navigationHistory.synchronize(with: webView.backForwardList)
     }
 
-    func reload() {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { chromiumPage.command("engine.reload"); return }
-        #endif
-        webView.reload()
-    }
+    func reload() { pageEngine.reload(bypassingCache: false) }
 
     func clearSiteDataAndReload() async {
         guard let targetURL = displayURL ?? webView.url else { return }
@@ -104,31 +62,14 @@ extension BrowserPlatformPage {
     }
 
     func performReload(_ mode: BrowserPageReloadMode) {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage {
-            switch BrowserPageReloadPolicy.action(isLoading: isLoading, mode: mode) {
-            case .stop: chromiumPage.command("engine.stop")
-            case .reload, .reloadFromOrigin: chromiumPage.command("engine.reload")
-            }
-            return
-        }
-        #endif
         switch BrowserPageReloadPolicy.action(isLoading: isLoading, mode: mode) {
-        case .stop:
-            webView.stopLoading()
-        case .reload:
-            webView.reload()
-        case .reloadFromOrigin:
-            webView.reloadFromOrigin()
+        case .stop: pageEngine.stop()
+        case .reload: pageEngine.reload(bypassingCache: false)
+        case .reloadFromOrigin: pageEngine.reload(bypassingCache: true)
         }
     }
 
-    func stopLoading() {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { chromiumPage.command("engine.stop"); return }
-        #endif
-        webView.stopLoading()
-    }
+    func stopLoading() { pageEngine.stop() }
 
     func retryAfterNavigationFailure() {
         guard
@@ -169,12 +110,6 @@ extension BrowserPlatformPage {
             return true
         }
         return webView.canGoBack
-    }
-
-    private static func navigationTitle(for item: WKBackForwardListItem) -> String {
-        let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !title.isEmpty { return title }
-        return item.url.host() ?? item.url.absoluteString
     }
 
     /// True when Crest, not web content, asked for this navigation. Two signals

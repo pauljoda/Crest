@@ -4,12 +4,7 @@ import WebKit
 /// Native presentation operations used by Crest's existing views. Engine
 /// objects and snapshot configuration stay behind the page boundary.
 extension BrowserPage {
-    var nativeView: NSView {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { return chromiumPage.surface }
-        #endif
-        return webView
-    }
+    var nativeView: NSView { pageEngine.nativeView }
     var presentationWindow: NSWindow? { nativeView.window }
     var viewportSize: CGSize { nativeView.bounds.size }
 
