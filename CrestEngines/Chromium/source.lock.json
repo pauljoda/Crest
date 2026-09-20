@@ -30,6 +30,9 @@
   "developmentBuildArguments": {
     "target_cpu": "arm64",
     "is_official_build": false,
+    "is_debug": false,
+    "dcheck_always_on": false,
+    "enable_expensive_dchecks": false,
     "is_component_build": false,
     "use_thin_lto": false,
     "chrome_pgo_phase": 0,
@@ -173,5 +176,26 @@
     "Patches/bindgen-apple-linker.patch": "a926989b1c69701a16c43734bfb314ff04ed50f7d9a4a08e206f1ade1c09425a",
     "Patches/v8-generator-apple-unwind.patch": "b26d34cbdc8db33dd1e12fbc891fefbffde0f4de5eceb6a45690d2e16cd0d186",
     "Patches/framework-apple-unwind.patch": "1d9b2812747ffac8389e354c9e978abb0becdaa5957890c8895126a577234ce2"
+  },
+  "performanceBuildArguments": {
+    "target_cpu": "arm64",
+    "is_official_build": true,
+    "is_debug": false,
+    "dcheck_always_on": false,
+    "enable_expensive_dchecks": false,
+    "is_component_build": false,
+    "use_thin_lto": true,
+    "chrome_pgo_phase": 2,
+    "symbol_level": 1,
+    "enable_dsyms": false,
+    "use_lld": true,
+    "enable_precompiled_headers": false,
+    "thin_lto_enable_optimizations": true,
+    "v8_enable_builtins_optimization": true
+  },
+  "performanceInputs": {
+    "macSDKVersion": "26.5",
+    "pgoProfile": "chrome-mac-arm-7977-1788370430-86c3761d2948e8c8d0d55297b1fe9e1ece34bd4f-06a64751a269dadf571fdaab542d91fb4dda7b8b.profdata",
+    "pgoSHA256": "a15ec1285ffaa94af27ce4dd8aecbc56b70aaec4de953306a074b800a6793a87"
   }
 }

@@ -144,20 +144,34 @@ targets:
     type: framework
     platform: macOS
     sources:
-      - path: CrestMac/Infrastructure/WebKit/BrowserWebHostView.swift
-      - path: CrestNative/Apple/CoreClient
-      - path: CrestNative/Apple/Composition/ControlPlaneModel.swift
-      - path: CrestNative/Apple/Composition/ControlPlaneApp.swift
-      - path: CrestNative/Apple/Composition/CoreRecordsView.swift
+      - path: Documentation/ReleaseNotes.json
+        buildPhase: resources
+      - path: CrestShared
+        excludes:
+          - Resources/CrestIcon/Sources
+          - Resources/CrestIcon/Validation
+      - path: CrestMac
       - path: CrestEngines/Chromium/Apple
         excludes:
           - CrestChromiumHost.h
+          - ChromiumAdapter.swift
+    dependencies:
+      - package: Sparkle
+        product: Sparkle
+      - sdk: AuthenticationServices.framework
+      - sdk: CloudKit.framework
+      - sdk: CoreLocation.framework
+      - sdk: LocalAuthentication.framework
+      - sdk: MediaPlayer.framework
+      - sdk: UserNotifications.framework
+      - sdk: WebKit.framework
+      - sdk: Security.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.chromium-ui
         PRODUCT_MODULE_NAME: CrestChromiumUI
         GENERATE_INFOPLIST_FILE: YES
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CHROMIUM_HOST"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CHROMIUM_HOST CREST_CORE_BACKED"
         SWIFT_OBJC_BRIDGING_HEADER: "$(PROJECT_DIR)/CrestEngines/Chromium/Apple/CrestChromiumHost.h"
         SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
         CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"

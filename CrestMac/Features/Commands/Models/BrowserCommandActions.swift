@@ -169,8 +169,12 @@ struct BrowserCommandActions {
     }
 
     func openNewWindow() {
+        #if CREST_CHROMIUM_HOST
+        CrestChromiumRoot.openNativeWindow(.normal(sourceWindowID: targetWindowID))
+        #else
         openWindow(
             id: BrowserSceneID.browser.rawValue, value: BrowserMacWindowRequest.normal(sourceWindowID: targetWindowID))
+        #endif
     }
 
     func openBlankWindow() {

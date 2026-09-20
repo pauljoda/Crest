@@ -33,7 +33,11 @@ final class BrowserMacApplication {
     init() {
         #if CREST_CORE_BACKED
         setenv("CREST_ISOLATED_SESSION", "1", 1)
-        setenv("CREST_ISOLATED_PERSISTENCE_ID", "core-native-ui-review", 1)
+        #if CREST_CHROMIUM_HOST
+        setenv("CREST_ISOLATED_PERSISTENCE_ID", "chromium-native-ui-review", 0)
+        #else
+        setenv("CREST_ISOLATED_PERSISTENCE_ID", "core-native-ui-review", 0)
+        #endif
         #endif
         let launchEnvironment = BrowserLaunchEnvironment.current
         let shouldReset = launchEnvironment.resetsSession

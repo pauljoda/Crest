@@ -44,6 +44,17 @@ def main():
         shutil.copy2(core, frameworks / "CrestCore.Native.dylib")
     resources = output / "Contents/Resources"
     resources.mkdir(exist_ok=True)
+    if not args.baseline:
+        # Crest's existing views resolve assets and catalogs through Bundle.main.
+        # Preserve those resources when its window composition is framework-hosted.
+        for resource in (ui / "Resources").iterdir():
+            if resource.name == "Info.plist":
+                continue
+            subprocess.run(["ditto", str(resource), str(resources / resource.name)], check=True)
+        sparkle = ui.parent / "Sparkle.framework"
+        if not sparkle.is_dir():
+            parser.error("The native UI build must supply Sparkle.framework beside CrestChromiumUI.framework")
+        subprocess.run(["ditto", str(sparkle), str(frameworks / "Sparkle.framework")], check=True)
     (resources / "Crest-Isolated-Experiment").write_text("Explicit experimental profile required.\n")
     shutil.copy2(repo / "CrestEngines/Chromium/ThirdParty/Mori-LICENSE", resources / "Crest-Mori-LICENSE.txt")
     info_path = output / "Contents/Info.plist"

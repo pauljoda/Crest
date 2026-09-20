@@ -15,6 +15,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         category: "WebKitLifecycle"
     )
 
+    #if CREST_CHROMIUM_HOST
+    @ObservationIgnored var chromiumPage: ChromiumNativePage?
+    #endif
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored let pictureInPicture: BrowserPictureInPicturePageController
     @ObservationIgnored lazy var linkHover = BrowserLinkHoverController(webView: webView)
@@ -24,7 +27,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         handle: { [weak self] event in self?.handleLinkDrag(event) }
     )
     @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
-        let controller = BrowserWebFocusRestorationController(webView: webView)
+        let controller = BrowserWebFocusRestorationController(webView: nativeView)
         (webView as? BrowserDesktopWebView)?.focusRestoration = controller
         return controller
     }()
@@ -296,7 +299,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         webView.underPageBackgroundColor = .clear
         Self.lifecycleSignposter.endInterval("Initialize WKWebView", webViewInterval)
         super.init()
-
+        #if CREST_CHROMIUM_HOST
+        chromiumPage = ChromiumNativePage(profileID: profileID) { [weak self] event, values in
+            self?.receiveChromiumEvent(event, values: values)
+        }
+        #else
         desktopWebView.menuHost = self
         desktopWebView.linkHover = linkHover
         desktopWebView.linkDrag = linkDrag
@@ -409,6 +416,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                     self?.receiveHostedWebNotificationMessage(message)
                 }
         }
+        #endif
     }
 
     /// Records that web content opened this page and that WebKit still owes it a
@@ -423,6 +431,15 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func load(_ request: URLRequest) {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage, let destination = request.url {
+            pendingNavigationURL = destination
+            webContentFailureMessage = nil
+            isLoading = true
+            chromiumPage.load(destination)
+            return
+        }
+        #endif
         appInitiatedURL = request.url
         prepareForNavigation(to: request.url)
         webView.load(request)
@@ -431,6 +448,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// Replays a request WebKit classified as web-content navigation in this
     /// page without granting it the broader trust of an app-initiated load.
     func loadWebContentRequest(_ request: URLRequest) {
+        #if CREST_CHROMIUM_HOST
+        if chromiumPage != nil { load(request); return }
+        #endif
         prepareForNavigation(to: request.url)
         webView.load(request)
     }
@@ -456,6 +476,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// not restore, and the caller falls back to an ordinary load.
     @discardableResult
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
+        #if CREST_CHROMIUM_HOST
+        if chromiumPage != nil { return false }
+        #endif
         // WebKit owns an adopted popup's first navigation, and an adopted popup
         // has no archived state of its own to restore in the first place.
         guard !isAwaitingPopupNavigation, !wasOpenedAsPopup else { return false }
@@ -521,6 +544,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func prepareForSpaceDeletion() {
+        #if CREST_CHROMIUM_HOST
+        chromiumPage?.dispose()
+        #endif
         faviconSession.stop()
         mediaCaptureSession.reset()
         sitePermissionRequests.setPresentationAvailable(false)
@@ -1155,7 +1181,41 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         navigationAction.targetFrame?.isMainFrame == true
     }
 
+    #if CREST_CHROMIUM_HOST
+    private func receiveChromiumEvent(_ event: String, values: [String: Any]) {
+        switch event {
+        case "changed":
+            let wasLoading = isLoading
+            let destination = (values["url"] as? String).flatMap(URL.init(string:))
+            // The host creates a blank WebContents before loading the requested URL.
+            if destination?.absoluteString == "about:blank", pendingNavigationURL != nil { return }
+            url = destination
+            title = values["title"] as? String ?? ""
+            isLoading = values["isLoading"] as? Bool ?? false
+            estimatedProgress = isLoading ? 0.5 : 1
+            hasOnlySecureContent = destination?.scheme == "https"
+            canGoBack = values["canGoBack"] as? Bool ?? false
+            canGoForward = values["canGoForward"] as? Bool ?? false
+            webContentFailureMessage = values["failure"] as? String
+            if values["committed"] as? Bool == true {
+                pendingNavigationURL = nil
+                committedNavigationCount += 1
+            }
+            if wasLoading, !isLoading, committedNavigationCount > 0 { completedNavigationCount += 1 }
+        case "creation_failed":
+            isLoading = false
+            webContentFailureMessage = "Chromium couldn’t create this page."
+        case "open_requested":
+            if let value = values["url"] as? String, let destination = URL(string: value) { openModifiedLink(URLRequest(url: destination), spaceID, true) }
+        default: break
+        }
+    }
+    #endif
+
     func refreshNavigationState() {
+        #if CREST_CHROMIUM_HOST
+        if chromiumPage != nil { return }
+        #endif
         synchronizeNavigationHistory()
         canGoBack = canReturnFromNavigationFailure || !navigationHistory.backItems.isEmpty || webView.canGoBack
         canGoForward = !navigationHistory.forwardItems.isEmpty || webView.canGoForward

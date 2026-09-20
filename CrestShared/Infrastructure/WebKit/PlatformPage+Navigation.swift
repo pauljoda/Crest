@@ -3,6 +3,9 @@ import WebKit
 
 extension BrowserPlatformPage {
     func goBack() {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { chromiumPage.command("engine.back"); return }
+        #endif
         refreshNavigationState()
         if navigationFailure != nil {
             returnFromNavigationFailure()
@@ -16,6 +19,9 @@ extension BrowserPlatformPage {
     }
 
     func goForward() {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { chromiumPage.command("engine.forward"); return }
+        #endif
         refreshNavigationState()
         if let item = navigationHistory.forwardItems.first {
             webView.go(to: item)
@@ -66,6 +72,9 @@ extension BrowserPlatformPage {
     /// Retire their pending destination once WebKit publishes that URL, and
     /// publish history from the same observation path as the address bar.
     func synchronizeNavigationHistory() {
+        #if CREST_CHROMIUM_HOST
+        if chromiumPage != nil { return }
+        #endif
         if let pendingNavigationURL, webView.url == pendingNavigationURL,
             webView.backForwardList.currentItem?.url == pendingNavigationURL
         {
@@ -75,6 +84,9 @@ extension BrowserPlatformPage {
     }
 
     func reload() {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { chromiumPage.command("engine.reload"); return }
+        #endif
         webView.reload()
     }
 
@@ -92,6 +104,15 @@ extension BrowserPlatformPage {
     }
 
     func performReload(_ mode: BrowserPageReloadMode) {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage {
+            switch BrowserPageReloadPolicy.action(isLoading: isLoading, mode: mode) {
+            case .stop: chromiumPage.command("engine.stop")
+            case .reload, .reloadFromOrigin: chromiumPage.command("engine.reload")
+            }
+            return
+        }
+        #endif
         switch BrowserPageReloadPolicy.action(isLoading: isLoading, mode: mode) {
         case .stop:
             webView.stopLoading()
@@ -103,6 +124,9 @@ extension BrowserPlatformPage {
     }
 
     func stopLoading() {
+        #if CREST_CHROMIUM_HOST
+        if let chromiumPage { chromiumPage.command("engine.stop"); return }
+        #endif
         webView.stopLoading()
     }
 

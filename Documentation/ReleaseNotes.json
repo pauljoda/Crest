@@ -1485,6 +1485,10 @@
     "native-ui-direct-core-commands": {
       "category": "internal",
       "message": "Run native tab and folder commands directly against the core-owned browser session."
+    },
+    "native-chromium-ui-and-optimized-engine": {
+      "category": "internal",
+      "message": "Run Chromium in the original native Crest UI with the portable core and release engine optimizations."
     }
   }
 }

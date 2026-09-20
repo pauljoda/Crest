@@ -26,10 +26,59 @@ inspect that step before resuming it; do not run upstream `build.sh` over existi
 work because it removes the output directory.
 
 The development build uses a non-component link, Apple's linker, and disabled
-precompiled headers. The bindgen patch uses Apple's linker for Xcode SDK TAPI
+precompiled headers. It explicitly disables `dcheck_always_on` and
+`enable_expensive_dchecks`: in this Chromium revision, `is_debug=false` alone
+still enables those checks in a non-official build. V8 then also compiles debug
+code and write-barrier verification. Use a separate diagnostic build when those
+checks are needed; do not compare its benchmark scores with shipping browsers.
+Changing these flags requires recompiling Chromium, not just the Swift framework.
+For an existing prepared checkout, stop its build, then run
+`configure-chromium.py --source /absolute/chromium/src --configuration development`
+and rebuild with `build-chromium-baseline.py`. Configuration replaces the
+preset-owned GN arguments, preserves independent flags, and regenerates the same
+output directory. Source verification alone does not update GN arguments.
+The development configuration still omits PGO and ThinLTO. Performance evaluation
+must first compare the same engine configuration in the stock and native UI hosts,
+then compare a shipping configuration against a matching browser version.
+
+The bindgen patch uses Apple's linker for Xcode SDK TAPI
 compatibility. Preparation also supplies the loader-relative LLVM alias omitted
 from the pinned Rust archive and retrieves DevTools' exact esbuild CIPD package.
 These are build adjustments, not browser-behavior changes.
+
+The pinned LLD 23.1.0 cannot parse the `arm64e.x1` targets in the Xcode 27
+macOS SDK's `libSystem.tbd`. Use the macOS 26.5 SDK for the performance preset;
+it may also be installed under Command Line Tools even when Xcode has a newer
+SDK. This selects the engine SDK without changing the system Xcode selection.
+The performance preset enables official-build optimizations, PGO, ThinLTO with
+LLD, and profile-guided V8 builtins. It keeps debug checks disabled and preserves
+Chromium's normal sandbox and accessibility behavior. This is a build
+configuration, not a claim of distribution readiness or measured parity.
+
+Retrieve the exact mac-arm profile named by `performanceInputs` in the lock from
+Chromium's `chromium-optimization-profiles/pgo_profiles` Google Storage bucket
+(also named in `chrome/build/mac-arm.pgo.txt`). With the build stopped, run:
+
+```sh
+python Scripts/control-plane/configure-chromium.py \
+  --source /absolute/chromium/src --configuration performance \
+  --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-profile.profdata
+python Scripts/control-plane/build-chromium-baseline.py \
+  --source /absolute/chromium/src --jobs 12 --min-free-gib 15
+```
+
+The configuration helper verifies the SDK version and PGO checksum before GN
+generation. Check the generated compile and link commands for profile use and
+ThinLTO, and the V8 snapshot command for `--turbo-profiling-input`. Changing
+configuration recompiles the engine; reuse the existing output directory and
+allow additional time and memory for the final ThinLTO link.
+
+Compare stock and native hosts with the same engine, build settings, foreground
+state, window size, and accessibility mode. Native accessibility inspection can
+activate Chromium's full screen-reader mode and affect Speedometer scores. A
+temporary `--disable-renderer-accessibility` run can isolate that measurement
+cost; it must not become a product default or replace accessibility validation.
+Keep diagnostic runs labeled separately from runs with normal accessibility.
 
 With Apple's linker, the non-component development framework and V8 snapshot
 generator use DWARF unwinding because this mixed C++/Objective-C/Rust build has
@@ -82,10 +131,16 @@ and the repository, and removes default-browser registration from that copy.
 It does not notarize or publish a distributable release.
 Launch with both `--crest-control-plane` and an explicit, separate
 `--user-data-dir`. The host rejects startup without that explicit directory.
+The native UI uses the named isolated session `chromium-native-ui-review` by
+default. Set `CREST_ISOLATED_PERSISTENCE_ID` to a different name and provide a
+separate `--user-data-dir` for an independent session, including benchmark runs.
+Use the Release configuration of `CrestChromiumUI` for performance comparisons.
 
 The host keeps Chromium's process and application lifecycle. The Swift framework
-contains no application entry point. Its current UI is the migration UI;
-production UI cutover, complete capability validation and distributable packaging
+contains no application entry point. `CrestChromiumUI` compiles Crest's existing
+shared and macOS UI, and `CrestChromiumRoot` mounts `BrowserMacApplication` in
+native windows. `ChromiumNativePage` supplies the WebContents view inside the
+existing page card. Complete capability validation and distributable packaging
 remain part of the integration work.
 
 Packaged experiments require `--signing-identity` with a stable Apple Development

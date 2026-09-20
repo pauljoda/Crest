@@ -379,6 +379,9 @@ final class BrowserPagePool:
 
     func bindRuntimeRouting(_ runtime: BrowserTabRuntime, tabID: TabID) {
         for page in runtime.allPages {
+            #if CREST_CHROMIUM_HOST
+            page.chromiumPage?.isPrivateBrowsing = browsingMode.isPrivate
+            #endif
             page.host = self
             page.windowRouting?.pool = self
             page.downloadCenter = downloadCenter
@@ -1625,6 +1628,9 @@ final class BrowserPagePool:
             splitLinkHost: splitLinkHost,
             linkDestinationHost: linkDestinationHost
         )
+        #if CREST_CHROMIUM_HOST
+        page.chromiumPage?.isPrivateBrowsing = browsingMode.isPrivate
+        #endif
         page.host = self
         page.windowRouting = routing
         return page

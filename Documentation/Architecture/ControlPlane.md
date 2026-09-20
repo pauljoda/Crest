@@ -202,23 +202,39 @@ not replace physical-device validation.
 ## Chromium host
 
 The host overlay uses Chromium's browser startup, Browser and TabStripModel.
-Its BrowserWindow implementation hosts native Crest windows and loads the
-`CrestChromiumUI` framework after browser startup. The framework has no `@main`
-and does not replace Chromium's application delegate. Chromium quit requests first run native before-unload handlers and the active-download
-confirmation. Cancellation resets those native continuations. Accepted requests
-then wait for the core’s save and native disposal sequence; a blocked save also
-resets native quit preparation. This path still needs linked-host validation.
+Its BrowserWindow implementation loads `CrestChromiumUI` after browser startup.
+The framework compiles the original `CrestShared` and `CrestMac` views and services,
+then mounts `BrowserMacApplication.browserWindowContent` in native windows. It has
+no `@main` and does not replace Chromium's application delegate. The temporary
+`ControlPlaneWindow` is no longer the Chromium product interface.
 
-Each Space uses a regular profile under the explicitly supplied experimental
-Chromium user-data directory. Private workspaces instead use distinct off-the-record contexts owned by the
-source regular profile. They do not create a private profile directory. Chromium
-excludes extensions from these additional off-the-record contexts; private
-extension parity is not yet established. Profile leases remain alive
-until the core disposes the engine. Native tabs move between per-profile,
-per-window TabStripModels without replacing their renderer or navigation stack.
-These host sources still require a linked browser and runtime validation before
-their declared capabilities establish feature parity. The normal Crest UI and
-production state are not yet cut over to this host.
+`CREST_CORE_BACKED` uses the same .NET session authority and domain commands as
+`CrestNativeCore`. `ChromiumNativePage` creates a WebContents for the existing
+`BrowserPage` and mounts its NSView inside the original page card. Navigation,
+Back, Forward, reload, stop, title, URL and loading observations cross the native
+host port. The existing pools still own page lifetimes and window presentation.
+Engine effects have not yet moved to the asynchronous core dispatcher in this
+composition. The separate `ChromiumAdapter` remains the kernel adapter for the
+contract harness.
+
+Each Space uses a regular Chromium profile under the explicit experimental
+user-data directory. Crest's native session uses its own isolated defaults suite,
+separate from both production and the WebKit review app. Packaging includes the
+original UI resources and Sparkle dependency; isolated startup disables updates
+and CloudKit. Chromium quit requests run native before-unload and download checks,
+then flush native persistence before disposing pages.
+
+This is the first native UI integration, with several deliberate migration gaps.
+The macOS menu bar still comes from Chromium, with primary keyboard commands
+routed to Crest. Private windows and popup adoption are not connected to the
+original UI composition: unowned popup offers are rejected, and private pages
+cannot fall through to persistent profiles. The lower host already has adoption
+and off-the-record ports for the next integration. WebKit-specific page tools,
+permissions, downloads, favicon observations, opaque history restoration,
+profile deletion, and extensions still need their Chromium adapters. A dormant
+WKWebView remains behind compatibility APIs while these callers move; it does not
+load the Chromium page. Profile capabilities must describe this actual integration
+before features are advertised as supported.
 
 See [Chromium source preparation](../../CrestEngines/Chromium/README.md) for the
 pinned build workflow.
