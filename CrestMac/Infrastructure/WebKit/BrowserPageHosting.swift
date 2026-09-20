@@ -61,4 +61,11 @@ protocol BrowserPageHosting: AnyObject {
     /// Routes a Media Session message received through an opener's shared
     /// content controller to the resident page that authored it.
     func routeMediaSessionMessage(_ message: WKScriptMessage)
+
+    /// Publishes feedback for a browser interaction initiated by this page in
+    /// the window that currently presents it.
+    func presentInteractionHint(
+        _ hint: BrowserPageInteractionHint,
+        from page: BrowserPage
+    )
 }

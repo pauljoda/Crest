@@ -127,13 +127,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// The URL Crest asked this page to load, as opposed to one web content
     /// asked for. Only an app-initiated load may reach a `file:` URL.
     @ObservationIgnored var appInitiatedURL: URL?
-    @ObservationIgnored let openModifiedLink: (URLRequest, SpaceID, Bool) -> Void
+    @ObservationIgnored private let openModifiedLinkHandler: (BrowserPage, URLRequest, SpaceID, Bool) -> Void
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored let handleLinkDrag: (BrowserPeekInteractionEvent) -> Void
     @ObservationIgnored var navigationContext: BrowserPageNavigationContext?
     @ObservationIgnored var activeNavigation: WKNavigation?
     @ObservationIgnored private var observations: Set<AnyCancellable> = []
     @ObservationIgnored var processRecovery = BrowserProcessRecovery()
+    @ObservationIgnored private var interactionHintState = BrowserPageInteractionHintState()
     @ObservationIgnored private let findSession = BrowserFindSession()
     @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
         document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
@@ -278,7 +279,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         saveHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.SaveCredential = { _ in },
         openNewTab: @escaping (URL) -> Void,
-        openModifiedLink: @escaping (URLRequest, SpaceID, Bool) -> Void = { _, _, _ in },
+        openModifiedLink: @escaping (BrowserPage, URLRequest, SpaceID, Bool) -> Void = {
+            _, _, _, _ in
+        },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         handleLinkDrag: @escaping (BrowserPeekInteractionEvent) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
@@ -334,7 +337,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             ruleLists: contentRuleLists,
             additionalRuleList: contentRuleList
         )
-        self.openModifiedLink = openModifiedLink
+        openModifiedLinkHandler = openModifiedLink
         self.openPeek = openPeek
         self.handleLinkDrag = handleLinkDrag
         self.splitLinkHost = splitLinkHost
@@ -456,6 +459,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         if ownsUserContentController {
             BrowserLinkHoverContentBridge.install(in: webView.configuration.userContentController)
             BrowserLinkDragContentBridge.install(in: webView.configuration.userContentController)
+            BrowserPointerLockContentBridge.install(
+                in: webView.configuration.userContentController
+            )
             linkContextMessageProxy = BrowserLinkContextContentBridge.install(
                 in: webView.configuration.userContentController
             ) { [weak self] message in
@@ -537,6 +543,23 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             }
         }
         extensionBackgroundActivityLease?.start()
+    }
+
+    func openModifiedLink(
+        _ request: URLRequest,
+        _ spaceID: SpaceID,
+        _ selecting: Bool
+    ) {
+        openModifiedLinkHandler(self, request, spaceID, selecting)
+    }
+
+    func receivePointerLockMessage(_ message: WKScriptMessage) {
+        guard message.webView === webView,
+            message.name == BrowserPointerLockContentBridge.name,
+            let report = BrowserPointerLockMessage(body: message.body),
+            let hint = interactionHintState.receivePointerLock(report)
+        else { return }
+        host?.presentInteractionHint(hint, from: self)
     }
 
     /// Records that web content opened this page and that WebKit still owes it a
@@ -1604,4 +1627,98 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         )
     }
 
+}
+
+enum BrowserPageInteractionHint: Equatable {
+    case backgroundTabOpened
+    case pointerLockEntered
+}
+
+struct BrowserPageInteractionHintEvent {
+    let hint: BrowserPageInteractionHint
+    let source: BrowserPage
+}
+
+struct BrowserPointerLockMessage {
+    let document: String
+    let isLocked: Bool
+
+    init?(body: Any) {
+        guard let body = body as? [String: Any],
+            body.count == 3,
+            body["version"] as? Int == 1,
+            let document = body["document"] as? String,
+            !document.isEmpty,
+            document.utf8.count <= 128,
+            let isLocked = body["locked"] as? Bool
+        else { return nil }
+        self.document = document
+        self.isLocked = isLocked
+    }
+}
+
+struct BrowserPageInteractionHintState {
+    private var lockedDocuments: Set<String> = []
+
+    mutating func receivePointerLock(
+        _ message: BrowserPointerLockMessage
+    ) -> BrowserPageInteractionHint? {
+        guard message.isLocked else {
+            lockedDocuments.remove(message.document)
+            return nil
+        }
+        guard lockedDocuments.insert(message.document).inserted else { return nil }
+        return .pointerLockEntered
+    }
+}
+
+@MainActor
+enum BrowserPointerLockContentBridge {
+    static let name = "crestPointerLock"
+    static let world = WKContentWorld.world(
+        name: "com.pauldavis.crest.pointer-lock"
+    )
+
+    static func install(in controller: WKUserContentController) {
+        controller.add(
+            BrowserLinkContextScriptMessageProxy { message in
+                let page =
+                    (message.webView as? BrowserDesktopWebView)?
+                    .menuHost as? BrowserPage
+                page?.receivePointerLockMessage(message)
+            },
+            contentWorld: world,
+            name: name
+        )
+        controller.addUserScript(
+            WKUserScript(
+                source: source,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false,
+                in: world
+            )
+        )
+    }
+
+    static let source = #"""
+        (() => {
+          "use strict";
+          if (globalThis.__crestPointerLock) return;
+          const documentID = `${Date.now()}-${Math.random()}`;
+          let locked = false;
+          const update = next => {
+            if (next === locked) return;
+            locked = next;
+            try {
+              webkit.messageHandlers.crestPointerLock.postMessage({
+                version: 1, document: documentID, locked
+              });
+            } catch (_) {}
+          };
+          const refresh = () => update(document.pointerLockElement !== null);
+          globalThis.__crestPointerLock = { refresh };
+          document.addEventListener("pointerlockchange", refresh, true);
+          addEventListener("pagehide", () => update(false), { capture: true, passive: true });
+        })();
+        """#
 }

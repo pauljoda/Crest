@@ -265,6 +265,14 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
         XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+        XCTAssertEqual(context.pool.interactionHintRevision, 1)
+        XCTAssertEqual(
+            context.pool.latestInteractionHint?.hint,
+            .backgroundTabOpened
+        )
+        XCTAssertTrue(
+            context.pool.latestInteractionHint?.source === context.sourcePage
+        )
         XCTAssertTrue(context.pool.containsResidentPage(for: backgroundTab.id))
         let backgroundWebView = try XCTUnwrap(
             context.pool.extensionWebView(
@@ -334,6 +342,36 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertEqual(context.pool.activeTabID, openedTab.id)
         XCTAssertTrue(context.pool.containsResidentPage(for: openedTab.id))
+        XCTAssertEqual(context.pool.interactionHintRevision, 0)
+    }
+
+    func testBackgroundPopupPublishesFeedbackWithoutChangingSelection() throws {
+        let popupURL = try XCTUnwrap(
+            URL(string: "https://example.com/background-popup")
+        )
+        let context = try makePopupContext()
+        let configuration = try XCTUnwrap(
+            context.opener.webView.configuration.copy()
+                as? WKWebViewConfiguration
+        )
+
+        let popup = context.pool.adoptPopupWebView(
+            configuration: configuration,
+            requestedURL: popupURL,
+            opener: context.opener,
+            selecting: false
+        )
+
+        XCTAssertNotNil(popup)
+        XCTAssertTrue(context.pool.activePage === context.opener)
+        XCTAssertEqual(context.pool.interactionHintRevision, 1)
+        XCTAssertEqual(
+            context.pool.latestInteractionHint?.hint,
+            .backgroundTabOpened
+        )
+        XCTAssertTrue(
+            context.pool.latestInteractionHint?.source === context.opener
+        )
     }
 
     func testCompletedBackgroundNavigationUpdatesItsOwnTabAndHistory() async throws {
@@ -1418,6 +1456,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 BrowserPictureInPictureScript.source,
                 BrowserLinkHoverContentBridge.source,
                 BrowserLinkDragContentBridge.source,
+                BrowserPointerLockContentBridge.source,
                 BrowserLinkContextContentBridge.source,
                 BrowserBlockedPopupContentBridge.source,
                 BrowserGeolocationContentBridge.source,
@@ -1434,6 +1473,61 @@ final class BrowserPagePoolTests: XCTestCase {
         let restoredFirstStore = try XCTUnwrap(pool.activePage)
             .webView.configuration.websiteDataStore
         XCTAssertTrue(firstStore === restoredFirstStore)
+    }
+
+    func testPointerLockHintRequiresANewSuccessfulLock() throws {
+        var state = BrowserPageInteractionHintState()
+        let locked = try XCTUnwrap(
+            BrowserPointerLockMessage(
+                body: ["version": 1, "document": "main", "locked": true]
+            )
+        )
+        let unlocked = try XCTUnwrap(
+            BrowserPointerLockMessage(
+                body: ["version": 1, "document": "main", "locked": false]
+            )
+        )
+
+        XCTAssertEqual(state.receivePointerLock(locked), .pointerLockEntered)
+        XCTAssertNil(state.receivePointerLock(locked))
+        XCTAssertNil(state.receivePointerLock(unlocked))
+        XCTAssertEqual(state.receivePointerLock(locked), .pointerLockEntered)
+    }
+
+    func testPointerLockMessageRejectsMalformedReports() {
+        XCTAssertNil(
+            BrowserPointerLockMessage(
+                body: ["version": 2, "document": "main", "locked": true]
+            )
+        )
+        XCTAssertNil(
+            BrowserPointerLockMessage(
+                body: ["version": 1, "document": "", "locked": true]
+            )
+        )
+        XCTAssertNil(
+            BrowserPointerLockMessage(
+                body: [
+                    "version": 1,
+                    "document": String(repeating: "a", count: 129),
+                    "locked": true,
+                ]
+            )
+        )
+    }
+
+    func testPointerLockBridgeUsesAnIsolatedWorldInEveryFrame() {
+        let controller = WKUserContentController()
+
+        BrowserPointerLockContentBridge.install(in: controller)
+
+        XCTAssertEqual(controller.userScripts.count, 1)
+        XCTAssertFalse(controller.userScripts[0].isForMainFrameOnly)
+        XCTAssertEqual(controller.userScripts[0].injectionTime, .atDocumentStart)
+        controller.removeScriptMessageHandler(
+            forName: BrowserPointerLockContentBridge.name,
+            contentWorld: BrowserPointerLockContentBridge.world
+        )
     }
 
     func testXCTestStandardPoolNeverUsesTheInstalledWebsiteDataStore() throws {

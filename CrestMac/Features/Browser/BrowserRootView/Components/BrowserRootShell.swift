@@ -18,6 +18,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     @Environment(BrowserExtensionSidebarStore.self) private var extensionSidebar: BrowserExtensionSidebarStore?
     @State private var downloadFeedback = BrowserMacDownloadFeedbackState()
     @State private var spacePagerPresentation = SpacePagerPresentation()
+    @State private var visibleInteractionHint: BrowserPageInteractionHint?
 
     private var sidebarEdge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
 
@@ -116,6 +117,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             if let label = model.visiblePageZoomFeedbackLabel {
                 BrowserPageZoomFeedbackView(label: label)
             }
+
+            if let visibleInteractionHint {
+                BrowserPageInteractionHintView(hint: visibleInteractionHint)
+            }
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
@@ -201,8 +206,80 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .onChange(of: transientBrowsing.peekRequests, initial: true) {
             model.pages.retainPeekPages(for: transientBrowsing.peekRequests)
         }
+        .onChange(of: model.pages.interactionHintRevision) { _, revision in
+            guard revision > 0,
+                let hint = model.pages.latestInteractionHint?.hint
+            else { return }
+            withAnimation(
+                model.accessibleAnimation(CrestMotion.feedbackPresentation, reduceMotion)
+            ) {
+                visibleInteractionHint = hint
+            }
+        }
+        .task(id: model.pages.interactionHintRevision) {
+            guard model.pages.interactionHintRevision > 0 else { return }
+            try? await Task.sleep(for: BrowserRootMetrics.urlCopyFeedbackDuration)
+            guard !Task.isCancelled else { return }
+            withAnimation(
+                model.accessibleAnimation(CrestMotion.dismissal, reduceMotion)
+            ) {
+                visibleInteractionHint = nil
+            }
+        }
         .onChange(of: model.extensionSidebar?.panel) { model.extensionSidebar?.reconcile() }
         .onDisappear { model.extensionSidebar?.release() }
     }
 
+}
+
+private struct BrowserPageInteractionHintView: View {
+    let hint: BrowserPageInteractionHint
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        Label(hint.title, systemImage: hint.systemImage)
+            .font(.callout.weight(.semibold))
+            .padding(.horizontal, BrowserRootMetrics.urlCopyFeedbackHorizontalPadding)
+            .frame(height: BrowserRootMetrics.urlCopyFeedbackHeight)
+            .glassEffect(.regular, in: .capsule)
+            .shadow(
+                color: .black.opacity(
+                    reduceTransparency ? 0 : CrestOpacity.controlShadow
+                ),
+                radius: BrowserRootMetrics.urlCopyFeedbackShadowRadius,
+                y: BrowserRootMetrics.urlCopyFeedbackShadowYOffset
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.top, BrowserRootMetrics.urlCopyFeedbackTopInset)
+            .allowsHitTesting(false)
+            .accessibilityAddTraits(.isStaticText)
+            .transition(
+                reduceMotion
+                    ? .opacity
+                    : .move(edge: .top).combined(with: .opacity)
+            )
+            .zIndex(BrowserRootMetrics.feedbackZIndex)
+    }
+}
+
+extension BrowserPageInteractionHint {
+    fileprivate var title: LocalizedStringKey {
+        switch self {
+        case .backgroundTabOpened:
+            "Opened in Background Tab"
+        case .pointerLockEntered:
+            "Press Esc to Release Pointer"
+        }
+    }
+
+    fileprivate var systemImage: String {
+        switch self {
+        case .backgroundTabOpened:
+            "plus.square.on.square"
+        case .pointerLockEntered:
+            "cursorarrow.motionlines"
+        }
+    }
 }

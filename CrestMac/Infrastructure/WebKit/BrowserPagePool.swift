@@ -78,6 +78,8 @@ final class BrowserPagePool:
     let windowID: BrowserWindowID
     @ObservationIgnored private weak var presentationWindow: NSWindow?
     private(set) var isWindowFocused = true
+    private(set) var interactionHintRevision = 0
+    @ObservationIgnored private(set) var latestInteractionHint: BrowserPageInteractionHintEvent?
     var publishesPageMetadataCentrally: Bool { runtimeStore.publishesPageMetadataCentrally }
     var contentBlockingErrorDescription: String? { contentBlocking.errorDescription }
     let downloadCenter: BrowserDownloadCenter
@@ -123,7 +125,12 @@ final class BrowserPagePool:
         [:]
 
     func openExtensionSidebarLink(_ url: URL, in spaceID: SpaceID) {
-        openModifiedLink(URLRequest(url: url), in: spaceID, selecting: true)
+        openModifiedLink(
+            URLRequest(url: url),
+            source: nil,
+            in: spaceID,
+            selecting: true
+        )
     }
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
@@ -957,6 +964,7 @@ final class BrowserPagePool:
 
     private func openModifiedLink(
         _ request: URLRequest,
+        source: BrowserPage?,
         in spaceID: SpaceID,
         selecting: Bool
     ) {
@@ -974,6 +982,9 @@ final class BrowserPagePool:
         extensionControllerPool.reconcileExtensionState(in: registration.session)
         page.load(request)
         if selecting { select(session: registration.session) }
+        if !selecting, let source {
+            presentInteractionHint(.backgroundTabOpened, from: source)
+        }
         reconcileCredentialAccess(in: registration.session)
     }
 
@@ -1633,8 +1644,23 @@ final class BrowserPagePool:
             activate(registration.tab.id, at: .now)
         } else {
             observeBackgroundPage(page, for: registration.tab.id, in: registration.space)
+            presentInteractionHint(.backgroundTabOpened, from: opener)
         }
         return page.webView
+    }
+
+    func presentInteractionHint(
+        _ hint: BrowserPageInteractionHint,
+        from page: BrowserPage
+    ) {
+        guard let tabID = tabID(for: page),
+            presentedTabIDs.contains(tabID)
+        else { return }
+        latestInteractionHint = BrowserPageInteractionHintEvent(
+            hint: hint,
+            source: page
+        )
+        interactionHintRevision &+= 1
     }
 
     /// Honors `window.close()` by closing the popup's tab through the same store
@@ -2215,8 +2241,13 @@ final class BrowserPagePool:
                 try await routing?.pool?.saveHTTPAuthenticationCredential(request, space.id)
             },
             openNewTab: { [weak routing] url in routing?.pool?.openNewTab(url) },
-            openModifiedLink: { [weak routing] url, spaceID, selecting in
-                routing?.pool?.openModifiedLink(url, in: spaceID, selecting: selecting)
+            openModifiedLink: { [weak routing] source, url, spaceID, selecting in
+                routing?.pool?.openModifiedLink(
+                    url,
+                    source: source,
+                    in: spaceID,
+                    selecting: selecting
+                )
             },
             openPeek: { [weak routing] in routing?.pool?.openPeek($0) },
             handleLinkDrag: { [weak routing] in routing?.pool?.handleLinkDrag($0) },
