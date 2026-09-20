@@ -41,6 +41,11 @@ struct BrowserDownloadLedger {
         return newlyAcknowledged.count
     }
 
+    mutating func acknowledgeItem(_ itemID: UUID) {
+        guard items.contains(where: { $0.id == itemID }) else { return }
+        acknowledgedItemIDs.insert(itemID)
+    }
+
     mutating func setDestination(_ destination: URL, for itemID: UUID) {
         update(itemID) { item in
             item.filename = destination.lastPathComponent

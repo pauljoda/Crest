@@ -70,6 +70,31 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var retryContexts: [UUID: BrowserDownloadRetryContext] = [:]
     @ObservationIgnored private var retryLeases: [UUID: BrowserDownloadRetryLease] = [:]
     @ObservationIgnored private var dataSaveAssignments: [UUID: BrowserSpaceRuntimeAssignment] = [:]
+    private final class EngineTransfer {
+        let itemID: UUID
+        let assignment: BrowserSpaceRuntimeAssignment
+        var controller: (any BrowserEngineDownloadControlling)?
+        var estimator = BrowserDownloadTransferEstimator()
+        var securityScopedURL: URL?
+        var warningToken: String?
+        var resolvingDestination = false
+        var isFinished = false
+
+        init(itemID: UUID, assignment: BrowserSpaceRuntimeAssignment,
+             controller: any BrowserEngineDownloadControlling) {
+            self.itemID = itemID; self.assignment = assignment; self.controller = controller
+        }
+        func finish() {
+            isFinished = true
+            warningToken = nil
+            securityScopedURL?.stopAccessingSecurityScopedResource()
+            securityScopedURL = nil
+        }
+    }
+    // Keep terminal identities until this center is released so a late engine
+    // event cannot recreate a cleared or expired record.
+    @ObservationIgnored private var engineTransfers: [BrowserEngineDownloadID: EngineTransfer] = [:]
+    @ObservationIgnored private let approveEngineDownload: @MainActor (String, String) async -> Bool
     @ObservationIgnored private var authenticationSessions: [ObjectIdentifier: BrowserHTTPAuthenticationSession] = [:]
     @ObservationIgnored private var lastRetentionSweepAt: Date?
     @ObservationIgnored private let promptForCredentials: CredentialPromptHandler
@@ -88,6 +113,7 @@ final class BrowserDownloadCenter: NSObject {
         loadCredential: @escaping CredentialLoader = { _, _ in nil },
         saveCredential: @escaping CredentialSaver = { _, _ in },
         approveRiskyDownload: @escaping RiskApprovalHandler = { _, _, _ in false },
+        approveEngineDownload: @escaping @MainActor (String, String) async -> Bool = { _, _ in false },
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         resolveDownloadDestination:
             @escaping DownloadDestinationResolver = {
@@ -107,6 +133,7 @@ final class BrowserDownloadCenter: NSObject {
         self.loadCredential = loadCredential
         self.saveCredential = saveCredential
         self.approveRiskyDownload = approveRiskyDownload
+        self.approveEngineDownload = approveEngineDownload
         self.permissionCenter = permissionCenter
         self.resolveDownloadDestination = resolveDownloadDestination
         super.init()
@@ -175,6 +202,7 @@ final class BrowserDownloadCenter: NSObject {
             now: now
         )
         for itemID in removedItemIDs {
+            forgetEngineDownload(itemID)
             retryContexts.removeValue(forKey: itemID)
             retryLeases.removeValue(forKey: itemID)
         }
@@ -182,6 +210,13 @@ final class BrowserDownloadCenter: NSObject {
     }
 
     func cancel(_ itemID: UUID) {
+        if let (id, transfer) = engineTransfers.first(where: { $0.value.itemID == itemID && !$0.value.isFinished }) {
+            let controller = transfer.controller
+            transfer.finish()
+            ledger.cancel(itemID, message: "Canceled.")
+            controller?.cancelDownload(id)
+            return
+        }
         if dataSaveAssignments.removeValue(forKey: itemID) != nil {
             ledger.cancel(itemID, message: "Canceled.")
             return
@@ -200,13 +235,19 @@ final class BrowserDownloadCenter: NSObject {
     }
 
     func clear(_ itemID: UUID) {
+        guard !engineTransfers.values.contains(where: { $0.itemID == itemID && !$0.isFinished }) else { return }
         guard !itemIDs.values.contains(itemID), dataSaveAssignments[itemID] == nil else { return }
+        forgetEngineDownload(itemID)
         ledger.remove(itemID)
         retryContexts.removeValue(forKey: itemID)
         retryLeases.removeValue(forKey: itemID)
     }
 
     func deleteRecords(profileID: UUID, spaceID: SpaceID) {
+        for transfer in engineTransfers.values where transfer.assignment == BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID) {
+            cancel(transfer.itemID)
+            forgetEngineDownload(transfer.itemID)
+        }
         dataSaveAssignments = dataSaveAssignments.filter {
             $0.value != BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
         }
@@ -238,6 +279,93 @@ final class BrowserDownloadCenter: NSObject {
         automaticDownloadSequences = automaticDownloadSequences.filter {
             $0.key.webViewID != webViewID
         }
+    }
+
+    func receiveEngineDownload(
+        _ update: BrowserEngineDownloadUpdate,
+        assignment: BrowserSpaceRuntimeAssignment,
+        controller: any BrowserEngineDownloadControlling
+    ) {
+        guard update.id.profileID == assignment.profileID else { return }
+        let transfer: EngineTransfer
+        if let existing = engineTransfers[update.id] {
+            guard existing.assignment == assignment, !existing.isFinished else { return }
+            transfer = existing
+        } else {
+            transfer = EngineTransfer(itemID: ledger.begin(profileID: assignment.profileID,
+                filename: BrowserDownloadDestination.safeFilename(from: update.filename), createdAt: update.createdAt),
+                assignment: assignment, controller: controller)
+            engineTransfers[update.id] = transfer
+            if update.isRestored { ledger.acknowledgeItem(transfer.itemID) }
+        }
+        if let destination = update.destination {
+            ledger.setDestination(destination, for: transfer.itemID)
+        }
+        ledger.setTransferUpdate(transfer.estimator.sample(
+            completedUnitCount: update.bytesReceived, totalUnitCount: update.totalBytes,
+            fractionCompleted: update.totalBytes > 0 ? Double(update.bytesReceived) / Double(update.totalBytes) : 0,
+            isPaused: update.isPaused), for: transfer.itemID)
+        switch update.state {
+        case .preparing, .downloading:
+            transfer.warningToken = nil
+        case .finished:
+            ledger.finish(transfer.itemID, finalByteCount: update.bytesReceived)
+            transfer.finish()
+        case .canceled:
+            ledger.cancel(transfer.itemID, message: "Canceled.")
+            transfer.finish()
+        case .failed(let message):
+            ledger.fail(transfer.itemID, message: message)
+            transfer.finish()
+        case .awaitingApproval(let token, let message):
+            ledger.markAwaitingApproval(transfer.itemID)
+            guard transfer.warningToken != token else { return }
+            transfer.warningToken = token
+            Task { [weak self, weak transfer] in
+                guard let self, let transfer else { return }
+                let approved = await approveEngineDownload(update.filename, message)
+                guard !transfer.isFinished, transfer.warningToken == token else { return }
+                if approved { transfer.controller?.approveDownload(update.id, warningToken: token) }
+                else { cancel(transfer.itemID) }
+            }
+        }
+    }
+
+    private func forgetEngineDownload(_ itemID: UUID) {
+        guard let (id, transfer) = engineTransfers.first(where: { $0.value.itemID == itemID }),
+            transfer.isFinished else { return }
+        transfer.controller?.removeDownload(id)
+        transfer.controller = nil
+    }
+
+    func resolveEngineDownloadDestination(
+        _ id: BrowserEngineDownloadID, suggestedFilename: String, forcesPrompt: Bool
+    ) async -> URL? {
+        guard let transfer = engineTransfers[id], !transfer.isFinished,
+            !transfer.resolvingDestination else { return nil }
+        transfer.resolvingDestination = true
+        defer { transfer.resolvingDestination = false }
+        let resolution = await resolveDownloadDestination(
+            BrowserDownloadDestination.safeFilename(from: suggestedFilename), transfer.assignment.spaceID, forcesPrompt)
+        guard !transfer.isFinished else {
+            if case .destination(_, let scoped) = resolution { scoped?.stopAccessingSecurityScopedResource() }
+            return nil
+        }
+        switch resolution {
+        case .destination(let url, let scoped):
+            transfer.securityScopedURL?.stopAccessingSecurityScopedResource()
+            transfer.securityScopedURL = scoped
+            ledger.setDestination(url, for: transfer.itemID)
+            return url
+        case .cancelled:
+            cancel(transfer.itemID)
+        case .unavailable:
+            let controller = transfer.controller
+            ledger.fail(transfer.itemID, message: "The download folder is unavailable. Choose another folder in Space settings.")
+            transfer.finish()
+            controller?.cancelDownload(id)
+        }
+        return nil
     }
 
     private static func shorter(

@@ -11,6 +11,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     static var engineHost: (any CrestChromiumEngineHost)? { instance?.host }
     private let host: any CrestChromiumEngineHost
     private let application: BrowserMacApplication
+    private var downloads: ChromiumDownloadAdapter?
     private var windows: [BrowserWindowID: NSWindow] = [:]
     private var quickWindows: [UUID: QuickWindow] = [:]
     private final class QuickWindow {
@@ -70,6 +71,29 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         self.host = host
         application = BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host))
         super.init()
+        downloads = ChromiumDownloadAdapter(host: host) { [weak self] values, profileID in
+            guard let self else { return nil }
+            var contexts = self.windows.keys.compactMap { id -> (BrowserStore, BrowserPagePool)? in
+                guard let model = self.application.windowCoordinator.existingModel(for: id) else { return nil }
+                return (model.browser, model.pages)
+            }
+            if self.privateWindow != nil { contexts.append((self.application.privateBrowser, self.application.privatePages)) }
+            for (browser, pages) in contexts {
+                let assignment: BrowserSpaceRuntimeAssignment?
+                if let pageID = values["sourcePageId"] as? String {
+                    assignment = pages.chromiumDownloadAssignment(pageID: pageID, profileID: profileID)
+                } else {
+                    // Background extension downloads have no page. Only route a
+                    // uniquely owned profile; never borrow the selected Space.
+                    let spaces = browser.session.spaces.filter { $0.profile.id == profileID }
+                    assignment = spaces.count == 1 ? BrowserSpaceRuntimeAssignment(space: spaces[0]) : nil
+                }
+                guard let assignment, let space = browser.space(matching: assignment),
+                    !self.application.spaceAccess.isLocked(space) else { continue }
+                return ChromiumDownloadAdapter.Destination(center: pages.downloadCenter, assignment: assignment)
+            }
+            return nil
+        }
         host.setExtensionReview { values, window, reply in
             MainActor.assumeIsolated { Self.extensions.review(values, window: window, reply: reply) }
         }

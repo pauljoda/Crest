@@ -1549,6 +1549,10 @@
     "chromium-page-close-confirmation": {
       "category": "fixed",
       "message": "Keep Chromium tabs and windows open when a page asks you to stay, preserving unsaved work when closing is canceled."
+    },
+    "chromium-native-downloads": {
+      "category": "improved",
+      "message": "Track Chromium downloads in Crest, cancel transfers, and save files using each Space’s download folder preferences."
     }
   }
 }

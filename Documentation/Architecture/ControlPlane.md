@@ -474,14 +474,22 @@ them to `chrome://` for navigation and translates observations back, preserving
 paths, queries and fragments. Web URLs and `chrome-extension://` security origins
 are unchanged. Internal navigation remains gated by the engine capability.
 
-There are still migration gaps. The macOS menu bar comes from Chromium, with
-primary keyboard commands routed to Crest. Download transfers work through
-Chromium but have not reached Crest's download ledger. Individual tab/window
-closure still needs the same before-unload preflight as application quit.
+The native menu bar uses Crest's commands and shortcut preferences. Individual
+tab and window closure preflights Chromium pages before committing the shared
+session change. A canceled close preserves the pages and their unsaved state.
+Chromium download observations feed the existing native download ledger through
+`BrowserEngineDownloadControlling`. Per-Space destinations use the Apple platform
+resolver. Transfer progress stays local to the adapter, while retention settings
+remain core-owned. Restored records retain their original creation times and
+do not become new-download notifications. Clearing or expiring a record removes
+engine download history while preserving completed files. Destination selection never supplies an implicit safety
+override. Explicit warning decisions are checked against the current engine
+verdict; policy blocks and known malware cannot be approved through this bridge.
+
+There are still migration gaps.
 Other WebKit-specific page tools, favicon observations, opaque history restoration,
-profile deletion and extension side panels need their Chromium adapters. A dormant
-WKWebView remains behind compatibility APIs while these callers move; it does not
-load the Chromium page. Profile capabilities must describe this actual integration
+profile deletion and extension side panels need their Chromium adapters.
+Profile capabilities must describe this actual integration
 before features are advertised as supported.
 
 See [Chromium source preparation](../../CrestEngines/Chromium/README.md) for the

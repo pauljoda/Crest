@@ -60,6 +60,13 @@
 #include "base/functional/bind.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/download/download_core_service.h"
+#include "chrome/browser/download/download_item_model.h"
+#include "chrome/browser/ui/crest/crest_download_hooks.h"
+#include "chrome/browser/download/download_confirmation_result.h"
+#include "components/download/public/common/download_item.h"
+#include "content/public/browser/download_item_utils.h"
+#include "content/public/browser/download_manager.h"
+#include "ui/shell_dialogs/selected_file_info.h"
 #include "chrome/browser/ui/unload_controller.h"
 #include "chrome/browser/ui/browser_window/public/global_browser_collection.h"
 #include "chrome/browser/profiles/profile_manager.h"
@@ -225,6 +232,7 @@ struct NativeAdoption {
 };
 class ExtensionStateObserver;
 struct HostState {
+  const base::Time started_at = base::Time::Now();
   std::map<std::string, std::unique_ptr<ExtensionStateObserver>> extension_observers;
   void (^extension_review)(NSDictionary<NSString*, id>*, NSWindow*, void (^)(BOOL, BOOL));
   Browser* bootstrap = nullptr;
@@ -250,6 +258,8 @@ struct HostState {
   std::map<std::string, std::unique_ptr<Page>> pages;
   std::map<std::string, NativeAdoption> adoptions;
   void (^browser_observation)(NSDictionary<NSString*, id>*);
+  void (^download_observation)(NSDictionary<NSString*, id>*);
+  void (^download_destination)(NSDictionary<NSString*, id>*, void (^)(NSString*));
 };
 HostState& State() { static base::NoDestructor<HostState> state; return *state; }
 
@@ -572,6 +582,84 @@ Browser* BrowserFor(const std::string& profile_id, const std::string& window_id)
   state.browsers.emplace(key, std::make_unique<BrowserOwner>(browser, window_id));
   return browser;
 }
+
+download::DownloadItem* FindDownload(NSString* profile_id, NSString* guid) {
+  if (State().disposing) return nullptr;
+  auto found = State().profiles.find(base::SysNSStringToUTF8(profile_id));
+  return found == State().profiles.end() ? nullptr :
+      found->second->GetDownloadManager()->GetDownloadByGuid(base::SysNSStringToUTF8(guid));
+}
+
+NSString* DownloadWarningToken(download::DownloadItem* item) {
+  return [NSString stringWithFormat:@"%d:%d", item->GetDangerType(), item->GetInsecureDownloadStatus()];
+}
+
+// Only warnings with an explicit user override enter the approval path. Policy
+// blocks and known malware remain blocked; pending scans remain engine-owned.
+NSString* DownloadWarning(download::DownloadItem* item, bool* blocked) {
+  *blocked = false;
+  if (item->IsInsecure()) {
+    *blocked = item->GetInsecureDownloadStatus() != download::DownloadItem::WARN;
+    return *blocked ? @"The engine blocked this insecure download." :
+        @"This file was transferred over an insecure connection and could have been changed by someone else. Keep it only if you trust its source.";
+  }
+  if (!item->IsDangerous()) return nil;
+  switch (item->GetDangerType()) {
+    case download::DOWNLOAD_DANGER_TYPE_DANGEROUS_FILE:
+      return @"This type of file can change your computer. Keep it only if you trust its source.";
+    case download::DOWNLOAD_DANGER_TYPE_UNCOMMON_CONTENT:
+      return @"This file is not commonly downloaded. The engine could not confirm that it is safe.";
+    case download::DOWNLOAD_DANGER_TYPE_POTENTIALLY_UNWANTED:
+      return @"This file may change your browser or computer settings without your permission.";
+    case download::DOWNLOAD_DANGER_TYPE_ASYNC_SCANNING:
+    case download::DOWNLOAD_DANGER_TYPE_ASYNC_LOCAL_PASSWORD_SCANNING:
+    case download::DOWNLOAD_DANGER_TYPE_MAYBE_DANGEROUS_CONTENT:
+      return nil;
+    default:
+      *blocked = true;
+      return @"The engine blocked this download because of its safety or organization policy verdict.";
+  }
+}
+
+NSMutableDictionary<NSString*, id>* DownloadValues(download::DownloadItem* item) {
+  std::string profile_id;
+  for (const auto& [id, profile] : State().profiles)
+    if (profile == content::DownloadItemUtils::GetBrowserContext(item)) { profile_id = id; break; }
+  if (profile_id.empty()) return nil;
+  auto* contents = content::DownloadItemUtils::GetWebContents(item);
+  id source = NSNull.null;
+  for (const auto& [id, page] : State().pages)
+    if (contents && page->web_contents() == contents) { source = base::SysUTF8ToNSString(id); break; }
+  NSString* state = @"preparing";
+  NSString* message = @"";
+  switch (item->GetState()) {
+    case download::DownloadItem::COMPLETE: state = @"finished"; break;
+    case download::DownloadItem::CANCELLED: state = @"canceled"; break;
+    case download::DownloadItem::INTERRUPTED:
+      state = @"failed";
+      message = base::SysUTF16ToNSString(DownloadItemModel(item).GetInterruptDescription());
+      break;
+    case download::DownloadItem::IN_PROGRESS:
+      state = item->GetTargetFilePath().empty() ? @"preparing" : @"downloading";
+      bool blocked;
+      if (NSString* warning = DownloadWarning(item, &blocked)) {
+        state = blocked ? @"failed" : @"warning";
+        message = warning;
+      }
+      break;
+    default: break;
+  }
+  return [@{
+    @"downloadId": base::SysUTF8ToNSString(item->GetGuid()),
+    @"profileId": base::SysUTF8ToNSString(profile_id), @"sourcePageId": source,
+    @"filename": base::SysUTF8ToNSString(item->GetFileNameToReportUser().AsUTF8Unsafe()),
+    @"path": base::SysUTF8ToNSString(item->GetTargetFilePath().AsUTF8Unsafe()),
+    @"received": @(item->GetReceivedBytes()), @"total": @(item->GetTotalBytes()),
+    @"startedAt": @(item->GetStartTime().InSecondsFSinceUnixEpoch()),
+    @"restored": @(item->GetStartTime() < State().started_at),
+    @"paused": @(item->IsPaused()), @"state": state, @"message": message,
+    @"warningToken": DownloadWarningToken(item) } mutableCopy];
+}
 // A batch retains all WebContents until the native semantic operation accepts it.
 // In particular, approving the first tab never destroys it if a later tab vetoes.
 void FinishPageClosePreparation(uint64_t generation, bool allowed) {
@@ -679,6 +767,32 @@ Page* FindPage(NSString* identifier) {
 - (void)setBrowserObserver:(void (^)(NSDictionary<NSString*, id>*))observer {
   CHECK(NSThread.isMainThread);
   State().browser_observation = [observer copy];
+}
+- (void)setDownloadObserver:(void (^)(NSDictionary<NSString*, id>*))observer {
+  State().download_observation = [observer copy];
+}
+- (void)setDownloadDestinationResolver:(void (^)(NSDictionary<NSString*, id>*, void (^)(NSString*)))resolver {
+  State().download_destination = [resolver copy];
+}
+- (void)cancelDownload:(NSString*)downloadID profile:(NSString*)profileID {
+  // Do not mutate an item from inside its own notification stack.
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (auto* item = FindDownload(profileID, downloadID)) item->Cancel(true);
+  });
+}
+- (void)approveDownload:(NSString*)downloadID profile:(NSString*)profileID warning:(NSString*)token {
+  auto* item = FindDownload(profileID, downloadID);
+  if (!item || item->GetState() != download::DownloadItem::IN_PROGRESS ||
+      ![DownloadWarningToken(item) isEqualToString:token]) return;
+  bool blocked;
+  if (!DownloadWarning(item, &blocked) || blocked) return;
+  if (item->IsInsecure()) item->ValidateInsecureDownload();
+  else if (item->IsDangerous()) item->ValidateDangerousDownload();
+}
+- (void)removeDownload:(NSString*)downloadID profile:(NSString*)profileID {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (auto* item = FindDownload(profileID, downloadID)) item->Remove();
+  });
 }
 - (BOOL)adoptPage:(NSString*)adoptionID asPage:(NSString*)pageID profile:(NSString*)profileID observer:(Observation)observer {
   CHECK(NSThread.isMainThread);
@@ -1192,6 +1306,60 @@ Page* FindPage(NSString* identifier) {
 @end
 
 namespace crest {
+bool OwnsDownload(download::DownloadItem* item) {
+  if (!IsEnabled() || State().disposing || item->IsTransient() ||
+      item->GetMimeType() == "application/x-chrome-extension") return false;
+  for (const auto& [id, profile] : State().profiles)
+    if (profile == content::DownloadItemUtils::GetBrowserContext(item)) return true;
+  return false;
+}
+
+void PublishDownload(download::DownloadItem* item) {
+  auto values = DownloadValues(item);
+  if (!values || !State().download_observation) return;
+  // Capture a value snapshot before returning to the engine. Native UI or
+  // cancellation must never destroy a WebContents on this notification stack.
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (State().disposing || !State().download_observation) return;
+    State().download_observation(values);
+    if ([values[@"state"] isEqual:@"failed"]) {
+      if (auto* current = FindDownload(values[@"profileId"], values[@"downloadId"]);
+          current && current->GetState() == download::DownloadItem::IN_PROGRESS) {
+        bool blocked;
+        DownloadWarning(current, &blocked);
+        if (blocked) current->Cancel(true);
+      }
+    }
+  });
+}
+
+void ChooseDownloadDestination(download::DownloadItem* item,
+    const base::FilePath& suggested_path, DownloadConfirmationReason reason,
+    DownloadTargetDeterminerDelegate::ConfirmationCallback callback) {
+  auto values = DownloadValues(item);
+  // DLP and managed targets retain Chromium's policy path. This callback is
+  // reached only after its normal filename and path reservation checks.
+  if (!values || !State().download_destination || reason == DownloadConfirmationReason::DLP_BLOCKED) {
+    std::move(callback).Run(DownloadConfirmationResult::CANCELED, ui::SelectedFileInfo());
+    return;
+  }
+  values[@"filename"] = base::SysUTF8ToNSString(suggested_path.BaseName().AsUTF8Unsafe());
+  values[@"forcePrompt"] = @(reason != DownloadConfirmationReason::NONE && reason != DownloadConfirmationReason::PREFERENCE);
+  auto reply = std::make_shared<DownloadTargetDeterminerDelegate::ConfirmationCallback>(std::move(callback));
+  State().download_destination(values, ^(NSString* path) {
+    if (!*reply) return;
+    auto* current = FindDownload(values[@"profileId"], values[@"downloadId"]);
+    if (!path.length || !current || current->GetState() != download::DownloadItem::IN_PROGRESS) {
+      std::move(*reply).Run(DownloadConfirmationResult::CANCELED, ui::SelectedFileInfo());
+      return;
+    }
+    // Destination resolution alone never grants a safety override, even when
+    // the native resolver used a save panel. Chromium still checks the file.
+    std::move(*reply).Run(DownloadConfirmationResult::CONTINUE_WITHOUT_CONFIRMATION,
+        ui::SelectedFileInfo(base::FilePath(base::SysNSStringToUTF8(path))));
+  });
+}
+
 bool CompletePageClosePreparation(content::WebContents* contents, bool proceed) {
   auto& state = State();
   if (!state.close_preflight || state.close_pending.empty()) return false;

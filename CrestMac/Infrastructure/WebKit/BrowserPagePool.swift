@@ -242,6 +242,9 @@ final class BrowserPagePool:
                         spaceName: spaceName
                     )
                 },
+                approveEngineDownload: { filename, message in
+                    await dialogPresenter.approveEngineDownload(filename: filename, message: message)
+                },
                 permissionCenter: permissionCenter
             )
         if monitorsMemoryPressure {
@@ -1173,6 +1176,13 @@ final class BrowserPagePool:
     /// `websiteDataStore` and web extension controller. The Space lookup only
     /// confirms the tab landed in the opener's own profile.
     #if CREST_CHROMIUM_HOST
+    func chromiumDownloadAssignment(pageID: String, profileID: UUID) -> BrowserSpaceRuntimeAssignment? {
+        let pages = tabRuntimes.values.flatMap(\.allPages) + transientLeases.values.compactMap { $0.value?.page }
+        guard let page = pages.first(where: { $0.chromiumPage?.id == pageID }),
+            page.profileID == profileID, !isRuntimeCreationBlocked(in: page.spaceID) else { return nil }
+        return BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
+    }
+
     /// Retain Chromium's original WebContents, including its opener, history,
     /// JavaScript state and extension tab identity, in the shared tab runtime.
     func adoptChromiumPage(_ values: [String: Any]) -> Bool {

@@ -257,6 +257,20 @@ final class BrowserDialogPresenter {
         }
     }
 
+    func approveEngineDownload(filename: String, message: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            alert.messageText = "Keep “\(filename)”?"
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Cancel")
+            alert.addButton(withTitle: "Keep Download")
+            present(alert) { response in
+                continuation.resume(returning: response == .alertSecondButtonReturn)
+            }
+        }
+    }
+
     static func sourceLabel(for request: URLRequest) -> String {
         guard let url = request.url, let host = url.host(), !host.isEmpty else {
             return ProductIdentity.name

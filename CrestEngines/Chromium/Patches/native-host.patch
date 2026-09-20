@@ -363,3 +363,90 @@
    if ((browser_->GetType() == BrowserWindowInterface::Type::TYPE_DEVTOOLS) &&
        DevToolsWindow::HandleBeforeUnload(web_contents, proceed,
                                           proceed_to_fire_unload)) {
+--- a/chrome/browser/download/download_ui_controller.cc
++++ b/chrome/browser/download/download_ui_controller.cc
+@@ -3,6 +3,10 @@
+ // found in the LICENSE file.
+
+ #include "chrome/browser/download/download_ui_controller.h"
++
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_download_hooks.h"
++#endif
+
+ #include <memory>
+ #include <utility>
+@@ -219,6 +223,9 @@
+
+ void DownloadUIController::OnDownloadUpdated(content::DownloadManager* manager,
+                                              download::DownloadItem* item) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::OwnsDownload(item)) crest::PublishDownload(item);
++#endif
+   DownloadItemModel item_model(item);
+
+   bool needs_to_render = false;
+@@ -285,5 +292,8 @@
+   }
+
+   DownloadItemModel(item).SetWasUINotified(true);
++#if BUILDFLAG(IS_MAC)
++  if (crest::OwnsDownload(item)) return;
++#endif
+   delegate_->OnNewDownloadReady(item);
+ }
+--- a/chrome/browser/download/chrome_download_manager_delegate.cc
++++ b/chrome/browser/download/chrome_download_manager_delegate.cc
+@@ -3,6 +3,10 @@
+ // found in the LICENSE file.
+
+ #include "chrome/browser/download/chrome_download_manager_delegate.h"
++
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_download_hooks.h"
++#endif
+
+ #include <algorithm>
+ #include <memory>
+@@ -1509,6 +1513,12 @@
+     DownloadTargetDeterminerDelegate::ConfirmationCallback callback) {
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+   DCHECK(!download->IsTransient());
++#if BUILDFLAG(IS_MAC)
++  if (crest::OwnsDownload(download)) {
++    crest::ChooseDownloadDestination(download, suggested_path, reason, std::move(callback));
++    return;
++  }
++#endif
+
+ // TODO(xingliu): We should abstract a DownloadFilePicker interface and make all
+ // platform use it.
+--- a/chrome/browser/download/download_target_determiner.cc
++++ b/chrome/browser/download/download_target_determiner.cc
+@@ -3,6 +3,10 @@
+ // found in the LICENSE file.
+
+ #include "chrome/browser/download/download_target_determiner.h"
++
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_download_hooks.h"
++#endif
+
+ #include <optional>
+ #include <string>
+@@ -645,7 +649,14 @@
+ #endif
+
+     // If there is a non-neutral confirmation reason, prompt the user.
+-    if (confirmation_reason_ != DownloadConfirmationReason::NONE) {
++    bool choose_destination = confirmation_reason_ != DownloadConfirmationReason::NONE;
++#if BUILDFLAG(IS_MAC)
++    // Crest resolves ordinary transfers using the owning Space preferences.
++    // Do not manufacture a confirmation reason or bypass managed/forced paths.
++    choose_destination |= !is_resumption_ && !download_prefs_->IsDownloadPathManaged() &&
++        download_->GetForcedFilePath().empty() && crest::OwnsDownload(download_);
++#endif
++    if (choose_destination) {
+       base::FilePath sanitized_path = virtual_path_;
+ #if BUILDFLAG(IS_WIN)
+       // Windows prompt dialog will resolve all env variables in the file name,

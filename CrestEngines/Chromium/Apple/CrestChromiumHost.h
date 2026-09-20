@@ -4,6 +4,11 @@ NS_ASSUME_NONNULL_BEGIN
 // In-process, main-thread native port. Objects and blocks never enter .NET.
 @protocol CrestChromiumEngineHost <NSObject>
 - (void)setBrowserObserver:(void (^)(NSDictionary<NSString *, id> *values))observer;
+- (void)setDownloadObserver:(void (^)(NSDictionary<NSString *, id> *values))observer;
+- (void)setDownloadDestinationResolver:(void (^)(NSDictionary<NSString *, id> *values, void (^reply)(NSString * _Nullable path)))resolver;
+- (void)cancelDownload:(NSString *)downloadID profile:(NSString *)profileID;
+- (void)removeDownload:(NSString *)downloadID profile:(NSString *)profileID;
+- (void)approveDownload:(NSString *)downloadID profile:(NSString *)profileID warning:(NSString *)token;
 - (BOOL)createPage:(NSString *)pageID profile:(NSString *)profileID window:(NSString *)windowID
       privateMode:(BOOL)privateMode sourceProfile:(nullable NSString *)sourceProfileID
          observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;

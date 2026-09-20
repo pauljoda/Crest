@@ -54,5 +54,17 @@
   "chrome/browser/ui/unload_controller.cc": {
     "before": "bb281f7c66c1dd87cec88bd827762e962e74f5c641c21e291a40309cb3ee5317",
     "after": "3ba4e5d7b813450b6dc2eb970ad9f36e94cc193f5e507546e3ddaa3bffdef5c6"
+  },
+  "chrome/browser/download/download_ui_controller.cc": {
+    "before": "dd22a3f5ec4e31d750e56d3876441cb7cd23ca987d5e6a36091aeead80ae5f98",
+    "after": "9e9e370be45326befef99806b8b3bcc7481a8ef2eed4828c8f058862dbe43250"
+  },
+  "chrome/browser/download/chrome_download_manager_delegate.cc": {
+    "before": "90bfddc477741d3eace1891de0a7b8e8a0782810a2eed59b05f82021ed4158ca",
+    "after": "966a56efb2f3a8403b4660eca9b493f94bb31c7f621473b3dd101edffd6defff"
+  },
+  "chrome/browser/download/download_target_determiner.cc": {
+    "before": "94307ad9bdfb3443ddc76aa2d4618d485636b275ad44c2d8b4d4634fb332532b",
+    "after": "d92403b01325bbdf531a53ca026380fac0d459279414d34dca236048c0f1c5e5"
   }
 }
