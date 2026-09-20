@@ -19,5 +19,15 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     func navigateHistory(by offset: Int)
     func reload(bypassingCache: Bool)
     func stop()
+    func mediaActivity() async -> BrowserPageMediaActivity?
+    #if os(macOS)
+    func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void)
+    #endif
     func setZoom(_ zoom: CGFloat)
+}
+
+struct BrowserPageMediaActivity {
+    var isPlaying: Bool
+    var isCapturing: Bool
+    var hasPictureInPicture: Bool
 }

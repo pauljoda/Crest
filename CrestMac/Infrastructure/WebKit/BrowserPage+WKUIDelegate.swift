@@ -34,7 +34,7 @@ extension BrowserPage: WKUIDelegate {
     /// video context menu, including videos inside cross-origin frames.
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
     func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isActive: Bool) {
-        pictureInPicture.nativePresentationDidChange(isActive: isActive)
+        pictureInPicture?.nativePresentationDidChange(isActive: isActive)
     }
 
     /// Native PiP's Restore action asks the embedder to reveal its document.
@@ -42,7 +42,7 @@ extension BrowserPage: WKUIDelegate {
     /// uses it, so only a still-valid PiP source may change tab selection.
     @objc(_webViewFullscreenMayReturnToInline:)
     func webViewFullscreenMayReturnToInline(_ webView: WKWebView) {
-        guard webView === self.webView, pictureInPicture.canRestoreSource else { return }
+        guard webView === self.webView, pictureInPicture?.canRestoreSource == true else { return }
         host?.restorePictureInPictureSourcePage(self)
     }
 
@@ -180,7 +180,7 @@ extension BrowserPage: WKUIDelegate {
             requests: sitePermissionRequests
         ) { [weak self] decision in
             if decision == .grant {
-                self?.mediaCaptureSession.recordGrant(BrowserMediaPermission(type), origin: BrowserSiteOrigin(origin))
+                self?.mediaCaptureSession?.recordGrant(BrowserMediaPermission(type), origin: BrowserSiteOrigin(origin))
             }
             decisionHandler(decision)
         }

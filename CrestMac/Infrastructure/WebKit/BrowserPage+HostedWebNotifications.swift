@@ -5,13 +5,13 @@ import WebKit
 extension BrowserPage {
     func synchronizeHostedWebNotificationPermission() {
         sitePermissionRequests.cancelAll()
-        if let url = webView.url, let origin = BrowserSiteOrigin(url: url) {
+        if let url = webKitView?.url, let origin = BrowserSiteOrigin(url: url) {
             let decision = permissionCenter.decision(for: .notifications, origin: origin, in: spaceID)
             if decision != .grantPersistently && decision != .grantForSession {
                 removeHostedWebNotifications()
             }
         }
-        guard let currentURL = displayURL ?? webView.url,
+        guard let currentURL = displayURL ?? webKitView?.url,
             let origin = BrowserSiteOrigin(url: currentURL)
         else {
             return
@@ -449,6 +449,7 @@ extension BrowserPage {
     }
 
     private func hasActiveUserGesture(in frame: WKFrameInfo) async -> Bool {
+        guard let webView = webKitView else { return false }
         let result = try? await webView.callAsyncJavaScript(
             "return navigator.userActivation?.isActive === true;",
             arguments: [:],
@@ -538,7 +539,7 @@ extension BrowserPage {
         origin: BrowserSiteOrigin
     ) -> Bool {
         guard documentIdentifier == hostedNotificationDocumentIdentifier,
-            let currentURL = webView.url ?? displayURL,
+            let currentURL = webKitView?.url ?? displayURL,
             let currentOrigin = BrowserSiteOrigin(url: currentURL)
         else { return false }
         return currentOrigin == origin

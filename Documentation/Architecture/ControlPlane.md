@@ -121,16 +121,23 @@ strength of unit tests or an unrelated successful build.
 ## Native engine boundary
 
 The existing desktop and mobile page facades use `BrowserPageEngine` for native
-view ownership, loads, Back/Forward history, reload, stop, zoom and Find.
+view ownership, loads, Back/Forward history, reload, stop, zoom, Find, viewport
+capture and media residency observations.
 `BrowserWebKitPageEngine` owns WebKit's supplemental same-document navigation
 history on both Apple platforms. `ChromiumNativePage` implements that same port
 using the Chromium host. History entries remain read projections; traversal and
 cache-bypassing reloads run in the engine's navigation controller.
 
-Other page services and registration still need consolidation. The Chromium
-facade currently retains WebKit service objects, and the original message-based
-adapter/kernel remains separate. Migrating navigation does not complete those
-ownership changes.
+Each desktop composition constructs exactly one native engine. Chromium pages
+have no WebKit view; WebKit document controllers are optional and are only
+created for a WebKit page. Chromium snapshots come from its compositor, and
+idle-tab decisions use Chromium playback, capture and picture-in-picture state.
+Missing media observations keep the page resident until its engine can answer.
+
+Registration and remaining page services still need consolidation. Reader mode,
+Apple page translation, full-page capture and Web Archive export remain WebKit
+services. The original message-based adapter/kernel also remains separate.
+Completing this native boundary does not finish the core authority migration.
 
 ## Existing UI migration
 

@@ -3,7 +3,7 @@ import WebKit
 
 extension BrowserPage {
     func fitViewport(width: CGFloat, owner: UUID) async {
-        guard width.isFinite, width > 0, developerViewport == nil else { return }
+        guard let webView = webKitView, width.isFinite, width > 0, developerViewport == nil else { return }
         viewportFitOwner = owner
         viewportFitGeneration &+= 1
         let generation = viewportFitGeneration
@@ -30,6 +30,6 @@ extension BrowserPage {
         guard viewportFitOwner == owner else { return }
         viewportFitOwner = nil
         viewportFitGeneration &+= 1
-        webView.pageZoom = renderedPageZoom
+        pageEngine.setZoom(renderedPageZoom)
     }
 }

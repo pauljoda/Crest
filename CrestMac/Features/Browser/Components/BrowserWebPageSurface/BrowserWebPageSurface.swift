@@ -23,7 +23,7 @@ struct BrowserWebPageSurface: View {
 
             BrowserPageLoadingPresentation(page: page)
 
-            BrowserLinkHoverPreview(hover: page.linkHover)
+            if let hover = page.linkHover { BrowserLinkHoverPreview(hover: hover) }
 
             if page.isFindPresented {
                 BrowserFindBar(

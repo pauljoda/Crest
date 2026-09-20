@@ -42,4 +42,24 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         return BrowserNavigationHistoryItem(depth: depth,
             title: title.isEmpty ? item.url.host() ?? item.url.absoluteString : title, url: item.url)
     }
+    func mediaActivity() async -> BrowserPageMediaActivity? {
+        let state = await withCheckedContinuation { continuation in
+            webView.requestMediaPlaybackState { continuation.resume(returning: $0) }
+        }
+        return BrowserPageMediaActivity(isPlaying: state == .playing,
+            isCapturing: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
+            hasPictureInPicture: false)
+    }
+    #if os(macOS)
+    func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {
+        let configuration = WKSnapshotConfiguration()
+        configuration.afterScreenUpdates = false
+        if let rect { configuration.rect = rect }
+        if let width { configuration.snapshotWidth = NSNumber(value: Double(width)) }
+        webView.takeSnapshot(with: configuration) { image, _ in
+            MainActor.assumeIsolated { completion(image) }
+        }
+    }
+    #endif
+
 }

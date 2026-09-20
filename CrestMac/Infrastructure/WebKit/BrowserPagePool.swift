@@ -780,7 +780,7 @@ final class BrowserPagePool:
     /// screen would be the privacy failure the gate exists to prevent.
     func deactivatePagePresentation(at time: Date = .now) {
         for runtime in tabRuntimes.values where runtime.presentationWindowID == windowID {
-            runtime.page.pictureInPicture.invalidate()
+            runtime.page.pictureInPicture?.invalidate()
         }
         guard activeTabID != nil || !presentedTabIDs.isEmpty else { return }
         for tabID in presentedTabIDs where tabRuntimes[tabID]?.presentationWindowID == windowID {
@@ -1269,7 +1269,7 @@ final class BrowserPagePool:
     }
 
     func restorePictureInPictureSourcePage(_ page: BrowserPage) {
-        guard page.pictureInPicture.canRestoreSource,
+        guard page.pictureInPicture?.canRestoreSource == true,
             let tabID = tabID(for: page),
             tabRuntimes[tabID]?.routingWindowID == windowID,
             !isRuntimeCreationBlocked(in: page.spaceID),
@@ -1416,7 +1416,7 @@ final class BrowserPagePool:
             + transientLeases.values.compactMap { $0.value?.page }
         for page in retainedPages where page.spaceID == space.id {
             page.focusRestoration.invalidate()
-            page.pictureInPicture.invalidate()
+            page.pictureInPicture?.invalidate()
         }
         if activePage?.spaceID == space.id
             || presentedTabIDs.contains(where: { tabRuntimes[$0]?.page.spaceID == space.id })
@@ -1781,10 +1781,10 @@ final class BrowserPagePool:
         where requested.insert(departedTabID).inserted
             && !runtimeStore.isPresented(departedTabID, outside: windowID)
         {
-            tabRuntimes[departedTabID]?.page.pictureInPicture.leaveTab()
+            tabRuntimes[departedTabID]?.page.pictureInPicture?.leaveTab()
         }
         for arrivingTabID in presentedTabIDs where !self.presentedTabIDs.contains(arrivingTabID) {
-            tabRuntimes[arrivingTabID]?.page.pictureInPicture.returnToTab()
+            tabRuntimes[arrivingTabID]?.page.pictureInPicture?.returnToTab()
         }
         for departedTabID in departed where tabRuntimes[departedTabID]?.page != nil {
             inactiveSinceByTabID[departedTabID] = time
@@ -1825,7 +1825,7 @@ final class BrowserPagePool:
         // recreates the page and invalidates the old responder separately.
         source.focusRestoration.captureBeforeDeparture()
         destination.focusRestoration.requestRestoration(
-            displacing: source.webView
+            displacing: source.nativeView
         )
     }
 

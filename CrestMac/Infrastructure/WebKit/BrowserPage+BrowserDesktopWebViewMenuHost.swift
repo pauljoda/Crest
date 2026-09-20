@@ -73,7 +73,7 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
     func downloadImage(from url: URL) {
         let request = URLRequest(url: url)
         Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let self, let webView = webKitView else { return }
             let download = await webView.startDownload(using: request)
             guard !Task.isCancelled else {
                 _ = await download.cancel()

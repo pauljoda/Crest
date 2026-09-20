@@ -2,6 +2,8 @@ import Foundation
 import WebKit
 
 extension BrowserPlatformPage {
+    var webKitView: WKWebView? { webView }
+
     func goBack() {
         refreshNavigationState()
         if navigationFailure != nil {
@@ -35,6 +37,7 @@ extension BrowserPlatformPage {
     /// Retire their pending destination once WebKit publishes that URL, and
     /// publish history from the same observation path as the address bar.
     func synchronizeNavigationHistory() {
+        guard let webView = webKitView else { return }
         #if CREST_CHROMIUM_HOST
         if chromiumPage != nil { return }
         #endif
@@ -49,6 +52,7 @@ extension BrowserPlatformPage {
     func reload() { pageEngine.reload(bypassingCache: false) }
 
     func clearSiteDataAndReload() async {
+        guard let webView = webKitView else { return }
         guard let targetURL = displayURL ?? webView.url else { return }
         await BrowserWebsiteDataStore.clearSiteData(
             for: targetURL,
@@ -94,7 +98,7 @@ extension BrowserPlatformPage {
     }
 
     func returnFromNavigationFailure() {
-        guard let navigationFailure else { return }
+        guard let webView = webKitView, let navigationFailure else { return }
         let shouldNavigateBack =
             navigationFailure.phase == .committed
             && webView.canGoBack
@@ -105,7 +109,7 @@ extension BrowserPlatformPage {
     }
 
     var canReturnFromNavigationFailure: Bool {
-        guard let navigationFailure else { return false }
+        guard let webView = webKitView, let navigationFailure else { return false }
         if navigationFailure.phase == .provisional, webView.url != nil {
             return true
         }

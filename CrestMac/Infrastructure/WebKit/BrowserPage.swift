@@ -16,23 +16,22 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     )
 
     #if CREST_CHROMIUM_HOST
-    @ObservationIgnored var chromiumPage: ChromiumNativePage?
+    @ObservationIgnored let pageEngine: ChromiumNativePage
+    var chromiumPage: ChromiumNativePage? { pageEngine }
+    var webView: WKWebView? { nil }
+    #else
+    @ObservationIgnored let pageEngine: BrowserWebKitPageEngine
+    var webView: WKWebView { pageEngine.webView }
     #endif
-    @ObservationIgnored lazy var pageEngine: any BrowserPageEngine = {
-        #if CREST_CHROMIUM_HOST
-        return chromiumPage!
-        #else
-        return BrowserWebKitPageEngine(webView: webView)
-        #endif
-    }()
-    @ObservationIgnored let webView: WKWebView
-    @ObservationIgnored let pictureInPicture: BrowserPictureInPicturePageController
-    @ObservationIgnored lazy var linkHover = BrowserLinkHoverController(webView: webView)
-    @ObservationIgnored lazy var linkDrag = BrowserLinkDragController(
-        webView: webView,
-        context: { [weak self] in self?.navigationContext },
-        handle: { [weak self] event in self?.handleLinkDrag(event) }
-    )
+    @ObservationIgnored lazy var pictureInPicture = webKitView.map { BrowserPictureInPicturePageController(webView: $0) }
+    @ObservationIgnored lazy var linkHover = webKitView.map { BrowserLinkHoverController(webView: $0) }
+    @ObservationIgnored lazy var linkDrag = webKitView.map { webView in
+        BrowserLinkDragController(
+            webView: webView,
+            context: { [weak self] in self?.navigationContext },
+            handle: { [weak self] event in self?.handleLinkDrag(event) }
+        )
+    }
     @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
         let controller = BrowserWebFocusRestorationController(webView: nativeView)
         (webView as? BrowserDesktopWebView)?.focusRestoration = controller
@@ -55,10 +54,17 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
+    #if CREST_CHROMIUM_HOST
     var navigationHistory: BrowserPageNavigationHistory {
-        get { (pageEngine as? BrowserWebKitPageEngine)?.history ?? BrowserPageNavigationHistory() }
-        set { (pageEngine as? BrowserWebKitPageEngine)?.history = newValue }
+        get { BrowserPageNavigationHistory() }
+        set { }
     }
+    #else
+    var navigationHistory: BrowserPageNavigationHistory {
+        get { pageEngine.history }
+        set { pageEngine.history = newValue }
+    }
+    #endif
     var webContentFailureMessage: String?
     var isFindPresented: Bool { findSession.isPresented }
     var findQuery: String { findSession.query }
@@ -66,7 +72,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     let translation = BrowserPageTranslation()
-    var readerModeState: BrowserReaderModeState { readerModeSession.state }
+    var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
     var isContentBlockingActive: Bool { contentRuleSession.isActive }
     private(set) var developerPanel: BrowserDeveloperPanel?
     private(set) var isRegionCapturePresented = false
@@ -102,9 +108,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored let fileUploadAccess = BrowserFileUploadAccess()
     @ObservationIgnored var downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
-    @ObservationIgnored lazy var mediaCaptureSession = BrowserMediaCaptureSession(
-        webView: webView, permissionCenter: permissionCenter, spaceID: spaceID
-    )
+    @ObservationIgnored lazy var mediaCaptureSession = webKitView.map {
+        BrowserMediaCaptureSession(webView: $0, permissionCenter: permissionCenter, spaceID: spaceID)
+    }
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
     @ObservationIgnored let recoverNotificationSystemAuthorization: @MainActor () async -> Void
@@ -126,14 +132,16 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored private var observations: Set<AnyCancellable> = []
     @ObservationIgnored var processRecovery = BrowserProcessRecovery()
     @ObservationIgnored private let findSession = BrowserFindSession()
-    @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
-        document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
-    )
-    @ObservationIgnored lazy var faviconSession = BrowserFaviconSession(
-        document: BrowserWebKitFaviconDocument(webView: webView, profileID: profileID),
-        policy: .delayedDocumentIcons,
-        receive: { [weak self] in self?.faviconData = $0 }
-    )
+    @ObservationIgnored lazy var readerModeSession = webKitView.map {
+        BrowserReaderModeSession(document: BrowserWebKitReaderModeDocument(webView: $0, translation: translation))
+    }
+    @ObservationIgnored lazy var faviconSession = webKitView.map {
+        BrowserFaviconSession(
+            document: BrowserWebKitFaviconDocument(webView: $0, profileID: profileID),
+            policy: .delayedDocumentIcons,
+            receive: { [weak self] in self?.faviconData = $0 }
+        )
+    }
     @ObservationIgnored var sharingPicker: NSSharingServicePicker?
     @ObservationIgnored private var printOperation: NSPrintOperation?
     @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
@@ -294,6 +302,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 )
             }
         )
+        #if CREST_CHROMIUM_HOST
+        pageEngine = ChromiumNativePage(profileID: profileID)
+        #else
         let webViewInterval = Self.lifecycleSignposter.beginInterval("Initialize WKWebView")
         BrowserWebInspectorAccess.enableDeveloperExtras(
             in: configuration.preferences
@@ -304,16 +315,17 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             frame: .zero,
             configuration: configuration
         )
-        webView = desktopWebView
-        pictureInPicture = BrowserPictureInPicturePageController(webView: desktopWebView)
-        webView.underPageBackgroundColor = .clear
+        pageEngine = BrowserWebKitPageEngine(webView: desktopWebView)
+        desktopWebView.underPageBackgroundColor = .clear
         Self.lifecycleSignposter.endInterval("Initialize WKWebView", webViewInterval)
+        #endif
         super.init()
         #if CREST_CHROMIUM_HOST
-        chromiumPage = ChromiumNativePage(profileID: profileID) { [weak self] event, values in
+        chromiumPage?.observer = { [weak self] event, values in
             self?.receiveChromiumEvent(event, values: values)
         }
         #else
+        let webView = desktopWebView
         desktopWebView.menuHost = self
         desktopWebView.linkHover = linkHover
         desktopWebView.linkDrag = linkDrag
@@ -472,6 +484,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// answers `interactionState` with an empty session, and archiving that would
     /// replace a real state with one that restores nothing.
     var interactionState: Data? {
+        guard let webView = webKitView else { return nil }
         guard webView.backForwardList.currentItem != nil else { return nil }
         return webView.interactionState as? Data
     }
@@ -486,6 +499,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// not restore, and the caller falls back to an ordinary load.
     @discardableResult
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
+        guard let webView = webKitView else { return false }
         #if CREST_CHROMIUM_HOST
         if chromiumPage != nil { return false }
         #endif
@@ -504,6 +518,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func monitorUserActivity(_ handler: @escaping () -> Void) {
+        guard let webView = webKitView else { return }
         userActivityHandler = handler
         guard ownsUserContentController, userActivityMessageProxy == nil else { return }
         userActivityMessageProxy = BrowserUserActivityBridge.install(
@@ -514,6 +529,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func styleVisitedLinks(history: [BrowserHistoryEntry]) async {
+        guard let webView = webKitView else { return }
         await BrowserVisitedLinkStyler.apply(history: history, to: webView)
     }
 
@@ -529,13 +545,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         let shouldRefreshAutomaticIcon =
             tab.iconMode == .automatic
             && !tab.hasCurrentAutomaticFavicon
-            && webView.url != nil
-            && !webView.isLoading
+            && url != nil
+            && !isLoading
         if faviconData != tab.displayFaviconData
             || navigationContext?.iconMode != tab.iconMode
             || navigationContext?.tabID != tab.id
         {
-            faviconSession.invalidate()
+            faviconSession?.invalidate()
             faviconData = tab.displayFaviconData
         }
         navigationContext = BrowserPageNavigationContext(
@@ -544,7 +560,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             profileID: profileID,
             automaticallyOpensPeek: automaticallyOpensPeek
         )
-        linkDrag.contextDidChange()
+        linkDrag?.contextDidChange()
         if previousTitle != navigationContext?.title {
             mediaSessionCoordinator?.ownerTitleDidChange()
         }
@@ -557,22 +573,24 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         #if CREST_CHROMIUM_HOST
         chromiumPage?.dispose()
         #endif
-        faviconSession.stop()
-        mediaCaptureSession.reset()
+        faviconSession?.stop()
+        mediaCaptureSession?.reset()
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
-        readerModeSession.invalidate()
-        linkHover.detach()
-        linkDrag.detach()
+        readerModeSession?.invalidate()
+        linkHover?.detach()
+        linkDrag?.detach()
         (webView as? BrowserDesktopWebView)?.linkHover = nil
         (webView as? BrowserDesktopWebView)?.linkDrag = nil
         focusRestoration.invalidate()
         mediaSessionCoordinator?.prepareForRemoval()
-        pictureInPicture.invalidate()
+        pictureInPicture?.invalidate()
+        fileUploadAccess.invalidate()
+        userActivityHandler = nil
+        guard let webView = webKitView else { return }
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
-        fileUploadAccess.invalidate()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         (webView as? BrowserDesktopWebView)?.menuHost = nil
@@ -663,6 +681,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         balancedRuleLists: [WKContentRuleList],
         activation: BrowserContentRuleListActivation = .onNextNavigation
     ) {
+        guard let webView = webKitView else { return }
         contentRuleSession.apply(
             policy: policy,
             balancedRuleLists: balancedRuleLists,
@@ -686,6 +705,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         #if CREST_CHROMIUM_HOST
         if let chromiumPage { chromiumPage.command("engine.inspect"); return true }
         #endif
+        guard let webView = webKitView else { return false }
         return BrowserWebInspectorAccess.show(
             inspectorOwner: webView,
             isInspectable: webView.isInspectable
@@ -696,6 +716,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         #if CREST_CHROMIUM_HOST
         if let chromiumPage { chromiumPage.command("engine.inspect"); return }
         #endif
+        guard let webView = webKitView else { return }
         let result = BrowserWebInspectorAccess.toggle(
             panel,
             currentPanel: developerPanel,
@@ -727,9 +748,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         Task { [weak self] in
             guard let self else { return }
             do {
-                let image = try await webView.takeSnapshot(
-                    configuration: Self.snapshotConfiguration(rect: rect)
-                )
+                let image = await withCheckedContinuation { continuation in
+                    pageEngine.capture(rect: rect, width: nil) { continuation.resume(returning: $0) }
+                }
+                guard let image else { throw BrowserDeveloperCaptureError.pageUnavailable }
                 guard Self.copyImageToPasteboard(image) else {
                     throw BrowserDeveloperCaptureError.encodingFailed
                 }
@@ -757,7 +779,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     func savePortraitCapture() {
         Task { [weak self] in
-            guard let self, let window = webView.window else { return }
+            guard let self, let window = nativeView.window else { return }
             do {
                 let snapshot = try await fullPageSnapshot(snapshotWidth: 720)
                 let portrait = Self.portraitImage(from: snapshot)
@@ -838,15 +860,16 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func refreshReaderModeAvailability() async {
-        await readerModeSession.refreshAvailability()
+        await readerModeSession?.refreshAvailability()
     }
 
     func setReaderModeActive(_ isActive: Bool) async throws {
+        guard let readerModeSession else { throw BrowserReaderModeError.articleUnavailable }
         try await readerModeSession.setActive(isActive)
     }
 
     func toggleReaderMode() {
-        readerModeSession.toggle()
+        readerModeSession?.toggle()
     }
 
     func dismissCredentialFillRequest() {
@@ -862,10 +885,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
+        guard let webView = webKitView else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fill(credential, for: requestID, in: webView)
     }
 
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
+        guard let webView = webKitView else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fillGeneratedPassword(password, for: requestID, in: webView)
     }
 
@@ -901,6 +926,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         guard url != nil else {
             throw BrowserDeveloperCaptureError.pageUnavailable
         }
+        guard let webView = webKitView else { throw BrowserDeveloperCaptureError.pageUnavailable }
         let result = try await webView.evaluateJavaScript(
             """
             (() => {
@@ -1025,19 +1051,20 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         sharingPicker = picker
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
-            guard let self, self.webView.window != nil, self.sharingPicker === picker else { return }
+            guard let self, self.nativeView.window != nil, self.sharingPicker === picker else { return }
             let anchor = NSRect(
-                x: self.webView.bounds.maxX - 1,
-                y: self.webView.bounds.maxY - 1,
+                x: self.nativeView.bounds.maxX - 1,
+                y: self.nativeView.bounds.maxY - 1,
                 width: 1,
                 height: 1
             )
-            picker.show(relativeTo: anchor, of: self.webView, preferredEdge: .minY)
+            picker.show(relativeTo: anchor, of: self.nativeView, preferredEdge: .minY)
         }
     }
 
     func printPage() {
-        guard url != nil, let window = webView.window else { return }
+        guard let webView = webKitView else { return }
+        guard url != nil, let window = nativeView.window else { return }
         let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
         let operation = webView.printOperation(with: printInfo)
         operation.jobTitle = title.isEmpty ? url?.host() ?? ProductIdentity.name : title
@@ -1051,12 +1078,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func pdfData() async throws -> Data {
+        guard let webView = webKitView else { throw BrowserPageExportError.pageUnavailable }
         guard url != nil else { throw BrowserPageExportError.pageUnavailable }
         return try await webView.pdf(configuration: WKPDFConfiguration())
     }
 
     func exportPDF() {
-        guard let window = webView.window, url != nil else { return }
+        guard let window = nativeView.window, url != nil else { return }
         let suggestedFilename = BrowserPageExportPolicy.pdfFilename(title: title, url: url)
         Task { [weak self, weak window] in
             guard let self, let window else { return }
@@ -1081,6 +1109,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func webArchiveData() async throws -> Data {
+        guard let webView = webKitView else { throw BrowserPageExportError.pageUnavailable }
         guard url != nil else { throw BrowserPageExportError.pageUnavailable }
         return try await withCheckedThrowingContinuation { continuation in
             webView.createWebArchiveData { result in
@@ -1090,7 +1119,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func exportWebArchive() {
-        guard let window = webView.window, url != nil else { return }
+        guard let window = nativeView.window, url != nil else { return }
         let suggestedFilename = BrowserPageExportPolicy.webArchiveFilename(
             title: title,
             url: url
@@ -1149,18 +1178,18 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         // Same-document navigation never commits a replacement document.
         // Cancel the current pull here; suspend new pulls only when WebKit
         // actually starts provisional navigation.
-        linkDrag.cancel()
-        mediaCaptureSession.reset()
+        linkDrag?.cancel()
+        mediaCaptureSession?.reset()
         sitePermissionRequests.cancelAll()
         translation.reset()
-        readerModeSession.invalidate()
-        pictureInPicture.invalidate()
-        linkHover.beginNavigation()
+        readerModeSession?.invalidate()
+        pictureInPicture?.invalidate()
+        linkHover?.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
-        faviconSession.invalidate()
+        faviconSession?.invalidate()
         pendingNavigationURL = url
         // A capture describes one document's DOM. A right-click whose menu
         // never opened — a page that cancelled the event to draw its own —
@@ -1170,7 +1199,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func updateUnderPageBackground() {
-        webView.underPageBackgroundColor =
+        webKitView?.underPageBackgroundColor =
             completedNavigationCount == 0 ? .clear : nil
     }
 
@@ -1181,14 +1210,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     ) {
         guard isCurrentNavigation(navigation) else { return }
         activeNavigation = nil
-        let fallbackURL = pendingNavigationURL ?? webView.url ?? url
+        let fallbackURL = pendingNavigationURL ?? webKitView?.url ?? url
         pendingNavigationURL = nil
         navigationFailure = BrowserNavigationFailure(
             error: error,
             phase: phase,
             fallbackURL: fallbackURL
         )
-        canGoBack = canReturnFromNavigationFailure || webView.canGoBack
+        canGoBack = canReturnFromNavigationFailure || (webKitView?.canGoBack ?? false)
     }
 
     /// Whether `navigationAction` would replace this page's own main frame.
@@ -1242,8 +1271,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         if chromiumPage != nil { return }
         #endif
         synchronizeNavigationHistory()
-        canGoBack = canReturnFromNavigationFailure || !navigationHistory.backItems.isEmpty || webView.canGoBack
-        canGoForward = !navigationHistory.forwardItems.isEmpty || webView.canGoForward
+        canGoBack = canReturnFromNavigationFailure || !navigationHistory.backItems.isEmpty || (webKitView?.canGoBack ?? false)
+        canGoForward = !navigationHistory.forwardItems.isEmpty || (webKitView?.canGoForward ?? false)
     }
 
     func clearNavigationFailure(preservingPendingURL: Bool = false) {
@@ -1273,12 +1302,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     private func observeWebViewState() {
+        guard let webView = webKitView else { return }
         webView.publisher(for: \.url, options: [.initial, .new]).sink { [weak self] _ in
             // WebKit publishes URL before finishing its back-forward-list
             // mutation. Read the settled URL and list together on the next turn.
             Task { @MainActor in
                 guard let self else { return }
-                let value = self.webView.url
+                let value = self.webKitView?.url
                 self.translation.documentURLDidChange(from: self.url, to: value)
                 self.url = value
                 self.refreshNavigationState()
@@ -1331,13 +1361,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     func refreshFavicon() {
         guard navigationContext?.iconMode == .automatic,
-            webView.url != nil
+            webKitView?.url != nil
         else { return }
-        faviconSession.refresh()
+        faviconSession?.refresh()
     }
 
     func pullFavicon() async -> Data? {
-        await faviconSession.pull()
+        await faviconSession?.pull()
     }
 
     var siteThemeIconAccent: BrowserTabIconAccent? {
@@ -1363,6 +1393,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
+        guard let webView = webKitView else { return }
         credentialSession.receive(scriptMessage, in: webView)
     }
 

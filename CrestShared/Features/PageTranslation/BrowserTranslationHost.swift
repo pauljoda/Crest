@@ -4,7 +4,7 @@ import WebKit
 
 struct BrowserTranslationHost: ViewModifier {
     @Bindable var translation: BrowserPageTranslation
-    let webView: WKWebView
+    let webView: WKWebView?
     let isActive: Bool
     let isLoading: Bool
     let isReaderActive: Bool
@@ -28,7 +28,7 @@ struct BrowserTranslationHost: ViewModifier {
         return
             content
             .task(id: detectionID) {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, let webView else { return }
                 translation.updatePreferences(
                     automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
                     languageRules: .init(rawValue: languageRulesRawValue))
@@ -50,7 +50,9 @@ struct BrowserTranslationHost: ViewModifier {
                     automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
                     languageRules: .init(rawValue: languageRulesRawValue))
             }
-            .onDisappear { translation.setActive(false, in: webView, hostID: hostID) }
+            .onDisappear {
+                if let webView { translation.setActive(false, in: webView, hostID: hostID) }
+            }
             .sheet(isPresented: $translation.showsInformation) {
                 BrowserTranslationInformation(translation: translation)
             }

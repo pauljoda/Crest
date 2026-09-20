@@ -46,6 +46,11 @@
 #include "components/sessions/content/session_tab_helper.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/render_widget_host_view.h"
+#include "chrome/browser/media/webrtc/media_capture_devices_dispatcher.h"
+#include "chrome/browser/media/webrtc/media_stream_capture_indicator.h"
+#include "ui/gfx/image/image.h"
+#include "components/viz/common/frame_sinks/copy_output_result.h"
+#include "base/time/time.h"
 #include "components/find_in_page/find_tab_helper.h"
 #include "components/find_in_page/find_result_observer.h"
 #include "components/find_in_page/find_types.h"
@@ -946,6 +951,54 @@ Page* FindPage(NSString* identifier) {
   }));
   installer->InstallCrx(base::FilePath(base::SysNSStringToUTF8(path)));
   return YES;
+}
+- (NSDictionary<NSString*, id>*)mediaActivityForPage:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  auto* contents = page ? page->web_contents() : nullptr;
+  if (!contents) return nil;
+  auto indicator = MediaCaptureDevicesDispatcher::GetInstance()->GetMediaStreamCaptureIndicator();
+  return @{
+    @"playing": @(contents->IsCurrentlyAudible() || contents->GetCurrentlyPlayingVideoCount() > 0),
+    @"capturing": @(contents->IsBeingCaptured() || indicator->IsCapturingUserMedia(contents)
+                     || indicator->IsCapturingTab(contents) || indicator->IsCapturingWindow(contents)
+                     || indicator->IsCapturingDisplay(contents)),
+    @"pictureInPicture": @(contents->HasPictureInPictureVideo() || contents->HasPictureInPictureDocument())
+  };
+}
+- (void)capturePage:(NSString*)pageID rect:(NSRect)rect width:(CGFloat)width
+         completion:(void (^)(NSImage*))completion {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  auto* view = page && page->web_contents() ? page->web_contents()->GetRenderWidgetHostView() : nullptr;
+  if (!view || !std::isfinite(width) || width < 0 || width > 16384 ||
+      !std::isfinite(rect.origin.x) || !std::isfinite(rect.origin.y) ||
+      !std::isfinite(rect.size.width) || !std::isfinite(rect.size.height)) {
+    completion(nil);
+    return;
+  }
+  gfx::Rect area = NSIsEmptyRect(rect) ? gfx::Rect() : gfx::Rect(
+      static_cast<int>(rect.origin.x), static_cast<int>(rect.origin.y),
+      static_cast<int>(rect.size.width), static_cast<int>(rect.size.height));
+  if (!area.IsEmpty()) area.Intersect(gfx::Rect(view->GetViewBounds().size()));
+  if (!NSIsEmptyRect(rect) && area.IsEmpty()) { completion(nil); return; }
+  gfx::Size size = area.IsEmpty() ? view->GetViewBounds().size() : area.size();
+  if (size.IsEmpty()) { completion(nil); return; }
+  gfx::Size output;
+  if (width > 0) output = gfx::Size(std::max(1, static_cast<int>(width)),
+      std::max(1, static_cast<int>(width * size.height() / size.width())));
+  auto reply = [completion copy];
+  view->CopyFromSurface(area, output, base::Seconds(2), base::BindOnce(
+      [](void (^reply)(NSImage*), const content::CopyFromSurfaceResult& result) {
+        if (!result.has_value()) {
+          dispatch_async(dispatch_get_main_queue(), ^{ reply(nil); });
+          return;
+        }
+        SkBitmap bitmap = result->bitmap;
+        dispatch_async(dispatch_get_main_queue(), ^{
+          reply(bitmap.drawsNothing() ? nil : gfx::Image::CreateFrom1xBitmap(bitmap).ToNSImage());
+        });
+      }, reply));
 }
 - (BOOL)findInPage:(NSString*)pageID query:(NSString*)query backwards:(BOOL)backwards
      caseSensitive:(BOOL)caseSensitive completion:(void (^)(BOOL))completion {

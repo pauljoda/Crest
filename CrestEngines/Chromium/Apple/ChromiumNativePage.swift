@@ -10,7 +10,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     let surface = ChromiumNativePageView()
     var isPrivateBrowsing = false
     private let profileID: UUID
-    private let observer: (String, [String: Any]) -> Void
+    var observer: (String, [String: Any]) -> Void
     private var host: (any CrestChromiumEngineHost)?
     private var requestedURL: URL?
     private var zoom: CGFloat = 1
@@ -18,7 +18,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     private var created = false
     private var disposed = false
 
-    init(profileID: UUID, observer: @escaping (String, [String: Any]) -> Void) {
+    init(profileID: UUID, observer: @escaping (String, [String: Any]) -> Void = { _, _ in }) {
         self.profileID = profileID
         self.observer = observer
         surface.page = self
@@ -27,6 +27,18 @@ final class ChromiumNativePage: BrowserPageEngine {
     var nativeView: NSView { surface }
     private(set) var backHistory: [BrowserNavigationHistoryItem] = []
     private(set) var forwardHistory: [BrowserNavigationHistoryItem] = []
+    func mediaActivity() async -> BrowserPageMediaActivity? {
+        guard created, !disposed, let values = host?.mediaActivity(forPage: id) else { return nil }
+        return BrowserPageMediaActivity(isPlaying: values["playing"] as? Bool == true,
+            isCapturing: values["capturing"] as? Bool == true,
+            hasPictureInPicture: values["pictureInPicture"] as? Bool == true)
+    }
+    func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {
+        guard created, !disposed, let host else { completion(nil); return }
+        host.capturePage(id, rect: rect ?? .zero, width: width ?? 0) { image in
+            MainActor.assumeIsolated { completion(image) }
+        }
+    }
     func load(_ request: URLRequest) {
         guard let url = request.url else { return }
         load(url)

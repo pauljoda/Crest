@@ -56,7 +56,7 @@ final class AppleWebKitAdapter: CorePageRuntime {
         for entry in entries.values {
             entry.page.stopLoading()
             entry.page.prepareForSpaceDeletion()
-            entry.page.webView.removeFromSuperview()
+            entry.page.pageEngine.nativeView.removeFromSuperview()
         }
         for popup in pendingPopups.values { popup.page.prepareForSpaceDeletion() }
         pendingPopups.removeAll()
@@ -96,7 +96,7 @@ final class AppleWebKitAdapter: CorePageRuntime {
             retainedStates = retainedStates.filter { $0.value.profileID != profile }
             for (id, entry) in entries where entry.creation.payload["profileId"] as? String == profile {
                 entry.route.pageID = nil
-                entry.page.stopLoading(); entry.page.prepareForSpaceDeletion(); entry.page.webView.removeFromSuperview()
+                entry.page.stopLoading(); entry.page.prepareForSpaceDeletion(); entry.page.pageEngine.nativeView.removeFromSuperview()
                 entries.removeValue(forKey: id)
             }
             for (id, popup) in pendingPopups where popup.profileID == profile {
@@ -121,7 +121,7 @@ final class AppleWebKitAdapter: CorePageRuntime {
                 entry.identity["tabId"] as? String == p["tabId"] as? String,
                 entry.identity["spaceId"] as? String == p["spaceId"] as? String,
                 entry.identity["generation"] as? String == p["generation"] as? String,
-                entry.page.webView.superview == nil
+                entry.page.pageEngine.nativeView.superview == nil
             else { send?("engine.page_reassignment_failed", identity, message); return }
             entry.creation = message
             entries[pageID] = entry
@@ -131,7 +131,7 @@ final class AppleWebKitAdapter: CorePageRuntime {
         if message.type == "engine.release_workspace", let workspace = p["workspaceId"] as? String {
             retainedStates = retainedStates.filter { $0.value.workspaceID != workspace }
             for (id, entry) in entries where entry.creation.payload["workspaceId"] as? String == workspace {
-                entry.page.stopLoading(); entry.page.prepareForSpaceDeletion(); entry.page.webView.removeFromSuperview()
+                entry.page.stopLoading(); entry.page.prepareForSpaceDeletion(); entry.page.pageEngine.nativeView.removeFromSuperview()
                 entries.removeValue(forKey: id)
             }
             for (id, popup) in pendingPopups where popup.workspaceID == workspace {
@@ -210,10 +210,10 @@ final class AppleWebKitAdapter: CorePageRuntime {
         case "engine.unload_page":
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                let decision = await entry.page.residencyDecision(isSelected: entry.page.webView.superview != nil)
+                let decision = await entry.page.residencyDecision(isSelected: entry.page.pageEngine.nativeView.superview != nil)
                 // A native page may have become active while WebKit checked media.
                 guard entries[pageID]?.page === entry.page else { return }
-                guard decision.allowsAutomaticUnload, entry.page.webView.superview == nil,
+                guard decision.allowsAutomaticUnload, entry.page.pageEngine.nativeView.superview == nil,
                     !entry.page.isLoading, !entry.page.wasOpenedAsPopup else {
                     send?("engine.unload_canceled", identity, message); return
                 }
@@ -242,7 +242,7 @@ final class AppleWebKitAdapter: CorePageRuntime {
             // This limitation is declared in registration until a native close continuation is integrated.
             entry.page.stopLoading()
             entry.page.prepareForSpaceDeletion()
-            entry.page.webView.removeFromSuperview()
+            entry.page.pageEngine.nativeView.removeFromSuperview()
             entries.removeValue(forKey: pageID)
             send?("engine.page_closed", identity, message)
         default: send?("engine.failed", identity, message)
@@ -394,7 +394,7 @@ extension AppleWebKitAdapter {
         Task { @MainActor [weak self] in
             guard let self, let current = entries[entry.key], current.page === page else { return }
             entries.removeValue(forKey: entry.key)
-            page.stopLoading(); page.prepareForSpaceDeletion(); page.webView.removeFromSuperview()
+            page.stopLoading(); page.prepareForSpaceDeletion(); page.pageEngine.nativeView.removeFromSuperview()
             send?("engine.page_destroyed", current.identity, nil)
         }
     }

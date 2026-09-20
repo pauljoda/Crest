@@ -9,17 +9,17 @@ import os
 extension BrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
         translation.reset()
-        linkHover.beginNavigation()
-        linkDrag.beginNavigation()
+        linkHover?.beginNavigation()
+        linkDrag?.beginNavigation()
         focusRestoration.invalidate()
-        mediaCaptureSession.reset()
+        mediaCaptureSession?.reset()
         sitePermissionRequests.cancelAll()
         activeNavigation = navigation
         // Reloads and history traversal do not necessarily pass through the
         // app-level load path. Retire the old document's session as soon as
         // WebKit starts any replacement navigation.
         mediaSessionCoordinator?.prepareForNavigation()
-        pictureInPicture.invalidate()
+        pictureInPicture?.invalidate()
         isAwaitingPopupNavigation = false
         beginBlockedPopupNavigation()
         beginGeolocationNavigation()
@@ -30,16 +30,16 @@ extension BrowserPage: WKNavigationDelegate {
         clearNavigationFailure(preservingPendingURL: true)
         pendingServerTrustIdentity = nil
         credentialState.didStartNavigation()
-        readerModeSession.invalidate()
-        faviconSession.invalidate()
+        readerModeSession?.invalidate()
+        faviconSession?.invalidate()
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
-        linkHover.didCommitNavigation()
-        linkDrag.didFinishNavigation()
+        linkHover?.didCommitNavigation()
+        linkDrag?.didFinishNavigation()
         mediaSessionCoordinator?.didCommitNavigation()
-        pictureInPicture.navigationDidCommit()
+        pictureInPicture?.navigationDidCommit()
         committedNavigationCount += 1
         // Supplements belong to the current document. A document replacement
         // can discard an item that WebKit omits from its public history lists.
@@ -48,8 +48,8 @@ extension BrowserPage: WKNavigationDelegate {
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         Task { [weak self] in
             guard let self,
-                self.webView.url?.scheme == "https",
-                self.webView.window?.isKeyWindow == true, NSApp.isActive
+                self.webKitView?.url?.scheme == "https",
+                self.webKitView?.window?.isKeyWindow == true, NSApp.isActive
             else { return }
             await BrowserPasskeyAccessController.shared.prepareForBrowsing()
         }
@@ -293,14 +293,14 @@ extension BrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        faviconSession.invalidate()
+        faviconSession?.invalidate()
         translation.reset()
-        readerModeSession.invalidate()
-        linkHover.beginNavigation()
-        linkDrag.beginNavigation()
+        readerModeSession?.invalidate()
+        linkHover?.beginNavigation()
+        linkDrag?.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()
-        pictureInPicture.invalidate()
+        pictureInPicture?.invalidate()
         credentialState.webContentProcessDidTerminate()
         httpAuthenticationSession.authenticationFailed()
         processTerminationCount += 1
@@ -376,8 +376,8 @@ extension BrowserPage: WKNavigationDelegate {
         withError error: any Error
     ) {
         if isCurrentNavigation(navigation) {
-            linkHover.didFailNavigation()
-            linkDrag.didFinishNavigation()
+            linkHover?.didFailNavigation()
+            linkDrag?.didFinishNavigation()
         }
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
@@ -393,8 +393,8 @@ extension BrowserPage: WKNavigationDelegate {
         withError error: any Error
     ) {
         if isCurrentNavigation(navigation) {
-            linkHover.didFailNavigation()
-            linkDrag.didFinishNavigation()
+            linkHover?.didFailNavigation()
+            linkDrag?.didFinishNavigation()
         }
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(

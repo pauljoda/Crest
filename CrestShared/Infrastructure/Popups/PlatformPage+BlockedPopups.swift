@@ -18,7 +18,7 @@ extension BrowserPlatformPage {
             documentIdentifier.count <= 128,
             let frameURL = message.frameInfo.request.url,
             let origin = BrowserSiteOrigin(url: frameURL),
-            let currentURL = webView.url,
+            let currentURL = webKitView?.url,
             BrowserSiteOrigin(url: currentURL) == origin,
             !BrowserAutomaticPopupPolicy.allowsAutomaticPopups(
                 decision: permissionCenter.decision(
@@ -54,7 +54,7 @@ extension BrowserPlatformPage {
     func allowAutomaticPopupsForBlockedSite() {
         guard let notice = blockedPopupState.notice,
             notice.status == .blocked,
-            let currentURL = displayURL ?? webView.url,
+            let currentURL = displayURL ?? webKitView?.url,
             BrowserSiteOrigin(url: currentURL) == notice.origin
         else { return }
 

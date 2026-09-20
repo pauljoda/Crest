@@ -1537,6 +1537,10 @@
     "native-engine-navigation-port": {
       "category": "improved",
       "message": "Use Chromium's page history in the native Back and Forward menus and honor reloads that bypass the cache."
+    },
+    "native-engine-page-ownership": {
+      "category": "improved",
+      "message": "Capture Chromium page content and preserve active media when managing idle tabs, without creating an unused WebKit page."
     }
   }
 }

@@ -163,9 +163,7 @@ final class BrowserPageRuntimeStore {
     private func captureSnapshot(of runtime: BrowserTabRuntime) {
         runtime.snapshotGeneration &+= 1
         let generation = runtime.snapshotGeneration
-        let configuration = WKSnapshotConfiguration()
-        configuration.afterScreenUpdates = false
-        runtime.page.webView.takeSnapshot(with: configuration) { [weak self, weak runtime] image, _ in
+        runtime.page.captureViewport { [weak self, weak runtime] image in
             MainActor.assumeIsolated {
                 guard let self, let runtime, runtime.store === self, runtime.snapshotGeneration == generation else {
                     return

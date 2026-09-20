@@ -2,6 +2,7 @@ import WebKit
 
 extension BrowserPlatformPage {
     func synchronizePopupPermission(for url: URL? = nil) {
+        guard let webView = webKitView else { return }
         let origin = (url ?? displayURL ?? webView.url)
             .flatMap(BrowserSiteOrigin.init(url:))
         let decision =
