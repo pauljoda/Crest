@@ -1805,6 +1805,7 @@
 		22D12604EF73FE48C6A8A654 /* BrowserSyncContentScopeSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2021E46087B132DD524BEB63 /* BrowserSyncContentScopeSection.swift */; };
 		22D42CAFF6271CD2E37809D1 /* BrowserCredentialImportDestinationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F8B7E515B285E0E19EFE11C /* BrowserCredentialImportDestinationCard.swift */; };
 		22DDB1FF4FFDC0514B3DFAD8 /* TabFaviconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301CE30319EC512F1F19A300 /* TabFaviconView.swift */; };
+		22E8BC560EA81BD506945DAF /* BrowserCloudSyncStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD3423D44B95E90309B23998 /* BrowserCloudSyncStateTests.swift */; };
 		22EA5FB40A1F058DAB974388 /* BrowserSystemSymbolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2996BCB043E4016DE2514C28 /* BrowserSystemSymbolCatalog.swift */; };
 		22EBE9C118A2412B3D7FED7C /* BrowserPlatformPaletteExitCommandModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8667D74C8416C58D68E2375E /* BrowserPlatformPaletteExitCommandModifier.swift */; };
 		22F599AD480C82E395539A99 /* SitePermissionCenter+Production.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25ADA6A75FCD7A51567B5C5E /* SitePermissionCenter+Production.swift */; };
@@ -2627,6 +2628,7 @@
 		32CD568591D936731F293C51 /* MobileOnboardingSpaceCustomizationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FFCF978256243CF51C242F /* MobileOnboardingSpaceCustomizationSheet.swift */; };
 		32CE5252A8F4B116CA71A77C /* BrowserSplitGroupNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A315DFFCE541D2DF2F75A4 /* BrowserSplitGroupNormalizer.swift */; };
 		32CEC78808A7958A2B3DFF6E /* BrowserFolderColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D6E1A769F29703B466021E9 /* BrowserFolderColorPalette.swift */; };
+		32D7022241EEB6E69908780E /* BrowserLaunchEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F7FAEC0BD57B04289BDCDB /* BrowserLaunchEnvironmentTests.swift */; };
 		32D8907C659A538E0A48DBCF /* ButtonStyle+Crest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0485FB849904C2107FA4E15 /* ButtonStyle+Crest.swift */; };
 		32DC9322C6283FBBBB1CB6B5 /* BrowserAdvancedSetupSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B95F68E7B670DE7878A068E9 /* BrowserAdvancedSetupSection.swift */; };
 		32E5E26F2D204D34DD228406 /* BrowserTabDragPreviewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093DF2C9720898A9A8325EBB /* BrowserTabDragPreviewLayout.swift */; };
@@ -12228,6 +12230,7 @@
 		EFD21A5C946E01D99C596687 /* BrowserChromeAnimating.swift in Sources */ = {isa = PBXBuildFile; fileRef = D85AFFCBA92F7FBC5F2481CA /* BrowserChromeAnimating.swift */; };
 		EFD4A44916B5D14EDEE50D05 /* UserActivityScriptMessageProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A66994AC49CBDD2BB53FBF /* UserActivityScriptMessageProxy.swift */; };
 		EFE262F0783F1D48E7D2C075 /* BrowserCloudSyncDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5715118B0791067E4452D40 /* BrowserCloudSyncDiagnostics.swift */; };
+		EFE56A5F00E15E504D182419 /* BrowserCloudRecordCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFECF54C58A9CF65D37CAD4D /* BrowserCloudRecordCodecTests.swift */; };
 		EFE9277133D0CE56493220B3 /* BrowserFolderDragPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11929179D091ABE444FE6F7F /* BrowserFolderDragPreview.swift */; };
 		EFEA89A3D483D6C7605239DB /* BrowserPreviewSessionFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C451F05BE6F8ECB252ECD58 /* BrowserPreviewSessionFactory.swift */; };
 		EFECE7F55EE1C027DCBDD37A /* FaviconFallbackRequestToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10F8D4E37469B0AC6CE1787 /* FaviconFallbackRequestToken.swift */; };
@@ -13786,6 +13789,7 @@
 		4406DDDF8F7EF52AD2A431DB /* BrowserManualSetupSiteEditorMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserManualSetupSiteEditorMetrics.swift; sourceTree = "<group>"; };
 		4416D8CFC4D6462CBBD3F46B /* CrestPlatformLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrestPlatformLayout.swift; sourceTree = "<group>"; };
 		442D565CC84F86ED4E133692 /* BrowserSplitCardPointerMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSplitCardPointerMonitor.swift; sourceTree = "<group>"; };
+		44302003006967123D55108E /* MacCloudReview.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacCloudReview.entitlements; sourceTree = "<group>"; };
 		4454B38875EB329603B7111A /* BrowserLinkSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserLinkSettingsPane.swift; sourceTree = "<group>"; };
 		4459BAF4272A3CC9D91E0CA9 /* BrowserSourceImportTabRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSourceImportTabRow.swift; sourceTree = "<group>"; };
 		447286F13146BF45B0A17437 /* BrowserDefaultBrowserRequestStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserDefaultBrowserRequestStyle.swift; sourceTree = "<group>"; };
@@ -14164,6 +14168,7 @@
 		694D6A8D3DF81F9BFD607E87 /* ChromiumPasswordCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromiumPasswordCrypto.swift; sourceTree = "<group>"; };
 		69540FC478ED792587CF51D6 /* BrowserTabBatchActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabBatchActions.swift; sourceTree = "<group>"; };
 		6971EE3CF7969165CE8D4883 /* BrowserStore+Folders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BrowserStore+Folders.swift"; sourceTree = "<group>"; };
+		69804B00C718769132D9F2ED /* MobileCloudReview.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MobileCloudReview.entitlements; sourceTree = "<group>"; };
 		69A1C00B92A5F7BA1075D056 /* BrowserSidebarReorderRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSidebarReorderRow.swift; sourceTree = "<group>"; };
 		69A75DD5E029371E13E97CCE /* BrowserDownloadRiskAssessment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserDownloadRiskAssessment.swift; sourceTree = "<group>"; };
 		69F3FD9C920291A781F831D7 /* BrowserSpaceAccessPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSpaceAccessPresentation.swift; sourceTree = "<group>"; };
@@ -19706,6 +19711,8 @@
 				B18C880CDB53C6E0949AA84E /* ControlPlaneApp.swift */,
 				653E63FFD559DD6EA40A7187 /* ControlPlaneModel.swift */,
 				DD82D533A02DA2B0BF69E7F9 /* CoreRecordsView.swift */,
+				44302003006967123D55108E /* MacCloudReview.entitlements */,
+				69804B00C718769132D9F2ED /* MobileCloudReview.entitlements */,
 			);
 			path = Composition;
 			sourceTree = "<group>";
@@ -35188,9 +35195,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				5EE082DD7261F21F5CF02DAF /* AddressResolverTests.swift in Sources */,
+				EFE56A5F00E15E504D182419 /* BrowserCloudRecordCodecTests.swift in Sources */,
+				22E8BC560EA81BD506945DAF /* BrowserCloudSyncStateTests.swift in Sources */,
 				141C463CDDB015F7A5A9FBD5 /* BrowserCoreSessionAuthorityTests.swift in Sources */,
 				9571614A28868867343C0FC0 /* BrowserCurrentTabFolderTests.swift in Sources */,
 				7A847ABFD73D4C9F7AD13BD7 /* BrowserDataRetentionTests.swift in Sources */,
+				32D7022241EEB6E69908780E /* BrowserLaunchEnvironmentTests.swift in Sources */,
 				856545233B45EC3AC449CBB1 /* BrowserSessionRecoveryTests.swift in Sources */,
 				D5839D121EA6586A631F46CF /* BrowserSessionTests.swift in Sources */,
 				75DEDEB351BAD973DEAE1793 /* BrowserSplitGroupSessionTests.swift in Sources */,
@@ -38866,15 +38876,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil";
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
-				CODE_SIGN_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(CREST_NATIVE_CORE_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
 				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish";
 				CREST_DEFAULT_UPDATE_CHANNEL = stable;
+				CREST_NATIVE_CORE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
+				CREST_NATIVE_CORE_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CrestMac/Configuration/Crest-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				OTHER_LDFLAGS = "$(inherited) \"$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib\"";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CREST_NATIVE_CORE_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = Crest;
 				PRODUCT_NAME = CrestNativeCore;
 				PROVISIONING_PROFILE_SPECIFIER = "$(CREST_PROVISIONING_PROFILE_SPECIFIER)";
@@ -38975,6 +38987,7 @@
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil";
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = CrestNative/Apple/Composition/MobileCloudReview.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CREST_CORE_FRAMEWORK_DIR = "$(PROJECT_DIR)/CrestCore/artifacts/$(PLATFORM_NAME)";
 				CREST_MOBILE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.mobile-native-core";
@@ -39304,15 +39317,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil";
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
-				CODE_SIGN_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(CREST_NATIVE_CORE_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
 				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish";
 				CREST_DEFAULT_UPDATE_CHANNEL = stable;
+				CREST_NATIVE_CORE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
+				CREST_NATIVE_CORE_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CrestMac/Configuration/Crest-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				OTHER_LDFLAGS = "$(inherited) \"$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib\"";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CREST_NATIVE_CORE_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = Crest;
 				PRODUCT_NAME = CrestNativeCore;
 				PROVISIONING_PROFILE_SPECIFIER = "$(CREST_PROVISIONING_PROFILE_SPECIFIER)";
@@ -39485,6 +39500,7 @@
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil";
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = CrestNative/Apple/Composition/MobileCloudReview.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CREST_CORE_FRAMEWORK_DIR = "$(PROJECT_DIR)/CrestCore/artifacts/$(PLATFORM_NAME)";
 				CREST_MOBILE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.mobile-native-core";

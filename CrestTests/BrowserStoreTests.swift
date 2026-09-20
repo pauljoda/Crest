@@ -158,6 +158,14 @@ final class BrowserStoreTests: XCTestCase {
     }
 
     func testFreshInstallSeedPersistsButNeverStagesBeforeCloudBootstrap() async throws {
+        let review = BrowserStore.isolatedLaunch(launchEnvironment: BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_SESSION": "1", "CREST_ISOLATED_CLOUD_SYNC_ID": "review"],
+            isXCTestRuntime: false))
+        await review.flushPendingSyncPersistence()
+        XCTAssertTrue(review.session.hasDisposableSeedState)
+        let reviewRecords = await review.cloudSyncRecords()
+        XCTAssertTrue(reviewRecords.isEmpty)
+
         let sessionPersistence = InMemoryBrowserSessionPersistence()
         let syncPersistence = InMemoryBrowserSyncJournalPersistence()
         let coordinator = BrowserSyncCoordinator(

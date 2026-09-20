@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Stores the cloud-sync state as a file rather than a `UserDefaults` value.
@@ -45,6 +46,22 @@ final class FileBrowserCloudSyncStatePersistence: BrowserCloudSyncStatePersistin
             fileURL: directory.appendingPathComponent(Self.fileName),
             migrationDefaults: migrationDefaults
         )
+    }
+
+    static func isolated(
+        localProfileID: String,
+        configuration: BrowserCloudSyncConfiguration
+    ) -> FileBrowserCloudSyncStatePersistence? {
+        guard let support = FileManager.default.urls(for: .applicationSupportDirectory,
+            in: .userDomainMask).first else { return nil }
+        let identity = [localProfileID, configuration.containerIdentifier, configuration.zoneName]
+            .joined(separator: "\n")
+        let namespace = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+        let directory = support.appendingPathComponent(ProductIdentity.storageDirectoryName, isDirectory: true)
+            .appendingPathComponent(directoryName, isDirectory: true)
+            .appendingPathComponent("Isolated", isDirectory: true)
+            .appendingPathComponent(namespace, isDirectory: true)
+        return FileBrowserCloudSyncStatePersistence(fileURL: directory.appendingPathComponent(fileName))
     }
 
     init(

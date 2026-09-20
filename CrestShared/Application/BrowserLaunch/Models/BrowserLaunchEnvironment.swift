@@ -3,6 +3,8 @@ import Foundation
 struct BrowserLaunchEnvironment: Equatable, Sendable {
     let explicitlyRequiresIsolation: Bool
     let persistentIsolationID: String?
+    let isolatedCloudSyncID: String?
+    let requestsIsolatedCloudSync: Bool
     let resetsSession: Bool
     let presentsShowcaseSession: Bool
     let usesInMemoryCredentialVault: Bool
@@ -26,6 +28,13 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         explicitlyRequiresIsolation = Self.isEnabled(.isolatedSession, in: values)
         persistentIsolationID = values[Key.persistentIsolationID.rawValue]
             .flatMap(Self.normalizedIsolationID)
+        requestsIsolatedCloudSync = values["CREST_ISOLATED_CLOUD_SYNC_ID"] != nil
+        isolatedCloudSyncID = values["CREST_ISOLATED_CLOUD_SYNC_ID"].flatMap { value in
+            guard (1...48).contains(value.count), value.allSatisfy({
+                $0.isASCII && ($0.isLowercase || $0.isNumber || $0 == "-")
+            }) else { return nil }
+            return value
+        }
         resetsSession = Self.isEnabled(.resetSession, in: values)
         presentsShowcaseSession = Self.isEnabled(.showcaseSession, in: values)
         usesInMemoryCredentialVault = Self.isEnabled(

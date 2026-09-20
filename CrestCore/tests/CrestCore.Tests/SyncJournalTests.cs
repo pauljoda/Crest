@@ -20,6 +20,49 @@ public sealed partial class BrowserContractsTests
     });
 
     [Fact]
+    public void UUIDLetterCaseDoesNotCreateEditsButCaseChangesInTitlesStillDo()
+    {
+        var record = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 1, Guid.NewGuid());
+        var payload = record["payload"]!["value"]!;
+        payload["title"] = "ABCDEFAB-1234-1234-1234-ABCDEFABCDEF";
+        var document = JournalDocument(record);
+        var journal = new NativeSyncJournal(Bytes(document));
+        var desired = record["payload"]!.DeepClone();
+        desired["value"]!["id"]!["rawValue"] = IdForTest(payload["id"]!).ToLowerInvariant();
+        desired["value"]!["spaceID"]!["rawValue"] = IdForTest(payload["spaceID"]!).ToLowerInvariant();
+        byte[] Stage() => JournalCommand(document, "stage", new()
+        {
+            ["payloads"] = new JsonArray(desired.DeepClone()), ["archiveReasons"] = new JsonArray(),
+            ["deletionReason"] = "superseded", ["now"] = 100.0
+        });
+        var unchanged = journal.Apply(Stage());
+        Assert.Equal(1UL, JsonNode.Parse(unchanged.Read())!["logicalClock"]!.GetValue<ulong>());
+        desired["value"]!["title"] = payload["title"]!.GetValue<string>().ToLowerInvariant();
+        Assert.Equal(2UL, JsonNode.Parse(unchanged.Apply(Stage()).Read())!["logicalClock"]!.GetValue<ulong>());
+        static string IdForTest(JsonNode value) => value["rawValue"]!.GetValue<string>();
+    }
+
+    [Fact]
+    public void TimestampEncodingDoesNotCreateEditsButDifferentDateValuesStillDo()
+    {
+        var record = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 1, Guid.NewGuid());
+        record["payload"]!["value"]!["positionModifiedAt"] = JsonNode.Parse("811615335.98");
+        var document = JournalDocument(record);
+        var journal = new NativeSyncJournal(Bytes(document));
+        var desired = record["payload"]!.DeepClone();
+        desired["value"]!["positionModifiedAt"] = JsonNode.Parse("811615335.98000002");
+        byte[] Stage() => JournalCommand(document, "stage", new()
+        {
+            ["payloads"] = new JsonArray(desired.DeepClone()), ["archiveReasons"] = new JsonArray(),
+            ["deletionReason"] = "superseded", ["now"] = 100.0
+        });
+        var unchanged = journal.Apply(Stage());
+        Assert.Equal(1UL, JsonNode.Parse(unchanged.Read())!["logicalClock"]!.GetValue<ulong>());
+        desired["value"]!["positionModifiedAt"] = Math.BitIncrement(811615335.98);
+        Assert.Equal(2UL, JsonNode.Parse(unchanged.Apply(Stage()).Read())!["logicalClock"]!.GetValue<ulong>());
+    }
+
+    [Fact]
     public void SyncOwnerRejectsSupersededPreparationsAndRetainsNewerRevisionDuringStorage()
     {
         var record = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 9, Guid.NewGuid());

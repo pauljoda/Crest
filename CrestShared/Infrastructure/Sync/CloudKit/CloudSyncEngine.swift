@@ -5,7 +5,7 @@ actor BrowserCloudSyncEngine {
     private let database: @Sendable () -> CKDatabase
     private let gateway: any BrowserCloudSyncModelGateway
     private let persistence: any BrowserCloudSyncStatePersisting
-    private let codec = BrowserCloudRecordCodec()
+    private let codec: BrowserCloudRecordCodec
     private let automaticallySync: Bool
     private let statusHandler: (@Sendable (BrowserCloudSyncStatus) async -> Void)?
     private let activityHandler: (@Sendable (BrowserCloudSyncActivity) async -> Void)?
@@ -27,6 +27,7 @@ actor BrowserCloudSyncEngine {
         statusHandler: (@Sendable (BrowserCloudSyncStatus) async -> Void)? = nil,
         activityHandler: (@Sendable (BrowserCloudSyncActivity) async -> Void)? = nil
     ) throws {
+        self.codec = BrowserCloudRecordCodec()
         self.database = database
         self.gateway = gateway
         self.persistence = persistence
@@ -52,6 +53,7 @@ actor BrowserCloudSyncEngine {
         statusHandler: (@Sendable (BrowserCloudSyncStatus) async -> Void)? = nil,
         activityHandler: (@Sendable (BrowserCloudSyncActivity) async -> Void)? = nil
     ) throws {
+        self.codec = BrowserCloudRecordCodec(zoneName: configuration.zoneName)
         self.database = {
             CKContainer(identifier: configuration.containerIdentifier).privateCloudDatabase
         }
@@ -95,7 +97,7 @@ actor BrowserCloudSyncEngine {
         }
         if persistedState.engineStateSerialization == nil {
             syncEngine.state.add(pendingDatabaseChanges: [
-                .saveZone(BrowserCloudRecordCodec.recordZone)
+                .saveZone(codec.recordZone)
             ])
         }
         await enqueueLocalChanges(on: syncEngine)
@@ -127,7 +129,7 @@ actor BrowserCloudSyncEngine {
             if persistedState.requiresFullPull {
                 _ = try await pullFromICloud()
             }
-            try await syncEngine.fetchChanges()
+            try await syncEngine.fetchChanges(.init(scope: .zoneIDs([codec.recordZoneID])))
             guard !isStopped else { throw CancellationError() }
             guard !persistedState.requiresAccountConfirmation else {
                 await updateStatus(.pausedForAccountConfirmation)
@@ -143,7 +145,7 @@ actor BrowserCloudSyncEngine {
                 throw BrowserSyncError.remoteChangeNotApplied("Pull from iCloud to recover an incomplete download.")
             }
             await enqueueLocalChanges(on: syncEngine)
-            try await syncEngine.sendChanges()
+            try await syncEngine.sendChanges(.init(scope: .zoneIDs([codec.recordZoneID])))
             guard !isStopped else { throw CancellationError() }
             if let failure = eventFailureDescription {
                 throw BrowserSyncError.remoteChangeNotApplied(failure)
@@ -163,7 +165,7 @@ actor BrowserCloudSyncEngine {
         defer { isPullingSnapshot = false }
         await updateStatus(.syncing)
         do {
-            let records = try await BrowserCloudSnapshotLoader(database: database())
+            let records = try await BrowserCloudSnapshotLoader(database: database(), codec: codec)
                 .load(requiresCompleteSnapshot: true)
             guard !isStopped, !persistedState.requiresAccountConfirmation else {
                 throw BrowserSyncError.remoteChangeNotApplied("The iCloud account changed during the download.")
@@ -269,6 +271,15 @@ actor BrowserCloudSyncEngine {
         }
     }
 
+    func nextFetchChangesOptions(
+        _ context: CKSyncEngine.FetchChangesContext,
+        syncEngine: CKSyncEngine
+    ) async -> CKSyncEngine.FetchChangesOptions {
+        var options = context.options
+        options.scope = .zoneIDs(context.options.scope.contains(codec.recordZoneID) ? [codec.recordZoneID] : [])
+        return options
+    }
+
     func makeRecordZoneChangeBatch(
         _ context: CKSyncEngine.SendChangesContext,
         syncEngine: CKSyncEngine
@@ -277,7 +288,12 @@ actor BrowserCloudSyncEngine {
             !persistedState.requiresFullPull, !isPullingSnapshot
         else { return nil }
         let changes = syncEngine.state.pendingRecordZoneChanges.filter {
-            context.options.scope.contains($0)
+            switch $0 {
+            case .saveRecord(let id), .deleteRecord(let id):
+                return id.zoneID == codec.recordZoneID && context.options.scope.contains($0)
+            @unknown default:
+                return false
+            }
         }
         let records = await gateway.cloudSyncRecords()
         guard !isStopped, !persistedState.requiresAccountConfirmation,
@@ -318,7 +334,7 @@ actor BrowserCloudSyncEngine {
         guard !isStopped, !persistedState.requiresAccountConfirmation else { return }
         let changes = pendingIDs.map { id in
             CKSyncEngine.PendingRecordZoneChange.saveRecord(
-                CKRecord.ID(recordName: id.recordName, zoneID: BrowserCloudRecordCodec.zoneID)
+                CKRecord.ID(recordName: id.recordName, zoneID: codec.recordZoneID)
             )
         }
         syncEngine.state.add(pendingRecordZoneChanges: changes)
@@ -342,7 +358,7 @@ actor BrowserCloudSyncEngine {
         guard !persistedState.requiresAccountConfirmation else { return }
         var fetchedRecords: [CKRecord] = []
         for modification in event.modifications {
-            guard modification.record.recordID.zoneID == BrowserCloudRecordCodec.zoneID else { continue }
+            guard modification.record.recordID.zoneID == codec.recordZoneID else { continue }
             fetchedRecords.append(modification.record)
             persistedState.systemFields.update(with: modification.record)
         }
@@ -371,7 +387,7 @@ actor BrowserCloudSyncEngine {
         if !event.deletions.isEmpty {
             let localRecords = await gateway.cloudSyncRecords()
             let localNames = Set(localRecords.map { $0.id.recordName })
-            for deletion in event.deletions {
+            for deletion in event.deletions where deletion.recordID.zoneID == codec.recordZoneID {
                 persistedState.systemFields.remove(recordName: deletion.recordID.recordName)
                 if localNames.contains(deletion.recordID.recordName) {
                     syncEngine.state.add(pendingRecordZoneChanges: [
@@ -390,13 +406,13 @@ actor BrowserCloudSyncEngine {
         guard !persistedState.requiresAccountConfirmation else { return }
         guard
             let deletion = event.deletions.first(where: {
-                $0.zoneID == BrowserCloudRecordCodec.zoneID
+                $0.zoneID == codec.recordZoneID
             })
         else { return }
         persistedState.systemFields = BrowserCloudRecordSystemFields()
         if Self.restoresLocalRecords(afterZoneDeletion: deletion.reason) {
             syncEngine.state.add(pendingDatabaseChanges: [
-                .saveZone(BrowserCloudRecordCodec.recordZone)
+                .saveZone(codec.recordZone)
             ])
             await enqueueLocalChanges(on: syncEngine)
         } else {
@@ -468,7 +484,7 @@ actor BrowserCloudSyncEngine {
         syncEngine: CKSyncEngine
     ) async throws {
         var uploaded: [BrowserSyncRecordID: BrowserSyncVersion] = [:]
-        for record in event.savedRecords {
+        for record in event.savedRecords where record.recordID.zoneID == codec.recordZoneID {
             persistedState.systemFields.update(with: record)
             if let decoded = try? codec.decode(record) {
                 uploaded[decoded.id] = decoded.version
@@ -483,6 +499,7 @@ actor BrowserCloudSyncEngine {
 
         for failure in event.failedRecordSaves {
             let recordID = failure.record.recordID
+            guard recordID.zoneID == codec.recordZoneID else { continue }
             switch failure.error.code {
             case .serverRecordChanged:
                 if let serverRecord = failure.error.serverRecord {
@@ -522,7 +539,7 @@ actor BrowserCloudSyncEngine {
             case .zoneNotFound:
                 persistedState.systemFields.remove(recordName: recordID.recordName)
                 syncEngine.state.add(pendingDatabaseChanges: [
-                    .saveZone(BrowserCloudRecordCodec.recordZone)
+                    .saveZone(codec.recordZone)
                 ])
                 syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID)])
             case .unknownItem:

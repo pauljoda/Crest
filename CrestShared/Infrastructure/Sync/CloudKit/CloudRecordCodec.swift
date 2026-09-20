@@ -5,16 +5,21 @@ struct BrowserCloudRecordCodec: Sendable {
     /// Cloud payload compatibility is independent of the local journal format.
     static let currentSchemaVersion = 3
 
-    static let zoneName = "CrestPrivate"
+    static let zoneName = BrowserCloudSyncConfiguration.defaultZoneName
     static let zoneID = CKRecordZone.ID(zoneName: zoneName)
-    static let recordZone = CKRecordZone(zoneID: zoneID)
+    let recordZoneID: CKRecordZone.ID
+    var recordZone: CKRecordZone { CKRecordZone(zoneID: recordZoneID) }
+
+    init(zoneName: String = Self.zoneName) {
+        recordZoneID = CKRecordZone.ID(zoneName: zoneName)
+    }
 
     func encode(
         _ source: BrowserSyncRecord,
         reusing baseRecord: CKRecord? = nil
     ) throws -> CKRecord {
         try source.validate()
-        let recordID = CKRecord.ID(recordName: source.id.recordName, zoneID: Self.zoneID)
+        let recordID = CKRecord.ID(recordName: source.id.recordName, zoneID: recordZoneID)
         let recordType = Self.recordType(for: source.id.kind)
         let record: CKRecord
         if let baseRecord {
@@ -44,7 +49,7 @@ struct BrowserCloudRecordCodec: Sendable {
                     kind: .space,
                     value: source.spaceID.rawValue
                 ).recordName,
-                zoneID: Self.zoneID
+                zoneID: recordZoneID
             )
             record[Field.spaceReference] = CKRecord.Reference(recordID: spaceRecordID, action: .none)
         }
@@ -67,7 +72,7 @@ struct BrowserCloudRecordCodec: Sendable {
     }
 
     func decode(_ record: CKRecord) throws -> BrowserSyncRecord {
-        guard record.recordID.zoneID == Self.zoneID else {
+        guard record.recordID.zoneID == recordZoneID else {
             throw BrowserCloudRecordCodecError.unexpectedZone(record.recordID.zoneID.zoneName)
         }
         guard let kind = Self.kind(for: record.recordType) else {

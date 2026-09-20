@@ -2,7 +2,12 @@ import CloudKit
 
 struct BrowserCloudSnapshotLoader: Sendable {
     let database: CKDatabase
-    private let codec = BrowserCloudRecordCodec()
+    let codec: BrowserCloudRecordCodec
+
+    init(database: CKDatabase, codec: BrowserCloudRecordCodec = BrowserCloudRecordCodec()) {
+        self.database = database
+        self.codec = codec
+    }
 
     /// Reads every record in Crest's zone, one record at a time.
     ///
@@ -16,7 +21,7 @@ struct BrowserCloudSnapshotLoader: Sendable {
         var hasMore = true
         while hasMore {
             let changes = try await database.recordZoneChanges(
-                inZoneWith: BrowserCloudRecordCodec.zoneID,
+                inZoneWith: codec.recordZoneID,
                 since: token,
                 desiredKeys: nil,
                 resultsLimit: nil

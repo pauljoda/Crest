@@ -66,14 +66,31 @@ public static class NativeSyncEvaluator
             tombstone is null ? null : Date(tombstone, "deletedAt"), kind == "tab" && payload is not null ? Date(payload, "lastActivatedAt") : null);
     }
     internal static void ValidateRecord(JsonObject record) => _ = Stamp(record);
-    // Codable omits nil fields. Equivalent records must not acquire new clocks
-    // or pending uploads merely because a merge emitted an explicit JSON null.
-    internal static bool Equivalent(JsonNode? first, JsonNode? second)
+    // Wire identities are UUID values, independent of the writer's letter case.
+    // Keep ordinary strings (including UUID-looking titles) case-sensitive.
+    // Codable also omits nil fields while the core may emit explicit JSON null.
+    internal static bool Equivalent(JsonNode? first, JsonNode? second) => Equivalent(first, second, null);
+    private static bool Equivalent(JsonNode? first, JsonNode? second, string? field)
     {
         if (first is JsonObject a && second is JsonObject b)
-            return a.Select(p => p.Key).Union(b.Select(p => p.Key)).All(key => Equivalent(a[key], b[key]));
+            return a.Select(p => p.Key).Union(b.Select(p => p.Key)).All(key =>
+                Equivalent(a[key], b[key], key == "value" && a["kind"] is not null ? "id" : key));
         if (first is JsonArray x && second is JsonArray y)
-            return x.Count == y.Count && x.Zip(y).All(pair => Equivalent(pair.First, pair.Second));
+            return x.Count == y.Count && x.Zip(y).All(pair => Equivalent(pair.First, pair.Second, field));
+        bool identity = field is "id" or "rawValue" or "profileID" or "spaceID" or "deviceID"
+            or "folderID" or "parentID" or "orderAnchorTabID" or "splitGroupID";
+        if (identity && first is JsonValue av && second is JsonValue bv
+            && av.TryGetValue<string>(out var at) && bv.TryGetValue<string>(out var bt)
+            && Guid.TryParse(at, out var aid) && Guid.TryParse(bt, out var bid)) return aid == bid;
+        // JSONEncoder and JSONSerialization can spell the same binary Date
+        // differently (811615335.98 vs 811615335.98000002). Compare timestamp
+        // values exactly as doubles, without rounding away real edits. Clocks
+        // and other integer fields must retain their full integer precision.
+        bool timestamp = field is "lastActivatedAt" or "positionModifiedAt" or "titleModifiedAt"
+            or "savedTabsExpansionModifiedAt" or "collapseModifiedAt" or "iconModifiedAt" or "tintModifiedAt"
+            or "archivedAt" or "deletedAt" or "firstVisitedAt" or "lastVisitedAt";
+        if (timestamp && first is JsonValue ad && second is JsonValue bd
+            && ad.TryGetValue<double>(out var aDate) && bd.TryGetValue<double>(out var bDate)) return aDate == bDate;
         return JsonNode.DeepEquals(first, second);
     }
     private static TabPlacement Placement(JsonNode payload) => Text(payload, "placement") switch

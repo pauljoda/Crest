@@ -3,6 +3,34 @@ import XCTest
 @testable import Crest
 
 final class BrowserLaunchEnvironmentTests: XCTestCase {
+    func testCloudReviewRequiresExplicitNamedIsolationAndNeverUsesTheProductionZone() throws {
+        let configuration = BrowserCloudSyncConfiguration(containerIdentifier: "iCloud.com.pauldavis.crest")
+        let values = ["CREST_ISOLATED_SESSION": "1", "CREST_ISOLATED_PERSISTENCE_ID": "device-one",
+            "CREST_ISOLATED_CLOUD_SYNC_ID": "shared-review"]
+        let review = try XCTUnwrap(configuration.isolated(for:
+            BrowserLaunchEnvironment(values: values, isXCTestRuntime: false)))
+        XCTAssertEqual(review.zoneName, "CrestReview-shared-review")
+        XCTAssertNotEqual(review.zoneName, configuration.zoneName)
+        for omitted in values.keys {
+            var incomplete = values
+            incomplete[omitted] = nil
+            XCTAssertNil(configuration.isolated(for:
+                BrowserLaunchEnvironment(values: incomplete, isXCTestRuntime: false)))
+        }
+        XCTAssertNil(configuration.isolated(for:
+            BrowserLaunchEnvironment(values: values, isXCTestRuntime: true)))
+        XCTAssertNil(configuration.isolated(for:
+            BrowserLaunchEnvironment(values: values, isXCTestRuntime: false, isSwiftUIPreviewRuntime: true)))
+        for invalid in ["../CrestPrivate", "Shared Review", "", String(repeating: "a", count: 49)] {
+            var malformed = values
+            malformed["CREST_ISOLATED_CLOUD_SYNC_ID"] = invalid
+            XCTAssertNil(configuration.isolated(for:
+                BrowserLaunchEnvironment(values: malformed, isXCTestRuntime: false)))
+            XCTAssertTrue(BrowserLaunchIsolationPolicy.requiresIsolation(
+                BrowserLaunchEnvironment(values: ["CREST_ISOLATED_CLOUD_SYNC_ID": invalid], isXCTestRuntime: false)))
+        }
+    }
+
     func testParsesEveryOwnedLaunchValueWithoutLosingRawFixtureInputs() {
         let environment = BrowserLaunchEnvironment(
             values: [

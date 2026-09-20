@@ -103,8 +103,8 @@ unknown fields supported by the compatibility contract.
 
 The experimental Chromium launch creates an isolated CloudKit controller and
 does not start production sync. Removing that protection is not a sync migration.
-Add an explicitly configured test container or record zone and provisioned app
-identities for live cross-device validation. Keep sample sessions and test
+Live cross-device validation opts into a separate review record zone through
+explicit launch configuration and provisioned app identities. Keep sample sessions and test
 tombstones out of the installed app's journal and cloud records. Simulator builds
 and an idle sync indicator cannot substitute for two-client record convergence.
 
@@ -207,6 +207,10 @@ barrier without waiting for encoding or allowing a later stale snapshot to win.
 Incoming merges bind their journal transaction to the session replacement, so
 both core values publish under the same lock after SQLite commits. Swift retains
 read projections and schedules native background work and storage.
+
+Sync compares UUID fields by identity and timestamps by their exact binary date
+value. Different JSON number spellings from native encoders do not create edits;
+logical clocks retain integer precision and ordinary strings remain case-sensitive.
 
 Preserving unknown record fields through restaging and proving live cross-engine
 CloudKit convergence remain required. An unreadable transactional store currently
@@ -372,7 +376,7 @@ For iOS, publish `CrestCore.Native` for `ios-arm64` or `iossimulator-arm64` with
 `Scripts/control-plane/package-apple-core.py`, then build `CrestMobileNativeCore`
 with `CREST_CORE_FRAMEWORK_DIR` set to the containing directory. The framework's
 platform must match the Xcode destination. This app uses its own bundle identity
-and has no production iCloud or credential entitlements. Simulator execution does
+and requests CloudKit only in provisioned device builds, without the production browser credential entitlement. Simulator execution does
 not replace physical-device validation.
 
 ## Chromium host
@@ -397,7 +401,7 @@ Each Space uses a regular Chromium profile under the explicit experimental
 user-data directory. Crest's native session uses its own isolated defaults suite,
 separate from both production and the WebKit review app. Packaging includes the
 original UI resources and Sparkle dependency; isolated startup disables updates
-and CloudKit. Chromium quit requests run native before-unload and download checks,
+and CloudKit by default. Chromium quit requests run native before-unload and download checks,
 then flush native persistence before disposing pages.
 
 The original private-window composition uses a separate in-memory Chromium
@@ -443,3 +447,28 @@ pinned build workflow.
 The engineering package is design input, not an implemented SDK. Its suggested
 commit, publication, and report-storage workflow does not override repository
 instructions or authorize external actions.
+
+## Isolated CloudKit review
+
+A provisioned review app can opt into real transport with `CREST_ISOLATED_SESSION=1`,
+its own `CREST_ISOLATED_PERSISTENCE_ID`, and `CREST_ISOLATED_CLOUD_SYNC_ID`.
+The cloud ID is a shared lowercase ASCII slug of at most 48 characters. Devices
+with the same cloud ID use `CrestReview-<id>`; each device keeps its own local
+profile ID. Tests, previews, unnamed profiles and malformed cloud IDs cannot opt
+in. The transport scopes fetches, writes, references and deletion handling to
+that zone. Its cursor and server metadata live separately from production,
+partitioned by local profile, container and zone.
+Fresh cloud review profiles use the disposable first-install seed, so an existing
+cloud session replaces their sample Spaces before publication. Restored profiles
+keep their existing identities; equal Space names alone never imply duplication.
+
+Device builds of `CrestMobileNativeCore` request CloudKit without the production
+browser entitlement. For macOS provisioning, build `CrestNativeCore` with
+`CREST_NATIVE_CORE_ENTITLEMENTS=CrestNative/Apple/Composition/MacCloudReview.entitlements`.
+Its `CREST_NATIVE_CORE_BUNDLE_IDENTIFIER` may be set to the Chromium experiment
+identity when obtaining that profile. Automatic development signing must grant
+the review identity access to Crest's container. Chromium packaging accepts the
+resulting profile through `--provisioning-profile`; it validates the identity and
+CloudKit grant, embeds the profile, and preserves Chromium's runtime entitlements.
+The review package uses the Development CloudKit environment. CloudKit access
+does not grant Apple's browser password-helper entitlement.

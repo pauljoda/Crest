@@ -11,6 +11,7 @@ enum BrowserLaunchIsolationPolicy {
         environment.isXCTestRuntime
             || environment.isSwiftUIPreviewRuntime
             || environment.explicitlyRequiresIsolation
+            || environment.requestsIsolatedCloudSync
             || environment.resetsSession
             || environment.presentsShowcaseSession
             || environment.usesInMemoryCredentialVault

@@ -264,6 +264,20 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         XCTAssertEqual(decoded.tombstone?.reason, .explicitDelete)
     }
 
+    func testReviewZonesCannotReadOrReuseProductionRecords() throws {
+        let source = try makeTabRecord()
+        let production = BrowserCloudRecordCodec()
+        let review = BrowserCloudRecordCodec(zoneName: "CrestReview-test")
+        let record = try review.encode(source)
+        XCTAssertEqual(record.recordID.zoneID, review.recordZoneID)
+        XCTAssertEqual((record["space"] as? CKRecord.Reference)?.recordID.zoneID, review.recordZoneID)
+        XCTAssertEqual(try review.decode(record), source)
+        XCTAssertThrowsError(try production.decode(record))
+        let liveRecord = try production.encode(source)
+        XCTAssertThrowsError(try review.decode(liveRecord))
+        XCTAssertThrowsError(try review.encode(source, reusing: liveRecord))
+    }
+
     func testChildRecordCarriesAReferenceToItsOwningSpace() throws {
         let source = try makeTabRecord()
         let cloudRecord = try BrowserCloudRecordCodec().encode(source)

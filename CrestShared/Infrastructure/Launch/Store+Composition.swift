@@ -173,7 +173,8 @@ extension BrowserStore {
     private static func isolatedFixtureSession(
         for launchEnvironment: BrowserLaunchEnvironment
     ) -> BrowserSession {
-        if launchEnvironment.forcesOnboardingWelcome
+        if launchEnvironment.requestsIsolatedCloudSync
+            || launchEnvironment.forcesOnboardingWelcome
             || launchEnvironment.forcesMacOnboardingSetup
             || launchEnvironment.forcesMobileOnboardingSetup
         {

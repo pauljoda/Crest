@@ -26,7 +26,8 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
         let database = database ?? cloudContainer().privateCloudDatabase
         self.database = database
         do {
-            return try await BrowserCloudSnapshotLoader(database: database).load()
+            return try await BrowserCloudSnapshotLoader(database: database,
+                codec: BrowserCloudRecordCodec(zoneName: configuration.zoneName)).load()
         } catch let error as CKError where error.code == .zoneNotFound {
             return []
         }

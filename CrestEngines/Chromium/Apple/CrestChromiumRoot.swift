@@ -26,6 +26,7 @@ final class CrestChromiumRoot: NSObject {
         instance = root
         BrowserMacAppIconPreference.restore()
         root.openWindow(.initial)
+        Task { await root.application.cloudSync.start() }
         root.eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             handleShortcutEvent(event) ? nil : event
         }

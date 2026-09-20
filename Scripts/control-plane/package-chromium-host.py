@@ -5,6 +5,8 @@ from pathlib import Path
 import plistlib
 import shutil
 import subprocess
+import tempfile
+from datetime import datetime, timezone
 
 
 def main():
@@ -12,6 +14,7 @@ def main():
     parser.add_argument("--browser", required=True, type=Path, help="Built Chromium.app with the Crest overlay")
     parser.add_argument("--signing-identity", required=True,
                         help="Stable Apple Development or Developer ID signing identity; ad-hoc is rejected")
+    parser.add_argument("--provisioning-profile", type=Path, help="Development profile granting this isolated app access to Crest CloudKit")
     parser.add_argument("--baseline", action="store_true", help="Package the stock baseline without the Crest host libraries")
     parser.add_argument("--ui", type=Path, help="Built CrestChromiumUI.framework")
     parser.add_argument("--core", type=Path, help="Published CrestCore.Native.dylib")
@@ -34,6 +37,36 @@ def main():
         parser.error("Provide a built Chromium app")
     if not args.baseline and (ui is None or core is None or not (ui / "CrestChromiumUI").is_file() or not core.is_file()):
         parser.error("Provide the linked browser, native UI framework, and NativeAOT library")
+    cloud_entitlements = None
+    if args.provisioning_profile:
+        if args.baseline:
+            parser.error("CloudKit is only supported by the native Crest composition")
+        profile = plistlib.loads(subprocess.check_output(
+            ["security", "cms", "-D", "-i", str(args.provisioning_profile)]))
+        granted = profile.get("Entitlements", {})
+        application_id = granted.get("com.apple.application-identifier", "")
+        team = granted.get("com.apple.developer.team-identifier", "")
+        expected_id = team + ".com.pauldavis.crest.control-plane.chromium"
+        with (repo / "CrestMac/Configuration/Crest-Info.plist").open("rb") as stream:
+            container = plistlib.load(stream)["CrestCloudKitContainerIdentifier"]
+        expiration = profile.get("ExpirationDate")
+        if (not team or application_id != expected_id or not expiration
+                or expiration.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc)
+                or container not in granted.get("com.apple.developer.icloud-container-identifiers", [])
+                or "Development" not in granted.get("com.apple.developer.icloud-container-environment", [])
+                or granted.get("com.apple.developer.aps-environment") != "development"):
+            parser.error("The profile must grant this experiment's app ID development CloudKit and push access")
+        service = granted.get("com.apple.developer.icloud-services", [])
+        if service != "*" and "CloudKit" not in service:
+            parser.error("The provisioning profile does not grant CloudKit")
+        cloud_entitlements = {
+            "com.apple.application-identifier": application_id,
+            "com.apple.developer.team-identifier": team,
+            "com.apple.developer.icloud-container-identifiers": [container],
+            "com.apple.developer.icloud-container-environment": "Development",
+            "com.apple.developer.icloud-services": ["CloudKit"],
+            "com.apple.developer.aps-environment": "development",
+        }
     # APFS clones avoid another complete copy of Chromium's framework while
     # retaining independent files for signing. No input bundle is modified.
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -82,6 +115,8 @@ def main():
         info["CFBundleIconName"] = "Crest"
         info["NSDockTilePlugIn"] = "CrestDockTilePlugin.docktileplugin"
         info["CrestAppIconPreferenceDomain"] = info["CFBundleIdentifier"]
+        with (repo / "CrestMac/Configuration/Crest-Info.plist").open("rb") as stream:
+            info["CrestCloudKitContainerIdentifier"] = plistlib.load(stream)["CrestCloudKitContainerIdentifier"]
     # This experiment must not register as the system HTTP/HTTPS handler.
     info.pop("CFBundleURLTypes", None)
     info.pop("CFBundleDocumentTypes", None)
@@ -91,7 +126,20 @@ def main():
                                       output / "Contents/PlugIns/CrestDockTilePlugin.docktileplugin"]
     targets += sorted((p for p in frameworks.rglob("*.app") if not p.is_symlink()), key=lambda p: len(p.parts), reverse=True)
     targets += sorted((p for p in frameworks.glob("*.framework") if p.name != "CrestChromiumUI.framework"), key=lambda p: len(p.parts), reverse=True)
+    if cloud_entitlements:
+        shutil.copy2(args.provisioning_profile, output / "Contents/embedded.provisionprofile")
     for target in [*targets, output]:
+        if target == output and cloud_entitlements:
+            existing = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(output)],
+                                      capture_output=True, check=True).stdout
+            entitlements = plistlib.loads(existing) if existing.strip() else {}
+            entitlements.update(cloud_entitlements)
+            with tempfile.TemporaryDirectory(prefix="crest-cloud-sign-") as temporary:
+                path = Path(temporary) / "entitlements.plist"
+                path.write_bytes(plistlib.dumps(entitlements))
+                subprocess.run(["codesign", "--force", "--sign", args.signing_identity,
+                                "--preserve-metadata=flags,runtime", "--entitlements", str(path), str(target)], check=True)
+            continue
         subprocess.run(["codesign", "--force", "--sign", args.signing_identity, "--preserve-metadata=entitlements,flags,runtime", str(target)], check=True)
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(output)], check=True)
     mode = "" if args.baseline else "--crest-control-plane and "

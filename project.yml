@@ -229,14 +229,16 @@ targets:
       - sdk: Security.framework
     settings:
       base:
-        CODE_SIGN_ENTITLEMENTS: CrestNative/Apple/Composition/ControlPlane.entitlements
+        CREST_NATIVE_CORE_ENTITLEMENTS: CrestNative/Apple/Composition/ControlPlane.entitlements
+        CODE_SIGN_ENTITLEMENTS: "$(CREST_NATIVE_CORE_ENTITLEMENTS)"
         # Release scripts supply the app profile without provisioning bundled plug-ins.
         PROVISIONING_PROFILE_SPECIFIER: "$(CREST_PROVISIONING_PROFILE_SPECIFIER)"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CrestMac/Configuration/Crest-Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: Crest
         ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil"
-        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core
+        CREST_NATIVE_CORE_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core
+        PRODUCT_BUNDLE_IDENTIFIER: "$(CREST_NATIVE_CORE_BUNDLE_IDENTIFIER)"
         PRODUCT_MODULE_NAME: Crest
         PRODUCT_NAME: CrestNativeCore
         CREST_DEFAULT_UPDATE_CHANNEL: stable
@@ -275,6 +277,9 @@ targets:
       - path: CrestTests/BrowserSplitTabCopyTests.swift
       - path: CrestTests/BrowserStoreTests.swift
       - path: CrestTests/BrowserStoreWorkspaceTests.swift
+      - path: CrestTests/BrowserCloudRecordCodecTests.swift
+      - path: CrestTests/BrowserCloudSyncStateTests.swift
+      - path: CrestTests/BrowserLaunchEnvironmentTests.swift
       - path: CrestTests/BrowserCoreSessionAuthorityTests.swift
       - path: CrestTests/BrowserSyncTests.swift
       - path: CrestTests/SuspendingBrowserSpaceDataDeleter.swift
@@ -389,6 +394,7 @@ targets:
       - sdk: Security.framework
     settings:
       base:
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]": CrestNative/Apple/Composition/MobileCloudReview.entitlements
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CrestMobile/Configuration/CrestMobile-Info.plist
         IPHONEOS_DEPLOYMENT_TARGET: "26.1"

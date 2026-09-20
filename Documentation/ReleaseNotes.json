@@ -1521,6 +1521,10 @@
     "core-owned-sync-publication": {
       "category": "internal",
       "message": "Make the portable session own sync publication and revision ordering, reject stale background snapshots, and publish incoming session and journal changes together."
+    },
+    "isolated-cross-engine-cloud-sync": {
+      "category": "internal",
+      "message": "Enable provisioned desktop and mobile review profiles to share an isolated CloudKit zone, adopt existing cloud Spaces on first launch, and avoid false sync edits from UUID casing or timestamp encoding."
     }
   }
 }
