@@ -33,6 +33,11 @@ final class ChromiumNativePage: BrowserPageEngine {
             isCapturing: values["capturing"] as? Bool == true,
             hasPictureInPicture: values["pictureInPicture"] as? Bool == true)
     }
+    func transferOwnership(to windowID: BrowserWindowID) -> Bool {
+        guard created, !disposed, let host else { return false }
+        return host.preparePage(id, forWindow: windowID.rawValue.uuidString)
+    }
+
     func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {
         guard created, !disposed, let host else { completion(nil); return }
         host.capturePage(id, rect: rect ?? .zero, width: width ?? 0) { image in

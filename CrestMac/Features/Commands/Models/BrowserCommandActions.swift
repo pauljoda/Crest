@@ -153,6 +153,37 @@ struct BrowserCommandActions {
         }
     }
 
+    /// Availability belongs to the same command route used by menus and keys.
+    /// In particular, a disabled split shortcut must leave text selection alone.
+    func canPerform(_ command: BrowserShortcutCommand) -> Bool {
+        if let number = command.tabNumber { return number <= orderedTabs.count }
+        if let number = command.spaceNumber { return number <= browser.session.spaces.count }
+        switch command {
+        case .newBlankWindow: return !browser.isPrivateBrowsing && browser.selectedSpace != nil
+        case .newQuickWindow, .showArchive, .toggleContentBlocking: return browser.selectedSpace != nil
+        case .back: return pages.canGoBack
+        case .forward: return pages.canGoForward
+        case .reloadPage, .reloadFromOrigin: return canReloadSelectedTab
+        case .stopLoading: return pages.isLoading
+        case .toggleSelectedTabPinned: return browser.selectedTab != nil
+        case .duplicateTab: return canDuplicateSelectedTab
+        case .reopenClosedTab: return browser.selectedSpace?.archivedTabs.isEmpty == false
+        case .archiveTab: return canArchiveSelectedTab
+        case .toggleReaderMode: return pages.readerModeState.canToggle
+        case .toggleTranslationToolbar: return pages.hasActivePage && !pages.readerModeState.isActive
+        case .zoomIn, .zoomOut, .actualSize: return pages.hasActivePage && pages.activePage?.developerViewport == nil
+        case .findInPage, .copyPageLink, .copyPageLinkAsMarkdown, .sharePage,
+             .exportPDF, .saveWebArchive, .printPage, .showWebInspector, .toggleDeveloperToolbar:
+            return pages.hasActivePage
+        case .splitWithNextTab: return canSplitWithNextTab
+        case .focusNextSplitCard, .focusPreviousSplitCard, .removeTabFromSplit, .separateSplitTabs:
+            return isSelectedTabInSplit
+        case .moveSplitCardLeft: return canMoveFocusedSplitCard(.left)
+        case .moveSplitCardRight: return canMoveFocusedSplitCard(.right)
+        default: return true
+        }
+    }
+
     private func numberedIndex(
         of command: BrowserShortcutCommand,
         in resolve: (Int) -> BrowserShortcutCommand?
@@ -181,11 +212,13 @@ struct BrowserCommandActions {
         guard !browser.isPrivateBrowsing, let space = browser.selectedSpace, !spaceAccess.isLocked(space) else {
             return
         }
-        openWindow(
-            id: BrowserSceneID.blankWindow.rawValue,
-            value: BrowserMacWindowRequest.temporary(
-                sourceWindowID: targetWindowID,
-                assignment: BrowserSpaceRuntimeAssignment(space: space)))
+        let request = BrowserMacWindowRequest.temporary(
+            sourceWindowID: targetWindowID, assignment: BrowserSpaceRuntimeAssignment(space: space))
+        #if CREST_CHROMIUM_HOST
+        CrestChromiumRoot.openNativeWindow(request)
+        #else
+        openWindow(id: BrowserSceneID.blankWindow.rawValue, value: request)
+        #endif
     }
 
     func openPrivateWindow() {
@@ -198,13 +231,13 @@ struct BrowserCommandActions {
 
     func openQuickWindow() {
         guard let space = browser.selectedSpace else { return }
-        openWindow(
-            id: BrowserSceneID.quickWindow.rawValue,
-            value: BrowserQuickWindowRequest.empty(
-                spaceAssignment: BrowserSpaceRuntimeAssignment(space: space),
-                targetWindowID: targetWindowID
-            )
-        )
+        let request = BrowserQuickWindowRequest.empty(
+            spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID)
+        #if CREST_CHROMIUM_HOST
+        CrestChromiumRoot.openNativeQuickWindow(request)
+        #else
+        openWindow(id: BrowserSceneID.quickWindow.rawValue, value: request)
+        #endif
     }
 
     func closeKeyWindow() {

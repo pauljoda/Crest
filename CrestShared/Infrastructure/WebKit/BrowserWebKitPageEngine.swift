@@ -51,6 +51,9 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
             hasPictureInPicture: false)
     }
     #if os(macOS)
+    // WKWebView travels with the retained page; its lifetime is not owned by an NSWindow.
+    func transferOwnership(to windowID: BrowserWindowID) -> Bool { true }
+
     func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {
         let configuration = WKSnapshotConfiguration()
         configuration.afterScreenUpdates = false

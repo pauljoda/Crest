@@ -69,6 +69,36 @@
    if ([self confirmQuitIfNeeded] == ConfirmQuitResultAborted) {
      return;
    }
+@@ -1123,6 +1127,14 @@
+           gfx::NativeWindow([notify object]));
+   if (!browser)
+     return;
++
++  // Crest owns the application menu and tab organization. Retain Chromium
++  // profile/lifecycle context without attaching Chrome menu bridges.
++  if (crest::IsEnabled()) {
++    _lastActiveBrowser = browser->GetWeakPtr();
++    [self setLastProfile:browser->GetProfile()];
++    return;
++  }
+
+   // Since we may have different windows with different profiles, we clear the
+   // subscription each time a window becomes the main.
+@@ -2197,6 +2209,14 @@
+   if (profile == _lastProfile)
+     return;
+
++  if (crest::IsEnabled()) {
++    // These observers update Chrome menu commands, which Crest replaces.
++    // Keeping the profile itself is still required by Chromium app services.
++    _profilePrefRegistrar.reset();
++    _lastProfile = profile;
++    return;
++  }
++
+   // If _lastProfile becomes null, remember the last state of Cmd+Shift+T so the
+   // command can continue working (or stay disabled). This is primarily meant
+   // for the zero-profile state.
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
 @@ -3448,6 +3448,11 @@

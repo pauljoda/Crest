@@ -50,8 +50,13 @@ The Chromium packager includes Crest's default and alternate icon resources and
 Dock tile plug-in. The native root restores the icon preference at startup. The
 preference uses the experimental app's own domain so the Dock plug-in can read it
 outside the browser process. The outer bundle reports Crest's version while the
-engine framework retains its Chromium version. Remaining identity work includes
-the app menus, external links and normal distribution composition.
+engine framework retains its Chromium version. The Chromium host installs Crest's
+AppKit menus and About identity. Those menus
+and native keyboard events use the existing command actions and persisted shortcut
+assignments. Blank and Quick Windows mount their original native views; Quick
+Window dismissal releases its lease and promotion returns it to its source
+workspace. Unsupported page services remain disabled until their adapter is wired.
+Remaining identity work includes external links and normal distribution composition.
 
 Validate coherent user flows as they are wired into the app. Retain focused tests
 for state, persistence, synchronization, ownership and authorization. Do not make

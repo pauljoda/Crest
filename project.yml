@@ -274,6 +274,7 @@ targets:
       - path: CrestTests/BrowserWebHostViewTests.swift
       - path: CrestTests/BrowserPageNavigationMarkerTests.swift
       - path: CrestTests/BrowserFindSessionTests.swift
+      - path: CrestTests/BrowserShortcutTests.swift
       - path: CrestTests/BrowserCurrentTabFolderTests.swift
       - path: CrestTests/BrowserSplitGroupSessionTests.swift
       - path: CrestTests/BrowserSplitTabCopyTests.swift

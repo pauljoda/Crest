@@ -12,10 +12,35 @@ final class CrestChromiumRoot: NSObject {
     private let host: any CrestChromiumEngineHost
     private let application: BrowserMacApplication
     private var windows: [BrowserWindowID: NSWindow] = [:]
+    private var quickWindows: [UUID: QuickWindow] = [:]
+    private final class QuickWindow {
+        let window: NSWindow
+        let model: BrowserQuickWindowModel
+        let request: QuickRequest
+        init(window: NSWindow, model: BrowserQuickWindowModel, request: QuickRequest) {
+            self.window = window; self.model = model; self.request = request
+        }
+    }
+    private final class QuickRequest {
+        var value: BrowserQuickWindowRequest
+        init(_ value: BrowserQuickWindowRequest) { self.value = value }
+    }
+    private struct QuickWindowTitle: ViewModifier {
+        let model: BrowserQuickWindowModel
+        let request: QuickRequest
+        weak var window: NSWindow?
+
+        func body(content: Content) -> some View {
+            content.onChange(of: model.windowTitle(for: request.value), initial: true) { _, title in
+                window?.title = title
+            }
+        }
+    }
     private var privateWindow: NSWindow?
     private var privateSourceProfile: UUID?
     static var privateSourceProfileID: UUID? { instance?.privateSourceProfile }
     private var eventMonitor: Any?
+    private var browserMenu: CrestChromiumMenu?
     private var quitting = false
     private var hasStopped = false
 
@@ -26,6 +51,13 @@ final class CrestChromiumRoot: NSObject {
         instance = root
         BrowserMacAppIconPreference.restore()
         root.openWindow(.initial)
+        root.browserMenu = CrestChromiumMenu(shortcuts: root.application.shortcuts,
+            actions: { [weak root] in root?.actions },
+            perform: { [weak root] in root?.perform($0) },
+            canPerform: { [weak root] in root?.canPerform($0) == true },
+            applicationAction: { [weak root] in root?.performApplicationAction($0) },
+            canCheckForUpdates: { [weak root] in root?.application.softwareUpdates.isEnabled == true })
+        root.browserMenu?.install()
         Task { await root.application.cloudSync.start() }
         root.eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             handleShortcutEvent(event) ? nil : event
@@ -88,6 +120,54 @@ final class CrestChromiumRoot: NSObject {
     static func openNativeWindow(_ request: BrowserMacWindowRequest) { instance?.openWindow(request) }
 
     static func openPrivateNativeWindow() { instance?.openPrivateWindow() }
+
+    static func openNativeQuickWindow(_ request: BrowserQuickWindowRequest) { instance?.openQuickWindow(request) }
+
+    private func openQuickWindow(_ request: BrowserQuickWindowRequest) {
+        if let existing = quickWindows.values.first(where: { $0.request.value == request }) {
+            existing.window.makeKeyAndOrderFront(nil); return
+        }
+        let resolver = BrowserQuickWindowContextResolver(browser: application.browser,
+            pages: application.pages, pagePoolRegistry: application.pagePoolRegistry)
+        guard let context = resolver.context(for: request),
+            let space = context.browser.space(matching: request.assignment), !application.spaceAccess.isLocked(space) else { return }
+        let current = QuickRequest(request)
+        let model = BrowserQuickWindowModel(request: request, browser: context.browser, pages: context.pages,
+            spaceAccess: application.spaceAccess, supportsLivePagePromotion: context.supportsLivePagePromotion,
+            preferences: .production, requestLifecycle: BrowserQuickWindowRequestLifecycle(
+                isCurrent: { [weak current] in current?.value.hasSamePresentationIdentity(as: $0) == true },
+                replace: { [weak current] expected, revised in
+                    guard let current, current.value.hasSamePresentationIdentity(as: expected) else { return false }
+                    current.value = revised; return true
+                }))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: BrowserQuickWindowLayout.defaultWidth,
+            height: BrowserQuickWindowLayout.defaultHeight),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.identifier = NSUserInterfaceItemIdentifier(request.id.uuidString)
+        window.title = "Quick Window"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isReleasedWhenClosed = false
+        window.isRestorable = false
+        window.tabbingMode = .disallowed
+        window.contentMinSize = NSSize(width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight)
+        quickWindows[request.id] = QuickWindow(window: window, model: model, request: current)
+        window.contentViewController = NSHostingController(rootView: BrowserQuickWindowWindowSurface(
+            model: model, spaceAccess: application.spaceAccess, pagePoolRegistry: application.pagePoolRegistry,
+            dismiss: { [weak window] in window?.performClose(nil) },
+            openBrowserWindow: { [weak self] in
+                guard let self else { return }
+                if !self.application.windowCoordinator.activateExistingWindow(for: context.browser) {
+                    self.openWindow(.normal(sourceWindowID: request.targetWindowID))
+                }
+            }).environment(application.windowTransparency).environment(application.splitFocus)
+            .environment(application.softwareUpdates)
+            .modifier(QuickWindowTitle(model: model, request: current, window: window)))
+        NotificationCenter.default.addObserver(self, selector: #selector(windowClosed(_:)),
+            name: NSWindow.willCloseNotification, object: window)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+    }
 
     private func openPrivateWindow() {
         if let privateWindow { privateWindow.makeKeyAndOrderFront(nil); return }
@@ -155,7 +235,16 @@ final class CrestChromiumRoot: NSObject {
 
     @objc private func windowClosed(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
+        if let id = quickWindows.first(where: { $0.value.window === window })?.key,
+            let quick = quickWindows.removeValue(forKey: id) {
+            quick.model.releaseForDismissal()
+            window.contentViewController = nil
+            host.disposePages([], windows: [id.uuidString], releaseProfiles: [])
+            NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
+            return
+        }
         if window === privateWindow {
+            for quick in Array(quickWindows.values) where quick.model.browser.isPrivateBrowsing { quick.window.close() }
             let profiles = application.privateBrowser.session.spaces.map { $0.profile.id.uuidString }
             application.closePrivateBrowsingWindow()
             host.disposePages([], windows: [application.privatePages.windowID.rawValue.uuidString], releaseProfiles: profiles)
@@ -173,6 +262,9 @@ final class CrestChromiumRoot: NSObject {
     @objc(windowForIdentifier:)
     static func window(for identifier: String?) -> NSWindow? {
         guard let instance else { return nil }
+        if let identifier, let quick = instance.quickWindows.values.first(where: { $0.window.identifier?.rawValue == identifier }) {
+            return quick.window
+        }
         if let identifier, instance.privateWindow?.identifier?.rawValue == identifier { return instance.privateWindow }
         if let identifier { return instance.windows.values.first { $0.identifier?.rawValue == identifier } }
         return instance.windows.values.first
@@ -186,6 +278,7 @@ final class CrestChromiumRoot: NSObject {
             MainActor.assumeIsolated {
                 guard allowed else { instance.quitting = false; return }
                 Task { @MainActor in
+                    for quick in Array(instance.quickWindows.values) { quick.window.close() }
                     for id in Array(instance.windows.keys) {
                         guard let model = instance.application.windowCoordinator.existingModel(for: id) else { continue }
                         await model.browser.flushPendingSyncPersistence()
@@ -203,30 +296,64 @@ final class CrestChromiumRoot: NSObject {
 
     @objc static func handleShortcutEvent(_ event: NSEvent) -> Bool {
         guard let instance, event.type == .keyDown,
-            event.modifierFlags.contains(.command),
-            let key = event.charactersIgnoringModifiers?.lowercased() else { return false }
-        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
-        if modifiers == [.command, .shift], key == "n" { instance.openPrivateWindow(); return true }
-        guard modifiers == .command || (modifiers == [.command, .shift] && key == "+") else { return false }
-        if key == "q" { return deferQuit() }
+            NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil,
+            (NSApp.keyWindow?.firstResponder as? ShortcutRecorderButton)?.isRecording != true,
+            let shortcut = BrowserShortcut(event: event), shortcut.isValid else { return false }
+        if shortcut == BrowserShortcut(key: .character("q"), modifiers: .command) { return deferQuit() }
         guard !instance.quitting else { return true }
-        if key == "n" { instance.openWindow(.normal(sourceWindowID: instance.activeModel?.id)); return true }
-        guard let model = instance.activeContext, let actions = instance.actions else { return false }
-        switch key {
-        case "l": actions.openLocation()
-        case "t": actions.openNewTab()
-        case "w": actions.closeTabOrWindow()
-        case "r": model.pages.reloadOrStop(in: model.browser.session)
-        case "f": model.pages.activePage?.presentFind()
-        case "=", "+": _ = model.pages.activePage?.zoomIn()
-        case "-": _ = model.pages.activePage?.zoomOut()
-        case "0": _ = model.pages.activePage?.resetZoom()
-        case "[": model.pages.goBack()
-        case "]": model.pages.goForward()
-        case ",": model.browser.openSettings(); model.pages.select(session: model.browser.session)
-        default: return false
+        if shortcut == BrowserShortcut(key: .character(","), modifiers: .command) {
+            instance.performApplicationAction(.settings)
+            return true
         }
+        // Inspector, extension popup and system dialog responders are not a
+        // browser workspace. Their editing and close shortcuts stay local.
+        guard instance.activeContext != nil || instance.quickWindows.values.contains(where: { $0.window === NSApp.keyWindow }) else { return false }
+        guard let command = instance.application.shortcuts.command(for: event, isEnabled: instance.canPerform) else { return false }
+        instance.perform(command)
         return true
+    }
+
+    private func canPerform(_ command: BrowserShortcutCommand) -> Bool {
+        guard !quitting, NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil else { return false }
+        switch command {
+        // These page services still need Chromium adapters. Do not send them
+        // to a nonexistent WebKit document or a disconnected SwiftUI scene.
+        case .toggleContentBlocking, .toggleTranslationToolbar,
+             .exportPDF, .saveWebArchive, .printPage: return false
+        case .newWindow, .newPrivateWindow: return true
+        case .closeWindow, .closeTabOrWindow:
+            return actions != nil || quickWindows.values.contains(where: { $0.window === NSApp.keyWindow })
+        default: return actions?.canPerform(command) == true
+        }
+    }
+
+    private func perform(_ command: BrowserShortcutCommand) {
+        guard canPerform(command) else { return }
+        if let actions { actions.perform(command); return }
+        switch command {
+        case .newWindow: openWindow(.normal(sourceWindowID: nil))
+        case .newPrivateWindow: openPrivateWindow()
+        case .closeWindow, .closeTabOrWindow: NSApp.keyWindow?.performClose(nil)
+        default: break
+        }
+    }
+
+    private func performApplicationAction(_ action: CrestChromiumMenu.ApplicationAction) {
+        switch action {
+        case .about:
+            let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+            NSApp.orderFrontStandardAboutPanel(options: [
+                .applicationName: "Crest", .applicationVersion: version,
+                .credits: NSAttributedString(string: "Chromium \(host.engineVersion())"),
+                .applicationIcon: NSApp.applicationIconImage as Any])
+        case .updates: application.softwareUpdates.checkForUpdates()
+        case .settings, .gettingStarted:
+            if activeContext == nil { openWindow(.normal(sourceWindowID: nil)) }
+            guard let context = activeContext else { return }
+            if action == .settings { context.browser.openSettings() }
+            else { context.browser.openGettingStarted() }
+            context.pages.select(session: context.browser.session)
+        }
     }
 
     @objc static func showNativeNotice(_ message: String, icon: String) {

@@ -1,8 +1,38 @@
+import AppKit
 import XCTest
 
 @testable import Crest
 
 final class BrowserShortcutTests: XCTestCase {
+    @MainActor
+    func testNativeDispatchUsesCurrentOverridesAndLeavesDisabledCommandsToTheResponder() throws {
+        let store = BrowserShortcutStore.inMemory()
+        let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+            modifierFlags: [.command, .shift], timestamp: 0, windowNumber: 0, context: nil,
+            characters: "i", charactersIgnoringModifiers: "i", isARepeat: false, keyCode: 34))
+        XCTAssertEqual(store.command(for: event, isEnabled: { _ in true }), .toggleDeveloperToolbar)
+        XCTAssertNil(store.command(for: event, isEnabled: { _ in false }))
+        store.clearShortcut(for: .toggleDeveloperToolbar)
+        XCTAssertNil(store.command(for: event, isEnabled: { _ in true }))
+        XCTAssertEqual(store.assign(BrowserShortcut(key: .character("i"), modifiers: [.command, .shift]), to: .newTab), .assigned)
+        XCTAssertEqual(store.command(for: event, isEnabled: { _ in true }), .newTab)
+    }
+
+    @MainActor
+    func testDefaultZoomAliasNeverOverridesAnExplicitAssignment() throws {
+        let store = BrowserShortcutStore.inMemory()
+        let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+            modifierFlags: [.command], timestamp: 0, windowNumber: 0, context: nil,
+            characters: "=", charactersIgnoringModifiers: "=", isARepeat: false, keyCode: 24))
+        XCTAssertEqual(store.command(for: event, isEnabled: { _ in true }), .zoomIn)
+        XCTAssertEqual(store.assign(BrowserShortcut(key: .character("="), modifiers: .command), to: .newTab), .assigned)
+        XCTAssertEqual(store.command(for: event, isEnabled: { _ in true }), .newTab)
+        XCTAssertNil(store.command(for: event, isEnabled: { $0 != .newTab }))
+        store.clearShortcut(for: .newTab)
+        store.clearShortcut(for: .zoomIn)
+        XCTAssertNil(store.command(for: event, isEnabled: { _ in true }))
+    }
+
     func testDefaultShortcutCatalogContainsNoDuplicateChords() {
         let assignments = Dictionary(grouping: BrowserShortcutCommand.allCases) {
             $0.defaultShortcut

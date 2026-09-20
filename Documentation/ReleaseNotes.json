@@ -1541,6 +1541,10 @@
     "native-engine-page-ownership": {
       "category": "improved",
       "message": "Capture Chromium page content and preserve active media when managing idle tabs, without creating an unused WebKit page."
+    },
+    "crest-native-chromium-commands": {
+      "category": "improved",
+      "message": "Use Crest menus and customized shortcuts with Chromium, including Blank Windows and Quick Windows."
     }
   }
 }

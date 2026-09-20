@@ -1121,6 +1121,9 @@ final class BrowserPagePool:
             page.spaceID == assignment.spaceID,
             page.profileID == assignment.profileID
         else { return false }
+        // Move the renderer before Quick Window dismissal destroys its old
+        // host. SwiftUI attaches the retained native view on a later update.
+        guard page.pageEngine.transferOwnership(to: windowID) else { return false }
         guard lease.relinquishPage() === page else { return false }
         page.opensModifiedLinksInForeground = false
         transientLeases.removeValue(forKey: lease.id)

@@ -21,6 +21,8 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     func stop()
     func mediaActivity() async -> BrowserPageMediaActivity?
     #if os(macOS)
+    /// Transfer ownership before releasing the presenting window.
+    func transferOwnership(to windowID: BrowserWindowID) -> Bool
     func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void)
     #endif
     func setZoom(_ zoom: CGFloat)
