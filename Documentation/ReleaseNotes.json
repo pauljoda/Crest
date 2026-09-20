@@ -1505,6 +1505,10 @@
     "chromium-native-extension-popovers-and-crest-addresses": {
       "category": "improved",
       "message": "Extension popups stay anchored to their toolbar buttons, with balanced toolbar spacing and Crest addresses for internal browser pages."
+    },
+    "portable-sync-projection-and-materialization": {
+      "category": "internal",
+      "message": "Move shared-record projection and incoming session materialization into the portable core while preserving local pages, profile isolation, and delayed folder deliveries."
     }
   }
 }

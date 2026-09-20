@@ -6,6 +6,9 @@ enum BrowserSyncProjection {
         preferences: BrowserSyncPreferences,
         existingRecords: [BrowserSyncRecord]
     ) throws -> [BrowserSyncPayload] {
+        #if CREST_CORE_BACKED
+        return try BrowserCoreSync.project(session, preferences: preferences, records: existingRecords)
+        #else
         var payloads: [BrowserSyncPayload] = []
         let existingTokens = existingOrderTokens(from: existingRecords)
         let spaceRecordIDs = session.spaces.map {
@@ -191,6 +194,7 @@ enum BrowserSyncProjection {
             try payload.validate()
         }
         return payloads
+        #endif
     }
 
     private static func requiredOrderToken(

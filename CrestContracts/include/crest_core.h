@@ -87,9 +87,24 @@ CREST_API crest_status_t CREST_CALL crest_sync_journal_create(
     const uint8_t* input, size_t input_length, uint64_t* out_handle);
 CREST_API crest_status_t CREST_CALL crest_sync_journal_apply(
     uint64_t handle, const uint8_t* input, size_t input_length, uint64_t* out_handle);
+/* On semantic failure, checked apply returns INVALID_MESSAGE and an optional
+ * query-result handle containing the error. Read/release it with sync_query_*. */
+CREST_API crest_status_t CREST_CALL crest_sync_journal_apply_checked(
+    uint64_t handle, const uint8_t* input, size_t input_length,
+    uint64_t* out_handle, uint64_t* out_error_query);
 CREST_API crest_status_t CREST_CALL crest_sync_journal_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_journal_release(uint64_t handle);
+
+/* Prepared sync queries evaluate once and retain immutable JSON results.
+ * Worker-safe, 64 MiB input/output limit; each handle must be released.
+ * Read supports a non-consuming capacity probe. Semantic document errors are
+ * encoded in the result envelope; malformed requests return a status error. */
+CREST_API crest_status_t CREST_CALL crest_sync_query_prepare(
+    const uint8_t* input, size_t input_length, uint64_t* out_handle);
+CREST_API crest_status_t CREST_CALL crest_sync_query_read(
+    uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
+CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
 
 /* Native-UI session authority. All calls are exception-contained. Inputs and
  * checkpoint parts are <= 64 MiB; no native objects, disk I/O or callbacks.

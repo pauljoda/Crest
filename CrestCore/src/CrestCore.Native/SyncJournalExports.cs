@@ -33,6 +33,17 @@ public static unsafe partial class Exports
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_journal_apply", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncJournalApply(ulong handle, byte* input, nuint count, ulong* result)
+        => ApplySyncJournal(handle, input, count, result, null);
+
+    [UnmanagedCallersOnly(EntryPoint = "crest_sync_journal_apply_checked", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SyncJournalApplyChecked(ulong handle, byte* input, nuint count, ulong* result, ulong* errorResult)
+    {
+        if (errorResult == null) return CoreStatus.InvalidArgument;
+        *errorResult = 0;
+        return ApplySyncJournal(handle, input, count, result, errorResult);
+    }
+
+    private static int ApplySyncJournal(ulong handle, byte* input, nuint count, ulong* result, ulong* errorResult)
     {
         if (result == null) return CoreStatus.InvalidArgument;
         *result = 0;
@@ -45,6 +56,15 @@ public static unsafe partial class Exports
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SyncJournals.TryAdd(id, next)) return CoreStatus.InternalError;
             *result = id; return CoreStatus.Ok;
+        }
+        catch (NativeSyncDocumentException error)
+        {
+            if (errorResult != null)
+            {
+                try { *errorResult = RetainSyncQuery(NativeSyncQuery.Failure(error)); }
+                catch { return CoreStatus.InternalError; }
+            }
+            return CoreStatus.InvalidMessage;
         }
         catch (Exception error) { return SyncJournalError(error); }
     }

@@ -64,15 +64,6 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         self = next
     }
 
-    private func validateDesired(_ payloads: [BrowserSyncPayload]) throws {
-        guard payloads.count <= Self.maximumRecordCount else { throw BrowserSyncError.recordLimitExceeded(payloads.count) }
-        var seen: Set<BrowserSyncRecordID> = []
-        for payload in payloads {
-            try payload.validate()
-            guard seen.insert(payload.recordID).inserted else { throw BrowserSyncError.duplicateRecord(payload.recordID.recordName) }
-        }
-    }
-
     private func validateIncoming(_ incoming: [BrowserSyncRecord], checksSpace: Bool) throws {
         guard incoming.count <= Self.maximumRecordCount else { throw BrowserSyncError.recordLimitExceeded(incoming.count) }
         let local = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.spaceID) })
@@ -151,13 +142,8 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         at date: Date = .now
     ) throws {
         #if CREST_CORE_BACKED
-        let payloads = try BrowserSyncProjection.payloads(from: session, preferences: preferences, existingRecords: records)
-        try validateDesired(payloads)
         try applyCore("stage", arguments: [
-            "payloads": try BrowserCoreSync.value(payloads),
-            "archiveReasons": session.spaces.flatMap { $0.archivedTabs }.map {
-                ["id": $0.id.rawValue.uuidString, "reason": $0.reason.rawValue]
-            },
+            "session": try BrowserCoreSync.value(BrowserCoreSessionAuthority.compact(session)),
             "deletionReason": deletionReason.rawValue, "now": date.timeIntervalSinceReferenceDate
         ])
         #else
@@ -292,12 +278,8 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     ) throws {
         #if CREST_CORE_BACKED
         try validateIncoming(remoteRecords, checksSpace: false)
-        let payloads = try BrowserSyncProjection.payloads(from: session, preferences: preferences, existingRecords: records)
-        try validateDesired(payloads)
-        let allIDs = Set(records.map(\.id)).union(remoteRecords.map(\.id)).union(payloads.map(\.recordID))
-        guard allIDs.count <= Self.maximumRecordCount else { throw BrowserSyncError.recordLimitExceeded(allIDs.count) }
         try applyCore("overwrite", arguments: ["records": try BrowserCoreSync.value(remoteRecords),
-            "payloads": try BrowserCoreSync.value(payloads), "now": date.timeIntervalSinceReferenceDate])
+            "session": try BrowserCoreSync.value(BrowserCoreSessionAuthority.compact(session)), "now": date.timeIntervalSinceReferenceDate])
         #else
         var recordsByID = try validatedRecordDictionary()
         var remoteIDs: Set<BrowserSyncRecordID> = []
@@ -408,11 +390,15 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     }
 
     func materializedSession(applyingTo localSession: BrowserSession) throws -> BrowserSession {
+        #if CREST_CORE_BACKED
+        try BrowserCoreSync.materialize(localSession, preferences: preferences, records: records)
+        #else
         try BrowserSyncMaterializer.materialize(
             records: BrowserSyncRecordReconciler.reconciledRecords(records),
             preferences: preferences,
             localSession: localSession
         )
+        #endif
     }
 
     private mutating func nextVersion() throws -> BrowserSyncVersion {

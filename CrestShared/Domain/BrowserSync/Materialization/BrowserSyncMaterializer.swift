@@ -6,6 +6,9 @@ enum BrowserSyncMaterializer {
         preferences: BrowserSyncPreferences,
         localSession: BrowserSession
     ) throws -> BrowserSession {
+        #if CREST_CORE_BACKED
+        return try BrowserCoreSync.materialize(localSession, preferences: preferences, records: records)
+        #else
         let active = records.filter { $0.payload != nil }
         let folderRecordSpaceIDs = Self.folderRecordSpaceIDs(in: records)
         let tombstonedFolderIDs = Set(
@@ -112,6 +115,7 @@ enum BrowserSyncMaterializer {
         result.defaultSpaceID = localSession.defaultSpaceID
         result.repairRuntimeIntegrity()
         return result
+        #endif
     }
 
     /// The Space each folder record belongs to, whether that folder is still

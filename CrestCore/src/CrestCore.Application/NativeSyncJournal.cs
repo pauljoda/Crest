@@ -111,7 +111,10 @@ public sealed class NativeSyncJournal
         if (operation is "stage" or "overwrite")
         {
             var desired = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
-            foreach (var node in args["payloads"]!.AsArray())
+            var session = args["session"] as JsonObject;
+            var payloads = session is null ? args["payloads"]!.AsArray()
+                : NativeSyncProjection.Project(session, fields["preferences"]!, records.Values);
+            foreach (var node in payloads)
             {
                 var payload = node!.AsObject();
                 if (!desired.TryAdd(Name(PayloadId(payload)), payload)) throw new BrowserRuleException("duplicate_sync_record");
@@ -136,7 +139,10 @@ public sealed class NativeSyncJournal
                 // Parent evidence is from the accepted journal before staging.
                 var spaces = records.Values.Where(r => Kind(r) == "space").Select(r => Id(r["spaceID"])).ToHashSet();
                 var folderRecords = records.Values.Where(r => Kind(r) == "folder").ToDictionary(r => Id(r["id"]!["value"]));
-                var archiveReasons = args["archiveReasons"]!.AsArray().ToDictionary(n => Id(n!["id"]), n => n!["reason"]!.GetValue<string>());
+                var archiveReasons = session is null
+                    ? args["archiveReasons"]!.AsArray().ToDictionary(n => Id(n!["id"]), n => n!["reason"]!.GetValue<string>())
+                    : NativeSyncProjection.Items(session, "spaces").SelectMany(s => NativeSyncProjection.Items(s!, "archivedTabs"))
+                        .ToDictionary(a => Id(a!["tab"]!["id"]), a => NativeSyncProjection.ArchiveReason(a!));
                 foreach (var (id, payload) in desired.OrderBy(p => p.Key, StringComparer.Ordinal))
                 {
                     if (next.TryGetValue(id, out var existing) && NativeSyncEvaluator.Equivalent(Payload(existing), payload)) continue;
@@ -187,9 +193,8 @@ public sealed class NativeSyncJournal
         string kind = payload["type"]!.GetValue<string>();
         if (kind is "space" or "folder") return true;
         var value = kind == "archive" ? Value(payload)["tab"]! : Value(payload);
-        static bool Web(JsonNode? url) => url is not null && Uri.TryCreate(url.GetValue<string>(), UriKind.Absolute, out var parsed)
-            && parsed.Scheme is "http" or "https" && parsed.Host.Length > 0;
-        return Web(value["url"]) && (kind == "history" || value["nativeContent"] is null && (value["savedURL"] is null || Web(value["savedURL"])));
+        return kind == "history" ? SyncContentPolicy.Includes(value["url"]?.GetValue<string>())
+            : SyncContentPolicy.IncludesTab(value["url"]?.GetValue<string>(), value["nativeContent"] is not null, value["savedURL"]?.GetValue<string>());
     }
     private static bool AncestryArrived(JsonObject payload, Dictionary<Guid, JsonObject> folders)
     {

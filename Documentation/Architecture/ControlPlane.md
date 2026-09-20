@@ -90,10 +90,11 @@ or revive WebKit extension emulation. Any later extension-list sync needs an
 explicit portable intent model and local permission review; it is not implicit in
 this browser-record migration.
 
-The main sync ownership gap is `BrowserSyncCoordinator.merge`: it currently stages
-the local session, merges records, materializes a Swift session and applies
-retention before submitting that result to the core authority. These rules must
-move together so an accepted session and its pending sync changes cannot diverge.
+The main sync ownership gap is `BrowserSyncCoordinator.merge`: it orders core
+staging, record merging and materialization, then applies native session repair
+and retention before submitting the session to the core authority. These steps
+must become one transaction so an accepted session and its pending sync changes
+cannot diverge.
 Preserve ordering between local edits, incoming batches, durable checkpoints,
 pending uploads and acknowledgements, including crash recovery. Keep explicit
 deletion distinct from absence, retention and superseded records, and preserve
@@ -169,11 +170,20 @@ creates a separate handle and publishes its decoded projection only on success.
 The persistence adapter writes the core-encoded snapshot in the existing format.
 Failed operations leave the original records, clock and pending uploads intact.
 
-Projection from the browser session and materialization back into native records
-still run in Swift. The sync coordinator still orders these operations and saves
-the journal before submitting the materialized session to the session authority.
-Moving those remaining rules and coupling the two accepted states with crash
-recovery is required before enabling cross-engine cloud sync.
+`NativeSyncProjection` maps compact native checkpoints to the existing shared
+record format. Staging projects directly inside the immutable journal transition,
+so projection failures cannot advance its clock. `NativeSyncMaterializer` applies
+reconciled incoming records, preserves device credentials and local-only pages,
+and distinguishes delayed parent folders from tombstoned folders. Domain folder
+resolution holds back incomplete subtrees and rejects cross-Space ancestry.
+Prepared query handles evaluate once and return typed identity-bearing errors.
+Native favicon image bytes stay outside the core and are reattached by the adapter.
+
+General checkpoint repair and retention still run in Swift. The sync coordinator
+still saves the journal before submitting the materialized session to the session
+authority. Coupling those accepted states, migrating the remaining rules, preserving
+unknown record fields through restaging, and adding crash recovery are required
+before enabling cross-engine cloud sync.
 
 Value-only operations still use `crest_core_edit_session`, which receives one
 compact Space and returns an atomic edit.

@@ -207,12 +207,12 @@ final class BrowserCoreSessionAuthority {
     private static func value<T: Encodable>(_ value: T) throws -> Any {
         try JSONSerialization.jsonObject(with: JSONEncoder().encode(value), options: .fragmentsAllowed)
     }
-    private static func compactTab(_ source: BrowserTab) -> BrowserTab { var tab = source; tab.faviconData = nil; return tab }
-    private static func compactArchive(_ source: ArchivedTab) -> ArchivedTab { var entry = source; entry.tab.faviconData = nil; return entry }
+    private nonisolated static func compactTab(_ source: BrowserTab) -> BrowserTab { var tab = source; tab.faviconData = nil; return tab }
+    private nonisolated static func compactArchive(_ source: ArchivedTab) -> ArchivedTab { var entry = source; entry.tab.faviconData = nil; return entry }
     private static func metadata(_ source: BrowserSpace) -> BrowserSpace {
         var space = source; space.tabs = []; space.folders = []; space.history = []; space.archivedTabs = []; return space
     }
-    private static func compact(_ source: BrowserSession) -> BrowserSession {
+    nonisolated static func compact(_ source: BrowserSession) -> BrowserSession {
         var session = source
         for i in session.spaces.indices {
             session.spaces[i].tabs = session.spaces[i].tabs.map(compactTab)

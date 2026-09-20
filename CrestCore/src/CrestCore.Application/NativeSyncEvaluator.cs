@@ -17,7 +17,7 @@ public static class NativeSyncEvaluator
         JsonNode result = request["operation"]!.GetValue<string>() switch
         {
             "resolve" => Resolve(request["first"]!.AsObject(), request["second"]!.AsObject()),
-            "reconcile" => Reconcile(request["records"]!.AsArray()),
+            "reconcile" => Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject())),
             "order.allocate" => new JsonArray(SyncOrderTokens.Allocate(
                 request["tokens"]!.AsArray().Select(n => n?.GetValue<string>()).ToArray())
                 .Select(t => (JsonNode)JsonValue.Create(t)!).ToArray()),
@@ -159,7 +159,7 @@ public static class NativeSyncEvaluator
         }).ToArray());
     }
 
-    private static JsonArray Reconcile(JsonArray records)
+    internal static JsonArray Reconcile(IEnumerable<JsonObject> records)
     {
         var byId = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         foreach (var node in records) { _ = Stamp(node!); byId[Name(node!)] = node!.AsObject(); }

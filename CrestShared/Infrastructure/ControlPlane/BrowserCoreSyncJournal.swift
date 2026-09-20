@@ -37,9 +37,11 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
         ])
         guard data.count <= Self.byteLimit else { throw JournalError.tooLarge }
         var next: UInt64 = 0
+        var errorQuery: UInt64 = 0
         let result = data.withUnsafeBytes {
-            crest_sync_journal_apply(handle, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &next)
+            crest_sync_journal_apply_checked(handle, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &next, &errorQuery)
         }
+        if errorQuery != 0 { let _: Bool = try BrowserCoreSync.readQuery(errorQuery) }
         if result == CREST_INVALID_STATE { throw BrowserSyncError.logicalClockExhausted }
         guard result == CREST_OK else { throw JournalError.rejected(result) }
         return BrowserCoreSyncJournal(handle: next, preferences: preferences)
