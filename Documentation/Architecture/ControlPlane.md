@@ -162,9 +162,18 @@ the last Space. Native profile cleanup and authentication remain platform work.
 
 `crest_core_evaluate_sync` runs wire-compatible conflict resolution and stable
 fractional ordering in the core. Record identity is validated on both sides of
-the boundary. The existing Swift journal, projection and materializer still
-orchestrate these decisions; moving that transaction and its persistence into
-the authority remains required before enabling cross-engine cloud sync.
+the boundary. `NativeSyncJournal` owns immutable journal snapshots: local staging,
+deletion evidence, incoming merges, cloud replacement, logical clocks and upload
+acknowledgements. Swift value copies retain a shared snapshot handle; a mutation
+creates a separate handle and publishes its decoded projection only on success.
+The persistence adapter writes the core-encoded snapshot in the existing format.
+Failed operations leave the original records, clock and pending uploads intact.
+
+Projection from the browser session and materialization back into native records
+still run in Swift. The sync coordinator still orders these operations and saves
+the journal before submitting the materialized session to the session authority.
+Moving those remaining rules and coupling the two accepted states with crash
+recovery is required before enabling cross-engine cloud sync.
 
 Value-only operations still use `crest_core_edit_session`, which receives one
 compact Space and returns an atomic edit.

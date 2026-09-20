@@ -1497,6 +1497,10 @@
     "core-space-commands-sync-rules-crest-branding": {
       "category": "internal",
       "message": "Move Space and folder changes, sync conflicts, and stable ordering into the portable core, and restore Crest icon customization in the Chromium host."
+    },
+    "portable-sync-journal-transactions": {
+      "category": "internal",
+      "message": "Move sync journal staging, deletion evidence, merges, and upload acknowledgements into immutable portable core snapshots."
     }
   }
 }

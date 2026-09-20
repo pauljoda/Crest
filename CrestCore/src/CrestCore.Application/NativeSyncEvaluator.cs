@@ -65,6 +65,17 @@ public static class NativeSyncEvaluator
         return new(kind, recordId, spaceId, Version(record), reason,
             tombstone is null ? null : Date(tombstone, "deletedAt"), kind == "tab" && payload is not null ? Date(payload, "lastActivatedAt") : null);
     }
+    internal static void ValidateRecord(JsonObject record) => _ = Stamp(record);
+    // Codable omits nil fields. Equivalent records must not acquire new clocks
+    // or pending uploads merely because a merge emitted an explicit JSON null.
+    internal static bool Equivalent(JsonNode? first, JsonNode? second)
+    {
+        if (first is JsonObject a && second is JsonObject b)
+            return a.Select(p => p.Key).Union(b.Select(p => p.Key)).All(key => Equivalent(a[key], b[key]));
+        if (first is JsonArray x && second is JsonArray y)
+            return x.Count == y.Count && x.Zip(y).All(pair => Equivalent(pair.First, pair.Second));
+        return JsonNode.DeepEquals(first, second);
+    }
     private static TabPlacement Placement(JsonNode payload) => Text(payload, "placement") switch
     {
         "pinned" => TabPlacement.Pinned, "saved" => TabPlacement.Saved, "current" => TabPlacement.Current,

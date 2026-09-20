@@ -48,7 +48,7 @@ final class UserDefaultsBrowserSyncJournalPersistence: BrowserSyncJournalPersist
 
     private func decode(_ data: Data) throws -> BrowserSyncJournal {
         do {
-            return try JSONDecoder().decode(BrowserSyncJournal.self, from: data)
+            return try BrowserSyncJournal.decodeSnapshot(data)
         } catch {
             throw BrowserSyncJournalPersistenceError.decodingFailed
         }
@@ -56,9 +56,7 @@ final class UserDefaultsBrowserSyncJournalPersistence: BrowserSyncJournalPersist
 
     func save(_ journal: BrowserSyncJournal) throws {
         do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.sortedKeys]
-            defaults.set(try encoder.encode(journal), forKey: key)
+            defaults.set(try journal.encodedSnapshot(), forKey: key)
         } catch {
             throw BrowserSyncJournalPersistenceError.encodingFailed
         }

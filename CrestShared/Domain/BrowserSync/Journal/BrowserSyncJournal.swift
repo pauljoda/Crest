@@ -8,6 +8,9 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     let deviceID: UUID
     private(set) var logicalClock: UInt64
     var preferences: BrowserSyncPreferences
+    #if CREST_CORE_BACKED
+    private var core: BrowserCoreSyncJournal?
+    #endif
     private(set) var records: [BrowserSyncRecord]
     private(set) var pendingRecordIDs: Set<BrowserSyncRecordID>
 
@@ -22,6 +25,70 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         records = []
         pendingRecordIDs = []
     }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.schemaVersion == rhs.schemaVersion && lhs.deviceID == rhs.deviceID
+            && lhs.logicalClock == rhs.logicalClock && lhs.preferences == rhs.preferences
+            && lhs.records == rhs.records && lhs.pendingRecordIDs == rhs.pendingRecordIDs
+    }
+
+    func encodedSnapshot() throws -> Data {
+        #if CREST_CORE_BACKED
+        if let core {
+            return try core.read(preferences: preferences)
+        }
+        #endif
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try encoder.encode(self)
+    }
+
+    static func decodeSnapshot(_ data: Data) throws -> Self {
+        var journal = try JSONDecoder().decode(Self.self, from: data)
+        #if CREST_CORE_BACKED
+        // Keep additive fields that this Swift version does not understand.
+        journal.core = try BrowserCoreSyncJournal(data: data, preferences: journal.preferences)
+        #endif
+        return journal
+    }
+
+    #if CREST_CORE_BACKED
+    private mutating func applyCore(_ operation: String, arguments: [String: Any]) throws {
+        let owner = try core ?? BrowserCoreSyncJournal(self)
+        let prepared = try owner.applying(operation, preferences: preferences, arguments: arguments)
+        var next = try JSONDecoder().decode(Self.self, from: prepared.read())
+        guard next.deviceID == deviceID, next.schemaVersion == schemaVersion else {
+            throw BrowserSyncError.invalidField("journalIdentity")
+        }
+        next.core = prepared
+        self = next
+    }
+
+    private func validateDesired(_ payloads: [BrowserSyncPayload]) throws {
+        guard payloads.count <= Self.maximumRecordCount else { throw BrowserSyncError.recordLimitExceeded(payloads.count) }
+        var seen: Set<BrowserSyncRecordID> = []
+        for payload in payloads {
+            try payload.validate()
+            guard seen.insert(payload.recordID).inserted else { throw BrowserSyncError.duplicateRecord(payload.recordID.recordName) }
+        }
+    }
+
+    private func validateIncoming(_ incoming: [BrowserSyncRecord], checksSpace: Bool) throws {
+        guard incoming.count <= Self.maximumRecordCount else { throw BrowserSyncError.recordLimitExceeded(incoming.count) }
+        let local = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.spaceID) })
+        var seen: Set<BrowserSyncRecordID> = []
+        for record in incoming {
+            try record.validate()
+            guard seen.insert(record.id).inserted else { throw BrowserSyncError.duplicateRecord(record.id.recordName) }
+            if checksSpace, let space = local[record.id], space != record.spaceID {
+                throw BrowserSyncError.crossSpaceConflict(record.id.recordName)
+            }
+        }
+        if checksSpace, local.keys.count + seen.subtracting(local.keys).count > Self.maximumRecordCount {
+            throw BrowserSyncError.recordLimitExceeded(local.keys.count + seen.subtracting(local.keys).count)
+        }
+    }
+    #endif
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -83,6 +150,17 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         deletionReason: BrowserSyncTombstoneReason = .explicitDelete,
         at date: Date = .now
     ) throws {
+        #if CREST_CORE_BACKED
+        let payloads = try BrowserSyncProjection.payloads(from: session, preferences: preferences, existingRecords: records)
+        try validateDesired(payloads)
+        try applyCore("stage", arguments: [
+            "payloads": try BrowserCoreSync.value(payloads),
+            "archiveReasons": session.spaces.flatMap { $0.archivedTabs }.map {
+                ["id": $0.id.rawValue.uuidString, "reason": $0.reason.rawValue]
+            },
+            "deletionReason": deletionReason.rawValue, "now": date.timeIntervalSinceReferenceDate
+        ])
+        #else
         var byID = try validatedRecordDictionary()
         let knownSpaceIDs = Self.spaceIDs(in: byID)
         let knownFolderIDs = Self.folderIDs(in: byID)
@@ -159,9 +237,14 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         }
 
         records = Array(byID.values).sortedByRecordName()
+        #endif
     }
 
     mutating func merge(_ remoteRecords: [BrowserSyncRecord]) throws {
+        #if CREST_CORE_BACKED
+        try validateIncoming(remoteRecords, checksSpace: true)
+        try applyCore("merge", arguments: ["records": try BrowserCoreSync.value(remoteRecords)])
+        #else
         var byID = try validatedRecordDictionary()
         var incomingIDs: Set<BrowserSyncRecordID> = []
 
@@ -199,6 +282,7 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         }
 
         records = Array(byID.values).sortedByRecordName()
+        #endif
     }
 
     mutating func prepareToOverwriteCloud(
@@ -206,6 +290,15 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         remoteRecords: [BrowserSyncRecord],
         at date: Date = .now
     ) throws {
+        #if CREST_CORE_BACKED
+        try validateIncoming(remoteRecords, checksSpace: false)
+        let payloads = try BrowserSyncProjection.payloads(from: session, preferences: preferences, existingRecords: records)
+        try validateDesired(payloads)
+        let allIDs = Set(records.map(\.id)).union(remoteRecords.map(\.id)).union(payloads.map(\.recordID))
+        guard allIDs.count <= Self.maximumRecordCount else { throw BrowserSyncError.recordLimitExceeded(allIDs.count) }
+        try applyCore("overwrite", arguments: ["records": try BrowserCoreSync.value(remoteRecords),
+            "payloads": try BrowserCoreSync.value(payloads), "now": date.timeIntervalSinceReferenceDate])
+        #else
         var recordsByID = try validatedRecordDictionary()
         var remoteIDs: Set<BrowserSyncRecordID> = []
         for remote in remoteRecords {
@@ -266,9 +359,14 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
 
         records = overwritten
         pendingRecordIDs = pending
+        #endif
     }
 
     mutating func replaceWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
+        #if CREST_CORE_BACKED
+        try validateIncoming(remoteRecords, checksSpace: false)
+        try applyCore("replace", arguments: ["records": try BrowserCoreSync.value(remoteRecords)])
+        #else
         guard remoteRecords.count <= Self.maximumRecordCount else {
             throw BrowserSyncError.recordLimitExceeded(remoteRecords.count)
         }
@@ -284,18 +382,29 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         records = remoteRecords.sortedByRecordName()
         pendingRecordIDs = []
         logicalClock = maximumClock
+        #endif
     }
 
-    mutating func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) {
+    mutating func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) throws {
+        #if CREST_CORE_BACKED
+        try applyCore("acknowledge", arguments: ["acknowledgements": try recordIDs.map { ["id": try BrowserCoreSync.value($0)] }])
+        #else
         pendingRecordIDs.subtract(recordIDs)
+        #endif
     }
 
-    mutating func markUploaded(_ acknowledgedVersions: [BrowserSyncRecordID: BrowserSyncVersion]) {
+    mutating func markUploaded(_ acknowledgedVersions: [BrowserSyncRecordID: BrowserSyncVersion]) throws {
+        #if CREST_CORE_BACKED
+        try applyCore("acknowledge", arguments: ["acknowledgements": try acknowledgedVersions.map {
+            ["id": try BrowserCoreSync.value($0.key), "version": try BrowserCoreSync.value($0.value)]
+        }])
+        #else
         let currentByID = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.version) })
         let exactlyAcknowledged = acknowledgedVersions.compactMap { id, version in
             currentByID[id] == version ? id : nil
         }
         pendingRecordIDs.subtract(exactlyAcknowledged)
+        #endif
     }
 
     func materializedSession(applyingTo localSession: BrowserSession) throws -> BrowserSession {

@@ -161,7 +161,7 @@ final class BrowserSplitTabCopyTests: XCTestCase {
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
         var journal = BrowserSyncJournal(deviceID: UUID())
         try journal.stage(session: store.session)
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         XCTAssertTrue(store.splitTabWithSelectedTab(source.id, matching: assignment))
         let copy = try XCTUnwrap(store.selectedTab)
         XCTAssertEqual(copy.folderID, currentFolder.id)

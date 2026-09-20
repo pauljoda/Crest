@@ -77,6 +77,20 @@ CREST_API crest_status_t CREST_CALL crest_core_evaluate_sync(
     const uint8_t* input_utf8, size_t input_length,
     uint8_t* destination, size_t capacity, size_t* out_length);
 
+/* Immutable sync journal snapshots. Apply creates a new handle without changing
+ * the input. Decode and persist the new snapshot before publishing it. All four
+ * calls are worker-safe; each handle must be released. JSON inputs/outputs are
+ * bounded to 64 MiB. INVALID_STATE from apply means logical clock exhaustion.
+ * Read supports the usual BUFFER_TOO_SMALL size probe and does not consume.
+ */
+CREST_API crest_status_t CREST_CALL crest_sync_journal_create(
+    const uint8_t* input, size_t input_length, uint64_t* out_handle);
+CREST_API crest_status_t CREST_CALL crest_sync_journal_apply(
+    uint64_t handle, const uint8_t* input, size_t input_length, uint64_t* out_handle);
+CREST_API crest_status_t CREST_CALL crest_sync_journal_read(
+    uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
+CREST_API crest_status_t CREST_CALL crest_sync_journal_release(uint64_t handle);
+
 /* Native-UI session authority. All calls are exception-contained. Inputs and
  * checkpoint parts are <= 64 MiB; no native objects, disk I/O or callbacks.
  * Commits require the last accepted revision. Pair commits publish both or

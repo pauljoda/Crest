@@ -172,13 +172,13 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
 
     func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) throws {
         try commit { journal in
-            journal.markUploaded(recordIDs)
+            try journal.markUploaded(recordIDs)
         }
     }
 
     func markUploaded(_ acknowledgedVersions: [BrowserSyncRecordID: BrowserSyncVersion]) throws {
         try commit { journal in
-            journal.markUploaded(acknowledgedVersions)
+            try journal.markUploaded(acknowledgedVersions)
         }
     }
 

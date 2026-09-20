@@ -205,7 +205,7 @@ final class BrowserSyncTests: XCTestCase {
         let session = BrowserSession.preview
         var journal = BrowserSyncJournal(deviceID: fixedUUID(2))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         let clock = journal.logicalClock
 
         try journal.stage(session: session, at: fixedDate(200))
@@ -218,7 +218,7 @@ final class BrowserSyncTests: XCTestCase {
         var session = currentTabSession(count: 4)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(220))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         let before = tabOrderTokens(in: journal)
         let moved = session.spaces[0].tabs.removeLast()
         session.spaces[0].tabs.insert(moved, at: 1)
@@ -248,7 +248,7 @@ final class BrowserSyncTests: XCTestCase {
         var session = currentTabSession(count: 3)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(221))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         let before = tabOrderTokens(in: journal)
         let inserted = BrowserTab(
             id: TabID(rawValue: fixedUUID(722)),
@@ -282,7 +282,7 @@ final class BrowserSyncTests: XCTestCase {
         var session = currentTabSession(count: 2)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(222))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         var observedCompaction = false
 
         for index in 0..<80 {
@@ -302,7 +302,7 @@ final class BrowserSyncTests: XCTestCase {
             observedCompaction =
                 observedCompaction
                 || journal.pendingRecordIDs.count > 1
-            journal.markUploaded(journal.pendingRecordIDs)
+            try journal.markUploaded(journal.pendingRecordIDs)
         }
 
         XCTAssertTrue(observedCompaction)
@@ -328,7 +328,7 @@ final class BrowserSyncTests: XCTestCase {
         var second = BrowserSyncJournal(deviceID: fixedUUID(224))
         try first.stage(session: base, at: fixedDate(100))
         try second.merge(first.records)
-        first.markUploaded(first.pendingRecordIDs)
+        try first.markUploaded(first.pendingRecordIDs)
 
         var firstEdit = base
         let firstMoved = firstEdit.spaces[0].tabs.removeLast()
@@ -544,7 +544,7 @@ final class BrowserSyncTests: XCTestCase {
         var phone = BrowserSyncJournal(deviceID: fixedUUID(213))
         try mac.stage(session: base, at: fixedDate(100))
         try phone.merge(mac.records)
-        mac.markUploaded(mac.pendingRecordIDs)
+        try mac.markUploaded(mac.pendingRecordIDs)
 
         var macEdit = base
         macEdit.spaces[0].branding = BrowserSpaceBranding(
@@ -779,13 +779,13 @@ final class BrowserSyncTests: XCTestCase {
         session.spaces[0].name = "Newer local rename"
         try journal.stage(session: session, at: fixedDate(200))
 
-        journal.markUploaded([spaceRecordID: uploadedVersion])
+        try journal.markUploaded([spaceRecordID: uploadedVersion])
 
         XCTAssertTrue(journal.pendingRecordIDs.contains(spaceRecordID))
         let currentVersion = try XCTUnwrap(
             journal.records.first { $0.id == spaceRecordID }?.version
         )
-        journal.markUploaded([spaceRecordID: currentVersion])
+        try journal.markUploaded([spaceRecordID: currentVersion])
         XCTAssertFalse(journal.pendingRecordIDs.contains(spaceRecordID))
     }
 
@@ -797,7 +797,7 @@ final class BrowserSyncTests: XCTestCase {
         var journal = BrowserSyncJournal(deviceID: fixedUUID(204))
         try journal.stage(session: session, at: fixedDate(100))
         let local = try XCTUnwrap(journal.records.first)
-        journal.markUploaded([local.id: local.version])
+        try journal.markUploaded([local.id: local.version])
         let stale = BrowserSyncRecord(
             id: local.id,
             spaceID: local.spaceID,
@@ -869,7 +869,7 @@ final class BrowserSyncTests: XCTestCase {
         let removedTabID = removedTab.id
         var journal = BrowserSyncJournal(deviceID: fixedUUID(3))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         session.spaces[0].tabs.removeAll { $0.id == removedTabID }
         session.spaces[0].archivedTabs.append(
             ArchivedTab(
@@ -896,7 +896,7 @@ final class BrowserSyncTests: XCTestCase {
         let retainedTabID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(301))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         session.spaces[0].tabs.removeAll { $0.id == retainedTabID }
 
         try journal.stage(
@@ -927,7 +927,7 @@ final class BrowserSyncTests: XCTestCase {
             let protectedTab = try XCTUnwrap(session.selectedSpace?.tabs.first)
             var journal = BrowserSyncJournal(deviceID: fixedUUID(303))
             try journal.stage(session: session, at: fixedDate(100))
-            journal.markUploaded(journal.pendingRecordIDs)
+            try journal.markUploaded(journal.pendingRecordIDs)
             session.spaces[0].tabs.removeAll { $0.id == protectedTab.id }
             session.spaces[0].archivedTabs.append(
                 ArchivedTab(
@@ -966,7 +966,7 @@ final class BrowserSyncTests: XCTestCase {
         session.spaces[0].folders.append(folder)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(302))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
         session.spaces[0].folders.removeAll()
 
         try journal.stage(
@@ -1861,7 +1861,7 @@ final class BrowserSyncTests: XCTestCase {
         ]
         var journal = BrowserSyncJournal(deviceID: fixedUUID(1_180))
         try journal.stage(session: remoteSession, at: fixedDate(600))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
 
         let materialized = try journal.materializedSession(
             applyingTo: oneSpaceSession()
@@ -2241,7 +2241,7 @@ final class BrowserSyncTests: XCTestCase {
         var second = BrowserSyncJournal(deviceID: fixedUUID(31))
         try first.stage(session: base, at: fixedDate(100))
         try second.merge(first.records)
-        first.markUploaded(first.pendingRecordIDs)
+        try first.markUploaded(first.pendingRecordIDs)
 
         var firstEdit = base
         firstEdit.spaces[0].name = "Athena"
@@ -2616,7 +2616,7 @@ final class BrowserSyncTests: XCTestCase {
         cloudSession.spaces[0].name = "Chosen from iCloud"
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(920))
         try cloud.stage(session: cloudSession, at: fixedDate(900))
-        cloud.markUploaded(cloud.pendingRecordIDs)
+        try cloud.markUploaded(cloud.pendingRecordIDs)
 
         let persistence = InMemoryBrowserSyncJournalPersistence()
         let coordinator = BrowserSyncCoordinator(
@@ -2751,7 +2751,7 @@ final class BrowserSyncTests: XCTestCase {
         )
         var journal = BrowserSyncJournal(deviceID: fixedUUID(956))
         try journal.stage(session: session, at: fixedDate(100))
-        journal.markUploaded(journal.pendingRecordIDs)
+        try journal.markUploaded(journal.pendingRecordIDs)
 
         session.spaces.removeAll { $0.id == deletedSpaceID }
         session.selectedSpaceID = retained.spaces[0].id
