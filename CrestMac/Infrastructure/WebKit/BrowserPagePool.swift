@@ -124,7 +124,7 @@ final class BrowserPagePool:
     @ObservationIgnored private let activateHostedNotificationSource: (SpaceID, TabID) -> Void
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
-    @ObservationIgnored private let websiteDataStoreRemover: any BrowserWebsiteDataStoreRemoving
+    @ObservationIgnored private let profileRemover: any BrowserEngineProfileRemoving
     @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     private var memoryPressureCoalescer: BrowserMemoryPressureCoalescer {
@@ -167,8 +167,8 @@ final class BrowserPagePool:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
         saveHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialSaver = { _, _ in },
-        websiteDataStoreRemover:
-            any BrowserWebsiteDataStoreRemoving = WebKitBrowserWebsiteDataStoreRemover(),
+        profileRemover:
+            any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
         contentRuleListProvider:
             any BrowserContentRuleListProviding = BrowserContentRuleListProvider.shared,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
@@ -212,7 +212,7 @@ final class BrowserPagePool:
         self.popupTabHost = popupTabHost
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
-        self.websiteDataStoreRemover = websiteDataStoreRemover
+        self.profileRemover = profileRemover
         contentBlocking = BrowserContentBlockingController(provider: contentRuleListProvider)
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
@@ -438,7 +438,7 @@ final class BrowserPagePool:
                     username: request.username, password: request.password, protectionSpace: request.protectionSpace,
                     in: spaceID, replacing: request.replacing)
             },
-            websiteDataStoreRemover: websiteDataStoreRemover, contentRuleListProvider: contentRuleListProvider,
+            profileRemover: profileRemover, contentRuleListProvider: contentRuleListProvider,
             popupTabHost: browser.popupTabHost,
             openNewTab: { [weak browser] url in browser?.openNewTab(url: url) },
             openModifiedLink: { [weak browser] url, spaceID, selecting in
@@ -967,11 +967,7 @@ final class BrowserPagePool:
         // of its tabs goes with it: nothing may outlive the profile it describes.
         tabState.removeStates(profileID: space.profile.id)
         serverTrustOverrides.removeApprovals(for: space.profile.id)
-        if !usesEphemeralWebsiteDataStores {
-            try await websiteDataStoreRemover.removePersistentDataStore(
-                for: space.profile
-            )
-        }
+        try await profileRemover.removeProfile(space.profile, ephemeral: usesEphemeralWebsiteDataStores)
         permissionCenter.reset(spaceID: space.id)
     }
 

@@ -30,7 +30,8 @@ final class BrowserMacApplication {
     let startupBehavior: BrowserStartupBehavior
     let presentsInstalledApplicationUI: Bool
 
-    init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil) {
+    init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil,
+        profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover()) {
         #if CREST_CORE_BACKED
         setenv("CREST_ISOLATED_SESSION", "1", 1)
         #if CREST_CHROMIUM_HOST
@@ -150,6 +151,7 @@ final class BrowserMacApplication {
                     replacing: request.replacing
                 )
             },
+            profileRemover: profileRemover,
             tabStateArchive: tabStateArchive,
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in browser.openNewTab(url: url) },
@@ -203,6 +205,7 @@ final class BrowserMacApplication {
             monitorsMemoryPressure: !usesIsolatedLaunch,
             browsingMode: .privateBrowsing,
             permissionCenter: BrowserSitePermissionCenter(),
+            profileRemover: profileRemover,
             // The private pool answers to the private store, so a popup from a
             // private page can only ever land in a private tab.
             popupTabHost: privateBrowser.popupTabHost,

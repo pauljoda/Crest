@@ -1377,7 +1377,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             permissionCenter: permissionCenter,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
         let origin = BrowserSiteOrigin(
             scheme: "https",
@@ -1440,11 +1440,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let remover = RecordingMobileWebsiteDataStoreRemover()
         let primaryPages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
         let secondaryPages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
         let registry = MobileBrowserPageStoreRegistry(primary: primaryPages)
         registry.register(secondaryPages)
@@ -1477,7 +1477,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let remover = SuspendingMobileWebsiteDataStoreRemover()
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
         let deletedSession = BrowserSession(
             spaces: [deletedSpace],
@@ -2226,15 +2226,13 @@ private final class StopRecordingMobileWebView: WKWebView {
 
 @MainActor
 private final class SuspendingMobileWebsiteDataStoreRemover:
-    BrowserWebsiteDataStoreRemoving
+    BrowserEngineProfileRemoving
 {
     private var startWaiters: [CheckedContinuation<Void, Never>] = []
     private var removalContinuation: CheckedContinuation<Void, Never>?
     private var hasStarted = false
 
-    func removePersistentDataStore(
-        for profile: BrowsingProfile
-    ) async throws {
+    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
         hasStarted = true
         let waiters = startWaiters
         startWaiters.removeAll()
@@ -2261,13 +2259,11 @@ private final class SuspendingMobileWebsiteDataStoreRemover:
 
 @MainActor
 private final class RecordingMobileWebsiteDataStoreRemover:
-    BrowserWebsiteDataStoreRemoving
+    BrowserEngineProfileRemoving
 {
     private(set) var removedProfileIDs: [UUID] = []
 
-    func removePersistentDataStore(
-        for profile: BrowsingProfile
-    ) async throws {
+    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
         removedProfileIDs.append(profile.id)
     }
 }

@@ -42,6 +42,8 @@ final class ChromiumExtensionStore {
     func refresh() {
         revision &+= 1
         guard let host = CrestChromiumRoot.engineHost else { return }
+        let profiles = Set(spaces.map { $0.profile.id })
+        installed = installed.filter { profiles.contains($0.key) }
         for space in spaces where installed[space.profile.id] != nil {
             installed[space.profile.id] = host.extensions(forProfile: space.profile.id.uuidString).map(Installed.init)
         }

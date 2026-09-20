@@ -9,6 +9,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)cancelDownload:(NSString *)downloadID profile:(NSString *)profileID;
 - (void)removeDownload:(NSString *)downloadID profile:(NSString *)profileID;
 - (void)approveDownload:(NSString *)downloadID profile:(NSString *)profileID warning:(NSString *)token;
+- (void)deleteProfile:(NSString *)profileID ephemeral:(BOOL)ephemeral completion:(void (^)(BOOL deleted))completion;
 - (BOOL)createPage:(NSString *)pageID profile:(NSString *)profileID window:(NSString *)windowID
       privateMode:(BOOL)privateMode sourceProfile:(nullable NSString *)sourceProfileID
          observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;

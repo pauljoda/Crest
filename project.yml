@@ -277,6 +277,8 @@ targets:
       - path: CrestTests/BrowserShortcutTests.swift
       - path: CrestTests/BrowserDurableTabCloseTests.swift
       - path: CrestTests/BrowserEngineDownloadTests.swift
+      - path: CrestTests/BrowserWebsiteDataStoreTests.swift
+      - path: CrestTests/BrowserPagePoolTests.swift
       - path: CrestTests/BrowserCurrentTabFolderTests.swift
       - path: CrestTests/BrowserSplitGroupSessionTests.swift
       - path: CrestTests/BrowserSplitTabCopyTests.swift

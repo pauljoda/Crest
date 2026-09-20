@@ -341,13 +341,15 @@ released after their acknowledgments. Native page creation must drain before
 workspace disposal. A stale popup offer is rejected instead of being moved to a
 persistent workspace.
 
-Space deletion saves an intent before disposing native profiles. Dependent
+In the standalone kernel, Space deletion saves an intent before disposing native profiles. Dependent
 workspaces lose access and release their native pages first. Engine cleanup and
 service cleanup have separate correlated acknowledgments; failure retains a
 pending Space that can be retried. Completed tombstones remain in the checkpoint
 and reject stale Space/profile records. WebKit implements deletion for its
-isolated in-memory profiles. Chromium and production credential/sync providers
-must establish their own cleanup contract before advertising deletion support.
+isolated in-memory profiles. The native Chromium cleanup port described below
+is separate from this message-based path. The native app still needs the same
+durable core intent and coordinated service recovery before deletion is complete
+across both integration paths.
 
 The standalone harness uses a small contract-testing UI. Product migration uses
 the original Crest UI in the NativeCore targets. In the harness, native feature tabs
@@ -496,8 +498,22 @@ falls back to the tab's saved URL. Named review launches keep separate archives;
 private and ephemeral sessions do not persist them. Quit captures resident pages
 before flushing writes and disposing the engine.
 
+Space data cleanup uses `BrowserEngineProfileRemoving`, injected alongside the
+page adapter. Page pools release the Space's pages across native windows before
+calling that port. The WebKit implementation removes its identified website data
+store; the Chromium implementation revokes pending pages, popups, private profile
+borrowers and extension observations, then uses Chromium's profile deletion
+service. It waits for browsing-data removal and the durable engine deletion
+marker before returning success. Chromium can finish removing the profile
+directory on its next startup. Completed download files remain on disk.
+
+The native app still needs a durable core deletion intent and restart recovery
+for the whole operation, including credential cleanup and the final Space
+tombstone. The engine's cleanup marker covers its own files; it does not make
+that complete cross-service transition atomic.
+
 There are still migration gaps.
-Other WebKit-specific page tools, profile deletion and extension side panels need
+Other WebKit-specific page tools and extension side panels need
 their Chromium adapters.
 Profile capabilities must describe this actual integration
 before features are advertised as supported.

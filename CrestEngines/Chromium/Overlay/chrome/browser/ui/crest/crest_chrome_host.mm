@@ -11,6 +11,15 @@
 #include "base/check.h"
 #include "base/apple/foundation_util.h"
 #include "base/pickle.h"
+#include "base/functional/callback_helpers.h"
+#include "base/files/file_util.h"
+#include "components/prefs/pref_service.h"
+#include "chrome/browser/browsing_data/chrome_browsing_data_remover_constants.h"
+#include "chrome/browser/profiles/delete_profile_helper.h"
+#include "chrome/browser/profiles/nuke_profile_directory_utils.h"
+#include "chrome/browser/profiles/profile_attributes_storage.h"
+#include "chrome/browser/profiles/profile_attributes_storage_observer.h"
+#include "content/public/browser/browsing_data_remover.h"
 #include "components/favicon/content/content_favicon_driver.h"
 #include "components/favicon/core/favicon_driver_observer.h"
 #include "components/sessions/content/content_serialized_navigation_builder.h"
@@ -238,6 +247,7 @@ struct NativeAdoption {
   std::string profile;
 };
 class ExtensionStateObserver;
+class NativeProfileDeletion;
 struct HostState {
   const base::Time started_at = base::Time::Now();
   std::map<std::string, std::unique_ptr<ExtensionStateObserver>> extension_observers;
@@ -260,7 +270,9 @@ struct HostState {
   std::string creating_window;
   std::map<std::string, Profile*> profiles;
   std::map<std::string, std::unique_ptr<ScopedProfileKeepAlive>> profile_leases;
-  std::set<std::string> creating_pages;
+  std::map<std::string, std::string> creating_pages;
+  std::set<std::string> deleting_profiles;
+  std::map<std::string, std::unique_ptr<NativeProfileDeletion>> profile_deletions;
   std::map<std::string, std::unique_ptr<BrowserOwner>> browsers;
   std::map<std::string, std::unique_ptr<Page>> pages;
   std::map<std::string, NativeAdoption> adoptions;
@@ -269,6 +281,75 @@ struct HostState {
   void (^download_destination)(NSDictionary<NSString*, id>*, void (^)(NSString*));
 };
 HostState& State() { static base::NoDestructor<HostState> state; return *state; }
+
+// Chromium owns the wipe, profile registry and crash-recoverable disk cleanup.
+// Keep the profile alive until the wipe and deletion marker have both completed.
+class NativeProfileDeletion final : public content::BrowsingDataRemover::Observer,
+                                    public ProfileAttributesStorageObserver {
+ public:
+  NativeProfileDeletion(std::string id, base::FilePath path, void (^completion)(BOOL))
+      : id_(std::move(id)), path_(std::move(path)), completion_([completion copy]) {}
+  ~NativeProfileDeletion() override {
+    if (remover_) remover_->RemoveObserver(this);
+    if (observing_storage_) g_browser_process->profile_manager()->GetProfileAttributesStorage().RemoveObserver(this);
+  }
+  void Start(Profile* profile) {
+    if (!profile || State().disposing) { Finish(false); return; }
+    profile_ = profile;
+    keep_alive_ = std::make_unique<ScopedProfileKeepAlive>(profile, ProfileKeepAliveOrigin::kProfileDeletionProcess);
+    if (IsProfileDirectoryMarkedForDeletion(path_)) { Wipe(); return; }
+    auto* manager = g_browser_process->profile_manager();
+    manager->GetProfileAttributesStorage().AddObserver(this);
+    observing_storage_ = true;
+    // This first signs the profile out, preventing data deletion from being
+    // propagated by Chromium Sync, and persists its deletion marker.
+    manager->GetDeleteProfileHelper().MaybeScheduleProfileForDeletion(path_,
+        base::DoNothing(), ProfileMetrics::DELETE_PROFILE_SETTINGS);
+  }
+  void Wipe() {
+    remover_ = profile_->GetBrowsingDataRemover();
+    remover_->AddObserver(this);
+    remover_->RemoveAndReply(base::Time(), base::Time::Max(),
+        chrome_browsing_data_remover::WIPE_PROFILE,
+        chrome_browsing_data_remover::ALL_ORIGIN_TYPES, this);
+  }
+  void OnBrowsingDataRemoverDone(uint64_t failures) override {
+    remover_->RemoveObserver(this);
+    remover_ = nullptr;
+    if (failures || State().disposing) { Finish(false); return; }
+    // Do not report success while the next-launch cleanup marker is only in RAM.
+    g_browser_process->local_state()->CommitPendingWrite(base::BindOnce(
+        &NativeProfileDeletion::Finish, weak_factory_.GetWeakPtr(), true));
+  }
+  void OnProfileWasRemoved(const base::FilePath& path, const std::u16string&) override {
+    if (path != path_) return;
+    g_browser_process->profile_manager()->GetProfileAttributesStorage().RemoveObserver(this);
+    observing_storage_ = false;
+    Wipe();
+  }
+  void Finish(bool success) {
+    if (finished_) return;
+    finished_ = true;
+    auto id = id_;
+    const bool may_retry_creation = !success && !IsProfileDirectoryMarkedForDeletion(path_);
+    void (^reply)(BOOL) = completion_;
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if (may_retry_creation) State().deleting_profiles.erase(id);
+      State().profile_deletions.erase(id);
+      reply(success);
+    });
+  }
+ private:
+  std::string id_;
+  base::FilePath path_;
+  void (^completion_)(BOOL);
+  std::unique_ptr<ScopedProfileKeepAlive> keep_alive_;
+  raw_ptr<Profile> profile_ = nullptr;
+  raw_ptr<content::BrowsingDataRemover> remover_ = nullptr;
+  bool observing_storage_ = false;
+  bool finished_ = false;
+  base::WeakPtrFactory<NativeProfileDeletion> weak_factory_{this};
+};
 
 // Profile-scoped change and icon observation adapted from Mori (MIT).
 class ExtensionStateObserver
@@ -868,19 +949,25 @@ Page* FindPage(NSString* identifier) {
   if (!state.root_profile || state.disposing || state.pages.contains(key) || state.creating_pages.contains(key)) return NO;
   // Reclaim observers only after their WebContents destruction callback returned.
   std::erase_if(state.pages, [](const auto& pair) { return !pair.second->web_contents(); });
-  state.creating_pages.insert(key);
   const std::string profile_id = base::SysNSStringToUTF8(profileID);
+  if (!base::Uuid::ParseCaseInsensitive(profile_id).is_valid() || state.deleting_profiles.contains(profile_id)) return NO;
+  state.creating_pages.emplace(key, profile_id);
   auto* manager = g_browser_process->profile_manager();
   CHECK(manager);
   if (privateMode && !sourceProfileID.length) { state.creating_pages.erase(key); return NO; }
   const std::string source_id = privateMode ? base::SysNSStringToUTF8(sourceProfileID) : profile_id;
+  if (!base::Uuid::ParseCaseInsensitive(source_id).is_valid() || state.deleting_profiles.contains(source_id)) {
+    state.creating_pages.erase(key); return NO;
+  }
   const base::FilePath path = manager->user_data_dir().AppendASCII("Crest-" + source_id);
   manager->CreateProfileAsync(path, base::BindOnce(
-      [](std::string page_id, std::string profile_id, std::string window_id,
+      [](std::string page_id, std::string profile_id, std::string source_id, std::string window_id,
          bool private_mode, Observation observer, Profile* profile) {
         auto& state = State();
         if (!state.creating_pages.erase(page_id)) return;
-        if (!profile || state.disposing) { observer(@"creation_failed", @{}); return; }
+        if (!profile || state.disposing || state.deleting_profiles.contains(profile_id) || state.deleting_profiles.contains(source_id)) {
+          observer(@"creation_failed", @{}); return;
+        }
         if (!state.profiles.contains(profile_id)) {
           // The regular source owns the OTR profile and must outlive it. No
           // private profile path, session checkpoint, or browsing history is created.
@@ -903,7 +990,7 @@ Page* FindPage(NSString* identifier) {
             ui::PAGE_TRANSITION_AUTO_TOPLEVEL, AddTabTypes::ADD_NONE);
         state.pages.emplace(page_id, std::make_unique<Page>(contents, browser, profile_id, observer));
         observer(@"created", @{});
-      }, key, profile_id, base::SysNSStringToUTF8(windowID), static_cast<bool>(privateMode), [observer copy]));
+      }, key, profile_id, source_id, base::SysNSStringToUTF8(windowID), static_cast<bool>(privateMode), [observer copy]));
   return YES;
 }
 - (NSView*)viewForPage:(NSString*)pageID {
@@ -1133,12 +1220,12 @@ Page* FindPage(NSString* identifier) {
 }
 - (void)prepareExtensionProfile:(NSString*)profileID completion:(void (^)(BOOL))completion {
   const auto id = base::SysNSStringToUTF8(profileID);
-  if (!base::Uuid::ParseCaseInsensitive(id).is_valid() || State().disposing) { completion(NO); return; }
+  if (!base::Uuid::ParseCaseInsensitive(id).is_valid() || State().disposing || State().deleting_profiles.contains(id)) { completion(NO); return; }
   if (State().profiles.contains(id)) { completion(!State().profiles[id]->IsOffTheRecord()); return; }
   auto* manager = g_browser_process->profile_manager();
   manager->CreateProfileAsync(manager->user_data_dir().AppendASCII("Crest-" + id), base::BindOnce(
     [](std::string id, void (^done)(BOOL), Profile* profile) {
-      if (!profile || State().disposing) { done(NO); return; }
+      if (!profile || State().disposing || State().deleting_profiles.contains(id)) { done(NO); return; }
       if (!State().profiles.contains(id)) {
         State().profiles[id] = profile;
         State().profile_leases[id] = std::make_unique<ScopedProfileKeepAlive>(profile, ProfileKeepAliveOrigin::kAppWindow);
@@ -1337,6 +1424,54 @@ Page* FindPage(NSString* identifier) {
     state.profile_leases.erase(id);
   }
 }
+- (void)deleteProfile:(NSString*)profileID ephemeral:(BOOL)ephemeral completion:(void (^)(BOOL))completion {
+  CHECK(NSThread.isMainThread);
+  auto& state = State();
+  const std::string id = base::SysNSStringToUTF8(profileID);
+  auto* manager = g_browser_process->profile_manager();
+  if (!manager || state.disposing || !base::Uuid::ParseCaseInsensitive(id).is_valid() || state.profile_deletions.contains(id)) {
+    completion(NO); return;
+  }
+  auto found = state.profiles.find(id);
+  Profile* profile = found == state.profiles.end() ? nullptr : found->second;
+  if (ephemeral && profile && !profile->IsOffTheRecord()) { completion(NO); return; }
+  const base::FilePath path = manager->user_data_dir().AppendASCII("Crest-" + id);
+  if (profile == state.root_profile || (profile && !profile->IsOffTheRecord() && profile->GetPath() != path)) {
+    completion(NO); return;
+  }
+  state.deleting_profiles.insert(id);
+  std::set<std::string> released{id};
+  if (profile && !profile->IsOffTheRecord()) {
+    for (const auto& [key, candidate] : state.profiles)
+      if (candidate->GetOriginalProfile() == profile) released.insert(key);
+  }
+  NSMutableArray<NSString*>* pages = [NSMutableArray array];
+  NSMutableArray<NSString*>* profiles = [NSMutableArray array];
+  for (const auto& key : released) {
+    state.deleting_profiles.insert(key);
+    [profiles addObject:base::SysUTF8ToNSString(key)];
+  }
+  std::erase_if(state.creating_pages, [&](const auto& entry) { return released.contains(entry.second); });
+  for (const auto& [key, page] : state.pages)
+    if (released.contains(page->profile)) [pages addObject:base::SysUTF8ToNSString(key)];
+  // Hold the regular profile while releasing browsers and Crest's runtime leases.
+  auto keep_alive = profile && !profile->IsOffTheRecord() ?
+      std::make_unique<ScopedProfileKeepAlive>(profile, ProfileKeepAliveOrigin::kProfileDeletionProcess) : nullptr;
+  [self disposePages:pages windows:@[] releaseProfiles:profiles];
+  if (state.browser_observation) state.browser_observation(@{ @"deletedProfile": profileID });
+  if (ephemeral) { completion(YES); return; }
+  if (!manager->GetProfileAttributesStorage().GetProfileAttributesWithPath(path) &&
+      !manager->GetProfileByPath(path) && !base::PathExists(path)) { completion(YES); return; }
+  auto deletion = std::make_unique<NativeProfileDeletion>(id, path, completion);
+  auto* pending = deletion.get();
+  state.profile_deletions.emplace(id, std::move(deletion));
+  if (auto* loaded = manager->GetProfileByPath(path)) { pending->Start(loaded); return; }
+  if (IsProfileDirectoryMarkedForDeletion(path)) { pending->Finish(false); return; }
+  manager->CreateProfileAsync(path, base::BindOnce([](std::string id, Profile* loaded) {
+    auto found = State().profile_deletions.find(id);
+    if (found != State().profile_deletions.end()) found->second->Start(loaded);
+  }, id));
+}
 - (void)disposePages {
   CHECK(NSThread.isMainThread);
   auto& state = State();
@@ -1383,7 +1518,7 @@ Page* FindPage(NSString* identifier) {
 - (void)prepareToQuit:(void (^)(BOOL))completion {
   CHECK(NSThread.isMainThread);
   auto& state = State();
-  if (state.quit_preflight || state.close_preflight || state.disposing) { completion(NO); return; }
+  if (state.quit_preflight || state.close_preflight || state.disposing || !state.profile_deletions.empty()) { completion(NO); return; }
   state.quit_preflight = [completion copy];
   ContinueQuitPreparation(++state.quit_generation, true);
 }

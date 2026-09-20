@@ -1488,7 +1488,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let pool = BrowserPagePool(
             usesEphemeralWebsiteDataStores: false,
             permissionCenter: permissionCenter,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
         let origin = BrowserSiteOrigin(
             scheme: "https",
@@ -1523,6 +1523,20 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(remover.removedProfileIDs, [deletedSpace.profile.id])
     }
 
+    func testDeletingAPrivateSpaceStillReleasesItsEngineProfile() async throws {
+        let tab = BrowserTab.startPage()
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let remover = RecordingWebsiteDataStoreRemover()
+        let pool = BrowserPagePool(browsingMode: .privateBrowsing, profileRemover: remover)
+        pool.select(tab: tab, space: space)
+
+        try await pool.deleteData(for: space)
+
+        XCTAssertTrue(pool.retainedTabIDs.isEmpty)
+        XCTAssertEqual(remover.removedProfileIDs, [space.profile.id])
+        XCTAssertEqual(remover.ephemeralRemovals, [true])
+    }
+
     func testDeletingSpaceThroughRegistryReleasesEveryWindowBeforeRemovingSharedDataOnce() async throws {
         let tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
@@ -1535,14 +1549,14 @@ final class BrowserPagePoolTests: XCTestCase {
         let primaryPool = BrowserPagePool(
             runtimeStore: sharedRuntime,
             usesEphemeralWebsiteDataStores: false,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
         let secondaryPool = BrowserPagePool(
             runtimeStore: sharedRuntime,
             usesEphemeralWebsiteDataStores: false,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
-        let temporaryPool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, websiteDataStoreRemover: remover)
+        let temporaryPool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, profileRemover: remover)
         let registry = BrowserPagePoolRegistry(primary: primaryPool)
         registry.register(secondaryPool)
         registry.register(temporaryPool)
@@ -1585,7 +1599,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let remover = SuspendingWebsiteDataStoreRemover()
         let pool = BrowserPagePool(
             usesEphemeralWebsiteDataStores: false,
-            websiteDataStoreRemover: remover
+            profileRemover: remover
         )
         pool.select(tab: tab, space: space)
         XCTAssertNotNil(pool.activePage)
@@ -2529,7 +2543,7 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let pool = BrowserPagePool(
             usesEphemeralWebsiteDataStores: false,
-            websiteDataStoreRemover: RecordingWebsiteDataStoreRemover(),
+            profileRemover: RecordingWebsiteDataStoreRemover(),
             tabStateArchive: archive
         )
 
@@ -3243,28 +3257,26 @@ private final class StubModifiedLinkNavigationAction: WKNavigationAction,
 
 @MainActor
 private final class RecordingWebsiteDataStoreRemover:
-    BrowserWebsiteDataStoreRemoving
+    BrowserEngineProfileRemoving
 {
     private(set) var removedProfileIDs: [UUID] = []
+    private(set) var ephemeralRemovals: [Bool] = []
 
-    func removePersistentDataStore(
-        for profile: BrowsingProfile
-    ) async throws {
+    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
         removedProfileIDs.append(profile.id)
+        ephemeralRemovals.append(ephemeral)
     }
 }
 
 @MainActor
 private final class SuspendingWebsiteDataStoreRemover:
-    BrowserWebsiteDataStoreRemoving
+    BrowserEngineProfileRemoving
 {
     private var startWaiters: [CheckedContinuation<Void, Never>] = []
     private var removalContinuation: CheckedContinuation<Void, Never>?
     private var hasStarted = false
 
-    func removePersistentDataStore(
-        for profile: BrowsingProfile
-    ) async throws {
+    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
         hasStarted = true
         let waiters = startWaiters
         startWaiters.removeAll()

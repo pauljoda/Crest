@@ -4,6 +4,13 @@ import XCTest
 
 @MainActor
 final class BrowserWebsiteDataStoreTests: XCTestCase {
+    func testEphemeralProfileRemovalNeverOpensAPersistentWebKitStore() async throws {
+        let remover = WebKitBrowserWebsiteDataStoreRemover(
+            identifierProvider: { XCTFail("Ephemeral profiles must not query persistent stores"); return [] },
+            removeDataStore: { _ in XCTFail("Ephemeral profiles must not remove persistent stores") })
+        try await remover.removeProfile(BrowsingProfile(), ephemeral: true)
+    }
+
     func testSiteDataMatchingIncludesTheHostAndItsParentRecords() {
         XCTAssertTrue(
             BrowserSiteDataPolicy.matchesDataRecord(

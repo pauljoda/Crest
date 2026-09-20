@@ -1557,6 +1557,10 @@
     "chromium-history-and-site-icons": {
       "category": "improved",
       "message": "Restore Chromium Back and Forward history after restarting Crest and show site icons in tabs."
+    },
+    "chromium-space-profile-cleanup": {
+      "category": "fixed",
+      "message": "Delete Chromium website and extension data with its Space, while keeping other Spaces and downloaded files."
     }
   }
 }

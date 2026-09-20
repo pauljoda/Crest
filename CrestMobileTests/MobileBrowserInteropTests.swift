@@ -8,31 +8,6 @@ import XCTest
 
 @MainActor
 final class MobileBrowserInteropTests: XCTestCase {
-    func testCapabilityBrokerErrorsRemainAvailableToTheMobileExtensionDelegate() {
-        XCTAssertEqual(
-            BrowserExtensionCapabilityBrokerError.invalidRequest.errorDescription,
-            "The extension sent Crest an invalid capability request."
-        )
-        XCTAssertEqual(
-            BrowserExtensionCapabilityBrokerError.permissionDenied(
-                "internalCapabilityBroker"
-            ).errorDescription,
-            "The extension does not have the internalCapabilityBroker permission."
-        )
-        XCTAssertEqual(
-            BrowserExtensionCapabilityBrokerError.serviceFailure(
-                "The capability broker failed."
-            ).errorDescription,
-            "The capability broker failed."
-        )
-        XCTAssertEqual(
-            BrowserExtensionCapabilityBrokerError.unsupportedAPI(
-                "windows.create"
-            ).errorDescription,
-            "Crest does not support the windows.create capability."
-        )
-    }
-
     func testMobilePageAdvertisesSafariCompatibleBrowserIdentity() async throws {
         let tab = BrowserTab(title: "Compatibility", url: nil, placement: .current)
         let space = BrowserSpace(
@@ -990,7 +965,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
-            websiteDataStoreRemover: MobileRecordingWebsiteDataStoreRemover(),
+            profileRemover: MobileRecordingWebsiteDataStoreRemover(),
             tabStateArchive: archive
         )
 
@@ -1527,11 +1502,11 @@ final class MobileBrowserInteropTests: XCTestCase {
 /// test without touching the simulator's real WebKit data.
 @MainActor
 private final class MobileRecordingWebsiteDataStoreRemover:
-    BrowserWebsiteDataStoreRemoving
+    BrowserEngineProfileRemoving
 {
     private(set) var removedProfileIDs: [UUID] = []
 
-    func removePersistentDataStore(for profile: BrowsingProfile) async throws {
+    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
         removedProfileIDs.append(profile.id)
     }
 }

@@ -2,7 +2,7 @@ import Foundation
 import WebKit
 
 @MainActor
-struct WebKitBrowserWebsiteDataStoreRemover: BrowserWebsiteDataStoreRemoving {
+struct WebKitBrowserWebsiteDataStoreRemover: BrowserEngineProfileRemoving {
     typealias IdentifierProvider = @MainActor () async -> [UUID]
     typealias RemoveDataStore = @MainActor (UUID) async throws -> Void
     typealias Sleep = @MainActor (Duration) async throws -> Void
@@ -57,6 +57,11 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserWebsiteDataStoreRemoving {
         self.recordDeferredCleanup = recordDeferredCleanup
         self.completeCleanup = completeCleanup
         self.acceptsClearedStoreFallback = acceptsClearedStoreFallback
+    }
+
+    func removeProfile(_ profile: BrowsingProfile, ephemeral: Bool) async throws {
+        guard !ephemeral else { return }
+        try await removePersistentDataStore(for: profile)
     }
 
     func removePersistentDataStore(for profile: BrowsingProfile) async throws {

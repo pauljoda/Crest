@@ -87,7 +87,7 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
-    @ObservationIgnored private let websiteDataStoreRemover: any BrowserWebsiteDataStoreRemoving
+    @ObservationIgnored private let profileRemover: any BrowserEngineProfileRemoving
     @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
@@ -113,8 +113,8 @@ final class MobileBrowserPageStore:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
         saveHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialSaver = { _, _ in },
-        websiteDataStoreRemover:
-            any BrowserWebsiteDataStoreRemoving = WebKitBrowserWebsiteDataStoreRemover(),
+        profileRemover:
+            any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
         contentRuleListProvider:
             any BrowserContentRuleListProviding = BrowserContentRuleListProvider.shared,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
@@ -143,7 +143,7 @@ final class MobileBrowserPageStore:
         self.permissionCenter = permissionCenter
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
-        self.websiteDataStoreRemover = websiteDataStoreRemover
+        self.profileRemover = profileRemover
         contentBlocking = BrowserContentBlockingController(provider: contentRuleListProvider)
         self.linkDestinationHost = linkDestinationHost
         self.openNewTab = openNewTab
@@ -611,11 +611,7 @@ final class MobileBrowserPageStore:
         // of its tabs goes with it: nothing may outlive the profile it describes.
         tabState.removeStates(profileID: space.profile.id)
         serverTrustOverrides.removeApprovals(for: space.profile.id)
-        if !usesEphemeralWebsiteDataStores {
-            try await websiteDataStoreRemover.removePersistentDataStore(
-                for: space.profile
-            )
-        }
+        try await profileRemover.removeProfile(space.profile, ephemeral: usesEphemeralWebsiteDataStores)
         permissionCenter.reset(spaceID: space.id)
     }
 

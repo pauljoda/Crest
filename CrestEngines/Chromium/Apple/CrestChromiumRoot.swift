@@ -69,7 +69,8 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     private init(host: any CrestChromiumEngineHost) {
         self.host = host
-        application = BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host))
+        application = BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
+            profileRemover: ChromiumProfileRemover(host: host))
         super.init()
         downloads = ChromiumDownloadAdapter(host: host) { [weak self] values, profileID in
             guard let self else { return nil }
@@ -100,6 +101,11 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         host.setBrowserObserver { [weak self] values in
             MainActor.assumeIsolated {
                 let values = ChromiumInternalURL.presentedValues(values)
+                if let profileID = values["deletedProfile"] as? String {
+                    Self.extensions.refresh()
+                    if self?.privateSourceProfile?.uuidString == profileID { self?.privateWindow?.close() }
+                    return
+                }
                 if values["extensionsChanged"] as? Bool == true { Self.extensions.refresh(); return }
                 guard let self, let token = values["adoptionId"] as? String else { return }
                 for id in self.windows.keys {
@@ -113,7 +119,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     static var extensionSpaces: [BrowserSpace] {
         guard let instance else { return [] }
-        return instance.application.browser.session.spaces.filter { !instance.application.spaceAccess.isLocked($0) }
+        return instance.application.browser.session.spaces.filter {
+            !instance.application.browser.deletingSpaceIDs.contains($0.id) && !instance.application.spaceAccess.isLocked($0)
+        }
     }
     static var activeNativeWindow: NSWindow? {
         guard let instance else { return nil }
