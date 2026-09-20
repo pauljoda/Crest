@@ -26,6 +26,8 @@ public sealed class NativePolicyTests
     }
     [Theory]
     [InlineData("chrome://extensions/")]
+    [InlineData("crest://extensions/?id=abcdefghijklmnopabcdefghijklmnop#details")]
+    [InlineData("CREST://version/")]
     [InlineData("chrome-extension://abcdefghijklmnopabcdefghijklmnop/options.html")]
     public void InternalAddressesRequireTheSelectedEngineCapability(string address)
     {

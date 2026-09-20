@@ -68,11 +68,6 @@ struct BrowserPinnedExtensionActionButton: View {
     }
 
     private func performAction() {
-        perform(
-            popupAnchor?.offsetBy(
-                dy: -BrowserPinnedExtensionStripLayoutPolicy.tileSize / 2
-                    - BrowserPinnedExtensionStripLayoutPolicy.popupGap
-            )
-        )
+        perform(popupAnchor)
     }
 }

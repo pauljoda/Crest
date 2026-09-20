@@ -13,6 +13,8 @@ struct BrowserPinnedExtensionStrip: View {
                 BrowserPinnedExtensionStripContent(actions: actions,
                     perform: { action, anchor in page.runExtension(action.id, anchor: anchor) },
                     presentMenu: { action, anchor in store.presentMenu(action, space: space, anchor: anchor) })
+                    .padding(.top, BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
+                        + (space.tabSections.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset))
                     .transition(.opacity)
             }
         }

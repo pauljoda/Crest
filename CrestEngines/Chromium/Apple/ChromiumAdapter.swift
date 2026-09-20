@@ -18,7 +18,7 @@ final class ChromiumAdapter: CorePageRuntime {
     init(host: any CrestChromiumEngineHost) {
         self.host = host
         host.setBrowserObserver { [weak self] values in
-            MainActor.assumeIsolated { self?.send?("engine.adoption_requested", values, nil) }
+            MainActor.assumeIsolated { self?.send?("engine.adoption_requested", ChromiumInternalURL.presentedValues(values), nil) }
         }
     }
     var descriptor: Data {
@@ -116,13 +116,14 @@ final class ChromiumAdapter: CorePageRuntime {
             entry.identity["spaceId"] as? String == spaceID, entry.identity["generation"] as? String == generation
         else { send?("engine.failed", identity, message); return }
         if message.type == "engine.close_page" { pages[pageID]?.close = message }
-        if !host.command(message.type, page: pageID, url: p["url"] as? String) {
+        if !host.command(message.type, page: pageID, url: (p["url"] as? String).map(ChromiumInternalURL.engine)) {
             pages[pageID]?.close = nil
             send?("engine.failed", identity, message)
         }
     }
     private func observe(pageID: String, event: String, values: [String: Any]) {
         guard let entry = pages[pageID] else { return }
+        let values = ChromiumInternalURL.presentedValues(values)
         var payload = entry.identity
         switch event {
         case "created": send?("engine.page_created", payload, entry.creation)

@@ -381,6 +381,14 @@ link to Chromium's advanced manager. CRX verification precedes the native consen
 review, and additional Space installations reuse only the explicitly reviewed
 package and permission identity.
 
+Extension action content is hosted in an AppKit popover anchored to the native
+button view. AppKit handles screen-edge placement and movement; Chromium retains
+the popup renderer and extension lifecycle. Internal browser addresses use
+`crest://` in Crest's session and address controls. The Chromium adapter translates
+them to `chrome://` for navigation and translates observations back, preserving
+paths, queries and fragments. Web URLs and `chrome-extension://` security origins
+are unchanged. Internal navigation remains gated by the engine capability.
+
 There are still migration gaps. The macOS menu bar comes from Chromium, with
 primary keyboard commands routed to Crest. Download transfers work through
 Chromium but have not reached Crest's download ledger. Individual tab/window

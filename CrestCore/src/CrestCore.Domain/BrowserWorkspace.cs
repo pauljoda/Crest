@@ -579,7 +579,7 @@ public sealed partial class BrowserWorkspace(WorkspaceId id, IIdSource ids, IClo
     {
         if (url is null || url.Length > 16384 || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
             || (parsed.Scheme is not ("http" or "https") && url != "about:blank"
-                && !(allowsInternalPages && parsed.Scheme == "chrome" && parsed.Host.Length > 0)
+                && !(allowsInternalPages && parsed.Scheme is "chrome" or "crest" && parsed.Host.Length > 0)
                 && !(allowsInternalPages && parsed.Scheme == "chrome-extension" && parsed.Host.Length == 32
                     && parsed.Host.All(c => c is >= 'a' and <= 'p')))
             || !string.IsNullOrEmpty(parsed.UserInfo))

@@ -92,27 +92,26 @@ using Observation = void (^)(NSString*, NSDictionary<NSString*, id>*);
 class ExtensionPopup final : public extensions::ExtensionView,
                              public extensions::ExtensionHostObserver {
  public:
-  ExtensionPopup(std::unique_ptr<extensions::ExtensionViewHost> host, NSWindow* owner, NSPoint anchor)
-      : host_(std::move(host)), owner_(owner), anchor_(anchor) {
+  ExtensionPopup(std::unique_ptr<extensions::ExtensionViewHost> host, NSView* anchor_view, NSRect anchor_rect)
+      : host_(std::move(host)), anchor_view_(anchor_view), anchor_rect_(anchor_rect) {
     host_->set_view(this);
     host_->AddObserver(this);
     auto weak = weak_factory_.GetWeakPtr();
     host_->SetCloseHandler(base::BindOnce([](base::WeakPtr<ExtensionPopup> popup, extensions::ExtensionHost*) {
       dispatch_async(dispatch_get_main_queue(), ^{ if (popup) popup->Close(); });
     }, weak));
-    panel_ = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 360, 320)
-        styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskFullSizeContentView
-        backing:NSBackingStoreBuffered defer:NO];
-    panel_.titleVisibility = NSWindowTitleHidden;
-    panel_.titlebarAppearsTransparent = YES;
-    panel_.releasedWhenClosed = NO;
-    panel_.floatingPanel = YES;
+    popover_ = [[NSPopover alloc] init];
+    popover_.behavior = NSPopoverBehaviorTransient;
+    NSViewController* controller = [[NSViewController alloc] init];
+    controller.view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 320)];
     NSView* view = host_->host_contents()->GetNativeView().GetNativeNSView();
-    view.frame = panel_.contentView.bounds;
+    view.frame = controller.view.bounds;
     view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [panel_.contentView addSubview:view];
-    resign_observer_ = [[NSNotificationCenter defaultCenter]
-        addObserverForName:NSWindowDidResignKeyNotification object:panel_ queue:NSOperationQueue.mainQueue
+    [controller.view addSubview:view];
+    popover_.contentViewController = controller;
+    popover_.contentSize = controller.view.bounds.size;
+    close_observer_ = [[NSNotificationCenter defaultCenter]
+        addObserverForName:NSPopoverDidCloseNotification object:popover_ queue:NSOperationQueue.mainQueue
         usingBlock:^(NSNotification*) {
           dispatch_async(dispatch_get_main_queue(), ^{ if (weak) weak->Close(); });
         }];
@@ -121,26 +120,26 @@ class ExtensionPopup final : public extensions::ExtensionView,
   ~ExtensionPopup() override { Close(); }
   void Close() {
     weak_factory_.InvalidateWeakPtrs();
-    if (resign_observer_) [[NSNotificationCenter defaultCenter] removeObserver:resign_observer_];
-    resign_observer_ = nil;
-    [owner_ removeChildWindow:panel_];
-    [panel_ orderOut:nil];
-    panel_ = nil;
+    if (close_observer_) [[NSNotificationCenter defaultCenter] removeObserver:close_observer_];
+    close_observer_ = nil;
+    [popover_ close];
+    popover_ = nil;
     if (host_) { host_->RemoveObserver(this); host_.reset(); }
   }
   gfx::NativeView GetNativeView() override { return host_ ? host_->host_contents()->GetNativeView() : gfx::NativeView(); }
   void ResizeDueToAutoResize(content::WebContents*, const gfx::Size& size) override {
-    [panel_ setContentSize:NSMakeSize(std::clamp(size.width(), 25, 800), std::clamp(size.height(), 25, 600))];
-    Position();
+    // AppKit keeps the arrow attached and fits the resized content to the screen.
+    popover_.contentSize = NSMakeSize(std::clamp(size.width(), 25, 800), std::clamp(size.height(), 25, 600));
   }
   void RenderFrameCreated(content::RenderFrameHost* frame) override {
     if (auto* view = frame->GetView()) view->EnableAutoResize(gfx::Size(25, 25), gfx::Size(800, 600));
   }
   bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent&) override { return false; }
   void OnLoaded() override {
-    Position();
-    [owner_ addChildWindow:panel_ ordered:NSWindowAbove];
-    [panel_ makeKeyAndOrderFront:nil];
+    if (!anchor_view_.window) { Close(); return; }
+    [popover_ showRelativeToRect:anchor_rect_ ofView:anchor_view_
+                  preferredEdge:anchor_view_.isFlipped ? NSMaxYEdge : NSMinYEdge];
+    [popover_.contentViewController.view.window makeKeyWindow];
     if (host_) host_->host_contents()->Focus();
   }
   void OnExtensionHostDestroyed(extensions::ExtensionHost* host) override {
@@ -148,18 +147,11 @@ class ExtensionPopup final : public extensions::ExtensionView,
     Close();
   }
  private:
-  void Position() {
-    if (!panel_ || !owner_) return;
-    NSRect screen = owner_.screen.visibleFrame;
-    CGFloat x = std::clamp(anchor_.x, NSMinX(screen), NSMaxX(screen) - NSWidth(panel_.frame));
-    CGFloat y = std::clamp(anchor_.y, NSMinY(screen) + NSHeight(panel_.frame), NSMaxY(screen));
-    [panel_ setFrameTopLeftPoint:NSMakePoint(x, y)];
-  }
   std::unique_ptr<extensions::ExtensionViewHost> host_;
-  NSWindow* __weak owner_;
-  NSPoint anchor_;
-  NSPanel* __strong panel_ = nil;
-  id __strong resign_observer_ = nil;
+  NSView* __weak anchor_view_;
+  NSRect anchor_rect_;
+  NSPopover* __strong popover_ = nil;
+  id __strong close_observer_ = nil;
   base::WeakPtrFactory<ExtensionPopup> weak_factory_{this};
 };
 class NativePermissionPrompt final : public permissions::PermissionPrompt {
@@ -809,10 +801,12 @@ Page* FindPage(NSString* identifier) {
   }
   return result;
 }
-- (BOOL)runExtension:(NSString*)extensionID page:(NSString*)pageID anchor:(NSPoint)anchor {
+- (BOOL)runExtension:(NSString*)extensionID page:(NSString*)pageID
+         anchorView:(NSView*)anchorView anchorRect:(NSRect)anchorRect {
   CHECK(NSThread.isMainThread);
   Page* page = FindPage(pageID);
-  if (!page || !page->web_contents()) return NO;
+  if (!page || !page->web_contents() || !anchorView.window ||
+      anchorView.window != crest::WindowForBrowser(page->browser)) return NO;
   Profile* profile = page->browser->GetProfile();
   const auto id = base::SysNSStringToUTF8(extensionID);
   const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(id);
@@ -831,9 +825,8 @@ Page* FindPage(NSString* identifier) {
   if (!action) return NO;
   auto popup = extensions::ExtensionViewHostFactory::CreatePopupHost(*extension,
       action->GetPopupUrl(sessions::SessionTabHelper::IdForTab(contents).id()), page->browser);
-  NSWindow* window = crest::WindowForBrowser(page->browser);
-  if (!popup || !window) return NO;
-  page->extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), window, anchor);
+  if (!popup) return NO;
+  page->extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), anchorView, anchorRect);
   return YES;
 }
 - (NSString*)engineVersion { return base::SysUTF8ToNSString(version_info::GetVersionNumber()); }

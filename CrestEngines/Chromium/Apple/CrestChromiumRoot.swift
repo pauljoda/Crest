@@ -41,6 +41,7 @@ final class CrestChromiumRoot: NSObject {
         }
         host.setBrowserObserver { [weak self] values in
             MainActor.assumeIsolated {
+                let values = ChromiumInternalURL.presentedValues(values)
                 if values["extensionsChanged"] as? Bool == true { Self.extensions.refresh(); return }
                 guard let self, let token = values["adoptionId"] as? String else { return }
                 for id in self.windows.keys {
@@ -69,7 +70,8 @@ final class CrestChromiumRoot: NSObject {
         // Settings and extension options are core-owned tabs even when no web
         // page is active. Do not fabricate an opener or borrow another Space.
         model.browser.selectSpace(space.id)
-        guard model.browser.openNewTab(url: url, matching: BrowserSpaceRuntimeAssignment(space: space)) != nil else { return false }
+        guard let destination = URL(string: ChromiumInternalURL.presented(url.absoluteString)),
+              model.browser.openNewTab(url: destination, matching: BrowserSpaceRuntimeAssignment(space: space)) != nil else { return false }
         model.pages.select(session: model.browser.session)
         return true
     }

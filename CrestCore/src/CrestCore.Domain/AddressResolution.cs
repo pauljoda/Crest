@@ -8,6 +8,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery)
         if (value.Length == 0) return null;
         if (value.Length > 4096) throw new BrowserRuleException("invalid_address");
         if (value == "about:blank" || value.StartsWith("chrome://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("crest://", StringComparison.OrdinalIgnoreCase)
             || value.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase))
         {
             if (!allowsInternalPages) return new(provider.Search(value), value);

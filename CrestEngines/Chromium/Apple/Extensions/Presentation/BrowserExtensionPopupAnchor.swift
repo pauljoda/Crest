@@ -60,10 +60,19 @@ final class BrowserExtensionPopupAnchor {
     func replacingSourceWindow(
         _ window: NSWindow?
     ) -> BrowserExtensionPopupAnchor {
-        BrowserExtensionPopupAnchor(
+        // A popover can disappear before its action is presented. Capture the
+        // live source location at the click, not its last SwiftUI layout pass.
+        let point: CGPoint
+        if let sourceView, let sourceWindow = sourceView.window {
+            let rect = sourceWindow.convertToScreen(sourceView.convert(sourceView.bounds, to: nil))
+            point = CGPoint(x: rect.midX, y: rect.midY)
+        } else {
+            point = screenPoint
+        }
+        return BrowserExtensionPopupAnchor(
             screenPoint: CGPoint(
-                x: screenPoint.x + fallbackOffset.x,
-                y: screenPoint.y + fallbackOffset.y
+                x: point.x + fallbackOffset.x,
+                y: point.y + fallbackOffset.y
             ),
             sourceWindow: window,
             sourceView: nil,

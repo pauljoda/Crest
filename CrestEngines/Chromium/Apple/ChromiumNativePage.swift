@@ -112,7 +112,9 @@ final class ChromiumNativePage: BrowserFindExecuting {
 
     func runExtension(_ extensionID: String, anchor: BrowserExtensionPopupAnchor? = nil) {
         guard created, !disposed else { return }
-        if host?.runExtension(extensionID, page: id, anchor: anchor?.replacingSourceWindow(surface.window).screenPoint ?? NSEvent.mouseLocation) != true {
+        let anchor = anchor ?? BrowserExtensionPopupAnchor(screenPoint: NSEvent.mouseLocation, sourceWindow: surface.window)
+        guard let source = anchor.presentationSource(fallbackWindow: surface.window) else { return }
+        if host?.runExtension(extensionID, page: id, anchorView: source.view, anchorRect: source.rect) != true {
             CrestChromiumRoot.showNativeNotice("This extension action is unavailable on this page.", icon: "puzzlepiece.extension")
         }
     }
@@ -148,7 +150,7 @@ final class ChromiumNativePage: BrowserFindExecuting {
     private func navigatePendingURL() {
         guard let requestedURL else { return }
         self.requestedURL = nil
-        _ = host?.command("engine.navigate", page: id, url: requestedURL.absoluteString)
+        _ = host?.command("engine.navigate", page: id, url: ChromiumInternalURL.engine(requestedURL.absoluteString))
     }
 
     private func receive(_ event: String, values: [String: Any]) {
@@ -162,7 +164,7 @@ final class ChromiumNativePage: BrowserFindExecuting {
         } else if event == "creation_failed" {
             creating = false
         }
-        observer(event, values)
+        observer(event, ChromiumInternalURL.presentedValues(values))
     }
 }
 

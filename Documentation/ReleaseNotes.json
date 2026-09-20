@@ -1501,6 +1501,10 @@
     "portable-sync-journal-transactions": {
       "category": "internal",
       "message": "Move sync journal staging, deletion evidence, merges, and upload acknowledgements into immutable portable core snapshots."
+    },
+    "chromium-native-extension-popovers-and-crest-addresses": {
+      "category": "improved",
+      "message": "Extension popups stay anchored to their toolbar buttons, with balanced toolbar spacing and Crest addresses for internal browser pages."
     }
   }
 }

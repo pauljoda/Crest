@@ -18,7 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSArray<NSDictionary<NSString *, id> *> *)permissionsForPage:(NSString *)pageID;
 - (BOOL)setPermission:(NSString *)permissionID page:(NSString *)pageID value:(NSInteger)value;
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForPage:(NSString *)pageID;
-- (BOOL)runExtension:(NSString *)extensionID page:(NSString *)pageID anchor:(NSPoint)anchor;
+- (BOOL)runExtension:(NSString *)extensionID page:(NSString *)pageID
+         anchorView:(NSView *)anchorView anchorRect:(NSRect)anchorRect;
 - (void)prepareExtensionProfile:(NSString *)profileID completion:(void (^)(BOOL ready))completion;
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForProfile:(NSString *)profileID;
 - (BOOL)extensionCommand:(NSString *)command extension:(NSString *)extensionID profile:(NSString *)profileID window:(NSString *)windowID;

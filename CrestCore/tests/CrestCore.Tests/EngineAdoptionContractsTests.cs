@@ -57,12 +57,14 @@ public sealed partial class BrowserContractsTests
     }
     [Theory]
     [InlineData("chrome://extensions")]
+    [InlineData("crest://extensions")]
     [InlineData("chrome-extension://abcdefghijklmnopabcdefghijklmnop/options.html")]
     public void InternalNavigationRequiresTheEngineCapability(string url)
     {
         Assert.Throws<BrowserRuleException>(() => BrowserWorkspace.ValidateUrl(url));
         BrowserWorkspace.ValidateUrl(url, allowsInternalPages: true);
         Assert.Throws<BrowserRuleException>(() => BrowserWorkspace.ValidateUrl("javascript:alert(1)", allowsInternalPages: true));
+        Assert.Throws<BrowserRuleException>(() => BrowserWorkspace.ValidateUrl("crest://user:password@extensions", allowsInternalPages: true));
         Assert.Throws<BrowserRuleException>(() => BrowserWorkspace.ValidateUrl("chrome-extension://not-an-extension/options", allowsInternalPages: true));
     }
 }
