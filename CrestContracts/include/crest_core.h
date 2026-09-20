@@ -151,6 +151,15 @@ CREST_API crest_status_t CREST_CALL crest_session_read_command(
 CREST_API crest_status_t CREST_CALL crest_session_commit_command(uint64_t command, uint64_t* out_revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t command);
 
+// Reserve a validated replacement while the platform writes one durable session
+// and journal transaction. Release cancels an uncommitted reservation. The
+// returned checkpoint is independently owned and must also be released.
+CREST_API crest_status_t CREST_CALL crest_session_reserve_replacement(
+    uint64_t session, uint64_t expected_revision, const uint8_t *delta, size_t delta_length,
+    const uint8_t *selection, size_t selection_length, uint64_t *replacement, uint64_t *checkpoint);
+CREST_API crest_status_t CREST_CALL crest_session_commit_replacement(uint64_t replacement, uint64_t *revision);
+CREST_API crest_status_t CREST_CALL crest_session_release_replacement(uint64_t replacement);
+
 /* Copies retained configuration; sets *out_core to 0 on failure.
  * Caller initializes struct_size to sizeof(crest_core_options_v1).
  * options and out_core must be non-null. Does not start the executor.

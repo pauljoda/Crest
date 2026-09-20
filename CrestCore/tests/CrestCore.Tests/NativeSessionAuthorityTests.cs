@@ -24,6 +24,29 @@ public sealed partial class BrowserContractsTests
         { ["remove"] = new JsonArray(), ["upsert"] = new JsonArray(tab) } }) });
     }
     [Fact]
+    public void DurableReplacementReservesPublicationAndCancellationKeepsTheAcceptedRevision()
+    {
+        var session = SavedSession().Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var selection = Selection(session);
+        var original = authority.Checkpoint(1, selection).Read("core");
+        using (var cancelled = authority.ReserveReplacement(1, RenameDelta(session, "Not saved"), selection))
+        {
+            Assert.Equal(original, authority.Checkpoint(1, selection).Read("core"));
+            Assert.Throws<BrowserRuleException>(() => authority.Commit(1, RenameDelta(session, "Racing edit")));
+            Assert.Throws<BrowserRuleException>(() => authority.ReserveReplacement(1, RenameDelta(session, "Racing merge"), selection));
+        }
+        Assert.Equal(1UL, authority.Revision);
+        using var accepted = authority.ReserveReplacement(1, RenameDelta(session, "Durable"), selection);
+        var persisted = accepted.Checkpoint.Read("core");
+        Assert.Equal(2UL, accepted.Commit());
+        Assert.Equal(persisted, authority.Checkpoint(2, selection).Read("core"));
+        Assert.Throws<BrowserRuleException>(() => accepted.Commit());
+        authority.Commit(2, RenameDelta(session, "Next local edit"));
+        Assert.Equal(3UL, authority.Revision);
+    }
+
+    [Fact]
     public void NativeAuthorityRejectsStaleEditsAndKeepsEarlierCheckpointStable()
     {
         var session = SavedSession().Document["session"]!;

@@ -13,6 +13,7 @@ public sealed partial class NativeSessionAuthority
     public const int MaximumBytes = 64 * 1024 * 1024;
     internal static readonly object Gate = new();
     private SessionDocument document;
+    private NativeSessionReplacement? replacement;
     private readonly BrowserWorkspaceKind workspaceKind;
     internal sealed record SessionDocument(JsonObject Metadata, IReadOnlyList<SpaceDocument> Spaces);
     internal sealed record SpaceDocument(JsonObject Metadata, IReadOnlyDictionary<string, IReadOnlyList<JsonNode>> Sections);
@@ -68,6 +69,7 @@ public sealed partial class NativeSessionAuthority
 
     private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes)
     {
+        RequireWritable();
         if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
@@ -104,6 +106,10 @@ public sealed partial class NativeSessionAuthority
         var next = new SessionDocument(metadata, spaceOrder.Select(id => byId[id]).ToArray());
         Validate(next);
         return next;
+    }
+    private void RequireWritable()
+    {
+        if (replacement is not null) throw new BrowserRuleException("session_transaction_in_progress");
     }
     public ulong Commit(ulong expected, ReadOnlySpan<byte> delta)
     {

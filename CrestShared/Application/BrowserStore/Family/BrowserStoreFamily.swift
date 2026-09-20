@@ -70,6 +70,26 @@ final class BrowserStoreFamily {
     }
 
     #if CREST_CORE_BACKED
+    func installSyncedSession(_ session: BrowserSession, journal: BrowserSyncJournal,
+        journalPersistence: any BrowserSyncJournalPersisting, from source: BrowserStore) throws {
+        let previous = authoritativeSession
+        try core.replaceDurably(with: session) { checkpoint in
+            if let storage = source.persistence as? BrowserTransactionalSessionPersistence {
+                guard storage.owns(journalPersistence) else {
+                    throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint
+                }
+                try storage.commit(session, checkpoint: checkpoint, journal: journal)
+            } else {
+                // Ephemeral workspaces and injected test adapters have no
+                // cross-launch recovery. Live persistent compositions use the
+                // transactional adapter above.
+                try journalPersistence.save(journal)
+                source.persistence.save(session, scope: .everything, checkpoint: checkpoint)
+            }
+        }
+        reconcileStores(after: previous, from: source)
+    }
+
     func executeSpace(_ operation: String, in spaceID: SpaceID? = nil, arguments: [String: Any],
         from source: BrowserStore, at date: Date = .now) -> Bool {
         let previous = authoritativeSession

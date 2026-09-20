@@ -91,10 +91,11 @@ explicit portable intent model and local permission review; it is not implicit i
 this browser-record migration.
 
 `NativeSyncSessionTransition` prepares local staging, record merging,
-materialization, repair and retention as one core operation. The main remaining
-gap is publication: `BrowserSyncCoordinator.merge` still saves the prepared journal
-before submitting the matching session to the session authority. Durable storage
-and authority publication must accept the pair together so they cannot diverge.
+materialization, repair and retention as one core operation. The session authority
+then reserves the validated replacement while the Apple storage adapter commits
+the matching session, per-Space history and journal in one SQLite transaction.
+Failed storage cancels the reservation; accepted storage publishes the reserved
+revision before native windows reconcile. A restart reads the committed pair.
 Preserve ordering between local edits, incoming batches, durable checkpoints,
 pending uploads and acknowledgements, including crash recovery. Keep explicit
 deletion distinct from absence, retention and superseded records, and preserve
@@ -189,11 +190,20 @@ original session and journal untouched. Replacing a disposable seed with real
 cloud Spaces clears the seed marker.
 
 `crest_sync_session_prepare` returns a matched session result and immutable journal
-handle after all merge rules succeed. The coordinator still persists the journal
-before authority publication. Coupling those accepted states, preserving unknown
-record fields through restaging, and adding crash recovery remain prerequisites
-for enabling cross-engine cloud sync. Native presentation codecs continue to
-normalize platform glyphs and branding values.
+handle after all merge rules succeed. `crest_session_reserve_replacement` validates
+the replacement before any durable write and excludes competing core writes until
+publication or cancellation. Core-backed persistent compositions use
+`BrowserTransactionalSessionPersistence`; legacy defaults are migrated once and
+retained for rollback. Local saves, incoming sync and upload acknowledgments use
+one serial storage queue. Startup stages restored local edits before cloud work,
+including edits saved before their coalesced sync projection completed.
+
+The Swift sync coordinator still owns journal scheduling and its immutable handle
+separately from the session authority. Consolidating that ownership, preserving
+unknown record fields through restaging, and proving live cross-engine CloudKit
+convergence remain required. An unreadable transactional store currently stops
+startup with the file preserved; a native recovery flow is still needed. Native
+presentation codecs continue to normalize platform glyphs and branding values.
 
 Value-only operations still use `crest_core_edit_session`, which receives one
 compact Space and returns an atomic edit.

@@ -42,6 +42,31 @@ final class BrowserCoreSessionAuthority {
         projection = next
     }
 
+    /// The reservation excludes core writes until storage succeeds. A failed
+    /// write releases it without changing the projection or accepted revision.
+    func replaceDurably(with next: BrowserSession,
+        persist: (any BrowserSessionCheckpoint) throws -> Void) throws {
+        let delta = try delta(to: next) ?? Data(#"{"version":1,"spaces":[]}"#.utf8)
+        let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: next))
+        var replacement: UInt64 = 0, checkpoint: UInt64 = 0
+        let result = delta.withUnsafeBytes { bytes in selection.withUnsafeBytes { window in
+            crest_session_reserve_replacement(owner.value, revision,
+                bytes.bindMemory(to: UInt8.self).baseAddress, delta.count,
+                window.bindMemory(to: UInt8.self).baseAddress, selection.count, &replacement, &checkpoint)
+        } }
+        guard result == CREST_OK else { throw CoreError.rejected(result) }
+        defer { crest_session_release_replacement(replacement) }
+        let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
+        try persist(snapshot)
+        var accepted: UInt64 = 0
+        let committed = crest_session_commit_replacement(replacement, &accepted)
+        // All validation and overflow checks precede the durable write. The
+        // reservation makes publication infallible for this owned handle.
+        precondition(committed == CREST_OK, "Lost core storage reservation")
+        revision = accepted
+        projection = next
+    }
+
     static func replacePair(
         source: BrowserCoreSessionAuthority, sourceSession: BrowserSession,
         destination: BrowserCoreSessionAuthority, destinationSession: BrowserSession

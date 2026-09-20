@@ -5,6 +5,79 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
+    func testTransactionalStorageRollsBackBothPartsAndRecoversTheCommittedPair() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("session.sqlite")
+        let icons = InMemoryBrowserFaviconStore()
+        let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: icons)
+        var original = BrowserSession.preview
+        original.recordVisit(url: URL(string: "https://example.org/before")!, title: "Before")
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: original)
+        try storage.migrateIfNeeded(session: original, journal: journal)
+        let core = BrowserCoreSessionAuthority(session: original)
+        var next = original
+        next.spaces[0].name = "After transaction"
+        next.recordVisit(url: URL(string: "https://example.org/after")!, title: "After")
+        var nextJournal = journal
+        try nextJournal.stage(session: next)
+        XCTAssertThrowsError(try core.replaceDurably(with: next) { checkpoint in
+            try storage.commit(next, checkpoint: MissingHistoryCheckpoint(core: try XCTUnwrap(checkpoint.coreData())), journal: nextJournal)
+        })
+        XCTAssertEqual(core.projection, original)
+        let afterFailure = try BrowserTransactionalSessionPersistence(url: url, favicons: icons)
+        XCTAssertEqual(afterFailure.load(), original)
+        XCTAssertEqual(try afterFailure.journalPersistence.load(), journal)
+
+        try core.replaceDurably(with: next) { checkpoint in
+            try storage.commit(next, checkpoint: checkpoint, journal: nextJournal)
+        }
+        let reopened = try BrowserTransactionalSessionPersistence(url: url, favicons: icons)
+        XCTAssertEqual(reopened.load(), next)
+        XCTAssertEqual(try reopened.journalPersistence.load(), nextJournal)
+        // A later launch must never overwrite accepted data with a legacy copy.
+        try reopened.migrateIfNeeded(session: original, journal: journal)
+        XCTAssertEqual(reopened.load(), next)
+    }
+
+    func testIncomingSyncPublishesAndPersistsTheSameSessionAcrossWindows() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let icons = InMemoryBrowserFaviconStore()
+        let storage = try BrowserTransactionalSessionPersistence(url: directory.appendingPathComponent("session.sqlite"), favicons: icons)
+        let original = BrowserSession.preview
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: original)
+        try storage.migrateIfNeeded(session: original, journal: journal)
+        let coordinator = BrowserSyncCoordinator(persistence: storage.journalPersistence)
+        let store = BrowserStore(session: original, persistence: storage, syncCoordinator: coordinator)
+        let other = store.makeWindowStore()
+        var remote = original
+        remote.spaces[0].name = "Remote Space"
+        var remoteJournal = journal
+        try remoteJournal.stage(session: remote)
+        try store.mergeRemoteSyncRecords(remoteJournal.records)
+        XCTAssertEqual(store.session.spaces[0].name, "Remote Space")
+        XCTAssertEqual(other.session.spaces[0].name, "Remote Space")
+        XCTAssertEqual(storage.load(), store.session)
+        XCTAssertEqual(try storage.journalPersistence.load(), coordinator.journal)
+        // A local save may precede its coalesced projection. On restart, staging
+        // that durable session restores the pending edit without losing history.
+        store.updateSpaceIdentity(original.spaces[0].id, name: "Local after sync", symbol: "book", accent: .teal)
+        await store.flushPendingSyncPersistence()
+        let restored = try XCTUnwrap(storage.load())
+        XCTAssertEqual(restored.spaces[0].name, "Local after sync")
+        XCTAssertEqual(try storage.journalPersistence.load(), coordinator.journal)
+    }
+
+    private final class MissingHistoryCheckpoint: BrowserSessionCheckpoint {
+        let core: Data
+        init(core: Data) { self.core = core }
+        func coreData() -> Data? { core }
+        func historyData(in spaceID: SpaceID) -> Data? { nil }
+    }
+
     func testCoreRepairPreservesAssetOwnershipWhenIdentitiesCollide() throws {
         var first = BrowserSession.preview.spaces[0]
         first.tabs = [first.tabs[0]]

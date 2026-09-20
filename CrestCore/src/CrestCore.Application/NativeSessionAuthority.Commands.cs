@@ -67,6 +67,7 @@ public sealed partial class NativeSessionAuthority
     {
         lock (Gate)
         {
+            RequireWritable();
             if (command.ExpectedRevision != Revision) throw new BrowserRuleException("stale_session_revision");
             var nextRevision = checked(Revision + 1);
             document = command.Document;

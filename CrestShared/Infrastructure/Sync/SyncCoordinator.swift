@@ -85,11 +85,13 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         remoteRecords: [BrowserSyncRecord],
         into localSession: BrowserSession,
         at date: Date = .now,
-        storeRevision: BrowserStoreSyncRevision? = nil
+        storeRevision: BrowserStoreSyncRevision? = nil,
+        install: ((BrowserSession, BrowserSyncJournal, any BrowserSyncJournalPersisting) throws -> Void)? = nil
     ) throws -> BrowserSession {
         try commit(
             storeRevision: storeRevision,
-            staleResult: localSession
+            staleResult: localSession,
+            persist: install.map { install in { result, journal in try install(result, journal, self.persistence) } }
         ) { journal in
             #if CREST_CORE_BACKED
             return try journal.prepareSession(localSession, remoteRecords: remoteRecords, at: date)
@@ -134,11 +136,13 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         _ remoteRecords: [BrowserSyncRecord],
         replacing localSession: BrowserSession,
         at date: Date = .now,
-        storeRevision: BrowserStoreSyncRevision? = nil
+        storeRevision: BrowserStoreSyncRevision? = nil,
+        install: ((BrowserSession, BrowserSyncJournal, any BrowserSyncJournalPersisting) throws -> Void)? = nil
     ) throws -> BrowserSession {
         try commit(
             storeRevision: storeRevision,
-            staleResult: localSession
+            staleResult: localSession,
+            persist: install.map { install in { result, journal in try install(result, journal, self.persistence) } }
         ) { journal in
             #if CREST_CORE_BACKED
             return try journal.prepareSession(localSession, remoteRecords: remoteRecords, replacing: true,
@@ -206,6 +210,7 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
     private func commit<Result>(
         storeRevision: BrowserStoreSyncRevision?,
         staleResult: @autoclosure () -> Result,
+        persist: ((Result, BrowserSyncJournal) throws -> Void)? = nil,
         _ mutation: (inout BrowserSyncJournal) throws -> Result
     ) throws -> Result {
         try mutationLock.withLock {
@@ -216,7 +221,8 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
             else { return staleResult() }
             let result = try mutation(&candidate)
             guard stateLock.withLock({ !isStale(storeRevision) }) else { return staleResult() }
-            try persistence.save(candidate)
+            if let persist { try persist(result, candidate) }
+            else { try persistence.save(candidate) }
             stateLock.withLock {
                 storedJournal = candidate
                 // A newer session may arrive while this save is encoding.
