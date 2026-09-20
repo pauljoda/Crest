@@ -56,14 +56,59 @@ final class BrowserCoreSessionAuthority {
         source.projection = sourceSession; destination.projection = destinationSession
     }
 
-    func checkpoint(for window: BrowserSession) throws -> BrowserCoreSessionCheckpoint {
-        let selection: [String: Any] = [
+    private static func selection(for window: BrowserSession) throws -> [String: Any] {
+        [
             "selectedSpaceID": try Self.value(window.selectedSpaceID),
             "selectedTabs": try window.spaces.map { space -> [String: Any] in
                 ["spaceID": try Self.value(space.id), "tabID": try space.selectedTabID.map(Self.value) ?? NSNull()]
             },
         ]
-        let data = try JSONSerialization.data(withJSONObject: selection)
+    }
+
+    func execute(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
+        window: BrowserSession, at date: Date) throws -> BrowserCoreSessionEditing.Result {
+        guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }),
+            let windowSpace = window.space(id: spaceID) else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+        let data = try JSONSerialization.data(withJSONObject: [
+            "version": 1, "operation": operation, "spaceId": spaceID.rawValue.uuidString,
+            "profileId": windowSpace.profile.id.uuidString,
+            "arguments": arguments, "window": try Self.selection(for: window),
+            "now": date.timeIntervalSinceReferenceDate,
+        ])
+        var command: UInt64 = 0
+        let prepared = data.withUnsafeBytes {
+            crest_session_prepare_command(owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &command)
+        }
+        guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
+        defer { crest_session_release_command(command) }
+        var length = 0
+        let measured = crest_session_read_command(command, nil, 0, &length)
+        guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 4 * 1024 * 1024 else {
+            throw CoreError.rejected(measured)
+        }
+        let capacity = length
+        var output = Data(count: capacity)
+        let read = output.withUnsafeMutableBytes {
+            crest_session_read_command(command, $0.bindMemory(to: UInt8.self).baseAddress, capacity, &length)
+        }
+        guard read == CREST_OK else { throw CoreError.rejected(read) }
+        let result = try BrowserCoreSessionEditing.decode(output, preservingAssetsFrom: projection.spaces[index])
+        var next = projection
+        next.selectedSpaceID = window.selectedSpaceID
+        for i in next.spaces.indices {
+            next.spaces[i].selectedTabID = window.space(id: next.spaces[i].id)?.selectedTabID
+        }
+        next.applyCoreResult(result, at: index)
+        var accepted: UInt64 = 0
+        let committed = crest_session_commit_command(command, &accepted)
+        guard committed == CREST_OK else { throw CoreError.rejected(committed) }
+        revision = accepted
+        projection = next
+        return result
+    }
+
+    func checkpoint(for window: BrowserSession) throws -> BrowserCoreSessionCheckpoint {
+        let data = try JSONSerialization.data(withJSONObject: Self.selection(for: window))
         var handle: UInt64 = 0
         let result = data.withUnsafeBytes {
             crest_session_checkpoint(owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &handle)

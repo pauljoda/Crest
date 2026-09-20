@@ -18,7 +18,7 @@ extension BrowserStore {
         beforeFolderID: FolderID? = nil, detachesSplitMembers: Bool = false
     ) -> Bool {
         guard space(matching: assignment) != nil,
-            session.fileTabs(
+            fileSessionTabs(
                 tabs, in: assignment.spaceID, into: folderID, location: location, before: anchor,
                 beforeFolderID: beforeFolderID, detachesSplitMembers: detachesSplitMembers)
         else { return false }
@@ -33,7 +33,7 @@ extension BrowserStore {
         before siblingID: FolderID? = nil, beforeTabID: TabID? = nil
     ) -> Bool {
         guard space(matching: assignment) != nil,
-            session.moveFolder(
+            moveSessionFolder(
                 id, in: assignment.spaceID, into: parentID, before: siblingID,
                 location: location, beforeTabID: beforeTabID)
         else { return false }

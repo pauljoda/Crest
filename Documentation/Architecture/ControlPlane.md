@@ -29,7 +29,17 @@ This moves live state ownership and checkpoint serialization into the core.
 Remaining native domain operations still submit prepared value changes; replacing
 those proposals with semantic core commands is a separate part of the migration.
 
-`crest_core_edit_session` receives one compact Space and returns an atomic edit.
+The store's tab opening, activation, closing, deletion, current-tab clearing,
+renaming and residency actions now send commands directly to that authority.
+Folder renaming, collapse, deletion, moves and tab filing use the same path.
+Requests contain arguments and window selection rather than an encoded Space.
+The core prepares the edit against its owned records, the native adapter decodes
+the resulting projection, and a revision-checked commit publishes both sides.
+Abandoned preparations do not change state. Favicon bytes stay native, and
+existing history and archive records do not cross the command boundary.
+
+Value-only operations still use `crest_core_edit_session`, which receives one
+compact Space and returns an atomic edit.
 It excludes images, history and existing archive records. The native projection
 keeps those records and presentation metadata, applies the returned tab/folder
 values, and reconciles native pages through the existing pools. The core's

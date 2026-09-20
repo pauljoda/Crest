@@ -781,8 +781,7 @@ extension BrowserStore {
     }
 
     func selectTab(_ id: TabID) {
-        guard selectedSpace != nil else { return }
-        session.selectTab(id)
+        guard let space = selectedSpace, activateSessionTab(id, in: space.id) else { return }
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -794,7 +793,7 @@ extension BrowserStore {
             in: space
         )
         if let fallbackID {
-            session.selectTab(fallbackID)
+            _ = activateSessionTab(fallbackID, in: space.id)
         } else {
             session.clearTabSelection(in: space.id)
         }

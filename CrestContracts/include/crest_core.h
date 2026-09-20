@@ -96,6 +96,18 @@ CREST_API crest_status_t CREST_CALL crest_session_read_checkpoint(
 CREST_API crest_status_t CREST_CALL crest_session_destroy(uint64_t session);
 CREST_API crest_status_t CREST_CALL crest_session_release_checkpoint(uint64_t checkpoint);
 
+/* Commands operate on the owned session using only arguments and window
+ * selection. Prepare/read do not mutate; decode the projection before commit.
+ * Commit rejects a stale revision and a second commit of the same command.
+ * Input/output <= 4 MiB. Always release the command, including failed commits.
+ * Keep its originating session alive until the command is released. */
+CREST_API crest_status_t CREST_CALL crest_session_prepare_command(
+    uint64_t session, uint64_t expected_revision, const uint8_t* input, size_t length, uint64_t* out_command);
+CREST_API crest_status_t CREST_CALL crest_session_read_command(
+    uint64_t command, uint8_t* destination, size_t capacity, size_t* out_length);
+CREST_API crest_status_t CREST_CALL crest_session_commit_command(uint64_t command, uint64_t* out_revision);
+CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t command);
+
 /* Copies retained configuration; sets *out_core to 0 on failure.
  * Caller initializes struct_size to sizeof(crest_core_options_v1).
  * options and out_core must be non-null. Does not start the executor.

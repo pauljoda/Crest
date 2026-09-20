@@ -39,11 +39,11 @@ extension BrowserStore {
         if let draft = space.currentTabs.first(where: {
             $0.isStartPage && (!excludingSplitGroups || space.splitGroup(containing: $0.id) == nil)
         }) {
-            session.selectTab(draft.id)
+            guard activateSessionTab(draft.id, in: space.id) else { return nil }
             return (draft.id, false)
         }
         guard
-            let tabID = session.openTab(
+            let tabID = openSessionTab(
                 title: BrowserTab.startPageTitle,
                 url: nil,
                 symbol: BrowserTab.startPageSymbol,
@@ -60,7 +60,7 @@ extension BrowserStore {
     @discardableResult
     func openNewTab(url: URL) -> TabID? {
         guard let space = selectedSpace else { return nil }
-        let tabID = session.openTab(
+        let tabID = openSessionTab(
             title: url.host() ?? url.absoluteString,
             url: url,
             in: space.id,
@@ -91,10 +91,7 @@ extension BrowserStore {
             after: space.selectedTabID,
             in: space
         )
-        if selecting {
-            session.selectSpace(spaceID)
-        }
-        let tabID = session.openTab(
+        let tabID = openSessionTab(
             title: url.host() ?? url.absoluteString,
             url: url,
             in: spaceID,
@@ -134,9 +131,8 @@ extension BrowserStore {
             after: space.selectedTabID,
             in: space
         )
-        if selecting { session.selectSpace(spaceID) }
         guard
-            let tabID = session.openTab(
+            let tabID = openSessionTab(
                 title: destinationURL.host() ?? destinationURL.absoluteString,
                 url: destinationURL,
                 in: spaceID,
@@ -174,7 +170,7 @@ extension BrowserStore {
             ? dismissalFallbackTabID(afterDismissing: id, in: space)
             : nil
         guard
-            session.closeTab(
+            closeSessionTab(
                 id,
                 in: spaceID,
                 fallbackTabID: fallbackID
@@ -208,12 +204,12 @@ extension BrowserStore {
             space.selectedTabID == id
             ? dismissalFallbackTabID(afterDismissing: id, in: space)
             : nil
-        session.closeTab(id, fallbackTabID: fallbackID)
+        guard closeSessionTab(id, in: space.id, fallbackTabID: fallbackID, resetArchivePlacement: false) else { return }
         persist(deletionReason: .superseded, scope: .core)
     }
 
     func deleteTab(_ id: TabID, in spaceID: SpaceID) {
-        guard session.deleteTab(id, in: spaceID) else { return }
+        guard deleteSessionTab(id, in: spaceID) else { return }
         persist(deletionReason: .explicitDelete, scope: .core)
     }
 
@@ -233,7 +229,7 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil,
-            session.clearCurrentTabs(in: assignment.spaceID)
+            clearSessionTabs(in: assignment.spaceID)
         else { return false }
         persist(deletionReason: .superseded, scope: .core)
         return true
@@ -246,7 +242,7 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             space.tabs.contains(where: { $0.id == id }),
-            session.deleteTab(id, in: assignment.spaceID)
+            deleteSessionTab(id, in: assignment.spaceID)
         else { return false }
         persist(deletionReason: .explicitDelete, scope: .core)
         return true
@@ -258,7 +254,7 @@ extension BrowserStore {
         for id: TabID,
         in spaceID: SpaceID
     ) -> Bool {
-        guard session.setTabCustomTitle(title, tabID: id, in: spaceID) else {
+        guard renameSessionTab(title, tabID: id, in: spaceID) else {
             return false
         }
         persist(syncUrgency: .coalesced, scope: .core)
@@ -546,7 +542,7 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) -> Bool {
         guard
-            session.setTabKeepsPageLoaded(
+            setSessionTabResidency(
                 keepsPageLoaded,
                 tabID: id,
                 in: spaceID

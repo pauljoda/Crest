@@ -56,4 +56,35 @@ public sealed partial class BrowserContractsTests
             source, 1, RenameDelta(session, "Source accepted"), destination, 2, RenameDelta(session, "Destination accepted"));
         Assert.Equal((2UL, 3UL), result);
     }
+
+    [Fact]
+    public void NativeCommandsPrepareWithoutMutationAndRejectConcurrentCommits()
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!;
+        var space = session["spaces"]![0]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var window = JsonNode.Parse(Selection(session))!;
+        window["selectedTabs"]![0]!["tabID"] = null;
+        byte[] Request(string title) => Bytes(new JsonObject
+        {
+            ["version"] = 1, ["spaceId"] = fixture.Space.Value.ToString(),
+            ["profileId"] = space["profile"]!["id"]!.DeepClone(), ["window"] = window.DeepClone(),
+            ["operation"] = "tab.rename", ["now"] = 800000001.0,
+            ["arguments"] = new JsonObject { ["tabId"] = fixture.Tab.Value.ToString(), ["title"] = title },
+        });
+        var before = authority.Checkpoint(1, Selection(session)).Read("core");
+        var first = authority.PrepareCommand(1, Request("Accepted"));
+        var competing = authority.PrepareCommand(1, Request("Stale"));
+        Assert.Equal(before, authority.Checkpoint(1, Selection(session)).Read("core"));
+        Assert.Null(JsonNode.Parse(first.Output)!["space"]!["selectedTabID"]);
+        Assert.Equal(2UL, first.Commit());
+        Assert.Throws<BrowserRuleException>(() => competing.Commit());
+        Assert.Throws<BrowserRuleException>(() => first.Commit());
+        var checkpoint = authority.Checkpoint(2, Bytes(window));
+        var saved = JsonNode.Parse(checkpoint.Read("core"))!["spaces"]![0]!;
+        Assert.Equal("Accepted", saved["tabs"]![0]!["customTitle"]!.GetValue<string>());
+        Assert.Null(saved["selectedTabID"]);
+        Assert.True(JsonNode.DeepEquals(space["history"], JsonNode.Parse(checkpoint.Read(fixture.Space.Value.ToString()))));
+        Assert.True(JsonNode.DeepEquals(space["branding"], saved["branding"]));
+    }
 }

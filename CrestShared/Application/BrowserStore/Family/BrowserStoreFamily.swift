@@ -67,6 +67,21 @@ final class BrowserStoreFamily {
         reconcileStores(after: previous, from: adoptingSelection ? source : nil)
     }
 
+    #if CREST_CORE_BACKED
+    func execute(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
+        from source: BrowserStore, at date: Date) -> BrowserCoreSessionEditing.Result? {
+        let previous = authoritativeSession
+        do {
+            let result = try core.execute(operation, in: spaceID, arguments: arguments, window: source.session, at: date)
+            reconcileStores(after: previous, from: source)
+            return result
+        } catch {
+            source.localSyncErrorDescription = "Core command failed: \(error)"
+            return nil
+        }
+    }
+    #endif
+
     /// Installs both prepared graphs before any window reconciles its selection.
     /// This is synchronous on the main actor, so a transfer has no partial
     /// source/destination state across an actor suspension.

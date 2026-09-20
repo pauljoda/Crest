@@ -46,24 +46,29 @@ enum BrowserCoreSessionEditing {
                 }
             }
             guard status == CREST_OK else { throw EditError.rejected(status) }
-            var result = try JSONDecoder().decode(Result.self, from: output)
-            guard result.space.id == space.id, result.space.profile == space.profile else {
-                throw EditError.wrongIdentity
-            }
-            let originals = Dictionary(uniqueKeysWithValues: space.tabs.map { ($0.id, $0) })
-            let copies = Dictionary(uniqueKeysWithValues: result.copies.map { (TabID(rawValue: $0.copy), TabID(rawValue: $0.source)) })
-            for index in result.space.tabs.indices {
-                let id = result.space.tabs[index].id
-                if let original = originals[copies[id] ?? id] {
-                    result.space.tabs[index].faviconData = original.faviconData
-                }
-            }
+            let result = try decode(output, preservingAssetsFrom: space)
             logger.debug("Applied \(operation, privacy: .public) to \(space.id.rawValue.uuidString, privacy: .public)")
             return result
         } catch {
             logger.error("Rejected \(operation, privacy: .public): \(String(describing: error), privacy: .public)")
             return nil
         }
+    }
+
+    static func decode(_ output: Data, preservingAssetsFrom space: BrowserSpace) throws -> Result {
+        var result = try JSONDecoder().decode(Result.self, from: output)
+        guard result.space.id == space.id, result.space.profile == space.profile else {
+            throw EditError.wrongIdentity
+        }
+        let originals = Dictionary(uniqueKeysWithValues: space.tabs.map { ($0.id, $0) })
+        let copies = Dictionary(uniqueKeysWithValues: result.copies.map { (TabID(rawValue: $0.copy), TabID(rawValue: $0.source)) })
+        for index in result.space.tabs.indices {
+            let id = result.space.tabs[index].id
+            if let original = originals[copies[id] ?? id] {
+                result.space.tabs[index].faviconData = original.faviconData
+            }
+        }
+        return result
     }
 
     static func tabValue(_ source: BrowserTab) -> Any? {
@@ -81,6 +86,11 @@ extension BrowserSession {
         guard let index = spaces.firstIndex(where: { $0.id == spaceID }),
             let result = BrowserCoreSessionEditing.edit(operation, space: spaces[index], arguments: arguments, at: date)
         else { return nil }
+        applyCoreResult(result, at: index)
+        return result
+    }
+
+    mutating func applyCoreResult(_ result: BrowserCoreSessionEditing.Result, at index: Int) {
         // Only the fields owned by this editor are replaced. Preferences,
         // branding, history and all native presentation metadata stay intact.
         spaces[index].tabs = result.space.tabs
@@ -88,8 +98,7 @@ extension BrowserSession {
         spaces[index].splitGroups = result.space.splitGroups
         spaces[index].selectedTabID = result.space.selectedTabID
         spaces[index].archivedTabs.append(contentsOf: result.space.archivedTabs)
-        if result.selectSpace { selectedSpaceID = spaceID }
-        return result
+        if result.selectSpace { selectedSpaceID = spaces[index].id }
     }
 }
 #endif

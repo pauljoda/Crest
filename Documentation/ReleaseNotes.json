@@ -1481,6 +1481,10 @@
     "core-session-ownership-and-checkpoints": {
       "category": "internal",
       "message": "Move native browser session ownership, atomic workspace edits, and save snapshots into the portable core."
+    },
+    "native-ui-direct-core-commands": {
+      "category": "internal",
+      "message": "Run native tab and folder commands directly against the core-owned browser session."
     }
   }
 }

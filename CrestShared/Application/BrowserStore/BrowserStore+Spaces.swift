@@ -249,7 +249,7 @@ extension BrowserStore {
 
     @discardableResult
     func renameFolder(_ folderID: FolderID, in spaceID: SpaceID, title: String) -> Bool {
-        guard session.renameFolder(folderID, in: spaceID, title: title) else { return false }
+        guard renameSessionFolder(folderID, in: spaceID, title: title) else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -331,7 +331,7 @@ extension BrowserStore {
         isCollapsed: Bool
     ) -> Bool {
         guard
-            session.setFolderCollapsed(
+            collapseSessionFolder(
                 folderID,
                 in: spaceID,
                 isCollapsed: isCollapsed
@@ -388,7 +388,7 @@ extension BrowserStore {
         before siblingID: FolderID? = nil
     ) -> Bool {
         guard
-            session.moveFolder(
+            moveSessionFolder(
                 folderID,
                 in: spaceID,
                 into: parentID,
@@ -447,7 +447,7 @@ extension BrowserStore {
 
     @discardableResult
     func deleteFolder(_ folderID: FolderID, in spaceID: SpaceID) -> Bool {
-        guard session.deleteFolder(folderID, in: spaceID) else { return false }
+        guard deleteSessionFolder(folderID, in: spaceID) else { return false }
         persist(deletionReason: .explicitDelete, scope: .core)
         return true
     }

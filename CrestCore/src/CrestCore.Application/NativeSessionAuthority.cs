@@ -8,7 +8,7 @@ namespace CrestCore.Application;
 /// Native views propose value deltas; only an accepted revision becomes visible.
 /// Published documents are immutable, so storage can serialize an older checkpoint
 /// on its worker while the UI continues editing the current revision.
-public sealed class NativeSessionAuthority
+public sealed partial class NativeSessionAuthority
 {
     public const int MaximumBytes = 64 * 1024 * 1024;
     internal static readonly object Gate = new();

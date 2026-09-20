@@ -11,6 +11,7 @@ public static unsafe partial class Exports
 {
     private static readonly ConcurrentDictionary<ulong, NativeSessionAuthority> Sessions = new();
     private static readonly ConcurrentDictionary<ulong, NativeSessionCheckpoint> Checkpoints = new();
+    private static readonly ConcurrentDictionary<ulong, NativeSessionCommand> SessionCommands = new();
     private static bool ValidSessionInput(byte* bytes, nuint count) => bytes != null && count is > 0 and <= NativeSessionAuthority.MaximumBytes;
     private static int SessionError(Exception error) => error is BrowserRuleException rule && rule.Code == "stale_session_revision"
         ? CoreStatus.InvalidState : CoreStatus.InvalidMessage;
@@ -95,4 +96,47 @@ public static unsafe partial class Exports
     public static int SessionDestroy(ulong handle) => Sessions.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
     [UnmanagedCallersOnly(EntryPoint = "crest_session_release_checkpoint", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionReleaseCheckpoint(ulong handle) => Checkpoints.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
+
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_prepare_command", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionPrepareCommand(ulong handle, ulong expected, byte* bytes, nuint count, ulong* command)
+    {
+        if (command == null) return CoreStatus.InvalidArgument;
+        *command = 0;
+        if (!ValidSessionInput(bytes, count)) return CoreStatus.InvalidArgument;
+        if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
+        try
+        {
+            var prepared = session.PrepareCommand(expected, new(bytes, (int)count));
+            var id = checked((ulong)Interlocked.Increment(ref nextHandle));
+            if (!SessionCommands.TryAdd(id, prepared)) return CoreStatus.InternalError;
+            *command = id; return CoreStatus.Ok;
+        }
+        catch (Exception e) { return SessionError(e); }
+    }
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_read_command", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionReadCommand(ulong handle, byte* destination, nuint capacity, nuint* length)
+    {
+        if (length == null || destination == null && capacity != 0) return CoreStatus.InvalidArgument;
+        *length = 0;
+        if (capacity > NativeSessionEditor.MaximumBytes) return CoreStatus.LimitExceeded;
+        if (!SessionCommands.TryGetValue(handle, out var command)) return CoreStatus.InvalidHandle;
+        try
+        {
+            *length = (nuint)command.Output.Length;
+            if (capacity < *length) return CoreStatus.BufferTooSmall;
+            command.Output.CopyTo(new Span<byte>(destination, (int)capacity)); return CoreStatus.Ok;
+        }
+        catch (Exception e) { return SessionError(e); }
+    }
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_command", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionCommitCommand(ulong handle, ulong* revision)
+    {
+        if (revision == null) return CoreStatus.InvalidArgument;
+        *revision = 0;
+        if (!SessionCommands.TryGetValue(handle, out var command)) return CoreStatus.InvalidHandle;
+        try { *revision = command.Commit(); return CoreStatus.Ok; }
+        catch (Exception e) { return SessionError(e); }
+    }
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_release_command", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionReleaseCommand(ulong handle) => SessionCommands.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
 }
