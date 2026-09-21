@@ -50,7 +50,7 @@ assets and opaque engine data stay outside semantic records.
 | 3. Finish engine and service integration | Use the same registered page/profile contracts in the real UI. Complete tab/window before-unload, Crest download ledger integration, favicons, restoration, profile deletion, transfers and recovery. Inventory current reader, translation, capture, print, media, authentication, notification and page-action callers; adapt each supported feature and remove dormant WebKit objects from the Chromium path. | Exercise each migrated user flow in the native app. Capability declarations match actual adapter behavior and govern UI availability. Close cancellation, private/locked Space boundaries and interrupted operations preserve state. Unsupported engine features have explicit product behavior. |
 | 4. Complete native extensions | Preserve the restored toolbar, Site Controls, permission review, multi-Space installation and native Settings. Complete applicable action context menus, commands, extension-created windows and side panels. Extension-created windows and side panels are implemented against the pinned Chromium headers and remain unverified until a Chromium build runs them. Keep Chromium responsible for verification, runtime permissions, updates and execution. Resolve iCloud Passwords through valid Crest signing and Apple's helper requirements. | uBlock Origin Lite filters real requests and retains profile settings. iCloud Passwords completes pairing and autofill with the properly entitled build and user participation where required. Installation, copying, removal and private access preserve Space ownership. |
 | 5. Finish Crest identity and lifecycle | Package the Crest default icon, alternate artwork and Dock tile plug-in. Restore saved icon preferences at Chromium startup. Replace app-facing Chromium menu/About identity with Crest while retaining required engine attribution. Wire external links, reopen, quit, saved windows, browser registration and the intended update path into the host. | Finder, running Dock and Dock after quit use Crest artwork. Default/custom choices survive relaunch and appearance changes. App/menu version and identity are correct. External links and lifecycle actions reach the native Crest UI. |
-| 6. Complete app composition and migration | Make the core the normal app composition on both platforms. Keep isolated review identities and explicit profile roots. Provide a safe import/upgrade path for existing Crest state, with recovery copies and no implicit WebKit-to-Chromium cookie or credential conversion. Document reproducible builds, required entitlements and engine distribution requirements. Remove obsolete experiment UI and duplicate migration paths once the real app covers their contracts. | Fresh install, existing-session upgrade, restart, offline editing, sync reconnect and private browsing work on Mac and mobile. Original UI remains intact. Relevant retained tests and release builds pass; temporary build outputs are cleaned. Every remaining external dependency is named, and unfinished requirements remain open. |
+| 6. Complete app composition and migration | Make the core the normal app composition on both platforms. Keep isolated review identities and explicit profile roots. Provide a safe import/upgrade path for existing Crest state, with recovery copies and no implicit WebKit-to-Chromium cookie or credential conversion. Document reproducible builds, required entitlements and engine distribution requirements. Remove obsolete experiment UI and duplicate migration paths once the real app covers their contracts. | Fresh install, existing-session upgrade, restart, offline editing, sync reconnect and private browsing work on Mac and mobile. The existing-session upgrade is covered by a test that carries a real installed defaults session, its per-Space history, its favicons and its sync journal into the checkpoint and proves the second launch does not repeat it; see "Upgrading an installed session". Physical-device and real-account runs against installed Spaces remain open. Original UI remains intact. Relevant retained tests and release builds pass; temporary build outputs are cleaned. Every remaining external dependency is named, and unfinished requirements remain open. |
 
 The Chromium packager includes Crest's default and alternate icon resources and
 Dock tile plug-in. The native root restores the icon preference at startup. The
@@ -210,11 +210,12 @@ Each store family attaches that authority to its core session with
 `crest_session_attach_access`, and a borrowed workspace inherits its source's.
 The session authority then rejects a prepared command against a Space whose
 stored policy requires authentication and holds no grant, with `space_locked`,
-before any preparation runs. Changing the policy itself, Space deletion intents,
-retention and cleanup sweeps still apply to a locked Space, because none of them
-returns its tabs, folders, history or archive. Sync staging, merging and
-materialization commit as session replacements rather than commands, so
-background convergence on a locked Space is unaffected.
+before any preparation runs. Raising a Space's protection, its deletion intents,
+and retention or cleanup sweeps still apply while it is locked, because none of
+them returns its tabs, folders, history or archive; removing protection is the
+decision authentication guards, so it needs the grant like any other command.
+Sync staging, merging and materialization commit as session replacements rather
+than commands, so background convergence on a locked Space is unaffected.
 
 ## Existing UI migration
 
@@ -370,7 +371,43 @@ the replacement before any durable write and excludes competing core writes unti
 publication or cancellation. Core-backed persistent compositions use
 `BrowserTransactionalSessionPersistence`; legacy defaults are migrated once and
 retained for rollback. Local saves, incoming sync and upload acknowledgments use
-one serial storage queue. Startup stages restored local edits before cloud work,
+one serial storage queue.
+
+### Upgrading an installed session
+
+The upgrade carries exactly two values: the installed release's
+`UserDefaults` session core plus its per-Space history keys, and its sync
+journal. Everything else keeps the identifier it already had and is read in
+place, because the products share one identity — `ProductIdentity` resolves the
+same `com.pauldavis.crest` defaults domain, the same
+`Application Support/Crest` directory, the same keychain service namespace and
+the same `iCloud.com.pauldavis.crest` container for the WebKit `Crest` target,
+`CrestMobile`, and the Chromium composition that
+`package-chromium-host.py --product` assembles from `CrestChromiumUIProduct`.
+That packaged product rewrites `CFBundleIdentifier` to `com.pauldavis.crest`
+and carries Crest's own CloudKit container key, and it omits
+`CREST_REVIEW_BUILD`, so it takes the installed rather than the isolated launch
+path and opens the same `ControlPlane/session.sqlite`, favicon store, tab-state
+archive and download staging directory. None of these products is
+App-Sandboxed; adding `com.apple.security.app-sandbox` to either side would
+move every one of those paths into a container and strand the installed data,
+so the product package must be signed with the Mac target's own entitlements.
+
+`BrowserStore.migratedStorage` performs the carry and is the seam the upgrade
+test drives with its own directory, defaults suite and favicon store.
+`migrateIfNeeded` is a no-op once a checkpoint exists, so a later launch never
+replaces accepted data with the retained legacy copy. A core the installed
+release itself could not decode is copied aside by the legacy store, migrates
+nothing, and requests a full cloud pull, so the disposable seed that stands in
+is replaced by the Spaces CloudKit still holds instead of being published as
+their deletion.
+
+WebKit cookies and website data, WebKit extension packages and their granted
+permissions, and WebKit tab interaction-state archives are engine-specific and
+are not converted. The branch deletes none of them, so returning to the WebKit
+app finds them intact; a Chromium tab without a usable archive falls back to
+loading its URL. Physical-device validation and a real-account sync run against
+installed Spaces are still outstanding. Startup stages restored local edits before cloud work,
 including edits saved before their coalesced sync projection completed.
 
 `NativeSyncAuthority` is attached to the persistent session authority and owns the

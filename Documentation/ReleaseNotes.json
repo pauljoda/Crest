@@ -1733,6 +1733,14 @@
     "native-core-shared-error-codes": {
       "category": "internal",
       "message": "Keep native core error codes consistent across policies and native status mapping."
+    },
+    "upgrade-unreadable-session-recovery": {
+      "category": "fixed",
+      "message": "Upgrading with a damaged saved session no longer gets stuck on the recovery screen; Crest starts and restores your Spaces from iCloud instead."
+    },
+    "installed-session-upgrade-coverage": {
+      "category": "internal",
+      "message": "Cover the installed-session upgrade end to end: every record, profile identity, sync journal state and favicon survives the one-time move into the transactional store."
     }
   }
 }

@@ -195,6 +195,38 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         XCTAssertEqual(try relaunched.journalPersistence.load()?.records, journal.records)
     }
 
+    /// An upgrade that finds a core the installed release could not decode. Its
+    /// bytes have to survive, the app still has to launch, and the empty seed
+    /// that stands in must never be published as a deletion of the real Spaces.
+    func testUpgradingAnUnreadableInstalledCoreLaunchesAndAsksForAFullCloudPull() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let suiteName = "com.pauldavis.crest.tests.upgrade." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let favicons = BrowserFaviconFileStore(
+            rootDirectory: directory.appendingPathComponent("Favicons", isDirectory: true))
+        let unreadable = Data("a core a later build may still read".utf8)
+        defaults.set(unreadable, forKey: UserDefaultsBrowserSessionPersistence.coreKey)
+
+        let legacy = UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: favicons)
+        let storage = try BrowserStore.migratedStorage(directory: directory, legacy: legacy,
+            journal: UserDefaultsBrowserSyncJournalPersistence(defaults: defaults),
+            favicons: favicons, environment: .current)
+        // Nothing was carried, so launch seeds a disposable fresh install rather
+        // than committing an empty session over the reader's own Space IDs.
+        XCTAssertNil(storage.load())
+        XCTAssertEqual(legacy.preservedUnreadableSessionData(), unreadable)
+        XCTAssertEqual(defaults.data(forKey: UserDefaultsBrowserSessionPersistence.coreKey), unreadable)
+        // The cloud-recovery request stays on disk until a transport consumes it
+        // and resets the cursor, so the seed is replaced by a full pull.
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: BrowserSessionRecovery.cloudMarker(for: storage.url).path))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: BrowserSessionRecovery.checkpointURL(for: storage.url).path))
+    }
+
     /// Spaces with distinct profiles, folders, pinned/saved/current tabs, a
     /// split, an archive, per-Space history, favicon bytes and a locked Space.
     private func makeInstalledSession() throws -> BrowserSession {

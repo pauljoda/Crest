@@ -172,7 +172,8 @@ extension BrowserStore {
         let url = directory.appendingPathComponent("session.sqlite")
         do {
             let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: favicons)
-            try storage.migrateIfNeeded(session: migrationSession(legacy), journal: journal.load())
+            try storage.migrateIfNeeded(session: migrationSession(legacy, storeURL: url),
+                journal: journal.load())
             try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
             try? storage.saveRecoveryCheckpoint()
             return storage
@@ -180,10 +181,24 @@ extension BrowserStore {
             throw BrowserSessionStartupFailure(storeURL: url, underlying: error)
         }
     }
-    private static func migrationSession(_ legacy: UserDefaultsBrowserSessionPersistence) throws -> BrowserSession? {
+
+    /// The installed release's session, or nil when this upgrade has none it may
+    /// carry.
+    ///
+    /// A core that would not decode has already been copied aside by the legacy
+    /// store, and those bytes are the only remaining record of that session.
+    /// Migrating the disposable seed that stands in for it would let sync read
+    /// the empty result as a deletion of every real Space, so the launch asks
+    /// the cloud transport for a full pull instead: the seed is replaced by the
+    /// Spaces CloudKit still holds rather than tombstoning them. Refusing to
+    /// launch at all is not an option here — there is no checkpoint to restore
+    /// on a first upgrade, so the retry would never succeed.
+    private static func migrationSession(_ legacy: UserDefaultsBrowserSessionPersistence,
+        storeURL: URL) throws -> BrowserSession? {
         let session = legacy.load()
         guard legacy.status != .preservedUnreadableSession else {
-            throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint
+            try Data().write(to: BrowserSessionRecovery.cloudMarker(for: storeURL), options: .atomic)
+            return nil
         }
         return session
     }
