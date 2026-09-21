@@ -99,7 +99,7 @@ public sealed class SearchPreferences
         string address = resolution.Url;
         if (resolution.SearchQuery is null && Uri.TryCreate(address, UriKind.Absolute, out var uri)
             && uri.Scheme is "http" or "https") address = uri.AbsoluteUri;
-        BrowserWorkspace.ValidateUrl(address, allowsInternalPages);
+        BrowserSpace.ValidateUrl(address, allowsInternalPages);
         return address;
     }
 }

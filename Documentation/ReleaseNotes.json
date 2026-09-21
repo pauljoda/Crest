@@ -1653,6 +1653,10 @@
     "stable-mobile-window-runtime": {
       "category": "fixed",
       "message": "Fix an iPhone startup freeze that prevented browsing and iCloud sync."
+    },
+    "retire-message-kernel-runtime": {
+      "category": "internal",
+      "message": "Retire the unused message-based browser kernel runtime; the native session authority is the single implementation of browser rules."
     }
   }
 }

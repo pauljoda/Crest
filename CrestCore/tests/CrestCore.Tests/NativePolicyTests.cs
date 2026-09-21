@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using CrestCore.Application;
 using CrestCore.Contracts;
+using CrestCore.Domain;
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -74,6 +75,24 @@ public sealed class NativePolicyTests
         request["peekModified"] = true;
         Assert.Throws<ProtocolException>(() => Decision());
     }
+    [Fact]
+    public void CustomSearchTemplatesRejectCredentialAndLocalTargetsAndHaveStableSelectionFallback()
+    {
+        foreach (var template in new[] {
+            "http://example.org/?q=%s", "https://example.org/?q=%s&token=secret", "https://localhost/?q=%s",
+            "https://192.168.1.1/?q=%s", "https://%s.example.org/", "https://example.org/#%s",
+            "https://example.org/?q=%s&other={searchTerms}", "https://example.org/?q=%s&bad=%z",
+            "https://user:secret@example.org/?q=%s", "https://example.org:8443/?q=%s" })
+            Assert.Throws<BrowserRuleException>(() => SearchProvider.Custom(Guid.NewGuid(), "Custom", template, null));
+        var id = Guid.NewGuid(); var provider = SearchProvider.Custom(id, "Café", "https://example.org/find/{searchTerms}", null);
+        var preferences = SearchPreferences.Default.Upsert(provider).Select(provider.Id, true);
+        Assert.Equal("https://example.org/find/a%2Fb%3Fc", preferences.Resolve("a/b?c", false));
+        Assert.Throws<BrowserRuleException>(() => preferences.Upsert(SearchProvider.Custom(Guid.NewGuid(), "CAFE", "https://example.com/?q=%s", null)));
+        Assert.Equal("google", preferences.Remove(id).SelectedId);
+        Assert.Equal(provider.Id, preferences.SelectedId);
+        Assert.Throws<BrowserRuleException>(() => SearchPreferences.Default.Resolve("https://user:password@example.org", false));
+    }
+
     [Fact]
     public void PurePolicyRejectsUnknownVersionsAndOperations()
     {

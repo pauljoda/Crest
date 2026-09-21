@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char* session = "11111111-1111-1111-1111-111111111111";
 static void access_boundary(void) {
     uint64_t access = 0, request = 0;
     uint8_t space[16] = {1}, profile[16] = {2}, replacement[16] = {3};
@@ -40,72 +39,74 @@ static void policy_boundary(void) {
     assert(crest_core_evaluate_policy(invalid, sizeof(invalid), output, 256, &length) == CREST_INVALID_MESSAGE);
     assert(length == 0);
 }
-static void descriptor(crest_core_handle_t core, const char* role) {
-    char json[2048];
+static const char* space_id = "44444444-4444-4444-4444-444444444444";
+static const char* profile_id = "55555555-5555-5555-5555-555555555555";
+static void session_boundary(void) {
+    char json[1024];
+    int size = snprintf(json, sizeof(json),
+        "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},"
+        "\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"tabs\":[],\"folders\":[],"
+        "\"history\":[],\"archivedTabs\":[]}]}", space_id, space_id, profile_id);
+    assert(size > 0 && (size_t)size < sizeof(json));
+    uint64_t session = 999, revision = 999;
+    assert(crest_session_create(NULL, 0, &session, &revision) == CREST_INVALID_ARGUMENT
+        && session == 0 && revision == 0);
+    assert(crest_session_create((const uint8_t*)"{}", 2, &session, &revision) == CREST_INVALID_MESSAGE
+        && session == 0);
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK
+        && session != 0 && revision == 1);
+    memset(json, 0xaa, sizeof(json)); /* The core must own its session copy. */
+
+    /* The remaining v1 descriptor contract: process-local engine registration. */
     const char* capability = "{\"status\":\"supported\",\"contractVersion\":1,\"scope\":\"native ABI test\",\"limitations\":[],\"evidence\":\"native consumer\"}";
-    int length = snprintf(json, sizeof(json),
-        "{\"adapterId\":\"%s\",\"role\":\"%s\",\"implementationId\":\"fixture\",\"implementationVersion\":\"1\",\"protocolVersion\":1,"
-        "\"capabilities\":{\"pages\":%s,\"navigation\":%s,\"surfaces\":%s}}", role, role, capability, capability, capability);
-    assert(length > 0 && (size_t)length < sizeof(json));
-    assert(crest_core_register_adapter(core, (const uint8_t*)json, length) == CREST_OK);
-    memset(json, 0xaa, sizeof(json)); /* The core must own its descriptor copy. */
-}
-static void extract_id(const char* json, const char* key, char out[37]) {
-    char needle[64]; snprintf(needle, sizeof(needle), "\"%s\":\"", key);
-    const char* value = strstr(json, needle); assert(value); value += strlen(needle);
-    memcpy(out, value, 36); out[36] = 0; assert(value[36] == '"');
+    char engine[2048];
+    size = snprintf(engine, sizeof(engine),
+        "{\"adapterId\":\"engine\",\"role\":\"engine\",\"implementationId\":\"fixture\","
+        "\"implementationVersion\":\"1\",\"protocolVersion\":%u,\"capabilities\":{\"pages\":%s,\"navigation\":%s}}",
+        CREST_PROTOCOL_VERSION, capability, capability);
+    assert(size > 0 && (size_t)size < sizeof(engine));
+    assert(crest_session_register_engine(session + 1000, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_HANDLE);
+    assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_OK);
+    assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_MESSAGE);
+    memset(engine, 0xaa, sizeof(engine)); /* The session must own its descriptor copy. */
+
+    char selection[512];
+    size = snprintf(selection, sizeof(selection),
+        "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"selectedTabs\":[{\"spaceID\":{\"rawValue\":\"%s\"},\"tabID\":null}]}",
+        space_id, space_id);
+    assert(size > 0 && (size_t)size < sizeof(selection));
+    uint64_t checkpoint = 0;
+    assert(crest_session_checkpoint(session, revision + 1, (const uint8_t*)selection, (size_t)size, &checkpoint)
+        == CREST_INVALID_STATE && checkpoint == 0);
+    assert(crest_session_checkpoint(session, revision, (const uint8_t*)selection, (size_t)size, &checkpoint) == CREST_OK
+        && checkpoint != 0);
+
+    /* A capacity probe reports the size without consuming the immutable part. */
+    const char* part = "core";
+    size_t length = 0, again = 0;
+    assert(crest_session_read_checkpoint(checkpoint, (const uint8_t*)part, strlen(part), NULL, 0, &length)
+        == CREST_BUFFER_TOO_SMALL && length > 0);
+    uint8_t* output = malloc(length + 1); assert(output); output[length] = 0xa5;
+    assert(crest_session_read_checkpoint(checkpoint, (const uint8_t*)part, strlen(part), output, length - 1, &again)
+        == CREST_BUFFER_TOO_SMALL && again == length);
+    assert(crest_session_read_checkpoint(checkpoint, (const uint8_t*)part, strlen(part), output, length, &again) == CREST_OK
+        && again == length && output[length] == 0xa5);
+    output[length] = 0;
+    /* Engine registration is process-local and never enters the checkpoint. */
+    assert(strstr((const char*)output, "fixture") == NULL);
+    free(output);
+
+    assert(crest_session_release_checkpoint(checkpoint) == CREST_OK);
+    assert(crest_session_release_checkpoint(checkpoint) == CREST_INVALID_HANDLE);
+    assert(crest_session_destroy(session) == CREST_OK);
+    assert(crest_session_destroy(session) == CREST_INVALID_HANDLE);
+    assert(crest_session_checkpoint(session, 1, (const uint8_t*)selection, (size_t)size, &checkpoint) == CREST_INVALID_HANDLE);
 }
 int main(void) {
     assert(crest_core_abi_version() == CREST_ABI_VERSION);
     policy_boundary();
     access_boundary();
-    crest_core_handle_t core = 999;
-    assert(crest_core_create(NULL, &core) == CREST_INVALID_ARGUMENT && core == 0);
-    char config[512];
-    int size = snprintf(config, sizeof(config), "{\"sessionId\":\"%s\",\"protocolVersion\":1,\"isolationMode\":\"ephemeral\",\"queueByteLimit\":8192,\"messageByteLimit\":4096}", session);
-    crest_core_options_v1 options = { sizeof(options), 99, (const uint8_t*)config, (size_t)size };
-    assert(crest_core_create(&options, &core) == CREST_VERSION_MISMATCH && core == 0);
-    options.abi_version = CREST_ABI_VERSION;
-    assert(crest_core_create(&options, &core) == CREST_OK && core != 0);
-    memset(config, 0xaa, sizeof(config));
-    assert(crest_core_start(core) == CREST_INVALID_STATE);
-    descriptor(core, "ui"); descriptor(core, "engine"); descriptor(core, "platform");
-    assert(crest_core_start(core) == CREST_OK);
-    assert(crest_core_destroy(core) == CREST_INVALID_STATE);
-    assert(crest_core_post(core, NULL, 10) == CREST_INVALID_ARGUMENT);
-    char command[1024];
-    size = snprintf(command, sizeof(command), "{\"protocolVersion\":1,\"sessionId\":\"%s\",\"id\":\"22222222-2222-2222-2222-222222222222\",\"correlationId\":\"22222222-2222-2222-2222-222222222222\",\"causationId\":null,\"sender\":\"ui\",\"recipient\":\"core\",\"sequence\":\"1\",\"kind\":\"command\",\"type\":\"core.snapshot\",\"payload\":{}}", session);
-    assert(crest_core_post(core, (const uint8_t*)command, size) == CREST_OK);
-    assert(crest_core_post(core, (const uint8_t*)command, size) == CREST_OK);
-    memset(command, 0xaa, sizeof(command));
-    assert(crest_core_wait_output(core, 2000) == CREST_OK);
-    size_t length = 0, second_length = 0;
-    assert(crest_core_read_output(core, NULL, 0, &length) == CREST_BUFFER_TOO_SMALL);
-    assert(length > 0 && length <= 4096);
-    uint8_t* output = malloc(4097); assert(output);
-    assert(crest_core_read_output(core, output, length - 1, &second_length) == CREST_BUFFER_TOO_SMALL);
-    assert(length == second_length);
-    assert(crest_core_read_output(core, output, 4096, &length) == CREST_OK);
-    output[length] = 0; assert(strstr((char*)output, "ui.snapshot"));
-    assert(crest_core_begin_shutdown(core) == CREST_OK);
-    assert(crest_core_begin_shutdown(core) == CREST_OK);
-    assert(crest_core_wait_stopped(core, 0) == CREST_TIMEOUT);
-    int count = 0;
-    while (crest_core_wait_output(core, 2000) != CREST_STOPPED) {
-        assert(++count < 20);
-        assert(crest_core_read_output(core, output, 4096, &length) == CREST_OK);
-        output[length] = 0;
-        if (strstr((char*)output, "engine.dispose_all")) {
-            char id[37], correlation[37];
-            extract_id((char*)output, "id", id); extract_id((char*)output, "correlationId", correlation);
-            size = snprintf(command, sizeof(command), "{\"protocolVersion\":1,\"sessionId\":\"%s\",\"id\":\"33333333-3333-3333-3333-333333333333\",\"correlationId\":\"%s\",\"causationId\":\"%s\",\"sender\":\"engine\",\"recipient\":\"core\",\"sequence\":\"1\",\"kind\":\"observation\",\"type\":\"engine.stopped\",\"payload\":{}}", session, correlation, id);
-            assert(crest_core_post(core, (const uint8_t*)command, size) == CREST_OK);
-        }
-    }
-    assert(crest_core_wait_stopped(core, 2000) == CREST_OK);
-    assert(crest_core_destroy(core) == CREST_OK);
-    assert(crest_core_start(core) == CREST_INVALID_HANDLE);
-    free(output);
-    puts("Native ABI ownership, size retry, identity, and shutdown checks passed.");
+    session_boundary();
+    puts("Native ABI buffer ownership, size retry, handle and session checks passed.");
     return 0;
 }

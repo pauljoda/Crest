@@ -27,7 +27,6 @@ extern "C" {
 #define CREST_ABI_VERSION 1u
 #define CREST_PROTOCOL_VERSION 1u
 
-typedef uint64_t crest_core_handle_t;
 typedef int32_t crest_status_t;
 
 #define CREST_OK                ((crest_status_t)0)
@@ -44,14 +43,7 @@ typedef int32_t crest_status_t;
 #define CREST_INTERNAL_ERROR    ((crest_status_t)-6)
 #define CREST_LIMIT_EXCEEDED    ((crest_status_t)-7)
 
-typedef struct crest_core_options_v1 {
-    uint32_t struct_size;
-    uint32_t abi_version;
-    const uint8_t* configuration_utf8;
-    size_t configuration_length;
-} crest_core_options_v1;
-
-/* Returns the ABI major supported by this image. No core is required. */
+/* Returns the ABI major supported by this image. */
 CREST_API uint32_t CREST_CALL crest_core_abi_version(void);
 
 /* Process-local Space access authority. UUID pointers reference exactly 16
@@ -147,8 +139,8 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
  */
 CREST_API crest_status_t CREST_CALL crest_session_create(
     const uint8_t* session, size_t length, uint64_t* out_session, uint64_t* out_revision);
-/* One process-local engine descriptor per native session. Same v1 descriptor
-   as crest_core_register_adapter; never saved or synced with browser records. */
+/* One process-local engine descriptor per native session. A v1 capability
+   descriptor; never saved or synced with browser records. */
 CREST_API crest_status_t CREST_CALL crest_session_register_engine(
     uint64_t session, const uint8_t* descriptor, size_t length);
 /* Borrow a canonical profile into a new memory-only session. The projection is
@@ -231,79 +223,6 @@ CREST_API crest_status_t CREST_CALL crest_sync_transaction_seal(uint64_t transac
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_commit(uint64_t transaction);
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_release(uint64_t transaction);
 CREST_API crest_status_t CREST_CALL crest_session_bind_sync_replacement(uint64_t replacement, uint64_t transaction);
-
-/* Copies retained configuration; sets *out_core to 0 on failure.
- * Caller initializes struct_size to sizeof(crest_core_options_v1).
- * options and out_core must be non-null. Does not start the executor.
- */
-CREST_API crest_status_t CREST_CALL crest_core_create(
-    const crest_core_options_v1* options,
-    crest_core_handle_t* out_core);
-
-/* Configuring only. Copies a validated provider descriptor.
- * Registration is for trusted shipped code; it loads no native/managed code.
- */
-CREST_API crest_status_t CREST_CALL crest_core_register_adapter(
-    crest_core_handle_t core,
-    const uint8_t* descriptor_utf8,
-    size_t descriptor_length);
-
-/* Validates required providers; starts the serialized semantic executor.
- * Returns transport/startup status, not a promise that native pages exist.
- */
-CREST_API crest_status_t CREST_CALL crest_core_start(
-    crest_core_handle_t core);
-
-/* Thread-safe enqueue. Input is borrowed only until this call returns.
- * OK means copied and accepted; BUSY means not accepted and safe to retry.
- * Semantic completion/failure is reported through the outbox.
- */
-CREST_API crest_status_t CREST_CALL crest_core_post(
-    crest_core_handle_t core,
-    const uint8_t* message_utf8,
-    size_t message_length);
-
-/* Dedicated transport worker only. Blocks on a notification, not a spin loop.
- * OK: output available. TIMEOUT: no change. STOPPED: outbox empty and no more
- * output can be produced. timeout_ms == 0 performs a nonblocking check.
- */
-CREST_API crest_status_t CREST_CALL crest_core_wait_output(
-    crest_core_handle_t core,
-    uint32_t timeout_ms);
-
-/* Single-consumer copy from outbox. out_length must be non-null.
- * With capacity 0, destination may be null. BUFFER_TOO_SMALL reports the
- * needed byte count and does not consume. OK copies/consumes one message.
- * EMPTY/STOPPED sets *out_length to 0. No trailing NUL is written.
- */
-CREST_API crest_status_t CREST_CALL crest_core_read_output(
-    crest_core_handle_t core,
-    uint8_t* destination,
-    size_t capacity,
-    size_t* out_length);
-
-/* Nonblocking, idempotent, irreversible shutdown request. Caller completes
- * cancelable native quit preflight first. Allows required terminal adapter
- * completions while quiescing. Wakes output waits as state/output changes.
- * Runtime shutdown may depend on host completion of final emitted effects.
- */
-CREST_API crest_status_t CREST_CALL crest_core_begin_shutdown(
-    crest_core_handle_t core);
-
-/* Worker-only wait for stopped executor. Continue draining/routing final
- * output on the transport worker; do not deadlock it with this wait.
- * OK means stopped, TIMEOUT means still stopping. Does not consume output.
- */
-CREST_API crest_status_t CREST_CALL crest_core_wait_stopped(
-    crest_core_handle_t core,
-    uint32_t timeout_ms);
-
-/* Stopped/failed-before-start only; no concurrent calls, worker waits or
- * outstanding references may remain. Outbox must be drained. Invalidates
- * the numeric handle. Does not dlclose/FreeLibrary the containing image.
- */
-CREST_API crest_status_t CREST_CALL crest_core_destroy(
-    crest_core_handle_t core);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -12,7 +12,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery)
             || value.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase))
         {
             if (!allowsInternalPages) return new(provider.Search(value), value);
-            BrowserWorkspace.ValidateUrl(value, allowsInternalPages: true);
+            BrowserSpace.ValidateUrl(value, allowsInternalPages: true);
             return new(value, null);
         }
         if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && explicitUrl.Scheme is "http" or "https"
