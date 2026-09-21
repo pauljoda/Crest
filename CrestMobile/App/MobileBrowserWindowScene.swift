@@ -11,7 +11,7 @@ struct MobileBrowserWindowScene: View {
     private let sidebarWidgets: BrowserSidebarWidgetRuntime
     @Bindable private var onboardingCoordinator: BrowserOnboardingCoordinator
 
-    @State private var model: MobileBrowserWindowSceneModel
+    @StateObject private var runtime: Runtime
     @State private var browsingMode: BrowserBrowsingMode = .standard
     @State private var hasPresentedAutomaticOnboarding = false
 
@@ -36,8 +36,8 @@ struct MobileBrowserWindowScene: View {
         self.onboardingCoordinator = onboardingCoordinator
         self.automaticallyPresentsOnboarding = automaticallyPresentsOnboarding
         self.sidebarWidgets = sidebarWidgets
-        _model = State(
-            initialValue: MobileBrowserWindowSceneModel(
+        _runtime = StateObject(
+            wrappedValue: Runtime(model: MobileBrowserWindowSceneModel(
                 id: id,
                 rootBrowser: rootBrowser,
                 permissionCenter: permissionCenter,
@@ -49,8 +49,22 @@ struct MobileBrowserWindowScene: View {
                 monitorsMemoryPressure: monitorsMemoryPressure,
                 usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
                 mediaSessionStore: mediaSessions
-            )
+            ))
         )
+    }
+
+    private var model: MobileBrowserWindowSceneModel { runtime.model }
+
+    /// Scene construction registers stores and reads shared observed state.
+    /// StateObject's deferred initializer runs that work once per mounted scene,
+    /// outside its parent's body evaluation. The model keeps Observation for UI updates.
+    @MainActor
+    private final class Runtime: ObservableObject {
+        let model: MobileBrowserWindowSceneModel
+
+        init(model: MobileBrowserWindowSceneModel) {
+            self.model = model
+        }
     }
 
     var body: some View {

@@ -1649,6 +1649,10 @@
     "shared-core-multi-selection-commands": {
       "category": "improved",
       "message": "Apply selected-tab and folder changes together, and preserve the full selection when an unsaved-page close is canceled."
+    },
+    "stable-mobile-window-runtime": {
+      "category": "fixed",
+      "message": "Fix an iPhone startup freeze that prevented browsing and iCloud sync."
     }
   }
 }
