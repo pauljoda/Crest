@@ -245,6 +245,28 @@ final class ChromiumNativePage: BrowserPageEngine {
         host?.closeSidePanel(page: id)
     }
 
+    /// Mounts, relayouts or removes the docked DevTools frontend the engine is
+    /// offering for this page.
+    ///
+    /// A docked inspector belongs to the card it inspects, not to the window:
+    /// the frontend is a subview of this page's own surface, below the page so
+    /// the page can be drawn on top of it at the rectangle the frontend asked
+    /// for. Undocking withdraws the offer — Chromium then opens the window the
+    /// user asked for — and so does closing the inspector by any route.
+    func refreshDevTools() {
+        guard !disposed, let host else { return }
+        surface.devToolsView = host.devToolsView(page: id)
+        surface.layoutEngineView()
+    }
+
+    /// The inspector for this page is going away, whatever closed it. The core
+    /// clears its developer-panel selection so the next Console or Elements
+    /// command opens an inspector instead of trying to close a closed one.
+    func developerPanelDidClose() {
+        guard !disposed else { return }
+        observer("developer_panel", [:])
+    }
+
     static func webStoreExtensionID(_ url: URL?) -> String? {
         guard let url, url.scheme == "https", url.host == "chromewebstore.google.com",
             url.pathComponents.count >= 3, url.pathComponents[1] == "detail",
@@ -271,6 +293,7 @@ final class ChromiumNativePage: BrowserPageEngine {
         pendingNavigation = nil
         disposed = true
         Self.registry[id] = nil
+        surface.devToolsView = nil
         surface.subviews.forEach { $0.removeFromSuperview() }
         host?.disposePages([id], windows: [], releaseProfiles: [])
         host = nil
@@ -415,6 +438,27 @@ extension ChromiumNativePage: BrowserPageDocumentServices {
 @MainActor
 final class ChromiumNativePageView: NSView, BrowserNativePageSurfaceLifecycle {
     weak var page: ChromiumNativePage?
+    /// The docked DevTools frontend, while one is offered for this page. It is
+    /// kept below the engine's page view so the page is drawn on top of it,
+    /// which is the arrangement the resizing strategy is expressed in.
+    var devToolsView: NSView? {
+        didSet {
+            guard devToolsView !== oldValue else { return }
+            oldValue?.removeFromSuperview()
+            guard let devToolsView else { return }
+            devToolsView.autoresizingMask = []
+            if let engineView {
+                addSubview(devToolsView, positioned: .below, relativeTo: engineView)
+            } else {
+                addSubview(devToolsView)
+            }
+        }
+    }
+    /// The engine's page view. The DevTools frontend is a sibling, so the page
+    /// is whichever subview is not it.
+    private var engineView: NSView? {
+        subviews.first { $0 !== devToolsView }
+    }
     override func layout() {
         super.layout()
         layoutEngineView()
@@ -423,15 +467,34 @@ final class ChromiumNativePageView: NSView, BrowserNativePageSurfaceLifecycle {
         layoutEngineView()
     }
     func layoutEngineView() {
-        guard !bounds.isEmpty, let view = subviews.first else { return }
-        view.frame = bounds
-        // A navigation can replace Chromium's renderer after this container
-        // was laid out. Propagate the viewport even when its size is unchanged.
-        view.setFrameSize(bounds.size)
+        guard !bounds.isEmpty, let view = engineView else { return }
+        guard let devToolsView, let page,
+            let frames = CrestChromiumRoot.engineHost?.layoutDevTools(page: page.id, container: bounds),
+            let frontendFrame = frames["devTools"]?.rectValue,
+            let pageFrame = frames["page"]?.rectValue
+        else {
+            view.isHidden = false
+            view.frame = bounds
+            // A navigation can replace Chromium's renderer after this container
+            // was laid out. Propagate the viewport even when its size is unchanged.
+            view.setFrameSize(bounds.size)
+            return
+        }
+        devToolsView.frame = frontendFrame
+        devToolsView.setFrameSize(frontendFrame.size)
+        // An empty page rectangle is the frontend asking to cover the page —
+        // its own device-toolbar and drawer layouts do this — so the page is
+        // hidden rather than squeezed to nothing.
+        view.isHidden = pageFrame.isEmpty
+        guard !pageFrame.isEmpty else { return }
+        view.frame = pageFrame
+        view.setFrameSize(pageFrame.size)
     }
     override var acceptsFirstResponder: Bool { true }
     override func becomeFirstResponder() -> Bool {
-        guard let view = subviews.first else { return super.becomeFirstResponder() }
+        // The page, never the docked inspector beside it: focus arriving at the
+        // card belongs to the page the card is showing.
+        guard let view = engineView else { return super.becomeFirstResponder() }
         return window?.makeFirstResponder(view) ?? false
     }
     override func viewDidMoveToWindow() {

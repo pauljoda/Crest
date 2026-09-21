@@ -26,6 +26,14 @@ struct BrowserSiteControlButton: View {
             }
             .modifier(BrowserSiteControlPopoverStyle())
         }
+        // This control opens the window's extension list, so it is where an
+        // extension popup goes when the keyboard asked for one and the
+        // extension has no pinned tile to anchor to.
+        .background {
+            #if CREST_CHROMIUM_HOST
+                BrowserExtensionPopupAnchorReader(site: .menu)
+            #endif
+        }
         .pagePermissionHost(configuration.page.sitePermissionRequests)
         .onChange(of: configuration.page.sitePermissionRequests.current?.id) {
             configuration.presentationChanged(presentationBinding.wrappedValue)

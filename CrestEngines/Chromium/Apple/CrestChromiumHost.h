@@ -62,6 +62,21 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
                             closed:(void (^)(void))closed
     NS_SWIFT_NAME(openSidePanel(_:page:closed:));
 - (void)closeSidePanelForPage:(NSString *)pageID NS_SWIFT_NAME(closeSidePanel(page:));
+// Docked DevTools. A Crest window is the user's window, so a docked inspector
+// is mounted inside the page card it inspects instead of opening a window of
+// its own. The engine offers and withdraws the frontend through
+// `CrestRoot.routeDevTools(page:)`; this reads back what it offered.
+//
+// `devToolsViewForPage:` is the frontend's container while an inspector is
+// docked on that page, and nil otherwise. `layoutDevToolsForPage:container:`
+// resolves where the frontend and the inspected page go inside `container`,
+// which is the whole card interior, and returns AppKit rectangles under the
+// `devTools` and `page` keys — the frontend's own dock side and size are
+// encoded in the resizing strategy the engine keeps for that page. A `page`
+// rectangle with no area means the frontend is covering the page on purpose.
+- (nullable NSView *)devToolsViewForPage:(NSString *)pageID NS_SWIFT_NAME(devToolsView(page:));
+- (nullable NSDictionary<NSString *, NSValue *> *)layoutDevToolsForPage:(NSString *)pageID
+    container:(NSRect)container NS_SWIFT_NAME(layoutDevTools(page:container:));
 // chrome.commands. The shortcut's target in the active page's own profile, or
 // nil when no enabled extension bound it. A named command has already been
 // delivered to its extension and reports `handled`; an `_execute_action`

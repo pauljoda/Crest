@@ -670,6 +670,22 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         BrowserExtensionSidePanelHost.route(request, extensionID: extensionID, page: page, host: host)
     }
 
+    /// The docked DevTools frontend for a page changed: it was opened, resized,
+    /// moved to another dock side, or withdrawn. The page owns the card it is
+    /// mounted in, so it reads the offer back itself.
+    @objc(routeDevTools:)
+    static func routeDevTools(_ pageID: String) {
+        guard let instance, !instance.quitting else { return }
+        ChromiumNativePage.live(pageID)?.refreshDevTools()
+    }
+
+    /// The inspector for a page is closing, whichever way it was closed.
+    @objc(closeDevToolsPanel:)
+    static func closeDevToolsPanel(_ pageID: String) {
+        guard let instance, !instance.quitting else { return }
+        ChromiumNativePage.live(pageID)?.developerPanelDidClose()
+    }
+
     @objc static func deferQuit() -> Bool {
         guard let instance, !instance.hasStopped else { return false }
         guard !instance.quitting else { return true }
@@ -725,8 +741,13 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         guard let page = activeContext?.pages.activePage?.chromiumPage,
             let result = host.dispatchExtensionShortcut(event, page: page.id) else { return false }
         // An `_execute_action` binding runs through the core so the popup keeps
-        // the anchor a click on the extension's own button would have used.
-        if let extensionID = result["action"] as? String { page.runExtension(extensionID) }
+        // the anchor a click on the extension's own button would have used: its
+        // pinned tile, or the control that opens the window's extension list. A
+        // shortcut has no pointer location, so the pointer is never the answer.
+        if let extensionID = result["action"] as? String {
+            page.runExtension(extensionID, anchor: BrowserExtensionToolbarAnchorRegistry.anchor(
+                for: extensionID, in: page.surface.window))
+        }
         return true
     }
 

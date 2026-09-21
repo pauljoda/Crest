@@ -9,6 +9,7 @@
 
 class Browser;
 class GURL;
+class Profile;
 namespace content { class WebContents; class NavigationThrottleRegistry; struct DropData; struct OpenURLParams; }
 
 namespace crest {
@@ -20,6 +21,14 @@ void OnBrowserWindowDestroyed(Browser* browser);
 // reserved for that Browser when the Browser's first tab is offered, so this
 // only records whether `chrome.windows.create` asked for focus.
 void OnEngineWindowShown(Browser* browser, bool focused);
+// Whether a browsing window the engine wants to create for itself has a Crest
+// Space to live in. A window Crest is creating for itself always does.
+//
+// Answered before the Browser exists, so a request no Space can host is
+// refused at the one point Chromium already reports as an error:
+// `chrome.windows.create` rejects instead of leaving its promise unsettled, and
+// no unowned Browser is left running with tabs to decline.
+bool CanCreateEngineBrowser(Profile* profile);
 void EnsureCrestUIStarted(Browser* browser);
 // Chrome's AppController retains its lifecycle role. A quit waits for core saves.
 bool DeferQuit();
@@ -38,6 +47,21 @@ void AddNavigationThrottle(content::NavigationThrottleRegistry& registry);
 // leaves Chromium's own behavior in place.
 bool OpenExtensionSidePanel(content::WebContents* contents, const std::string& extension_id);
 bool CloseExtensionSidePanel(content::WebContents* contents, const std::string& extension_id);
+// DevTools. Crest is a single-window browser, so a docked inspector belongs
+// inside the page card it inspects rather than in a window of its own. This
+// build never creates Chrome's Views contents container, so its
+// `DevtoolsUIController` — which is what normally answers both of these — does
+// not exist; these answer in its place for a WebContents a Crest page owns.
+//
+// `CanDockDevTools` decides whether the frontend may dock at all.
+// `UpdateDockedDevTools` offers, relayouts or withdraws the docked frontend and
+// returns true when a Crest page owns `inspected`. `OnDevToolsClosing` reports
+// an inspector that is going away by any route — its own close button, an
+// undocked window close, or the inspected page closing — so the core's
+// developer-panel selection cannot go stale.
+bool CanDockDevTools(content::WebContents* inspected);
+bool UpdateDockedDevTools(content::WebContents* inspected);
+void OnDevToolsClosing(content::WebContents* inspected);
 // Applies semantic policy after Chromium validates a renderer's original request.
 bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& params);
 #ifdef __OBJC__

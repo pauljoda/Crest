@@ -1757,6 +1757,18 @@
     "chromium-devtools-close-command": {
       "category": "fixed",
       "message": "Repeating a developer panel command in Chromium-powered windows closes Developer Tools as intended."
+    },
+    "chromium-docked-devtools": {
+      "category": "improved",
+      "message": "Developer Tools open inside the page in Chromium-powered windows, docked to the side or bottom you choose, instead of in a separate window."
+    },
+    "extension-shortcut-popup-anchor": {
+      "category": "fixed",
+      "message": "Extension popups opened by keyboard shortcut appear at the extension button rather than the pointer."
+    },
+    "locked-space-extension-window-rejects": {
+      "category": "fixed",
+      "message": "Extensions asking to open a window in a locked Space get a clear refusal instead of waiting forever."
     }
   }
 }

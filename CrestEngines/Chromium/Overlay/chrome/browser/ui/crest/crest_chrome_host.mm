@@ -16,7 +16,9 @@
 #include "base/timer/timer.h"
 #include "content/public/browser/devtools_agent_host.h"
 #include "content/public/browser/devtools_agent_host_client.h"
+#include "base/functional/bind.h"
 #include "base/functional/callback_helpers.h"
+#include "base/task/sequenced_task_runner.h"
 #include "base/files/file_util.h"
 #include "components/prefs/pref_service.h"
 #include "chrome/browser/browsing_data/chrome_browsing_data_remover_constants.h"
@@ -53,6 +55,7 @@
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/permissions/permission_request.h"
 #include "components/permissions/permission_uma_util.h"
+#include "chrome/browser/devtools/devtools_contents_resizing_strategy.h"
 #include "chrome/browser/devtools/devtools_toggle_action.h"
 #include "chrome/browser/devtools/devtools_window.h"
 #include "chrome/browser/extensions/api/side_panel/side_panel_service.h"
@@ -141,6 +144,8 @@
 + (BOOL)openExternalURLs:(NSArray<NSURL*>*)urls;
 + (void)routeSidePanel:(NSString*)extensionID page:(NSString*)pageID
                request:(CrestSidePanelRequest)request;
++ (void)routeDevTools:(NSString*)pageID;
++ (void)closeDevToolsPanel:(NSString*)pageID;
 @end
 
 @interface CrestLinkMenuAction : NSObject
@@ -282,6 +287,34 @@ class ExtensionSidePanel final : public extensions::ExtensionView,
   void (^__strong closed_)(void);
   NSView* __strong container_ = nil;
   base::WeakPtrFactory<ExtensionSidePanel> weak_factory_{this};
+};
+// The docked DevTools frontend inside a Crest page card.
+//
+// Chromium owns the frontend WebContents and everything in it, including the
+// undock and close buttons. This owns only the container the core mounts, so a
+// dock-side or size change is a relayout of a card that is already on screen
+// rather than a new one, and the resizing strategy the frontend publishes is
+// kept here beside it.
+class DevToolsPanel {
+ public:
+  explicit DevToolsPanel(content::WebContents* frontend)
+      : frontend_(frontend->GetWeakPtr()) {
+    container_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)];
+    container_.autoresizesSubviews = YES;
+    NSView* view = frontend->GetNativeView().GetNativeNSView();
+    view.frame = container_.bounds;
+    view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [container_ addSubview:view];
+  }
+  NSView* container() { return container_; }
+  bool hosts(content::WebContents* frontend) const {
+    return frontend_ && frontend_.get() == frontend;
+  }
+  DevToolsContentsResizingStrategy strategy;
+
+ private:
+  base::WeakPtr<content::WebContents> frontend_;
+  NSView* __strong container_ = nil;
 };
 class NativePermissionPrompt final : public permissions::PermissionPrompt {
  public:
@@ -803,6 +836,11 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   uint64_t navigation_generation = 0;
   std::unique_ptr<ExtensionPopup> extension_popup;
   std::unique_ptr<ExtensionSidePanel> side_panel;
+  std::unique_ptr<DevToolsPanel> devtools;
+  // A frontend Crest handed back to Chromium's own window. Its renderer is
+  // permanently switched to Views drawing there, so re-docking must replace it
+  // rather than mount it again.
+  base::WeakPtr<content::WebContents> undocked_devtools;
   std::unique_ptr<PageDocumentService> document_service;
   void Publish(bool committed = false, NSString* failure = nil) {
     if (!web_contents() || State().disposing) return;
@@ -868,6 +906,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     }
     extension_popup.reset();
     side_panel.reset();
+    devtools.reset();
     Observe(nullptr);
     if (!State().disposing) observation(@"closed", @{});
   }
@@ -985,8 +1024,13 @@ Browser* BrowserFor(const std::string& profile_id, const std::string& window_id)
   auto found = state.profiles.find(profile_id);
   if (found == state.profiles.end()) return nullptr;
   Profile* profile = found->second;
-  if (Browser::GetCreationStatusForProfile(profile) != BrowserWindowInterface::CreationStatus::kOk) return nullptr;
+  // Named before the status check as well as the creation: a window the core is
+  // opening for itself is never subject to `CanCreateEngineBrowser`.
   state.creating_window = window_id;
+  if (Browser::GetCreationStatusForProfile(profile) != BrowserWindowInterface::CreationStatus::kOk) {
+    state.creating_window.clear();
+    return nullptr;
+  }
   Browser* browser = Browser::Create(Browser::CreateParams(profile, false));
   state.creating_window.clear();
   state.browsers.emplace(key, std::make_unique<BrowserOwner>(browser, window_id));
@@ -1547,10 +1591,11 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   } else if ([command isEqualToString:@"engine.inspect_close"]) {
     auto* inspector = DevToolsWindow::GetInstanceForInspectedWebContents(contents);
     if (!inspector) return NO;
-    // `CanDockDevTools` is false in this host, so every inspector is undocked
-    // and the browser-scoped toggle only ever reveals one again. Close the
-    // frontend contents instead: that is the same path its own window close
-    // takes, including the frontend's before-unload handling.
+    // Closing the frontend contents is the one path that covers both states: a
+    // docked frontend is its own delegate and tears the inspector down from
+    // here, and an undocked one takes the same route its window close takes.
+    // The browser-scoped toggle cannot be used instead — it acts on whichever
+    // tab is active, which is not necessarily the card this command names.
     content::WebContents* frontend = inspector->GetDevToolsWebContents();
     if (!frontend) return NO;
     frontend->Close();
@@ -1682,6 +1727,32 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   Page* page = FindPage(pageID);
   if (!page) return;
   page->side_panel.reset();
+}
+- (NSView*)devToolsViewForPage:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  return page && page->devtools ? page->devtools->container() : nil;
+}
+- (NSDictionary<NSString*, NSValue*>*)layoutDevToolsForPage:(NSString*)pageID container:(NSRect)container {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->devtools || NSIsEmptyRect(container)) return nil;
+  // The frontend takes the whole card interior and the inspected page is drawn
+  // on top of it at the rectangle the frontend asked for, which is how its own
+  // dock side, splitter position and drawer height reach the card.
+  gfx::Rect frontend_bounds;
+  gfx::Rect page_bounds;
+  ApplyDevToolsContentsResizingStrategy(
+      page->devtools->strategy,
+      gfx::Rect(0, 0, static_cast<int>(NSWidth(container)), static_cast<int>(NSHeight(container))),
+      &frontend_bounds, &page_bounds);
+  // Chromium measures from the top left; AppKit measures from the bottom left.
+  auto flipped = [&container](const gfx::Rect& rect) {
+    return [NSValue valueWithRect:NSMakeRect(NSMinX(container) + rect.x(),
+        NSMinY(container) + NSHeight(container) - rect.y() - rect.height(),
+        rect.width(), rect.height())];
+  };
+  return @{ @"devTools": flipped(frontend_bounds), @"page": flipped(page_bounds) };
 }
 - (NSDictionary<NSString*, id>*)dispatchExtensionShortcut:(NSEvent*)event page:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
@@ -2399,8 +2470,10 @@ void OnBrowserWindowCreated(Browser* browser) {
   }
   if (!State().started || !State().creating_window.empty()) return;
   if (RegisterEngineBrowser(browser)) return;
-  // No Crest Space can host this profile. The Browser is still tracked so its
-  // tabs are offered and then declined, rather than left running unowned.
+  // `CanCreateEngineBrowser` refuses these before they are created, so this is
+  // only reached by a creation path that does not consult it. The Browser is
+  // still tracked so its tabs are offered and then declined, rather than left
+  // running unowned.
   const std::string key = "native/" + base::Uuid::GenerateRandomV4().AsLowercaseString();
   State().browsers.emplace(key, std::make_unique<BrowserOwner>(browser, std::string()));
 }
@@ -2443,6 +2516,19 @@ void OnEngineWindowShown(Browser* browser, bool focused) {
     owner->focused = focused;
     return;
   }
+}
+bool CanCreateEngineBrowser(Profile* profile) {
+  // Before the core runs, and for the window the core is creating for itself,
+  // the engine's own answer stands.
+  if (!IsEnabled() || !State().started || !State().creating_window.empty()) return true;
+  if (State().disposing || State().quitting) return true;
+  std::string profile_id;
+  for (const auto& [id, candidate] : State().profiles)
+    if (candidate == profile) { profile_id = id; break; }
+  if (profile_id.empty() || State().deleting_profiles.contains(profile_id)) return false;
+  NSDictionary<NSString*, NSString*>* placement = [NSClassFromString(@"CrestRoot")
+      reserveEngineWindowForProfile:base::SysUTF8ToNSString(profile_id)];
+  return placement[@"windowId"].length > 0 && placement[@"spaceId"].length > 0;
 }
 NSWindow* WindowForBrowser(Browser* browser) {
   if (!State().started) return nil;
@@ -2487,6 +2573,60 @@ bool OpenExtensionSidePanel(content::WebContents* contents, const std::string& e
 }
 bool CloseExtensionSidePanel(content::WebContents* contents, const std::string& extension_id) {
   return RouteSidePanel(contents, extension_id, CrestSidePanelRequestClose);
+}
+bool CanDockDevTools(content::WebContents* inspected) {
+  if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
+  return !PageIdentifierForContents(inspected).empty();
+}
+bool UpdateDockedDevTools(content::WebContents* inspected) {
+  if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
+  const std::string identifier = PageIdentifierForContents(inspected);
+  if (identifier.empty()) return false;
+  Page* page = FindPage(base::SysUTF8ToNSString(identifier));
+  if (!page) return false;
+  auto* inspector = DevToolsWindow::GetInstanceForInspectedWebContents(inspected);
+  DevToolsContentsResizingStrategy strategy;
+  // Only a docked frontend belongs in the card. An undocked window also offers
+  // its device-emulation container for the inspected tab, which Crest does not
+  // present: the card keeps showing the page.
+  content::WebContents* frontend = inspector && inspector->IsDocked()
+      ? DevToolsWindow::GetInTabWebContents(inspected, &strategy) : nullptr;
+  if (!frontend) {
+    if (inspector && !inspector->IsDocked()) {
+      if (content::WebContents* undocked = inspector->GetDevToolsWebContents())
+        page->undocked_devtools = undocked->GetWeakPtr();
+    }
+    // Nothing is docked any more: the inspector closed, or the user undocked
+    // it and Chromium has taken the frontend into a window of its own.
+    if (!page->devtools) return true;
+    page->devtools.reset();
+  } else if (page->undocked_devtools.get() == frontend) {
+    // The user re-docked the window they had undocked. That frontend can no
+    // longer draw outside Views, so it is replaced with a fresh docked one.
+    page->undocked_devtools.reset();
+    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+        FROM_HERE, base::BindOnce([](base::WeakPtr<content::WebContents> inspected,
+                                     base::WeakPtr<content::WebContents> frontend) {
+          if (frontend) frontend->Close();
+          if (inspected) {
+            DevToolsWindow::OpenDevToolsWindow(inspected.get(), DevToolsToggleAction::Show(),
+                DevToolsOpenedByAction::kMainMenuOrMainShortcut);
+          }
+        }, inspected->GetWeakPtr(), frontend->GetWeakPtr()));
+    return true;
+  } else {
+    if (!page->devtools || !page->devtools->hosts(frontend))
+      page->devtools = std::make_unique<DevToolsPanel>(frontend);
+    page->devtools->strategy.CopyFrom(strategy);
+  }
+  [NSClassFromString(@"CrestRoot") routeDevTools:base::SysUTF8ToNSString(identifier)];
+  return true;
+}
+void OnDevToolsClosing(content::WebContents* inspected) {
+  if (!IsEnabled() || !State().started || State().disposing || State().quitting) return;
+  const std::string identifier = PageIdentifierForContents(inspected);
+  if (identifier.empty()) return;
+  [NSClassFromString(@"CrestRoot") closeDevToolsPanel:base::SysUTF8ToNSString(identifier)];
 }
 bool OpenExternalURLs(NSArray<NSURL*>* urls) {
   // Before the native root exists there is nothing to route into, and after a

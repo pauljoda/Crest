@@ -26,7 +26,10 @@ struct BrowserPinnedExtensionActionButton: View {
                 height: BrowserPinnedExtensionStripLayoutPolicy.tileSize
             )
             .background {
-                BrowserExtensionPopupAnchorReader(popupAnchor: $popupAnchor)
+                BrowserExtensionPopupAnchorReader(
+                    popupAnchor: $popupAnchor,
+                    site: .tile(action.id)
+                )
             }
             .overlay {
                 BrowserExtensionContextMenuTrigger(presentMenu: presentMenu)

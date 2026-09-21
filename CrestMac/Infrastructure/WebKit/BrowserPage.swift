@@ -1268,6 +1268,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 committedNavigationCount += 1
             }
             if wasLoading, !isLoading, committedNavigationCount > 0 { completedNavigationCount += 1 }
+        case "developer_panel":
+            // The inspector went away on its own — its close button, an
+            // undocked window close, or the engine tearing it down. Without
+            // this the next Console command would try to close a panel that is
+            // already gone instead of opening one.
+            developerPanel = nil
         case "closed":
             Task { @MainActor [weak self] in
                 guard let self else { return }

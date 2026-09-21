@@ -1117,3 +1117,114 @@
    const SidePanelEntry::Key extension_key(SidePanelEntry::Id::kExtension,
                                            extension_id);
  
+--- a/chrome/browser/devtools/devtools_window.cc
++++ b/chrome/browser/devtools/devtools_window.cc
+@@ -112,6 +112,9 @@
+ #include "chrome/android/chrome_jni_headers/DevToolsActivity_jni.h"
+ #else
+ #include "chrome/browser/devtools/devtools_ui_controller.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
++#endif
+ #include "chrome/browser/ui/browser.h"
+ #include "chrome/browser/ui/browser_tabstrip.h"
+ #include "chrome/browser/ui/browser_window.h"
+@@ -511,6 +514,11 @@
+ 
+   base::RecordAction(base::UserMetricsAction("DevTools_Close"));
+ 
++#if BUILDFLAG(IS_MAC)
++  // Reported before the withdrawal below, which cannot tell a closing
++  // inspector from one the user has merely undocked.
++  crest::OnDevToolsClosing(GetInspectedWebContents());
++#endif
+   UpdateBrowserWindow();
+   UpdateBrowserToolbar();
+ 
+@@ -1069,8 +1077,13 @@
+         FROM_HERE, base::BindOnce(&DevToolsWindow::ActivateInspectedTab,
+                                   weak_factory_.GetWeakPtr()));
+ 
++    bool updated_devtools = false;
++#if BUILDFLAG(IS_MAC)
++    updated_devtools = crest::UpdateDockedDevTools(inspected_web_contents);
++#endif
+     if (auto* devtools_ui_controller =
+-            DevtoolsUIController::From(inspected_browser)) {
++            !updated_devtools ? DevtoolsUIController::From(inspected_browser)
++                              : nullptr) {
+       devtools_ui_controller->UpdateDevtools(inspected_web_contents);
+     }
+     main_web_contents_->SetInitialFocus();
+@@ -1377,7 +1390,15 @@
+ #endif  // BUILDFLAG(IS_MAC)
+     DevtoolsUIController* devtools_ui_controller =
+         browser ? DevtoolsUIController::From(browser) : nullptr;
+-    if (!devtools_ui_controller || !devtools_ui_controller->CanDockDevtools()) {
++    bool can_dock_in_embedder = false;
++#if BUILDFLAG(IS_MAC)
++    // Crest has a card to dock into wherever it owns the inspected page, and
++    // never creates the Views contents container the controller needs.
++    can_dock_in_embedder = crest::CanDockDevTools(inspected_web_contents);
++#endif
++    if (!can_dock_in_embedder &&
++        (!devtools_ui_controller ||
++         !devtools_ui_controller->CanDockDevtools())) {
+       can_dock = false;
+     }
+   }
+--- a/chrome/browser/devtools/devtools_window_views.cc
++++ b/chrome/browser/devtools/devtools_window_views.cc
+@@ -4,6 +4,9 @@
+ 
+ #include "chrome/browser/devtools/devtools_ui_controller.h"
+ #include "chrome/browser/devtools/devtools_window.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
++#endif
+ #include "chrome/browser/ui/browser.h"
+ #include "chrome/browser/ui/browser_window.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+@@ -135,6 +138,13 @@
+   if (!inspected_browser) {
+     return;
+   }
++#if BUILDFLAG(IS_MAC)
++  // Crest mounts a docked frontend inside the page card it inspects, and never
++  // creates the Views contents container this controller drives.
++  if (crest::UpdateDockedDevTools(inspected_web_contents)) {
++    return;
++  }
++#endif
+   if (auto* devtools_ui_controller =
+           DevtoolsUIController::From(inspected_browser)) {
+     devtools_ui_controller->UpdateDevtools(inspected_web_contents);
+--- a/chrome/browser/extensions/api/tabs/tabs_api.cc
++++ b/chrome/browser/extensions/api/tabs/tabs_api.cc
+@@ -35,6 +35,9 @@
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface_iterator.h"
+ #include "chrome/browser/ui/browser_window/public/create_browser_window.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
++#endif
+ #include "chrome/browser/ui/incognito_allowed_url.h"
+ #include "chrome/browser/ui/navigator/browser_navigator.h"
+ #include "chrome/browser/ui/navigator/browser_navigator_params.h"
+@@ -1084,6 +1087,16 @@
+       BrowserWindowInterface::CreationStatus::kOk) {
+     return RespondNow(Error(ExtensionTabUtil::kBrowserWindowNotAllowed));
+   }
++
++#if BUILDFLAG(IS_MAC)
++  // Crest composes every browsing window, so this request is only possible
++  // where a Crest Space can host it. Reporting the refusal here settles the
++  // promise instead of leaving an unowned window running with tabs nothing
++  // will adopt.
++  if (!crest::CanCreateEngineBrowser(&*window_profile)) {
++    return RespondNow(Error(ExtensionTabUtil::kBrowserWindowNotAllowed));
++  }
++#endif
+   BrowserWindowCreateParams create_params(window_type, *window_profile,
+                                           user_gesture());
+ 

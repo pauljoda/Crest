@@ -162,5 +162,17 @@
   "chrome/browser/ui/views/side_panel/extensions/extension_side_panel_utils.cc": {
     "before": "b52441c7f4fd190eb5c23317974fb5b2d4ab87ca56f57db91bfbde4782acfea0",
     "after": "91c988d6403970bbf04df9dd73bac7841c61ad55a0043de78f1dab34e096cc99"
+  },
+  "chrome/browser/devtools/devtools_window.cc": {
+    "before": "46adcec2e281d8ccd5e6b171c4b1c9429bb19c087a3bb82a247f311a012d55b0",
+    "after": "f423dd752357b97754fa58e46cb469a03856ef875e0492197deb92075b2fc26f"
+  },
+  "chrome/browser/devtools/devtools_window_views.cc": {
+    "before": "af2006b4da93fbbf449fd5ea0126e6a6214dacc6b66ee5a74f1974af3b39831d",
+    "after": "b5ddbd8e89d11090d9768b4bd6b3581bd7077b0873aefe2dea80bb668a58d287"
+  },
+  "chrome/browser/extensions/api/tabs/tabs_api.cc": {
+    "before": "b28b95b94b93fa99227c989281a4948b8bb56ddbc2039cb0abe455d5d74995dc",
+    "after": "8524a9b39b701464a62105221aa6314a3298e597023d913c26d21036d9f5b50b"
   }
 }

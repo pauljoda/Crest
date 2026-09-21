@@ -183,9 +183,13 @@ for WebKit. Chromium printing renders a PDF and presents the native PDFKit print
 sheet, whose paper settings scale the rendered pages. Reader and whole-page Apple
 translation stay unavailable in Chromium and their menu items are absent rather
 than dimmed; Chromium's page context menu translates a selection through Apple's
-on-device translation instead. Developer commands open and toggle DevTools on the
+on-device translation instead. Developer commands open, switch and close DevTools on the
 requested panel, except Network, which DevTools only exposes to Chromium's own
-frontend. Local documents now open on both engines: File ▸ Open File… offers the
+frontend. A docked inspector is mounted inside the page card it inspects, on the
+dock side and at the size its own frontend asks for, so opening it adds no
+window; undocking is a request for a window and Chromium opens one. Closing the
+inspector by any route — its own close button, an undocked window close, the
+page closing — clears the card's panel selection. Local documents now open on both engines: File ▸ Open File… offers the
 document kinds the registered engine reads, including its own archive format, and
 the address route resolves `file://` URLs, absolute paths and home-relative paths
 to the same URL in the core and in the Swift fallback. Local-file tabs have no
@@ -676,7 +680,9 @@ WebContents to a core tab, preserving opener relationships and document state.
 Unowned or stale popup offers are rejected.
 
 Find uses an engine-neutral configuration, while Chromium supplies page search,
-zoom and DevTools. Site Controls reads and changes Chromium's origin permissions;
+zoom and DevTools. A keyboard-triggered `_execute_action` popup anchors to the
+extension's pinned tile, or to the control that opens the window's extension
+list, rather than to wherever the pointer happens to be. Site Controls reads and changes Chromium's origin permissions;
 permission requests use native sheets attached to the owning Crest window.
 Extension actions use the active page's profile and Chromium's real action runner,
 popup host, service workers and permission enforcement. Private windows only

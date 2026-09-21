@@ -225,8 +225,20 @@ the Browser's first tab is offered for adoption; a renderer popup still joins
 its opener's window instead. An off-the-record profile maps only to the private
 window, and a profile with no Space to host it is declined rather than routed
 into an unrelated Space. `focused: false` opens the window without making it
-key; a requested window `state` is ignored. DevTools and picture-in-picture keep
-their Views windows, which Chromium drives on its own.
+key; a requested window `state` is ignored. A request no Space can host is refused
+before its window is created, so `chrome.windows.create` reports an error
+instead of leaving its promise unsettled. Picture-in-picture keeps its Views window, which Chromium drives on
+its own, and so does a DevTools frontend the user has undocked.
+
+A docked DevTools frontend is mounted inside the Crest page card it inspects.
+This build never creates Chrome's Views contents container, so the
+`DevtoolsUIController` that normally decides whether docking is possible and
+lays the frontend out does not exist; Crest answers in its place for a
+WebContents one of its pages owns, and applies the frontend's own
+`DevToolsContentsResizingStrategy` — which carries the dock side, splitter
+position and drawer height — to the card interior. The frontend's undock button
+still works and Chromium then opens the window the user asked for; re-docking
+returns it to the card.
 
 Extension side panels are hosted as a card in the page row beside the page they
 belong to, not as a tab, and are neither persisted nor synced. Crest resolves
@@ -245,7 +257,9 @@ the card they were showing.
 An extension's `chrome.commands` bindings are matched in the host after Crest's
 own shortcuts have had the key equivalent: a named command is delivered as
 `commands.onCommand` with the active-tab grant Chromium requires, and an
-`_execute_action` binding runs the action through Crest's own button path. The
+`_execute_action` binding runs the action through Crest's own button path,
+anchoring its popup to the extension's pinned tile or, when it has none, to the
+control that opens the window's extension list. The
 bindings themselves belong to the engine; the Extensions settings pane links to
 Chromium's own shortcut page for changing them.
 

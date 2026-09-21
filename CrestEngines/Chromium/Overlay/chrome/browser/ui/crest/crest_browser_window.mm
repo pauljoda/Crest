@@ -705,10 +705,16 @@ void CrestBrowserWindow::BookmarkBarStateChanged( BookmarkBar::AnimateChangeType
 
 void CrestBrowserWindow::TemporarilyShowBookmarkBar(base::TimeDelta duration) {}
 
-void CrestBrowserWindow::UpdateDevTools(content::WebContents* inspected_web_contents) {}
+void CrestBrowserWindow::UpdateDevTools(content::WebContents* inspected_web_contents) {
+  crest::UpdateDockedDevTools(inspected_web_contents);
+}
 
 bool CrestBrowserWindow::CanDockDevTools() const {
-  return false;
+  // A docked inspector is mounted inside the page card it inspects, so every
+  // Crest window can host one. The gate DevTools actually consults is
+  // `crest::CanDockDevTools`, which answers per inspected WebContents because
+  // only a Crest page has a card to dock into.
+  return true;
 }
 
 void CrestBrowserWindow::UpdateLoadingAnimations(bool is_visible) {}
@@ -769,6 +775,9 @@ bool CrestBrowserWindow::UpdateToolbarSecurityState() {
 
 void CrestBrowserWindow::UpdateCustomTabBarVisibility(bool visible, bool animate) {}
 
+// Chrome dims its contents view while a DevTools-owned modal dialog is up. The
+// dialog is presented as a sheet on the Crest window, which draws its own
+// dimming, so there is no separate scrim to show or hide.
 void CrestBrowserWindow::SetDevToolsScrimVisibility(bool visible) {}
 
 void CrestBrowserWindow::ResetToolbarTabState(content::WebContents* contents) {}
