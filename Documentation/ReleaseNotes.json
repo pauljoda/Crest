@@ -1633,6 +1633,10 @@
     "recover-unreadable-core-session": {
       "category": "fixed",
       "message": "Recover an unreadable browsing session from a saved checkpoint while preserving the original files."
+    },
+    "shared-core-history-and-retention-commands": {
+      "category": "internal",
+      "message": "Move history, archive restoration, retention and split identity edits into commands against the shared core's owned records."
     }
   }
 }

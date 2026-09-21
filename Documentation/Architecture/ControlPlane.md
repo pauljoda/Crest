@@ -227,6 +227,15 @@ the resulting projection, and a revision-checked commit publishes both sides.
 Abandoned preparations do not change state. Favicon bytes stay native, and
 existing history and archive records do not cross the command boundary.
 
+History visits and removal, archive restoration, automatic cleanup, retention and
+split identity metadata now prepare against the authority's owned records. The
+native caller sends intent and window selection, then applies only changed history
+entries, removal references and tab or split projections. The core reads retention
+preferences itself. Archive removals use positions so older repeated identities do
+not cause an unexpired occurrence to be removed. Native favicon assets remain
+attached when tabs move into or out of the archive, and other windows retain their
+own selection during reconciliation.
+
 Space creation, identity, appearance, preferences, default selection, saved-tab
 disclosure, reordering and removal also use the authority's commands. Profile
 identity is checked before editing; borrowed workspaces cannot change their source

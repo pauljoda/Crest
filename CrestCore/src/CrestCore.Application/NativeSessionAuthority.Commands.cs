@@ -17,6 +17,11 @@ public sealed partial class NativeSessionAuthority
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
             if (request["operation"]!.GetValue<string>() == "workspace.import") return PrepareWorkspaceCommand(expected, request);
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
+            var operation = request["operation"]!.GetValue<string>();
+            if (operation.StartsWith("history.", StringComparison.Ordinal)
+                || operation.StartsWith("records.", StringComparison.Ordinal)
+                || operation is "archive.restore" or "split.title" or "split.icon" or "split.tint")
+                return PrepareRecordCommand(expected, request);
             if (request["operation"]!.GetValue<string>().StartsWith("transient.", StringComparison.Ordinal))
                 return PrepareTransientCommand(expected, request);
             if (request["operation"]!.GetValue<string>() == "tab.transfer") return PrepareTabTransfer(expected, request);

@@ -6,12 +6,20 @@ extension BrowserStore {
     func recordVisit(url: URL, title: String?) {
         guard selectedSpace != nil else { return }
         let spaceID = session.selectedSpaceID
+        #if CREST_CORE_BACKED
+        guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
+        #else
         session.recordVisit(url: url, title: title)
+        #endif
         persist(syncUrgency: .coalesced, scope: .history(in: spaceID))
     }
 
     func recordVisit(url: URL, title: String?, in spaceID: SpaceID) {
+        #if CREST_CORE_BACKED
+        guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
+        #else
         session.recordVisit(url: url, title: title, in: spaceID)
+        #endif
         persist(syncUrgency: .coalesced, scope: .history(in: spaceID))
     }
 
@@ -22,13 +30,25 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
+        #if CREST_CORE_BACKED
+        guard recordSessionVisit(url: url, title: title, in: assignment.spaceID) else { return false }
+        #else
         session.recordVisit(url: url, title: title, in: assignment.spaceID)
+        #endif
         persist(
             syncUrgency: .coalesced,
             scope: .history(in: assignment.spaceID)
         )
         return true
     }
+
+    #if CREST_CORE_BACKED
+    private func recordSessionVisit(url: URL, title: String?, in spaceID: SpaceID) -> Bool {
+        family.executeRecords("history.visit", in: spaceID, arguments: [
+            "url": url.absoluteString, "title": title as Any? ?? NSNull()
+        ], from: self)
+    }
+    #endif
 
     func archiveTransientPage(url: URL, title: String?, in spaceID: SpaceID) {
         guard let space = session.space(id: spaceID) else { return }
@@ -68,7 +88,11 @@ extension BrowserStore {
     }
 
     func clearHistory(in spaceID: SpaceID) {
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("history.clear", in: spaceID, from: self) else { return }
+        #else
         guard session.clearHistory(in: spaceID) else { return }
+        #endif
         persist(deletionReason: .explicitDelete, scope: .history(in: spaceID))
     }
 
@@ -76,9 +100,14 @@ extension BrowserStore {
     func clearHistory(
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard space(matching: assignment) != nil,
+        guard space(matching: assignment) != nil else { return false }
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("history.clear", in: assignment.spaceID, from: self) else { return false }
+        #else
+        guard
             session.clearHistory(in: assignment.spaceID)
         else { return false }
+        #endif
         persist(
             deletionReason: .explicitDelete,
             scope: .history(in: assignment.spaceID)
@@ -87,7 +116,11 @@ extension BrowserStore {
     }
 
     func cleanupCurrentTabs() {
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("records.cleanup", from: self) else { return }
+        #else
         session.cleanupCurrentTabsUsingSpacePreferences()
+        #endif
         persist(deletionReason: .retention, scope: .core)
     }
 
@@ -102,6 +135,10 @@ extension BrowserStore {
     @discardableResult
     func sweepExpiredBrowsingData(now: Date = .now) -> Bool {
         guard family.beginCleanupSweep(at: now) else { return false }
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("records.sweep", from: self, at: now) else { return true }
+        persist(deletionReason: .retention, scope: .everything)
+        #else
         var swept = session
         swept.cleanupCurrentTabsUsingSpacePreferences(now: now)
         let removedStoredRecords = swept.applyDataRetentionPolicies(now: now)
@@ -111,6 +148,7 @@ extension BrowserStore {
             deletionReason: .retention,
             scope: removedStoredRecords ? .everything : .core
         )
+        #endif
         return true
     }
 
@@ -145,13 +183,22 @@ extension BrowserStore {
 
     func cleanupCurrentTabs(in spaceID: SpaceID) {
         guard session.space(id: spaceID) != nil else { return }
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("records.cleanup", in: spaceID, from: self) else { return }
+        #else
         session.cleanupCurrentTabs(in: spaceID)
+        #endif
         persist(deletionReason: .retention, scope: .core)
     }
 
     func restoreArchivedTab(_ id: TabID) {
         guard selectedSpace != nil else { return }
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("archive.restore", in: session.selectedSpaceID,
+            arguments: ["tabId": id.rawValue.uuidString], from: self) else { return }
+        #else
         session.restoreArchivedTab(id)
+        #endif
         persist(deletionReason: .superseded, scope: .core)
     }
 
@@ -164,7 +211,12 @@ extension BrowserStore {
             session.selectedSpaceID == assignment.spaceID,
             space.archivedTabs.contains(where: { $0.id == id })
         else { return false }
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("archive.restore", in: assignment.spaceID,
+            arguments: ["tabId": id.rawValue.uuidString], from: self) else { return false }
+        #else
         session.restoreArchivedTab(id)
+        #endif
         persist(deletionReason: .superseded, scope: .core)
         return true
     }
@@ -184,11 +236,17 @@ extension BrowserStore {
         for url: URL,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard space(matching: assignment) != nil,
+        guard space(matching: assignment) != nil else { return false }
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("history.remove_url", in: assignment.spaceID,
+            arguments: ["url": url.absoluteString], from: self) else { return false }
+        #else
+        guard
             session.removeHistory(for: url, in: assignment.spaceID)
         else {
             return false
         }
+        #endif
         persist(
             deletionReason: .explicitDelete,
             scope: .history(in: assignment.spaceID)
@@ -202,7 +260,13 @@ extension BrowserStore {
         until endDate: Date,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard space(matching: assignment) != nil,
+        guard space(matching: assignment) != nil else { return false }
+        #if CREST_CORE_BACKED
+        guard family.executeRecords("history.remove_range", in: assignment.spaceID, arguments: [
+            "start": startDate.timeIntervalSinceReferenceDate, "end": endDate.timeIntervalSinceReferenceDate
+        ], from: self) else { return false }
+        #else
+        guard
             session.removeHistory(
                 from: startDate,
                 until: endDate,
@@ -211,6 +275,7 @@ extension BrowserStore {
         else {
             return false
         }
+        #endif
         persist(
             deletionReason: .explicitDelete,
             scope: .history(in: assignment.spaceID)

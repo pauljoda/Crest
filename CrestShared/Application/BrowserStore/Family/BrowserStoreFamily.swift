@@ -232,6 +232,19 @@ final class BrowserStoreFamily {
             return nil
         }
     }
+
+    func executeRecords(_ operation: String, in spaceID: SpaceID? = nil, arguments: [String: Any] = [:],
+        from source: BrowserStore, at date: Date = .now) -> Bool {
+        let previous = authoritativeSession
+        do {
+            let changed = try core.executeRecords(operation, in: spaceID, arguments: arguments, window: source.session, at: date)
+            if changed { reconcileStores(after: previous, from: source) }
+            return changed
+        } catch {
+            source.localSyncErrorDescription = "Core record command failed: \(error)"
+            return false
+        }
+    }
     #endif
 
     #if CREST_CORE_BACKED

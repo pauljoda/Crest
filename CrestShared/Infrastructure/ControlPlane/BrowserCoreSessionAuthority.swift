@@ -253,6 +253,76 @@ final class BrowserCoreSessionAuthority {
         return projection != window
     }
 
+    func executeRecords(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
+        window: BrowserSession, at date: Date) throws -> Bool {
+        struct Changes: Decodable {
+            struct Change: Decodable {
+                let spaceId: UUID
+                let profileId: UUID
+                let historyEntry: BrowserHistoryEntry?
+                let removedHistory: [UUID]?
+                let removedArchiveIndices: [Int]?
+                let tabEdit: BrowserCoreSessionEditing.Result?
+                let splitGroups: [BrowserSplitGroupMetadata]?
+            }
+            let changes: [Change]
+        }
+        let space = spaceID.flatMap { window.space(id: $0) }
+        let data = try JSONSerialization.data(withJSONObject: [
+            "version": 1, "operation": operation,
+            "spaceId": spaceID?.rawValue.uuidString as Any? ?? NSNull(),
+            "profileId": space?.profile.id.uuidString as Any? ?? NSNull(),
+            "arguments": arguments, "window": try Self.selection(for: window),
+            "now": date.timeIntervalSinceReferenceDate,
+        ])
+        return try commitCommand(data) { output in
+            let result = try JSONDecoder().decode(Changes.self, from: output)
+            var next = self.projection
+            next.selectedSpaceID = window.selectedSpaceID
+            for index in next.spaces.indices {
+                next.spaces[index].selectedTabID = window.space(id: next.spaces[index].id)?.selectedTabID
+            }
+            for change in result.changes {
+                guard let index = next.spaces.firstIndex(where: { $0.id.rawValue == change.spaceId }),
+                    next.spaces[index].profile.id == change.profileId else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+                let original = next.spaces[index]
+                if var edit = change.tabEdit {
+                    guard edit.space.id == original.id, edit.space.profile == original.profile else {
+                        throw CoreError.rejected(CREST_INVALID_ARGUMENT)
+                    }
+                    var images = Dictionary(original.archivedTabs.map { ($0.id, $0.tab.faviconData) },
+                        uniquingKeysWith: { first, _ in first })
+                    for tab in original.tabs { images[tab.id] = tab.faviconData }
+                    for tabIndex in edit.space.tabs.indices {
+                        edit.space.tabs[tabIndex].faviconData = images[edit.space.tabs[tabIndex].id] ?? nil
+                    }
+                    for archiveIndex in edit.space.archivedTabs.indices {
+                        edit.space.archivedTabs[archiveIndex].tab.faviconData = images[edit.space.archivedTabs[archiveIndex].id] ?? nil
+                    }
+                    next.applyCoreResult(edit, at: index)
+                }
+                if let removed = change.removedHistory {
+                    let ids = Set(removed)
+                    next.spaces[index].history.removeAll { ids.contains($0.id) }
+                }
+                if let entry = change.historyEntry {
+                    next.spaces[index].history.removeAll { $0.id == entry.id }
+                    next.spaces[index].history.insert(entry, at: 0)
+                }
+                if let removed = change.removedArchiveIndices {
+                    let indices = Set(removed)
+                    guard indices.allSatisfy({ next.spaces[index].archivedTabs.indices.contains($0) }) else {
+                        throw CoreError.rejected(CREST_INVALID_ARGUMENT)
+                    }
+                    next.spaces[index].archivedTabs = next.spaces[index].archivedTabs.enumerated()
+                        .filter { !indices.contains($0.offset) }.map(\.element)
+                }
+                if let groups = change.splitGroups { next.spaces[index].splitGroups = groups }
+            }
+            return (next, !result.changes.isEmpty)
+        }
+    }
+
     func prepareSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
         window: BrowserSession, at date: Date) throws -> PreparedChange {
         let space = spaceID.flatMap { window.space(id: $0) }

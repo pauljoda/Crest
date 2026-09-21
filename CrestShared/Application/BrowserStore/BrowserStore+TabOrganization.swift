@@ -520,6 +520,12 @@ extension BrowserStore {
         groupID: SplitGroupID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        guard space(matching: assignment) != nil,
+            family.executeRecords("split.title", in: assignment.spaceID, arguments: [
+                "groupId": groupID.rawValue.uuidString, "value": title as Any? ?? NSNull()
+            ], from: self) else { return false }
+        #else
         guard
             space(matching: assignment)?.liveSplitGroupIDs.contains(groupID)
                 == true,
@@ -529,6 +535,7 @@ extension BrowserStore {
                 in: assignment.spaceID
             )
         else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -539,6 +546,14 @@ extension BrowserStore {
         groupID: SplitGroupID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        let normalized = emoji.flatMap(BrowserIconSymbol.normalizedEmoji)
+        guard emoji == nil || normalized != nil, space(matching: assignment) != nil,
+            family.executeRecords("split.icon", in: assignment.spaceID, arguments: [
+                "groupId": groupID.rawValue.uuidString,
+                "value": normalized.map(BrowserIconSymbol.symbol(forEmoji:)) as Any? ?? NSNull()
+            ], from: self) else { return false }
+        #else
         guard
             space(matching: assignment)?.liveSplitGroupIDs.contains(groupID)
                 == true,
@@ -548,6 +563,7 @@ extension BrowserStore {
                 in: assignment.spaceID
             )
         else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -558,6 +574,14 @@ extension BrowserStore {
         groupID: SplitGroupID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        guard space(matching: assignment) != nil else { return false }
+        let value: Any
+        do { value = try tint.map { try JSONSerialization.jsonObject(with: JSONEncoder().encode($0)) } ?? NSNull() }
+        catch { return false }
+        guard family.executeRecords("split.tint", in: assignment.spaceID,
+            arguments: ["groupId": groupID.rawValue.uuidString, "value": value], from: self) else { return false }
+        #else
         guard
             space(matching: assignment)?.liveSplitGroupIDs.contains(groupID)
                 == true,
@@ -567,6 +591,7 @@ extension BrowserStore {
                 in: assignment.spaceID
             )
         else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }

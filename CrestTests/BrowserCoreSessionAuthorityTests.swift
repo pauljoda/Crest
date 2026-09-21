@@ -5,6 +5,41 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
+    func testRecordCommandsPreserveNativeAssetsAndOtherWindowSelection() throws {
+        var original = BrowserSession.preview
+        let spaceID = original.spaces[0].id
+        original.selectedSpaceID = spaceID
+        original.spaces[0].history = []
+        var archived = BrowserTab(title: "Archived", url: URL(string: "https://example.org/archive"), placement: .current)
+        archived.faviconData = Data([1, 3, 5])
+        original.spaces[0].archivedTabs = [ArchivedTab(tab: archived, archivedAt: .now, reason: .closed)]
+        let store = BrowserStore(session: original, persistence: InMemoryBrowserSessionPersistence())
+        let other = store.makeWindowStore()
+        other.selectSpace(original.spaces[1].id)
+        let otherSpace = other.selectedSpace?.id
+        let otherTab = other.selectedTab?.id
+
+        store.recordVisit(url: try XCTUnwrap(URL(string: "https://example.org/visit#one")), title: "First")
+        let visit = try XCTUnwrap(store.selectedSpace?.history.first)
+        store.recordVisit(url: try XCTUnwrap(URL(string: "https://example.org/visit#two")), title: "Second")
+        XCTAssertEqual(store.selectedSpace?.history.first?.id, visit.id)
+        XCTAssertEqual(store.selectedSpace?.history.first?.visitCount, 2)
+        XCTAssertEqual(other.session.space(id: spaceID)?.history, store.selectedSpace?.history)
+
+        store.restoreArchivedTab(archived.id)
+        XCTAssertEqual(store.selectedTab?.id, archived.id)
+        XCTAssertEqual(store.selectedTab?.faviconData, archived.faviconData)
+        XCTAssertTrue(try XCTUnwrap(other.session.space(id: spaceID)).archivedTabs.isEmpty)
+        XCTAssertEqual(other.selectedSpace?.id, otherSpace)
+        XCTAssertEqual(other.selectedTab?.id, otherTab)
+
+        store.selectTab(original.spaces[0].tabs[0].id)
+        store.sweepExpiredBrowsingData(now: .now.addingTimeInterval(86400 * 2))
+        XCTAssertEqual(store.session.space(id: spaceID)?.archivedTabs.first(where: { $0.id == archived.id })?.tab.faviconData,
+            archived.faviconData)
+        XCTAssertNil(store.localSyncErrorDescription)
+    }
+
     func testFailedTransferStorageReleasesBothWritersWhileThePreparedValueIsStillAlive() throws {
         enum Failure: Error { case disk }
         let original = BrowserSession.preview
