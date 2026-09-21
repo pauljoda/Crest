@@ -1673,6 +1673,10 @@
     "chromium-setup-window-sizing": {
       "category": "fixed",
       "message": "The setup window opens at its intended size so the preview no longer sits against the window edge."
+    },
+    "shared-core-page-lifecycle-policy": {
+      "category": "internal",
+      "message": "Move memory-pressure release planning, tab dismissal and renderer recovery decisions into the shared core; native adapters keep page creation, media veto, unload and disposal."
     }
   }
 }

@@ -1,14 +1,13 @@
+/// Counts consecutive renderer terminations for one page. The reload budget
+/// itself belongs to the core, so every engine gives up at the same point.
 struct BrowserProcessRecovery {
     private(set) var consecutiveTerminations = 0
-    let maximumAutomaticReloads: Int
-
-    init(maximumAutomaticReloads: Int = 2) {
-        self.maximumAutomaticReloads = maximumAutomaticReloads
-    }
 
     mutating func recordTermination() -> BrowserProcessRecoveryAction {
         consecutiveTerminations += 1
-        return consecutiveTerminations <= maximumAutomaticReloads ? .reload : .showFailure
+        return BrowserCorePolicy.processRecoveryAction(
+            consecutiveTerminations: consecutiveTerminations
+        )
     }
 
     mutating func recordSuccessfulNavigation() {

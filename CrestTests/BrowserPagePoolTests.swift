@@ -3062,41 +3062,6 @@ private final class EmptyBrowserContentRuleListProvider:
 }
 
 final class BrowserPageLifecyclePolicyTests: XCTestCase {
-    func testDesktopAndMobilePressureHaveDifferentReleaseBudgets() {
-        XCTAssertEqual(
-            BrowserMemoryPressureReleasePolicy.releaseLimit(
-                for: .warning,
-                eligiblePageCount: 8,
-                platform: .desktop
-            ),
-            1
-        )
-        XCTAssertEqual(
-            BrowserMemoryPressureReleasePolicy.releaseLimit(
-                for: .critical,
-                eligiblePageCount: 8,
-                platform: .desktop
-            ),
-            4
-        )
-        XCTAssertEqual(
-            BrowserMemoryPressureReleasePolicy.releaseLimit(
-                for: .warning,
-                eligiblePageCount: 8,
-                platform: .mobile
-            ),
-            0
-        )
-        XCTAssertEqual(
-            BrowserMemoryPressureReleasePolicy.releaseLimit(
-                for: .critical,
-                eligiblePageCount: 8,
-                platform: .mobile
-            ),
-            1
-        )
-    }
-
     func testTheCoalescerCollapsesOneSqueezeWithoutSwallowingAnEscalation() {
         var coalescer = BrowserMemoryPressureCoalescer()
         let squeeze = Date()

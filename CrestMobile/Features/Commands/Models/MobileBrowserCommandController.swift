@@ -16,7 +16,7 @@ struct MobileBrowserCommandController {
     }
 
     var canDismissSelectedTab: Bool {
-        BrowserTabDismissalPolicy.action(
+        BrowserCorePolicy.tabDismissal(
             for: browser.selectedTab,
             tabCount: orderedTabs.count
         ) != .closeWindow
@@ -49,7 +49,7 @@ struct MobileBrowserCommandController {
     @discardableResult
     func dismissSelectedTab() -> TabID? {
         guard let selectedTab = browser.selectedTab else { return nil }
-        switch BrowserTabDismissalPolicy.action(
+        switch BrowserCorePolicy.tabDismissal(
             for: selectedTab,
             tabCount: orderedTabs.count
         ) {

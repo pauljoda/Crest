@@ -33,14 +33,6 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
     @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
 
-    /// One resident page memory pressure may consider, with the idle stamp its
-    /// least-recently-used ordering comes from.
-    private typealias IdlePageCandidate = (
-        tabID: TabID,
-        inactiveSince: Date,
-        page: MobileBrowserPage
-    )
-
     /// The focused card: the one page the toolbar, find bar, navigation
     /// controls, and every lifecycle observer speak for. Split View adds cards
     /// beside it without adding a second focus.
@@ -1364,31 +1356,29 @@ final class MobileBrowserPageStore:
     /// Off-screen pages come first and almost always answer the question. Every
     /// presented card is ineligible in that sweep, focused or not — unloading a
     /// web view somebody is looking at is never a saving worth making. Only when
-    /// that sweep finds nobody at all, and only at `.critical`, does
-    /// `BrowserPresentedPageReleasePolicy` open the far cards of the carousel.
+    /// that sweep finds nobody at all, and only at `.critical`, does the core's
+    /// release plan open the far cards of the carousel.
     private func releaseInactivePages(for level: BrowserMemoryPressureLevel) async {
-        let candidates = idleCandidatesByLeastRecentlyUsed()
-        let offScreen = candidates.filter { !presentedTabIDs.contains($0.tabID) }
-        var eligibleTabIDs = await releasableTabIDs(among: offScreen)
+        // The core owns candidate eligibility and order; this store contributes
+        // the residency facts and WebKit's own veto.
+        let plan = BrowserCorePolicy.residencyReleasePlan(
+            level: level,
+            platform: .mobile,
+            candidates: idleCandidates(),
+            focusedIndex: activePage.flatMap { presentedTabIDs.firstIndex(of: $0.tabID) }
+        )
+        var eligibleTabIDs = await releasableTabIDs(among: plan.offScreen)
         eligibleTabIDs += nativeTabs.inactiveTabIDs(excluding: presentedTabIDs)
 
         if eligibleTabIDs.isEmpty {
-            let fallbackTabIDs = Set(
-                BrowserPresentedPageReleasePolicy.fallbackReleasableTabIDs(
-                    presentedTabIDs: presentedTabIDs,
-                    focusedTabID: activePage?.tabID,
-                    level: level,
-                    hasOtherReleasablePages: false
-                )
-            )
             eligibleTabIDs = await releasableTabIDs(
-                among: candidates.filter { fallbackTabIDs.contains($0.tabID) },
+                among: plan.presentedFallback,
                 allowsPresentedPages: true
             )
         }
 
-        let releaseLimit = BrowserMemoryPressureReleasePolicy.releaseLimit(
-            for: level,
+        let releaseLimit = BrowserCorePolicy.memoryPressureReleaseLimit(
+            level: level,
             eligiblePageCount: eligibleTabIDs.count,
             platform: .mobile
         )
@@ -1397,21 +1387,19 @@ final class MobileBrowserPageStore:
         }
     }
 
-    /// Every resident page with an idle stamp, oldest first, excluding the
-    /// focused one. Ties break on tab identity so a squeeze is deterministic.
-    private func idleCandidatesByLeastRecentlyUsed() -> [IdlePageCandidate] {
-        inactiveSinceByTabID.compactMap {
-            tabID,
-            inactiveSince -> IdlePageCandidate? in
+    /// Every resident page with an idle stamp, excluding the focused one, with
+    /// the presentation facts the core needs to order and filter them.
+    private func idleCandidates() -> [BrowserCorePolicy.ResidencyCandidate] {
+        inactiveSinceByTabID.compactMap { tabID, inactiveSince in
             guard activePage?.tabID != tabID, let page = pagesByTabID[tabID] else {
                 return nil
             }
-            return (tabID: tabID, inactiveSince: inactiveSince, page: page)
-        }.sorted {
-            if $0.inactiveSince != $1.inactiveSince {
-                return $0.inactiveSince < $1.inactiveSince
-            }
-            return $0.tabID.rawValue.uuidString < $1.tabID.rawValue.uuidString
+            return BrowserCorePolicy.ResidencyCandidate(
+                tabID: tabID,
+                inactiveSince: inactiveSince,
+                keepsPageLoaded: page.navigationContext?.keepsPageLoaded == true,
+                presentedIndex: presentedTabIDs.firstIndex(of: tabID)
+            )
         }
     }
 
@@ -1421,19 +1409,20 @@ final class MobileBrowserPageStore:
     /// Everything is re-checked after the await: a page can be selected back onto
     /// the screen, or released outright, while WebKit is still answering for it.
     private func releasableTabIDs(
-        among candidates: [IdlePageCandidate],
+        among tabIDs: [TabID],
         allowsPresentedPages: Bool = false
     ) async -> [TabID] {
         var releasable: [TabID] = []
-        for candidate in candidates {
+        for tabID in tabIDs {
             guard !Task.isCancelled else { return releasable }
-            let decision = await residencyDecisionProvider(candidate.page, false)
-            guard pagesByTabID[candidate.tabID] === candidate.page,
-                candidate.tabID != activePage?.tabID,
-                allowsPresentedPages || !presentedTabIDs.contains(candidate.tabID),
+            guard let page = pagesByTabID[tabID] else { continue }
+            let decision = await residencyDecisionProvider(page, false)
+            guard pagesByTabID[tabID] === page,
+                tabID != activePage?.tabID,
+                allowsPresentedPages || !presentedTabIDs.contains(tabID),
                 decision.allowsAutomaticUnload
             else { continue }
-            releasable.append(candidate.tabID)
+            releasable.append(tabID)
         }
         return releasable
     }

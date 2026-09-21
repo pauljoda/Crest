@@ -1875,40 +1875,48 @@ final class BrowserPagePool:
     /// Every presented card is ineligible, not only the focused one: unloading
     /// a web view the person is looking at is never a saving worth making.
     private func releaseInactivePages(for level: BrowserMemoryPressureLevel) async {
-        let candidates = inactiveSinceByTabID.compactMap {
-            tabID,
-            inactiveSince -> (tabID: TabID, inactiveSince: Date, page: BrowserPage)? in
-            guard !runtimeStore.presentedTabIDs.contains(tabID), let page = tabRuntimes[tabID]?.page else {
-                return nil
-            }
-            return (tabID: tabID, inactiveSince: inactiveSince, page: page)
-        }.sorted {
-            if $0.inactiveSince != $1.inactiveSince {
-                return $0.inactiveSince < $1.inactiveSince
-            }
-            return $0.tabID.rawValue.uuidString < $1.tabID.rawValue.uuidString
+        // The core owns candidate eligibility and order; this store contributes
+        // the residency facts and the engine's own veto.
+        let candidatePages = inactiveSinceByTabID.reduce(into: [TabID: BrowserPage]()) { pages, entry in
+            guard !runtimeStore.presentedTabIDs.contains(entry.key),
+                let page = tabRuntimes[entry.key]?.page
+            else { return }
+            pages[entry.key] = page
         }
+        let plan = BrowserCorePolicy.residencyReleasePlan(
+            level: level,
+            platform: .desktop,
+            candidates: candidatePages.keys.map { tabID in
+                BrowserCorePolicy.ResidencyCandidate(
+                    tabID: tabID,
+                    inactiveSince: inactiveSinceByTabID[tabID],
+                    keepsPageLoaded: candidatePages[tabID]?.navigationContext?.keepsPageLoaded == true
+                )
+            },
+            focusedIndex: nil
+        )
 
         var eligiblePages: [(tabID: TabID, page: BrowserPage?)] = []
-        for candidate in candidates {
+        for tabID in plan.offScreen {
             guard !Task.isCancelled else { return }
+            guard let page = candidatePages[tabID] else { continue }
             // `BrowserPageResidencyDecision.isSelected` now means "is
             // presented" — a card of the split on screen, focused or not.
             // Every candidate here is off screen, so it is answered `false`.
             // The name stays until the decision type is revisited.
-            let decision = await residencyDecisionProvider(candidate.page, false)
+            let decision = await residencyDecisionProvider(page, false)
             let allRuntimesAllowAutomaticUnload = decision.allowsAutomaticUnload
             // Re-checked after the await: a page can be selected back onto the
             // screen while WebKit is answering for it.
-            guard tabRuntimes[candidate.tabID]?.page === candidate.page,
-                !runtimeStore.presentedTabIDs.contains(candidate.tabID),
+            guard tabRuntimes[tabID]?.page === page,
+                !runtimeStore.presentedTabIDs.contains(tabID),
                 allRuntimesAllowAutomaticUnload
             else { continue }
-            eligiblePages.append((candidate.tabID, candidate.page))
+            eligiblePages.append((tabID, page))
         }
         eligiblePages += nativeTabs.inactiveTabIDs(excluding: Array(runtimeStore.presentedTabIDs)).map { ($0, nil) }
-        let releaseLimit = BrowserMemoryPressureReleasePolicy.releaseLimit(
-            for: level,
+        let releaseLimit = BrowserCorePolicy.memoryPressureReleaseLimit(
+            level: level,
             eligiblePageCount: eligiblePages.count,
             platform: .desktop
         )

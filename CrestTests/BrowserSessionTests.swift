@@ -260,34 +260,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertNil(session.selectedTab)
     }
 
-    func testTabDismissalClosesCurrentTabsButOnlyUnloadsPinnedAndSavedTabs() {
-        let current = BrowserTab(
-            title: "Current",
-            url: URL(string: "https://current.example"),
-            placement: .current
-        )
-        let pinned = BrowserTab(
-            title: "Pinned",
-            url: URL(string: "https://pinned.example"),
-            placement: .pinned
-        )
-        let saved = BrowserTab(
-            title: "Saved",
-            url: URL(string: "https://saved.example"),
-            placement: .saved
-        )
-
-        XCTAssertEqual(BrowserTabDismissalPolicy.action(for: current), .closeTab)
-        XCTAssertEqual(BrowserTabDismissalPolicy.action(for: pinned), .unloadPage)
-        XCTAssertEqual(BrowserTabDismissalPolicy.action(for: saved), .unloadPage)
-        XCTAssertEqual(BrowserTabDismissalPolicy.action(for: .startPage()), .closeWindow)
-        XCTAssertEqual(
-            BrowserTabDismissalPolicy.action(for: .startPage(), tabCount: 2),
-            .closeTab
-        )
-        XCTAssertEqual(BrowserTabDismissalPolicy.action(for: nil), .closeWindow)
-    }
-
     func testSwitchingSpacesRestoresEachSpacesSelectedTab() throws {
         var session = BrowserSession.preview
         let work = try XCTUnwrap(session.spaces.first)

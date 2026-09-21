@@ -627,36 +627,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         XCTAssertTrue(pages.containsResidentPage(for: split.nonMemberID))
     }
 
-    // MARK: - Presented release policy
-
-    func testPresentedReleasePolicyProtectsTheFocusedCardAndBothNeighbours() {
-        let members = (0..<4).map { TabID(rawValue: fixedUUID(0x200 + $0)) }
-
-        XCTAssertEqual(
-            fallback(members, focusedIndex: 0),
-            [members[2], members[3]]
-        )
-        XCTAssertEqual(fallback(members, focusedIndex: 1), [members[3]])
-        XCTAssertEqual(fallback(members, focusedIndex: 2), [members[0]])
-        XCTAssertEqual(
-            fallback(members, focusedIndex: 3),
-            [members[0], members[1]]
-        )
-    }
-
     // MARK: - Helpers
-
-    private func fallback(
-        _ members: [TabID],
-        focusedIndex: Int
-    ) -> [TabID] {
-        BrowserPresentedPageReleasePolicy.fallbackReleasableTabIDs(
-            presentedTabIDs: members,
-            focusedTabID: members[focusedIndex],
-            level: .critical,
-            hasOtherReleasablePages: false
-        )
-    }
 
     /// A Space holding one split run plus one ordinary background tab after it.
     private func makeSplitSession(

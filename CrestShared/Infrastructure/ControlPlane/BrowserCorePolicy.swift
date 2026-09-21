@@ -101,6 +101,77 @@ enum BrowserCorePolicy {
         }
         return result
     }
+    /// One off-screen page as the native store sees it. `inactiveSince` is
+    /// missing for an engine tab that holds no Crest page of its own.
+    struct ResidencyCandidate {
+        let tabID: TabID
+        var inactiveSince: Date?
+        var keepsPageLoaded = false
+        var presentedIndex: Int?
+
+        init(tabID: TabID, inactiveSince: Date?, keepsPageLoaded: Bool = false, presentedIndex: Int? = nil) {
+            self.tabID = tabID
+            self.inactiveSince = inactiveSince
+            self.keepsPageLoaded = keepsPageLoaded
+            self.presentedIndex = presentedIndex
+        }
+    }
+    /// How many eligible pages this squeeze may take back. A core that cannot
+    /// answer releases nothing rather than guessing at a budget.
+    static func memoryPressureReleaseLimit(level: BrowserMemoryPressureLevel, eligiblePageCount: Int,
+        platform: BrowserMemoryPressurePlatform) -> Int {
+        guard let limit = evaluate(["version": 1, "operation": "residency.release_limit",
+            "level": level.rawValue, "platform": platform.rawValue,
+            "eligiblePageCount": eligiblePageCount])?["limit"] as? Int, limit >= 0 else { return 0 }
+        return limit
+    }
+    /// The order in which release should be attempted. The caller still asks
+    /// each page's engine for the residency veto and re-validates ownership
+    /// after every await; `presentedFallback` is only used when the off-screen
+    /// sweep released nobody at all.
+    static func residencyReleasePlan(level: BrowserMemoryPressureLevel, platform: BrowserMemoryPressurePlatform,
+        candidates: [ResidencyCandidate], focusedIndex: Int?)
+        -> (offScreen: [TabID], presentedFallback: [TabID]) {
+        guard let response = evaluate([
+            "version": 1, "operation": "residency.release_plan",
+            "level": level.rawValue, "platform": platform.rawValue,
+            "focusedIndex": focusedIndex as Any? ?? NSNull(),
+            "candidates": candidates.map { candidate in
+                ["tabID": candidate.tabID.rawValue.uuidString.lowercased(),
+                 "inactiveSince": candidate.inactiveSince?.timeIntervalSinceReferenceDate as Any? ?? NSNull(),
+                 "keepsPageLoaded": candidate.keepsPageLoaded,
+                 "isPresented": candidate.presentedIndex != nil,
+                 "presentedIndex": candidate.presentedIndex as Any? ?? NSNull()]
+            }
+        ]) else { return ([], []) }
+        let known = Dictionary(uniqueKeysWithValues: candidates.map {
+            ($0.tabID.rawValue.uuidString.lowercased(), $0.tabID)
+        })
+        func tabIDs(_ field: String) -> [TabID] {
+            (response[field] as? [String] ?? []).compactMap { known[$0] }
+        }
+        return (tabIDs("tabIDs"), tabIDs("fallbackTabIDs"))
+    }
+    /// Whether a renderer termination is answered by reloading again. An
+    /// unavailable core stops reloading instead of risking a crash loop.
+    static func processRecoveryAction(consecutiveTerminations: Int) -> BrowserProcessRecoveryAction {
+        guard let action = evaluate(["version": 1, "operation": "residency.process_recovery",
+            "consecutiveTerminations": consecutiveTerminations])?["action"] as? String else { return .showFailure }
+        return action == "reload" ? .reload : .showFailure
+    }
+    /// What dismissing this tab means. An unavailable core closes the tab, the
+    /// one dismissal that never discards a window or a durable page.
+    static func tabDismissal(for tab: BrowserTab?, tabCount: Int) -> BrowserTabDismissalAction {
+        guard let tab else { return .closeWindow }
+        guard let action = evaluate(["version": 1, "operation": "tabs.dismissal",
+            "placement": tab.placement.rawValue, "isStartPage": tab.isStartPage,
+            "tabCount": tabCount])?["action"] as? String else { return .closeTab }
+        switch action {
+        case "unloadPage": return .unloadPage
+        case "closeWindow": return .closeWindow
+        default: return .closeTab
+        }
+    }
     private static func evaluate(_ request: [String: Any]) -> [String: Any]? {
         guard let data = try? JSONSerialization.data(withJSONObject: request) else { return nil }
         var length = 0

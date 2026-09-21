@@ -248,7 +248,7 @@ struct BrowserCommandActions {
             return
         }
 
-        switch BrowserTabDismissalPolicy.action(
+        switch BrowserCorePolicy.tabDismissal(
             for: selectedTab,
             tabCount: orderedTabs.count
         ) {
