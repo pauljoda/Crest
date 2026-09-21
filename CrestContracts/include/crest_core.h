@@ -54,6 +54,30 @@ typedef struct crest_core_options_v1 {
 /* Returns the ABI major supported by this image. No core is required. */
 CREST_API uint32_t CREST_CALL crest_core_abi_version(void);
 
+/* Process-local Space access authority. UUID pointers reference exactly 16
+ * RFC 4122/network-order bytes and are borrowed only during the call. Boolean
+ * arguments are 0 or 1. Calls are synchronous and serialized per authority;
+ * no JSON, callbacks, native authentication, persistence or sync is involved.
+ * Destroy only after draining calls. A failed query reports locked.
+ * Begin returns request=0 if already open, BUSY if another prompt is pending.
+ * Complete consumes a matching request on success or denial; INVALID_STATE
+ * rejects stale, repeated or wrong-identity replies without granting access.
+ * Inactive-scene lock-all is skipped during a prompt; explicit lock-all is not.
+ */
+CREST_API crest_status_t CREST_CALL crest_access_create(uint64_t* out_handle);
+CREST_API crest_status_t CREST_CALL crest_access_is_locked(
+    uint64_t handle, const uint8_t* space_uuid, const uint8_t* profile_uuid,
+    int32_t requires_authentication, int32_t* out_locked);
+CREST_API crest_status_t CREST_CALL crest_access_begin(
+    uint64_t handle, const uint8_t* space_uuid, const uint8_t* profile_uuid,
+    int32_t requires_authentication, uint64_t* out_request);
+CREST_API crest_status_t CREST_CALL crest_access_complete(
+    uint64_t handle, const uint8_t* space_uuid, const uint8_t* profile_uuid,
+    uint64_t request, int32_t succeeded);
+CREST_API crest_status_t CREST_CALL crest_access_lock_space(uint64_t handle, const uint8_t* space_uuid);
+CREST_API crest_status_t CREST_CALL crest_access_lock_all(uint64_t handle, int32_t inactive_scene, int32_t* out_applied);
+CREST_API crest_status_t CREST_CALL crest_access_destroy(uint64_t handle);
+
 /* Bounded pure domain evaluation for incremental migration of synchronous
  * native APIs. No core handle, retained state, I/O, callbacks, or executor wait.
  * Input <= 16 KiB, output <= 64 KiB. Capacity 0 reports required size without

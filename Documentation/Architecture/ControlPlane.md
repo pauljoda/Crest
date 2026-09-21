@@ -178,6 +178,17 @@ The original message-based kernel's page creation and lifetime rules still need
 consolidation with the native composition. This boundary does not finish the core
 authority migration.
 
+Space unlocking uses a process-local `SpaceAccessAuthority` in the .NET domain.
+The native access controller presents Apple's authentication prompt and publishes
+UI changes; it no longer owns an independent set of unlocked profiles. Grants
+match both Space and profile identity. Only the current request may complete;
+relocking cancels it, and a late result cannot consume a newer request. Scene
+deactivation caused by the system prompt preserves that pending request. Explicit
+locking always revokes access. These grants never enter checkpoints or sync.
+The small C ABI uses fixed UUID bytes and synchronous calls, without JSON or a
+message executor. Durable access-policy changes still use session commands, and
+native page, credential and extension callers retain their existing access gates.
+
 ## Existing UI migration
 
 `CrestNativeCore` and `CrestMobileNativeCore` build the existing platform entry

@@ -1621,6 +1621,10 @@
     "retire-control-plane-prototype-ui": {
       "category": "internal",
       "message": "Remove the obsolete control-plane test UI and Apple message wrappers so every app target uses Crest's original native interface."
+    },
+    "shared-core-space-unlocking": {
+      "category": "internal",
+      "message": "Move temporary Space unlock grants and authentication completion rules into the shared core while preserving native device authentication."
     }
   }
 }

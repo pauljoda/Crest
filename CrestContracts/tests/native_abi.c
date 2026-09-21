@@ -5,6 +5,24 @@
 #include <string.h>
 
 static const char* session = "11111111-1111-1111-1111-111111111111";
+static void access_boundary(void) {
+    uint64_t access = 0, request = 0;
+    uint8_t space[16] = {1}, profile[16] = {2}, replacement[16] = {3};
+    int32_t locked = 0, applied = 0;
+    assert(crest_access_create(&access) == CREST_OK && access != 0);
+    assert(crest_access_is_locked(access, NULL, profile, 1, &locked) == CREST_INVALID_ARGUMENT && locked == 1);
+    assert(crest_access_is_locked(access, space, profile, 2, &locked) == CREST_INVALID_ARGUMENT && locked == 1);
+    assert(crest_access_begin(access, space, profile, 1, &request) == CREST_OK && request != 0);
+    assert(crest_access_complete(access, space, replacement, request, 1) == CREST_INVALID_STATE);
+    assert(crest_access_lock_all(access, 1, &applied) == CREST_OK && applied == 0);
+    assert(crest_access_complete(access, space, profile, request, 1) == CREST_OK);
+    assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_OK && locked == 0);
+    assert(crest_access_lock_space(access, space) == CREST_OK);
+    assert(crest_access_complete(access, space, profile, request, 1) == CREST_INVALID_STATE);
+    assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_OK && locked == 1);
+    assert(crest_access_destroy(access) == CREST_OK);
+    assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_INVALID_HANDLE && locked == 1);
+}
 static void policy_boundary(void) {
     const char *request = "{\"version\":1,\"operation\":\"address.intent\",\"input\":\"localhost:8767/profile\",\"searchTemplate\":\"https://duckduckgo.com/?q=%s\"}";
     size_t length = 0;
@@ -40,6 +58,7 @@ static void extract_id(const char* json, const char* key, char out[37]) {
 int main(void) {
     assert(crest_core_abi_version() == CREST_ABI_VERSION);
     policy_boundary();
+    access_boundary();
     crest_core_handle_t core = 999;
     assert(crest_core_create(NULL, &core) == CREST_INVALID_ARGUMENT && core == 0);
     char config[512];

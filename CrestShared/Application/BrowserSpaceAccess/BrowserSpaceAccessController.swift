@@ -1,3 +1,4 @@
+import CrestCoreABI
 import Foundation
 import Observation
 
@@ -8,12 +9,13 @@ final class BrowserSpaceAccessController {
     private(set) var failure: BrowserSpaceAccessFailure?
 
     @ObservationIgnored private let authenticator: any BrowserDeviceAuthenticating
-    @ObservationIgnored private var lockGeneration: UInt = 0
+    @ObservationIgnored private let core = BrowserCoreSpaceAccess()
+    @ObservationIgnored private var activeRequest: UInt64?
+    private var accessRevision: UInt = 0
     /// Invoked after the unlocked set changes so a service holding live access
     /// to a Space's pages — the extension debugger — can withdraw at once
     /// instead of at its next request.
     @ObservationIgnored var accessDidChange: (() -> Void)?
-    private var unlockedAssignments: Set<BrowserSpaceRuntimeAssignment> = []
 
     init(
         authenticator: any BrowserDeviceAuthenticating = SystemBrowserDeviceAuthenticator()
@@ -22,10 +24,8 @@ final class BrowserSpaceAccessController {
     }
 
     func isLocked(_ space: BrowserSpace) -> Bool {
-        space.accessPolicy.requiresAuthentication
-            && !unlockedAssignments.contains(
-                BrowserSpaceRuntimeAssignment(space: space)
-            )
+        _ = accessRevision
+        return core.isLocked(space)
     }
 
     func isAuthenticating(_ space: BrowserSpace) -> Bool {
@@ -54,14 +54,20 @@ final class BrowserSpaceAccessController {
 
     @discardableResult
     func unlock(_ space: BrowserSpace) async -> Bool {
-        guard isLocked(space) else { return true }
-        guard authenticatingAssignment == nil else { return false }
+        let attempt = core.begin(space)
+        guard attempt.status == CREST_OK else {
+            if attempt.status != CREST_BUSY { failure = .authenticationUnavailable }
+            return false
+        }
+        guard attempt.request != 0 else { return true }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let generation = lockGeneration
+        let request = attempt.request
+        activeRequest = request
         authenticatingAssignment = assignment
         failure = nil
         defer {
-            if generation == lockGeneration {
+            if activeRequest == request {
+                activeRequest = nil
                 authenticatingAssignment = nil
             }
         }
@@ -72,40 +78,44 @@ final class BrowserSpaceAccessController {
                     localized: "Authenticate to unlock the \(space.name) Space in Crest."
                 )
             )
-            guard generation == lockGeneration else { return false }
+            guard core.complete(request, assignment: assignment, succeeded: authenticated) else { return false }
             guard authenticated else {
                 failure = .authenticationDenied
                 return false
             }
-            unlockedAssignments.insert(assignment)
+            accessRevision &+= 1
             accessDidChange?()
             return true
         } catch {
-            guard generation == lockGeneration else { return false }
+            guard core.complete(request, assignment: assignment, succeeded: false) else { return false }
             failure = .authenticationUnavailable
             return false
         }
     }
 
     func lock(_ spaceID: SpaceID) {
-        unlockedAssignments = Set(
-            unlockedAssignments.filter { $0.spaceID != spaceID }
-        )
+        core.lock(spaceID)
+        accessRevision &+= 1
         if authenticatingAssignment?.spaceID == spaceID {
-            lockGeneration &+= 1
+            activeRequest = nil
             authenticatingAssignment = nil
         }
         accessDidChange?()
     }
 
     func lockAllForInactiveScene() {
-        guard authenticatingAssignment == nil else { return }
-        lockAll()
+        guard core.lockAll(inactiveScene: true) else { return }
+        publishLocked()
     }
 
     func lockAll() {
-        lockGeneration &+= 1
-        unlockedAssignments.removeAll()
+        _ = core.lockAll()
+        publishLocked()
+    }
+
+    private func publishLocked() {
+        accessRevision &+= 1
+        activeRequest = nil
         authenticatingAssignment = nil
         accessDidChange?()
     }

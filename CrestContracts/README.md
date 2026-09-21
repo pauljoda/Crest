@@ -1,9 +1,22 @@
-# Experimental control-plane contract
+# Portable core contract
 
 The implemented C ABI is in `include/crest_core.h`. `CrestCore.Contracts.Protocol`
 defines the current JSON contract. It parses bounded UTF-8 JSON directly and
 builds JSON nodes without reflection. The application and domain have no native
 engine references.
+
+The native Crest apps use the `crest_session_*`, sync and policy entry points.
+`crest_access_*` owns process-local Space unlock grants, shared by the native
+desktop and mobile access controllers. The platform supplies device-authentication
+results; the core accepts only the current request for the exact Space/profile
+identity. Relocking invalidates pending results. Grants are never persisted or
+synced. This small synchronous boundary uses 16-byte UUIDs and integer results,
+without message serialization or an executor wait. Native UI, page, credential
+and extension callers continue to consult the same access controller.
+
+The message protocol described below remains for the old kernel's contract tests.
+Its prototype Apple UI and transport have been removed. It is not the native
+app's runtime; remaining lifetime rules must be consolidated before retiring it.
 
 `crest_core_evaluate_policy` is a separate pure-function entry point for the
 existing native store APIs during migration. Requests use `version: 1` and an
