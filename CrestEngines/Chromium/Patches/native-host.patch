@@ -84,7 +84,33 @@
 
    // Since we may have different windows with different profiles, we clear the
    // subscription each time a window becomes the main.
-@@ -2197,6 +2209,14 @@
+@@ -1853,7 +1865,13 @@
+   // If the browser is currently trying to quit, don't do anything and return NO
+   // to prevent AppKit from doing anything.
+   if (browser_shutdown::IsTryingToQuit())
+     return NO;
++
++  // Crest owns window composition. Chromium must not create a browser here,
++  // because that browser would have no registered native window.
++  if (crest::Reopen()) {
++    return NO;
++  }
+
+   // Bring all browser windows to the front. Specifically, this brings them in
+   // front of any app windows. FocusWindowSet will also unminimize the most
+@@ -2052,6 +2070,11 @@
+   return ProfileManager::MaybeForceOffTheRecordMode(profile);
+ }
+
+ - (void)application:(NSApplication*)sender openURLs:(NSArray<NSURL*>*)urls {
++  // Crest applies its own external-URL policy, Space routing and placement.
++  if (crest::OpenExternalURLs(urls)) {
++    return;
++  }
++
+   StartupTabs startupTabs;
+   for (NSURL* url in urls) {
+@@ -2197,6 +2220,14 @@
    if (profile == _lastProfile)
      return;
 

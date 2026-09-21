@@ -123,6 +123,8 @@
 + (void)startWithHost:(id<CrestChromiumEngineHost>)host;
 + (NSWindow*)windowForIdentifier:(NSString*)identifier;
 + (BOOL)deferQuit;
++ (BOOL)reopen;
++ (BOOL)openExternalURLs:(NSArray<NSURL*>*)urls;
 @end
 
 @interface CrestLinkMenuAction : NSObject
@@ -2075,7 +2077,24 @@ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
   if (!window || window.attachedSheet) return nullptr;
   return std::make_unique<NativePermissionPrompt>(window, delegate);
 }
-bool IsEnabled() { return base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane"); }
+namespace {
+bool HasBundleMarker(NSString* name) {
+  NSString* path = [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:name];
+  return path && [NSFileManager.defaultManager fileExistsAtPath:path];
+}
+// A product bundle hosts the native Crest UI for every launch, including the
+// ones Crest cannot add switches to: Finder, login items, the default-browser
+// role and Dock reopen. Experiment bundles keep requiring the explicit switch.
+bool IsProductBundle() {
+  static const bool product = HasBundleMarker(@"Crest-Native-Host");
+  return product;
+}
+}  // namespace
+bool IsEnabled() {
+  static const bool enabled =
+      IsProductBundle() || base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane");
+  return enabled;
+}
 void OnBrowserWindowCreated(Browser* browser) {
   if (!State().bootstrap) {
     State().bootstrap = browser;
@@ -2098,9 +2117,19 @@ void OnBrowserWindowDestroyed(Browser* browser) {
 void EnsureCrestUIStarted(Browser* browser) {
   CHECK(NSThread.isMainThread);
   if (State().started) return;
-  CHECK(base::CommandLine::ForCurrentProcess()->HasSwitch("user-data-dir"));
-  NSString* framework = [NSBundle.mainBundle.privateFrameworksPath stringByAppendingPathComponent:@"CrestChromiumUI.framework"];
-  NSBundle* bundle = [NSBundle bundleWithPath:framework];
+  // An experiment bundle must name its own engine profile root. A product
+  // bundle uses Chromium's default directory for its own bundle identity.
+  CHECK(IsProductBundle() || base::CommandLine::ForCurrentProcess()->HasSwitch("user-data-dir"));
+  // The review and product compositions keep separate framework names so a
+  // package can only ever contain the one it was assembled from.
+  NSBundle* bundle = nil;
+  for (NSString* name in @[ @"CrestChromiumUI.framework", @"CrestChromiumUIProduct.framework" ]) {
+    NSString* path = [NSBundle.mainBundle.privateFrameworksPath stringByAppendingPathComponent:name];
+    if (![NSFileManager.defaultManager fileExistsAtPath:path]) continue;
+    bundle = [NSBundle bundleWithPath:path];
+    break;
+  }
+  CHECK(bundle);
   NSError* error = nil;
   CHECK([bundle loadAndReturnError:&error]) << base::SysNSStringToUTF8(error.description);
   CHECK(NSClassFromString(@"CrestRoot"));
@@ -2119,5 +2148,16 @@ NSWindow* WindowForBrowser(Browser* browser) {
 }
 bool DeferQuit() {
   return IsEnabled() && State().started && !State().quitting && [NSClassFromString(@"CrestRoot") deferQuit];
+}
+bool Reopen() {
+  if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
+  return [NSClassFromString(@"CrestRoot") reopen];
+}
+bool OpenExternalURLs(NSArray<NSURL*>* urls) {
+  // Before the native root exists there is nothing to route into, and after a
+  // quit has been accepted there is nothing left to open. Chromium then keeps
+  // its own behavior rather than dropping the request.
+  if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
+  return [NSClassFromString(@"CrestRoot") openExternalURLs:urls];
 }
 }  // namespace crest

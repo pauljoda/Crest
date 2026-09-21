@@ -22,6 +22,10 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
     }
     static var engineHost: (any CrestChromiumEngineHost)? { instance?.host }
+    /// External URLs delivered before the root owns a window. Chromium hands
+    /// them over during startup, which can be while session recovery is still
+    /// on screen; they open once the first window exists.
+    private static var pendingExternalURLs: [URL] = []
     private let host: any CrestChromiumEngineHost
     private let application: BrowserMacApplication
     private var downloads: ChromiumDownloadAdapter?
@@ -58,6 +62,14 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private var browserMenu: CrestChromiumMenu?
     private var quitting = false
     private var hasStopped = false
+    /// Which normal windows were open, newest last. Window contents and
+    /// selection stay in `BrowserWindowStateStore`, and frames stay in AppKit's
+    /// own autosave records; this list only records how many windows the
+    /// SwiftUI `WindowGroup` would have restored, which AppKit cannot tell a
+    /// framework-hosted window itself.
+    private var restorableWindowIDs: [BrowserWindowID] = []
+    private let restorationDefaults: UserDefaults?
+    private static let restorableWindowsKey = "crest.chromium.windows.v1"
 
     @objc(startWithHost:)
     static func start(host: any CrestChromiumEngineHost) {
@@ -98,7 +110,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         instance = root
         BrowserMacWindowPresentation.host = root
         BrowserMacAppIconPreference.restore()
-        root.openWindow(.initial)
+        root.restoreWindows()
         if let recoveryKeyMonitor { NSEvent.removeMonitor(recoveryKeyMonitor) }
         recoveryKeyMonitor = nil
         recoveryWindow?.close()
@@ -115,12 +127,15 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             handleShortcutEvent(event) ? nil : event
         }
         NSApp.activate(ignoringOtherApps: true)
+        root.openPendingExternalURLs()
     }
 
     private init(host: any CrestChromiumEngineHost) throws {
         self.host = host
         application = try BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
             profileRemover: ChromiumProfileRemover(host: host))
+        restorationDefaults = Self.restorationDefaults()
+        restorableWindowIDs = Self.storedRestorableWindowIDs(in: restorationDefaults)
         super.init()
         downloads = ChromiumDownloadAdapter(host: host) { [weak self] values, profileID in
             guard let self else { return nil }
@@ -325,6 +340,136 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         window.makeKeyAndOrderFront(nil)
     }
 
+    // MARK: - Restoration
+
+    /// The defaults domain this launch persists window state into. It mirrors
+    /// `BrowserMacApplication`'s own choice so an isolated session keeps its
+    /// window list beside the rest of its state.
+    private static func restorationDefaults() -> UserDefaults? {
+        let environment = BrowserLaunchEnvironment.current
+        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else { return .standard }
+        guard let isolationID = environment.persistentIsolationID else { return nil }
+        return UserDefaults(suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: isolationID))
+    }
+
+    private static func storedRestorableWindowIDs(in defaults: UserDefaults?) -> [BrowserWindowID] {
+        guard let stored = defaults?.array(forKey: restorableWindowsKey) as? [String] else { return [] }
+        return stored.compactMap(UUID.init(uuidString:)).map(BrowserWindowID.init(rawValue:))
+    }
+
+    private func persistRestorableWindowIDs() {
+        restorationDefaults?.set(restorableWindowIDs.map { $0.rawValue.uuidString }, forKey: Self.restorableWindowsKey)
+    }
+
+    /// Reopens the normal windows the previous session left open. Private and
+    /// Quick Windows are deliberately not restored.
+    private func restoreWindows() {
+        let restored = restorableWindowIDs
+        restorableWindowIDs = []
+        for id in restored { openWindow(id == .main ? .initial : BrowserMacWindowRequest(id: id, kind: .normal)) }
+        if windows.isEmpty { openWindow(.initial) }
+        let front = restored.first { windows[$0] != nil } ?? windows.keys.first
+        if let front, let window = windows[front] { window.makeKeyAndOrderFront(nil) }
+    }
+
+    /// A Dock click or `Open` with no Crest window. The SwiftUI application
+    /// brings an existing window forward and otherwise opens the initial
+    /// window; Chromium must not create a browser of its own here because it
+    /// would have no registered native window.
+    @objc static func reopen() -> Bool {
+        guard let instance, !instance.quitting else { return false }
+        if let window = activeNativeWindow ?? instance.privateWindow
+            ?? instance.quickWindows.values.first?.window {
+            if window.isMiniaturized { window.deminiaturize(nil) }
+            window.makeKeyAndOrderFront(nil)
+        } else {
+            instance.openWindow(.initial)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        return true
+    }
+
+    // MARK: - External URLs
+
+    /// Chromium's `AppController` hands over every external open. Routing then
+    /// matches the SwiftUI application's own external-link handling.
+    @objc(openExternalURLs:)
+    static func openExternalURLs(_ urls: [URL]) -> Bool {
+        let accepted = urls.filter {
+            $0.isFileURL
+                ? BrowserExternalURLPolicy.acceptsLocalDocument($0)
+                : BrowserExternalURLPolicy.accepts($0)
+        }
+        guard !accepted.isEmpty else { return true }
+        guard let instance else {
+            pendingExternalURLs.append(contentsOf: accepted)
+            return true
+        }
+        instance.openExternalURLs(accepted)
+        return true
+    }
+
+    private func openPendingExternalURLs() {
+        let pending = Self.pendingExternalURLs
+        Self.pendingExternalURLs = []
+        guard !pending.isEmpty else { return }
+        openExternalURLs(pending)
+    }
+
+    private func openExternalURLs(_ urls: [URL]) {
+        Task { @MainActor in
+            let documents = urls.filter { $0.isFileURL }
+            if !documents.isEmpty { await openLocalDocuments(documents) }
+            for url in urls where !url.isFileURL { await openExternalURL(url) }
+        }
+    }
+
+    /// The window an external open belongs to. A tear-off window owns a
+    /// disposable workspace, so it never receives one; if no normal window is
+    /// left, one opens. An external open rarely arrives while Crest is
+    /// frontmost, so there is usually no key window to ask.
+    private func externalTargetModel() -> BrowserMacWindowModel? {
+        let active = activeModel.flatMap { $0.isTemporary ? nil : $0 }
+        if active == nil, restorableWindowIDs.isEmpty { openWindow(.initial) }
+        return active ?? restorableWindowIDs.reversed().lazy
+            .compactMap({ self.application.windowCoordinator.existingModel(for: $0) }).first
+    }
+
+    /// A document opened from Finder, Open With or `open -a Crest` is not a web
+    /// link and has no host to route on. It belongs in the Space on screen.
+    private func openLocalDocuments(_ urls: [URL]) async {
+        guard let model = externalTargetModel(), let space = model.browser.selectedSpace else { return }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        guard await application.spaceAccess.unlock(space),
+            model.browser.space(matching: assignment) != nil else { return }
+        BrowserCommandActions(browser: model.browser, pages: model.pages, chrome: model.chrome,
+            openWindow: EnvironmentValues().openWindow, spaceAccess: application.spaceAccess,
+            targetWindowID: model.id).openLocalDocuments(urls, in: assignment)
+        windows[model.id]?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func openExternalURL(_ url: URL) async {
+        guard let model = externalTargetModel() else { return }
+        let browser = model.browser
+        let decision = BrowserLinkPreferenceStore.shared.routingDecision(
+            for: url, in: browser.session, unavailableSpaceIDs: browser.deletingSpaceIDs)
+        guard let space = browser.session.space(id: decision.spaceID) else { return }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        guard await application.spaceAccess.unlock(space), browser.space(matching: assignment) != nil else { return }
+        switch decision {
+        case .quickWindow:
+            openQuickWindow(BrowserQuickWindowRequest(url: url, spaceAssignment: assignment, targetWindowID: model.id))
+        case .space:
+            guard browser.openNewTab(url: url, matching: assignment) != nil else { return }
+            model.pages.select(session: browser.session)
+            model.pages.load(url)
+            model.chrome.dismissCommandPalette()
+            windows[model.id]?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
     func openWindow(_ request: BrowserMacWindowRequest) {
         if let existing = windows[request.id] { existing.makeKeyAndOrderFront(nil); return }
         guard application.windowCoordinator.model(for: request) != nil else { return }
@@ -346,7 +491,18 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         window.contentViewController = NSHostingController(rootView: application.browserWindowContent(request))
         NotificationCenter.default.addObserver(self, selector: #selector(windowClosed(_:)),
             name: NSWindow.willCloseNotification, object: window)
-        window.center()
+        if request.kind == .normal {
+            // Frames belong to AppKit's autosave records, as they do for the
+            // SwiftUI scene. Tear-off windows keep their drop placement.
+            let autosaveName = "crest.chromium.window.\(request.id.rawValue.uuidString)"
+            if !window.setFrameUsingName(autosaveName) { window.center() }
+            window.setFrameAutosaveName(autosaveName)
+            restorableWindowIDs.removeAll { $0 == request.id }
+            restorableWindowIDs.append(request.id)
+            persistRestorableWindowIDs()
+        } else {
+            window.center()
+        }
         window.makeKeyAndOrderFront(nil)
     }
 
@@ -409,6 +565,12 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
         guard let id = windows.first(where: { $0.value === window })?.key else { return }
         windows.removeValue(forKey: id)
+        // A window the user closed is not restored; windows still open at quit
+        // are, so a terminating application keeps its recorded list.
+        if !quitting, restorableWindowIDs.contains(id) {
+            restorableWindowIDs.removeAll { $0 == id }
+            persistRestorableWindowIDs()
+        }
         application.windowCoordinator.closeWindow(id)
         NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
     }
@@ -428,6 +590,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         guard let instance, !instance.hasStopped else { return false }
         guard !instance.quitting else { return true }
         instance.quitting = true
+        instance.persistRestorableWindowIDs()
         instance.host.prepareToQuit { allowed in
             MainActor.assumeIsolated {
                 guard allowed else { instance.quitting = false; return }
@@ -520,8 +683,13 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         NSSharingServicePicker(items: [item]).show(relativeTo: view.bounds, of: view, preferredEdge: .maxY)
     }
     @objc static func showQRCode(forURL url: String, title: String) { showNativeNotice("QR sharing is not yet connected in this host.", icon: "qrcode") }
-    @objc static func translateURL(_ url: String) { showNativeNotice("Translation is not yet connected in this host.", icon: "globe") }
-    @objc static func translateText(_ text: String) { showNativeNotice("Translation is not yet connected in this host.", icon: "globe") }
+    @objc static func translateURL(_ url: String) {
+        showNativeNotice(
+            "Whole-page translation is not available in this engine. Select text on the page, then translate the selection.",
+            icon: "globe"
+        )
+    }
+    @objc static func translateText(_ text: String) { ChromiumSelectionTranslation.present(text) }
     @objc static func showTabSearch() { instance?.activeContext?.chrome.presentCommandPalette() }
 }
 #endif

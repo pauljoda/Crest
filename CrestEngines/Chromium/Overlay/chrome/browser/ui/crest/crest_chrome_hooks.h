@@ -17,6 +17,9 @@ void OnBrowserWindowDestroyed(Browser* browser);
 void EnsureCrestUIStarted(Browser* browser);
 // Chrome's AppController retains its lifecycle role. A quit waits for core saves.
 bool DeferQuit();
+// A Dock click or reopen with no windows. Crest activates an existing window
+// or opens its initial one; Chromium creates no browser of its own.
+bool Reopen();
 // Consumes the result of a native close preflight without destroying the page.
 bool CompletePageClosePreparation(content::WebContents* contents, bool proceed);
 // Called after Chromium has approved a renderer's drag request.
@@ -25,6 +28,9 @@ void AddNavigationThrottle(content::NavigationThrottleRegistry& registry);
 // Applies semantic policy after Chromium validates a renderer's original request.
 bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& params);
 #ifdef __OBJC__
+// Consumes an external open: a link from another app, a document, or the
+// default-browser role. Crest applies its own routing policy.
+bool OpenExternalURLs(NSArray<NSURL*>* urls);
 NSWindow* WindowForBrowser(Browser* browser);
 void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url);
 #endif

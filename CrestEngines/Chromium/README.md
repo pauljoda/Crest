@@ -131,6 +131,39 @@ and the repository, and removes default-browser registration from that copy.
 It does not notarize or publish a distributable release.
 Launch with both `--crest-control-plane` and an explicit, separate
 `--user-data-dir`. The host rejects startup without that explicit directory.
+
+`--product` packages Crest's own desktop identity instead of that review
+identity. It consumes the `CrestChromiumUIProduct` framework, which compiles the
+same sources without `CREST_REVIEW_BUILD` and therefore uses Crest's normal
+persistent store, sync and update state rather than an isolated session. The
+packaged bundle takes the `com.pauldavis.crest` identifier and copies Crest's
+`CFBundleURLTypes`, `CFBundleDocumentTypes`, Sparkle feed and public key from
+`CrestMac/Configuration/Crest-Info.plist`, so HTTP, HTTPS and HTML registration
+and `Check for Updates` work through the app's existing paths. Supply the
+product identity's resolved entitlements with `--entitlements`; unexpanded build
+settings are rejected. The two framework targets are alternatives and keep
+separate product names, so a rebuild cannot leave one composition's resources in
+the other; the packager embeds the framework it was given under its own name,
+detects the composition from its `Crest-Native-Host` resource and refuses a
+mismatched mode, and the host loads whichever of the two names a bundle
+contains. A product bundle carries a
+`Crest-Native-Host` resource instead of `Crest-Isolated-Experiment`: it hosts the
+native UI for launches that carry no switches — Finder, the default-browser role,
+Dock reopen — and uses Chromium's default profile directory for its own bundle
+identity. Signing and provisioning that identity for distribution remain
+external requirements; the packager still refuses `/Applications` and never
+replaces an installed Crest.
+
+External opens, document opens and reopen reach the native UI through
+`AppController`. `crest::OpenExternalURLs` applies Crest's own external-URL
+policy with Space or Quick Window routing for web links and its local-document
+rules for opened files, queuing anything that arrives before the first window
+exists, and `crest::Reopen` activates an existing window or
+opens the initial one instead of letting Chromium create a browser with no
+registered window. Normal windows are restored at startup from the list of
+windows that were open at quit; their contents come from the existing per-window
+state and their frames from AppKit's autosave records. Private and Quick Windows
+are not restored.
 The native UI uses the named isolated session `chromium-native-ui-review` by
 default. Set `CREST_ISOLATED_PERSISTENCE_ID` to a different name and provide a
 separate `--user-data-dir` for an independent session, including benchmark runs.

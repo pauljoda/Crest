@@ -99,8 +99,10 @@ targetTemplates:
           - "$(CREST_CORE_FRAMEWORK_DIR)/CrestCoreABI.framework/CrestCoreABI"
         outputFiles:
           - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCoreABI.framework/CrestCoreABI"
-targets:
-  CrestChromiumUI:
+  # The Chromium host framework has one composition and two identities: the
+  # isolated review framework and the normal product framework. Only the Swift
+  # compilation conditions differ, so both build from this template.
+  ChromiumHostFramework:
     type: framework
     platform: macOS
     sources:
@@ -135,13 +137,34 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: Crest
         ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil"
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CHROMIUM_HOST CREST_CORE_BACKED CREST_REVIEW_BUILD"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: ${hostCompilationConditions}
         SWIFT_OBJC_BRIDGING_HEADER: "$(PROJECT_DIR)/CrestEngines/Chromium/Apple/CrestChromiumHost.h"
         SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
         CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"
         OTHER_LDFLAGS: '$(inherited) "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"'
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @loader_path/../../.."
         SWIFT_EMIT_LOC_STRINGS: NO
+targets:
+  CrestChromiumUI:
+    templates:
+      - ChromiumHostFramework
+    templateAttributes:
+      hostCompilationConditions: "$(inherited) CREST_CHROMIUM_HOST CREST_CORE_BACKED CREST_REVIEW_BUILD"
+    scheme: {}
+  # The normal desktop composition: the same host framework without review
+  # isolation, so it uses Crest's persistent store, sync and update identity.
+  # It keeps its own product name so a rebuild can never leave one
+  # composition's resources inside the other's framework.
+  CrestChromiumUIProduct:
+    templates:
+      - ChromiumHostFramework
+    templateAttributes:
+      hostCompilationConditions: "$(inherited) CREST_CHROMIUM_HOST CREST_CORE_BACKED"
+    sources:
+      # Names this framework's composition, and becomes the packaged bundle's
+      # marker for a host that starts without launch switches.
+      - path: CrestEngines/Chromium/Composition/Crest-Native-Host
+        buildPhase: resources
     scheme: {}
   CrestNativeCore:
     type: application

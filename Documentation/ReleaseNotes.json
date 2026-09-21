@@ -1689,6 +1689,14 @@
     "chromium-content-blocking-mapping": {
       "category": "improved",
       "message": "Content blocking controls appear only where the browsing engine supports them; Chromium-powered windows rely on extensions such as uBlock Origin Lite."
+    },
+    "chromium-host-external-links-and-reopen": {
+      "category": "new",
+      "message": "Chromium-powered Crest opens links and documents sent from other apps, reopens a window from the Dock, and restores its open windows at launch."
+    },
+    "chromium-host-product-packaging": {
+      "category": "internal",
+      "message": "Add a non-review Chromium host composition and a product packaging mode that carries Crest identity, URL and document types, and Sparkle update settings."
     }
   }
 }
