@@ -28,12 +28,14 @@ public static class NativeSyncProjection
     {
         var policy = Preferences(preferences);
         var existing = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var archiveReasons = new Dictionary<Guid, string?>();
         foreach (var record in existingRecords)
         {
             if (record["payload"]?["value"] is not { } value) continue;
             string kind = record["id"]!["kind"]!.GetValue<string>();
             string name = kind + ":" + Id(record["id"]!["value"]).ToString("D");
             existing[name] = Text(kind == "archive" ? value["tab"]?["orderToken"] : value["orderToken"]);
+            if (kind == "archive") archiveReasons[Id(record["id"]!["value"])] = Text(value["reason"]);
         }
         var result = new JsonArray();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -99,13 +101,18 @@ public static class NativeSyncProjection
                 value["spaceID"] = space["id"]!.DeepClone();
                 Add("history", value);
             }
-            var archive = Items(space, "archivedTabs").Where(a => PortableTab(a!["tab"]!)).Select(a => a!).ToArray();
+            // Archive presentation sorts by date after a merge. That is not a
+            // user reorder: keep accepted positions and append new identities.
+            var archive = Items(space, "archivedTabs").Where(a => PortableTab(a!["tab"]!)).Select(a => a!)
+                .OrderBy(a => existing.GetValueOrDefault("archive:" + Id(a["tab"]!["id"]).ToString("D")) ?? "~", StringComparer.Ordinal)
+                .ThenBy(a => Id(a["tab"]!["id"]).ToString("D"), StringComparer.Ordinal).ToArray();
             var archiveTokens = Tokens("archive", archive, archived: true);
             for (int j = 0; j < archive.Length; j++) Add("archive", new JsonObject
             {
                 ["tab"] = Tab(archive[j]["tab"]!, space["id"]!, archiveTokens[j], archived: true),
                 ["archivedAt"] = archive[j]["archivedAt"]!.DeepClone(),
-                ["reason"] = SyncContentPolicy.ProjectArchiveReason(ArchiveReason(archive[j]))
+                ["reason"] = SyncContentPolicy.ProjectArchiveReason(ArchiveReason(archive[j]),
+                    archiveReasons.GetValueOrDefault(Id(archive[j]["tab"]!["id"])))
             });
         }
         return result;

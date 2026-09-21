@@ -11,8 +11,8 @@ enum TabArchiveReason: String, Codable, Equatable, Sendable {
     case deletedOnAnotherDevice
     case quickWindow
     /// Local presentation metadata for an archive record first observed from
-    /// another device. Projection canonicalizes this to `closed` so one
-    /// device's observation never becomes the removal cause everywhere.
+    /// another device. The core retains the accepted record's original cause;
+    /// a record without an earlier cause projects as `closed`.
     case synced
 
     var syncProjectionReason: Self {

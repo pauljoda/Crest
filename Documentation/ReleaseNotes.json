@@ -1625,6 +1625,10 @@
     "shared-core-space-unlocking": {
       "category": "internal",
       "message": "Move temporary Space unlock grants and authentication completion rules into the shared core while preserving native device authentication."
+    },
+    "preserve-archive-sync-round-trip": {
+      "category": "fixed",
+      "message": "Keep archived tabs stable when syncing to a new device."
     }
   }
 }

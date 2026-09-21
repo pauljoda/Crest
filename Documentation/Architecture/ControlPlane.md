@@ -329,6 +329,11 @@ Sync compares UUID fields by identity and timestamps by their exact binary date
 value. Different JSON number spellings from native encoders do not create edits;
 logical clocks retain integer precision and ordinary strings remain case-sensitive.
 
+Receiving an archive changes its local presentation to "synced" while retaining
+the accepted record's original cause on upload. Archive display order follows
+dates; it does not rewrite shared position tokens. Restaging after a cloud pull
+preserves existing archive revisions and allocates positions only for new records.
+
 Native record projections preserve additive encrypted payload fields through
 CloudKit decoding, journal persistence and uploads. Core restaging carries those
 fields forward using the supported payload vocabulary. Known optional fields
