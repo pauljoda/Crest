@@ -128,17 +128,13 @@ extension MobileBrowserPage: WKNavigationDelegate {
                 destinationURL: navigationAction.request.url
             )
             : nil
-        let clickIntent = BrowserLinkClickModifierPolicy.intent(
-            isCommandModified: isCommandModified,
-            isOptionModified: isOptionModified,
-            peekModifier: BrowserLinkPreferenceStore.shared.preferences.peekClickModifier
-        )
-        let decision = BrowserLinkNavigationDecision.classify(
+        let decision = BrowserLinkNavigationDecision.classifyModifiedLink(
             destinationURL: navigationAction.request.url, context: navigationContext,
             isUserActivatedLink: navigationAction.navigationType == .linkActivated,
             isTopLevelNavigation: navigationAction.targetFrame?.isMainFrame ?? true,
-            isPeekModified: clickIntent == .peek,
-            isNewTabModified: clickIntent == .newTab || isMiddleClick,
+            isCommandModified: isCommandModified, isOptionModified: isOptionModified,
+            isMiddleClick: isMiddleClick,
+            peekModifier: BrowserLinkPreferenceStore.shared.preferences.peekClickModifier,
             isShiftModified: isShiftModified,
             focusesNewTabs: opensModifiedLinksInForeground
                 || BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks)

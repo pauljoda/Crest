@@ -1613,6 +1613,14 @@
     "shared-core-saved-link-navigation": {
       "category": "improved",
       "message": "Keep saved and pinned pages open when following off-site links in Chromium, using the same Peek rules as WebKit."
+    },
+    "chromium-native-modified-links": {
+      "category": "improved",
+      "message": "Use your preferred Peek shortcut and open links in foreground or background tabs while browsing with Chromium."
+    },
+    "retire-control-plane-prototype-ui": {
+      "category": "internal",
+      "message": "Remove the obsolete control-plane test UI and Apple message wrappers so every app target uses Crest's original native interface."
     }
   }
 }

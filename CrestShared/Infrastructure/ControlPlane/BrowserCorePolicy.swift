@@ -7,6 +7,24 @@ import os
 /// remain commands to the core session authority.
 enum BrowserCorePolicy {
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "CorePolicy")
+    static func modifiedLinkNavigation(destinationURL: URL?, context: BrowserPageNavigationContext?,
+        isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isCommandModified: Bool,
+        isOptionModified: Bool, isMiddleClick: Bool, peekModifier: BrowserLinkClickModifier,
+        isShiftModified: Bool, focusesNewTabs: Bool) -> BrowserLinkNavigationDecision {
+        guard let response = evaluate([
+            "version": 1, "operation": "navigation.modified_link",
+            "url": destinationURL?.absoluteString as Any? ?? NSNull(),
+            "userActivatedLink": isUserActivatedLink, "topLevel": isTopLevelNavigation,
+            "commandModified": isCommandModified, "optionModified": isOptionModified,
+            "middleClick": isMiddleClick, "peekModifier": peekModifier.rawValue,
+            "shiftModified": isShiftModified, "focusesNewTabs": focusesNewTabs,
+            "hasContext": context != nil, "placement": context?.placement.rawValue as Any? ?? NSNull(),
+            "savedUrl": context?.savedURL?.absoluteString as Any? ?? NSNull(),
+            "automaticallyOpensPeek": context?.automaticallyOpensPeek ?? false
+        ]), let value = response["decision"] as? String,
+            let decision = BrowserLinkNavigationDecision(rawValue: value) else { return .navigate }
+        return decision
+    }
     static func linkNavigation(destinationURL: URL?, context: BrowserPageNavigationContext?,
         isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isPeekModified: Bool,
         isNewTabModified: Bool, isShiftModified: Bool, focusesNewTabs: Bool) -> BrowserLinkNavigationDecision {

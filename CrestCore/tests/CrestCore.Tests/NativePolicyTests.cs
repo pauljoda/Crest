@@ -53,6 +53,28 @@ public sealed class NativePolicyTests
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())));
     }
     [Fact]
+    public void ModifiedLinkWireKeepsPreferenceAndOwnershipExplicit()
+    {
+        var request = new JsonObject { ["version"] = 1, ["operation"] = "navigation.modified_link", ["url"] = "https://example.com/",
+            ["userActivatedLink"] = true, ["topLevel"] = true, ["commandModified"] = true, ["optionModified"] = false,
+            ["middleClick"] = false, ["peekModifier"] = "command", ["shiftModified"] = false,
+            ["focusesNewTabs"] = false, ["hasContext"] = true, ["placement"] = "open", ["savedUrl"] = null,
+            ["automaticallyOpensPeek"] = false };
+        string Decision() => JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!["decision"]!.GetValue<string>();
+        Assert.Equal("peekModifier", Decision());
+        request["hasContext"] = false;
+        Assert.Equal("navigate", Decision());
+        request["peekModifier"] = "option";
+        Assert.Equal("backgroundTab", Decision());
+        request["shiftModified"] = true;
+        Assert.Equal("foregroundTab", Decision());
+        request["peekModifier"] = "control";
+        Assert.Throws<ProtocolException>(() => Decision());
+        request["peekModifier"] = "option";
+        request["peekModified"] = true;
+        Assert.Throws<ProtocolException>(() => Decision());
+    }
+    [Fact]
     public void PurePolicyRejectsUnknownVersionsAndOperations()
     {
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate("{\"version\":2,\"operation\":\"address.intent\"}"u8));

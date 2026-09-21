@@ -24,6 +24,26 @@ enum BrowserPeekPolicy {
 enum BrowserLinkNavigationDecision: String {
     case navigate, peekModifier, peekSavedSite, backgroundTab, foregroundTab
 
+    static func classifyModifiedLink(destinationURL: URL?, context: BrowserPageNavigationContext?,
+        isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isCommandModified: Bool,
+        isOptionModified: Bool, isMiddleClick: Bool, peekModifier: BrowserLinkClickModifier,
+        isShiftModified: Bool, focusesNewTabs: Bool) -> Self {
+        #if CREST_CORE_BACKED
+        return BrowserCorePolicy.modifiedLinkNavigation(destinationURL: destinationURL, context: context,
+            isUserActivatedLink: isUserActivatedLink, isTopLevelNavigation: isTopLevelNavigation,
+            isCommandModified: isCommandModified, isOptionModified: isOptionModified,
+            isMiddleClick: isMiddleClick, peekModifier: peekModifier,
+            isShiftModified: isShiftModified, focusesNewTabs: focusesNewTabs)
+        #else
+        let intent = BrowserLinkClickModifierPolicy.intent(isCommandModified: isCommandModified,
+            isOptionModified: isOptionModified, peekModifier: peekModifier)
+        return classify(destinationURL: destinationURL, context: context,
+            isUserActivatedLink: isUserActivatedLink, isTopLevelNavigation: isTopLevelNavigation,
+            isPeekModified: intent == .peek, isNewTabModified: intent == .newTab || isMiddleClick,
+            isShiftModified: isShiftModified, focusesNewTabs: focusesNewTabs)
+        #endif
+    }
+
     static func classify(destinationURL: URL?, context: BrowserPageNavigationContext?,
         isUserActivatedLink: Bool, isTopLevelNavigation: Bool,
         isPeekModified: Bool, isNewTabModified: Bool, isShiftModified: Bool = false,
@@ -48,12 +68,13 @@ enum BrowserLinkNavigationDecision: String {
     }
 
     func peekRequest(destinationURL: URL?, context: BrowserPageNavigationContext?,
-        sourcePresentation: BrowserPeekSourcePresentation? = nil) -> BrowserPeekRequest? {
+        sourcePresentation: BrowserPeekSourcePresentation? = nil,
+        engineNavigation: BrowserEngineNavigation? = nil) -> BrowserPeekRequest? {
         guard self == .peekModifier || self == .peekSavedSite,
             let destinationURL, let context else { return nil }
         return BrowserPeekRequest(url: destinationURL, sourceTabID: context.tabID,
             sourceTitle: context.title, spaceAssignment: context.assignment,
             trigger: self == .peekModifier ? .modifierClick : .protectedSavedSite,
-            sourcePresentation: sourcePresentation)
+            sourcePresentation: sourcePresentation, engineNavigation: engineNavigation)
     }
 }

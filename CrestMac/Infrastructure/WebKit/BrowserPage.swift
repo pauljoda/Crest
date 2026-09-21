@@ -364,6 +364,32 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 self.openPeek(request)
             }
         }
+        chromiumPage?.modifiedLinkHandler = { [weak self] destination, modifiers, token in
+            guard let self else { return (.navigate, nil) }
+            let preferences = BrowserLinkPreferenceStore.shared.preferences
+            let decision = BrowserLinkNavigationDecision.classifyModifiedLink(
+                destinationURL: destination, context: self.navigationContext,
+                isUserActivatedLink: true, isTopLevelNavigation: true,
+                isCommandModified: modifiers & 1 != 0, isOptionModified: modifiers & 2 != 0,
+                isMiddleClick: modifiers & 8 != 0, peekModifier: preferences.peekClickModifier,
+                isShiftModified: modifiers & 4 != 0,
+                focusesNewTabs: self.opensModifiedLinksInForeground || preferences.focusesNewTabsOpenedFromLinks)
+            guard decision == .peekModifier else { return (decision, nil) }
+            guard let context = self.navigationContext, let sourceWindow = self.pageEngine.nativeView.window,
+                let request = decision.peekRequest(destinationURL: destination, context: context,
+                    engineNavigation: BrowserEngineNavigation(
+                        implementation: self.pageEngine.registration.implementationId, token: token))
+            else { return (.navigate, nil) }
+            return (decision, { [weak self, weak sourceWindow] in
+                guard let self, let sourceWindow, self.pageEngine.nativeView.window === sourceWindow,
+                    let current = self.navigationContext,
+                    current.tabID == context.tabID, current.assignment == context.assignment else {
+                    self?.chromiumPage?.discardNavigation(token)
+                    return
+                }
+                self.openPeek(request)
+            })
+        }
         #else
         let webView = desktopWebView
         desktopWebView.menuHost = self

@@ -24,6 +24,12 @@ typedef void (^CrestDeferredNavigation)(void);
 - (void)setProtectedLinkHandlerForPage:(NSString *)pageID
     handler:(CrestDeferredNavigation _Nullable (^)(NSString *url))handler
     NS_SWIFT_NAME(setProtectedLinkHandler(page:handler:));
+- (void)setModifiedLinkHandlerForPage:(NSString *)pageID
+    handler:(void (^)(NSString *url, NSUInteger modifiers, NSString *token,
+        void (^reply)(NSString *decision, CrestDeferredNavigation _Nullable present)))handler
+    NS_SWIFT_NAME(setModifiedLinkHandler(page:handler:));
+- (BOOL)loadPendingNavigation:(NSString *)token page:(NSString *)pageID expectedURL:(NSString *)url;
+- (void)discardPendingNavigation:(NSString *)token;
 - (nullable NSData *)interactionStateForPage:(NSString *)pageID;
 - (BOOL)restorePage:(NSString *)pageID interactionState:(NSData *)state expectedURL:(NSString *)url;
 - (BOOL)preparePage:(NSString *)pageID forWindow:(NSString *)windowID;

@@ -2,7 +2,7 @@
 +++ b/chrome/browser/ui/views/frame/browser_window_factory.cc
 @@ -5,6 +5,10 @@
  #include <memory>
- 
+
  #include "build/build_config.h"
 +#if BUILDFLAG(IS_MAC)
 +#include "chrome/browser/ui/crest/crest_browser_window.h"
@@ -46,7 +46,7 @@
 +    return;
 +  }
 +#endif
- 
+
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
    // Check for DSE integrity if flag is enabled.
 --- a/chrome/browser/app_controller_mac.mm
@@ -61,7 +61,7 @@
  #include "chrome/browser/ui/browser_live_tab_context.h"
 @@ -930,6 +931,9 @@
  }
- 
+
  - (void)tryToTerminateApplication {
 +  if (crest::DeferQuit()) {
 +    return;
@@ -127,7 +127,7 @@
  #include "chrome/browser/accessibility_annotator/content_annotator/content_annotator_tab_helper.h"
  #include "chrome/browser/actor/actor_keyed_service.h"
 @@ -477,11 +481,18 @@
- 
+
    // Create the ReadAnythingController first to ensure it exists before
    // any potential consumers, like the side panel controller.
 -  if (features::IsImmersiveReadAnythingEnabled()) {
@@ -151,11 +151,11 @@
 +++ b/chrome/app/chrome_exe_main_mac.cc
 @@ -19,6 +19,8 @@
  #include <unistd.h>
- 
+
  #include <memory>
 +#include <string>
 +#include <string_view>
- 
+
  #include "base/allocator/early_zone_registration_apple.h"
  #include "base/compiler_specific.h"
 @@ -155,6 +157,35 @@
@@ -191,7 +191,7 @@
 +    }
 +  }
 +#endif
- 
+
  #if defined(HELPER_EXECUTABLE)
    sandbox::SeatbeltExecServer::CreateFromArgumentsResult seatbelt =
 --- a/chrome/browser/ui/startup/startup_browser_creator.cc
@@ -216,7 +216,7 @@
 +++ b/components/os_crypt/common/keychain_password_mac.mm
 @@ -9,6 +9,7 @@
  #include <atomic>
- 
+
  #include "base/apple/osstatus_logging.h"
 +#include "base/apple/foundation_util.h"
  #include "base/apple/scoped_cftyperef.h"
@@ -242,41 +242,51 @@
 +  }
 +  return service ? kDefaultServiceName : kDefaultAccountName;
 +}
- 
+
  // These values are persisted to logs. Entries should not be renumbered and
  // numeric values should never be reused.
 @@ -110,13 +127,13 @@
- 
+
  // static
  KeychainPassword::KeychainNameType& KeychainPassword::GetServiceName() {
 -  static KeychainNameContainerType service_name(kDefaultServiceName);
 +  static KeychainNameContainerType service_name(CrestKeychainName(true));
    return *service_name;
  }
- 
+
  // static
  KeychainPassword::KeychainNameType& KeychainPassword::GetAccountName() {
 -  static KeychainNameContainerType account_name(kDefaultAccountName);
 +  static KeychainNameContainerType account_name(CrestKeychainName(false));
    return *account_name;
  }
- 
+
 --- a/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
 +++ b/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
-@@ -36,2 +36,4 @@
+@@ -34,6 +34,8 @@
+ #include "url/origin.h"
+
  #if BUILDFLAG(IS_MAC)
 +#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 +#include "chrome/browser/ui/crest/crest_permission_prompt.h"
  #include "chrome/browser/ui/views/permissions/permission_prompt_notifications_mac.h"
-@@ -277,2 +279,5 @@
+ #include "chrome/browser/web_applications/os_integration/mac/web_app_shortcut_mac.h"
+ #endif
+@@ -275,6 +277,9 @@
+ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
+     content::WebContents* web_contents,
      permissions::PermissionPrompt::Delegate* delegate) {
 +#if BUILDFLAG(IS_MAC)
 +  if (crest::IsEnabled()) return crest::CreatePermissionPrompt(web_contents, delegate);
 +#endif
    if (delegate->ShouldDropCurrentRequestIfCannotShowQuietly() &&
+       IsFullScreenMode(web_contents)) {
+     return nullptr;
 --- a/chrome/browser/profiles/profile.cc
 +++ b/chrome/browser/profiles/profile.cc
-@@ -121,2 +121,10 @@
+@@ -119,6 +119,14 @@
+     : profile_id_(profile_id) {}
+
  bool Profile::OTRProfileID::AllowsBrowserWindows() const {
 +#if BUILDFLAG(IS_MAC)
 +  // Crest private workspaces retain independent OTR contexts under the source
@@ -287,16 +297,24 @@
 +  }
 +#endif
    // Non-Primary OTR profiles are not supposed to create Browser windows.
+   // DevTools::BrowserContext, MediaRouter::Presentation, and
+   // CaptivePortal::Signin are exceptions to this ban.
 --- a/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc
 +++ b/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc
-@@ -5,2 +5,6 @@
+@@ -3,6 +3,10 @@
+ // found in the LICENSE file.
+
  #include "chrome/browser/ui/views/extensions/extension_install_dialog_view.h"
 +#if BUILDFLAG(IS_MAC)
 +#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 +#include "chrome/browser/ui/crest/crest_extension_prompt.h"
 +#endif
 
-@@ -85,2 +89,8 @@
+ #include <memory>
+ #include <string>
+@@ -83,6 +87,12 @@
+     ExtensionInstallPrompt::DoneCallback done_callback,
+     std::unique_ptr<InstallPromptData> prompt) {
    DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
 +#if BUILDFLAG(IS_MAC)
 +  if (crest::IsEnabled()) {
@@ -305,9 +323,13 @@
 +  }
 +#endif
 
+   // If the dialog has to be parented to WebContents, force activate the
+   // contents. See crbug.com/40059470.
 --- a/chrome/browser/extensions/api/messaging/launch_context_posix.cc
 +++ b/chrome/browser/extensions/api/messaging/launch_context_posix.cc
-@@ -49,2 +49,12 @@
+@@ -47,6 +47,16 @@
+   if (result.empty()) {
+     result = FindManifestInDir(chrome::DIR_NATIVE_MESSAGING, host_name);
    }
 +
 +#if BUILDFLAG(IS_MAC)
@@ -320,9 +342,12 @@
 +  }
 +#endif
 
+   if (result.empty()) {
+     error_message = "Can't find native messaging host " + host_name;
 --- a/extensions/browser/updater/extension_downloader.cc
 +++ b/extensions/browser/updater/extension_downloader.cc
-@@ -348,4 +348,14 @@
+@@ -347,6 +347,16 @@
+     AddToFetches(fetches_preparing, std::move(task));
    pending_tasks_.clear();
 
 +#if BUILDFLAG(IS_MAC)
@@ -337,6 +362,7 @@
 +#endif
  }
 
+ void ExtensionDownloader::SetIdentityManager(
 --- a/chrome/browser/ui/unload_controller.cc
 +++ b/chrome/browser/ui/unload_controller.cc
 @@ -3,6 +3,10 @@
@@ -581,7 +607,18 @@
 
  #include <algorithm>
  #include <iterator>
-@@ -5615,6 +5618,9 @@
+@@ -2949,6 +2952,10 @@
+
+   std::string process_type =
+       command_line->GetSwitchValueASCII(switches::kProcessType);
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled() && process_type == switches::kRendererProcess)
++    command_line->AppendSwitch("crest-control-plane");
++#endif
+   const base::CommandLine& browser_command_line =
+       *base::CommandLine::ForCurrentProcess();
+
+@@ -5615,6 +5622,9 @@
  void ChromeContentBrowserClient::CreateThrottlesForNavigation(
      content::NavigationThrottleRegistry& registry) {
    CreateAndAddChromeThrottlesForNavigation(registry);
@@ -591,3 +628,340 @@
  }
 
  std::vector<std::unique_ptr<content::CommitDeferringCondition>>
+--- a/chrome/browser/ui/browser.cc
++++ b/chrome/browser/ui/browser.cc
+@@ -3,6 +3,9 @@
+ // found in the LICENSE file.
+
+ #include "chrome/browser/ui/browser.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+
+ #include <stddef.h>
+
+@@ -1245,9 +1248,10 @@
+
+ WebContents* Browser::OpenURLFromTab(
+     WebContents* source,
+-    const OpenURLParams& params,
++    const OpenURLParams& requested_params,
+     base::OnceCallback<void(content::NavigationHandle&)>
+         navigation_handle_callback) {
++  OpenURLParams params(requested_params);
+   TRACE_EVENT1("navigation", "Browser::OpenURLFromTab", "source", source);
+ #if DCHECK_IS_ON()
+   DCHECK(params.Valid());
+@@ -1259,6 +1263,10 @@
+     return window->OpenURLFromTab(source, params,
+                                   std::move(navigation_handle_callback));
+   }
++
++#if BUILDFLAG(IS_MAC)
++  if (crest::RouteModifiedLink(source, params)) return nullptr;
++#endif
+
+   // If the source is already split, navigate the other pane instead of
+   // creating a new tab. Return |source| so that WebContentsImpl::OpenURL()
+--- a/third_party/blink/public/web/web_navigation_params.h
++++ b/third_party/blink/public/web/web_navigation_params.h
+@@ -108,6 +108,9 @@
+
+   // The navigation policy. See WebNavigationPolicy.
+   WebNavigationPolicy navigation_policy = kWebNavigationPolicyCurrentTab;
++  // Crest trusted anchor input: Command=1, Option=2, Shift=4, middle button=8.
++  // Zero for scripts, forms, download attributes and ordinary Chromium.
++  int crest_link_modifiers = 0;
+
+   // Whether the frame had a transient user activation
+   // at the time this request was issued.
+--- a/third_party/blink/public/mojom/frame/remote_frame.mojom
++++ b/third_party/blink/public/mojom/frame/remote_frame.mojom
+@@ -131,6 +131,10 @@
+   // TODO(crbug.com/1315802): Refactor _unfencedTop handling.
+   bool is_unfenced_top_navigation = false;
+
++  // Crest trusted anchor input; browser validation and ownership still apply.
++  // Command=1, Option=2, Shift=4, middle button=8. Not an authorization grant.
++  uint32 crest_link_modifiers = 0;
++
+   // Extra information about the triggering of the OpenURL.
+   blink.mojom.TriggeringEventInfo triggering_event_info;
+   pending_remote<blink.mojom.BlobURLToken>? blob_url_token;
+--- a/third_party/blink/renderer/core/frame/local_frame_client_impl.h
++++ b/third_party/blink/renderer/core/frame/local_frame_client_impl.h
+@@ -150,7 +150,8 @@
+       bool has_rel_opener,
+       mojo::PendingReceiver<
+           mojom::blink::NavigationResumeDeferredCommitListener>,
+-      std::optional<base::UnguessableToken> script_tool_invocation_id) override;
++      std::optional<base::UnguessableToken> script_tool_invocation_id,
++      int crest_link_modifiers = 0) override;
+   void DispatchWillSendSubmitEvent(HTMLFormElement*) override;
+   void DidStartLoading() override;
+   void DidStopLoading() override;
+--- a/third_party/blink/renderer/core/frame/local_frame_client.h
++++ b/third_party/blink/renderer/core/frame/local_frame_client.h
+@@ -204,7 +204,8 @@
+       mojo::PendingReceiver<
+           mojom::blink::NavigationResumeDeferredCommitListener>
+           resume_defer_commit_listener,
+-      std::optional<base::UnguessableToken> script_tool_invocation_id) = 0;
++      std::optional<base::UnguessableToken> script_tool_invocation_id,
++      int crest_link_modifiers = 0) = 0;
+
+   virtual void DispatchWillSendSubmitEvent(HTMLFormElement*) = 0;
+
+--- a/third_party/blink/renderer/core/frame/local_frame_client_impl.cc
++++ b/third_party/blink/renderer/core/frame/local_frame_client_impl.cc
+@@ -638,7 +638,8 @@
+     bool has_rel_opener,
+     mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>
+         resume_defer_commit_listener,
+-    std::optional<base::UnguessableToken> script_tool_invocation_id) {
++    std::optional<base::UnguessableToken> script_tool_invocation_id,
++    int crest_link_modifiers) {
+   if (!web_frame_->Client()) {
+     return;
+   }
+@@ -670,6 +671,7 @@
+       should_check_main_world_content_security_policy;
+   navigation_info->blob_url_token = std::move(blob_url_token);
+   navigation_info->input_start = input_start_time;
++  navigation_info->crest_link_modifiers = crest_link_modifiers;
+   navigation_info->actual_navigation_start = actual_navigation_start;
+   navigation_info->initiator_frame_token =
+       base::OptionalFromPtr(initiator_frame_token);
+--- a/third_party/blink/renderer/core/html/html_anchor_element.h
++++ b/third_party/blink/renderer/core/html/html_anchor_element.h
+@@ -120,7 +120,7 @@
+                            NavigationPolicy,
+                            bool is_trusted,
+                            base::TimeTicks platform_time_stamp,
+-                           KURL);
++                           KURL, int crest_link_modifiers);
+   void HandleClick(MouseEvent&);
+
+   unsigned link_relations_ : 31;
+--- a/third_party/blink/renderer/core/html/html_anchor_element.cc
++++ b/third_party/blink/renderer/core/html/html_anchor_element.cc
+@@ -393,7 +393,7 @@
+     NavigationPolicy navigation_policy,
+     bool is_trusted,
+     base::TimeTicks platform_time_stamp,
+-    KURL completed_url) {
++    KURL completed_url, int crest_link_modifiers) {
+   LocalDOMWindow* window = GetDocument().domWindow();
+   if (!window) {
+     return;
+@@ -423,6 +423,7 @@
+       is_trusted ? mojom::blink::TriggeringEventInfo::kFromTrustedEvent
+                  : mojom::blink::TriggeringEventInfo::kFromUntrustedEvent);
+   frame_request.SetInputStartTime(platform_time_stamp);
++  frame_request.SetCrestLinkModifiers(crest_link_modifiers);
+
+   Frame* target_frame =
+       frame->Tree().FindOrCreateFrameForNavigation(frame_request, target).frame;
+@@ -533,12 +534,23 @@
+     return;
+   }
+
++  // Crest carries the actual trusted link event, never global modifier state.
++  // Download attributes keep the normal download pipeline even when modified.
++  int crest_link_modifiers = 0;
++#if BUILDFLAG(IS_MAC)
++  if (event.isTrusted() && completed_url.ProtocolIsInHttpFamily() &&
++      !FastHasAttribute(html_names::kDownloadAttr) &&
++      base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    crest_link_modifiers = (event.metaKey() ? 1 : 0) | (event.altKey() ? 2 : 0) |
++                           (event.shiftKey() ? 4 : 0) | (event.button() == 1 ? 8 : 0);
++  }
++#endif
+   base::OnceClosure navigate_closure = blink::BindOnce(
+       &HTMLAnchorElementBase::NavigateToHyperlink, WrapWeakPersistent(this),
+       std::move(request), navigation_policy, event.isTrusted(),
+-      event.PlatformTimeStamp(), std::move(completed_url));
+-
+-  if (navigation_policy == kNavigationPolicyDownload) {
++      event.PlatformTimeStamp(), std::move(completed_url), crest_link_modifiers);
++
++  if (navigation_policy == kNavigationPolicyDownload && !(crest_link_modifiers & 11)) {
+     // We distinguish single/double click with some modifiers.
+     // See the comment of `EventHandler.delayed_navigation_task_handle_`.
+     auto task_handle = PostDelayedCancellableTask(
+--- a/third_party/blink/renderer/core/loader/empty_clients.cc
++++ b/third_party/blink/renderer/core/loader/empty_clients.cc
+@@ -128,7 +128,8 @@
+     bool is_container_initiated,
+     bool has_rel_opener,
+     mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>,
+-    std::optional<base::UnguessableToken> script_tool_invocation_id) {}
++    std::optional<base::UnguessableToken> script_tool_invocation_id,
++    int crest_link_modifiers) {}
+
+ void EmptyLocalFrameClient::DispatchWillSendSubmitEvent(HTMLFormElement*) {}
+
+--- a/third_party/blink/renderer/core/loader/frame_loader.cc
++++ b/third_party/blink/renderer/core/loader/frame_loader.cc
+@@ -1015,7 +1015,7 @@
+       request.IsContainerInitiated(),
+       request.GetWindowFeatures().explicit_opener,
+       request.TakeResumeDeferredCommitListener(),
+-      request.GetScriptToolInvocationId());
++      request.GetScriptToolInvocationId(), request.GetCrestLinkModifiers());
+ }
+
+ static void FillStaticResponseIfNeeded(WebNavigationParams* params,
+--- a/third_party/blink/renderer/core/loader/empty_clients.h
++++ b/third_party/blink/renderer/core/loader/empty_clients.h
+@@ -370,7 +370,8 @@
+       bool has_rel_opener,
+       mojo::PendingReceiver<
+           mojom::blink::NavigationResumeDeferredCommitListener>,
+-      std::optional<base::UnguessableToken> script_tool_invocation_id) override;
++      std::optional<base::UnguessableToken> script_tool_invocation_id,
++      int crest_link_modifiers = 0) override;
+
+   void DispatchWillSendSubmitEvent(HTMLFormElement*) override;
+
+--- a/third_party/blink/renderer/core/loader/frame_load_request.h
++++ b/third_party/blink/renderer/core/loader/frame_load_request.h
+@@ -153,6 +153,8 @@
+   }
+
+   base::TimeTicks GetInputStartTime() const { return input_start_time_; }
++  void SetCrestLinkModifiers(int modifiers) { crest_link_modifiers_ = modifiers; }
++  int GetCrestLinkModifiers() const { return crest_link_modifiers_; }
+
+   base::TimeTicks GetCreationTime() const { return creation_time_; }
+
+@@ -242,6 +244,7 @@
+   const DOMWrapperWorld* world_ = nullptr;
+   scoped_refptr<base::RefCountedData<mojo::Remote<mojom::blink::BlobURLToken>>>
+       blob_url_token_;
++  int crest_link_modifiers_ = 0;
+   base::TimeTicks input_start_time_;
+   base::TimeTicks creation_time_;
+   mojom::RequestContextFrameType frame_type_ =
+--- a/content/renderer/render_frame_impl.cc
++++ b/content/renderer/render_frame_impl.cc
+@@ -5707,6 +5707,16 @@
+   // process: DownloadURL handles downloads, OpenURL handles all navigations
+   // that will end up in a different tab/window, and BeginNavigation handles
+   // everything else.
++  // Keep the full renderer request on the existing navigation IPC. The browser
++  // applies Crest's policy after the usual origin/header/disposition checks.
++  if ((info->crest_link_modifiers & 11) &&
++      info->navigation_type == blink::kWebNavigationTypeLinkClicked &&
++      info->triggering_event_info == blink::mojom::TriggeringEventInfo::kFromTrustedEvent &&
++      url.SchemeIsHTTPOrHTTPS() &&
++      base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    OpenURL(std::move(info));
++    return;
++  }
+   if (info->navigation_policy == blink::kWebNavigationPolicyDownload) {
+     mojo::PendingRemote<blink::mojom::BlobURLToken> blob_url_token =
+         CloneBlobURLToken(info->blob_url_token);
+@@ -6005,6 +6015,7 @@
+       blink::WebStringToGURL(info->url_request.ReferrerString()),
+       info->url_request.GetReferrerPolicy());
+   params->disposition = NavigationPolicyToDisposition(policy);
++  params->crest_link_modifiers = info->crest_link_modifiers;
+   params->triggering_event_info = info->triggering_event_info;
+   params->blob_url_token = CloneBlobURLToken(info->blob_url_token);
+   params->should_replace_current_entry =
+--- a/content/public/browser/page_navigator.h
++++ b/content/public/browser/page_navigator.h
+@@ -14,6 +14,7 @@
+ #include <vector>
+
+ #include "base/functional/callback.h"
++#include "base/memory/ref_counted.h"
+ #include "base/memory/scoped_refptr.h"
+ #include "content/common/content_export.h"
+ #include "content/public/browser/child_process_host.h"
+@@ -144,6 +145,10 @@
+   // Indicates whether this navigation was triggered while processing a user
+   // gesture if the navigation was initiated by the renderer.
+   bool user_gesture;
++  uint32_t crest_link_modifiers = 0;
++  // Native-only one-shot fallback for Option's original download disposition.
++  // Shared ownership preserves OpenURLParams copyability without replaying it.
++  scoped_refptr<base::RefCountedData<base::OnceClosure>> crest_download_fallback;
+
+   // Indicates whether this navigation was started by an ad.
+   bool started_by_ad = false;
+--- a/content/browser/renderer_host/navigator.cc
++++ b/content/browser/renderer_host/navigator.cc
+@@ -1085,7 +1085,9 @@
+     const std::string& href_translate,
+     scoped_refptr<network::SharedURLLoaderFactory> blob_url_loader_factory,
+     bool has_rel_opener,
+-    bool started_by_ad) {
++    bool started_by_ad,
++    uint32_t crest_link_modifiers,
++    scoped_refptr<base::RefCountedData<base::OnceClosure>> crest_download_fallback) {
+   // Note: This can be called for subframes (even when OOPIFs are not possible)
+   // if the disposition calls for a different window.
+
+@@ -1131,6 +1133,8 @@
+   params.should_replace_current_entry = should_replace_current_entry;
+   params.user_gesture = user_gesture;
+   params.triggering_event_info = triggering_event_info;
++  params.crest_link_modifiers = crest_link_modifiers;
++  params.crest_download_fallback = std::move(crest_download_fallback);
+   params.initiator_origin = initiator_origin;
+   params.initiator_base_url = initiator_base_url;
+   params.initiator_frame_token = base::OptionalFromPtr(initiator_frame_token);
+--- a/content/browser/renderer_host/render_frame_host_impl.cc
++++ b/content/browser/renderer_host/render_frame_host_impl.cc
+@@ -10289,6 +10289,18 @@
+   }
+   // TODO(crbug.com/385170155): Consider whether to pass actual_navigation_start
+   // through this path as well, which may involve a lot of plumbing.
++  scoped_refptr<base::RefCountedData<base::OnceClosure>> crest_download_fallback;
++  if (params->crest_link_modifiers && params->disposition == WindowOpenDisposition::SAVE_TO_DISK &&
++      validated_url.SchemeIsHTTPOrHTTPS()) {
++    auto download = blink::mojom::DownloadURLParams::New();
++    download->url = validated_url;
++    download->referrer = params->referrer.Clone();
++    download->initiator_origin = params->initiator_origin;
++    download->cross_origin_redirects = network::mojom::RedirectMode::kFollow;
++    download->has_user_gesture = params->user_gesture;
++    crest_download_fallback = base::MakeRefCounted<base::RefCountedData<base::OnceClosure>>(
++        base::BindOnce(&RenderFrameHostImpl::DownloadURL, GetWeakPtr(), std::move(download)));
++  }
+   owner->GetCurrentNavigator().RequestOpenURL(
+       this, validated_url, base::OptionalToPtr(params->initiator_frame_token),
+       GetProcess()->GetDeprecatedID(), params->initiator_origin,
+@@ -10297,7 +10309,8 @@
+       params->disposition, params->should_replace_current_entry,
+       params->user_gesture, params->triggering_event_info,
+       params->href_translate, std::move(blob_url_loader_factory),
+-      params->has_rel_opener, params->started_by_ad);
++      params->has_rel_opener, params->started_by_ad, params->crest_link_modifiers,
++      std::move(crest_download_fallback));
+ }
+
+ void RenderFrameHostImpl::GetAssociatedInterface(
+--- a/content/browser/renderer_host/navigator.h
++++ b/content/browser/renderer_host/navigator.h
+@@ -10,6 +10,7 @@
+
+ #include "base/memory/raw_ptr.h"
+ #include "base/memory/scoped_refptr.h"
++#include "base/memory/ref_counted.h"
+ #include "content/browser/renderer_host/navigation_controller_impl.h"
+ #include "content/common/content_export.h"
+ #include "content/common/navigation_client.mojom.h"
+@@ -140,7 +141,9 @@
+       const std::string& href_translate,
+       scoped_refptr<network::SharedURLLoaderFactory> blob_url_loader_factory,
+       bool has_rel_opener,
+-      bool started_by_ad);
++      bool started_by_ad,
++      uint32_t crest_link_modifiers = 0,
++      scoped_refptr<base::RefCountedData<base::OnceClosure>> crest_download_fallback = nullptr);
+
+   // Called when a document requests a navigation in another document through a
+   // `blink::RemoteFrame`. If `method` is "POST", then `post_body` needs to

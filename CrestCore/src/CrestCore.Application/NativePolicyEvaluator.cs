@@ -18,14 +18,32 @@ public static class NativePolicyEvaluator
         var request = Protocol.Parse(utf8);
         if (request.GetProperty("version").GetInt32() != 1) throw new ProtocolException("version_mismatch");
         var operation = Protocol.Text(request, "operation");
-        if (operation == "navigation.link")
+        if (operation is "navigation.link" or "navigation.modified_link")
         {
-            Protocol.Members(request, "version", "operation", "url", "userActivatedLink", "topLevel",
-                "peekModified", "newTabModified", "shiftModified", "focusesNewTabs", "hasContext",
-                "placement", "savedUrl", "automaticallyOpensPeek");
+            bool peek, newTab;
+            if (operation == "navigation.modified_link")
+            {
+                Protocol.Members(request, "version", "operation", "url", "userActivatedLink", "topLevel",
+                    "commandModified", "optionModified", "middleClick", "peekModifier", "shiftModified", "focusesNewTabs",
+                    "hasContext", "placement", "savedUrl", "automaticallyOpensPeek");
+                var preference = Protocol.Text(request, "peekModifier") switch {
+                    "option" => LinkPeekModifier.Option, "command" => LinkPeekModifier.Command,
+                    _ => throw new ProtocolException("invalid_peek_modifier")
+                };
+                (peek, newTab) = LinkNavigationPolicy.Modifiers(request.GetProperty("commandModified").GetBoolean(),
+                    request.GetProperty("optionModified").GetBoolean(), request.GetProperty("middleClick").GetBoolean(), preference);
+            }
+            else
+            {
+                Protocol.Members(request, "version", "operation", "url", "userActivatedLink", "topLevel",
+                    "peekModified", "newTabModified", "shiftModified", "focusesNewTabs", "hasContext",
+                    "placement", "savedUrl", "automaticallyOpensPeek");
+                peek = request.GetProperty("peekModified").GetBoolean();
+                newTab = request.GetProperty("newTabModified").GetBoolean();
+            }
             var decision = LinkNavigationPolicy.Decide(request.GetProperty("url").GetString(),
                 request.GetProperty("userActivatedLink").GetBoolean(), request.GetProperty("topLevel").GetBoolean(),
-                request.GetProperty("peekModified").GetBoolean(), request.GetProperty("newTabModified").GetBoolean(),
+                peek, newTab,
                 request.GetProperty("shiftModified").GetBoolean(), request.GetProperty("focusesNewTabs").GetBoolean(),
                 request.GetProperty("hasContext").GetBoolean(), request.GetProperty("placement").GetString(),
                 request.GetProperty("savedUrl").GetString(), request.GetProperty("automaticallyOpensPeek").GetBoolean());

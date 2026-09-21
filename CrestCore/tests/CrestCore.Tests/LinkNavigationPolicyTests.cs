@@ -6,6 +6,33 @@ namespace CrestCore.Tests;
 public sealed class LinkNavigationPolicyTests
 {
     [Theory]
+    [InlineData(true, false, false, LinkPeekModifier.Option, LinkNavigationDecision.BackgroundTab)]
+    [InlineData(false, true, false, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
+    [InlineData(true, false, false, LinkPeekModifier.Command, LinkNavigationDecision.PeekModifier)]
+    [InlineData(false, true, false, LinkPeekModifier.Command, LinkNavigationDecision.BackgroundTab)]
+    [InlineData(true, true, false, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
+    [InlineData(true, true, false, LinkPeekModifier.Command, LinkNavigationDecision.PeekModifier)]
+    [InlineData(false, false, true, LinkPeekModifier.Option, LinkNavigationDecision.BackgroundTab)]
+    [InlineData(false, false, true, LinkPeekModifier.Command, LinkNavigationDecision.BackgroundTab)]
+    [InlineData(false, true, true, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
+    public void ConfigurableModifiersAndMiddleClickUseOneNavigationPolicy(bool command, bool option, bool middle,
+        LinkPeekModifier preference, LinkNavigationDecision expected)
+    {
+        var (peek, newTab) = LinkNavigationPolicy.Modifiers(command, option, middle, preference);
+        Assert.Equal(expected, Decide(peek: peek, newTab: newTab));
+        Assert.Equal(expected == LinkNavigationDecision.BackgroundTab ? LinkNavigationDecision.ForegroundTab : expected,
+            Decide(peek: peek, newTab: newTab, shift: true));
+    }
+
+    [Fact]
+    public void HoldingBothKeysDoesNotTurnDeclinedPeekIntoANewTab()
+    {
+        var (peek, newTab) = LinkNavigationPolicy.Modifiers(true, true, false, LinkPeekModifier.Option);
+        Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: peek, newTab: newTab, owned: false));
+        Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: peek, newTab: newTab, topLevel: false));
+    }
+
+    [Theory]
     [InlineData("https://www.apple.com/news/", "saved", true, LinkNavigationDecision.Navigate)]
     [InlineData("http://APPLE.com:8080/news/", "pinned", true, LinkNavigationDecision.Navigate)]
     [InlineData("https://developer.apple.com/", "saved", true, LinkNavigationDecision.PeekSavedSite)]

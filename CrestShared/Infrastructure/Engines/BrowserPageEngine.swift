@@ -17,6 +17,9 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     var backHistory: [BrowserNavigationHistoryItem] { get }
     var forwardHistory: [BrowserNavigationHistoryItem] { get }
     func load(_ request: URLRequest)
+    /// One-shot, engine-owned request metadata for a newly created native page.
+    /// Tokens never enter the core session, persistence or sync.
+    func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool
     func navigateHistory(by offset: Int)
     func reload(bypassingCache: Bool)
     func stop()
@@ -35,6 +38,7 @@ protocol BrowserPageEngine: BrowserFindExecuting {
 }
 
 extension BrowserPageEngine {
+    func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool { false }
     var interactionState: Data? { nil }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool { false }
     #if os(macOS)
@@ -42,6 +46,11 @@ extension BrowserPageEngine {
     func showInspector() -> Bool { false }
     func toggleInspector(_ panel: BrowserDeveloperPanel, current: BrowserDeveloperPanel?) -> BrowserWebInspectorToggleResult { .unavailable }
     #endif
+}
+
+struct BrowserEngineNavigation: Equatable, Sendable {
+    let implementation: String
+    let token: String
 }
 
 #if os(macOS)

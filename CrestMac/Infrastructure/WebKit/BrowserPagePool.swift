@@ -1062,6 +1062,7 @@ final class BrowserPagePool:
         peekPageLeases.removeValue(forKey: request.id)?.lease.release()
         let lease = makeTransientPageLease(
             url: request.url, in: space, opensModifiedLinksInForeground: true,
+            engineNavigation: request.engineNavigation,
             onDownloadOnlyNavigation: onDownloadOnlyNavigation)
         if let lease { peekPageLeases[request.id] = (request, lease) }
         return lease
@@ -1077,17 +1078,26 @@ final class BrowserPagePool:
         url: URL,
         in space: BrowserSpace,
         opensModifiedLinksInForeground: Bool = false,
+        engineNavigation: BrowserEngineNavigation? = nil,
         onUserActivity: @escaping () -> Void = {},
         onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> BrowserTransientPageLease? {
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard canHostTransientPage(matching: assignment) else { return nil }
         let tabID = TabID()
+        var pendingNavigation = engineNavigation
         let makeTransientPage = { [weak self] () -> BrowserPage? in
             guard let self,
                 canHostTransientPage(matching: assignment)
             else { return nil }
             let page = makePage(space: space)
+            if let navigation = pendingNavigation {
+                pendingNavigation = nil
+                guard page.pageEngine.stageNavigation(navigation, expecting: url) else {
+                    page.prepareForSpaceDeletion()
+                    return nil
+                }
+            }
             page.opensModifiedLinksInForeground = opensModifiedLinksInForeground
             return page
         }

@@ -68,6 +68,7 @@
 #include "components/sessions/content/session_tab_helper.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/navigation_throttle.h"
+#include "content/public/browser/page_navigator.h"
 #include "content/public/browser/render_widget_host_view.h"
 #include "chrome/browser/media/webrtc/media_capture_devices_dispatcher.h"
 #include "chrome/browser/media/webrtc/media_stream_capture_indicator.h"
@@ -262,6 +263,13 @@ struct NativeAdoption {
   base::WeakPtr<content::WebContents> contents;
   std::string profile;
 };
+struct PendingLinkNavigation {
+  content::OpenURLParams request;
+  base::WeakPtr<content::WebContents> source;
+  std::string profile;
+  uint64_t revision;
+  uint64_t generation;
+};
 class ExtensionStateObserver;
 class NativeProfileDeletion;
 struct HostState {
@@ -292,6 +300,7 @@ struct HostState {
   std::map<std::string, std::unique_ptr<BrowserOwner>> browsers;
   std::map<std::string, std::unique_ptr<Page>> pages;
   std::map<std::string, NativeAdoption> adoptions;
+  std::map<std::string, PendingLinkNavigation> pending_link_navigations;
   void (^browser_observation)(NSDictionary<NSString*, id>*);
   void (^download_observation)(NSDictionary<NSString*, id>*);
   void (^download_destination)(NSDictionary<NSString*, id>*, void (^)(NSString*));
@@ -641,6 +650,9 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents)) driver->AddObserver(this);
   }
   ~Page() override {
+    std::erase_if(State().pending_link_navigations, [&](const auto& entry) {
+      return !entry.second.source || entry.second.source.get() == web_contents();
+    });
     if (find_helper) find_helper->RemoveObserver(this);
     RemoveFaviconObservation();
   }
@@ -676,6 +688,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   Observation observation;
   BOOL (^link_handler)(NSString*, NSString*, NSString*) = nil;
   CrestDeferredNavigation (^protected_link_handler)(NSString*) = nil;
+  void (^modified_link_handler)(NSString*, NSUInteger, NSString*, void (^)(NSString*, CrestDeferredNavigation)) = nil;
   bool closing = false;
   uint64_t navigation_revision = 0;
   uint64_t navigation_generation = 0;
@@ -1133,6 +1146,38 @@ Page* FindPage(NSString* identifier) {
 - (void)setProtectedLinkHandlerForPage:(NSString*)pageID handler:(CrestDeferredNavigation (^)(NSString*))handler {
   CHECK(NSThread.isMainThread);
   if (Page* page = FindPage(pageID)) page->protected_link_handler = [handler copy];
+}
+- (void)setModifiedLinkHandlerForPage:(NSString*)pageID
+    handler:(void (^)(NSString*, NSUInteger, NSString*, void (^)(NSString*, CrestDeferredNavigation)))handler {
+  CHECK(NSThread.isMainThread);
+  if (Page* page = FindPage(pageID)) page->modified_link_handler = [handler copy];
+}
+- (void)discardPendingNavigation:(NSString*)token {
+  CHECK(NSThread.isMainThread);
+  State().pending_link_navigations.erase(base::SysNSStringToUTF8(token));
+}
+- (BOOL)loadPendingNavigation:(NSString*)token page:(NSString*)pageID expectedURL:(NSString*)url {
+  CHECK(NSThread.isMainThread);
+  auto& pending = State().pending_link_navigations;
+  auto found = pending.find(base::SysNSStringToUTF8(token));
+  if (found == pending.end()) return NO;
+  auto navigation = std::move(found->second);
+  pending.erase(found);  // Tokens can be consumed only once, including failures.
+  Page* page = FindPage(pageID);
+  if (State().disposing || !page || page->closing || !page->web_contents() || !navigation.source ||
+      page->profile != navigation.profile || navigation.request.url != GURL(base::SysNSStringToUTF8(url)) ||
+      !page->web_contents()->GetController().IsInitialNavigation()) return NO;
+  bool current_source = false;
+  for (const auto& [id, source] : State().pages) {
+    if (source->web_contents() == navigation.source.get() && source->browser == page->browser &&
+        !source->closing && source->navigation_revision == navigation.revision &&
+        source->navigation_generation == navigation.generation) { current_source = true; break; }
+  }
+  if (!current_source) return NO;
+  // Keep Chromium's verified referrer, initiator, headers and SiteInstance.
+  content::NavigationController::LoadURLParams load(navigation.request);
+  page->web_contents()->GetController().LoadURLWithParams(load);
+  return YES;
 }
 - (NSData*)interactionStateForPage:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
@@ -1625,6 +1670,7 @@ Page* FindPage(NSString* identifier) {
   state.disposing = true;
   state.browser_observation = nil;
   state.adoptions.clear();
+  state.pending_link_navigations.clear();
   state.pages.clear();
   // The core has stopped accepting work. Observer teardown precedes native destruction.
   while (!state.browsers.empty()) {
@@ -1684,6 +1730,64 @@ Page* FindPage(NSString* identifier) {
 @end
 
 namespace crest {
+bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& params) {
+  if (!IsEnabled() || !params.crest_link_modifiers) return false;
+  if (!State().disposing && source && params.crest_link_modifiers <= 15 &&
+      (params.crest_link_modifiers & 11) && params.is_renderer_initiated && params.user_gesture &&
+      params.triggering_event_info == blink::mojom::TriggeringEventInfo::kFromTrustedEvent &&
+      !params.started_from_context_menu && !params.post_data && params.url.SchemeIsHTTPOrHTTPS() &&
+      params.url.spec().size() <= 8192) {
+    for (auto& [id, page] : State().pages) {
+      if (page->web_contents() != source || page->closing || !page->modified_link_handler) continue;
+      const std::string token = base::Uuid::GenerateRandomV4().AsLowercaseString();
+      __block NSString* decision = nil;
+      __block CrestDeferredNavigation present = nil;
+      page->modified_link_handler(base::SysUTF8ToNSString(params.url.spec()), params.crest_link_modifiers,
+          base::SysUTF8ToNSString(token), ^(NSString* value, CrestDeferredNavigation action) {
+            decision = [value copy]; present = [action copy];
+          });
+      if ([decision isEqualToString:@"foregroundTab"] || [decision isEqualToString:@"backgroundTab"]) {
+        params.disposition = [decision isEqualToString:@"foregroundTab"]
+            ? WindowOpenDisposition::NEW_FOREGROUND_TAB : WindowOpenDisposition::NEW_BACKGROUND_TAB;
+        params.crest_download_fallback = nullptr;
+        return false;
+      }
+      if ([decision isEqualToString:@"peekModifier"] && present && State().pending_link_navigations.size() < 32) {
+        auto weak = source->GetWeakPtr();
+        const auto revision = page->navigation_revision;
+        const auto generation = page->navigation_generation;
+        params.crest_download_fallback = nullptr;
+        State().pending_link_navigations.emplace(token,
+            PendingLinkNavigation{params, weak, page->profile, revision, generation});
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if (!State().disposing && weak) {
+            for (auto& [current_id, current] : State().pages) {
+              if (current->web_contents() == weak.get() && !current->closing &&
+                  current->navigation_revision == revision && current->navigation_generation == generation) {
+                present(); return;
+              }
+            }
+          }
+          State().pending_link_navigations.erase(token);
+        });
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+          State().pending_link_navigations.erase(token);
+        });
+        return true;
+      }
+      break;
+    }
+  }
+  // Unowned pages and declined Peek retain the original renderer download path,
+  // including Chromium's download validation and restrictions.
+  if (params.disposition == WindowOpenDisposition::SAVE_TO_DISK &&
+      params.crest_download_fallback && params.crest_download_fallback->data) {
+    std::move(params.crest_download_fallback->data).Run();
+    return true;
+  }
+  return false;
+}
+
 namespace {
 class LinkNavigationThrottle final : public content::NavigationThrottle {
  public:

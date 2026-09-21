@@ -17,10 +17,11 @@ composition. The normal `Crest` and `CrestMobile` targets now use the same
 `CrestMobileNativeCore`. `CREST_REVIEW_BUILD` separately enforces isolated launch
 for the review targets. The normal Mac target still hosts WebKit; the native
 Chromium distribution remains a separate packaging step. The live native app uses
-`NativeSessionAuthority`; `BrowserSessionKernel` and its registered adapters
-remain a separate integration path. Completion requires one production authority
-and one capability contract, rather than maintaining two implementations of
-browser behavior.
+`NativeSessionAuthority`. The message-based `BrowserSessionKernel` remains in
+source for its core contract tests, but its prototype Apple apps and adapters
+have been removed. Completion requires consolidating the remaining lifetime and
+authentication rules and retiring the unused protocol runtime, rather than
+maintaining two implementations of browser behavior.
 
 ### Ownership after migration
 
@@ -173,8 +174,9 @@ still need Chromium adapters. Its inspector currently opens DevTools without
 selecting a requested panel. Local-file opening also remains to be wired into the
 native command route; entering a `file://` archive path in the current address
 resolver does not reopen it.
-The original message-based adapter/kernel and page creation/lifetime composition
-also remain separate. This boundary does not finish the core authority migration.
+The original message-based kernel's page creation and lifetime rules still need
+consolidation with the native composition. This boundary does not finish the core
+authority migration.
 
 ## Existing UI migration
 
@@ -346,113 +348,61 @@ existing persistence scopes and sync tombstone rules remain in use.
 Engine effects and the remaining command orchestration move behind the existing
 store/page interfaces in coherent sections. The original UI, layout, and
 interaction behavior remain the frontend.
-The standalone control-plane targets below are contract harnesses, not a
-replacement product UI. New product integration belongs in the existing UI target.
-
-The experimental `CrestControlPlane` and `CrestControlPlaneMobile` targets separate semantic browser decisions
-from native engine and presentation work. The normal `Crest` and `CrestMobile`
-targets continue to use their existing composition roots.
+The prototype `CrestControlPlane` and `CrestControlPlaneMobile` apps and their
+Apple message transport have been removed. Product and review builds use the
+original Crest UI. `CrestNativeCore` and `CrestMobileNativeCore` are isolated
+compositions of that UI, not separate browser interfaces.
 
 ## Ownership and dependencies
 
 | Module | Responsibility |
 | --- | --- |
-| `CrestCore.Domain` | Workspace, Space, profile identity, tab organization, per-window selection, history and archive rules |
-| `CrestCore.Application` | Serialized command processing, native effects, correlation, projections, bounded queues |
-| `CrestCore.Contracts` | Strict JSON parsing, provider descriptors, protocol validation |
-| `CrestCore.Native` | Exception-contained Native AOT C exports and numeric handles |
+| `CrestCore.Domain` | Workspace, Space, profile identity, tab organization, history, archive and sync rules |
+| `CrestCore.Application` | Accepted session ownership, semantic commands, storage reservations, sync projection and materialization |
+| `CrestCore.Contracts` | Strict JSON parsing, adapter descriptors and protocol validation |
+| `CrestCore.Native` | Exception-contained NativeAOT C exports and numeric handles |
 | `CrestShared/Infrastructure/ControlPlane` | Original UI adapters, accepted session projections and checkpoint handles |
-| `CrestNative/Apple/CoreClient` | Swift message transport and read-only projection types |
-| `CrestNative/Apple/Composition` | Experimental native app, composition, and surface attachment |
-| `CrestEngines/WebKit` | Adapter around the existing `BrowserPage` and `MobileBrowserPage` |
-| `CrestEngines/Chromium/Apple` | Native SwiftUI framework and Objective-C engine port |
+| `CrestShared/Infrastructure/Engines` | Registered native page and service contracts, including the WebKit page implementation |
+| `CrestNative/Apple/Composition` | Entitlements for isolated CloudKit review builds |
+| `CrestEngines/Chromium/Apple` | Native SwiftUI composition and Objective-C engine port |
 | `CrestEngines/Chromium/Overlay` | Chromium BrowserWindow, profiles, TabStripModel adoption and native observations |
 
-In the standalone contract harness, the domain references no JSON, filesystem,
-Apple, or Chromium APIs. The application
-emits native work as data. Its caller dispatches that work on the correct native
-thread and reports the outcome. SwiftUI reads core projections and sends commands.
-`BrowserStore` is never constructed for this session, so it cannot compete with
-the core as a writer. WebKit still owns live pages, history stacks, rendering,
-input, dialogs, and native security decisions.
+Each store family owns one `NativeSessionAuthority`. Swift holds the accepted
+projection and native assets; commands prepare against the core's current
+revision. The native caller decodes the projection before committing it. Durable
+commands reserve publication while the Apple storage adapter writes the matching
+session and sync journal. Failed storage releases the reservation without
+publishing a partial edit. Per-window selection remains separate when windows
+reconcile with the accepted family state.
 
-The experimental app has a separate bundle identity and a separate atomic session
-checkpoint. WebKit stores remain nonpersistent per profile. There is no credential vault, CloudKit startup,
-and no updater startup. Platform services receive isolated launch settings before
-construction. This is an experimental app for migration work, not a production
-profile migration or feature-complete replacement for Crest.
+The real WebKit composition uses `BrowserWebKitPageEngine` and the existing page
+pools. The Chromium composition implements those same native ports through
+`ChromiumNativePage`. The prototype `AppleWebKitAdapter`, `ChromiumAdapter`,
+`CorePageRuntime` and `CoreTransport` wrappers have no role in either composition
+and have been removed. Native rendering, request security and input remain with
+the selected engine.
 
-## Migration boundaries
+## Remaining authority consolidation
 
-The table includes facilities implemented in the standalone kernel. Its remaining
-integration column describes work still needed in the original UI composition.
+The original message-based `BrowserSessionKernel`, `BrowserKernel` and C runtime
+remain in the .NET source and ABI for their retained contract tests. No Apple app
+uses that runtime. Its page lifetime, authentication, residency and correlated
+completion rules must be reconciled with the actual native store and adapter
+paths before the obsolete orchestration is removed. Removing the prototype UI
+does not by itself complete this consolidation.
 
-| Existing owner | Core destination | Remaining integration |
-| --- | --- | --- |
-| `BrowserStore+TabLifecycle`, `BrowserSession+Tabs` | Tab commands, organization and accepted session ownership now used by the original UI | Direct commands against the owned session and native page effects |
-| `BrowserStoreSelection`, `BrowserWindowState` | Durable window-scoped selection, acknowledged group handoff and destination failure rollback | Full window chrome bindings |
-| `BrowserStore+Workspaces`, `BrowserStoreFamily` | Core session ownership, bound profile borrowing and atomic cross-family edits in the original UI; workspace lifecycle in the kernel | Consolidate native page disposal and profile lifetime with the kernel lifecycle contracts |
-| `BrowserStore+Spaces`, `BrowserSession+Organization`, address/search policy | Space/profile, organization, address resolution, search/content-blocking preferences and resumable deletion | Full branding and production profile deletion adapters |
-| `BrowserStore+Folders`, split-group domain | Nested folders, tab boundaries, subtree moves, filing, duplication, split mutations and multiple native page presentation | Batch close, appearance commands and full native UI bindings |
-| Page pools and platform page stores | Registered page/profile ports | Wrap both platform pools, preserve scene/runtime lifetime and recovery |
-| Chromium extensions | Engine-owned extension runtime with restored native toolbar, Site Controls, installer and Settings | Remaining extension UI parity, commands, windows, side panels and credential-helper signing; WebKit extension support is removed |
-| Persistence and sync coordinators | Original UI saves immutable core checkpoints in the existing Codable format; kernel provides revisioned saves and Space tombstones | Production import, core restore/migration rules and sync reconciliation |
-| Permission/credential/download services | Core policy with native continuations | Preserve document/origin scope and native consent flows |
+The retained native authority and persistence tests protect accepted revisions,
+checkpoint restoration, native asset ownership, window selection, durable
+session/journal commits and rollback. The removed Apple compatibility suite
+exercised the retired Swift message queue, chunked projections and prototype
+checkpoint writer. Those transport-specific contracts no longer have an Apple
+caller. Core protocol tests remain until the old C runtime is retired; the actual
+app's session migration and storage contracts remain covered in its own suite.
 
-`BrowserSessionKernel` routes windows and native pages to their owning workspace.
-Only the persistent workspace receives a storage provider. Private workspaces have
-fresh profile identities and Crest’s private search/retention defaults. Temporary
-workspaces borrow a source profile, while their tabs, folders, history, archive and
-selections remain separate and memory-only. Profile policy has one canonical
-writer. Closing an owner revokes dependent workspaces; its native profile is
-released after their acknowledgments. Native page creation must drain before
-workspace disposal. A stale popup offer is rejected instead of being moved to a
-persistent workspace.
-
-In the standalone kernel, Space deletion saves an intent before disposing native profiles. Dependent
-workspaces lose access and release their native pages first. Engine cleanup and
-service cleanup have separate correlated acknowledgments; failure retains a
-pending Space that can be retried. Completed tombstones remain in the checkpoint
-and reject stale Space/profile records. WebKit implements deletion for its
-isolated in-memory profiles. The native Chromium cleanup port described below
-is separate from this message-based path. The native app now saves a matching
-core-owned deletion intent and resumes its local adapters at launch. Consolidating
-the two application paths and capability contracts remains migration work.
-
-The standalone harness uses a small contract-testing UI. Product migration uses
-the original Crest UI in the NativeCore targets. In the harness, native feature tabs
-are modeled separately and do not create engine pages. Two windows can have
-independent empty selections. Selecting a tab owned by another window first issues
-a detach lease to that window. Only its matching acknowledgement commits the new
-selection and issues the destination attachment. Superseded handoffs cannot steal
-the current selection through late native callbacks.
-
-Native history and archive tabs query bounded pages of records from the core.
-Search, reopening, restoration and deletion preserve workspace ownership and
-locked-Space access rules. The UI owns only query presentation.
-
-The core restores legacy tab, folder, history, archive and window descriptors
-without creating native pages. Selecting a dormant page creates a new page identity
-and generation. Unknown additive JSON fields survive checkpoint round trips.
-`CoreSessionStorage` owns only byte storage and an exclusive writer lock. The core
-coalesces revisions behind the current save, and shutdown remains blocked after a
-failed save until a retry succeeds. This checkpoint does not import the installed
-application's data or enable CloudKit synchronization.
-
-Content-blocking policy lives in the core and is shared by profile borrowers.
-The WebKit adapter compiles Crest's existing balanced rules in an isolated cache,
-installs them before new-page navigation, and applies changes to existing pages
-on their next navigation. Native compilation failures remain visible and retryable.
-
-The new WebKit adapter retains the existing popup delegate and adopts its exact
-native page, preserving the opener and original request. Its registration still
-declares extensions unavailable. WebKit extension installation, emulation,
-runtime coordination have been removed. The Chromium host reuses the native
-extension presentation components with Chromium-owned profile state. Before-unload,
-download and permission integration through the asynchronous adapter remain
-unverified; their native browsing implementations remain in the actual app.
-Chromium registration must likewise reflect the capabilities of the actual built
-host, rather than assuming Chrome compatibility from the engine name.
+Follow the migration completion contract above for the outstanding ownership,
+engine-service, sync-convergence and distribution work. Capability declarations
+must describe the actual native adapter rather than the removed prototype or
+features available in stock Chrome.
 
 ## Build workflow
 
@@ -532,8 +482,7 @@ Back, Forward, reload, stop, title, URL and loading observations cross the nativ
 host port. The existing pools still own page lifetimes and window presentation.
 Engine effects have not yet moved to the asynchronous core dispatcher in this
 composition and do not need that additional hop: page operations use the shared
-native engine port, while portable session changes remain core-owned. The separate
-`ChromiumAdapter` remains the kernel adapter for the contract harness.
+native engine port, while portable session changes remain core-owned.
 
 Chromium's native page context menu also works without a Views widget around the
 page. It retains page and editing commands and adds Open Link in Peek for owned
@@ -557,8 +506,17 @@ card; same-site links retain normal engine navigation. The saved-site boundary
 ignores `www.` while keeping other subdomains distinct. Scripts, form submissions,
 subframes, address-bar loads and redirects keep their engine paths. Deferred Peek
 presentation is invalidated by source navigation, closure or reassignment.
-Chromium modifier-click interception still needs to carry trusted input and
-request metadata through its separate new-tab and download navigation paths.
+Chromium carries the originating link event's Command, Option, Shift and middle
+button state through its navigation request. The same core policy maps the user's
+Peek modifier preference and selects foreground or background tabs. The adapter
+changes tab disposition on the existing request, preserving Chromium's normal
+navigation and popup adoption. A Peek request retains its verified referrer,
+initiator, headers and source SiteInstance inside the engine. The native page port
+passes only a one-shot token to a newly created page in the same profile and
+window. The token expires on source navigation, closure, consumption or timeout;
+it never enters persistence or sync. A stale token cannot fall back to a bare URL
+load. Explicit download links keep Chromium's download path, and an unhandled
+Option-click can use the originating frame's validated download operation.
 
 The native page adapter propagates card viewport changes to Chromium during
 attachment, navigation and resizing. Keyboard equivalents first reach the page;

@@ -8,6 +8,7 @@ struct BrowserPeekRequest: Identifiable, Equatable, Sendable {
     let spaceAssignment: BrowserSpaceRuntimeAssignment
     let trigger: BrowserPeekTrigger
     let sourcePresentation: BrowserPeekSourcePresentation?
+    let engineNavigation: BrowserEngineNavigation?
 
     var spaceID: SpaceID { spaceAssignment.spaceID }
 
@@ -32,7 +33,8 @@ struct BrowserPeekRequest: Identifiable, Equatable, Sendable {
         sourceTitle: String,
         spaceAssignment: BrowserSpaceRuntimeAssignment,
         trigger: BrowserPeekTrigger,
-        sourcePresentation: BrowserPeekSourcePresentation? = nil
+        sourcePresentation: BrowserPeekSourcePresentation? = nil,
+        engineNavigation: BrowserEngineNavigation? = nil
     ) {
         self.id = id
         self.url = url
@@ -41,5 +43,6 @@ struct BrowserPeekRequest: Identifiable, Equatable, Sendable {
         self.spaceAssignment = spaceAssignment
         self.trigger = trigger
         self.sourcePresentation = sourcePresentation
+        self.engineNavigation = engineNavigation
     }
 }

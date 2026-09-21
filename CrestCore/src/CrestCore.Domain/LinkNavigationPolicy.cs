@@ -1,11 +1,18 @@
 namespace CrestCore.Domain;
 
 public enum LinkNavigationDecision { Navigate, PeekModifier, PeekSavedSite, BackgroundTab, ForegroundTab }
+public enum LinkPeekModifier { Option, Command }
 
 /// Semantic link behavior shared by the native engine adapters. Engines keep
 /// ownership of request security, downloads, form submissions and rendering.
 public static class LinkNavigationPolicy
 {
+    public static (bool Peek, bool NewTab) Modifiers(bool command, bool option, bool middle, LinkPeekModifier preference)
+    {
+        bool peek = preference == LinkPeekModifier.Command ? command : option;
+        bool newTab = preference == LinkPeekModifier.Command ? option : command;
+        return (peek, (!peek && newTab) || middle);
+    }
     public static LinkNavigationDecision Decide(string? destination, bool userActivatedLink,
         bool topLevel, bool peekModified, bool newTabModified, bool shiftModified,
         bool focusesNewTabs, bool hasContext, string? placement, string? savedUrl,

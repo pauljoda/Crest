@@ -15,9 +15,11 @@ final class ChromiumNativePage: BrowserPageEngine {
     var observer: (String, [String: Any]) -> Void
     var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
     var protectedLinkHandler: (URL) -> (() -> Void)? = { _ in nil }
+    var modifiedLinkHandler: (URL, Int, String) -> (BrowserLinkNavigationDecision, (() -> Void)?) = { _, _, _ in (.navigate, nil) }
     private var host: (any CrestChromiumEngineHost)?
     private var requestedURL: URL?
     private var pendingInteractionState: Data?
+    private var pendingNavigation: (token: String, url: URL)?
     private var zoom: CGFloat = 1
     private var creating = false
     private var created = false
@@ -30,6 +32,16 @@ final class ChromiumNativePage: BrowserPageEngine {
     }
 
     var nativeView: NSView { surface }
+    func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool {
+        guard !created, !creating, !disposed, pendingNavigation == nil,
+            navigation.implementation == registration.implementationId,
+            UUID(uuidString: navigation.token) != nil else { return false }
+        pendingNavigation = (navigation.token, url)
+        return true
+    }
+    func discardNavigation(_ token: String) {
+        (host ?? CrestChromiumRoot.engineHost)?.discardPendingNavigation(token)
+    }
     func showInspector() -> Bool {
         guard created, !disposed, let host else { return false }
         return host.command("engine.inspect", page: id, url: nil)
@@ -88,6 +100,10 @@ final class ChromiumNativePage: BrowserPageEngine {
     func stop() { command("engine.stop") }
 
     func load(_ url: URL) {
+        if let pendingNavigation, pendingNavigation.url != url {
+            discardNavigation(pendingNavigation.token)
+            self.pendingNavigation = nil
+        }
         pendingInteractionState = nil
         requestedURL = url
         if created { navigatePendingURL() }
@@ -206,6 +222,8 @@ final class ChromiumNativePage: BrowserPageEngine {
 
     func dispose() {
         guard !disposed else { return }
+        if let pendingNavigation { discardNavigation(pendingNavigation.token) }
+        pendingNavigation = nil
         disposed = true
         surface.subviews.forEach { $0.removeFromSuperview() }
         host?.disposePages([id], windows: [], releaseProfiles: [])
@@ -215,6 +233,18 @@ final class ChromiumNativePage: BrowserPageEngine {
     private func navigatePendingURL() {
         guard let requestedURL else { return }
         self.requestedURL = nil
+        if let navigation = pendingNavigation {
+            pendingNavigation = nil
+            pendingInteractionState = nil
+            if host?.loadPendingNavigation(navigation.token, page: id,
+                expectedURL: ChromiumInternalURL.engine(requestedURL.absoluteString)) != true {
+                // A stale request must not be retried as a bare URL, which loses
+                // the initiating frame's security and referrer information.
+                observer("changed", ["url": requestedURL.absoluteString, "isLoading": false,
+                    "failure": String(localized: "This link is no longer available. Open it again from its original page.")])
+            }
+            return
+        }
         let state = pendingInteractionState
         pendingInteractionState = nil
         if let state, host?.restorePage(id, interactionState: state,
@@ -262,6 +292,25 @@ final class ChromiumNativePage: BrowserPageEngine {
                     }
                 }
                 return deferred
+            }
+            host?.setModifiedLinkHandler(page: id) { [weak self] address, modifiers, token, reply in
+                MainActor.assumeIsolated {
+                    guard let self, !self.disposed, let url = URL(string: address) else {
+                        reply("navigate", nil)
+                        return
+                    }
+                    let (decision, action) = self.modifiedLinkHandler(url, Int(modifiers), token)
+                    var deferred: CrestDeferredNavigation?
+                    if let action {
+                        deferred = { [weak self] in
+                            MainActor.assumeIsolated {
+                                guard let self, !self.disposed else { return }
+                                action()
+                            }
+                        }
+                    }
+                    reply(decision.rawValue, deferred)
+                }
             }
             attachIfPossible()
             setZoom(zoom)

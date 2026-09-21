@@ -89,6 +89,74 @@
   },
   "chrome/browser/chrome_content_browser_client.cc": {
     "before": "425114fffb4a0cbad49c140ddc51edafec54570e2cd81b98b2dbdf3a674cdfa3",
-    "after": "4f89bdb342670b3ae2832127aa66acf0418ea9bda0bb5fcc26021e1bf033c532"
+    "after": "f7bdb5f297e2b3fd088e080a4c15807003edeb09abe5cd642348c5ffaf60ac08"
+  },
+  "chrome/browser/ui/browser.cc": {
+    "before": "17dbe8da97a8b5704b4a8f135985a3bb9d608de31ffcb058915da3e66b34aae3",
+    "after": "a8bb50f4b5895c29c81b392adc0d76d6f1be4d95b4715a8b3d83337bb618d28f"
+  },
+  "third_party/blink/public/web/web_navigation_params.h": {
+    "before": "0e85b1e5e1baf59c40be8e8c23e7756b6eb103596bc7d99a0b7727ee80e06624",
+    "after": "c9a9579ae3639eca67a4b530cd50c8c188290103c17c34d1aed12509493ba9a9"
+  },
+  "third_party/blink/public/mojom/frame/remote_frame.mojom": {
+    "before": "eed1fef7ed46a70e03dad15a0f8dbbb74c97ad17d7cc643183659da35b19286c",
+    "after": "5db7c70de317b1d4ded542cc9e04a55dd89b87970ebf04be65677ac438fad4d6"
+  },
+  "third_party/blink/renderer/core/frame/local_frame_client_impl.h": {
+    "before": "fa7db30fb78482ed77d0617de8dc1d93f19ca08d1c6ca7e158f34bff142c8cdc",
+    "after": "c00f31a9bd5b365d3ade50ed5cb969e8c9618d3bb29edd31a7be3f9587d74381"
+  },
+  "third_party/blink/renderer/core/frame/local_frame_client.h": {
+    "before": "f08f6fa47d807a6a5923f28c48d484a20b9a34cd22c931da78408c3918b7d329",
+    "after": "4e7b071fb9eb718370775ffa6c268f4cf185976d42813720003da52cdf3af4a4"
+  },
+  "third_party/blink/renderer/core/frame/local_frame_client_impl.cc": {
+    "before": "f72689225005a890bb81fbe332274564fb7c7f5a615d82b1b94d994146acb197",
+    "after": "d143d041472cf5061a1756ff70f2ecbca2082bdfcad0500eb18c7f4a81b9a801"
+  },
+  "third_party/blink/renderer/core/html/html_anchor_element.h": {
+    "before": "226797c8dd0f75ab636109644a3b68a61c008e6b5cc30402ef44741cee71bd0e",
+    "after": "18324d4c7b4c7a0e499473efce6c4a0bc786b5b9123b3f2fa8e79f07312aa98d"
+  },
+  "third_party/blink/renderer/core/html/html_anchor_element.cc": {
+    "before": "01d3c0d878af31e01e4ed9be9b5a2da91b0fdb8d99045803b1b59031a547b963",
+    "after": "b3ae45af3313ac0cc0c06ca1d9806e7ea26010777d0bbfc9c40771e85ae271fa"
+  },
+  "third_party/blink/renderer/core/loader/empty_clients.cc": {
+    "before": "854527b9830bce8a8f6eeff7016cb2ee1f437eeeb374e9a4daf35441b87c7e47",
+    "after": "a05b34933c04358e8b2eaee4b004697d757a742b03d57b5ccdde83fa6c392358"
+  },
+  "third_party/blink/renderer/core/loader/frame_loader.cc": {
+    "before": "79f50673eaa252af4d5d6360cec33713afdd5ac7b36d61b30ceeb81e4e6aed1a",
+    "after": "a1e7a416af6e1846e7a131b10c64e7f2df03ed5ef94be321dbae77f999824bf2"
+  },
+  "third_party/blink/renderer/core/loader/empty_clients.h": {
+    "before": "349de7917c6e05a3f05ec5fd43624ac495ee8dbd20cc21ceae2cf2e6c5cf1ba1",
+    "after": "60a4aa28a7afe89e0a1ec671d9db0fb36da6cd2e2512c2311e79ed7f21ab0193"
+  },
+  "third_party/blink/renderer/core/loader/frame_load_request.h": {
+    "before": "4adc5990b463a33d4b551bd4539f8972584c4abe2acb3945b59fc676210d9452",
+    "after": "3d05558792ecfa1938f85df275a740afe3dbd70e2f49fd9c2bea2ffc1e21a800"
+  },
+  "content/renderer/render_frame_impl.cc": {
+    "before": "16cbd9740554432fdca642a2579fab87ef81d8c23f5c9e415d0604b029a3b6ec",
+    "after": "6f803e00bb0a9a9f0578b4d08949eb633b304782706359936adbfa83aa1a48f7"
+  },
+  "content/public/browser/page_navigator.h": {
+    "before": "ca68d1f66b94ca9f741e6ac534c86902f12e414eed62a5d5e9a281fa949e1f0d",
+    "after": "7581f2701f873a0490c5354d18db2128626bf4c6667d52e8ea1d1bea2d64a603"
+  },
+  "content/browser/renderer_host/navigator.cc": {
+    "before": "babf156fee6acee178d059456c3c51ba13326b8ca78b00de58fee57debcea8a6",
+    "after": "096b3cf713698f77681acbb1805a35c8a18ade0b1c19254ce6e618407fcd5001"
+  },
+  "content/browser/renderer_host/render_frame_host_impl.cc": {
+    "before": "4eeb2db6661d24a1a9aa98d1b0e9790cfacd8ec84261d72713b5df219c102478",
+    "after": "7ef12dfb078456ac86556add2eac454fc41f85dcabf2c0ba30d12e4c1c9302af"
+  },
+  "content/browser/renderer_host/navigator.h": {
+    "before": "2b7a3770a08eafe6b35477ca98a9b63037f6ff013a42e58b26a7b28f0f894d4c",
+    "after": "9ddad30e255ab43a2b84442946df06a83985ca69c4dbf4b25c1e7856a39724f3"
   }
 }
