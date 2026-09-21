@@ -92,6 +92,7 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
 #if os(macOS)
 extension BrowserWebKitPageEngine: BrowserPageDocumentServices {
     var documentServices: (any BrowserPageDocumentServices)? { self }
+    var archiveFormat: BrowserPageArchiveFormat { .webKit }
 
     func fullPageSnapshot(width snapshotWidth: CGFloat?) async throws -> NSImage {
         let result = try await webView.evaluateJavaScript(
@@ -133,6 +134,6 @@ extension BrowserWebKitPageEngine: BrowserPageDocumentServices {
             webView.createWebArchiveData { continuation.resume(with: $0) }
         }
     }
-    func printOperation(with info: NSPrintInfo) -> NSPrintOperation { webView.printOperation(with: info) }
+    func printOperation(with info: NSPrintInfo) async throws -> NSPrintOperation { webView.printOperation(with: info) }
 }
 #endif

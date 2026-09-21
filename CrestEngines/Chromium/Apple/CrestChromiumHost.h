@@ -25,6 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSDictionary<NSString *, id> *)mediaActivityForPage:(NSString *)pageID;
 - (void)capturePage:(NSString *)pageID rect:(NSRect)rect width:(CGFloat)width
          completion:(void (^)(NSImage * _Nullable image))completion;
+- (void)exportPage:(NSString *)pageID format:(NSString *)format width:(CGFloat)width
+        completion:(void (^)(NSData * _Nullable data, NSString * _Nullable error))completion;
 - (BOOL)command:(NSString *)command page:(NSString *)pageID url:(nullable NSString *)url;
 - (NSArray<NSDictionary<NSString *, id> *> *)permissionsForPage:(NSString *)pageID;
 - (BOOL)setPermission:(NSString *)permissionID page:(NSString *)pageID value:(NSInteger)value;

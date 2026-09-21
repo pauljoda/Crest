@@ -1593,6 +1593,10 @@
     "native-engine-service-registration": {
       "category": "internal",
       "message": "Register native engine capabilities with the portable core and route document output and inspector actions through the page adapter."
+    },
+    "chromium-native-document-output": {
+      "category": "new",
+      "message": "Export PDFs, save offline web archives, capture full pages, and print Chromium pages through Crest’s native controls."
     }
   }
 }

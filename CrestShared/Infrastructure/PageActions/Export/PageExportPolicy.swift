@@ -1,12 +1,17 @@
 import Foundation
 
+enum BrowserPageArchiveFormat: String {
+    case webKit = "webarchive"
+    case mhtml
+}
+
 enum BrowserPageExportPolicy {
     static func pdfFilename(title: String?, url: URL?) -> String {
         filename(title: title, url: url, pathExtension: "pdf")
     }
 
-    static func webArchiveFilename(title: String?, url: URL?) -> String {
-        filename(title: title, url: url, pathExtension: "webarchive")
+    static func webArchiveFilename(title: String?, url: URL?, format: BrowserPageArchiveFormat = .webKit) -> String {
+        filename(title: title, url: url, pathExtension: format.rawValue)
     }
 
     static func imageFilename(title: String?, url: URL?) -> String {

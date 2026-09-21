@@ -74,9 +74,10 @@ enum BrowserEngineRegistration {
         scope: "Native macOS Chromium host with Crest page and profile ports",
         supported: ["pages", "navigation", "find", "zoom", "interaction-state", "page-residency",
                     "popups", "workspace-profiles", "workspace-transfer", "profile-deletion",
-                    "before-unload", "downloads", "permissions", "viewport-capture", "inspector", "internal-pages"],
+                    "before-unload", "downloads", "permissions", "viewport-capture", "inspector", "internal-pages",
+                    "full-page-capture", "pdf", "web-archive", "print"],
         unverified: ["extensions"],
-        unavailable: ["reader", "translation", "full-page-capture", "pdf", "web-archive", "print", "content-blocking"],
+        unavailable: ["reader", "translation", "content-blocking"],
         limitations: ["Extension actions and installation are wired; full API parity and Apple password-helper pairing remain incomplete."],
         evidence: "Native host page, lifecycle, download, permission and compositor ports; isolated app validation")
 }

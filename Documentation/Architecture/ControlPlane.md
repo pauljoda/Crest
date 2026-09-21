@@ -161,9 +161,18 @@ The native page port exposes this declaration without crossing the ABI for each
 interaction. Document export, printing, full-page capture and inspector commands
 now use native engine services. Save panels and print sheets remain native UI.
 The command route and developer capture controls consult the registered services;
-Chromium does not advertise WebKit's PDF, Web Archive, full-page capture, reader
-or Apple translation implementations. Its inspector currently opens DevTools
-without selecting a requested panel. Those Chromium services still need adapters.
+Chromium exports PDFs, full-page PNG captures and MHTML archives through a fixed,
+page-scoped in-process DevTools client. It exposes no debugging socket or arbitrary
+protocol commands to the UI. Navigation, renderer loss and page closure cancel a
+pending export; requests time out after 45 seconds. Full-page captures use the
+same 6,000-by-24,000 CSS-pixel bounds as WebKit, and export data is limited to 64 MiB.
+Archives use the engine's actual format: `.mhtml` for Chromium and `.webarchive`
+for WebKit. Chromium printing renders a PDF and presents the native PDFKit print
+sheet, whose paper settings scale the rendered pages. Reader and Apple translation
+still need Chromium adapters. Its inspector currently opens DevTools without
+selecting a requested panel. Local-file opening also remains to be wired into the
+native command route; entering a `file://` archive path in the current address
+resolver does not reopen it.
 The original message-based adapter/kernel and page creation/lifetime composition
 also remain separate. This boundary does not finish the core authority migration.
 

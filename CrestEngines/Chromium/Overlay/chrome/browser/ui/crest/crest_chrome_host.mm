@@ -11,6 +11,11 @@
 #include "base/check.h"
 #include "base/apple/foundation_util.h"
 #include "base/pickle.h"
+#include "base/json/json_reader.h"
+#include "base/json/json_writer.h"
+#include "base/timer/timer.h"
+#include "content/public/browser/devtools_agent_host.h"
+#include "content/public/browser/devtools_agent_host_client.h"
 #include "base/functional/callback_helpers.h"
 #include "base/files/file_util.h"
 #include "components/prefs/pref_service.h"
@@ -512,6 +517,108 @@ class ExtensionStateObserver
 
 void AdvancePageClosePreparation(uint64_t generation, bool allowed);
 
+// Fixed, in-process export commands for exactly one WebContents. This opens no
+// debugging socket and exposes no general protocol/evaluation entry point to UI.
+class PageDocumentService final : public content::WebContentsObserver,
+                                  public content::DevToolsAgentHostClient {
+ public:
+  explicit PageDocumentService(content::WebContents* contents)
+      : content::WebContentsObserver(contents) {}
+  ~PageDocumentService() override { Finish(nil, @"The page was closed."); }
+
+  void Export(NSString* format, CGFloat width, void (^completion)(NSData*, NSString*)) {
+    if (completion_) { completion(nil, @"An export is already in progress for this page."); return; }
+    if (!web_contents() || !std::isfinite(width) || width < 0 || width > 6000 ||
+        !([format isEqualToString:@"pdf"] || [format isEqualToString:@"png"] || [format isEqualToString:@"mhtml"])) {
+      completion(nil, @"This page cannot be exported."); return;
+    }
+    format_ = [format copy]; width_ = width; completion_ = [completion copy];
+    agent_ = content::DevToolsAgentHost::GetOrCreateFor(web_contents());
+    attached_ = agent_ && agent_->AttachClient(this);
+    if (!attached_) { Finish(nil, @"The renderer could not prepare the export."); return; }
+    timer_.Start(FROM_HERE, base::Seconds(45), base::BindOnce(
+        [](PageDocumentService* service) { service->Finish(nil, @"The page export timed out."); },
+        base::Unretained(this)));
+    if ([format isEqualToString:@"pdf"]) {
+      Send("Page.printToPDF", base::DictValue().Set("printBackground", true)
+          .Set("preferCSSPageSize", true).Set("generateTaggedPDF", true));
+    } else if ([format isEqualToString:@"mhtml"]) {
+      Send("Page.captureSnapshot", base::DictValue().Set("format", "mhtml"));
+    } else {
+      measuring_ = true;
+      Send("Page.getLayoutMetrics", base::DictValue());
+    }
+  }
+
+  void DispatchProtocolMessage(content::DevToolsAgentHost*, base::span<const uint8_t> message) override {
+    if (!completion_) return;
+    if (message.size() > 96 * 1024 * 1024) { Finish(nil, @"The page export is too large."); return; }
+    auto response = base::JSONReader::ReadDict(base::as_string_view(message), base::JSON_PARSE_RFC);
+    if (!response || response->FindInt("id") != sequence_) return;
+    const auto* result = response->FindDict("result");
+    if (!result) { Finish(nil, @"Chromium could not export this document."); return; }
+    if (measuring_) {
+      measuring_ = false;
+      const auto* dimensions = result->FindDict("cssContentSize");
+      double width = dimensions ? dimensions->FindDouble("width").value_or(0) : 0;
+      double height = dimensions ? dimensions->FindDouble("height").value_or(0) : 0;
+      if (!std::isfinite(width) || !std::isfinite(height) || width <= 0 || height <= 0) {
+        Finish(nil, @"The page dimensions are unavailable."); return;
+      }
+      width = std::min(width, 6000.0); height = std::min(height, 24000.0);
+      const double target = width_ > 0 ? width_ : std::min(width, 1600.0);
+      auto clip = base::DictValue().Set("x", 0).Set("y", 0)
+          .Set("width", width).Set("height", height).Set("scale", target / width);
+      Send("Page.captureScreenshot", base::DictValue().Set("format", "png")
+          .Set("fromSurface", true).Set("captureBeyondViewport", true).Set("clip", std::move(clip)));
+      return;
+    }
+    const auto* encoded = result->FindString("data");
+    if (!encoded) { Finish(nil, @"Chromium returned an empty document."); return; }
+    NSString* text = base::SysUTF8ToNSString(*encoded);
+    NSData* data = [format_ isEqualToString:@"mhtml"] ? [text dataUsingEncoding:NSUTF8StringEncoding]
+        : [[NSData alloc] initWithBase64EncodedString:text options:0];
+    if (!data.length || data.length > 64 * 1024 * 1024) { Finish(nil, @"The page export is empty or too large."); return; }
+    Finish(data, nil);
+  }
+  void AgentHostClosed(content::DevToolsAgentHost*) override {
+    attached_ = false; agent_.reset(); Finish(nil, @"The page was closed.");
+  }
+  void DidStartNavigation(content::NavigationHandle* navigation) override {
+    if (navigation->IsInPrimaryMainFrame() && !navigation->IsSameDocument())
+      Finish(nil, @"The page navigated before its export finished.");
+  }
+  void PrimaryMainFrameRenderProcessGone(base::TerminationStatus) override {
+    Finish(nil, @"The page renderer stopped.");
+  }
+  void WebContentsDestroyed() override { Finish(nil, @"The page was closed."); Observe(nullptr); }
+
+ private:
+  void Send(const char* method, base::DictValue params) {
+    if (!completion_ || !agent_) return;
+    auto json = base::WriteJson(base::DictValue().Set("id", ++sequence_)
+        .Set("method", method).Set("params", std::move(params)));
+    if (!json) { Finish(nil, @"The page export could not start."); return; }
+    agent_->DispatchProtocolMessage(this, base::as_byte_span(*json));
+  }
+  void Finish(NSData* data, NSString* error) {
+    auto completion = completion_;
+    completion_ = nil; measuring_ = false; timer_.Stop();
+    if (attached_ && agent_) { attached_ = false; agent_->DetachClient(this); }
+    agent_.reset();
+    // Swift may dispose this page from the completion; leave the protocol stack first.
+    if (completion) dispatch_async(dispatch_get_main_queue(), ^{ completion(data, error); });
+  }
+  scoped_refptr<content::DevToolsAgentHost> agent_;
+  base::OneShotTimer timer_;
+  bool attached_ = false;
+  bool measuring_ = false;
+  int sequence_ = 0;
+  CGFloat width_ = 0;
+  NSString* format_ = nil;
+  void (^completion_)(NSData*, NSString*) = nil;
+};
+
 struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
                     favicon::FaviconDriverObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
@@ -559,6 +666,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   bool closing = false;
   uint64_t navigation_revision = 0;
   std::unique_ptr<ExtensionPopup> extension_popup;
+  std::unique_ptr<PageDocumentService> document_service;
   void Publish(bool committed = false, NSString* failure = nil) {
     if (!web_contents() || State().disposing) return;
     auto& controller = web_contents()->GetController();
@@ -1356,6 +1464,17 @@ Page* FindPage(NSString* identifier) {
           reply(bitmap.drawsNothing() ? nil : gfx::Image::CreateFrom1xBitmap(bitmap).ToNSImage());
         });
       }, reply));
+}
+- (void)exportPage:(NSString*)pageID format:(NSString*)format width:(CGFloat)width
+        completion:(void (^)(NSData*, NSString*))completion {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents() || page->closing || State().disposing) {
+    completion(nil, @"The page is unavailable."); return;
+  }
+  if (!page->document_service)
+    page->document_service = std::make_unique<PageDocumentService>(page->web_contents());
+  page->document_service->Export(format, width, completion);
 }
 - (BOOL)findInPage:(NSString*)pageID query:(NSString*)query backwards:(BOOL)backwards
      caseSensitive:(BOOL)caseSensitive completion:(void (^)(BOOL))completion {

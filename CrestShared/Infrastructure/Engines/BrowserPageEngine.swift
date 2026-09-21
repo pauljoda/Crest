@@ -48,10 +48,11 @@ extension BrowserPageEngine {
 /// Rendering/export stays with the engine; save panels and print sheets stay native.
 @MainActor
 protocol BrowserPageDocumentServices {
+    var archiveFormat: BrowserPageArchiveFormat { get }
     func fullPageSnapshot(width: CGFloat?) async throws -> NSImage
     func pdfData() async throws -> Data
     func webArchiveData() async throws -> Data
-    func printOperation(with info: NSPrintInfo) -> NSPrintOperation
+    func printOperation(with info: NSPrintInfo) async throws -> NSPrintOperation
 }
 #endif
 

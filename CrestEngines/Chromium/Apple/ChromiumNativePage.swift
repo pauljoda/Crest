@@ -1,6 +1,7 @@
 #if CREST_CHROMIUM_HOST
 import AppKit
 import Observation
+import PDFKit
 
 /// Owns the WebContents behind the original Crest page card. The shell and
 /// portable session retain their tab identities; this object owns only a page.
@@ -246,6 +247,50 @@ final class ChromiumNativePage: BrowserPageEngine {
             creating = false
         }
         observer(event, ChromiumInternalURL.presentedValues(values))
+    }
+}
+
+extension ChromiumNativePage: BrowserPageDocumentServices {
+    var documentServices: (any BrowserPageDocumentServices)? { self }
+    var archiveFormat: BrowserPageArchiveFormat { .mhtml }
+
+    func fullPageSnapshot(width: CGFloat?) async throws -> NSImage {
+        let backingScale = surface.window?.backingScaleFactor ?? 1
+        let data = try await exportData(format: "png", width: width ?? 0)
+        guard let image = NSImage(data: data) else {
+            throw BrowserPageExportError.renderingFailed("The page capture could not be decoded.")
+        }
+        // Chromium returns device pixels; AppKit composes the capture in points.
+        let logicalWidth = width ?? image.size.width / backingScale
+        image.size = NSSize(width: logicalWidth, height: image.size.height * logicalWidth / image.size.width)
+        return image
+    }
+
+    func pdfData() async throws -> Data { try await exportData(format: "pdf") }
+    func webArchiveData() async throws -> Data { try await exportData(format: "mhtml") }
+
+    func printOperation(with info: NSPrintInfo) async throws -> NSPrintOperation {
+        let data = try await pdfData()
+        guard let document = PDFDocument(data: data),
+            let operation = document.printOperation(for: info, scalingMode: .pageScaleToFit, autoRotate: true) else {
+            throw BrowserPageExportError.renderingFailed("The page could not be prepared for printing.")
+        }
+        return operation
+    }
+
+    private func exportData(format: String, width: CGFloat = 0) async throws -> Data {
+        guard created, !disposed, let host else { throw BrowserPageExportError.pageUnavailable }
+        return try await withCheckedThrowingContinuation { continuation in
+            host.exportPage(id, format: format, width: width) { data, error in
+                MainActor.assumeIsolated {
+                    if let data { continuation.resume(returning: data) }
+                    else {
+                        continuation.resume(throwing: BrowserPageExportError.renderingFailed(
+                            error ?? "The page could not be exported."))
+                    }
+                }
+            }
+        }
     }
 }
 

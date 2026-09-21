@@ -144,6 +144,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
     @ObservationIgnored var sharingPicker: NSSharingServicePicker?
     @ObservationIgnored private var printOperation: NSPrintOperation?
+    @ObservationIgnored private var preparingPrint = false
     @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
     @ObservationIgnored private var linkContextMessageProxy: BrowserLinkContextScriptMessageProxy?
     /// The link the pending web-content context menu is over. Read and cleared
@@ -988,18 +989,33 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func printPage() {
-        guard let service = pageEngine.documentServices,
+        guard !preparingPrint, printOperation == nil, let service = pageEngine.documentServices,
             url != nil, let window = nativeView.window else { return }
         let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
-        let operation = service.printOperation(with: printInfo)
-        operation.jobTitle = title.isEmpty ? url?.host() ?? ProductIdentity.name : title
-        printOperation = operation
-        operation.runModal(
-            for: window,
-            delegate: self,
-            didRun: #selector(printOperationDidRun(_:success:contextInfo:)),
-            contextInfo: nil
-        )
+        let jobTitle = title.isEmpty ? url?.host() ?? ProductIdentity.name : title
+        preparingPrint = true
+        Task { [weak self, weak window] in
+            guard let self else { return }
+            defer { preparingPrint = false }
+            guard let window else { return }
+            do {
+                let operation = try await service.printOperation(with: printInfo)
+                guard nativeView.window === window, window.isVisible else { return }
+                operation.jobTitle = jobTitle
+                printOperation = operation
+                operation.runModal(
+                    for: window, delegate: self,
+                    didRun: #selector(printOperationDidRun(_:success:contextInfo:)), contextInfo: nil)
+            } catch {
+                guard window.isVisible else { return }
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = "The page couldn’t be printed."
+                alert.informativeText = error.localizedDescription
+                alert.addButton(withTitle: "OK")
+                await alert.beginSheetModal(for: window)
+            }
+        }
     }
 
     func pdfData() async throws -> Data {
@@ -1038,17 +1054,20 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func exportWebArchive() {
-        guard let window = nativeView.window, url != nil else { return }
+        guard let window = nativeView.window, url != nil,
+            let service = pageEngine.documentServices else { return }
+        let format = service.archiveFormat
         let suggestedFilename = BrowserPageExportPolicy.webArchiveFilename(
             title: title,
-            url: url
+            url: url,
+            format: format
         )
         Task { [weak self, weak window] in
             guard let self, let window else { return }
             do {
                 let data = try await webArchiveData()
                 let panel = NSSavePanel()
-                panel.allowedContentTypes = [.webArchive]
+                panel.allowedContentTypes = [UTType(filenameExtension: format.rawValue) ?? .data]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = suggestedFilename
                 panel.title = "Save Page as Web Archive"
