@@ -2,6 +2,36 @@ namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection
 {
+    public BrowserTab PromoteTransient(TabState source, TabId? selected, DateTimeOffset now)
+    {
+        var tab = BrowserTab.Restore(TransientState(source, now));
+        int? insertion = null;
+        if (selected is { } id && tabs.FindIndex(t => t.Id == id) is var index && index >= 0)
+        {
+            var split = tabs[index].SplitGroupId;
+            index++;
+            while (split is not null && index < tabs.Count && tabs[index].SplitGroupId == split) index++;
+            insertion = index;
+        }
+        InsertTab(tab, insertion);
+        return tab;
+    }
+
+    public void ArchiveTransient(TabState source, DateTimeOffset now)
+    {
+        if (tabs.Any(t => t.Id == source.Id) || archive.Any(t => t.Id == source.Id))
+            throw new BrowserRuleException("duplicate_tab");
+        archive.Add(new(TransientState(source, now), now, "quickWindow"));
+    }
+
+    private static TabState TransientState(TabState source, DateTimeOffset now)
+    {
+        if (source.Kind != TabKind.Web || string.IsNullOrEmpty(source.Url))
+            throw new BrowserRuleException("invalid_transient_page");
+        return source with { Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null,
+            SavedUrl = null, LastActivatedAt = now };
+    }
+
     public BrowserTab RestoreArchived(TabState source, DateTimeOffset now)
     {
         var tab = BrowserTab.Restore(source with

@@ -238,9 +238,11 @@ final class MobileBrowserTransientOverlayModel {
         activityClock.recordActivity(restartsTimerImmediately: true)
         guard let pages,
             isCurrentRequest,
+            !wasPromoted, !wasArchived,
             let pageLease,
             let page = pageLease.page,
             let outcome = BrowserTransientPagePromotion(
+                requestID: request.id,
                 url: page.url ?? request.url,
                 sourceAssignment: request.spaceAssignment,
                 leaseAssignment: pageLease.assignment,
@@ -353,7 +355,8 @@ final class MobileBrowserTransientOverlayModel {
             browser.archiveTransientPage(
                 url: snapshot.url,
                 title: snapshot.title,
-                matching: snapshot.assignment
+                matching: snapshot.assignment,
+                requestID: request.id
             )
         else { return }
         wasArchived = true

@@ -230,6 +230,20 @@ changed source revision; source deletion, replacement or release revokes access.
 The Swift family publishes accepted projections and schedules native window
 reconciliation. It no longer merges borrowed profile policy itself.
 
+Quick Window and Peek promotion on Mac and mobile use the same transient
+completion commands. The authority validates the source and destination profiles
+against its current records and uses native authentication results to authorize
+promotion. It creates and selects the destination tab, preserving insertion after
+the selected split group, and permits live-page adoption only within the same
+Space/profile. The adapter performs the view transfer after commit; an unavailable
+transfer falls back to loading the new tab. Empty Quick Windows only select the
+destination Space. Archive-on-dismiss uses the same domain collection and keeps
+window selection unchanged, including when a retained snapshot was relocked.
+Process-local completion receipts prevent a late dismissal or repeated promotion
+from creating another record. Canceling a prepared storage reservation does not
+consume the request. These receipts are not synced or restored; native page
+creation, suspension and disposal still need lifecycle consolidation.
+
 Portable archive import, reviewed import, and manual setup use one core workspace
 operation for both preview and commit. The core merges folders, enforces Space
 and pin limits, preserves existing profile identities, repairs imported identity

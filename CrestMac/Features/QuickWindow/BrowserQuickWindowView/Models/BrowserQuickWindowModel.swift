@@ -186,55 +186,21 @@ final class BrowserQuickWindowModel {
     @discardableResult
     func promote(to destination: BrowserSpace) -> Bool {
         activityClock.recordActivity(restartsTimerImmediately: true)
-        guard isCurrentRequest, let pages else { return false }
+        guard isCurrentRequest, !wasPromoted, !wasArchived, let pages else { return false }
         let assignment = BrowserSpaceRuntimeAssignment(space: destination)
-        guard
-            assignment.spaceID != selectedAssignment.spaceID
-                || assignment == selectedAssignment
-        else { return false }
-        guard let sourceSpace = browser.space(matching: selectedAssignment),
-            !spaceAccess.isLocked(sourceSpace),
-            let liveDestination = browser.space(matching: assignment),
-            !spaceAccess.isLocked(liveDestination)
-        else { return false }
-
-        if let url = page?.url ?? presentedRequest.initialURL {
-            guard
-                let tabID = browser.openNewTab(
-                    url: url,
-                    matching: assignment
-                ),
-                let currentDestination = browser.space(
-                    matching: assignment
-                )
-            else { return false }
-            let adoptedLivePage =
-                if let pageLease {
-                    supportsLivePagePromotion
-                        && pageLease.assignment == assignment
-                        && pages.adoptTransientPage(
-                            pageLease,
-                            as: tabID,
-                            in: currentDestination
-                        )
-                } else {
-                    false
-                }
-            if assignment != selectedAssignment {
-                preferences.rememberSpace(assignment.spaceID, for: url)
-            }
-            wasPromoted = true
-            if let pageLease, !adoptedLivePage {
-                pageLease.release()
-            }
-        } else {
-            browser.selectSpace(assignment.spaceID)
-            guard browser.selectedSpace?.id == assignment.spaceID else {
-                return false
-            }
-            wasPromoted = true
+        let url = currentSnapshot?.url ?? presentedRequest.initialURL
+        guard let outcome = BrowserTransientPagePromotion(requestID: presentedRequest.id,
+            url: url, sourceAssignment: selectedAssignment, leaseAssignment: pageLease?.assignment,
+            destinationAssignment: assignment, supportsLiveAdoption: supportsLivePagePromotion
+        ).perform(in: browser, isLocked: spaceAccess.isLocked, adoptPage: { [pageLease] tabID, space in
+            guard let pageLease else { return false }
+            return pages.adoptTransientPage(pageLease, as: tabID, in: space)
+        }) else { return false }
+        if let url, assignment != selectedAssignment {
+            preferences.rememberSpace(assignment.spaceID, for: url)
         }
-
+        wasPromoted = true
+        if outcome != .adoptedLivePage { pageLease?.release() }
         pages.select(session: browser.session)
         return true
     }
@@ -270,7 +236,8 @@ final class BrowserQuickWindowModel {
             browser.archiveTransientPage(
                 url: snapshot.url,
                 title: snapshot.title,
-                matching: snapshot.assignment
+                matching: snapshot.assignment,
+                requestID: presentedRequest.id
             )
         else { return false }
         wasArchived = true

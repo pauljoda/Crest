@@ -1601,6 +1601,10 @@
     "core-owned-temporary-window-profiles": {
       "category": "improved",
       "message": "Keep Blank Windows and detached tabs in step with their Space settings while preserving their separate browsing history."
+    },
+    "shared-core-transient-completion": {
+      "category": "improved",
+      "message": "Open Quick Window and Peek pages as tabs consistently across devices, preserving Space isolation and preventing duplicate archive entries."
     }
   }
 }

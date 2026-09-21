@@ -39,6 +39,17 @@ public static class NativeSessionEditor
         TabPlacement Placement(string name) => Enum.Parse<TabPlacement>(args[name]!.GetValue<string>(), true);
         switch (operation)
         {
+            case "tab.promote_transient":
+                if (args["tab"] is JsonObject transient)
+                {
+                    result = space.PromoteTransient(document.ReadNewTab(transient), selected, now).Id;
+                    selected = result;
+                }
+                selectSpace = true;
+                break;
+            case "tab.archive_transient":
+                space.ArchiveTransient(document.ReadNewTab(args["tab"]!.AsObject()), now);
+                break;
             case "tab.restore_archive":
                 result = space.RestoreArchived(document.ReadNewTab(args["tab"]!.AsObject()), now).Id;
                 selected = result;

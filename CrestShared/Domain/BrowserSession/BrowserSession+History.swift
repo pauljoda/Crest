@@ -49,9 +49,14 @@ extension BrowserSession {
             placement: .current,
             lastActivatedAt: date
         )
+        #if CREST_CORE_BACKED
+        guard let value = BrowserCoreSessionEditing.tabValue(tab) else { return }
+        _ = applyCoreEdit("tab.archive_transient", in: spaceID, arguments: ["tab": value], at: date)
+        #else
         spaces[spaceIndex].archivedTabs.append(
             ArchivedTab(tab: tab, archivedAt: date, reason: .quickWindow)
         )
+        #endif
     }
 
     private mutating func recordVisit(

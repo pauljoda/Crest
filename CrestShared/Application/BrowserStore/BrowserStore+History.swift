@@ -31,22 +31,33 @@ extension BrowserStore {
     }
 
     func archiveTransientPage(url: URL, title: String?, in spaceID: SpaceID) {
-        session.archiveTransientPage(url: url, title: title, in: spaceID)
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let space = session.space(id: spaceID) else { return }
+        _ = archiveTransientPage(url: url, title: title, matching: BrowserSpaceRuntimeAssignment(space: space))
     }
 
     @discardableResult
     func archiveTransientPage(
         url: URL,
         title: String?,
-        matching assignment: BrowserSpaceRuntimeAssignment
+        matching assignment: BrowserSpaceRuntimeAssignment,
+        requestID: UUID = UUID()
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
+        #if CREST_CORE_BACKED
+        let date = Date.now
+        let tab = BrowserTab(title: title.flatMap { $0.isEmpty ? nil : $0 } ?? url.host() ?? url.absoluteString,
+            url: url, placement: .current, lastActivatedAt: date)
+        guard let value = BrowserCoreSessionEditing.tabValue(tab),
+            family.execute("transient.archive", in: assignment.spaceID,
+                arguments: ["requestId": requestID.uuidString, "tab": value], from: self, at: date) != nil
+        else { return false }
+        #else
         session.archiveTransientPage(
             url: url,
             title: title,
             in: assignment.spaceID
         )
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }

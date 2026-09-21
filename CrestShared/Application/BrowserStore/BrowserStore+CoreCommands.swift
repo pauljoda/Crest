@@ -3,6 +3,38 @@ import Foundation
 // Store commands use the owned core session. Value-only session operations remain
 // available for imports, prepared transfers, and the legacy composition root.
 extension BrowserStore {
+    /// Native authentication supplies current access results. The core checks
+    /// the owning profiles and completes promotion before an adapter moves a view.
+    func promoteTransientPage(requestID: UUID, url: URL?, source: BrowserSpaceRuntimeAssignment,
+        lease: BrowserSpaceRuntimeAssignment?, destination: BrowserSpaceRuntimeAssignment,
+        sourceAccessible: Bool, destinationAccessible: Bool, supportsLiveAdoption: Bool
+    ) -> (tabID: TabID?, adoptLivePage: Bool)? {
+        guard space(matching: source) != nil, space(matching: destination) != nil else { return nil }
+        #if CREST_CORE_BACKED
+        let date = Date.now
+        let tab = url.flatMap { BrowserCoreSessionEditing.tabValue(BrowserTab(
+            title: $0.host() ?? $0.absoluteString, url: $0, placement: .current, lastActivatedAt: date)) }
+        guard let result = family.execute("transient.promote", in: destination.spaceID, arguments: [
+            "requestId": requestID.uuidString,
+            "sourceSpaceId": source.spaceID.rawValue.uuidString, "sourceProfileId": source.profileID.uuidString,
+            "leaseSpaceId": lease?.spaceID.rawValue.uuidString as Any? ?? NSNull(),
+            "leaseProfileId": lease?.profileID.uuidString as Any? ?? NSNull(),
+            "sourceAccessible": sourceAccessible, "destinationAccessible": destinationAccessible,
+            "supportsLiveAdoption": supportsLiveAdoption, "tab": tab ?? NSNull()
+        ], from: self, at: date) else { return nil }
+        persist(scope: .core)
+        return (result.tabId.map(TabID.init(rawValue:)), result.adoptLivePage == true)
+        #else
+        guard sourceAccessible, destinationAccessible, lease == nil || lease == source else { return nil }
+        if let url {
+            guard let tabID = openNewTab(url: url, matching: destination) else { return nil }
+            return (tabID, supportsLiveAdoption && lease == destination)
+        }
+        selectSpace(destination.spaceID)
+        return (nil, false)
+        #endif
+    }
+
     @discardableResult
     func openSessionTab(title: String, url: URL?, nativeContent: BrowserNativeTabContent? = nil,
         symbol: String = "globe", in spaceID: SpaceID, placement: TabPlacement = .current, requestedIndex: Int? = nil,

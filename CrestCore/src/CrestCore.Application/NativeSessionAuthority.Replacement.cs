@@ -53,6 +53,7 @@ public sealed partial class NativeSessionAuthority
                 value.SyncTransaction?.Commit();
                 document = value.Document; Revision = value.Revision;
                 borrowedSourceRevision = value.BorrowedSourceRevision ?? borrowedSourceRevision;
+                if (value.TransientCompletion is { } completed) completedTransients.Add(completed);
             }
             replacement = null;
             return Revision;
@@ -70,7 +71,7 @@ public sealed partial class NativeSessionAuthority
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(command.Document, Parse(selection));
             _ = checkpoint.Read("core");
-            replacement = new(this, command.Document, nextRevision, checkpoint, command.BorrowedSourceRevision);
+            replacement = new(this, command.Document, nextRevision, checkpoint, command.BorrowedSourceRevision, command.TransientCompletion);
             return replacement;
         }
     }
@@ -83,13 +84,15 @@ public sealed class NativeSessionReplacement : IDisposable
     internal NativeSessionAuthority.SessionDocument Document { get; }
     internal ulong Revision { get; }
     internal ulong? BorrowedSourceRevision { get; }
+    internal Guid? TransientCompletion { get; }
     public NativeSessionCheckpoint Checkpoint { get; }
     internal NativeSyncTransaction? SyncTransaction { get; private set; }
     internal NativeSessionReplacement(NativeSessionAuthority owner, NativeSessionAuthority.SessionDocument document,
-        ulong revision, NativeSessionCheckpoint checkpoint, ulong? borrowedSourceRevision = null)
+        ulong revision, NativeSessionCheckpoint checkpoint, ulong? borrowedSourceRevision = null, Guid? transientCompletion = null)
     {
         this.owner = owner; Document = document; Revision = revision; Checkpoint = checkpoint;
         BorrowedSourceRevision = borrowedSourceRevision;
+        TransientCompletion = transientCompletion;
     }
     public void BindSync(NativeSyncTransaction value)
     {

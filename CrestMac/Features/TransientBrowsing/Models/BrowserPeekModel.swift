@@ -148,9 +148,11 @@ final class BrowserPeekModel {
     func promote(to destinationAssignment: BrowserSpaceRuntimeAssignment) -> Bool {
         guard let pages,
             isCurrentRequest,
+            !wasPromoted,
             let pageLease,
             let page = pageLease.page,
             let outcome = BrowserTransientPagePromotion(
+                requestID: request.id,
                 url: page.url ?? request.url,
                 sourceAssignment: request.assignment,
                 leaseAssignment: pageLease.assignment,

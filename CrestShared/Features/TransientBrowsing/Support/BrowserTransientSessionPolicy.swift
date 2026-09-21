@@ -8,13 +8,7 @@ enum BrowserTransientLeaseDisposition: Equatable, Sendable {
     case usable(BrowserSpace)
 }
 
-/// The authorized source and destination of a transient promotion.
-struct BrowserTransientPromotionSpaces: Equatable, Sendable {
-    let source: BrowserSpace
-    let destination: BrowserSpace
-}
-
-/// Shared ownership and authorization rules for transient pages.
+/// Native presentation and authentication observations for transient pages.
 enum BrowserTransientSessionPolicy {
     @MainActor
     static func disposition(
@@ -51,29 +45,4 @@ enum BrowserTransientSessionPolicy {
         leaseAssignment == requestAssignment && leaseCanBeReused
     }
 
-    /// Both Spaces must exist and remain unlocked before promotion.
-    @MainActor
-    static func promotionSpaces(
-        source: BrowserSpace?,
-        destination: BrowserSpace?,
-        isLocked: @MainActor (BrowserSpace) -> Bool
-    ) -> BrowserTransientPromotionSpaces? {
-        guard let source,
-            !isLocked(source),
-            let destination,
-            !isLocked(destination)
-        else { return nil }
-        return BrowserTransientPromotionSpaces(
-            source: source,
-            destination: destination
-        )
-    }
-
-    /// A page can be adopted only by the Space and profile that already own it.
-    static func adoptsLivePage(
-        leaseAssignment: BrowserSpaceRuntimeAssignment,
-        destination: BrowserSpace
-    ) -> Bool {
-        leaseAssignment == BrowserSpaceRuntimeAssignment(space: destination)
-    }
 }

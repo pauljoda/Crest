@@ -14,6 +14,7 @@ enum BrowserCoreSessionEditing {
         var selectSpace: Bool
         var copies: [Copy]
         var changed: Bool
+        var adoptLivePage: Bool?
     }
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "CoreSession")
     private static let maximumBytes = 4 * 1024 * 1024

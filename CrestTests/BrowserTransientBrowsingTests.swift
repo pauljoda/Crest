@@ -814,71 +814,11 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         XCTAssertEqual(offered.map(\.id), [lockedSource.id, open.id])
     }
 
-    func testTransientPromotionRefusesAGoneOrLockedEnd() {
-        let source = makePolicySpace(name: "Source")
-        let destination = makePolicySpace(name: "Destination")
-        var locked = makePolicySpace(name: "Private")
-        locked.accessPolicy = .deviceOwnerAuthentication
-        let access = makeAccessController()
-
-        XCTAssertNil(
-            BrowserTransientSessionPolicy.promotionSpaces(
-                source: nil,
-                destination: destination,
-                isLocked: access.isLocked
-            )
-        )
-        XCTAssertNil(
-            BrowserTransientSessionPolicy.promotionSpaces(
-                source: source,
-                destination: nil,
-                isLocked: access.isLocked
-            )
-        )
-        XCTAssertNil(
-            BrowserTransientSessionPolicy.promotionSpaces(
-                source: locked,
-                destination: destination,
-                isLocked: access.isLocked
-            )
-        )
-        XCTAssertNil(
-            BrowserTransientSessionPolicy.promotionSpaces(
-                source: source,
-                destination: locked,
-                isLocked: access.isLocked
-            )
-        )
-        XCTAssertEqual(
-            BrowserTransientSessionPolicy.promotionSpaces(
-                source: source,
-                destination: destination,
-                isLocked: access.isLocked
-            ),
-            BrowserTransientPromotionSpaces(
-                source: source,
-                destination: destination
-            )
-        )
-    }
-
-    func testTransientLeaseIsAdoptedAndReusedOnlyBySpaceItAlreadyBelongsTo() {
+    func testTransientLeaseIsReusedOnlyByItsRequestAssignment() {
         let space = makePolicySpace(name: "Source")
         let other = makePolicySpace(name: "Destination")
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
 
-        XCTAssertTrue(
-            BrowserTransientSessionPolicy.adoptsLivePage(
-                leaseAssignment: assignment,
-                destination: space
-            )
-        )
-        XCTAssertFalse(
-            BrowserTransientSessionPolicy.adoptsLivePage(
-                leaseAssignment: assignment,
-                destination: other
-            )
-        )
         XCTAssertTrue(
             BrowserTransientSessionPolicy.reusesLease(
                 leaseAssignment: assignment,

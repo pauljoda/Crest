@@ -395,6 +395,11 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         XCTAssertTrue(model.wasPromoted)
         XCTAssertTrue(context.pages.activePage === promotedPage)
         XCTAssertEqual(context.pages.activePage?.profileID, context.source.profile.id)
+        let tabs = context.browser.session.tabIDs
+        XCTAssertFalse(model.promote(to: context.source))
+        model.releaseForDismissal()
+        XCTAssertEqual(context.browser.session.tabIDs, tabs)
+        XCTAssertTrue(context.browser.session.space(id: context.source.id)?.archivedTabs.isEmpty == true)
     }
 
     func testEmptyPromotionSelectsTheExactDestinationWithoutOpeningATab() throws {
