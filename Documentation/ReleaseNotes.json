@@ -1769,6 +1769,14 @@
     "locked-space-extension-window-rejects": {
       "category": "fixed",
       "message": "Extensions asking to open a window in a locked Space get a clear refusal instead of waiting forever."
+    },
+    "web-store-add-to-crest": {
+      "category": "new",
+      "message": "Chrome Web Store listings show Add to Crest, install straight into the Space you choose, and show Added to Crest with a remove option once installed."
+    },
+    "web-store-page-fits-card": {
+      "category": "fixed",
+      "message": "Chrome Web Store pages fit the page card instead of running past its edge, and the install review appears under the toolbar rather than off screen."
     }
   }
 }

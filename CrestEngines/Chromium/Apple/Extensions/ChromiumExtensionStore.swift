@@ -34,6 +34,13 @@ final class ChromiumExtensionStore {
     private(set) var installation: ChromiumExtensionInstallation?
     @ObservationIgnored private var popover: NSPopover?
     @ObservationIgnored private var windowClosed: NSObjectProtocol?
+    /// The one-point view the install review is anchored to. It belongs to the
+    /// window's own hosting view and is removed with the review.
+    @ObservationIgnored private var anchorSpot: NSView?
+    /// Runs when the presented install operation ends, however it ended. The
+    /// Chrome Web Store listing that started it uses this to restate its own
+    /// button instead of leaving it in the progress label.
+    @ObservationIgnored private var installCompletion: (@MainActor () -> Void)?
 
     var spaces: [BrowserSpace] { CrestChromiumRoot.extensionSpaces }
     func authorized(_ space: BrowserSpace) -> Bool {
@@ -159,13 +166,25 @@ final class ChromiumExtensionStore {
         } else { menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil) }
         withExtendedLifetime(handler) {}
     }
+    /// Removal asked for by identifier — the Chrome Web Store listing for an
+    /// extension already installed in this Space. The confirmation, the Space's
+    /// ownership check and the engine command are the menu's own.
+    func confirmRemoval(_ extensionID: String, in space: BrowserSpace,
+                        completion: (@MainActor () -> Void)? = nil) {
+        guard let record = installedRecord(extensionID, in: space) else {
+            completion?()
+            return
+        }
+        confirmRemoval(record, space: space, completion: completion)
+    }
     /// Mirrors the confirmation the extension settings pane requires before an
     /// uninstall. The menu's tracking loop owns the event while an item runs, so
     /// the alert is presented once the menu has dismissed.
-    private func confirmRemoval(_ record: Installed, space: BrowserSpace) {
+    private func confirmRemoval(_ record: Installed, space: BrowserSpace,
+                                completion: (@MainActor () -> Void)? = nil) {
         Task { @MainActor [weak self] in
             await Task.yield()
-            guard let self, self.authorized(space) else { return }
+            guard let self, self.authorized(space) else { completion?(); return }
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = String(localized: "Remove \(record.name)?")
@@ -176,6 +195,7 @@ final class ChromiumExtensionStore {
             alert.buttons.first?.hasDestructiveAction = true
             let complete: (NSApplication.ModalResponse) -> Void = { response in
                 MainActor.assumeIsolated {
+                    defer { completion?() }
                     guard response == .alertFirstButtonReturn else { return }
                     guard self.command("remove", extensionID: record.id, space: space) else {
                         self.reportFailure(); return
@@ -201,8 +221,14 @@ final class ChromiumExtensionStore {
             alert.runModal()
         }
     }
-    func install(_ id: String, in space: BrowserSpace, anchor: NSView?, copies: Set<SpaceID> = []) {
-        guard installation == nil, authorized(space), let window = anchor?.window ?? CrestChromiumRoot.activeNativeWindow else { return }
+    func install(_ id: String, in space: BrowserSpace, anchor: NSView?, copies: Set<SpaceID> = [],
+                 completion: (@MainActor () -> Void)? = nil) {
+        guard installation == nil, authorized(space),
+              let window = anchor?.window ?? CrestChromiumRoot.activeNativeWindow else {
+            completion?()
+            return
+        }
+        installCompletion = completion
         let job = ChromiumExtensionInstallation(id: id, space: space, window: window, store: self)
         job.selectedSpaces = copies
         installation = job
@@ -213,7 +239,17 @@ final class ChromiumExtensionStore {
         // Anchor native presentation in Crest's hosting view. Anchoring it in
         // Chromium's responder subtree lets web focus consume popover input.
         guard let source = window.contentView else { dismissInstallation(); return }
-        popover.show(relativeTo: NSRect(x: min(160, source.bounds.midX), y: source.bounds.maxY - 44, width: 1, height: 1), of: source, preferredEdge: .minY)
+        // AppKit reads a caller's positioning rectangle as if the view were not
+        // flipped, and SwiftUI's hosting view is flipped: a rectangle measured
+        // from its top edge presented the review past the window's lower edge
+        // and off the screen. A one-point positioning view carries the anchor
+        // instead, because a subview's own frame is resolved in its superview's
+        // coordinate space whichever way that space runs.
+        let spot = NSView(frame: NSRect(x: min(160, source.bounds.width / 2),
+            y: source.isFlipped ? 44 : source.bounds.height - 44, width: 1, height: 1))
+        source.addSubview(spot)
+        anchorSpot = spot
+        popover.show(relativeTo: .zero, of: spot, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
         windowClosed = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.dismissInstallation() }
@@ -235,6 +271,11 @@ final class ChromiumExtensionStore {
         popover = nil
         if let windowClosed { NotificationCenter.default.removeObserver(windowClosed) }
         windowClosed = nil
+        anchorSpot?.removeFromSuperview()
+        anchorSpot = nil
+        let completion = installCompletion
+        installCompletion = nil
+        completion?()
     }
 }
 

@@ -692,7 +692,12 @@ Chromium owns action execution, installation, permissions, updates, and pin stat
 Native Extensions settings provide Space-scoped management and copying, with a
 link to Chromium's advanced manager. CRX verification precedes the native consent
 review, and additional Space installations reuse only the explicitly reviewed
-package and permission identity.
+package and permission identity. A Chrome Web Store listing offers the same
+install from its own button: a host-scoped script in an isolated world relabels
+it for Crest, reports the installed state Chromium's registry holds for the
+page's Space, and passes a click to the native review. The extension it can ask
+for is the one the listing's address names, and private windows keep the store's
+own behavior.
 
 Extension action content is hosted in an AppKit popover anchored to the native
 button view. AppKit handles screen-edge placement and movement; Chromium retains

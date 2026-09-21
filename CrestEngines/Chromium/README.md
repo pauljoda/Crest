@@ -183,7 +183,9 @@ profile-scoped Chromium state and native install presentation. Registry, action,
 toolbar, and icon observers refresh the UI without polling. Pinning is stored in
 Chromium's per-profile toolbar preferences.
 
-On a Chrome Web Store listing, **Install Extension…** in Site Controls downloads
+On a Chrome Web Store listing, the listing's own install button reads **Add to
+Crest** and runs Crest's install; **Install Extension…** in Site Controls does
+the same thing from the toolbar. Both download
 the CRX3 package from Google's update service. Chromium verifies the publisher
 proof and expected ID before Crest shows the original install review layout.
 The review displays Chromium's permission warnings and offers website-access
@@ -198,7 +200,16 @@ The native Extensions settings pane retains Space selection, extension artwork,
 disclosure rows, enable/remove controls, options pages, and copying to other
 Spaces. Chromium's manager is available for detailed permissions, developer-mode
 unpacked installs, and engine-specific controls. The store's own Add to Chrome
-button remains unavailable in the ungoogled baseline. Crest mode also restores
+button is inert in the ungoogled baseline, so Crest takes it over: a script in
+an isolated world, injected only into `chromewebstore.google.com` documents in a
+regular profile, relabels that button **Add to Crest**, **Added to Crest** or
+**Remove from Crest** from Chromium's own registry and routes a click into the
+same install review. The click is delivered as a request in the listing's own
+URL fragment, and the host installs only the extension the listing's address
+names, so a store page cannot name another one. The same script releases the
+store's desktop minimum width, which is wider than a Crest page card and would
+otherwise push the listing and its button past the card's edge, and hides the
+store's prompts to switch to Chrome. Crest mode also restores
 Chromium's declared-URL extension update requests; signature and permission
 checks remain owned by Chromium.
 

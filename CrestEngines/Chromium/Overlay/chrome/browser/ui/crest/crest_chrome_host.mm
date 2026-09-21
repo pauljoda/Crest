@@ -116,8 +116,11 @@
 #include "base/command_line.h"
 #include "base/no_destructor.h"
 #include "base/uuid.h"
+#include "base/strings/string_split.h"
+#include "base/strings/string_util.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
+#include "chrome/common/chrome_isolated_world_ids.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser.h"
 #include "chrome/browser/ui/navigator/browser_navigator.h"
@@ -497,6 +500,9 @@ class NativeProfileDeletion final : public content::BrowsingDataRemover::Observe
   base::WeakPtrFactory<NativeProfileDeletion> weak_factory_{this};
 };
 
+// Re-states Crest's install affordance on every open Chrome Web Store listing.
+void RefreshStoreButtons();
+
 // Profile-scoped change and icon observation adapted from Mori (MIT).
 class ExtensionStateObserver
     : public extensions::ExtensionRegistryObserver,
@@ -640,6 +646,7 @@ class ExtensionStateObserver
       queued = false;
       if (State().browser_observation && !State().disposing)
         State().browser_observation(@{@"extensionsChanged": @YES});
+      RefreshStoreButtons();
     });
   }
 
@@ -781,6 +788,185 @@ class PageDocumentService final : public content::WebContentsObserver,
   void (^completion_)(NSData*, NSString*) = nil;
 };
 
+// Chrome Web Store listings. The store's own Add to Chrome button is inert in
+// this baseline, so Crest owns that affordance: a script in an isolated world
+// on the store's own host relabels the button and asks the core to run Crest's
+// install review. The script is not a general scripting entry point — it is
+// injected only into the store's own main frame in a regular profile, and the
+// only request it can make is for the extension the page's own URL names.
+bool IsWebStoreURL(const GURL& url) {
+  return url.SchemeIs(url::kHttpsScheme) && url.host() == "chromewebstore.google.com";
+}
+
+// The extension a store detail URL names, or an empty string for any other
+// store page. Chrome Web Store identifiers are 32 characters from a-p.
+std::string WebStoreExtensionID(const GURL& url) {
+  if (!IsWebStoreURL(url)) return std::string();
+  const std::string_view path = url.path();
+  std::vector<std::string_view> parts = base::SplitStringPiece(
+      path, "/", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+  if (parts.size() < 2 || parts.front() != "detail") return std::string();
+  std::string_view candidate = parts.back();
+  if (candidate.size() != 32) return std::string();
+  for (char character : candidate)
+    if (character < 'a' || character > 'p') return std::string();
+  return std::string(candidate);
+}
+
+// The isolated-world script. It uses DOM and CSSOM APIs only: the store's
+// content policy rejects stylesheets and inline style attributes Crest would
+// add to the markup, but script-driven property changes are not markup.
+const char* CrestStoreScript() {
+  return R"JS((function() {
+  if (window.__crestStore) { window.__crestStore.render(); return; }
+  var labels = { install: 'Add to Crest', installed: 'Added to Crest',
+                 remove: 'Remove from Crest', busy: 'Installing…' };
+  var state = { id: '', installed: false, busy: false };
+  var adopted = null, hovering = false, pending = false;
+  function detailID() {
+    var match = /\/detail\/(?:[^\/]+\/)?([a-p]{32})(?:\/|$)/.exec(location.pathname);
+    return match ? match[1] : '';
+  }
+  function label(button) { return button.querySelector('span[jsname="V67aGc"]') || button; }
+  function text(node) { return (node.textContent || '').replace(/\s+/g, ' ').trim(); }
+  // The store keeps the listing it navigated away from in the document and
+  // only hides it, so anything that is not actually rendered is stale.
+  function shown(element) {
+    if (!element || !element.isConnected) return false;
+    var rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+  function installLabel(value) {
+    return /^(add to|added to|remove from) (chrome|crest)$/i.test(value) || value === labels.busy;
+  }
+  // The listing's own install button: the one in the section that carries the
+  // extension's title, so a related listing's button is never adopted.
+  function locate() {
+    if (shown(adopted)) return adopted;
+    adopted = null; hovering = false;
+    var headings = document.querySelectorAll('h1'), scope = null;
+    for (var heading = 0; heading < headings.length; heading++) {
+      if (!shown(headings[heading])) continue;
+      scope = headings[heading].closest('section');
+      break;
+    }
+    var buttons = (scope || document).querySelectorAll('button');
+    for (var index = 0; index < buttons.length; index++) {
+      var button = buttons[index];
+      if (!shown(button) || !installLabel(text(label(button)))) continue;
+      adopted = button;
+      button.addEventListener('pointerenter', function() { hovering = true; render(); });
+      button.addEventListener('pointerleave', function() { hovering = false; render(); });
+      button.addEventListener('focus', function() { hovering = true; render(); });
+      button.addEventListener('blur', function() { hovering = false; render(); });
+      return button;
+    }
+    return null;
+  }
+  // The store's desktop layout keeps a minimum width wider than a Crest page
+  // card, which pushes the listing and its install button past the card's
+  // edge. Releasing that minimum lets the store use its own narrow layout.
+  function relax() {
+    // The store keeps the listing it navigated away from, so each document can
+    // hold more than one of these; every one of them has to be released.
+    var elements = [document.body].concat(
+        Array.prototype.slice.call(document.querySelectorAll('header, main')));
+    for (var index = 0; index < elements.length; index++) {
+      var element = elements[index];
+      if (!element) continue;
+      var minimum = parseFloat(getComputedStyle(element).minWidth);
+      if (minimum > 0 && minimum > window.innerWidth) element.style.minWidth = 'auto';
+    }
+  }
+  // Crest installs extensions itself, so the store's prompts to switch to
+  // Chrome are noise. Each prompt is found from its own wording and hidden at
+  // the outermost element that still says nothing else, so the listing around
+  // it is never affected.
+  function hidePrompt(pattern, limit) {
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    var node;
+    while ((node = walker.nextNode())) {
+      if (!pattern.test(node.nodeValue || '')) continue;
+      var element = node.parentElement, box = null;
+      while (element && element !== document.body && text(element).length <= limit) {
+        box = element;
+        element = element.parentElement;
+      }
+      // A prompt the store re-rendered leaves the hidden original behind, so
+      // a match that is already hidden is not the one to act on.
+      if (!box || box.style.display === 'none') continue;
+      box.style.display = 'none';
+      return;
+    }
+  }
+  var swept = 0, sweeping = 0;
+  function hidePrompts() {
+    // A prompt can be the last thing the store adds, so a suppressed sweep is
+    // always retried rather than dropped.
+    var waiting = 500 - (Date.now() - swept);
+    if (waiting > 0) {
+      if (!sweeping) sweeping = setTimeout(function() { sweeping = 0; hidePrompts(); }, waiting);
+      return;
+    }
+    swept = Date.now();
+    hidePrompt(/switch to chrome to install/i, 140);
+    hidePrompt(/switch to chrome\?/i, 260);
+  }
+  function render() {
+    relax();
+    hidePrompts();
+    var button = locate();
+    if (!button) return;
+    var wanted = state.busy ? labels.busy
+        : (state.installed ? (hovering ? labels.remove : labels.installed) : labels.install);
+    var span = label(button);
+    if (text(span) !== wanted) span.textContent = wanted;
+    if (button.disabled) button.disabled = false;
+    button.removeAttribute('disabled');
+    button.setAttribute('aria-disabled', state.busy ? 'true' : 'false');
+    button.setAttribute('aria-label', wanted);
+  }
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function() { pending = false; render(); });
+  }
+  // The core owns the install review, so the click never reaches the store's
+  // own handler. The request names the extension the page itself is showing
+  // and the core checks that name again before it downloads anything.
+  function request() {
+    var id = detailID();
+    if (!id || state.busy) return;
+    var command = state.installed ? 'crest-remove' : 'crest-install';
+    if (!state.installed) { state.busy = true; render(); }
+    history.replaceState(history.state, '',
+        location.pathname + location.search + '#' + command + '=' + id);
+  }
+  document.addEventListener('click', function(event) {
+    var button = locate();
+    var target = event.target;
+    if (!button || !target || !(target === button || (target.nodeType === 1 && button.contains(target)))) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    request();
+  }, true);
+  window.addEventListener('resize', function() { schedule(); });
+  new MutationObserver(schedule).observe(document.documentElement,
+      { childList: true, subtree: true, characterData: true });
+  window.__crestStore = {
+    render: render,
+    apply: function(next) {
+      state.id = next && typeof next.id === 'string' ? next.id : '';
+      state.installed = !!(next && next.installed);
+      state.busy = false;
+      if (!adopted || !adopted.isConnected) { adopted = null; }
+      render();
+    }
+  };
+  render();
+})();)JS";
+}
+
 struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
                     favicon::FaviconDriverObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
@@ -832,6 +1018,9 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   CrestDeferredNavigation (^protected_link_handler)(NSString*) = nil;
   void (^modified_link_handler)(NSString*, NSUInteger, NSString*, void (^)(NSString*, CrestDeferredNavigation)) = nil;
   bool closing = false;
+  // Whether a Chrome Web Store install or removal request from this page is
+  // still with the core.
+  bool store_request_open = false;
   uint64_t navigation_revision = 0;
   uint64_t navigation_generation = 0;
   std::unique_ptr<ExtensionPopup> extension_popup;
@@ -852,6 +1041,72 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       @"canGoBack": @(controller.CanGoBack()), @"canGoForward": @(controller.CanGoForward()),
       @"backHistory": History(-1), @"forwardHistory": History(1),
       @"committed": @(committed), @"failure": failure ?: (id)NSNull.null });
+  }
+  // Chrome Web Store support. Regular profiles only: a private window must
+  // not change a Space's persistent extension state, so its store pages keep
+  // the engine's own behavior.
+  content::RenderFrameHost* StoreFrame() {
+    if (!web_contents() || State().disposing) return nullptr;
+    if (web_contents()->GetBrowserContext()->IsOffTheRecord()) return nullptr;
+    auto* frame = web_contents()->GetPrimaryMainFrame();
+    if (!frame || !IsWebStoreURL(frame->GetLastCommittedURL())) return nullptr;
+    return frame;
+  }
+  void RunInStore(const std::string& script) {
+    if (auto* frame = StoreFrame())
+      frame->ExecuteJavaScriptInIsolatedWorld(base::UTF8ToUTF16(script), {},
+                                             ISOLATED_WORLD_ID_CHROME_INTERNAL);
+  }
+  void InjectStoreScript() {
+    if (!StoreFrame()) return;
+    RunInStore(CrestStoreScript());
+    PublishStoreState();
+  }
+  void PublishStoreState() {
+    auto* frame = StoreFrame();
+    if (!frame) return;
+    const std::string id = WebStoreExtensionID(frame->GetLastCommittedURL());
+    bool installed = false;
+    if (!id.empty()) {
+      auto* profile = Profile::FromBrowserContext(web_contents()->GetBrowserContext());
+      auto* registry = profile ? extensions::ExtensionRegistry::Get(profile) : nullptr;
+      installed = registry && registry->GetInstalledExtension(id) != nullptr;
+    }
+    auto state = base::DictValue().Set("id", id).Set("installed", installed);
+    auto json = base::WriteJson(state);
+    if (!json) return;
+    RunInStore("window.__crestStore && window.__crestStore.apply(" + *json + ");");
+  }
+  // A request the injected script wrote into the listing's own URL fragment.
+  // The extension it names has to be the one the page is showing, so a store
+  // page cannot ask Crest to install anything else, and the core still runs
+  // its own install review before Chromium verifies the package.
+  bool ConsumeStoreRequest(const GURL& url) {
+    if (!StoreFrame() || !url.has_ref()) return false;
+    const std::string_view ref = url.ref();
+    NSString* event = nil;
+    std::string requested;
+    if (base::StartsWith(ref, "crest-install=")) {
+      event = @"store_install";
+      requested = std::string(ref.substr(std::string_view("crest-install=").size()));
+    } else if (base::StartsWith(ref, "crest-remove=")) {
+      event = @"store_remove";
+      requested = std::string(ref.substr(std::string_view("crest-remove=").size()));
+    } else {
+      return false;
+    }
+    // Leave the listing's own address in place; the fragment is a message.
+    RunInStore("history.replaceState(history.state, '', location.pathname + location.search);");
+    const std::string expected = WebStoreExtensionID(url);
+    if (expected.empty() || requested != expected) {
+      PublishStoreState();
+      return true;
+    }
+    // The core owns the request now: leave the button's own progress label in
+    // place until the review it presents finishes.
+    store_request_open = true;
+    observation(event, @{ @"id": base::SysUTF8ToNSString(expected) });
+    return true;
   }
   NSArray* History(int direction) {
     auto& controller = web_contents()->GetController();
@@ -881,8 +1136,23 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       observation(@"navigation_started", @{});
     }
   }
+  void PrimaryMainDocumentElementAvailable() override { InjectStoreScript(); }
   void DidFinishNavigation(content::NavigationHandle* navigation) override {
+    // A store listing's own fragment carries the install request the injected
+    // script made. It is Crest's message, not a page the core should publish.
+    if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted() &&
+        navigation->IsSameDocument() && ConsumeStoreRequest(navigation->GetURL()))
+      return;
     if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted()) ++navigation_revision;
+    // The store is a single-page application: a listing change keeps the
+    // document, so the script stays and only its state has to be refreshed.
+    if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted() &&
+        navigation->IsSameDocument()) {
+      // Restoring the listing's own address is Crest's own edit, not a change
+      // of listing, so it must not reset a request that is still open.
+      if (store_request_open) store_request_open = false;
+      else PublishStoreState();
+    }
     if (navigation->IsInPrimaryMainFrame())
       Publish(navigation->HasCommitted() && !navigation->IsErrorPage(),
               navigation->IsErrorPage() ? @"navigation_failed" : nil);
@@ -911,6 +1181,11 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     if (!State().disposing) observation(@"closed", @{});
   }
 };
+
+void RefreshStoreButtons() {
+  if (State().disposing) return;
+  for (const auto& [id, page] : State().pages) page->PublishStoreState();
+}
 
 void OfferNativePage(base::WeakPtr<content::WebContents> contents, bool foreground);
 
@@ -1605,6 +1880,11 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     if (!zoom || !std::isfinite(factor) || factor < 0.25 || factor > 5) return NO;
     zoom->SetZoomMode(zoom::ZoomController::ZOOM_MODE_ISOLATED);
     zoom->SetZoomLevel(blink::ZoomFactorToZoomLevel(factor));
+  } else if ([command isEqualToString:@"engine.store_state"]) {
+    // The core finished or abandoned an install review; the listing's own
+    // button goes back to the state Chromium's registry reports.
+    page->store_request_open = false;
+    page->PublishStoreState();
   } else if ([command isEqualToString:@"engine.close_page"]) {
     const int index = page->browser->tab_strip_model()->GetIndexOfWebContents(contents);
     if (index < 0 || page->closing) return NO;

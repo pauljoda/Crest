@@ -267,6 +267,31 @@ final class ChromiumNativePage: BrowserPageEngine {
         observer("developer_panel", [:])
     }
 
+    /// The Chrome Web Store listing this page is showing asked Crest to install
+    /// or remove the extension it is about. The engine has already checked that
+    /// the extension is the one the page's own URL names, and the destination is
+    /// this page's own Space — a listing can never reach another Space or a
+    /// private window, which keeps no persistent extension state.
+    private func performStoreRequest(_ event: String, _ values: [String: Any]) {
+        let store = CrestChromiumRoot.extensions
+        guard !isPrivateBrowsing, let id = values["id"] as? String,
+            let space = CrestChromiumRoot.extensionSpaces.first(where: { $0.profile.id == profileID })
+        else { refreshStoreState(); return }
+        let refresh: @MainActor () -> Void = { [weak self] in self?.refreshStoreState() }
+        if event == "store_remove" {
+            store.confirmRemoval(id, in: space, completion: refresh)
+        } else {
+            store.install(id, in: space, anchor: surface, completion: refresh)
+        }
+    }
+
+    /// Restates the listing's install button from Chromium's own registry once
+    /// an install review has finished, been canceled, or was never offered.
+    private func refreshStoreState() {
+        guard created, !disposed else { return }
+        _ = host?.command("engine.store_state", page: id, url: nil)
+    }
+
     static func webStoreExtensionID(_ url: URL?) -> String? {
         guard let url, url.scheme == "https", url.host == "chromewebstore.google.com",
             url.pathComponents.count >= 3, url.pathComponents[1] == "detail",
@@ -386,6 +411,8 @@ final class ChromiumNativePage: BrowserPageEngine {
             navigatePendingURL()
         } else if event == "creation_failed" {
             creating = false
+        } else if event == "store_install" || event == "store_remove" {
+            performStoreRequest(event, values)
         }
         observer(event, ChromiumInternalURL.presentedValues(values))
     }
