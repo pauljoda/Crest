@@ -102,12 +102,20 @@ final class ChromiumExtensionStore {
         revision &+= 1
         return items.first { $0.id == extensionID }
     }
+    /// - Parameter openSidePanel: Supplied only when the extension has a side
+    ///   panel entry for the page the action was presented on. The caller owns
+    ///   the window the panel would mount into, so it also owns the check.
     func presentMenu(_ action: BrowserExtensionActionPresentation, space: BrowserSpace,
-                     anchor: BrowserExtensionPopupAnchor?, isPrivate: Bool = false) {
+                     anchor: BrowserExtensionPopupAnchor?, isPrivate: Bool = false,
+                     openSidePanel: (@MainActor () -> Void)? = nil) {
         let menu = NSMenu(title: action.displayName)
         menu.autoenablesItems = false
         let handler = ExtensionMenuHandler()
         let record = installedRecord(action.id, in: space)
+        if let openSidePanel {
+            menu.addItem(handler.item(String(localized: "Open Side Panel")) { openSidePanel() })
+            menu.addItem(.separator())
+        }
         // A private window must never change the Space's persistent extension
         // state, so only the navigation verbs are offered from one.
         if !isPrivate {

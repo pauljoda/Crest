@@ -575,6 +575,52 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
     }
 
+    // MARK: - Engine-created windows
+
+    /// Reserves the Crest window that will host a Browser the engine created
+    /// for itself — `chrome.windows.create`, an extension app window — and
+    /// names the Space its tabs belong to.
+    ///
+    /// Nothing is presented here: the engine creates the Browser first and
+    /// offers its tabs afterwards, and a renderer popup keeps its opener's
+    /// window instead. A profile with no Space to host it is declined, so the
+    /// engine drops those tabs rather than routing them into an unrelated
+    /// Space. An off-the-record profile belongs to the private window and is
+    /// declined outright when that window is closed.
+    @objc(reserveEngineWindowForProfile:)
+    static func reserveEngineWindow(forProfile profileID: String) -> [String: String]? {
+        guard let instance, !instance.quitting, let profile = UUID(uuidString: profileID) else { return nil }
+        if let space = instance.application.privateBrowser.session.spaces.first(where: { $0.profile.id == profile }) {
+            guard let identifier = instance.privateWindow?.identifier?.rawValue else { return nil }
+            return ["windowId": identifier, "spaceId": space.id.rawValue.uuidString]
+        }
+        guard let space = extensionSpaces.first(where: { $0.profile.id == profile }) else { return nil }
+        return ["windowId": BrowserWindowID().rawValue.uuidString, "spaceId": space.id.rawValue.uuidString]
+    }
+
+    /// Opens the window reserved for an engine-created Browser, just before its
+    /// first tab is offered for adoption.
+    @objc(presentEngineWindow:space:focused:)
+    static func presentEngineWindow(_ windowID: String, space spaceID: String, focused: Bool) {
+        guard let instance, !instance.quitting, let identifier = UUID(uuidString: windowID),
+            let space = UUID(uuidString: spaceID).map(SpaceID.init(rawValue:)) else { return }
+        if let window = instance.privateWindow, window.identifier?.rawValue == windowID {
+            if focused { window.makeKeyAndOrderFront(nil) }
+            return
+        }
+        let id = BrowserWindowID(rawValue: identifier)
+        if instance.windows[id] == nil { instance.openWindow(BrowserMacWindowRequest(id: id, kind: .normal)) }
+        guard let window = instance.windows[id],
+            let model = instance.application.windowCoordinator.existingModel(for: id) else { return }
+        model.browser.selectSpace(space)
+        if focused {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            window.orderFront(nil)
+        }
+    }
+
     @objc(windowForIdentifier:)
     static func window(for identifier: String?) -> NSWindow? {
         guard let instance else { return nil }

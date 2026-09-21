@@ -11,12 +11,18 @@
  #include "chrome/browser/ui/browser_window_deleter.h"
  #include "chrome/browser/ui/fullscreen/browser_window_fullscreen_controller.h"
  #include "chrome/browser/ui/views/frame/browser_native_widget_factory.h"
-@@ -30,6 +34,11 @@
+@@ -30,6 +34,17 @@
  BrowserWindow::CreateBrowserWindow(Browser* browser,
                                     bool user_gesture,
                                     bool in_tab_dragging) {
 +#if BUILDFLAG(IS_MAC)
-+  if (crest::IsEnabled() && (browser->is_type_normal() || browser->is_type_popup())) {
++  // Crest composes every browsing window, including the ones the engine
++  // creates for itself: chrome.windows.create, renderer popups and app
++  // windows. DevTools and picture-in-picture keep their Views windows, which
++  // Chromium drives entirely on its own.
++  if (crest::IsEnabled() &&
++      (browser->is_type_normal() || browser->is_type_popup() ||
++       browser->is_type_app() || browser->is_type_app_popup())) {
 +    return std::unique_ptr<BrowserWindow, BrowserWindowDeleter>(new CrestBrowserWindow(browser));
 +  }
 +#endif

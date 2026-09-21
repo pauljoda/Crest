@@ -5,6 +5,7 @@ struct BrowserPinnedExtensionStrip: View {
     let space: BrowserSpace
     private var store: ChromiumExtensionStore { CrestChromiumRoot.extensions }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(BrowserExtensionSidePanelHost.self) private var sidePanel: BrowserExtensionSidePanelHost?
 
     var body: some View {
         let actions = page.map { store.actions(for: $0).filter(\.isPinned) } ?? []
@@ -14,7 +15,9 @@ struct BrowserPinnedExtensionStrip: View {
                     perform: { action, anchor in page.runExtension(action.id, anchor: anchor) },
                     presentMenu: { action, anchor in
                         store.presentMenu(action, space: space, anchor: anchor,
-                            isPrivate: page.isPrivateBrowsing)
+                            isPrivate: page.isPrivateBrowsing,
+                            openSidePanel: BrowserExtensionSidePanelHost.opener(
+                                action, page: page, host: sidePanel))
                     })
                     .padding(.top, BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
                         + (space.tabSections.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset))
@@ -31,6 +34,7 @@ struct ChromiumExtensionControls: View {
     let url: URL?
     let dismiss: () -> Void
     private var store: ChromiumExtensionStore { CrestChromiumRoot.extensions }
+    @Environment(BrowserExtensionSidePanelHost.self) private var sidePanel: BrowserExtensionSidePanelHost?
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
@@ -44,9 +48,11 @@ struct ChromiumExtensionControls: View {
                 togglePinned: { store.togglePin($0, space: space) },
                 presentMenu: { action, anchor in
                     let retained = anchor?.replacingSourceWindow(page.surface.window)
+                    let openSidePanel = BrowserExtensionSidePanelHost.opener(
+                        action, page: page, host: sidePanel)
                     afterDismiss {
                         store.presentMenu(action, space: space, anchor: retained,
-                            isPrivate: page.isPrivateBrowsing)
+                            isPrivate: page.isPrivateBrowsing, openSidePanel: openSidePanel)
                     }
                 })
             if !page.isPrivateBrowsing, let id = ChromiumNativePage.webStoreExtensionID(url) {

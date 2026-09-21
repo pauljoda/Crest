@@ -1193,19 +1193,29 @@ final class BrowserPagePool:
     /// JavaScript state and extension tab identity, in the shared tab runtime.
     func adoptChromiumPage(_ values: [String: Any]) -> Bool {
         guard let token = values["adoptionId"] as? String,
-            let profile = (values["profileId"] as? String).flatMap(UUID.init(uuidString:)) else { return false }
-        let sourceID = values["sourcePageId"] as? String
-        let opener: BrowserPage?
-        if let sourceID {
-            opener = tabRuntimes.values.compactMap(\.page).first { $0.chromiumPage?.id == sourceID }
+            let profile = (values["profileId"] as? String)
+                .flatMap(UUID.init(uuidString:)) else { return false }
+        let destination: SpaceID
+        if let sourceID = values["sourcePageId"] as? String {
+            guard let opener = tabRuntimes.values.compactMap(\.page)
+                .first(where: { $0.chromiumPage?.id == sourceID }),
+                opener.profileID == profile else { return false }
+            destination = opener.spaceID
         } else {
             guard values["windowId"] as? String == windowID.rawValue.uuidString else { return false }
-            opener = activePage
+            // A window Crest opened for an engine-created window names the
+            // Space it was opened for: it has no page yet to treat as opener.
+            let target = (values["spaceId"] as? String)
+                .flatMap(UUID.init(uuidString:)).map(SpaceID.init(rawValue:))
+            if let target {
+                destination = target
+            } else if let opener = activePage, opener.profileID == profile {
+                destination = opener.spaceID
+            } else { return false }
         }
-        guard let opener, opener.profileID == profile,
-            !isRuntimeCreationBlocked(in: opener.spaceID),
+        guard !isRuntimeCreationBlocked(in: destination),
             let registration = popupTabHost.openTab(
-                (values["url"] as? String).flatMap(URL.init(string:)), opener.spaceID,
+                (values["url"] as? String).flatMap(URL.init(string:)), destination,
                 values["foreground"] as? Bool ?? true),
             registration.space.profile.id == profile else { return false }
         let page = makePage(space: registration.space, tabID: registration.tab.id)

@@ -14,6 +14,10 @@ namespace crest {
 bool IsEnabled();
 void OnBrowserWindowCreated(Browser* browser);
 void OnBrowserWindowDestroyed(Browser* browser);
+// A Browser the engine created for itself was shown. Crest opens the window it
+// reserved for that Browser when the Browser's first tab is offered, so this
+// only records whether `chrome.windows.create` asked for focus.
+void OnEngineWindowShown(Browser* browser, bool focused);
 void EnsureCrestUIStarted(Browser* browser);
 // Chrome's AppController retains its lifecycle role. A quit waits for core saves.
 bool DeferQuit();

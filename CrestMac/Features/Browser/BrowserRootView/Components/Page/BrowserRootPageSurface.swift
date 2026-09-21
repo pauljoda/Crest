@@ -45,7 +45,7 @@ struct BrowserRootPageSurface: View {
             hasEnteredSplitContent:
                 isSelectedSpace && model.sidebarInteraction.sidebarReorderState.hasEnteredSplitContent,
             resolvedTarget: isSelectedSpace ? model.sidebarInteraction.sidebarReorderState.resolvedTarget : nil,
-            presentsTrailingPanel: false
+            presentsTrailingPanel: isSelectedSpace && model.extensionSidePanel.panel != nil
         )
     }
 

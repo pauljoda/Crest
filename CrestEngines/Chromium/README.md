@@ -216,8 +216,27 @@ the separate experimental bundle needs its own Apple approval. Merely adding the
 entitlement to an experimental signature does not make it authorized.
 
 Private windows use separate off-the-record profiles, and extension actions are
-filtered by Chromium's incognito authorization. Extension side panels and complete
-extension-created window routing remain integration work.
+filtered by Chromium's incognito authorization.
+
+A browsing window the engine creates for itself — `chrome.windows.create`, an
+extension app window — routes to a Crest window. Crest reserves the window when
+the Browser is created, maps its profile to a Space, and opens the window when
+the Browser's first tab is offered for adoption; a renderer popup still joins
+its opener's window instead. An off-the-record profile maps only to the private
+window, and a profile with no Space to host it is declined rather than routed
+into an unrelated Space. `focused: false` opens the window without making it
+key; a requested window `state` is ignored. DevTools and picture-in-picture keep
+their Views windows, which Chromium drives on its own.
+
+Extension side panels are hosted as a card in the page row beside the page they
+belong to, not as a tab, and are neither persisted nor synced. Crest resolves
+the panel through `extensions::SidePanelService` and
+`ExtensionViewHostFactory::CreateSidePanelHost`; Chrome's own
+`SidePanelCoordinator`, reader and reading-list panels stay off. Only the
+extension action's context menu opens a panel today: `chrome.sidePanel.open()`
+and the action's open-on-icon-click behavior both run through
+`SidePanelService::OpenSidePanelForTab`, which drives the Views side-panel UI
+this build never creates, so they are still unrouted.
 
 Packaged experiments require `--signing-identity` with a stable Apple Development
 or Developer ID identity. Ad-hoc signing changes the keychain trust identity on

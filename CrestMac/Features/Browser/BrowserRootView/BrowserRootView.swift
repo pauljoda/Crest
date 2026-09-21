@@ -73,6 +73,9 @@ struct BrowserRootView: View {
             )
         )
         .environment(model.sidebarInteraction)
+        // Extension controls anywhere in the window open the panel into this
+        // window's own row, so they read the host rather than being handed it.
+        .environment(model.extensionSidePanel)
         .navigationTitle(Text(verbatim: model.windowTitle))
     }
 }

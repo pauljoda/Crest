@@ -46,6 +46,15 @@ typedef void (^CrestDeferredNavigation)(void);
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForPage:(NSString *)pageID;
 - (BOOL)runExtension:(NSString *)extensionID page:(NSString *)pageID
          anchorView:(NSView *)anchorView anchorRect:(NSRect)anchorRect;
+// Extension side panels. A panel is hosted as a Crest split-row card beside
+// the page it belongs to: it is not a tab, is never persisted and never syncs.
+// `closed` runs when the panel document or its extension host goes away.
+- (BOOL)hasSidePanel:(NSString *)extensionID page:(NSString *)pageID
+    NS_SWIFT_NAME(hasSidePanel(_:page:));
+- (nullable NSView *)openSidePanel:(NSString *)extensionID page:(NSString *)pageID
+                            closed:(void (^)(void))closed
+    NS_SWIFT_NAME(openSidePanel(_:page:closed:));
+- (void)closeSidePanelForPage:(NSString *)pageID NS_SWIFT_NAME(closeSidePanel(page:));
 - (void)prepareExtensionProfile:(NSString *)profileID completion:(void (^)(BOOL ready))completion;
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForProfile:(NSString *)profileID;
 - (BOOL)extensionCommand:(NSString *)command extension:(NSString *)extensionID profile:(NSString *)profileID window:(NSString *)windowID;

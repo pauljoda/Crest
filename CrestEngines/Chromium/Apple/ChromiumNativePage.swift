@@ -213,6 +213,24 @@ final class ChromiumNativePage: BrowserPageEngine {
         }
     }
 
+    /// Whether `extensionID` has a side panel entry for this page's own tab.
+    func hasSidePanel(_ extensionID: String) -> Bool {
+        guard created, !disposed, let host else { return false }
+        return host.hasSidePanel(extensionID, page: id)
+    }
+
+    /// Creates the panel document and returns its view for the core to mount.
+    /// `closed` runs when the panel or its extension host goes away on its own.
+    func openSidePanel(_ extensionID: String, closed: @escaping () -> Void) -> NSView? {
+        guard created, !disposed, let host else { return nil }
+        return host.openSidePanel(extensionID, page: id, closed: closed)
+    }
+
+    func closeSidePanel() {
+        guard created, !disposed else { return }
+        host?.closeSidePanel(page: id)
+    }
+
     static func webStoreExtensionID(_ url: URL?) -> String? {
         guard let url, url.scheme == "https", url.host == "chromewebstore.google.com",
             url.pathComponents.count >= 3, url.pathComponents[1] == "detail",

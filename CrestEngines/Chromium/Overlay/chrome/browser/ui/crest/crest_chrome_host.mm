@@ -55,6 +55,7 @@
 #include "components/permissions/permission_uma_util.h"
 #include "chrome/browser/devtools/devtools_toggle_action.h"
 #include "chrome/browser/devtools/devtools_window.h"
+#include "chrome/browser/extensions/api/side_panel/side_panel_service.h"
 #include "chrome/browser/extensions/extension_action_runner.h"
 #include "chrome/browser/extensions/extension_view.h"
 #include "chrome/browser/extensions/extension_view_host.h"
@@ -122,6 +123,8 @@
 @interface CrestRoot : NSObject
 + (void)startWithHost:(id<CrestChromiumEngineHost>)host;
 + (NSWindow*)windowForIdentifier:(NSString*)identifier;
++ (NSDictionary<NSString*, NSString*>*)reserveEngineWindowForProfile:(NSString*)profileID;
++ (void)presentEngineWindow:(NSString*)windowID space:(NSString*)spaceID focused:(BOOL)focused;
 + (BOOL)deferQuit;
 + (BOOL)reopen;
 + (BOOL)openExternalURLs:(NSArray<NSURL*>*)urls;
@@ -203,6 +206,63 @@ class ExtensionPopup final : public extensions::ExtensionView,
   NSPopover* __strong popover_ = nil;
   id __strong close_observer_ = nil;
   base::WeakPtrFactory<ExtensionPopup> weak_factory_{this};
+};
+// An extension side panel is a Crest split-row card, not a Views
+// SidePanelEntry: Crest never instantiates Chrome's SidePanelCoordinator. Only
+// the extension host and its view belong to Chromium; placement, sizing and
+// dismissal are the core's, and the card owns this object's lifetime.
+class ExtensionSidePanel final : public extensions::ExtensionView,
+                                 public extensions::ExtensionHostObserver {
+ public:
+  ExtensionSidePanel(std::unique_ptr<extensions::ExtensionViewHost> host, void (^closed)(void))
+      : host_(std::move(host)), closed_([closed copy]) {
+    container_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 600)];
+    container_.autoresizesSubviews = YES;
+    host_->set_view(this);
+    host_->AddObserver(this);
+    auto weak = weak_factory_.GetWeakPtr();
+    // The panel's own document called window.close(), or the extension
+    // retracted its entry. Either way the card goes away with it.
+    host_->SetCloseHandler(base::BindOnce([](base::WeakPtr<ExtensionSidePanel> panel, extensions::ExtensionHost*) {
+      dispatch_async(dispatch_get_main_queue(), ^{ if (panel) panel->Dismiss(); });
+    }, weak));
+    NSView* view = host_->host_contents()->GetNativeView().GetNativeNSView();
+    view.frame = container_.bounds;
+    view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [container_ addSubview:view];
+    host_->CreateRendererSoon();
+  }
+  ~ExtensionSidePanel() override { Close(); }
+  NSView* container() { return container_; }
+  void Close() {
+    weak_factory_.InvalidateWeakPtrs();
+    closed_ = nil;
+    if (host_) { host_->RemoveObserver(this); host_.reset(); }
+  }
+  gfx::NativeView GetNativeView() override {
+    return host_ ? host_->host_contents()->GetNativeView() : gfx::NativeView();
+  }
+  // The card is laid out by the row, so the panel document never resizes it.
+  void ResizeDueToAutoResize(content::WebContents*, const gfx::Size&) override {}
+  void RenderFrameCreated(content::RenderFrameHost*) override {}
+  bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent&) override { return false; }
+  void OnLoaded() override {}
+  void OnExtensionHostDestroyed(extensions::ExtensionHost* host) override {
+    if (host_.get() == host) host_.release();
+    Dismiss();
+  }
+ private:
+  // Hands the dismissal to the core, which removes the card and then releases
+  // this object. Nothing may touch `this` afterwards.
+  void Dismiss() {
+    void (^closed)(void) = closed_;
+    Close();
+    if (closed) closed();
+  }
+  std::unique_ptr<extensions::ExtensionViewHost> host_;
+  void (^__strong closed_)(void);
+  NSView* __strong container_ = nil;
+  base::WeakPtrFactory<ExtensionSidePanel> weak_factory_{this};
 };
 class NativePermissionPrompt final : public permissions::PermissionPrompt {
  public:
@@ -696,6 +756,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   uint64_t navigation_revision = 0;
   uint64_t navigation_generation = 0;
   std::unique_ptr<ExtensionPopup> extension_popup;
+  std::unique_ptr<ExtensionSidePanel> side_panel;
   std::unique_ptr<PageDocumentService> document_service;
   void Publish(bool committed = false, NSString* failure = nil) {
     if (!web_contents() || State().disposing) return;
@@ -760,6 +821,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       dispatch_async(dispatch_get_main_queue(), ^{ AdvancePageClosePreparation(generation, false); });
     }
     extension_popup.reset();
+    side_panel.reset();
     Observe(nullptr);
     if (!State().disposing) observation(@"closed", @{});
   }
@@ -776,6 +838,13 @@ struct BrowserOwner final : TabStripModelObserver {
   Browser* browser;
   std::string window;
   TabStripModel* strip;
+  // Set only for a Browser the engine created for itself. `space` names the
+  // Crest Space that reserved `window`; the window itself is opened lazily,
+  // when the first tab that cannot join an opener is offered.
+  std::string space;
+  bool engine_window = false;
+  bool presented = false;
+  bool focused = true;
   void OnTabStripModelChanged(TabStripModel*, const TabStripModelChange& change,
                              const TabStripSelectionChange& selection) override {
     if (change.type() != TabStripModelChange::kInserted || State().disposing) return;
@@ -816,14 +885,23 @@ void OfferNativePage(base::WeakPtr<content::WebContents> contents, bool foregrou
       if (page->web_contents() == source) { source_id = base::SysUTF8ToNSString(id); break; }
   }
   NSString* url = base::SysUTF8ToNSString(contents->GetVisibleURL().spec());
-  id native_window = NSNull.null;
+  BrowserOwner* host = nullptr;
   for (const auto& [id, owner] : state.browsers)
-    if (owner->strip && owner->strip->GetIndexOfWebContents(contents.get()) >= 0) {
-      native_window = base::SysUTF8ToNSString(owner->window); break;
-    }
+    if (owner->strip && owner->strip->GetIndexOfWebContents(contents.get()) >= 0) { host = owner.get(); break; }
+  // A window the engine created for itself (chrome.windows.create, an
+  // extension app window) has no Crest window until one of its tabs needs it.
+  // A renderer popup keeps its opener's window instead: that tab is adopted
+  // beside the page that opened it, exactly as it was before this path existed.
+  if (host && host->engine_window && !host->presented && source_id == NSNull.null) {
+    host->presented = true;
+    [NSClassFromString(@"CrestRoot") presentEngineWindow:base::SysUTF8ToNSString(host->window)
+                                                  space:base::SysUTF8ToNSString(host->space)
+                                                focused:host->focused ? YES : NO];
+  }
   state.browser_observation(@{
     @"adoptionId": base::SysUTF8ToNSString(token), @"profileId": base::SysUTF8ToNSString(profile_id),
-    @"windowId": native_window,
+    @"windowId": host ? base::SysUTF8ToNSString(host->window) : (id)NSNull.null,
+    @"spaceId": host && !host->space.empty() ? base::SysUTF8ToNSString(host->space) : (id)NSNull.null,
     @"sourcePageId": source_id, @"url": url.length ? url : @"about:blank", @"foreground": @(foreground) });
 }
 
@@ -841,6 +919,32 @@ Browser* BrowserFor(const std::string& profile_id, const std::string& window_id)
   state.creating_window.clear();
   state.browsers.emplace(key, std::make_unique<BrowserOwner>(browser, window_id));
   return browser;
+}
+
+// Reserves the Crest window that will host a Browser the engine created for
+// itself, so `WindowForBrowser` resolves and its tabs can be offered with a
+// window the core recognizes. The window is opened only once a tab needs it.
+// A profile with no Space to host it is declined rather than routed into an
+// unrelated Space; an off-the-record profile belongs to the private window
+// composition and is declined when that window is closed.
+bool RegisterEngineBrowser(Browser* browser) {
+  auto& state = State();
+  std::string profile_id;
+  for (const auto& [id, profile] : state.profiles)
+    if (profile == browser->GetProfile()) { profile_id = id; break; }
+  if (profile_id.empty() || state.deleting_profiles.contains(profile_id)) return false;
+  NSDictionary<NSString*, NSString*>* placement = [NSClassFromString(@"CrestRoot")
+      reserveEngineWindowForProfile:base::SysUTF8ToNSString(profile_id)];
+  NSString* window = placement[@"windowId"];
+  NSString* space = placement[@"spaceId"];
+  if (!window.length || !space.length) return false;
+  const std::string key = profile_id + "/" + base::SysNSStringToUTF8(window);
+  if (state.browsers.contains(key)) return false;
+  auto owner = std::make_unique<BrowserOwner>(browser, base::SysNSStringToUTF8(window));
+  owner->space = base::SysNSStringToUTF8(space);
+  owner->engine_window = true;
+  state.browsers.emplace(key, std::move(owner));
+  return true;
 }
 
 download::DownloadItem* FindDownload(NSString* profile_id, NSString* guid) {
@@ -1017,6 +1121,20 @@ void ContinueQuitPreparation(uint64_t generation, bool proceed) {
 Page* FindPage(NSString* identifier) {
   auto found = State().pages.find(base::SysNSStringToUTF8(identifier));
   return found == State().pages.end() ? nullptr : found->second.get();
+}
+// The extension, only if it has a side panel entry for this page's own tab.
+// Crest resolves the panel itself: `SidePanelService::OpenSidePanelForTab`
+// drives Chrome's Views side-panel UI, which this build never creates.
+const extensions::Extension* SidePanelExtension(NSString* extension_id, Page* page) {
+  if (!page || !page->web_contents()) return nullptr;
+  Profile* profile = page->browser->GetProfile();
+  const auto id = base::SysNSStringToUTF8(extension_id);
+  const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(id);
+  if (!extension || (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, profile))) return nullptr;
+  auto* service = extensions::SidePanelService::Get(profile);
+  if (!service) return nullptr;
+  const int tab = sessions::SessionTabHelper::IdForTab(page->web_contents()).id();
+  return service->HasSidePanelActionForTab(*extension, tab) ? extension : nullptr;
 }
 }  // namespace
 
@@ -1426,6 +1544,33 @@ Page* FindPage(NSString* identifier) {
   if (!popup) return NO;
   page->extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), anchorView, anchorRect);
   return YES;
+}
+- (BOOL)hasSidePanel:(NSString*)extensionID page:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  return SidePanelExtension(extensionID, FindPage(pageID)) != nullptr;
+}
+- (NSView*)openSidePanel:(NSString*)extensionID page:(NSString*)pageID closed:(void (^)(void))closed {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  const auto* extension = SidePanelExtension(extensionID, page);
+  if (!extension) return nil;
+  auto* service = extensions::SidePanelService::Get(page->browser->GetProfile());
+  auto* contents = page->web_contents();
+  auto options = service->GetOptions(*extension, sessions::SessionTabHelper::IdForTab(contents).id());
+  if (!options.path || options.path->empty() || options.enabled == false) return nil;
+  const GURL url = extension->ResolveExtensionURL(*options.path);
+  if (!url.is_valid()) return nil;
+  auto panel = extensions::ExtensionViewHostFactory::CreateSidePanelHost(*extension, url,
+      page->browser, page->browser->tab_strip_model()->GetTabForWebContents(contents));
+  if (!panel) return nil;
+  page->side_panel = std::make_unique<ExtensionSidePanel>(std::move(panel), closed);
+  return page->side_panel->container();
+}
+- (void)closeSidePanelForPage:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page) return;
+  page->side_panel.reset();
 }
 - (NSString*)engineVersion { return base::SysUTF8ToNSString(version_info::GetVersionNumber()); }
 - (void)setExtensionReview:(void (^)(NSDictionary<NSString*, id>*, NSWindow*, void (^)(BOOL, BOOL)))review {
@@ -2100,10 +2245,12 @@ void OnBrowserWindowCreated(Browser* browser) {
     State().bootstrap = browser;
     State().root_profile = browser->GetProfile()->GetOriginalProfile();
   }
-  if (State().started && State().creating_window.empty()) {
-    const std::string key = "native/" + base::Uuid::GenerateRandomV4().AsLowercaseString();
-    State().browsers.emplace(key, std::make_unique<BrowserOwner>(browser, std::string()));
-  }
+  if (!State().started || !State().creating_window.empty()) return;
+  if (RegisterEngineBrowser(browser)) return;
+  // No Crest Space can host this profile. The Browser is still tracked so its
+  // tabs are offered and then declined, rather than left running unowned.
+  const std::string key = "native/" + base::Uuid::GenerateRandomV4().AsLowercaseString();
+  State().browsers.emplace(key, std::make_unique<BrowserOwner>(browser, std::string()));
 }
 void OnBrowserWindowDestroyed(Browser* browser) {
   if (State().bootstrap == browser) State().bootstrap = nullptr;
@@ -2136,11 +2283,28 @@ void EnsureCrestUIStarted(Browser* browser) {
   State().started = true;
   [NSClassFromString(@"CrestRoot") startWithHost:[[CrestChromiumHost alloc] init]];
 }
+void OnEngineWindowShown(Browser* browser, bool focused) {
+  if (!State().started) return;
+  for (const auto& [key, owner] : State().browsers) {
+    if (owner->browser != browser || !owner->engine_window || owner->presented) continue;
+    // `chrome.windows.create` with `focused: false` reaches ShowInactive().
+    owner->focused = focused;
+    return;
+  }
+}
 NSWindow* WindowForBrowser(Browser* browser) {
   if (!State().started) return nil;
   for (const auto& [key, owner] : State().browsers) {
-    if (owner->browser == browser && !owner->window.empty())
-      return [NSClassFromString(@"CrestRoot") windowForIdentifier:base::SysUTF8ToNSString(owner->window)];
+    if (owner->browser != browser || owner->window.empty()) continue;
+    // A reserved engine window has an identifier before it has a window: a
+    // renderer popup never opens the one reserved for it, because its tab is
+    // adopted into the opener's window. Those Browsers keep the same fallback
+    // they had before they carried an identifier at all.
+    if (NSWindow* window = [NSClassFromString(@"CrestRoot")
+            windowForIdentifier:base::SysUTF8ToNSString(owner->window)]) {
+      return window;
+    }
+    break;
   }
   if (!State().creating_window.empty())
     return [NSClassFromString(@"CrestRoot") windowForIdentifier:base::SysUTF8ToNSString(State().creating_window)];

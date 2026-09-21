@@ -1697,6 +1697,10 @@
     "chromium-host-product-packaging": {
       "category": "internal",
       "message": "Add a non-review Chromium host composition and a product packaging mode that carries Crest identity, URL and document types, and Sparkle update settings."
+    },
+    "chromium-extension-windows-and-side-panels": {
+      "category": "new",
+      "message": "Windows created by extensions open as Crest windows in the matching Space, and extensions with a side panel can open it beside the current page from their toolbar menu."
     }
   }
 }

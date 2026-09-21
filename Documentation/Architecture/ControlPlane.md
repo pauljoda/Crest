@@ -48,7 +48,7 @@ assets and opaque engine data stay outside semantic records.
 | 1. Finish core ownership | Move remaining Space, branding, preference, workspace, transfer, import, cleanup and restore decisions from Swift proposals to semantic commands. Consolidate the remaining Swift mutations around the real UI. Keep existing checkpoint compatibility and fail atomically when a command cannot commit. | Mac and mobile native UI perform the same operations against the core. Multiple windows reconcile correctly; restart restores accepted state. Remaining Swift mutations are presentation or adapter work, with no parallel domain implementation. |
 | 2. Move sync semantics | Port the existing record model, projection, order tokens, merge, materialization and tombstone policy to the core. Retain native CloudKit transport and account handling. Preserve wire compatibility and local-only records. | Focused record tests cover concurrent edits, delayed batches, explicit deletion, retention, older clients and restart. Chromium Mac and WebKit mobile then converge through real CloudKit in an isolated sync namespace, verified from records as well as UI. |
 | 3. Finish engine and service integration | Use the same registered page/profile contracts in the real UI. Complete tab/window before-unload, Crest download ledger integration, favicons, restoration, profile deletion, transfers and recovery. Inventory current reader, translation, capture, print, media, authentication, notification and page-action callers; adapt each supported feature and remove dormant WebKit objects from the Chromium path. | Exercise each migrated user flow in the native app. Capability declarations match actual adapter behavior and govern UI availability. Close cancellation, private/locked Space boundaries and interrupted operations preserve state. Unsupported engine features have explicit product behavior. |
-| 4. Complete native extensions | Preserve the restored toolbar, Site Controls, permission review, multi-Space installation and native Settings. Complete applicable action context menus, commands, extension-created windows and side panels. Keep Chromium responsible for verification, runtime permissions, updates and execution. Resolve iCloud Passwords through valid Crest signing and Apple's helper requirements. | uBlock Origin Lite filters real requests and retains profile settings. iCloud Passwords completes pairing and autofill with the properly entitled build and user participation where required. Installation, copying, removal and private access preserve Space ownership. |
+| 4. Complete native extensions | Preserve the restored toolbar, Site Controls, permission review, multi-Space installation and native Settings. Complete applicable action context menus, commands, extension-created windows and side panels. Extension-created windows and side panels are implemented against the pinned Chromium headers and remain unverified until a Chromium build runs them. Keep Chromium responsible for verification, runtime permissions, updates and execution. Resolve iCloud Passwords through valid Crest signing and Apple's helper requirements. | uBlock Origin Lite filters real requests and retains profile settings. iCloud Passwords completes pairing and autofill with the properly entitled build and user participation where required. Installation, copying, removal and private access preserve Space ownership. |
 | 5. Finish Crest identity and lifecycle | Package the Crest default icon, alternate artwork and Dock tile plug-in. Restore saved icon preferences at Chromium startup. Replace app-facing Chromium menu/About identity with Crest while retaining required engine attribution. Wire external links, reopen, quit, saved windows, browser registration and the intended update path into the host. | Finder, running Dock and Dock after quit use Crest artwork. Default/custom choices survive relaunch and appearance changes. App/menu version and identity are correct. External links and lifecycle actions reach the native Crest UI. |
 | 6. Complete app composition and migration | Make the core the normal app composition on both platforms. Keep isolated review identities and explicit profile roots. Provide a safe import/upgrade path for existing Crest state, with recovery copies and no implicit WebKit-to-Chromium cookie or credential conversion. Document reproducible builds, required entitlements and engine distribution requirements. Remove obsolete experiment UI and duplicate migration paths once the real app covers their contracts. | Fresh install, existing-session upgrade, restart, offline editing, sync reconnect and private browsing work on Mac and mobile. Original UI remains intact. Relevant retained tests and release builds pass; temporary build outputs are cleaned. Every remaining external dependency is named, and unfinished requirements remain open. |
 
@@ -569,8 +569,7 @@ no `@main` and does not replace Chromium's application delegate. The temporary
 `BrowserPage` and mounts its NSView inside the original page card. Navigation,
 Back, Forward, reload, stop, title, URL and loading observations cross the native
 host port. The existing pools still own page lifetimes and window presentation.
-Engine effects have not yet moved to the asynchronous core dispatcher in this
-composition and do not need that additional hop: page operations use the shared
+Engine effects do not pass through the core: page operations use the shared
 native engine port, while portable session changes remain core-owned.
 
 Chromium's native page context menu also works without a Views widget around the
@@ -695,9 +694,14 @@ snapshot, retention, and child-record deletions do not authorize profile cleanup
 Adapter failures retain the intent for the next sync or launch; windows cannot
 reopen that profile while cleanup is pending.
 
-There are still migration gaps.
-Other WebKit-specific page tools and extension side panels need
-their Chromium adapters.
+Remaining migration gaps are: whole-page translation and Reader in Chromium
+(explicitly unavailable; selection translation is provided), the locked-Space
+command gate in the core, `chrome.commands` extension shortcuts, iCloud Passwords
+authorization with a properly signed Crest identity, signing and provisioning of
+the product identity, and compiling the unverified Chromium overlay changes in a
+Chromium build. Extension side panels have an adapter: a panel is a card in the page row, opened from the extension
+action's context menu, while `chrome.sidePanel.open()` and open-on-icon-click
+remain unrouted because both drive Chrome's Views side-panel UI.
 Profile capabilities must describe this actual integration
 before features are advertised as supported.
 

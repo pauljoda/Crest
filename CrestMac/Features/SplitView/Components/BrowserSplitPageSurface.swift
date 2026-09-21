@@ -92,6 +92,22 @@ struct BrowserSplitPageSurface: View {
                     focusesOnHover: { focusesOnHover(member.id) },
                     onFocusRequest: { if isSelectedSpace { model.focusSplitCard(member.id) } }
                 )
+            },
+            panel: isSelectedSpace && model.extensionSidePanel.panel != nil
+                ? .init(requestedWidth: model.extensionSidePanel.width) : nil,
+            onPanelResizeCommit: { model.extensionSidePanel.commitWidth($0) },
+            panelContent: {
+                if isSelectedSpace, let panel = model.extensionSidePanel.panel {
+                    BrowserExtensionSidePanelCard(host: model.extensionSidePanel, panel: panel)
+                        // The carry gesture must be able to tell the panel
+                        // divider from a card divider.
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: BrowserSplitCardFrameRegistry.coordinateSpace)
+                        } action: {
+                            panelFrame = $0
+                        }
+                        .onDisappear { panelFrame = nil }
+                }
             }
         )
         .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)

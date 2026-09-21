@@ -641,7 +641,10 @@ bool CrestBrowserWindow::IsFullscreen() const {
 
 void CrestBrowserWindow::Hide() { [crest::WindowForBrowser(browser_) orderOut:nil]; }
 
-void CrestBrowserWindow::ShowInactive() { [crest::WindowForBrowser(browser_) orderFront:nil]; }
+void CrestBrowserWindow::ShowInactive() {
+  crest::OnEngineWindowShown(browser_, false);
+  [crest::WindowForBrowser(browser_) orderFront:nil];
+}
 
 void CrestBrowserWindow::Deactivate() {}
 
@@ -1070,6 +1073,7 @@ void CrestBrowserWindow::DeleteBrowserWindow() {
 
 void CrestBrowserWindow::Show() {
   crest::EnsureCrestUIStarted(browser_);
+  crest::OnEngineWindowShown(browser_, true);
 }
 
 void CrestBrowserWindow::Close() {
