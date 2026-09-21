@@ -11,13 +11,14 @@ final class BrowserCoreSessionAuthority {
     @ObservationIgnored private var revision: UInt64
     @ObservationIgnored private let owner: SessionHandle
 
-    init(session: BrowserSession, workspaceKind: String = "persistent") {
+    init(session: BrowserSession, workspaceKind: String = "persistent", privateBrowsing: Bool = false) {
         projection = session
         do {
             guard var input = try Self.value(Self.compact(session)) as? [String: Any] else {
                 throw CoreError.rejected(CREST_INVALID_ARGUMENT)
             }
             input["coreWorkspaceKind"] = workspaceKind
+            input["corePrivateBrowsing"] = privateBrowsing || workspaceKind == "private"
             let data = try JSONSerialization.data(withJSONObject: input)
             var handle: UInt64 = 0; var initialRevision: UInt64 = 0
             let result = data.withUnsafeBytes {
@@ -78,22 +79,87 @@ final class BrowserCoreSessionAuthority {
         guard result == CREST_OK else { throw CoreError.rejected(result) }
     }
 
-    static func replacePair(
-        source: BrowserCoreSessionAuthority, sourceSession: BrowserSession,
-        destination: BrowserCoreSessionAuthority, destinationSession: BrowserSession
-    ) throws {
-        let empty = Data(#"{"version":1,"spaces":[]}"#.utf8)
-        let a = try source.delta(to: sourceSession) ?? empty
-        let b = try destination.delta(to: destinationSession) ?? empty
-        var ar: UInt64 = 0; var br: UInt64 = 0
-        let result = a.withUnsafeBytes { ap in b.withUnsafeBytes { bp in
-            crest_session_commit_pair(source.owner.value, source.revision, ap.bindMemory(to: UInt8.self).baseAddress, a.count,
-                destination.owner.value, destination.revision, bp.bindMemory(to: UInt8.self).baseAddress, b.count, &ar, &br)
-        } }
-        guard result == CREST_OK else { throw CoreError.rejected(result) }
+    func prepareTabMove(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
+        destination: BrowserSpaceRuntimeAssignment, arguments: [String: Any], window: BrowserSession,
+        at date: Date) throws -> PreparedChange {
+        guard let moved = window.space(id: source.spaceID)?.tabs.first(where: { $0.id == tabID })
+        else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+        let data = try JSONSerialization.data(withJSONObject: [
+            "version": 1, "operation": "tab.transfer", "spaceId": source.spaceID.rawValue.uuidString,
+            "profileId": source.profileID.uuidString, "destinationSpaceId": destination.spaceID.rawValue.uuidString,
+            "destinationProfileId": destination.profileID.uuidString, "arguments": arguments,
+            "window": Self.selection(for: window), "now": date.timeIntervalSinceReferenceDate
+        ])
+        let handle = try prepareCommand(data)
+        do {
+            let result = try JSONDecoder().decode(BrowserCoreTabTransfer.Result.self, from: readCommand(handle))
+            let intermediate = try BrowserCoreTabTransfer.applying(result.source, to: window, moved: moved)
+            let next = try BrowserCoreTabTransfer.applying(result.destination, to: intermediate, moved: moved,
+                selectingSpace: arguments["select"] as? Bool == true)
+            return PreparedChange(handle: handle, session: next)
+        } catch { crest_session_release_command(handle); throw error }
+    }
+
+    static func prepareTransfer(source: BrowserCoreSessionAuthority, sourceWindow: BrowserSession,
+        destination: BrowserCoreSessionAuthority, destinationWindow: BrowserSession,
+        tabID: TabID, assignment: BrowserSpaceRuntimeAssignment, fallback: TabID?, selecting: Bool) throws -> PreparedTransfer {
+        guard let moved = sourceWindow.space(id: assignment.spaceID)?.tabs.first(where: { $0.id == tabID })
+        else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+        let input = try JSONSerialization.data(withJSONObject: [
+            "version": 1, "spaceId": assignment.spaceID.rawValue.uuidString, "profileId": assignment.profileID.uuidString,
+            "sourceWindow": selection(for: sourceWindow), "destinationWindow": selection(for: destinationWindow),
+            "arguments": BrowserCoreTabTransfer.arguments(tabID: tabID, fallback: fallback, selecting: selecting),
+            "now": Date.now.timeIntervalSinceReferenceDate
+        ])
+        var handle: UInt64 = 0
+        let status = input.withUnsafeBytes { bytes in
+            crest_session_prepare_transfer(source.owner.value, source.revision, destination.owner.value, destination.revision,
+                bytes.bindMemory(to: UInt8.self).baseAddress, input.count, &handle)
+        }
+        guard status == CREST_OK else { throw CoreError.rejected(status) }
+        do {
+            var length = 0
+            let measured = crest_session_read_transfer(handle, nil, 0, &length)
+            guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 4 * 1024 * 1024
+            else { throw CoreError.rejected(measured) }
+            let capacity = length
+            var data = Data(count: capacity)
+            let read = data.withUnsafeMutableBytes {
+                crest_session_read_transfer(handle, $0.bindMemory(to: UInt8.self).baseAddress, capacity, &length)
+            }
+            guard read == CREST_OK else { throw CoreError.rejected(read) }
+            let result = try JSONDecoder().decode(BrowserCoreTabTransfer.Result.self, from: data)
+            return PreparedTransfer(handle: handle,
+                source: try BrowserCoreTabTransfer.applying(result.source, to: sourceWindow, moved: moved),
+                destination: try BrowserCoreTabTransfer.applying(result.destination, to: destinationWindow, moved: moved,
+                    selectingSpace: selecting))
+        } catch { crest_session_release_transfer(handle); throw error }
+    }
+    final class PreparedTransfer {
+        fileprivate let handle: UInt64
+        let source: BrowserSession
+        let destination: BrowserSession
+        fileprivate init(handle: UInt64, source: BrowserSession, destination: BrowserSession) {
+            self.handle = handle; self.source = source; self.destination = destination
+        }
+        deinit { crest_session_release_transfer(handle) }
+    }
+    static func commitTransfer(_ prepared: PreparedTransfer,
+        source: BrowserCoreSessionAuthority, destination: BrowserCoreSessionAuthority,
+        sync: BrowserCoreSyncTransaction? = nil,
+        persist: (any BrowserSessionCheckpoint, any BrowserSessionCheckpoint) throws -> Void) throws {
+        var a: UInt64 = 0, b: UInt64 = 0
+        let reserved = crest_session_reserve_transfer(prepared.handle, sync?.handle ?? 0, &a, &b)
+        guard reserved == CREST_OK else { throw CoreError.rejected(reserved) }
+        defer { crest_session_release_transfer(prepared.handle) }
+        let sourceCheckpoint = BrowserCoreSessionCheckpoint(handle: a)
+        let destinationCheckpoint = BrowserCoreSessionCheckpoint(handle: b)
+        try persist(sourceCheckpoint, destinationCheckpoint)
+        var ar: UInt64 = 0, br: UInt64 = 0
+        let committed = crest_session_commit_transfer(prepared.handle, &ar, &br)
+        precondition(committed == CREST_OK, "Lost core transfer reservation")
         source.revision = ar; destination.revision = br
-        // Both core graphs have committed before either window is reconciled.
-        source.projection = sourceSession; destination.projection = destinationSession
+        source.projection = prepared.source; destination.projection = prepared.destination
     }
 
     private static func selection(for window: BrowserSession) throws -> [String: Any] {

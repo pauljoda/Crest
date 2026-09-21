@@ -492,17 +492,22 @@ extension BrowserSession {
         else {
             return false
         }
+        #if CREST_CORE_BACKED
+        return (try? BrowserCoreTabTransfer.preview(source: source, destination: destination,
+            arguments: BrowserCoreTabTransfer.arguments(tabID: tab.id, placement: requestedPlacement), at: .now)) != nil
+        #else
         return BrowserTabPlacementPlan(
             moving: tab,
             to: requestedPlacement,
             in: destination,
             among: destination.tabs
         ) != nil
+        #endif
     }
 
-    /// Moves durable tab metadata across profile boundaries. The live WebKit page is
+    /// Moves durable tab metadata across profile boundaries. The live engine page is
     /// deliberately not part of this operation; page pools observe the changed runtime
-    /// assignment and rebuild the tab with the destination Space's website data store.
+    /// assignment and rebuild the tab with the destination Space's profile.
     @discardableResult
     mutating func moveTab(
         _ tabID: TabID,
@@ -524,6 +529,17 @@ extension BrowserSession {
             return false
         }
 
+        #if CREST_CORE_BACKED
+        let moved = spaces[sourceSpaceIndex].tabs[sourceTabIndex]
+        do {
+            let result = try BrowserCoreTabTransfer.preview(source: spaces[sourceSpaceIndex], destination: spaces[destinationSpaceIndex],
+                arguments: BrowserCoreTabTransfer.arguments(tabID: tabID, placement: requestedPlacement, folderID: requestedFolderID,
+                    before: destinationTabID, fallback: sourceFallbackTabID), at: date)
+            let intermediate = try BrowserCoreTabTransfer.applying(result.source, to: self, moved: moved)
+            self = try BrowserCoreTabTransfer.applying(result.destination, to: intermediate, moved: moved)
+            return true
+        } catch { return false }
+        #else
         let sourceTab = spaces[sourceSpaceIndex].tabs[sourceTabIndex]
         let destinationSpace = spaces[destinationSpaceIndex]
         guard
@@ -562,6 +578,7 @@ extension BrowserSession {
         // Organization does not activate the tab in its new profile or replace
         // the destination's remembered page. Drag navigation owns Space changes.
         return true
+        #endif
     }
 }
 

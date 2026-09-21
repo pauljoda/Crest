@@ -1,12 +1,14 @@
 import Foundation
 
 extension BrowserStore {
+    #if !CREST_CORE_BACKED
     private struct TabTransferPreparation {
         let sourceSpace: BrowserSpace
         let targetSpace: BrowserSpace
         let tab: BrowserTab
         let placement: BrowserTabPlacementPlan?
     }
+    #endif
 
     /// Borrows a Space's profile and policies while keeping browsing records
     /// in a separate, memory-only family. The window starts without a tab.
@@ -74,7 +76,16 @@ extension BrowserStore {
         to destination: BrowserStore,
         in destinationAssignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        prepareTabTransfer(id, matching: sourceAssignment, to: destination, in: destinationAssignment) != nil
+        #if CREST_CORE_BACKED
+        guard sourceAssignment == destinationAssignment, let source = space(matching: sourceAssignment),
+            source.contains(id), destination.space(matching: destinationAssignment) != nil,
+            isPrivateBrowsing == destination.isPrivateBrowsing else { return false }
+        if family === destination.family { return true }
+        return (try? BrowserStoreFamily.prepareTransfer(id, assignment: sourceAssignment,
+            source: self, destination: destination, fallback: nil, selecting: false)) != nil
+        #else
+        return prepareTabTransfer(id, matching: sourceAssignment, to: destination, in: destinationAssignment) != nil
+        #endif
     }
 
     @discardableResult
@@ -85,6 +96,33 @@ extension BrowserStore {
         in destinationAssignment: BrowserSpaceRuntimeAssignment,
         selecting: Bool = true
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        guard sourceAssignment == destinationAssignment, let source = space(matching: sourceAssignment),
+            source.contains(id), destination.space(matching: destinationAssignment) != nil,
+            isPrivateBrowsing == destination.isPrivateBrowsing else { return false }
+        if family === destination.family {
+            if selecting {
+                guard destination.activateSessionTab(id, in: destinationAssignment.spaceID) else { return false }
+                destination.persist(syncUrgency: .coalesced, scope: .core)
+            }
+            return true
+        }
+        var history = tabSelectionHistory
+        let fallback = history.fallbackTabID(afterDismissing: id, in: source.id,
+            availableTabIDs: Set(source.tabs.map(\.id)).subtracting([id]))
+        do {
+            let command = try BrowserStoreFamily.prepareTransfer(id, assignment: sourceAssignment,
+                source: self, destination: destination, fallback: fallback, selecting: selecting)
+            try BrowserStoreFamily.transfer(command, source: self, destination: destination)
+            tabSelectionHistory = history
+            tabSelectionHistory.reconcile(session: session)
+            tabMultiSelection.clear()
+            return true
+        } catch {
+            localSyncErrorDescription = "Core workspace transfer failed: \(error)"
+            return false
+        }
+        #else
         guard
             let prepared = prepareTabTransfer(
                 id, matching: sourceAssignment, to: destination, in: destinationAssignment
@@ -137,8 +175,10 @@ extension BrowserStore {
         persist(syncUrgency: .coalesced, scope: .core)
         destination.persist(syncUrgency: .coalesced, scope: .favicon(for: id))
         return true
+        #endif
     }
 
+    #if !CREST_CORE_BACKED
     private func prepareTabTransfer(
         _ id: TabID,
         matching sourceAssignment: BrowserSpaceRuntimeAssignment,
@@ -165,4 +205,5 @@ extension BrowserStore {
         return TabTransferPreparation(
             sourceSpace: sourceSpace, targetSpace: targetSpace, tab: tab, placement: placement)
     }
+    #endif
 }

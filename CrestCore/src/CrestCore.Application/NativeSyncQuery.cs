@@ -19,6 +19,8 @@ public static class NativeSyncQuery
         {
             JsonNode value = request["operation"]!.GetValue<string>() switch
             {
+                "transfer.preview" => NativeTabTransfer.Evaluate(request["source"]!.AsObject(), request["destination"]!.AsObject(),
+                    request["arguments"]!.AsObject(), request["now"]!.GetValue<double>()),
                 "project" => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
                     request["records"]!.AsArray().Select(n => n!.AsObject())),
                 "materialize" => Materialize(request),

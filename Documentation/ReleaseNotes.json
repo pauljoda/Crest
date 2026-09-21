@@ -1577,6 +1577,10 @@
     "setup-preview-window-inset": {
       "category": "fixed",
       "message": "Keep the setup sidebar preview comfortably inset from the window edge."
+    },
+    "shared-core-tab-transfers": {
+      "category": "improved",
+      "message": "Move tabs between Spaces and temporary windows while preserving their identity and saving changes consistently with sync."
     }
   }
 }

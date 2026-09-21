@@ -1122,7 +1122,12 @@ final class BrowserStoreTests: XCTestCase {
 
         XCTAssertEqual(deleter.deletedSpaces, [deletedSpace])
         XCTAssertNotNil(store.session.space(id: deletedSpace.id))
+        #if CREST_CORE_BACKED
+        XCTAssertEqual(store.deletingSpaceIDs, [deletedSpace.id])
+        XCTAssertEqual(persistence.session?.spaceDeletions?.first?.profileID, deletedSpace.profile.id)
+        #else
         XCTAssertTrue(store.deletingSpaceIDs.isEmpty)
+        #endif
         let descriptors = await vault.descriptors(
             in: deletedSpace.id
         )
@@ -1180,6 +1185,7 @@ final class BrowserStoreTests: XCTestCase {
             )
         }
         await deleter.waitUntilDeletionStarts()
+        let savedBeforeOpening = persistence.session
 
         XCTAssertTrue(store.deletingSpaceIDs.contains(destination.id))
         XCTAssertNil(
@@ -1198,7 +1204,7 @@ final class BrowserStoreTests: XCTestCase {
             store.session.space(id: destination.id)?.tabs.count,
             destinationTabCount
         )
-        XCTAssertNil(persistence.session)
+        XCTAssertEqual(persistence.session, savedBeforeOpening)
 
         deleter.finishDeletion()
         try await deletion.value

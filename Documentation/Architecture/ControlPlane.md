@@ -210,6 +210,15 @@ cannot publish or reserve storage. The Chromium process host presents the origin
 setup/import window through the native window port, including completion and
 dismissal; the SwiftUI app continues to use its existing scene.
 
+Cross-Space tab moves and same-profile temporary-window transfers prepare from
+the core's owned records. The core decides placement, split cleanup and
+destination selection, and validates the source window's fallback selection. A workspace transfer reserves both revisions
+until the persistent owner's session and sync journal are saved; cancellation
+leaves both graphs unchanged. Private browsing and stale profile identities
+cannot cross that boundary. The native coordinator moves the existing page
+through the engine adapter after the state commit, without navigating it again.
+Compact transfer projections exclude history, archive and native image bytes.
+
 `crest_core_evaluate_sync` runs wire-compatible conflict resolution and stable
 fractional ordering in the core. Record identity is validated on both sides of
 the boundary. `NativeSyncJournal` owns immutable journal snapshots: local staging,

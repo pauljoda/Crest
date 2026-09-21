@@ -125,6 +125,20 @@ CREST_API crest_status_t CREST_CALL crest_session_create(
     const uint8_t* session, size_t length, uint64_t* out_session, uint64_t* out_revision);
 CREST_API crest_status_t CREST_CALL crest_session_commit(
     uint64_t session, uint64_t expected_revision, const uint8_t* delta, size_t length, uint64_t* out_revision);
+/* Semantic same-profile workspace transfer. Reserve excludes both writers until
+   the durable owner's checkpoint and optional sync journal have been saved.
+   Releasing an uncommitted transfer cancels both reservations. */
+CREST_API crest_status_t CREST_CALL crest_session_prepare_transfer(
+    uint64_t source, uint64_t source_revision, uint64_t destination, uint64_t destination_revision,
+    const uint8_t *bytes, size_t count, uint64_t *transfer);
+CREST_API crest_status_t CREST_CALL crest_session_read_transfer(
+    uint64_t transfer, uint8_t *destination, size_t capacity, size_t *length);
+CREST_API crest_status_t CREST_CALL crest_session_reserve_transfer(
+    uint64_t transfer, uint64_t sync_transaction, uint64_t *source_checkpoint, uint64_t *destination_checkpoint);
+CREST_API crest_status_t CREST_CALL crest_session_commit_transfer(
+    uint64_t transfer, uint64_t *source_revision, uint64_t *destination_revision);
+CREST_API crest_status_t CREST_CALL crest_session_release_transfer(uint64_t transfer);
+
 CREST_API crest_status_t CREST_CALL crest_session_commit_pair(
     uint64_t source, uint64_t source_revision, const uint8_t* source_delta, size_t source_length,
     uint64_t destination, uint64_t destination_revision, const uint8_t* destination_delta, size_t destination_length,

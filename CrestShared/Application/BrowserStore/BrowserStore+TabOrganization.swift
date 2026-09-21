@@ -76,7 +76,11 @@ extension BrowserStore {
         }
         // A drag can cross several rows before it settles. Keep the local session
         // immediately responsive while coalescing the durable sync journal write.
+        #if CREST_CORE_BACKED
+        if actualSourceSpaceID == session.selectedSpaceID { persist(syncUrgency: .coalesced, scope: .core) }
+        #else
         persist(syncUrgency: .coalesced, scope: .core)
+        #endif
         return true
     }
 
@@ -169,7 +173,11 @@ extension BrowserStore {
         if sourceAssignment != destinationAssignment {
             interactionObserver?.browserDidMoveTab(from: item.runtimeAssignment, to: destinationAssignment)
         }
+        #if CREST_CORE_BACKED
+        if sourceAssignment == destinationAssignment { persist(syncUrgency: .coalesced, scope: .core) }
+        #else
         persist(syncUrgency: .coalesced, scope: .core)
+        #endif
         return true
     }
 
@@ -227,7 +235,9 @@ extension BrowserStore {
             from: BrowserTabRuntimeAssignment(tabID: id, spaceID: sourceSpace.id, profileID: sourceSpace.profile.id),
             to: BrowserSpaceRuntimeAssignment(space: destinationSpace)
         )
+        #if !CREST_CORE_BACKED
         persist(syncUrgency: .coalesced, scope: .core)
+        #endif
         return true
     }
 
@@ -258,6 +268,20 @@ extension BrowserStore {
                 afterDismissing: id, in: sourceSpaceID,
                 availableTabIDs: Set(source.tabs.map(\.id)))
             : nil
+        #if CREST_CORE_BACKED
+        guard let destination = session.space(id: destinationSpaceID) else { return false }
+        let follows = linkPreferences.followsTabsMovedToAnotherSpace
+        do {
+            try family.moveTab(id, source: BrowserSpaceRuntimeAssignment(space: source),
+                destination: BrowserSpaceRuntimeAssignment(space: destination),
+                arguments: BrowserCoreTabTransfer.arguments(tabID: id, placement: placement, folderID: folderID,
+                    before: destinationTabID, fallback: fallbackID, selecting: follows), from: self, at: .now)
+        } catch { localSyncErrorDescription = "Core tab move failed: \(error)"; return false }
+        if follows {
+            pendingMovedTabActivation = BrowserTabRuntimeAssignment(
+                tabID: id, spaceID: destination.id, profileID: destination.profile.id)
+        }
+        #else
         var draft = session
         guard
             draft.moveTab(
@@ -274,8 +298,9 @@ extension BrowserStore {
             pendingMovedTabActivation = BrowserTabRuntimeAssignment(
                 tabID: id, spaceID: destination.id, profileID: destination.profile.id)
         }
-        tabSelectionHistory = history
         session = draft
+        #endif
+        tabSelectionHistory = history
         return true
     }
 

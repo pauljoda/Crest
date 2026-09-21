@@ -35,7 +35,8 @@ final class BrowserStoreFamily {
     ) {
         #if CREST_CORE_BACKED
         core = BrowserCoreSessionAuthority(session: session,
-            workspaceKind: temporarySourceAssignment != nil ? "temporary" : browsingMode.isPrivate ? "private" : "persistent")
+            workspaceKind: temporarySourceAssignment != nil ? "temporary" : browsingMode.isPrivate ? "private" : "persistent",
+            privateBrowsing: browsingMode.isPrivate)
         #else
         authoritativeSession = session
         #endif
@@ -193,6 +194,61 @@ final class BrowserStoreFamily {
     }
     #endif
 
+    #if CREST_CORE_BACKED
+    func moveTab(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment, destination: BrowserSpaceRuntimeAssignment,
+        arguments: [String: Any], from store: BrowserStore, at date: Date) throws {
+        let previous = authoritativeSession
+        let command = try core.prepareTabMove(tabID, source: source, destination: destination,
+            arguments: arguments, window: store.session, at: date)
+        try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: store, at: date)
+    }
+
+    static func prepareTransfer(_ id: TabID, assignment: BrowserSpaceRuntimeAssignment,
+        source: BrowserStore, destination: BrowserStore, fallback: TabID?, selecting: Bool) throws -> BrowserCoreSessionAuthority.PreparedTransfer {
+        try BrowserCoreSessionAuthority.prepareTransfer(source: source.family.core, sourceWindow: source.session,
+            destination: destination.family.core, destinationWindow: destination.session,
+            tabID: id, assignment: assignment, fallback: fallback, selecting: selecting)
+    }
+
+    static func transfer(_ prepared: BrowserCoreSessionAuthority.PreparedTransfer,
+        source: BrowserStore, destination: BrowserStore) throws {
+        let previousSource = source.family.authoritativeSession
+        let previousDestination = destination.family.authoritativeSession
+        let sourceIsDurable = !source.isTemporaryWorkspace
+        let durable = sourceIsDurable ? source : destination
+        let next = sourceIsDurable ? prepared.source : prepared.destination
+        let revision = durable.family.reserveSyncRevision()
+        func commit(journal: BrowserSyncJournal? = nil, journalPersistence: (any BrowserSyncJournalPersisting)? = nil,
+            transaction: BrowserCoreSyncTransaction? = nil) throws {
+            try BrowserCoreSessionAuthority.commitTransfer(prepared, source: source.family.core,
+                destination: destination.family.core, sync: transaction) { a, b in
+                let checkpoint = sourceIsDurable ? a : b
+                if let storage = durable.persistence as? BrowserTransactionalSessionPersistence {
+                    if let journalPersistence, !storage.owns(journalPersistence) {
+                        throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint
+                    }
+                    try storage.commit(next, checkpoint: checkpoint, journal: journal)
+                } else {
+                    if let journal, let journalPersistence { try journalPersistence.save(journal) }
+                    durable.persistence.save(next, scope: .everything, checkpoint: checkpoint)
+                }
+                let temporary = sourceIsDurable ? destination : source
+                temporary.persistence.save(sourceIsDurable ? prepared.destination : prepared.source,
+                    scope: .everything, checkpoint: sourceIsDurable ? b : a)
+            }
+        }
+        if let sync = durable.syncCoordinator {
+            sync.advanceStoreRevision(to: revision)
+            try sync.installLocalCommand(next, deletionReason: .superseded, at: .now, revision: revision) {
+                _, journal, persistence, transaction in
+                try commit(journal: journal, journalPersistence: persistence, transaction: transaction)
+            }
+        } else { try commit() }
+        source.family.reconcileStores(after: previousSource, from: source)
+        destination.family.reconcileStores(after: previousDestination, from: destination)
+        durable.cloudSyncChangeHandler?()
+    }
+    #else
     /// Installs both prepared graphs before any window reconciles its selection.
     /// This is synchronous on the main actor, so a transfer has no partial
     /// source/destination state across an actor suspension.
@@ -204,24 +260,14 @@ final class BrowserStoreFamily {
         precondition(source.family !== destination.family)
         let previousSource = source.family.authoritativeSession
         let previousDestination = destination.family.authoritativeSession
-        #if CREST_CORE_BACKED
-        do {
-            try BrowserCoreSessionAuthority.replacePair(
-                source: source.family.core, sourceSession: sourceSession,
-                destination: destination.family.core, destinationSession: destinationSession)
-        } catch {
-            source.localSyncErrorDescription = "Core workspace transfer failed: \(error)"
-            destination.localSyncErrorDescription = source.localSyncErrorDescription
-            return false
-        }
-        #else
         source.family.authoritativeSession = sourceSession
         destination.family.authoritativeSession = destinationSession
-        #endif
         source.family.reconcileStores(after: previousSource, from: source)
         destination.family.reconcileStores(after: previousDestination, from: destination)
         return true
     }
+
+    #endif
 
     func save(_ session: BrowserSession, to persistence: any BrowserSessionPersisting,
         scope: BrowserSessionSaveScope = .everything) throws {

@@ -5,6 +5,60 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
+    func testFailedTransferStorageReleasesBothWritersWhileThePreparedValueIsStillAlive() throws {
+        enum Failure: Error { case disk }
+        let original = BrowserSession.preview
+        let assignment = BrowserSpaceRuntimeAssignment(space: original.spaces[0])
+        let tab = original.spaces[0].tabs[0]
+        var empty = original
+        empty.spaces[0].tabs = []; empty.spaces[0].selectedTabID = nil
+        let a = BrowserCoreSessionAuthority(session: original)
+        let b = BrowserCoreSessionAuthority(session: empty, workspaceKind: "temporary")
+        let command = try BrowserCoreSessionAuthority.prepareTransfer(source: a, sourceWindow: original,
+            destination: b, destinationWindow: empty, tabID: tab.id, assignment: assignment, fallback: nil, selecting: true)
+        XCTAssertThrowsError(try BrowserCoreSessionAuthority.commitTransfer(command, source: a, destination: b) { _, _ in
+            throw Failure.disk
+        })
+        XCTAssertEqual(a.projection, original)
+        XCTAssertEqual(b.projection, empty)
+        let retry = try BrowserCoreSessionAuthority.prepareTransfer(source: a, sourceWindow: original,
+            destination: b, destinationWindow: empty, tabID: tab.id, assignment: assignment, fallback: nil, selecting: true)
+        try BrowserCoreSessionAuthority.commitTransfer(retry, source: a, destination: b) { _, _ in }
+        XCTAssertFalse(a.projection.tabIDs.contains(tab.id))
+        XCTAssertEqual(b.projection.selectedTab?.id, tab.id)
+    }
+
+    func testWorkspaceTransferSavesThePersistentOwnerAndJournalTogetherBeforeReconcilingWindows() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storage = try BrowserTransactionalSessionPersistence(url: directory.appendingPathComponent("session.sqlite"),
+            favicons: InMemoryBrowserFaviconStore())
+        var original = BrowserSession.preview
+        let spaceID = original.spaces[0].id
+        let tabID = original.spaces[0].tabs[0].id
+        original.spaces[0].tabs[0].faviconData = Data([5, 8, 13])
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: original)
+        try storage.migrateIfNeeded(session: original, journal: journal)
+        let sync = BrowserSyncCoordinator(persistence: storage.journalPersistence)
+        let source = BrowserStore(session: original, persistence: storage, syncCoordinator: sync)
+        let observer = source.makeWindowStore()
+        let assignment = BrowserSpaceRuntimeAssignment(space: original.spaces[0])
+        let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
+        XCTAssertTrue(source.transferTab(tabID, matching: assignment, to: temporary, in: assignment))
+        XCTAssertFalse(observer.session.tabIDs.contains(tabID))
+        XCTAssertEqual(storage.load(), source.session)
+        XCTAssertEqual(try storage.journalPersistence.load(), sync.journal)
+        XCTAssertEqual(temporary.selectedTab?.faviconData, Data([5, 8, 13]))
+        XCTAssertFalse(source.session.space(id: spaceID)!.archivedTabs.contains { $0.id == tabID })
+        XCTAssertTrue(temporary.transferTab(tabID, matching: assignment, to: source, in: assignment))
+        XCTAssertEqual(source.selectedTab?.id, tabID)
+        XCTAssertTrue(observer.session.tabIDs.contains(tabID))
+        XCTAssertEqual(storage.load(), source.session)
+        XCTAssertEqual(try storage.journalPersistence.load(), sync.journal)
+        XCTAssertEqual(source.selectedTab?.faviconData, Data([5, 8, 13]))
+    }
+
     func testDeletionIntentSurvivesAdapterFailureAndRestartThenCommitsItsTombstoneWithTheSession() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

@@ -15,6 +15,7 @@ public sealed partial class NativeSessionAuthority
     private SessionDocument document;
     private NativeSessionReplacement? replacement;
     private readonly BrowserWorkspaceKind workspaceKind;
+    private readonly bool privateBrowsing;
     internal sealed record SessionDocument(JsonObject Metadata, IReadOnlyList<SpaceDocument> Spaces);
     internal sealed record SpaceDocument(JsonObject Metadata, IReadOnlyDictionary<string, IReadOnlyList<JsonNode>> Sections);
     public ulong Revision { get; private set; } = 1;
@@ -29,7 +30,8 @@ public sealed partial class NativeSessionAuthority
             "temporary" => BrowserWorkspaceKind.Temporary,
             _ => throw new BrowserRuleException("invalid_workspace_kind")
         };
-        document = new(Fields(input, ["spaces", "coreWorkspaceKind"]), input["spaces"]!.AsArray().Select(node =>
+        privateBrowsing = input["corePrivateBrowsing"]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
+        document = new(Fields(input, ["spaces", "coreWorkspaceKind", "corePrivateBrowsing"]), input["spaces"]!.AsArray().Select(node =>
             new SpaceDocument(Fields(node!.AsObject(), Sections), Sections.ToDictionary(section => section,
                 section => (IReadOnlyList<JsonNode>)node[section]!.AsArray().Select(item => item!.DeepClone()).ToArray()))).ToArray());
         Validate(document);

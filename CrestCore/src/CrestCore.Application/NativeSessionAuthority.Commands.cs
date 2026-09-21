@@ -17,6 +17,7 @@ public sealed partial class NativeSessionAuthority
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
             if (request["operation"]!.GetValue<string>() == "workspace.import") return PrepareWorkspaceCommand(expected, request);
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
+            if (request["operation"]!.GetValue<string>() == "tab.transfer") return PrepareTabTransfer(expected, request);
             if (request["operation"]!.GetValue<string>().StartsWith("space.", StringComparison.Ordinal))
                 return PrepareSpaceCommand(expected, request);
             var spaceId = Id(request["spaceId"]);
