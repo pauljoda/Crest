@@ -1605,6 +1605,10 @@
     "shared-core-transient-completion": {
       "category": "improved",
       "message": "Open Quick Window and Peek pages as tabs consistently across devices, preserving Space isolation and preventing duplicate archive entries."
+    },
+    "chromium-native-link-peek": {
+      "category": "improved",
+      "message": "Use page context menus and pull links into Peek while browsing with Chromium."
     }
   }
 }

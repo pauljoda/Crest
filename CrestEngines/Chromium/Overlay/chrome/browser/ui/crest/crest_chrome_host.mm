@@ -99,6 +99,7 @@
 #include "base/no_destructor.h"
 #include "base/uuid.h"
 #include "base/strings/sys_string_conversions.h"
+#include "base/strings/utf_string_conversions.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser.h"
 #include "chrome/browser/ui/navigator/browser_navigator.h"
@@ -112,12 +113,21 @@
 #include "content/public/browser/navigation_handle.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_contents_observer.h"
+#include "content/public/common/drop_data.h"
 #include "ui/base/page_transition_types.h"
 
 @interface CrestRoot : NSObject
 + (void)startWithHost:(id<CrestChromiumEngineHost>)host;
 + (NSWindow*)windowForIdentifier:(NSString*)identifier;
 + (BOOL)deferQuit;
+@end
+
+@interface CrestLinkMenuAction : NSObject
+@property(copy) void (^run)(void);
+- (void)invoke:(id)sender;
+@end
+@implementation CrestLinkMenuAction
+- (void)invoke:(id)sender { if (self.run) self.run(); }
 @end
 
 namespace {
@@ -663,6 +673,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   Browser* browser;
   std::string profile;
   Observation observation;
+  BOOL (^link_handler)(NSString*, NSString*, NSString*) = nil;
   bool closing = false;
   uint64_t navigation_revision = 0;
   std::unique_ptr<ExtensionPopup> extension_popup;
@@ -700,6 +711,10 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents())) PublishFavicon(driver->GetFavicon());
   }
   void TitleWasSet(content::NavigationEntry*) override { Publish(); }
+  void DidStartNavigation(content::NavigationHandle* navigation) override {
+    if (navigation->IsInPrimaryMainFrame() && !navigation->IsSameDocument())
+      observation(@"navigation_started", @{});
+  }
   void DidFinishNavigation(content::NavigationHandle* navigation) override {
     if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted()) ++navigation_revision;
     if (navigation->IsInPrimaryMainFrame())
@@ -1105,6 +1120,10 @@ Page* FindPage(NSString* identifier) {
   CHECK(NSThread.isMainThread);
   Page* page = FindPage(pageID);
   return page && page->web_contents() ? page->web_contents()->GetNativeView().GetNativeNSView() : nil;
+}
+- (void)setLinkHandlerForPage:(NSString*)pageID handler:(BOOL (^)(NSString*, NSString*, NSString*))handler {
+  CHECK(NSThread.isMainThread);
+  if (Page* page = FindPage(pageID)) page->link_handler = [handler copy];
 }
 - (NSData*)interactionStateForPage:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
@@ -1656,6 +1675,59 @@ Page* FindPage(NSString* identifier) {
 @end
 
 namespace crest {
+bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data) {
+  // File, image, selection and custom payload drags retain Chromium's native path.
+  // Chromium adds its own drag ID to every payload, including ordinary links.
+  if (!IsEnabled() || State().disposing || data.url_infos.size() != 1 ||
+      !data.url_infos[0].url.SchemeIsHTTPOrHTTPS() || data.url_infos[0].url.spec().size() > 8192 ||
+      data.download_metadata || !data.filenames.empty() || !data.file_system_files.empty() ||
+      !data.file_contents.empty() || data.file_contents_source_url.is_valid() ||
+      std::any_of(data.custom_data.begin(), data.custom_data.end(),
+          [](const auto& entry) { return entry.first != u"chromium/x-drag-id"; }) || !data.text ||
+      *data.text != base::UTF8ToUTF16(data.url_infos[0].url.spec())) return false;
+  auto* focused_frame = contents->GetFocusedFrame();
+  if (!focused_frame || !focused_frame->GetView() ||
+      !focused_frame->GetView()->GetSelectedText().empty()) return false;
+  for (auto& [id, page] : State().pages) {
+    if (page->web_contents() == contents && page->link_handler)
+      return page->link_handler(@"drag", base::SysUTF8ToNSString(data.url_infos[0].url.spec()),
+          base::SysUTF16ToNSString(data.url_infos[0].title));
+  }
+  return false;
+}
+
+void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url) {
+  if (!IsEnabled() || State().disposing || !url.SchemeIsHTTPOrHTTPS()) return;
+  for (auto& [id, page] : State().pages) {
+    if (page->web_contents() != contents || !page->link_handler) continue;
+    NSString* address = base::SysUTF8ToNSString(url.spec());
+    if (!page->link_handler(@"can_peek", address, @"")) return;
+    auto weak = contents->GetWeakPtr();
+    const uint64_t revision = page->navigation_revision;
+    CrestLinkMenuAction* action = [[CrestLinkMenuAction alloc] init];
+    action.run = ^{
+      // Return from menu tracking before mounting the native Peek card.
+      dispatch_async(dispatch_get_main_queue(), ^{
+        if (!weak || State().disposing) return;
+        for (auto& [current_id, current] : State().pages) {
+          if (current->web_contents() == weak.get() && current->navigation_revision == revision && current->link_handler) {
+            current->link_handler(@"peek", address, @"");
+            return;
+          }
+        }
+      });
+    };
+    NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:@"Open Link in Peek" action:@selector(invoke:) keyEquivalent:@""];
+    item.target = action;
+    item.representedObject = action;
+    // MenuControllerCocoa maps existing items by model index. Append native
+    // actions so asynchronous engine updates still address their original rows.
+    [menu addItem:NSMenuItem.separatorItem];
+    [menu addItem:item];
+    return;
+  }
+}
+
 bool OwnsDownload(download::DownloadItem* item) {
   if (!IsEnabled() || State().disposing || item->IsTransient() ||
       item->GetMimeType() == "application/x-chrome-extension") return false;

@@ -13,6 +13,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     var isPrivateBrowsing = false
     private let profileID: UUID
     var observer: (String, [String: Any]) -> Void
+    var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
     private var host: (any CrestChromiumEngineHost)?
     private var requestedURL: URL?
     private var pendingInteractionState: Data?
@@ -236,10 +237,17 @@ final class ChromiumNativePage: BrowserPageEngine {
         if event == "changed" {
             backHistory = history(values["backHistory"])
             forwardHistory = history(values["forwardHistory"])
+            if values["committed"] as? Bool == true { surface.layoutEngineView() }
         }
         if event == "created" {
             created = true
             creating = false
+            host?.setLinkHandler(page: id) { [weak self] action, address, label in
+                MainActor.assumeIsolated {
+                    guard let self, !self.disposed, let url = URL(string: address) else { return false }
+                    return self.linkHandler(action, url, label)
+                }
+            }
             attachIfPossible()
             setZoom(zoom)
             navigatePendingURL()
@@ -297,6 +305,20 @@ extension ChromiumNativePage: BrowserPageDocumentServices {
 @MainActor
 final class ChromiumNativePageView: NSView, BrowserNativePageSurfaceLifecycle {
     weak var page: ChromiumNativePage?
+    override func layout() {
+        super.layout()
+        layoutEngineView()
+    }
+    override func resizeSubviews(withOldSize oldSize: NSSize) {
+        layoutEngineView()
+    }
+    func layoutEngineView() {
+        guard !bounds.isEmpty, let view = subviews.first else { return }
+        view.frame = bounds
+        // A navigation can replace Chromium's renderer after this container
+        // was laid out. Propagate the viewport even when its size is unchanged.
+        view.setFrameSize(bounds.size)
+    }
     override var acceptsFirstResponder: Bool { true }
     override func becomeFirstResponder() -> Bool {
         guard let view = subviews.first else { return super.becomeFirstResponder() }
@@ -308,5 +330,6 @@ final class ChromiumNativePageView: NSView, BrowserNativePageSurfaceLifecycle {
     }
     func didAttach(to host: BrowserWebHostView) { page?.attachIfPossible() }
     func willDetach(from host: BrowserWebHostView) { page?.detach() }
+    func presentationGeometryDidChange() { layoutEngineView() }
 }
 #endif

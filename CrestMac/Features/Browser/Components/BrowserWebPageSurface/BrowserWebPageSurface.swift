@@ -14,6 +14,11 @@ struct BrowserWebPageSurface: View {
                 isPageActive: isPageActive,
                 focusRestorationGate: focusRestorationGate
             )
+            .onGeometryChange(for: CGRect.self) { geometry in
+                geometry.frame(in: .global)
+            } action: { _ in
+                (page.nativeView as? any BrowserNativePageSurfaceLifecycle)?.presentationGeometryDidChange()
+            }
             .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
             .opacity(
                 BrowserPageSurfacePolicy.revealsWebContent(

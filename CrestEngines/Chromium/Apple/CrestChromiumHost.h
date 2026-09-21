@@ -17,6 +17,9 @@ NS_ASSUME_NONNULL_BEGIN
          observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
 - (void)rejectAdoption:(NSString *)adoptionID;
 - (nullable NSView *)viewForPage:(NSString *)pageID;
+- (void)setLinkHandlerForPage:(NSString *)pageID
+                     handler:(BOOL (^)(NSString *action, NSString *url, NSString *label))handler
+    NS_SWIFT_NAME(setLinkHandler(page:handler:));
 - (nullable NSData *)interactionStateForPage:(NSString *)pageID;
 - (BOOL)restorePage:(NSString *)pageID interactionState:(NSData *)state expectedURL:(NSString *)url;
 - (BOOL)preparePage:(NSString *)pageID forWindow:(NSString *)windowID;

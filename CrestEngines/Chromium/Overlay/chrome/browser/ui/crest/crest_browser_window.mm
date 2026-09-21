@@ -963,7 +963,13 @@ content::KeyboardEventProcessingResult CrestBrowserWindow::PreHandleKeyboardEven
 }
 
 bool CrestBrowserWindow::HandleKeyboardEvent( const input::NativeWebKeyboardEvent& event) {
-  return false;
+  // Chromium offers shortcuts to the document first. Its Views window would
+  // then dispatch unhandled equivalents to AppKit; Crest owns that last step.
+  NSEvent* native_event = event.os_event.Get();
+  if (event.GetType() != input::NativeWebKeyboardEvent::Type::kRawKeyDown ||
+      !native_event || native_event.type != NSEventTypeKeyDown ||
+      !crest::WindowForBrowser(browser_).isKeyWindow) return false;
+  return [NSApp.mainMenu performKeyEquivalent:native_event];
 }
 
 std::unique_ptr<FindBar> CrestBrowserWindow::CreateFindBar() {

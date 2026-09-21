@@ -2,19 +2,22 @@ import AppKit
 import Observation
 import WebKit
 
-/// Connects owned DOM link drags to AppKit pointer and window events.
+/// Connects an engine's claimed link drag to AppKit pointer and window events.
 @MainActor
 final class BrowserLinkDragController {
     private static let pendingReleaseLifetime: TimeInterval = 0.3
     private static let escapeKeyCode: UInt16 = 53
-    private weak var webView: WKWebView?
+    private weak var nativeView: NSView?
+    private var webView: WKWebView? { nativeView as? WKWebView }
     private let context: () -> BrowserPageNavigationContext?
     private let pullHandler: BrowserLinkPullHandler
     private var frames: [String: WKFrameInfo] = [:]
     private var gesture: Gesture?
     private var eventMonitor: Any?
+    private var nativeMouseDownMonitor: Any?
     private var windowObserver: NSObjectProtocol?
     private var mouseDownLocation: CGPoint?
+    private var mouseDownAllowsNativeDrag = false
     private var pendingMouseUp: NSEvent?
     private var pendingMouseUpTime: TimeInterval?
     private var isNavigating = false
@@ -30,13 +33,47 @@ final class BrowserLinkDragController {
         context: @escaping () -> BrowserPageNavigationContext?,
         handle: @escaping (BrowserPeekInteractionEvent) -> Void
     ) {
-        self.webView = webView
+        self.nativeView = webView
         self.context = context
         pullHandler = BrowserLinkPullHandler(context: context, handle: handle)
         observePreference()
     }
 
-    isolated deinit { removeMonitors() }
+    init(nativeView: NSView, context: @escaping () -> BrowserPageNavigationContext?,
+         handle: @escaping (BrowserPeekInteractionEvent) -> Void) {
+        self.nativeView = nativeView
+        self.context = context
+        pullHandler = BrowserLinkPullHandler(context: context, handle: handle)
+    }
+
+    isolated deinit {
+        removeMonitors()
+        if let nativeMouseDownMonitor { NSEvent.removeMonitor(nativeMouseDownMonitor) }
+    }
+
+    func observeNativeMouseDown() {
+        guard nativeMouseDownMonitor == nil else { return }
+        nativeMouseDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self, let view = self.nativeView, event.window === view.window,
+                    let content = view.window?.contentView else { return }
+                let point = content.superview?.convert(event.locationInWindow, from: nil) ?? event.locationInWindow
+                guard let hit = content.hitTest(point),
+                    hit === view || hit.isDescendant(of: view) else { return }
+                self.mouseDown(event)
+                let flags = event.modifierFlags
+                self.mouseDownAllowsNativeDrag = !flags.contains(.command) && !flags.contains(.control)
+                    && BrowserLinkPreferenceStore.shared.dragsLinksToPeek != flags.contains(.option)
+            }
+            return event
+        }
+    }
+
+    /// Called only for a renderer URL drag that passed Chromium's drag policy.
+    func beginNativeLink(url: URL, label: String?) -> Bool {
+        guard mouseDownAllowsNativeDrag else { return false }
+        return begin(url: url, label: label, document: "native", dragOffset: nil)
+    }
 
     func mouseDown(_ event: NSEvent) {
         cancel()
@@ -65,6 +102,8 @@ final class BrowserLinkDragController {
 
     func detach() {
         cancel()
+        if let nativeMouseDownMonitor { NSEvent.removeMonitor(nativeMouseDownMonitor) }
+        nativeMouseDownMonitor = nil
         mouseDownLocation = nil
         pendingMouseUp = nil
         pendingMouseUpTime = nil
@@ -88,38 +127,43 @@ final class BrowserLinkDragController {
     }
 
     private func begin(_ message: BrowserLinkPullMessage) {
-        guard gesture == nil, !isNavigating, frames[message.document] != nil,
-            let webView, !webView.isHiddenOrHasHiddenAncestor,
-            let window = webView.window, window.isKeyWindow, NSApp.isActive,
+        guard frames[message.document] != nil, let url = message.url else { return }
+        _ = begin(url: url, label: message.label, document: message.document, dragOffset: message.dragOffset)
+    }
+
+    private func begin(url: URL, label: String?, document: String, dragOffset: CGPoint?) -> Bool {
+        guard gesture == nil, !isNavigating,
+            let nativeView, !nativeView.isHiddenOrHasHiddenAncestor,
+            let window = nativeView.window, window.isKeyWindow, NSApp.isActive,
             window.attachedSheet == nil,
             mouseDownLocation != nil || NSEvent.pressedMouseButtons & 1 != 0,
             pendingMouseUpTime.map({
                 ProcessInfo.processInfo.systemUptime - $0 < Self.pendingReleaseLifetime
             }) ?? true,
             let content = window.contentView,
-            let url = message.url,
             content.bounds.width > 0, content.bounds.height > 0
-        else { return }
+        else { return false }
         let current = normalizedPoint(window.mouseLocationOutsideOfEventStream, in: content)
         let origin: CGPoint
         if let mouseDownLocation {
             origin = normalizedPoint(mouseDownLocation, in: content)
         } else {
-            guard let offset = message.dragOffset else { return }
+            guard let offset = dragOffset, let webView else { return false }
             origin = CGPoint(
                 x: current.x - offset.x * webView.pageZoom / content.bounds.width,
                 y: current.y - offset.y * webView.pageZoom / content.bounds.height)
         }
         guard
             pullHandler.begin(
-                url: url, label: message.label, origin: origin,
+                url: url, label: label, origin: origin,
                 sample: BrowserLinkPullSample(
                     location: current, size: content.bounds.size,
                     time: ProcessInfo.processInfo.systemUptime))
-        else { return }
-        gesture = Gesture(document: message.document, window: window)
+        else { return false }
+        gesture = Gesture(document: document, window: window)
         installMonitors(window: window)
         if let pendingMouseUp { track(pendingMouseUp) }
+        return true
     }
 
     private func installMonitors(window: NSWindow) {
@@ -159,7 +203,7 @@ final class BrowserLinkDragController {
             }
             return
         }
-        guard let webView, webView.window === current.window,
+        guard let nativeView, nativeView.window === current.window,
             event.window === current.window, let content = current.window.contentView
         else {
             cancel()
@@ -170,7 +214,7 @@ final class BrowserLinkDragController {
             size: content.bounds.size, time: ProcessInfo.processInfo.systemUptime)
         if event.type == .leftMouseUp {
             let generation = releaseGeneration
-            // Let the source WebKit view receive mouse-up before the committed
+            // Let the source engine view receive mouse-up before the committed
             // overlay becomes a hit-test target over that same pointer.
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.releaseGeneration == generation else { return }
@@ -190,6 +234,10 @@ final class BrowserLinkDragController {
     func cancel() {
         releaseGeneration &+= 1
         gesture = nil
+        mouseDownAllowsNativeDrag = false
+        mouseDownLocation = nil
+        pendingMouseUp = nil
+        pendingMouseUpTime = nil
         removeMonitors()
         pullHandler.cancel()
     }

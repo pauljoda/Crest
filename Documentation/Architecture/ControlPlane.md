@@ -535,6 +535,24 @@ composition and do not need that additional hop: page operations use the shared
 native engine port, while portable session changes remain core-owned. The separate
 `ChromiumAdapter` remains the kernel adapter for the contract harness.
 
+Chromium's native page context menu also works without a Views widget around the
+page. It retains page and editing commands and adds Open Link in Peek for owned
+HTTP/HTTPS pages. Chrome profile, app, Incognito, split and new-window destinations
+are omitted until they have Crest-owned routing. Menu callbacks are bound to the source page and navigation
+revision. The drag-start delegate runs after Chromium's enterprise drag policy;
+ordinary URL drags can enter the existing AppKit link-pull controller. The
+controller applies the current modifier preference, tracks the originating
+window, and cancels on source changes, navigation, Escape or window deactivation.
+Image, file, webpage-custom-data and selected-text drags keep Chromium's path;
+Chromium's internal drag-tracking ID is permitted for ordinary link pulls. Pointer
+samples stay native; promoting the resulting Peek uses the core completion
+command. Modifier-click and protected saved-site navigation still need the
+equivalent Chromium navigation-policy bridge.
+
+The native page adapter propagates card viewport changes to Chromium during
+attachment, navigation and resizing. Keyboard equivalents first reach the page;
+unhandled equivalents then use Crest's AppKit menu and current responder.
+
 Each Space uses a regular Chromium profile under the explicit experimental
 user-data directory. Crest's native session uses its own isolated defaults suite,
 separate from both production and the WebKit review app. Packaging includes the

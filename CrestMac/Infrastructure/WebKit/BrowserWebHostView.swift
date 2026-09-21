@@ -263,6 +263,11 @@ final class BrowserWebFocusRestorationController {
 protocol BrowserNativePageSurfaceLifecycle: AnyObject {
     func didAttach(to host: BrowserWebHostView)
     func willDetach(from host: BrowserWebHostView)
+    func presentationGeometryDidChange()
+}
+
+extension BrowserNativePageSurfaceLifecycle {
+    func presentationGeometryDidChange() {}
 }
 
 @MainActor

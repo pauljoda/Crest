@@ -66,5 +66,25 @@
   "chrome/browser/download/download_target_determiner.cc": {
     "before": "94307ad9bdfb3443ddc76aa2d4618d485636b275ad44c2d8b4d4634fb332532b",
     "after": "d92403b01325bbdf531a53ca026380fac0d459279414d34dca236048c0f1c5e5"
+  },
+  "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm": {
+    "before": "903582053e2ac7de59513ee8f5c4dc06b7e5359bc4873f11b3efaf6634124000",
+    "after": "1597bf0ee4a4881f6d00a9b1c30313addcd2f0443ebed68ce35a92f28d75bef0"
+  },
+  "chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h": {
+    "before": "3a2ca97d02c1e182d2b38dad867bda37fe9e43000f0104484342fcb7fc578d9f",
+    "after": "2759a2aa983bad887b4768f65907ceedc4f4ea96a2ca7f3091fe928a493aefcb"
+  },
+  "chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm": {
+    "before": "6f215b33dcdd19d59f40c3881893847129c9bf0372cde318c9b04a2799693b5e",
+    "after": "8c30730205d011bfe477d023ed1239920e63a6360e491823513c1dcc959e2ec6"
+  },
+  "content/browser/web_contents/web_contents_view_mac.mm": {
+    "before": "fc5cb3c982ee3a091e7839235448fd20bd09a6301402d431e40f0a6379adf8c0",
+    "after": "d5a6ce782e084c8711d3517b58c5ec631f65103a4023259bc46bd254e0f22918"
+  },
+  "content/public/browser/web_contents_view_delegate.h": {
+    "before": "60cf4992f87376a9abbe408e4af59eb77dbd879d796dc5077d0b4ceae70bb400",
+    "after": "2f36a2c8d75b2528cfadc64bb79871fe365ca86c6ac3c71738517ef185108dd3"
   }
 }

@@ -6,7 +6,8 @@
 #endif
 
 class Browser;
-namespace content { class WebContents; }
+class GURL;
+namespace content { class WebContents; struct DropData; }
 
 namespace crest {
 // Enabled only by the explicitly selected Crest host command-line switch.
@@ -18,8 +19,11 @@ void EnsureCrestUIStarted(Browser* browser);
 bool DeferQuit();
 // Consumes the result of a native close preflight without destroying the page.
 bool CompletePageClosePreparation(content::WebContents* contents, bool proceed);
+// Called after Chromium has approved a renderer's drag request.
+bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data);
 #ifdef __OBJC__
 NSWindow* WindowForBrowser(Browser* browser);
+void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url);
 #endif
 }  // namespace crest
 

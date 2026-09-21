@@ -25,6 +25,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     #endif
     @ObservationIgnored lazy var pictureInPicture = webKitView.map { BrowserPictureInPicturePageController(webView: $0) }
     @ObservationIgnored lazy var linkHover = webKitView.map { BrowserLinkHoverController(webView: $0) }
+    #if CREST_CHROMIUM_HOST
+    @ObservationIgnored lazy var linkDrag: BrowserLinkDragController? = BrowserLinkDragController(
+        nativeView: nativeView,
+        context: { [weak self] in self?.navigationContext },
+        handle: { [weak self] event in self?.handleLinkDrag(event) })
+    #else
     @ObservationIgnored lazy var linkDrag = webKitView.map { webView in
         BrowserLinkDragController(
             webView: webView,
@@ -32,6 +38,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             handle: { [weak self] event in self?.handleLinkDrag(event) }
         )
     }
+    #endif
     @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
         let controller = BrowserWebFocusRestorationController(webView: nativeView)
         (webView as? BrowserDesktopWebView)?.focusRestoration = controller
@@ -325,6 +332,21 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         chromiumPage?.observer = { [weak self] event, values in
             self?.receiveChromiumEvent(event, values: values)
         }
+        chromiumPage?.linkHandler = { [weak self] action, destination, label in
+            guard let self, let context = self.navigationContext,
+                BrowserExternalURLPolicy.accepts(destination) else { return false }
+            switch action {
+            case "can_peek": return true
+            case "peek":
+                self.openPeek(BrowserPeekRequest(url: destination, sourceTabID: context.tabID,
+                    sourceTitle: context.title, spaceAssignment: context.assignment,
+                    trigger: .contextMenu))
+                return true
+            case "drag": return self.linkDrag?.beginNativeLink(url: destination, label: label) == true
+            default: return false
+            }
+        }
+        linkDrag?.observeNativeMouseDown()
         #else
         let webView = desktopWebView
         desktopWebView.menuHost = self
@@ -1171,6 +1193,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     #if CREST_CHROMIUM_HOST
     private func receiveChromiumEvent(_ event: String, values: [String: Any]) {
         switch event {
+        case "navigation_started":
+            linkDrag?.beginNavigation()
         case "favicon":
             guard let rawURL = values["url"] as? String, let source = URL(string: rawURL),
                 let url, BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url) else { return }
@@ -1183,6 +1207,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             url = destination
             title = values["title"] as? String ?? ""
             isLoading = values["isLoading"] as? Bool ?? false
+            if !isLoading { linkDrag?.didFinishNavigation() }
             estimatedProgress = isLoading ? 0.5 : 1
             hasOnlySecureContent = destination?.scheme == "https"
             canGoBack = values["canGoBack"] as? Bool ?? false

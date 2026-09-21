@@ -450,3 +450,122 @@
        base::FilePath sanitized_path = virtual_path_;
  #if BUILDFLAG(IS_WIN)
        // Windows prompt dialog will resolve all env variables in the file name,
+--- a/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm
++++ b/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm
+@@ -14,6 +14,8 @@
+ #include "base/strings/sys_string_conversions.h"
+ #include "base/task/current_thread.h"
+ #include "chrome/browser/headless/headless_mode_util.h"
++#include "chrome/app/chrome_command_ids.h"
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #import "components/remote_cocoa/app_shim/menu_controller_cocoa_delegate_impl.h"
+ #include "content/public/browser/web_contents.h"
+ #include "ui/base/cocoa/menu_utils.h"
+@@ -78,16 +80,36 @@
+   views::Widget* widget = views::Widget::GetTopLevelWidgetForNativeView(
+       source_web_contents_->GetNativeView());
+
+-  if (!widget || headless::IsHeadlessMode()) {
++  if (headless::IsHeadlessMode() || (!widget && (!crest::IsEnabled() || !parent_view_.window))) {
+     return;
+   }
+
+-  menu_controller_delegate_ = [[MenuControllerCocoaDelegateImpl alloc]
+-      initWithParams:MenuControllerParamsForWidget(widget)];
++  if (crest::IsEnabled()) {
++    // These destinations require Chrome profile/Views UI. Crest owns Space and
++    // window routing; never expose an engine-only window or profile here.
++    for (size_t i = menu_model_.GetItemCount(); i > 0; --i) {
++      switch (menu_model_.GetCommandIdAt(i - 1)) {
++        case IDC_CONTENT_CONTEXT_OPENLINKNEWWINDOW:
++        case IDC_CONTENT_CONTEXT_OPENLINKOFFTHERECORD:
++        case IDC_CONTENT_CONTEXT_OPENLINKINPROFILE:
++        case IDC_CONTENT_CONTEXT_OPENLINKBOOKMARKAPP:
++        case IDC_CONTENT_CONTEXT_OPENLINKSPLITVIEW:
++          menu_model_.RemoveItemAt(i - 1);
++          break;
++      }
++    }
++  }
++
++  if (widget) {
++    menu_controller_delegate_ = [[MenuControllerCocoaDelegateImpl alloc]
++        initWithParams:MenuControllerParamsForWidget(widget)];
++  }
+   menu_controller_ =
+       [[MenuControllerCocoa alloc] initWithModel:&menu_model_
+                                    isContextMenu:YES
+                                         delegate:menu_controller_delegate_];
++
++  crest::AppendLinkMenuItem(menu_controller_.menu, source_web_contents_, params_.link_url);
+
+   NSPoint position =
+       NSMakePoint(params_.x, NSHeight(parent_view_.bounds) - params_.y);
+@@ -97,7 +119,8 @@
+
+   ui::ShowContextMenu(menu_controller_.menu, clickEvent, parent_view_,
+                       /*allow_nested_tasks=*/true,
+-                      views::ElementTrackerViews::GetContextForWidget(widget));
++                      widget ? views::ElementTrackerViews::GetContextForWidget(widget)
++                             : ui::ElementContext());
+ }
+
+ void RenderViewContextMenuMacCocoa::CancelToolkitMenu() {
+--- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h
++++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h
+@@ -49,6 +49,7 @@
+       content::RenderWidgetHost* render_widget_host,
+       bool is_popup) override;
+   content::WebDragDestDelegate* GetDragDestDelegate() override;
++  bool HandleDragStart(const content::DropData& data) override;
+   void ShowContextMenu(content::RenderFrameHost& render_frame_host,
+                        const content::ContextMenuParams& params) override;
+   void StoreFocus() override;
+--- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
++++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
+@@ -10,6 +10,7 @@
+ #import "chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+ #include "chrome/browser/ui/browser_window/public/global_browser_collection.h"
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #include "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.h"
+ #include "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_remote_cocoa.h"
+ #include "chrome/browser/ui/cocoa/tab_contents/web_drag_bookmark_handler_mac.h"
+@@ -76,6 +77,10 @@
+                      weak_ptr_factory_.GetWeakPtr()));
+ }
+
++bool ChromeWebContentsViewDelegateViewsMac::HandleDragStart(const content::DropData& data) {
++  return crest::BeginLinkDrag(web_contents_, data);
++}
++
+ void ChromeWebContentsViewDelegateViewsMac::BuildMenuAsync(
+     content::RenderFrameHost& render_frame_host,
+     const content::ContextMenuParams& params,
+--- a/content/browser/web_contents/web_contents_view_mac.mm
++++ b/content/browser/web_contents/web_contents_view_mac.mm
+@@ -237,6 +237,11 @@
+
+   NSDragOperation mask = static_cast<NSDragOperation>(allowed_operations);
+
++  if (delegate_ && delegate_->HandleDragStart(drop_data)) {
++    web_contents_->SystemDragEnded(source_rwh);
++    return;
++  }
++
+   [drag_dest_ initiateDragWithRenderWidgetHost:source_rwh dropData:drop_data];
+   drag_source_start_rwh_ = source_rwh->GetWeakPtr();
+
+--- a/content/public/browser/web_contents_view_delegate.h
++++ b/content/public/browser/web_contents_view_delegate.h
+@@ -51,6 +51,10 @@
+
+   // Returns a delegate to process drags not handled by content.
+   virtual WebDragDestDelegate* GetDragDestDelegate();
++
++  // Lets a native embedder consume an approved renderer drag without starting
++  // an OS drag session. The default preserves the normal Chromium path.
++  virtual bool HandleDragStart(const DropData& data) { return false; }
+
+   // Shows a context menu.
+   //

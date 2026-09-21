@@ -5,4 +5,5 @@ enum BrowserPeekTrigger: String, Codable, Equatable, Sendable {
     case modifierClick
     case linkDrag
     case longPress
+    case contextMenu
 }
