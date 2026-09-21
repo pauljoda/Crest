@@ -56,7 +56,18 @@
 #include "chrome/browser/devtools/devtools_toggle_action.h"
 #include "chrome/browser/devtools/devtools_window.h"
 #include "chrome/browser/extensions/api/side_panel/side_panel_service.h"
+#include "chrome/browser/extensions/commands/command_service.h"
 #include "chrome/browser/extensions/extension_action_runner.h"
+#include "chrome/browser/extensions/extension_tab_util.h"
+#include "extensions/browser/event_router.h"
+#include "extensions/browser/permissions/active_tab_permission_granter.h"
+#include "extensions/common/command.h"
+#include "extensions/common/api/extension_action/action_info.h"
+#include "extensions/common/mojom/context_type.mojom.h"
+#include "ui/base/accelerators/accelerator.h"
+#include "ui/base/accelerators/command.h"
+#include "ui/events/cocoa/cocoa_event_utils.h"
+#include "ui/events/keycodes/keyboard_code_conversion_mac.h"
 #include "chrome/browser/extensions/extension_view.h"
 #include "chrome/browser/extensions/extension_view_host.h"
 #include "chrome/browser/extensions/extension_view_host_factory.h"
@@ -1197,6 +1208,38 @@ const extensions::Extension* SidePanelExtension(NSString* extension_id, Page* pa
   const int tab = sessions::SessionTabHelper::IdForTab(page->web_contents()).id();
   return service->HasSidePanelActionForTab(*extension, tab) ? extension : nullptr;
 }
+// chrome.commands. Crest owns the key-equivalent path, so an event the core
+// did not claim is matched against the extension keybindings itself rather
+// than through Chrome's Views keybinding registry, which this build never
+// creates. Modelled on `ExtensionKeybindingRegistry`: the same command
+// service, the same active-tab grant, and the same `commands.onCommand`
+// payload, without the accelerator table a Views window would maintain.
+ui::Accelerator ShortcutAccelerator(NSEvent* event) {
+  const ui::KeyboardCode key = ui::KeyboardCodeFromNSEvent(event);
+  if (key == ui::VKEY_UNKNOWN) return ui::Accelerator();
+  return ui::Accelerator(key, ui::EventFlagsFromModifiers(event.modifierFlags));
+}
+// Delivers a named command to its extension, granting the active-tab
+// permission first so the extension can act on the page it was invoked over.
+void DeliverExtensionCommand(Profile* profile, const extensions::Extension& extension,
+                             const std::string& command, content::WebContents* contents) {
+  base::ListValue args;
+  args.Append(command);
+  base::Value tab;
+  if (contents) {
+    if (auto* granter = extensions::ActiveTabPermissionGranter::FromWebContents(contents))
+      granter->GrantIfRequested(&extension);
+    // The action APIs are privileged extension contexts by construction.
+    const auto scrub = extensions::ExtensionTabUtil::GetScrubTabBehavior(
+        &extension, extensions::mojom::ContextType::kPrivilegedExtension, contents);
+    tab = base::Value(extensions::ExtensionTabUtil::CreateTabObject(contents, scrub, &extension).ToValue());
+  }
+  args.Append(std::move(tab));
+  auto event = std::make_unique<extensions::Event>(
+      extensions::events::COMMANDS_ON_COMMAND, "commands.onCommand", std::move(args), profile);
+  event->user_gesture = extensions::EventRouter::UserGestureState::kEnabled;
+  extensions::EventRouter::Get(profile)->DispatchEventToExtension(extension.id(), std::move(event));
+}
 }  // namespace
 
 @interface CrestChromiumHost : NSObject <CrestChromiumEngineHost>
@@ -1639,6 +1682,38 @@ const extensions::Extension* SidePanelExtension(NSString* extension_id, Page* pa
   Page* page = FindPage(pageID);
   if (!page) return;
   page->side_panel.reset();
+}
+- (NSDictionary<NSString*, id>*)dispatchExtensionShortcut:(NSEvent*)event page:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents() || State().disposing) return nil;
+  const ui::Accelerator accelerator = ShortcutAccelerator(event);
+  if (accelerator.key_code() == ui::VKEY_UNKNOWN) return nil;
+  Profile* profile = page->browser->GetProfile();
+  auto* commands = extensions::CommandService::Get(profile);
+  if (!commands) return nil;
+  for (const auto& extension : extensions::ExtensionRegistry::Get(profile)->enabled_extensions()) {
+    const auto& id = extension->id();
+    if (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, profile)) continue;
+    // `_execute_action` is the action itself, so the core runs it through the
+    // same path as a click on the extension's own button.
+    extensions::Command action;
+    bool active = false;
+    if (commands->GetExtensionActionCommand(id, extensions::ActionInfo::Type::kAction,
+            extensions::CommandService::ACTIVE, &action, &active) &&
+        active && action.accelerator() == accelerator) {
+      return @{@"action": base::SysUTF8ToNSString(id)};
+    }
+    ui::CommandMap named;
+    if (!commands->GetNamedCommands(id, extensions::CommandService::ACTIVE,
+                                    extensions::CommandService::REGULAR, &named)) continue;
+    for (const auto& [name, command] : named) {
+      if (command.accelerator() != accelerator) continue;
+      DeliverExtensionCommand(profile, *extension, name, page->web_contents());
+      return @{@"handled": @YES};
+    }
+  }
+  return nil;
 }
 - (NSString*)engineVersion { return base::SysUTF8ToNSString(version_info::GetVersionNumber()); }
 - (void)setExtensionReview:(void (^)(NSDictionary<NSString*, id>*, NSWindow*, void (^)(BOOL, BOOL)))review {

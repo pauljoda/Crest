@@ -25,10 +25,24 @@ final class ChromiumNativePage: BrowserPageEngine {
     private var created = false
     private var disposed = false
 
+    /// The live pages the engine can name. A side-panel request arrives with
+    /// only a page identifier, so the page it belongs to has to be reachable
+    /// without a view context. The entries are weak: a page belongs to its
+    /// window's pool and this lookup must not keep one alive.
+    private final class Reference { weak var page: ChromiumNativePage? }
+    private static var registry: [String: Reference] = [:]
+    static func live(_ id: String) -> ChromiumNativePage? {
+        guard let page = registry[id]?.page else { registry[id] = nil; return nil }
+        return page.disposed ? nil : page
+    }
+
     init(profileID: UUID, observer: @escaping (String, [String: Any]) -> Void = { _, _ in }) {
         self.profileID = profileID
         self.observer = observer
         surface.page = self
+        let reference = Reference()
+        reference.page = self
+        Self.registry[id] = reference
     }
 
     var nativeView: NSView { surface }
@@ -256,6 +270,7 @@ final class ChromiumNativePage: BrowserPageEngine {
         if let pendingNavigation { discardNavigation(pendingNavigation.token) }
         pendingNavigation = nil
         disposed = true
+        Self.registry[id] = nil
         surface.subviews.forEach { $0.removeFromSuperview() }
         host?.disposePages([id], windows: [], releaseProfiles: [])
         host = nil

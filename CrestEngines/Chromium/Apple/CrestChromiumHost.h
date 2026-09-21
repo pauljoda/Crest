@@ -62,6 +62,13 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
                             closed:(void (^)(void))closed
     NS_SWIFT_NAME(openSidePanel(_:page:closed:));
 - (void)closeSidePanelForPage:(NSString *)pageID NS_SWIFT_NAME(closeSidePanel(page:));
+// chrome.commands. The shortcut's target in the active page's own profile, or
+// nil when no enabled extension bound it. A named command has already been
+// delivered to its extension and reports `handled`; an `_execute_action`
+// binding reports the `action` whose extension the core runs itself, so the
+// popup keeps the core's own anchor.
+- (nullable NSDictionary<NSString *, id> *)dispatchExtensionShortcut:(NSEvent *)event
+    page:(NSString *)pageID NS_SWIFT_NAME(dispatchExtensionShortcut(_:page:));
 - (void)prepareExtensionProfile:(NSString *)profileID completion:(void (^)(BOOL ready))completion;
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForProfile:(NSString *)profileID;
 - (BOOL)extensionCommand:(NSString *)command extension:(NSString *)extensionID profile:(NSString *)profileID window:(NSString *)windowID;

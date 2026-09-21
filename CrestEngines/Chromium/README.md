@@ -232,11 +232,22 @@ Extension side panels are hosted as a card in the page row beside the page they
 belong to, not as a tab, and are neither persisted nor synced. Crest resolves
 the panel through `extensions::SidePanelService` and
 `ExtensionViewHostFactory::CreateSidePanelHost`; Chrome's own
-`SidePanelCoordinator`, reader and reading-list panels stay off. Only the
-extension action's context menu opens a panel today: `chrome.sidePanel.open()`
-and the action's open-on-icon-click behavior both run through
-`SidePanelService::OpenSidePanelForTab`, which drives the Views side-panel UI
-this build never creates, so they are still unrouted.
+`SidePanelCoordinator`, reader and reading-list panels stay off. The extension
+action's context menu, `chrome.sidePanel.open()`, `chrome.sidePanel.close()` and
+the action's open-on-icon-click behavior all reach that card. Chromium's own
+open and close helpers, which otherwise drive the Views side-panel UI this build
+never creates, hand the request to the card belonging to the tab it names; a
+window-wide request belongs to that window's active tab. A repeated request for
+the panel already on screen closes it on an icon click and is ignored by the
+API. `setOptions` that retracts an entry, and an extension that unloads, close
+the card they were showing.
+
+An extension's `chrome.commands` bindings are matched in the host after Crest's
+own shortcuts have had the key equivalent: a named command is delivered as
+`commands.onCommand` with the active-tab grant Chromium requires, and an
+`_execute_action` binding runs the action through Crest's own button path. The
+bindings themselves belong to the engine; the Extensions settings pane links to
+Chromium's own shortcut page for changing them.
 
 Packaged experiments require `--signing-identity` with a stable Apple Development
 or Developer ID identity. Ad-hoc signing changes the keychain trust identity on

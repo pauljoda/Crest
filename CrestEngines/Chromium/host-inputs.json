@@ -161,6 +161,6 @@
   },
   "chrome/browser/ui/views/side_panel/extensions/extension_side_panel_utils.cc": {
     "before": "b52441c7f4fd190eb5c23317974fb5b2d4ab87ca56f57db91bfbde4782acfea0",
-    "after": "08e022a1ebefe89d1ee8fa1c5cd348ab5b5ad1dbf256bce1ba72aafd814321c4"
+    "after": "91c988d6403970bbf04df9dd73bac7841c61ad55a0043de78f1dab34e096cc99"
   }
 }

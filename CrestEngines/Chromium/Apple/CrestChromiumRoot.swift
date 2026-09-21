@@ -647,6 +647,29 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         return instance.windows.values.first
     }
 
+    /// The panel host for the window that shows `window`'s page row, or `nil`
+    /// for a window that has no row of its own: setup, a Quick Window or the
+    /// recovery window.
+    private static func sidePanelHost(for window: NSWindow) -> BrowserExtensionSidePanelHost? {
+        guard let instance else { return nil }
+        if let id = instance.windows.first(where: { $0.value === window })?.key {
+            return ChromiumExtensionSidePanelHosts.host(for: id)
+        }
+        guard instance.privateWindow === window else { return nil }
+        return ChromiumExtensionSidePanelHosts.host(for: instance.application.privatePages.windowID)
+    }
+
+    /// The engine asked for a side-panel card: `chrome.sidePanel.open()`,
+    /// `chrome.sidePanel.close()`, or an action click whose extension opens a
+    /// panel instead of a popup. The card belongs to the page's own window.
+    @objc(routeSidePanel:page:request:)
+    static func routeSidePanel(_ extensionID: String, page pageID: String,
+                               request: CrestSidePanelRequest) {
+        guard let instance, !instance.quitting, let page = ChromiumNativePage.live(pageID),
+            let window = page.surface.window, let host = sidePanelHost(for: window) else { return }
+        BrowserExtensionSidePanelHost.route(request, extensionID: extensionID, page: page, host: host)
+    }
+
     @objc static func deferQuit() -> Bool {
         guard let instance, !instance.hasStopped else { return false }
         guard !instance.quitting else { return true }
@@ -687,8 +710,23 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         // Inspector, extension popup and system dialog responders are not a
         // browser workspace. Their editing and close shortcuts stay local.
         guard instance.activeContext != nil || instance.quickWindows.values.contains(where: { $0.window === NSApp.keyWindow }) else { return false }
-        guard let command = instance.application.shortcuts.command(for: event, isEnabled: instance.canPerform) else { return false }
-        instance.perform(command)
+        if let command = instance.application.shortcuts.command(for: event, isEnabled: instance.canPerform) {
+            instance.perform(command)
+            return true
+        }
+        // Crest's own shortcuts win. What is left can belong to an extension's
+        // `chrome.commands` binding in the active page's Space.
+        return instance.dispatchExtensionShortcut(event)
+    }
+
+    /// Offers an unclaimed key equivalent to the extensions installed in the
+    /// active page's own Space.
+    private func dispatchExtensionShortcut(_ event: NSEvent) -> Bool {
+        guard let page = activeContext?.pages.activePage?.chromiumPage,
+            let result = host.dispatchExtensionShortcut(event, page: page.id) else { return false }
+        // An `_execute_action` binding runs through the core so the popup keeps
+        // the anchor a click on the extension's own button would have used.
+        if let extensionID = result["action"] as? String { page.runExtension(extensionID) }
         return true
     }
 

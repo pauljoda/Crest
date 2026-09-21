@@ -48,6 +48,9 @@ struct BrowserExtensionsView: View {
                 Text("Choose an extension, then use Install Extension in Site Controls to review its permissions and select Spaces.")
                     .font(.callout).foregroundStyle(.secondary)
                 Button("Open Chromium Extension Manager", systemImage: "arrow.up.right.square") { run("manage") }
+                // Extension shortcuts are the engine's own bindings: Crest routes an
+                // unclaimed key equivalent to them but does not own their list.
+                Button("Keyboard Shortcuts…", systemImage: "keyboard") { run("shortcuts") }
             }
             if usesLiveSidebar { installedExtensions }
         }

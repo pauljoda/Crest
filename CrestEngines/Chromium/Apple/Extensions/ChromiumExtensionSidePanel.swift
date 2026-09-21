@@ -10,14 +10,19 @@ import SwiftUI
 /// rather than injected the way the extension controls receive it.
 @MainActor
 enum ChromiumExtensionSidePanelHosts {
-    private static var hosts: [BrowserWindowID: BrowserExtensionSidePanelHost] = [:]
+    /// Weak by construction: the window's own root model owns its panel host.
+    private final class Reference { weak var host: BrowserExtensionSidePanelHost? }
+    private static var hosts: [BrowserWindowID: Reference] = [:]
 
     static func register(_ host: BrowserExtensionSidePanelHost, for window: BrowserWindowID) {
-        hosts[window] = host
+        let reference = Reference()
+        reference.host = host
+        hosts[window] = reference
     }
     static func forget(_ window: BrowserWindowID) { hosts[window] = nil }
     static func host(for window: BrowserWindowID) -> BrowserExtensionSidePanelHost? {
-        hosts[window]
+        guard let host = hosts[window]?.host else { hosts[window] = nil; return nil }
+        return host
     }
 }
 

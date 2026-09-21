@@ -75,6 +75,7 @@ final class ChromiumExtensionStore {
             ? "https://chromewebstore.google.com/"
             : "https://chromewebstore.google.com/detail/\(extensionID)"
         case "manage": destination = "chrome://extensions/"
+        case "shortcuts": destination = "chrome://extensions/shortcuts"
         case "details": destination = "chrome://extensions/?id=\(extensionID)"
         case "options": destination = installed[space.profile.id]?.first { $0.id == extensionID }?.options
         default: destination = nil

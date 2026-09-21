@@ -1009,16 +1009,16 @@
  #include "chrome/browser/profiles/profile.h"
  #include "chrome/browser/ui/browser_window/public/browser_window_features.h"
  #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
-@@ -34,9 +37,48 @@
- 
- }  // namespace
+@@ -17,6 +20,38 @@
+ #include "content/public/browser/web_contents.h"
+ #include "extensions/common/extension_id.h"
  
 +#if BUILDFLAG(IS_MAC)
 +// Declared in chrome/browser/ui/crest/crest_chrome_hooks.h. Crest hosts an
 +// extension side panel as a card in its own page row and never creates the
 +// Views side-panel UI below, so every entry point that reaches these helpers
 +// is routed to that card instead. The declarations are repeated here rather
-+// than included because this target cannot depend on the one that owns the
++// than included because this target cannot depend on the one that owns that
 +// header: //chrome/browser/ui:ui already depends on this target.
 +namespace crest {
 +bool IsEnabled();
@@ -1045,12 +1045,16 @@
 +}  // namespace
 +#endif
 +
+ namespace extensions::side_panel_util {
+ 
+ namespace {
+@@ -37,6 +72,13 @@
  // Defined in extension_side_panel_utils.h
  void ToggleExtensionSidePanel(BrowserWindowInterface* browser_window,
                                const ExtensionId& extension_id) {
 +#if BUILDFLAG(IS_MAC)
-+  if (crest::IsEnabled()) {
-+    crest::OpenExtensionSidePanel(
++  if (::crest::IsEnabled()) {
++    ::crest::OpenExtensionSidePanel(
 +        CrestPanelContents(browser_window, nullptr), extension_id);
 +    return;
 +  }
@@ -1063,8 +1067,8 @@
                                    content::WebContents* web_contents,
                                    const ExtensionId& extension_id) {
 +#if BUILDFLAG(IS_MAC)
-+  if (crest::IsEnabled()) {
-+    crest::OpenExtensionSidePanel(
++  if (::crest::IsEnabled()) {
++    ::crest::OpenExtensionSidePanel(
 +        CrestPanelContents(&browser_window, web_contents), extension_id);
 +    return;
 +  }
@@ -1077,8 +1081,8 @@
                                        content::WebContents& web_contents,
                                        const ExtensionId& extension_id) {
 +#if BUILDFLAG(IS_MAC)
-+  if (crest::IsEnabled()) {
-+    crest::OpenExtensionSidePanel(&web_contents, extension_id);
++  if (::crest::IsEnabled()) {
++    ::crest::OpenExtensionSidePanel(&web_contents, extension_id);
 +    return;
 +  }
 +#endif
@@ -1090,8 +1094,8 @@
  void CloseGlobalExtensionSidePanel(BrowserWindowInterface* browser_window,
                                     const ExtensionId& extension_id) {
 +#if BUILDFLAG(IS_MAC)
-+  if (crest::IsEnabled()) {
-+    crest::CloseExtensionSidePanel(
++  if (::crest::IsEnabled()) {
++    ::crest::CloseExtensionSidePanel(
 +        CrestPanelContents(browser_window, nullptr), extension_id);
 +    return;
 +  }
@@ -1104,8 +1108,8 @@
                                         content::WebContents* web_contents,
                                         const ExtensionId& extension_id) {
 +#if BUILDFLAG(IS_MAC)
-+  if (crest::IsEnabled()) {
-+    crest::CloseExtensionSidePanel(
++  if (::crest::IsEnabled()) {
++    ::crest::CloseExtensionSidePanel(
 +        CrestPanelContents(browser_window, web_contents), extension_id);
 +    return;
 +  }

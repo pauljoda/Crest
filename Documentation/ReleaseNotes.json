@@ -1741,6 +1741,14 @@
     "installed-session-upgrade-coverage": {
       "category": "internal",
       "message": "Cover the installed-session upgrade end to end: every record, profile identity, sync journal state and favicon survives the one-time move into the transactional store."
+    },
+    "chromium-side-panel-routing": {
+      "category": "improved",
+      "message": "Extension side panels open from the extension icon and from the extension itself, and close when the extension disables or unloads them."
+    },
+    "chromium-extension-shortcuts": {
+      "category": "new",
+      "message": "Extension keyboard shortcuts work in Chromium-powered windows, with a Keyboard Shortcuts link in Extensions settings for engine-managed bindings."
     }
   }
 }
