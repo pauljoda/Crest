@@ -1,6 +1,8 @@
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
+    #region Actions - Transfer
+
     /// Moves ownership without closing, archiving, or creating a replacement tab.
     /// All destination checks precede mutation of either collection.
     public TabId? TransferTo(BrowserTabCollection destination, TabId id, TabId? selected, TabId? fallback,
@@ -44,4 +46,6 @@ public sealed partial class BrowserTabCollection {
         destination.RepairSplitMembership();
         return selected == id ? fallback is { } next && tabs.Any(t => t.Id == next) ? next : null : selected;
     }
+
+    #endregion
 }

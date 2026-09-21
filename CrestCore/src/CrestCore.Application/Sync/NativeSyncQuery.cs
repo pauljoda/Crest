@@ -8,7 +8,14 @@ namespace CrestCore.Application;
 /// A prepared query is evaluated once, then read without repeating projection
 /// work or generating different identities during buffer-capacity negotiation.
 public static class NativeSyncQuery {
+    #region Variables
+
     public const int MaximumBytes = NativeSyncJournal.MaximumBytes;
+
+    #endregion
+
+    #region Actions - Queries
+
     public static byte[] Prepare(ReadOnlySpan<byte> input) {
         if (input.Length is 0 or > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
@@ -59,4 +66,6 @@ public static class NativeSyncQuery {
         if (bytes.Length > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         return bytes;
     }
+
+    #endregion
 }

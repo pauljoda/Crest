@@ -3,6 +3,8 @@ namespace CrestCore.Domain;
 /// Numeric timestamps keep native Date precision at a retention boundary.
 /// Callers apply the returned indices to their existing value snapshots.
 public static class RecordRemovalPolicy {
+    #region Actions - Navigation
+
     public static IReadOnlyList<int> Expired(IReadOnlyList<double> timestamps, double now, double lifetime) {
         Validate(timestamps);
         if (!double.IsFinite(now) || !double.IsFinite(lifetime) || lifetime < 0)
@@ -19,4 +21,6 @@ public static class RecordRemovalPolicy {
     private static void Validate(IReadOnlyList<double> timestamps) {
         if (timestamps.Any(value => !double.IsFinite(value))) throw new BrowserRuleException("invalid_record_date");
     }
+
+    #endregion
 }

@@ -7,9 +7,15 @@ using CrestCore.Contracts;
 namespace CrestCore.Native;
 
 public static unsafe partial class Exports {
+    #region Variables
+
     /// One monotonic sequence for every handle table in this image, so a handle
     /// from one authority can never be mistaken for a live handle in another.
     private static long nextHandle;
+
+    #endregion
+
+    #region Actions - Native exports
 
     [UnmanagedCallersOnly(EntryPoint = "crest_core_abi_version", CallConvs = [typeof(CallConvCdecl)])]
     public static uint AbiVersion() => 1;
@@ -63,4 +69,5 @@ public static unsafe partial class Exports {
         } catch (ProtocolException error) { return error.Message == "version_mismatch" ? CoreStatus.VersionMismatch : CoreStatus.InvalidMessage; } catch { return CoreStatus.InvalidMessage; }
     }
 
+    #endregion
 }

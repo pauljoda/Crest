@@ -2,8 +2,15 @@ namespace CrestCore.Domain;
 
 /// The same bounded forest and stable tab-boundary ordering used by Crest's native sidebars.
 public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
+    #region Variables
+
     public const int MaximumDepth = 16;
     public const int MaximumCount = 500;
+
+    #endregion
+
+    #region Actions - Organization
+
     public static IReadOnlyList<BrowserFolder> RepairPreorder(IReadOnlyList<BrowserFolder> source) {
         List<BrowserFolder> accepted = [];
         Dictionary<FolderId, (int Depth, TabPlacement Location)> parents = [];
@@ -17,24 +24,7 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
         }
         return new FolderTree(accepted).DisplayOrder();
     }
-    public BrowserFolder Folder(FolderId id) => folders.FirstOrDefault(f => f.Id == id)
-        ?? throw new BrowserRuleException("unknown_folder");
-    public IEnumerable<BrowserFolder> Children(FolderId? id) => folders.Where(f => f.ParentId == id);
-    public HashSet<FolderId> Subtree(FolderId id) {
-        _ = Folder(id);
-        HashSet<FolderId> result = []; Stack<FolderId> pending = new([id]);
-        while (pending.TryPop(out var next))
-            if (result.Add(next)) foreach (var child in Children(next)) pending.Push(child.Id);
-        return result;
-    }
-    public int Depth(FolderId id) {
-        var folder = Folder(id); var depth = 0; HashSet<FolderId> seen = [id];
-        while (folder.ParentId is { } parent) {
-            if (!seen.Add(parent) || ++depth >= MaximumDepth) throw new BrowserRuleException("invalid_folder_tree");
-            folder = Folder(parent);
-        }
-        return depth;
-    }
+
     public void Validate() {
         if (folders.Count > MaximumCount || folders.Select(f => f.Id).Distinct().Count() != folders.Count)
             throw new BrowserRuleException("invalid_folder_tree");
@@ -44,6 +34,7 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
             _ = Depth(folder.Id);
         }
     }
+
     public IReadOnlyList<BrowserFolder> DisplayOrder() {
         Validate(); List<BrowserFolder> result = [];
         void Append(FolderId? parent) {
@@ -51,11 +42,7 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
         }
         Append(null); return result;
     }
-    public TabId? TabAnchor(FolderId id, IReadOnlyList<BrowserTab> tabs) {
-        var subtree = Subtree(id);
-        return tabs.FirstOrDefault(t => t.FolderId is { } f && subtree.Contains(f))?.Id
-            ?? (Folder(id).OrderAnchorTabId is { } anchor && tabs.Any(t => t.Id == anchor) ? anchor : null);
-    }
+
     public HashSet<FolderId> EmptyPredecessors(FolderId? before, TabId? anchor, FolderId? parent,
         TabPlacement placement, IReadOnlyList<BrowserTab> tabs) {
         HashSet<FolderId> result = [];
@@ -69,6 +56,7 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
         }
         return result;
     }
+
     public List<BrowserFolder> PreserveOrder(HashSet<TabId> removed, IReadOnlyList<BrowserTab> tabs,
         HashSet<FolderId>? excluding = null) => folders.Select(folder => {
             if (excluding?.Contains(folder.Id) == true) return folder;
@@ -85,4 +73,38 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
                 && t.Placement == folder.Location && (parent is null || t.FolderId is { } f && parent.Contains(f)))?.Id
             };
         }).ToList();
+
+    #endregion
+
+    #region Mutators
+
+    public BrowserFolder Folder(FolderId id) => folders.FirstOrDefault(f => f.Id == id)
+        ?? throw new BrowserRuleException("unknown_folder");
+
+    public IEnumerable<BrowserFolder> Children(FolderId? id) => folders.Where(f => f.ParentId == id);
+
+    public HashSet<FolderId> Subtree(FolderId id) {
+        _ = Folder(id);
+        HashSet<FolderId> result = []; Stack<FolderId> pending = new([id]);
+        while (pending.TryPop(out var next))
+            if (result.Add(next)) foreach (var child in Children(next)) pending.Push(child.Id);
+        return result;
+    }
+
+    public int Depth(FolderId id) {
+        var folder = Folder(id); var depth = 0; HashSet<FolderId> seen = [id];
+        while (folder.ParentId is { } parent) {
+            if (!seen.Add(parent) || ++depth >= MaximumDepth) throw new BrowserRuleException("invalid_folder_tree");
+            folder = Folder(parent);
+        }
+        return depth;
+    }
+
+    public TabId? TabAnchor(FolderId id, IReadOnlyList<BrowserTab> tabs) {
+        var subtree = Subtree(id);
+        return tabs.FirstOrDefault(t => t.FolderId is { } f && subtree.Contains(f))?.Id
+            ?? (Folder(id).OrderAnchorTabId is { } anchor && tabs.Any(t => t.Id == anchor) ? anchor : null);
+    }
+
+    #endregion
 }

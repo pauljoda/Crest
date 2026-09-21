@@ -1,3 +1,9 @@
 namespace CrestCore.Domain;
 
-public sealed class SystemClock : IClock { public DateTimeOffset Now => DateTimeOffset.UtcNow; }
+public sealed class SystemClock : IClock {
+    #region Variables
+
+    public DateTimeOffset Now => DateTimeOffset.UtcNow;
+
+    #endregion
+}

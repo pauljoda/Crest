@@ -7,7 +7,14 @@ using CrestCore.Application;
 namespace CrestCore.Native;
 
 public static unsafe partial class Exports {
+    #region Variables
+
     private static readonly ConcurrentDictionary<ulong, byte[]> SyncQueries = new();
+
+    #endregion
+
+    #region Actions - Native exports
+
     private static ulong RetainSyncQuery(byte[] result) {
         var id = checked((ulong)Interlocked.Increment(ref nextHandle));
         if (!SyncQueries.TryAdd(id, result)) throw new InvalidOperationException("Duplicate sync query handle");
@@ -40,4 +47,6 @@ public static unsafe partial class Exports {
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_query_release", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncQueryRelease(ulong handle) => SyncQueries.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
+
+    #endregion
 }

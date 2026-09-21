@@ -3,6 +3,8 @@ namespace CrestCore.Domain;
 /// Synchronous value edits used by native hosts that still own page lifetimes.
 /// No engine calls or page creation take place while an edit is evaluated.
 public sealed partial class BrowserTabCollection {
+    #region Actions - Editing
+
     public bool MoveTab(TabId id, TabPlacement placement, FolderId? requestedFolder, TabId? before,
         bool detachSplit, DateTimeOffset now) {
         var tab = Tab(id);
@@ -109,4 +111,6 @@ public sealed partial class BrowserTabCollection {
         NormalizeSplits(now);
         return selected;
     }
+
+    #endregion
 }

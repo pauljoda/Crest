@@ -5,6 +5,8 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Actions - Batch
+
     private NativeSessionCommand PrepareTabBatch(ulong expected, JsonObject request) {
         try {
             var window = request["window"]!;
@@ -91,4 +93,6 @@ public sealed partial class NativeSessionAuthority {
             return new(this, expected, document, TransferOutput(new JsonObject { ["error"] = error.Code }), error.Code);
         }
     }
+
+    #endregion
 }

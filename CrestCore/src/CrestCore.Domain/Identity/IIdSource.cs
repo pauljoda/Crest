@@ -1,3 +1,9 @@
 namespace CrestCore.Domain;
 
-public interface IIdSource { Guid Next(); }
+public interface IIdSource {
+    #region Abstract Methods
+
+    Guid Next();
+
+    #endregion
+}

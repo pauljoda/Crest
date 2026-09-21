@@ -3,6 +3,8 @@ namespace CrestCore.Domain;
 /// Absence alone is not authority to delete a shared tab. Delivery may be
 /// incomplete, and closing current tabs does not authorize deleting saved tabs.
 public static class SyncDeletionPolicy {
+    #region Actions - Sync
+
     public static string? Reason(string kind, TabPlacement? placement, string? archiveReason,
         bool owningSpaceRemains, string fallback) {
         if (fallback is not ("explicitDelete" or "superseded" or "retention"))
@@ -14,4 +16,6 @@ public static class SyncDeletionPolicy {
             return placement != TabPlacement.Current ? null : archiveReason == "autoCleanup" ? "retention" : "superseded";
         return !owningSpaceRemains && fallback == "explicitDelete" ? "explicitDelete" : null;
     }
+
+    #endregion
 }

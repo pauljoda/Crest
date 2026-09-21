@@ -8,6 +8,8 @@ namespace CrestCore.Application;
 /// Immutable sync state. Copies share records until a semantic transition
 /// replaces them; failed transitions never publish clocks, records or pending IDs.
 public sealed class NativeSyncJournal {
+    #region Variables
+
     public const int MaximumBytes = 64 * 1024 * 1024;
     public const int MaximumRecords = 250_000;
     private readonly JsonObject metadata;
@@ -16,6 +18,10 @@ public sealed class NativeSyncJournal {
     private readonly Lazy<byte[]> encoded;
     internal IEnumerable<JsonObject> Records => records.Values;
     internal JsonNode Preferences => metadata["preferences"]!.DeepClone();
+
+    #endregion
+
+    #region Constructors
 
     public NativeSyncJournal(ReadOnlySpan<byte> bytes) {
         var source = Parse(bytes);
@@ -34,31 +40,38 @@ public sealed class NativeSyncJournal {
 
     private NativeSyncJournal(JsonObject metadata, Dictionary<string, JsonObject> records, HashSet<string> pending) { this.metadata = metadata; this.records = records; this.pending = pending; encoded = new(Encode, true); }
 
+    #endregion
+
+    #region Actions - Decoding
+
     private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
         if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         return JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
     }
+
     private static Guid Id(JsonNode? node) => NativeSessionAuthority.Id(node);
+
     private static string Kind(JsonNode record) => record["id"]!["kind"]!.GetValue<string>();
+
     private static string Name(JsonNode id) => id["kind"]!.GetValue<string>() + ":" + Id(id["value"]).ToString("D");
+
     private static ulong Clock(JsonNode record) => record["version"]!["logicalClock"]!.GetValue<ulong>();
+
     private static JsonObject? Payload(JsonNode record) => record["payload"] as JsonObject;
+
     private static JsonObject Value(JsonNode payload) => payload["value"]!.AsObject();
+
     private static JsonObject PayloadId(JsonObject payload) {
         string kind = payload["type"]!.GetValue<string>();
         var identity = kind == "archive" ? Value(payload)["tab"]! : Value(payload);
         return new() { ["kind"] = kind, ["value"] = Id(identity["id"]).ToString("D").ToUpperInvariant() };
     }
+
     private static JsonNode PayloadSpace(JsonObject payload) => payload["type"]!.GetValue<string>() switch { "space" => Value(payload)["id"]!, "archive" => Value(payload)["tab"]!["spaceID"]!, _ => Value(payload)["spaceID"]! };
-    private static Dictionary<string, JsonObject> RecordMap(JsonArray values) {
-        if (values.Count > MaximumRecords) throw new BrowserRuleException("sync_record_limit");
-        var result = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
-        foreach (var value in values) {
-            NativeSyncEvaluator.ValidateRecord(value!.AsObject());
-            if (!result.TryAdd(Name(value["id"]!), value.AsObject())) throw new BrowserRuleException("duplicate_sync_record");
-        }
-        return result;
-    }
+
+    #endregion
+
+    #region Actions - Journal updates
 
     public NativeSyncJournal Apply(ReadOnlySpan<byte> bytes) {
         var request = Parse(bytes);
@@ -196,6 +209,7 @@ public sealed class NativeSyncJournal {
         "tab" => preferences[Value(payload)["placement"]!.GetValue<string>() == "current" ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
         _ => preferences["historyAndArchive"]!.GetValue<bool>()
     };
+
     private static bool Portable(JsonObject payload) {
         string kind = payload["type"]!.GetValue<string>();
         if (kind is "space" or "folder") return true;
@@ -203,6 +217,7 @@ public sealed class NativeSyncJournal {
         return kind == "history" ? SyncContentPolicy.Includes(value["url"]?.GetValue<string>())
             : SyncContentPolicy.IncludesTab(value["url"]?.GetValue<string>(), value["nativeContent"] is not null, value["savedURL"]?.GetValue<string>());
     }
+
     private static bool AncestryArrived(JsonObject payload, Dictionary<Guid, JsonObject> folders) {
         var value = Value(payload);
         JsonNode? next = payload["type"]!.GetValue<string>() switch { "folder" => value["parentID"], "tab" when value["placement"]!.GetValue<string>() != "pinned" => value["folderID"], _ => null };
@@ -216,7 +231,13 @@ public sealed class NativeSyncJournal {
         }
         return true;
     }
+
+    #endregion
+
+    #region Actions - Encoding
+
     public byte[] Read() => encoded.Value;
+
     private byte[] Encode() {
         var value = metadata.DeepClone().AsObject();
         value["records"] = new JsonArray(records.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
@@ -225,4 +246,20 @@ public sealed class NativeSyncJournal {
         if (result.Length > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         return result;
     }
+
+    #endregion
+
+    #region Mutators
+
+    private static Dictionary<string, JsonObject> RecordMap(JsonArray values) {
+        if (values.Count > MaximumRecords) throw new BrowserRuleException("sync_record_limit");
+        var result = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+        foreach (var value in values) {
+            NativeSyncEvaluator.ValidateRecord(value!.AsObject());
+            if (!result.TryAdd(Name(value["id"]!), value.AsObject())) throw new BrowserRuleException("duplicate_sync_record");
+        }
+        return result;
+    }
+
+    #endregion
 }

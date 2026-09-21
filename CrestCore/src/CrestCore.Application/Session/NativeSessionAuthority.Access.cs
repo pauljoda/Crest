@@ -5,7 +5,20 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Variables
+
     private SpaceAccessAuthority? access;
+
+    /// Operations that must still work while a Space is locked. None of them
+    /// returns tab, folder, history or archive contents to the caller: the
+    /// deletion intents that sync and cleanup depend on, and retention or
+    /// current-tab maintenance sweeps.
+    private static readonly string[] UnlockedOperations =
+        ["space.deletion.begin", "space.remove", "records.sweep", "records.cleanup"];
+
+    #endregion
+
+    #region Actions - Access
 
     /// Locking is process-local, so the grants and the session records that name
     /// the policy have to meet in the same process. A borrowed workspace inherits
@@ -18,13 +31,6 @@ public sealed partial class NativeSessionAuthority {
             access = authority;
         }
     }
-
-    /// Operations that must still work while a Space is locked. None of them
-    /// returns tab, folder, history or archive contents to the caller: the
-    /// deletion intents that sync and cleanup depend on, and retention or
-    /// current-tab maintenance sweeps.
-    private static readonly string[] UnlockedOperations =
-        ["space.deletion.begin", "space.remove", "records.sweep", "records.cleanup"];
 
     /// An unnamed policy was somebody restricting this Space in a build that knew
     /// more terms than this one. Resolve it to the guarded side, exactly as the
@@ -81,4 +87,6 @@ public sealed partial class NativeSessionAuthority {
         var assignment = new SpaceAccessAssignment(spaceId, Id(space.Metadata["profile"]!["id"]));
         lock (access) access.RequireAccessible(assignment, RequiresAuthentication(space));
     }
+
+    #endregion
 }

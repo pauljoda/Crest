@@ -10,8 +10,29 @@ namespace CrestCore.Application;
 /// publishes the returned value atomically, then reconciles its live pages.
 /// History, existing archive records and image payloads never cross this path.
 public static class NativeSessionEditor {
+    #region Variables
+
     public const int MaximumBytes = 4 * 1024 * 1024;
     private static readonly DateTimeOffset SwiftEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    private sealed class SuppliedIds(JsonArray values) : IIdSource {
+        #region Variables
+
+        private readonly Queue<Guid> values = new(values.Select(n => Guid.Parse(n!.GetValue<string>())));
+
+        #endregion
+
+        #region Actions - Identity supply
+
+        public Guid Next() => values.Dequeue();
+
+        #endregion
+    }
+
+    #endregion
+
+    #region Actions - Session editing
+
     public static byte[] Evaluate(ReadOnlySpan<byte> input) {
         if (input.Length > MaximumBytes) throw new ProtocolException("session_edit_limit");
         var parsed = Protocol.Parse(input);
@@ -220,13 +241,12 @@ public static class NativeSessionEditor {
             copies.Add((JsonNode)new JsonObject { ["source"] = source.Value.ToString(), ["copy"] = copy.Value.ToString() });
         }
     }
+
     private static JsonNode FolderSymbol(JsonNode value) {
         string symbol = value.GetValue<string>();
         if (symbol.Length == 0 || Encoding.UTF8.GetByteCount(symbol) > 128) throw new BrowserRuleException("invalid_folder_symbol");
         return JsonValue.Create(symbol)!;
     }
-    private sealed class SuppliedIds(JsonArray values) : IIdSource {
-        private readonly Queue<Guid> values = new(values.Select(n => Guid.Parse(n!.GetValue<string>())));
-        public Guid Next() => values.Dequeue();
-    }
+
+    #endregion
 }

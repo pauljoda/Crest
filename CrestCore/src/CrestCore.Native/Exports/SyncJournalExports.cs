@@ -8,7 +8,14 @@ using CrestCore.Domain;
 namespace CrestCore.Native;
 
 public static unsafe partial class Exports {
+    #region Variables
+
     private static readonly ConcurrentDictionary<ulong, NativeSyncJournal> SyncJournals = new();
+
+    #endregion
+
+    #region Actions - Native exports
+
     private static int SyncJournalError(Exception error) => error is BrowserRuleException rule
         ? rule.Code switch {
             "sync_clock_exhausted" => CoreStatus.InvalidState,
@@ -107,4 +114,6 @@ public static unsafe partial class Exports {
             return SyncJournalError(error);
         }
     }
+
+    #endregion
 }

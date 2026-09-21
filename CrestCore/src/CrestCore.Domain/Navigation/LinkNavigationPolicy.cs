@@ -3,11 +3,14 @@ namespace CrestCore.Domain;
 /// Semantic link behavior shared by the native engine adapters. Engines keep
 /// ownership of request security, downloads, form submissions and rendering.
 public static class LinkNavigationPolicy {
+    #region Actions - Navigation
+
     public static (bool Peek, bool NewTab) Modifiers(bool command, bool option, bool middle, LinkPeekModifier preference) {
         bool peek = preference == LinkPeekModifier.Command ? command : option;
         bool newTab = preference == LinkPeekModifier.Command ? option : command;
         return (peek, (!peek && newTab) || middle);
     }
+
     public static LinkNavigationDecision Decide(string? destination, bool userActivatedLink,
         bool topLevel, bool peekModified, bool newTabModified, bool shiftModified,
         bool focusesNewTabs, bool hasContext, string? placement, string? savedUrl,
@@ -31,4 +34,6 @@ public static class LinkNavigationPolicy {
         string host = url.IdnHost.ToLowerInvariant();
         return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
     }
+
+    #endregion
 }

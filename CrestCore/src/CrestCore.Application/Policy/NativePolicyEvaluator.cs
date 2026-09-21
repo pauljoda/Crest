@@ -10,8 +10,15 @@ namespace CrestCore.Application;
 /// Bounded, deterministic domain calls for existing synchronous native APIs.
 /// This path owns no session, queue, engine, I/O, callback, or retained state.
 public static class NativePolicyEvaluator {
+    #region Variables
+
     public const int MaximumInputBytes = 16_384;
     public const int MaximumOutputBytes = 65_536;
+
+    #endregion
+
+    #region Actions - Policy
+
     public static byte[] Evaluate(ReadOnlySpan<byte> utf8) {
         if (utf8.Length > MaximumInputBytes) throw new ProtocolException("policy_input_limit");
         var request = Protocol.Parse(utf8);
@@ -155,24 +162,32 @@ public static class NativePolicyEvaluator {
             ["searchQuery"] = intent?.SearchQuery
         });
     }
+
     private static byte[] Encode(JsonObject value) => Encoding.UTF8.GetBytes(value.ToJsonString());
+
     private static JsonElement? Optional(JsonElement value, string field) =>
         value.TryGetProperty(field, out var member) && member.ValueKind != JsonValueKind.Null ? member : null;
+
     private static JsonArray Identifiers(IReadOnlyList<string> values) =>
         new(values.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray());
+
     private static MemoryPressureLevel Level(JsonElement request) => Protocol.Text(request, "level") switch {
         "warning" => MemoryPressureLevel.Warning,
         "critical" => MemoryPressureLevel.Critical,
         _ => throw new ProtocolException("invalid_pressure_level")
     };
+
     private static MemoryPressurePlatform Platform(JsonElement request) => Protocol.Text(request, "platform") switch {
         "desktop" => MemoryPressurePlatform.Desktop,
         "mobile" => MemoryPressurePlatform.Mobile,
         _ => throw new ProtocolException("invalid_pressure_platform")
     };
+
     private static DateTimeOffset Date(JsonElement value, string field) {
         double seconds = value.GetProperty(field).GetDouble();
         if (!double.IsFinite(seconds)) throw new ProtocolException("invalid_date");
         return DateTimeOffset.UnixEpoch.AddSeconds(seconds);
     }
+
+    #endregion
 }

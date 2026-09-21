@@ -1,16 +1,13 @@
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
+    #region Variables
+
     public const int MaximumSplitMembers = 4;
 
-    public IReadOnlyList<BrowserTab> SplitMembers(TabId id) {
-        var tab = Tab(id);
-        if (tab.SplitGroupId is not { } group) return [tab];
-        int index = tabs.IndexOf(tab), first = index, last = index;
-        while (first > 0 && tabs[first - 1].SplitGroupId == group) first--;
-        while (last + 1 < tabs.Count && tabs[last + 1].SplitGroupId == group) last++;
-        return tabs.GetRange(first, last - first + 1);
-    }
+    #endregion
+
+    #region Actions - Splits
 
     private BrowserTab CopyTab(BrowserTab source, TabId id, DateTimeOffset now) => BrowserTab.Restore(source.Capture() with {
         Id = id,
@@ -126,4 +123,19 @@ public sealed partial class BrowserTabCollection {
         var groups = SplitMembershipPolicy.Repair(tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
         for (int index = 0; index < tabs.Count; index++) tabs[index].SetSplit(groups[index]);
     }
+
+    #endregion
+
+    #region Mutators
+
+    public IReadOnlyList<BrowserTab> SplitMembers(TabId id) {
+        var tab = Tab(id);
+        if (tab.SplitGroupId is not { } group) return [tab];
+        int index = tabs.IndexOf(tab), first = index, last = index;
+        while (first > 0 && tabs[first - 1].SplitGroupId == group) first--;
+        while (last + 1 < tabs.Count && tabs[last + 1].SplitGroupId == group) last++;
+        return tabs.GetRange(first, last - first + 1);
+    }
+
+    #endregion
 }

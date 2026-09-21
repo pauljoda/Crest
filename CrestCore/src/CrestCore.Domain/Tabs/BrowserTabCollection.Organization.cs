@@ -1,6 +1,8 @@
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
+    #region Actions - Organization
+
     public void AddFolder(FolderId id, string name, TabPlacement location = TabPlacement.Saved, FolderId? parent = null) {
         var tree = new FolderTree(folders);
         if (folders.Count >= FolderTree.MaximumCount) throw new BrowserRuleException("folder_limit");
@@ -14,16 +16,18 @@ public sealed partial class BrowserTabCollection {
         }
         folders.Insert(insertion, new(id, FolderName(name), location, parent));
     }
-    private static string FolderName(string name) => string.IsNullOrWhiteSpace(name) ? "Untitled Folder" : BrowserSpace.ValidName(name);
+
     public void RenameFolder(FolderId id, string name) {
         var folder = new FolderTree(folders).Folder(id);
         folders[folders.IndexOf(folder)] = folder with { Name = FolderName(name) };
     }
+
     public void CollapseFolder(FolderId id, bool collapsed, DateTimeOffset now) {
         var folder = new FolderTree(folders).Folder(id);
         if (folder.IsCollapsed == collapsed) return;
         folders[folders.IndexOf(folder)] = folder with { IsCollapsed = collapsed, CollapseModifiedAt = now };
     }
+
     public void DeleteFolder(FolderId id, DateTimeOffset now) {
         var folder = new FolderTree(folders).Folder(id);
         var next = folders.Where(f => f.Id != id).Select(f => f.ParentId == id ? f with { ParentId = folder.ParentId } : f).ToArray();
@@ -32,21 +36,25 @@ public sealed partial class BrowserTabCollection {
             tab.Place(tab.Placement, folder.ParentId, now, preservesSplit: true);
         folders.Clear(); folders.AddRange(ordered);
     }
+
     private static void ValidateInsertion(IReadOnlyList<BrowserTab> remaining, int insertion) {
         if (insertion > 0 && insertion < remaining.Count && remaining[insertion].SplitGroupId is { } split
             && remaining[insertion - 1].SplitGroupId == split) throw new BrowserRuleException("split_boundary");
     }
+
     private static int SectionEnd(List<BrowserTab> remaining, TabPlacement location) {
         int last = remaining.FindLastIndex(t => t.Placement == location);
         if (last >= 0) return last + 1;
         int current = remaining.FindIndex(t => t.Placement == TabPlacement.Current);
         return location == TabPlacement.Saved && current >= 0 ? current : remaining.Count;
     }
+
     internal void NormalizeSplits(DateTimeOffset now) {
         RepairSplitMembership();
         foreach (var group in tabs.Where(t => t.SplitGroupId is not null).GroupBy(t => t.SplitGroupId))
             if (group.Count() < 2) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
     }
+
     public void FileTabs(IReadOnlyCollection<TabId> requested, TabPlacement location, FolderId? folder,
         DateTimeOffset now, TabId? before = null, FolderId? beforeFolder = null, bool detachSplitMembers = false) {
         if (requested.Count == 0 || location == TabPlacement.Pinned) throw new BrowserRuleException("invalid_folder_placement");
@@ -86,6 +94,7 @@ public sealed partial class BrowserTabCollection {
         tabs.Clear(); tabs.AddRange(remaining); folders.Clear(); folders.AddRange(nextFolders);
         if (detachSplitMembers) NormalizeSplits(now);
     }
+
     public void MoveFolder(FolderId id, TabPlacement? location, FolderId? parent, DateTimeOffset now,
         FolderId? beforeFolder = null, TabId? beforeTab = null) {
         var tree = new FolderTree(folders); var source = tree.Folder(id);
@@ -125,4 +134,12 @@ public sealed partial class BrowserTabCollection {
             ? f with { OrderAnchorTabId = members[0].Id } : f).ToList();
         tabs.Clear(); tabs.AddRange(remaining); folders.Clear(); folders.AddRange(nextFolders);
     }
+
+    #endregion
+
+    #region Mutators
+
+    private static string FolderName(string name) => string.IsNullOrWhiteSpace(name) ? "Untitled Folder" : BrowserSpace.ValidName(name);
+
+    #endregion
 }

@@ -5,6 +5,8 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Actions - Commands
+
     /// Prepares against owned records. The native caller decodes the resulting
     /// projection before committing, so a failed read cannot leave its UI behind.
     public NativeSessionCommand PrepareCommand(ulong expected, ReadOnlySpan<byte> bytes) {
@@ -94,4 +96,6 @@ public sealed partial class NativeSessionAuthority {
             return Revision;
         }
     }
+
+    #endregion
 }

@@ -5,7 +5,14 @@ using System.Text.Json;
 namespace CrestCore.Contracts;
 
 public static class Protocol {
+    #region Variables
+
     public const int Version = 1;
+
+    #endregion
+
+    #region Actions - Parsing
+
     public static JsonElement Parse(ReadOnlySpan<byte> utf8) {
         // GetString with a throwing decoder rejects malformed UTF-8 before System.Text.Json replacement behavior.
         _ = new UTF8Encoding(false, true).GetString(utf8);
@@ -13,6 +20,7 @@ public static class Protocol {
         ValidateMembers(doc.RootElement);
         return doc.RootElement.Clone();
     }
+
     private static void ValidateMembers(JsonElement e) {
         if (e.ValueKind == JsonValueKind.Object) {
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -26,22 +34,27 @@ public static class Protocol {
             _ = new UTF8Encoding(false, true).GetBytes(e.GetString()!);
         }
     }
+
     public static void Members(JsonElement e, params string[] names) {
         if (e.ValueKind != JsonValueKind.Object || e.EnumerateObject().Any(p => !names.Contains(p.Name)))
             throw new ProtocolException("unexpected_member");
     }
+
     public static string Text(JsonElement e, string key, int max = 16384) {
         var p = e.GetProperty(key);
         if (p.ValueKind != JsonValueKind.String || p.GetString() is not { } s || s.Length == 0 || s.Length > max)
             throw new ProtocolException("invalid_string");
         return s;
     }
+
     public static string? OptionalText(JsonElement e, string key, int max = 16384)
         => !e.TryGetProperty(key, out var p) || p.ValueKind == JsonValueKind.Null ? null : Text(e, key, max);
+
     public static Guid Id(JsonElement e, string key) {
         _ = Text(e, key, 36);
         return Id(e.GetProperty(key));
     }
+
     public static Guid Id(JsonElement value) {
         if (value.ValueKind != JsonValueKind.String) throw new ProtocolException("invalid_uuid");
         string s = value.GetString()!;
@@ -49,20 +62,28 @@ public static class Protocol {
             throw new ProtocolException("invalid_uuid");
         return id;
     }
+
     public static Guid? OptionalId(JsonElement e, string key)
         => !e.TryGetProperty(key, out var p) || p.ValueKind == JsonValueKind.Null ? null : Id(e, key);
+
     public static ulong Counter(JsonElement e, string key) {
         string s = Text(e, key, 20);
         if (!ulong.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
             || value == 0 || s != value.ToString(CultureInfo.InvariantCulture)) throw new ProtocolException("invalid_counter");
         return value;
     }
+
     public static string Endpoint(JsonElement e, string key) {
         string s = Text(e, key, 96);
         if (s[0] is < 'a' or > 'z' || s.Any(c => !(char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '.' or '-' or '_')))
             throw new ProtocolException("invalid_endpoint");
         return s;
     }
+
+    #endregion
+
+    #region Actions - Descriptors
+
     public static Adapter Descriptor(ReadOnlySpan<byte> bytes) {
         var e = Parse(bytes);
         Members(e, "adapterId", "role", "implementationId", "implementationVersion", "protocolVersion", "capabilities");
@@ -84,4 +105,6 @@ public static class Protocol {
         }
         return new(id, role, Text(e, "implementationId", 128), Text(e, "implementationVersion", 128), capabilities);
     }
+
+    #endregion
 }

@@ -7,6 +7,8 @@ namespace CrestCore.Application;
 internal sealed record SpaceSections(IReadOnlyList<JsonNode> Tabs, IReadOnlyList<JsonNode> Folders,
     IReadOnlyList<JsonNode> History, IReadOnlyList<JsonNode> ArchivedTabs)
     : IReadOnlyDictionary<string, IReadOnlyList<JsonNode>> {
+    #region Variables
+
     internal static readonly IReadOnlyList<string> Names = Array.AsReadOnly<string>(["tabs", "folders", "history", "archivedTabs"]);
 
     public IReadOnlyList<JsonNode> this[string key] => key switch {
@@ -20,6 +22,11 @@ internal sealed record SpaceSections(IReadOnlyList<JsonNode> Tabs, IReadOnlyList
     public IEnumerable<string> Keys => Names;
     public IEnumerable<IReadOnlyList<JsonNode>> Values => Names.Select(name => this[name]);
     public int Count => Names.Count;
+
+    #endregion
+
+    #region Mutators
+
     public bool ContainsKey(string key) => Names.Contains(key, StringComparer.Ordinal);
 
     public bool TryGetValue(string key, out IReadOnlyList<JsonNode> value) {
@@ -35,4 +42,6 @@ internal sealed record SpaceSections(IReadOnlyList<JsonNode> Tabs, IReadOnlyList
         => Names.Select(name => new KeyValuePair<string, IReadOnlyList<JsonNode>>(name, this[name])).GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    #endregion
 }

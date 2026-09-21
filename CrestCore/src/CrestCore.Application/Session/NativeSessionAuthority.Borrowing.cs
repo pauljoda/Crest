@@ -6,14 +6,23 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Variables
+
     private readonly NativeSessionAuthority? borrowedSource;
     private readonly Guid borrowedSpace, borrowedProfile;
     private ulong borrowedSourceRevision;
     private bool released;
+
     // Presentation and organization belong to the temporary workspace. Every
     // other metadata field, including unknown compatible fields, follows its owner.
     private static readonly string[] LocalBorrowedFields =
         ["selectedTabID", "splitGroups", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt"];
+
+    internal ulong? BorrowedRevision => borrowedSource is null ? null : borrowedSource.Revision;
+
+    #endregion
+
+    #region Constructors
 
     private NativeSessionAuthority(SessionDocument initial, NativeSessionAuthority source, Guid space, Guid profile) {
         document = initial; workspaceKind = BrowserWorkspaceKind.Temporary;
@@ -22,6 +31,10 @@ public sealed partial class NativeSessionAuthority {
         borrowedSourceRevision = source.Revision;
         Validate(document);
     }
+
+    #endregion
+
+    #region Actions - Borrowing
 
     public NativeSessionAuthority CreateBorrowed(ulong expected, Guid spaceId, Guid profileId) {
         lock (Gate) {
@@ -68,7 +81,6 @@ public sealed partial class NativeSessionAuthority {
             throw new BrowserRuleException("borrowed_profile_requires_owner");
     }
 
-    internal ulong? BorrowedRevision => borrowedSource is null ? null : borrowedSource.Revision;
     internal void RequireBorrowedRevision(ulong? expected) {
         if (borrowedSource is null) return;
         _ = RequireBorrowedSource();
@@ -100,4 +112,6 @@ public sealed partial class NativeSessionAuthority {
     }
 
     public void Release() { lock (Gate) released = true; }
+
+    #endregion
 }

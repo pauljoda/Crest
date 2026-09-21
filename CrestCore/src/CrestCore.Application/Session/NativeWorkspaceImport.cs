@@ -7,12 +7,23 @@ namespace CrestCore.Application;
 /// Shared preview/command implementation. Sources contain semantic records only;
 /// positional asset references let the native caller retain opaque image bytes.
 public sealed class NativeWorkspaceImport {
+    #region Variables
+
     private sealed record Origin(int Source, int Space, int Tab, string Section);
     private readonly Dictionary<JsonNode, Origin> origins = new(ReferenceEqualityComparer.Instance);
+
+    #endregion
+
+    #region Actions - Workspace import
+
     private static Guid Id(JsonNode? n) => NativeSessionAuthority.Id(n);
+
     private static JsonArray Items(JsonNode n, string key) => n[key] as JsonArray ?? new();
+
     private static string Placement(JsonNode n) => n["placement"]?.GetValue<string>() ?? "current";
+
     private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString("D") };
+
     private static Guid? OptionalId(JsonNode? n) => n is null ? null : Id(n);
 
     public static JsonObject Preview(JsonObject session, JsonObject arguments, string mode, double now) {
@@ -24,22 +35,27 @@ public sealed class NativeWorkspaceImport {
             for (int ti = 0; ti < Items(space, section).Count; ti++)
                 origins[Items(space, section)[ti]!] = new(source, index, ti, section);
     }
+
     private JsonNode Copy(JsonNode node) {
         var copy = node.DeepClone();
         if (origins.TryGetValue(node, out var origin)) origins[copy] = origin;
         return copy;
     }
+
     private void Tabs(JsonNode space, IEnumerable<JsonNode> tabs) => space["tabs"] = new JsonArray(tabs.Select(Copy).ToArray());
+
     private static void Customize(JsonNode space, JsonNode values) {
         space["name"] = SpaceOrganizationPolicy.Name(values["name"]!.GetValue<string>());
         space["symbol"] = SpaceOrganizationPolicy.Symbol(values["symbol"]!.GetValue<string>());
         space["accent"] = values["accent"]!.DeepClone();
         space["branding"] = values["branding"]!.DeepClone();
     }
+
     private static void Available(JsonNode session, Guid id) {
         if (Items(session, "spaceDeletions").Any(d => Id(d!["spaceID"]) == id))
             throw new BrowserRuleException("space_deletion_in_progress");
     }
+
     private static void SelectAdded(JsonNode space, IEnumerable<JsonNode> tabs) {
         var chosen = tabs.LastOrDefault(t => Placement(t) == "current") ?? tabs.FirstOrDefault();
         if (chosen is not null) space["selectedTabID"] = chosen["id"]!.DeepClone();
@@ -235,4 +251,6 @@ public sealed class NativeWorkspaceImport {
         repaired["assets"] = assets;
         return repaired;
     }
+
+    #endregion
 }

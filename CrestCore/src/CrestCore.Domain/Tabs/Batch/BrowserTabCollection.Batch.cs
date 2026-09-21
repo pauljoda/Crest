@@ -1,6 +1,8 @@
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
+    #region Actions - Batch
+
     /// Operates on a detached command candidate. The authority publishes it only
     /// after the complete batch, native projection and storage have succeeded.
     public TabBatchResult ApplyBatch(TabBatchSelection request, TabBatchAction action, TabId? selected,
@@ -159,4 +161,6 @@ public sealed partial class BrowserTabCollection {
             }
         }
     }
+
+    #endregion
 }

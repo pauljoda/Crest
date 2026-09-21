@@ -9,19 +9,29 @@ namespace CrestCore.Application;
 /// Converts shared records into the native session document. Device credentials
 /// and engine-local pages come only from the receiving device's checkpoint.
 public static class NativeSyncMaterializer {
+    #region Actions - Materialization
+
     private static Guid? OptionalId(JsonNode? node) => node is null ? null : Id(node);
+
     private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString("D") };
+
     private static JsonArray Array(IEnumerable<JsonNode> items) => new(items.Select(n => n.DeepClone()).ToArray());
+
     private static IEnumerable<JsonNode> Local(JsonNode? space, string section) => space is null ? [] : Items(space, section).Select(n => n!);
+
     private static IEnumerable<JsonNode> Ordered(IEnumerable<JsonNode> source) => source
         .OrderBy(n => Text(n["orderToken"]), StringComparer.Ordinal).ThenBy(n => Id(n["id"]).ToString("D"), StringComparer.Ordinal);
+
     private static IEnumerable<JsonNode> Payloads(IEnumerable<JsonObject> records, string kind, Guid? space = null)
         => records.Where(r => Text(r["payload"]?["type"]) == kind && (space is null || Id(r["spaceID"]) == space))
             .Select(r => r["payload"]!["value"]!);
+
     private static BrowserFolder Folder(JsonNode node) => new(new(Id(node["id"])), Text(node["title"])!, Placement(node, "location"),
         OptionalId(node["parentID"]) is { } parent ? new(parent) : null);
+
     private static Dictionary<FolderId, BrowserFolder> LocalFolders(JsonNode? space)
         => Local(space, "folders").Select(Folder).ToDictionary(f => f.Id);
+
     private static NativeSyncDocumentException Error(string code, Guid id) => new(code, id.ToString("D"));
 
     public static JsonObject Materialize(JsonObject session, JsonNode preferences, IReadOnlyList<JsonObject> records, double now) {
@@ -190,4 +200,6 @@ public static class NativeSyncMaterializer {
             .Take(HistoryPolicy.MaximumEntries).Select(h => (JsonNode)Fields(h, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount"));
         return synced.Concat(localOnly).OrderByDescending(h => h["lastVisitedAt"]!.GetValue<double>()).ToList();
     }
+
+    #endregion
 }

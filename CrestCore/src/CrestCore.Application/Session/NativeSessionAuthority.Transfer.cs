@@ -6,6 +6,8 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Actions - Transfer
+
     private SpaceDocument TransferSpace(Guid spaceId, Guid profileId) {
         if (PendingDeletion(document.Metadata, spaceId) is not null) throw new BrowserRuleException("space_deletion_in_progress");
         var space = document.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == spaceId)
@@ -13,6 +15,7 @@ public sealed partial class NativeSessionAuthority {
         if (Id(space.Metadata["profile"]!["id"]) != profileId) throw new BrowserRuleException("wrong_profile_identity");
         return space;
     }
+
     private static JsonObject TransferProjection(SpaceDocument space, JsonNode window) {
         var value = space.Metadata.DeepClone().AsObject();
         value["selectedTabID"] = window["selectedTabs"]!.AsArray()
@@ -21,6 +24,7 @@ public sealed partial class NativeSessionAuthority {
             space.Sections[section].Select(n => n.DeepClone()).ToArray());
         return value;
     }
+
     private static SessionDocument ApplyTransfer(SessionDocument document, JsonNode window, params JsonObject[] edits) {
         var metadata = document.Metadata.DeepClone().AsObject();
         metadata["selectedSpaceID"] = window["selectedSpaceID"]!.DeepClone();
@@ -38,11 +42,13 @@ public sealed partial class NativeSessionAuthority {
         }).ToArray();
         var next = new SessionDocument(metadata, spaces); Validate(next); return next;
     }
+
     private static byte[] TransferOutput(JsonObject result) {
         var bytes = Encoding.UTF8.GetBytes(result.ToJsonString());
         if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
         return bytes;
     }
+
     private NativeSessionCommand PrepareTabTransfer(ulong expected, JsonObject request) {
         var sourceId = Id(request["spaceId"]); var destinationId = Id(request["destinationSpaceId"]);
         if (sourceId == destinationId) throw new BrowserRuleException("same_space_transfer");
@@ -90,8 +96,11 @@ public sealed partial class NativeSessionAuthority {
                 new(destination, destinationRevision, nextDestination, []), TransferOutput(result));
         }
     }
+
     internal static byte[] TransferSelection(SessionDocument value) => Encoding.UTF8.GetBytes(new JsonObject {
         ["selectedSpaceID"] = value.Metadata["selectedSpaceID"]!.DeepClone(),
         ["selectedTabs"] = new JsonArray(value.Spaces.Select(s => (JsonNode)new JsonObject { ["spaceID"] = s.Metadata["id"]!.DeepClone(), ["tabID"] = s.Metadata["selectedTabID"]?.DeepClone() }).ToArray())
     }.ToJsonString());
+
+    #endregion
 }

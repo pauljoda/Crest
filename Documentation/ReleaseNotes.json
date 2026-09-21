@@ -1721,6 +1721,10 @@
     "native-core-source-organization": {
       "category": "internal",
       "message": "Organize the native core by browser responsibility and clarify its session model."
+    },
+    "native-core-member-regions": {
+      "category": "internal",
+      "message": "Group native core state and behavior into consistent source sections."
     }
   }
 }

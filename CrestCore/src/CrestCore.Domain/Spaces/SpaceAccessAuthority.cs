@@ -4,9 +4,15 @@ namespace CrestCore.Domain;
 /// authentication UI; only a matching, still-pending result can grant access.
 /// Callers serialize access. Nothing in this authority is persisted or synced.
 public sealed class SpaceAccessAuthority {
+    #region Variables
+
     private readonly HashSet<SpaceAccessAssignment> unlocked = [];
     private (ulong Request, SpaceAccessAssignment Assignment)? pending;
     private ulong nextRequest;
+
+    #endregion
+
+    #region Actions - Space access
 
     public bool IsLocked(SpaceAccessAssignment assignment, bool requiresAuthentication) =>
         requiresAuthentication && !unlocked.Contains(assignment);
@@ -50,4 +56,6 @@ public sealed class SpaceAccessAuthority {
         unlocked.Clear();
         return true;
     }
+
+    #endregion
 }

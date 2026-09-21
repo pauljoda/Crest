@@ -3,6 +3,8 @@ namespace CrestCore.Domain;
 /// Repair never reorders tabs or rewrites position clocks. A singleton keeps
 /// its membership because the rest of a sync batch may not have arrived yet.
 public static class SplitMembershipPolicy {
+    #region Actions - Organization
+
     public static IReadOnlyList<Guid?> Repair(IReadOnlyList<SplitMember> tabs) {
         var result = new Guid?[tabs.Count];
         HashSet<Guid> retired = [];
@@ -27,4 +29,6 @@ public static class SplitMembershipPolicy {
         }
         return result;
     }
+
+    #endregion
 }

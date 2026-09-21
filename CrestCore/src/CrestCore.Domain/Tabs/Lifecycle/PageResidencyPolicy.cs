@@ -7,11 +7,18 @@ namespace CrestCore.Domain;
 /// capturing media, holding Picture in Picture, or whose media state is unknown
 /// stays resident whatever this policy proposes.
 public static class PageResidencyPolicy {
+    #region Variables
+
     /// How far from the focused card a presented member must sit before critical
     /// pressure may reclaim it. The focused card and both neighbours are one
     /// swipe away, so evicting them would trade a background page for a blank.
     public const int ProtectedNeighbourDistance = 1;
+
     public const int MaximumCandidates = 256;
+
+    #endregion
+
+    #region Actions - Lifecycle
 
     public static int ReleaseLimit(MemoryPressureLevel level, int eligiblePageCount, MemoryPressurePlatform platform) {
         if (eligiblePageCount < 0) throw new BrowserRuleException("invalid_page_count");
@@ -60,4 +67,6 @@ public static class PageResidencyPolicy {
         .ThenBy(candidate => candidate.TabId, StringComparer.Ordinal)
         .Select(candidate => candidate.TabId)
         .ToArray();
+
+    #endregion
 }

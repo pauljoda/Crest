@@ -5,6 +5,8 @@ namespace CrestCore.Application;
 /// Holds two validated revisions until the one durable owner has saved. Neither
 /// graph can change while reserved, and a failed save cancels both reservations.
 public sealed class NativeSessionTransfer : IDisposable {
+    #region Variables
+
     private readonly NativeSessionAuthority source, destination;
     private readonly NativeSessionCommand sourceCommand, destinationCommand;
     private NativeSessionReplacement? a, b;
@@ -12,8 +14,18 @@ public sealed class NativeSessionTransfer : IDisposable {
     public byte[] Output { get; }
     public NativeSessionCheckpoint SourceCheckpoint => a!.Checkpoint;
     public NativeSessionCheckpoint DestinationCheckpoint => b!.Checkpoint;
+
+    #endregion
+
+    #region Constructors
+
     internal NativeSessionTransfer(NativeSessionAuthority source, NativeSessionCommand a,
         NativeSessionAuthority destination, NativeSessionCommand b, byte[] output) { this.source = source; sourceCommand = a; this.destination = destination; destinationCommand = b; Output = output; }
+
+    #endregion
+
+    #region Actions - Transfer
+
     public void Reserve(NativeSyncTransaction? sync = null) {
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is not null) throw new BrowserRuleException("invalid_transfer_transaction");
@@ -28,6 +40,7 @@ public sealed class NativeSessionTransfer : IDisposable {
             } catch { a?.Dispose(); b?.Dispose(); a = b = null; throw; }
         }
     }
+
     public (ulong Source, ulong Destination) Commit() {
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is null || b is null) throw new BrowserRuleException("invalid_transfer_transaction");
@@ -37,7 +50,10 @@ public sealed class NativeSessionTransfer : IDisposable {
             var result = (a.Commit(), b.Commit()); completed = true; return result;
         }
     }
+
     public void Dispose() {
         lock (NativeSessionAuthority.Gate) { if (completed) return; a?.Dispose(); b?.Dispose(); completed = true; }
     }
+
+    #endregion
 }

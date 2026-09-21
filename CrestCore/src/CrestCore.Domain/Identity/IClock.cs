@@ -1,3 +1,9 @@
 namespace CrestCore.Domain;
 
-public interface IClock { DateTimeOffset Now { get; } }
+public interface IClock {
+    #region Variables
+
+    DateTimeOffset Now { get; }
+
+    #endregion
+}

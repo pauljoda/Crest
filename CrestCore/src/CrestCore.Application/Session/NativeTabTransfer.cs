@@ -7,7 +7,14 @@ namespace CrestCore.Application;
 /// Compact projections for transfer previews and authority commands. Native
 /// image bytes, archive, and history remain with their existing owners.
 public static class NativeTabTransfer {
+    #region Variables
+
     private static readonly DateTimeOffset Epoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    #endregion
+
+    #region Actions - Tab transfer
+
     public static JsonObject Evaluate(JsonObject source, JsonObject destination, JsonObject arguments, double now) {
         LegacySessionDocument Document(JsonObject space) => new(new() {
             ["session"] = new JsonObject { ["spaces"] = new JsonArray(space.DeepClone()), ["selectedSpaceID"] = space["id"]!.DeepClone() }
@@ -40,4 +47,6 @@ public static class NativeTabTransfer {
             ["destination"] = Write(destinationDocument, destinationState, b, targetSelection)
         };
     }
+
+    #endregion
 }

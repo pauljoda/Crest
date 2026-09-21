@@ -7,6 +7,8 @@ namespace CrestCore.Application;
 /// Reads Crest's existing Swift Codable session. Unowned/additive fields survive
 /// round trips verbatim as JSON values; only fields owned by the domain are replaced.
 public sealed class LegacySessionDocument {
+    #region Variables
+
     private static readonly DateTimeOffset SwiftEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private readonly JsonObject original;
     private readonly Dictionary<Guid, JsonObject> spaces = [];
@@ -19,53 +21,63 @@ public sealed class LegacySessionDocument {
     private readonly Dictionary<Guid, RetentionPreferences> retentionPreferences = [];
     private readonly Dictionary<Guid, ContentBlockingPolicy> contentBlockingPolicies = [];
 
+    #endregion
+
+    #region Constructors
+
     public LegacySessionDocument(JsonObject? source = null) => original = (JsonObject?)source?.DeepClone() ?? new();
+
+    #endregion
+
+    #region Actions - Session records
+
     public void CopyTabMetadata(TabId source, TabId destination) {
         if (tabs.TryGetValue(source.Value, out var value)) tabs[destination.Value] = (JsonObject)value.DeepClone();
     }
-    internal bool SetFolderMetadata(FolderId id, string field, JsonNode value) {
-        if (!folders.TryGetValue(id.Value, out var metadata)) folders[id.Value] = metadata = new();
-        if (JsonNode.DeepEquals(metadata[field], value)) return false;
-        metadata[field] = value.DeepClone();
-        return true;
-    }
+
     internal void TransferTabMetadata(TabId tab, LegacySessionDocument destination) {
         if (tabs.TryGetValue(tab.Value, out var value)) destination.tabs[tab.Value] = (JsonObject)value.DeepClone();
     }
+
+    private static JsonObject Copy(Dictionary<Guid, JsonObject> originals, Guid id)
+        => originals.TryGetValue(id, out var value) ? (JsonObject)value.DeepClone() : new();
+
+    private static void Remember(Dictionary<Guid, JsonObject> values, Guid id, JsonObject value) {
+        if (!values.TryAdd(id, value)) throw new BrowserRuleException("duplicate_persisted_identity");
+    }
+
+    #endregion
+
+    #region Actions - Decoding
+
     private static JsonObject Object(JsonNode? node) => node as JsonObject ?? throw new BrowserRuleException("invalid_saved_state");
+
     private static JsonArray Array(JsonNode? node) => node is null ? [] : node as JsonArray ?? throw new BrowserRuleException("invalid_saved_state");
+
     private static string? Text(JsonNode? node) => node is null ? null : node.GetValue<string>();
+
     private static Guid Id(JsonNode? node) {
         if (node is JsonObject o) node = o["rawValue"];
         if (!Guid.TryParseExact(Text(node), "D", out var id) || id == Guid.Empty) throw new BrowserRuleException("invalid_saved_identity");
         return id;
     }
+
     private static Guid? OptionalId(JsonNode? node) => node is null ? null : Id(node);
+
     private static DateTimeOffset Date(JsonNode? node) {
         var seconds = node?.GetValue<double>() ?? 0;
         if (!double.IsFinite(seconds)) throw new BrowserRuleException("invalid_saved_date");
         return SwiftEpoch.AddSeconds(seconds);
     }
+
     private static DateTimeOffset? OptionalDate(JsonNode? node) => node is null ? null : Date(node);
-    private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString().ToUpperInvariant() };
-    private static JsonNode? SwiftId(Guid? id) => id is { } value ? SwiftId(value) : null;
-    private static double Seconds(DateTimeOffset date) => (date - SwiftEpoch).TotalSeconds;
-    private static void WriteDate(JsonObject value, string key, DateTimeOffset? date, bool editTimestamp = false) {
-        // Swift Date stores a Double, with precision that differs from .NET ticks.
-        // Preserve its original number when the domain has not changed this field.
-        if (date is { } d && value[key] is { } originalDate && Date(originalDate) == d) return;
-        value[key] = date is { } updated ? editTimestamp ? NativeEditTimestamp.Encode(updated) : Seconds(updated) : null;
-    }
-    private static JsonObject Copy(Dictionary<Guid, JsonObject> originals, Guid id)
-        => originals.TryGetValue(id, out var value) ? (JsonObject)value.DeepClone() : new();
-    private static void Remember(Dictionary<Guid, JsonObject> values, Guid id, JsonObject value) {
-        if (!values.TryAdd(id, value)) throw new BrowserRuleException("duplicate_persisted_identity");
-    }
+
     private static TabPlacement Placement(JsonNode? node) => Text(node) switch {
         "current" => TabPlacement.Current,
         "pinned" => TabPlacement.Pinned,
         _ => TabPlacement.Saved
     };
+
     private TabState ReadTab(JsonObject t) {
         var id = Id(t["id"]); Remember(tabs, id, t);
         var nativeKind = t["nativeContent"] is JsonObject native ? Text(native["kind"]) : null;
@@ -79,7 +91,9 @@ public sealed class LegacySessionDocument {
             Date(t["lastActivatedAt"]), OptionalDate(t["positionModifiedAt"]), OptionalDate(t["titleModifiedAt"]),
             t["keepsPageLoaded"]?.GetValue<bool>() ?? false, OptionalId(t["splitGroupID"]));
     }
+
     internal TabState ReadNewTab(JsonObject value) => ReadTab(value);
+
     public WorkspaceState Read(IIdSource ids) {
         spaces.Clear(); tabs.Clear(); folders.Clear(); archives.Clear(); histories.Clear(); windows.Clear(); searchPreferences.Clear(); retentionPreferences.Clear();
         var session = Object(original["session"]);
@@ -157,9 +171,29 @@ public sealed class LegacySessionDocument {
         return new(new(OptionalId(original["workspaceId"]) ?? ids.Next()), defaultId is { } d ? new SpaceId(d) : null,
             selectedId is { } selectedSpace ? new SpaceId(selectedSpace) : null, states, windowStates, deletions);
     }
+
     private static T ReadEnum<T>(JsonNode? value, T missing, T unknown) where T : struct, Enum
         => value is null ? missing : Enum.TryParse<T>(Text(value), true, out var result) && Enum.IsDefined(result) ? result : unknown;
+
+    #endregion
+
+    #region Actions - Encoding
+
+    private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString().ToUpperInvariant() };
+
+    private static JsonNode? SwiftId(Guid? id) => id is { } value ? SwiftId(value) : null;
+
+    private static double Seconds(DateTimeOffset date) => (date - SwiftEpoch).TotalSeconds;
+
+    private static void WriteDate(JsonObject value, string key, DateTimeOffset? date, bool editTimestamp = false) {
+        // Swift Date stores a Double, with precision that differs from .NET ticks.
+        // Preserve its original number when the domain has not changed this field.
+        if (date is { } d && value[key] is { } originalDate && Date(originalDate) == d) return;
+        value[key] = date is { } updated ? editTimestamp ? NativeEditTimestamp.Encode(updated) : Seconds(updated) : null;
+    }
+
     internal static string EnumName<T>(T value) where T : struct, Enum { var text = value.ToString(); return char.ToLowerInvariant(text[0]) + text[1..]; }
+
     private JsonObject WriteTab(TabState t) {
         var value = Copy(tabs, t.Id.Value);
         value["id"] = SwiftId(t.Id.Value); value["title"] = t.Title; value["url"] = t.Url;
@@ -176,6 +210,7 @@ public sealed class LegacySessionDocument {
         } else value.Remove("nativeContent");
         return value;
     }
+
     public JsonObject Write(WorkspaceState state) {
         var document = (JsonObject)original.DeepClone();
         var session = document["session"] as JsonObject ?? new();
@@ -258,4 +293,17 @@ public sealed class LegacySessionDocument {
         }).ToArray());
         return document;
     }
+
+    #endregion
+
+    #region Mutators
+
+    internal bool SetFolderMetadata(FolderId id, string field, JsonNode value) {
+        if (!folders.TryGetValue(id.Value, out var metadata)) folders[id.Value] = metadata = new();
+        if (JsonNode.DeepEquals(metadata[field], value)) return false;
+        metadata[field] = value.DeepClone();
+        return true;
+    }
+
+    #endregion
 }

@@ -1,7 +1,14 @@
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Variables
+
     private NativeSyncAuthority? sync;
+
+    #endregion
+
+    #region Actions - Replacement
+
     public void AttachSync(NativeSyncAuthority value) {
         lock (Gate) {
             if (workspaceKind != CrestCore.Domain.BrowserWorkspaceKind.Persistent
@@ -64,4 +71,6 @@ public sealed partial class NativeSessionAuthority {
             return replacement;
         }
     }
+
+    #endregion
 }

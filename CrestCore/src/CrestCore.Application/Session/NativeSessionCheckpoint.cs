@@ -4,12 +4,24 @@ using System.Text.Json.Nodes;
 namespace CrestCore.Application;
 
 public sealed class NativeSessionCheckpoint {
+    #region Variables
+
     private readonly SessionDocument document;
     private readonly JsonObject selection;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> parts = new();
+
+    #endregion
+
+    #region Constructors
+
     internal NativeSessionCheckpoint(SessionDocument document, JsonObject selection) { this.document = document; this.selection = selection; }
 
+    #endregion
+
+    #region Actions - Checkpoint
+
     public byte[] Read(string part) => parts.GetOrAdd(part, Encode);
+
     private byte[] Encode(string part) {
         if (part != "core") {
             var id = Guid.Parse(part);
@@ -42,4 +54,6 @@ public sealed class NativeSessionCheckpoint {
         }
         return stream.ToArray();
     }
+
+    #endregion
 }

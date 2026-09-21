@@ -10,23 +10,34 @@ namespace CrestCore.Application;
 /// bytes never enter the document; the result identifies which live assets to
 /// reattach, even when repair changed a colliding tab or Space identity.
 public static class NativeSessionMaintenance {
+    #region Actions - Session maintenance
+
     private static Guid Id(JsonNode? node) {
         if (node is JsonObject wrapped) node = wrapped["rawValue"];
         return Guid.TryParse(node?.GetValue<string>(), out var id) ? id : throw new BrowserRuleException("invalid_saved_identity");
     }
+
     private static Guid? OptionalId(JsonNode? node) => node is null ? null : Id(node);
+
     private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString("D") };
+
     private static JsonArray Array(IEnumerable<JsonNode> nodes) => new(nodes.Select(n => n.DeepClone()).ToArray());
+
     private static bool StartPage(JsonNode tab) => tab["url"] is null && tab["nativeContent"] is null;
+
     private static TabPlacement StoredPlacement(JsonNode tab) => Text(tab["placement"]) switch { "current" => TabPlacement.Current, "pinned" => TabPlacement.Pinned, _ => TabPlacement.Saved };
+
     private static BrowserFolder Folder(JsonNode f) => new(new(Id(f["id"])), Text(f["title"])!,
         Text(f["location"]) == "current" ? TabPlacement.Current : TabPlacement.Saved,
         OptionalId(f["parentID"]) is { } p ? new(p) : null);
+
     private static string? Trim(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
     private static void NormalizeDate(JsonObject node, string field) {
         if (node[field] is not { } value) return;
         node[field] = NativeEditTimestamp.Normalize(value.GetValue<double>());
     }
+
     private static void NormalizeTab(JsonObject tab) {
         tab.Remove("faviconData");
         if (tab["nativeContent"] is not null) { tab.Remove("url"); tab.Remove("savedURL"); }
@@ -35,6 +46,7 @@ public static class NativeSessionMaintenance {
         if (StartPage(tab)) { tab["title"] = "Start Page"; tab["symbol"] = "flag.fill"; }
         tab["keepsPageLoaded"] ??= JsonValue.Create(false);
     }
+
     private static JsonObject StartTab(double now, IIdSource ids) => new() {
         ["id"] = SwiftId(ids.Next()),
         ["title"] = "Start Page",
@@ -166,4 +178,6 @@ public static class NativeSessionMaintenance {
             }
         return new() { ["session"] = session, ["changed"] = changed };
     }
+
+    #endregion
 }

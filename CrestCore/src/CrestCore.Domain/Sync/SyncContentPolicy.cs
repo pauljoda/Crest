@@ -3,6 +3,8 @@ namespace CrestCore.Domain;
 /// Shared browser records describe portable web content, never an engine's
 /// internal pages, native documents, files, or extension execution state.
 public static class SyncContentPolicy {
+    #region Actions - Sync
+
     public static bool Includes(string? url) => url is not null
         && Uri.TryCreate(url, UriKind.Absolute, out var parsed)
         && parsed.Scheme is "http" or "https" && parsed.Host.Length > 0;
@@ -19,4 +21,6 @@ public static class SyncContentPolicy {
     };
 
     public static string ArchiveReason(string storedReason, string? deletionOrigin) => deletionOrigin switch { "local" => "deleted", "remote" => "deletedOnAnotherDevice", _ => storedReason };
+
+    #endregion
 }

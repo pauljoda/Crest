@@ -5,11 +5,18 @@ namespace CrestCore.Application;
 /// The sync component of a native session. Native workers schedule preparation
 /// and storage, but only this owner accepts journals and orders local revisions.
 public sealed class NativeSyncAuthority(NativeSyncJournal initial) {
+    #region Variables
+
     private NativeSyncJournal journal = initial;
     private ulong latestRevision;
     private NativeSyncTransaction? pending;
     internal NativeSessionAuthority? Session { get; set; }
     public NativeSyncJournal Snapshot { get { lock (NativeSessionAuthority.Gate) return journal; } }
+
+    #endregion
+
+    #region Actions - Sync
+
     public void Advance(ulong revision) {
         lock (NativeSessionAuthority.Gate) latestRevision = Math.Max(latestRevision, revision);
     }
@@ -35,6 +42,7 @@ public sealed class NativeSyncAuthority(NativeSyncJournal initial) {
             return true;
         }
     }
+
     internal void Commit(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             RequirePending(value);
@@ -44,13 +52,17 @@ public sealed class NativeSyncAuthority(NativeSyncJournal initial) {
             pending = null;
         }
     }
+
     internal void Cancel(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             RequirePending(value);
             pending = null;
         }
     }
+
     private void RequirePending(NativeSyncTransaction value) {
         if (!ReferenceEquals(pending, value)) throw new BrowserRuleException("invalid_sync_transaction");
     }
+
+    #endregion
 }

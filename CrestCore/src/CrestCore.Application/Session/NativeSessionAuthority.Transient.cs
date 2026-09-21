@@ -5,9 +5,15 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Variables
+
     // Transient presentations do not survive process restart. Keep their terminal
     // receipts with the authority so a late dismiss cannot archive a promoted page.
     private readonly HashSet<Guid> completedTransients = [];
+
+    #endregion
+
+    #region Actions - Transient
 
     internal void RequirePendingTransient(Guid? id) {
         if (id is { } value && completedTransients.Contains(value))
@@ -38,4 +44,6 @@ public sealed partial class NativeSessionAuthority {
         output["adoptLivePage"] = adopt && args["tab"] is not null;
         return new(this, expected, prepared.Document, TransferOutput(output), transientCompletion: completion);
     }
+
+    #endregion
 }

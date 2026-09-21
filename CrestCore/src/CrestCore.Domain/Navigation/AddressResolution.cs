@@ -1,6 +1,8 @@
 namespace CrestCore.Domain;
 
 public sealed record AddressResolution(string Url, string? SearchQuery) {
+    #region Actions - Navigation
+
     public static AddressResolution? Resolve(string input, SearchProvider provider, bool allowsInternalPages = false) {
         string value = input.Trim();
         if (value.Length == 0) return null;
@@ -45,4 +47,6 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         if (!parsed.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return null;
         return new UriBuilder(parsed) { Host = string.Empty }.Uri.AbsoluteUri;
     }
+
+    #endregion
 }

@@ -6,28 +6,41 @@ namespace CrestCore.Application;
 /// projection replaces fields this client understands and carries the rest
 /// forward. Removed known fields and removed collection members stay removed.
 internal static class NativeSyncCompatibility {
+    #region Variables
+
     private sealed record Shape(string Names, Dictionary<string, Shape>? Children = null, Shape? Element = null, bool ById = false) {
+        #region Variables
+
         public HashSet<string> Fields { get; } = Names.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
+
+        #endregion
     }
-    private static Shape List(Shape element, bool byId = false) => new("", Element: element, ById: byId);
+
     private static readonly Shape Identity = new("rawValue");
     private static readonly Shape Color = new("red green blue alpha");
     private static readonly Shape Charge = new("kind value style");
+
     private static readonly Shape Crest = new(
         "backplate fieldDivision ordinary trim symbol chargeLayout backplateColorIndex secondaryFieldColorIndex ordinaryColorIndex trimColorIndex symbolColorIndex edgeColorIndex palette charge plateScale edgeWidth divisionCount finish ordinaryWidth trimWeight trimDetail chargeScale chargeOffset chargeWeight startingPresetID sheenAngle sealTeeth showsOutline depth",
         new() { ["palette"] = List(Color), ["charge"] = Charge });
+
     private static readonly Shape Branding = new(
         "colors bannerPattern bannerStrength readabilityFade keepsControlsReadable themeMode gradientAngle showsTexture iconStyle symbolColor crest renderingVersion folderColorIntensity textColorMode hasCustomAppearance",
         new() { ["colors"] = List(Color), ["symbolColor"] = Color, ["crest"] = Crest });
+
     private static readonly Shape SearchProvider = new("id name searchURLTemplate suggestionURLTemplate");
+
     private static readonly Shape Browsing = new(
         "searchProvider selectedSearchProviderID customSearchProviders searchSuggestionsEnabled currentTabCleanupPolicy contentBlockingPolicy dataRetention",
         new() { ["customSearchProviders"] = List(SearchProvider, true), ["dataRetention"] = new("history archive downloads") });
+
     private static readonly Shape Group = new("id customTitle titleModifiedAt customIconSymbol iconModifiedAt tint tintModifiedAt",
         new() { ["id"] = Identity, ["tint"] = Color });
+
     private static readonly Shape Tab = new(
         "id spaceID title nativeContent url savedURL symbol placement folderID splitGroupID orderToken lastActivatedAt positionModifiedAt customTitle titleModifiedAt keepsPageLoaded",
         new() { ["id"] = Identity, ["spaceID"] = Identity, ["folderID"] = Identity, ["splitGroupID"] = Identity });
+
     private static readonly Dictionary<string, Shape> Values = new() {
         ["space"] = new("id profileID name symbol accent branding browsingPreferences accessPolicy isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
             new() { ["id"] = Identity, ["branding"] = Branding, ["browsingPreferences"] = Browsing, ["splitGroups"] = List(Group, true) }),
@@ -37,6 +50,12 @@ internal static class NativeSyncCompatibility {
         ["history"] = new("id spaceID url title firstVisitedAt lastVisitedAt visitCount", new() { ["spaceID"] = Identity }),
         ["archive"] = new("tab archivedAt reason", new() { ["tab"] = Tab })
     };
+
+    #endregion
+
+    #region Actions - Sync
+
+    private static Shape List(Shape element, bool byId = false) => new("", Element: element, ById: byId);
 
     internal static JsonObject Preserve(JsonObject current, JsonObject? previous) {
         string kind = current["type"]!.GetValue<string>();
@@ -69,4 +88,6 @@ internal static class NativeSyncCompatibility {
         }
         return current.DeepClone();
     }
+
+    #endregion
 }

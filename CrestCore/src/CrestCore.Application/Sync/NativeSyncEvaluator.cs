@@ -8,7 +8,14 @@ namespace CrestCore.Application;
 /// Maps the existing Swift/CloudKit wire records to engine-independent rules.
 /// Unknown payload fields survive; no cloud API or page object crosses here.
 public static class NativeSyncEvaluator {
+    #region Variables
+
     public const int MaximumBytes = 16 * 1024 * 1024;
+
+    #endregion
+
+    #region Actions - Sync validation
+
     public static byte[] Evaluate(ReadOnlySpan<byte> bytes) {
         if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         var request = JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
@@ -27,18 +34,25 @@ public static class NativeSyncEvaluator {
     }
 
     private static string Text(JsonNode value, string field) => value[field]!.GetValue<string>();
+
     private static double? Date(JsonNode value, string field) {
         if (value[field] is null) return null;
         double date = value[field]!.GetValue<double>();
         if (!double.IsFinite(date)) throw new BrowserRuleException("invalid_sync_date");
         return date;
     }
+
     private static Guid Id(JsonNode? value) => NativeSessionAuthority.Id(value);
+
     private static SyncVersion Version(JsonNode value)
         => new(value["version"]!["logicalClock"]!.GetValue<ulong>(), Id(value["version"]!["deviceID"]));
+
     private static string Kind(JsonNode value) => Text(value["id"]!, "kind");
+
     private static string Name(JsonNode value) => Kind(value) + ":" + Id(value["id"]!["value"]).ToString("D");
+
     private static JsonObject? Payload(JsonNode value) => value["payload"]?["value"]?.AsObject();
+
     private static SyncRecordStamp Stamp(JsonNode record) {
         string kind = Kind(record);
         if (kind is not ("space" or "folder" or "tab" or "history" or "archive")) throw new BrowserRuleException("invalid_sync_kind");
@@ -60,11 +74,14 @@ public static class NativeSyncEvaluator {
         return new(kind, recordId, spaceId, Version(record), reason,
             tombstone is null ? null : Date(tombstone, "deletedAt"), kind == "tab" && payload is not null ? Date(payload, "lastActivatedAt") : null);
     }
+
     internal static void ValidateRecord(JsonObject record) => _ = Stamp(record);
+
     // Wire identities are UUID values, independent of the writer's letter case.
     // Keep ordinary strings (including UUID-looking titles) case-sensitive.
     // Codable also omits nil fields while the core may emit explicit JSON null.
     internal static bool Equivalent(JsonNode? first, JsonNode? second) => Equivalent(first, second, null);
+
     private static bool Equivalent(JsonNode? first, JsonNode? second, string? field) {
         if (first is JsonObject a && second is JsonObject b)
             return a.Select(p => p.Key).Union(b.Select(p => p.Key)).All(key =>
@@ -87,18 +104,21 @@ public static class NativeSyncEvaluator {
             && ad.TryGetValue<double>(out var aDate) && bd.TryGetValue<double>(out var bDate)) return aDate == bDate;
         return JsonNode.DeepEquals(first, second);
     }
+
     private static TabPlacement Placement(JsonNode payload) => Text(payload, "placement") switch {
         "pinned" => TabPlacement.Pinned,
         "saved" => TabPlacement.Saved,
         "current" => TabPlacement.Current,
         _ => throw new BrowserRuleException("invalid_sync_placement")
     };
+
     private static void Copy(JsonObject to, JsonObject from, params string[] fields) {
         foreach (string field in fields) {
             if (from.TryGetPropertyValue(field, out var value)) to[field] = value?.DeepClone();
             else to.Remove(field);
         }
     }
+
     private static void LatestFields(JsonObject result, JsonObject first, JsonObject second, string timestamp, params string[] fields) {
         if (SyncConflictPolicy.Latest(Date(first, timestamp), Date(second, timestamp)) is not { } winner) return;
         var source = winner == 0 ? first : second;
@@ -173,4 +193,6 @@ public static class NativeSyncEvaluator {
         }
         return new JsonArray(byId.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
     }
+
+    #endregion
 }

@@ -6,6 +6,8 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Actions - Workspace
+
     private NativeSessionCommand PrepareWorkspaceCommand(ulong expected, JsonObject request) {
         if (workspaceKind != BrowserWorkspaceKind.Persistent) throw new BrowserRuleException("persistent_workspace_required");
         var source = document.Metadata.DeepClone().AsObject();
@@ -30,4 +32,6 @@ public sealed partial class NativeSessionAuthority {
         Validate(next);
         return new(this, expected, next, output);
     }
+
+    #endregion
 }

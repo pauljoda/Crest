@@ -1,6 +1,8 @@
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
+    #region Actions - Lifetime
+
     public BrowserTab PromoteTransient(TabState source, TabId? selected, DateTimeOffset now) {
         var tab = BrowserTab.Restore(TransientState(source, now));
         int? insertion = null;
@@ -69,4 +71,6 @@ public sealed partial class BrowserTabCollection {
                 ?? tabs.FirstOrDefault(t => t.Placement == TabPlacement.Saved)?.Id;
         return selected;
     }
+
+    #endregion
 }

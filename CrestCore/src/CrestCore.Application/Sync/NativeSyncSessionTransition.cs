@@ -9,6 +9,8 @@ namespace CrestCore.Application;
 /// records; repair and retention finish before either resulting value is returned.
 /// Publication and durable storage must accept this pair together.
 public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, JsonObject Materialization) {
+    #region Actions - Sync
+
     public static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, ReadOnlySpan<byte> input) {
         if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
@@ -74,4 +76,6 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? "retention" : "superseded");
         return new(next, repaired);
     }
+
+    #endregion
 }

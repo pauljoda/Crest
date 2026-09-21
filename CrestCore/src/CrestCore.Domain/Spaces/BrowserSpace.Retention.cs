@@ -1,8 +1,14 @@
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserSpace {
+    #region Variables
+
     public RetentionPreferences Retention { get; private set; } = RetentionPreferences.Default;
-    public void SetRetention(RetentionPreferences value) { EnsureAccessible(); value.Validate(); Retention = value; }
+
+    #endregion
+
+    #region Actions - Retention
+
     public IReadOnlyList<BrowserTab> ExpiredTabs(DateTimeOffset now, IReadOnlySet<TabId> protectedTabs) {
         if (IsLocked || Retention.TabLifetime is not { } lifetime) return [];
         return tabs.Where(t => t.Placement == TabPlacement.Current && !t.Content.IsStartPage
@@ -25,4 +31,12 @@ public sealed partial class BrowserSpace {
         }
         return removed > 0;
     }
+
+    #endregion
+
+    #region Mutators
+
+    public void SetRetention(RetentionPreferences value) { EnsureAccessible(); value.Validate(); Retention = value; }
+
+    #endregion
 }

@@ -5,7 +5,13 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Variables
+
     private static readonly DateTimeOffset RecordEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    #endregion
+
+    #region Actions - Records
 
     // The caller sends intent and window selection. Existing history and archive
     // entries come from the authority; only changed read models cross back.
@@ -167,4 +173,6 @@ public sealed partial class NativeSessionAuthority {
         if (fields["splitGroups"] is null) fields["splitGroups"] = groups;
         change["splitGroups"] = groups.DeepClone();
     }
+
+    #endregion
 }

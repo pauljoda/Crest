@@ -4,6 +4,8 @@ using System.Text;
 namespace CrestCore.Domain;
 
 public sealed class SearchPreferences {
+    #region Variables
+
     public static readonly IReadOnlyList<SearchProvider> BuiltIns = Array.AsReadOnly<SearchProvider>([
         new("google", "Google", "https://www.google.com/search?q=%s"),
         new("duckDuckGo", "DuckDuckGo", "https://duckduckgo.com/?q=%s"),
@@ -11,21 +13,38 @@ public sealed class SearchPreferences {
         new("ecosia", "Ecosia", "https://www.ecosia.org/search?q=%s"),
         new("brave", "Brave Search", "https://search.brave.com/search?q=%s")
     ]);
+
     public static SearchPreferences Default { get; } = new("google", [], false);
     public string SelectedId { get; }
     public IReadOnlyList<SearchProvider> CustomProviders { get; }
     public bool SuggestionsEnabled { get; }
     public IEnumerable<SearchProvider> Providers => BuiltIns.Concat(CustomProviders);
+
+    #endregion
+
+    #region Constructors
+
     private SearchPreferences(string selected, IReadOnlyList<SearchProvider> custom, bool suggestions) { SelectedId = selected; CustomProviders = custom; SuggestionsEnabled = suggestions; }
+
+    #endregion
+
+    #region Actions - Search providers
+
     public static SearchPreferences Restore(string? selected, IEnumerable<SearchProvider> custom, bool suggestions) {
         var providers = custom.Take(32).GroupBy(p => p.Id).Select(g => g.First()).ToArray();
         if (!BuiltIns.Concat(providers).Any(p => p.Id == selected)) selected = "google";
         return new(selected!, Array.AsReadOnly(providers), suggestions);
     }
+
+    #endregion
+
+    #region Mutators
+
     public SearchPreferences Select(string id, bool suggestions) {
         if (!Providers.Any(p => p.Id == id)) throw new BrowserRuleException("unknown_search_provider");
         return new(id, CustomProviders, suggestions);
     }
+
     public SearchPreferences Upsert(SearchProvider provider) {
         if (!provider.Id.StartsWith("custom:", StringComparison.Ordinal)) throw new BrowserRuleException("invalid_search_provider");
         var validated = SearchProvider.Custom(Guid.Parse(provider.Id[7..]), provider.Name, provider.SearchTemplate, provider.SuggestionTemplate);
@@ -37,10 +56,12 @@ public sealed class SearchPreferences {
         if (index < 0) { if (values.Count >= 32) throw new BrowserRuleException("search_provider_limit"); values.Add(validated); } else values[index] = validated;
         return new(SelectedId, values.AsReadOnly(), SuggestionsEnabled);
     }
+
     public SearchPreferences Remove(Guid id) {
         string key = "custom:" + id.ToString();
         return new(SelectedId == key ? "google" : SelectedId, CustomProviders.Where(p => p.Id != key).ToList().AsReadOnly(), SuggestionsEnabled);
     }
+
     public string Resolve(string input, bool allowsInternalPages) {
         var value = input.Trim();
         var resolution = value == "about:blank" ? new AddressResolution(value, null)
@@ -52,4 +73,6 @@ public sealed class SearchPreferences {
         BrowserSpace.ValidateUrl(address, allowsInternalPages);
         return address;
     }
+
+    #endregion
 }

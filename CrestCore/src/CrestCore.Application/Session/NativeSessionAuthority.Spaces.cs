@@ -6,9 +6,12 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
+    #region Actions - Spaces
+
     private static bool SameDeletionIntent(JsonNode left, JsonNode right) =>
         Id(left["spaceID"]) == Id(right["spaceID"]) && Id(left["profileID"]) == Id(right["profileID"])
         && Id(left["operationID"]) == Id(right["operationID"]);
+
     private static bool EqualDeletionIntents(JsonNode? left, JsonNode? right) {
         if (left is not null and not JsonArray || right is not null and not JsonArray)
             throw new BrowserRuleException("invalid_deletion_intent");
@@ -17,7 +20,9 @@ public sealed partial class NativeSessionAuthority {
         // not the spelling chosen by the platform's encoder.
         return a.Count == b.Count && a.All(x => b.Any(y => SameDeletionIntent(x!, y!)));
     }
+
     private static JsonArray Deletions(JsonObject metadata) => metadata["spaceDeletions"] as JsonArray ?? new();
+
     private static JsonNode? PendingDeletion(JsonObject metadata, Guid id)
         => Deletions(metadata).FirstOrDefault(d => Id(d!["spaceID"]) == id);
 
@@ -170,4 +175,6 @@ public sealed partial class NativeSessionAuthority {
         if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
         return new NativeSessionCommand(this, expected, next, output);
     }
+
+    #endregion
 }

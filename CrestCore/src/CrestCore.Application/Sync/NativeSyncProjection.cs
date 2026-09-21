@@ -7,11 +7,17 @@ namespace CrestCore.Application;
 /// Projects the native checkpoint format onto the existing CloudKit payload
 /// format. Wire encoding lives here; portable-content and ordering rules are domain rules.
 public static class NativeSyncProjection {
+    #region Actions - Projection
+
     internal static Guid Id(JsonNode? value) => NativeSessionAuthority.Id(value);
+
     internal static string? Text(JsonNode? value) => value?.GetValue<string>();
+
     internal static JsonArray Items(JsonNode value, string field) => value[field]?.AsArray() ?? [];
+
     internal static JsonObject Fields(JsonNode source, params string[] names)
         => new(names.Where(n => source[n] is not null).Select(n => new KeyValuePair<string, JsonNode?>(n, source[n]!.DeepClone())));
+
     internal static TabPlacement Placement(JsonNode value, string field = "placement")
         => Text(value[field]) switch {
             "current" => TabPlacement.Current,
@@ -19,11 +25,15 @@ public static class NativeSyncProjection {
             "pinned" => TabPlacement.Pinned,
             _ => throw new BrowserRuleException("invalid_sync_placement")
         };
+
     internal static string? SavedUrl(JsonNode tab) => Text(tab["savedURL"])
         ?? (Placement(tab) == TabPlacement.Current ? null : Text(tab["url"]));
+
     internal static bool PortableTab(JsonNode tab) => SyncContentPolicy.IncludesTab(Text(tab["url"]), tab["nativeContent"] is not null, SavedUrl(tab));
+
     internal static string ArchiveReason(JsonNode archive)
         => SyncContentPolicy.ArchiveReason(Text(archive["reason"])!, Text(archive["deletionOrigin"]));
+
     internal static SyncPreferences Preferences(JsonNode source) => new(
         source["savedStructure"]!.GetValue<bool>(), source["currentTabs"]!.GetValue<bool>(), source["historyAndArchive"]!.GetValue<bool>());
 
@@ -122,4 +132,6 @@ public static class NativeSyncProjection {
         }
         return value;
     }
+
+    #endregion
 }

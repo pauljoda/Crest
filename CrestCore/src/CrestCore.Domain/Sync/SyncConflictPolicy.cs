@@ -2,6 +2,8 @@ namespace CrestCore.Domain;
 
 /// Conflict decisions are shared by every engine and cloud transport.
 public static class SyncConflictPolicy {
+    #region Actions - Sync
+
     public static int Winner(SyncRecordStamp first, SyncRecordStamp second) {
         if (first.Id != second.Id || first.Kind != second.Kind || first.Space != second.Space)
             throw new BrowserRuleException("sync_identity_mismatch");
@@ -27,4 +29,6 @@ public static class SyncConflictPolicy {
         string archiveReason, double archived, SyncVersion archiveVersion)
         => placement != TabPlacement.Current || archiveReason is "deleted" or "deletedOnAnotherDevice"
             || (archiveReason == "autoCleanup" ? activated > archived : tabVersion.CompareTo(archiveVersion) > 0);
+
+    #endregion
 }

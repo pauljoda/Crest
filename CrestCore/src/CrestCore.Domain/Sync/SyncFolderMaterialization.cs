@@ -3,6 +3,8 @@ namespace CrestCore.Domain;
 /// Resolves partial deliveries without confusing an unknown parent with a
 /// deleted one. The caller supplies stable sibling order from the sync records.
 public static class SyncFolderMaterialization {
+    #region Actions - Sync
+
     public static bool TryPromote(FolderId missing, HashSet<FolderId> active,
         IReadOnlyDictionary<FolderId, BrowserFolder> local, HashSet<FolderId> deleted,
         out FolderId? parent) {
@@ -55,4 +57,6 @@ public static class SyncFolderMaterialization {
         new FolderTree(result).Validate();
         return result;
     }
+
+    #endregion
 }

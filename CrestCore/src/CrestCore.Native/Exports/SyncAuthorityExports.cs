@@ -7,8 +7,14 @@ using CrestCore.Application;
 namespace CrestCore.Native;
 
 public static unsafe partial class Exports {
+    #region Variables
+
     private static readonly ConcurrentDictionary<ulong, NativeSyncAuthority> SyncAuthorities = new();
     private static readonly ConcurrentDictionary<ulong, NativeSyncTransaction> SyncTransactions = new();
+
+    #endregion
+
+    #region Actions - Native exports
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_create", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncAuthorityCreate(ulong journal, ulong* handle) {
@@ -21,6 +27,7 @@ public static unsafe partial class Exports {
             *handle = id; return CoreStatus.Ok;
         } catch (Exception error) { return SyncJournalError(error); }
     }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_release", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncAuthorityRelease(ulong handle) => SyncAuthorities.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
 
@@ -29,11 +36,13 @@ public static unsafe partial class Exports {
         if (!Sessions.TryGetValue(session, out var owner) || !SyncAuthorities.TryGetValue(sync, out var value)) return CoreStatus.InvalidHandle;
         try { owner.AttachSync(value); return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
     }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_advance", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncAuthorityAdvance(ulong handle, ulong revision) {
         if (!SyncAuthorities.TryGetValue(handle, out var owner)) return CoreStatus.InvalidHandle;
         owner.Advance(revision); return CoreStatus.Ok;
     }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_prepare", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncAuthorityPrepare(ulong handle, int hasRevision, ulong revision, byte* input, nuint count,
         ulong* transaction, ulong* journal, ulong* query) {
@@ -64,6 +73,7 @@ public static unsafe partial class Exports {
             return SyncJournalError(error);
         }
     }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_transaction_seal", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncTransactionSeal(ulong handle, int* accepted) {
         if (accepted == null) return CoreStatus.InvalidArgument;
@@ -71,20 +81,25 @@ public static unsafe partial class Exports {
         if (!SyncTransactions.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
         try { *accepted = value.Seal() ? 1 : 0; return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
     }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_transaction_commit", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncTransactionCommit(ulong handle) {
         if (!SyncTransactions.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
         try { value.Commit(); return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
     }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_transaction_release", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncTransactionRelease(ulong handle) {
         if (!SyncTransactions.TryRemove(handle, out var value)) return CoreStatus.InvalidHandle;
         value.Dispose(); return CoreStatus.Ok;
     }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_session_bind_sync_replacement", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionBindSyncReplacement(ulong replacement, ulong transaction) {
         if (!SessionReplacements.TryGetValue(replacement, out var target) || !SyncTransactions.TryGetValue(transaction, out var source))
             return CoreStatus.InvalidHandle;
         try { target.BindSync(source); return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
     }
+
+    #endregion
 }

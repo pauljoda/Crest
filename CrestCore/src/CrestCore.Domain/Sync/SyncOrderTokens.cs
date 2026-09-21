@@ -4,6 +4,8 @@ namespace CrestCore.Domain;
 
 /// Stable fractional positions preserve unmoved records during sync staging.
 public static class SyncOrderTokens {
+    #region Actions - Sync
+
     public static IReadOnlyList<string> Allocate(IReadOnlyList<string?> existing) {
         if (existing.Count > 250_000) throw new BrowserRuleException("sync_record_limit");
         if (existing.Count == 0) return [];
@@ -36,10 +38,12 @@ public static class SyncOrderTokens {
     }
 
     private static string Encode(ulong value) => value.ToString("x16", CultureInfo.InvariantCulture);
+
     private static string[] Compact(int count) {
         ulong step = ulong.MaxValue / ((ulong)count + 1);
         return Enumerable.Range(1, count).Select(i => Encode(step * (ulong)i)).ToArray();
     }
+
     private static bool Distribute(string[] result, int start, int count, ulong? lower, ulong? upper) {
         if (count == 0) return true;
         if (lower is { } low && upper is { } high && low >= high) return false;
@@ -49,4 +53,6 @@ public static class SyncOrderTokens {
         for (int i = 0; i < count; i++) result[start + i] = Encode((lower ?? 0) + step * ((ulong)i + 1));
         return true;
     }
+
+    #endregion
 }

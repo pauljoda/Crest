@@ -3,6 +3,8 @@ using System.Net;
 namespace CrestCore.Domain;
 
 public sealed record SearchProvider(string Id, string Name, string SearchTemplate, string? SuggestionTemplate = null) {
+    #region Actions - Spaces
+
     public string Search(string query) => SearchTemplate.Replace("%s", Uri.EscapeDataString(query), StringComparison.Ordinal)
         .Replace("{searchTerms}", Uri.EscapeDataString(query), StringComparison.Ordinal);
 
@@ -12,6 +14,11 @@ public sealed record SearchProvider(string Id, string Name, string SearchTemplat
         return new("custom:" + id.ToString(), name, ValidateTemplate(search),
             string.IsNullOrWhiteSpace(suggestions) ? null : ValidateTemplate(suggestions));
     }
+
+    #endregion
+
+    #region Actions - Validation
+
     private static string ValidateTemplate(string value) {
         value = value.Trim();
         if (value.Length > 2048) throw new BrowserRuleException("invalid_search_template");
@@ -37,4 +44,6 @@ public sealed record SearchProvider(string Id, string Name, string SearchTemplat
                 throw new BrowserRuleException("search_template_contains_secret");
         return value;
     }
+
+    #endregion
 }

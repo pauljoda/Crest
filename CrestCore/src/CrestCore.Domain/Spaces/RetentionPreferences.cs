@@ -2,8 +2,11 @@ namespace CrestCore.Domain;
 
 public sealed record RetentionPreferences(CurrentTabCleanup CurrentTabs, DataRetention History,
     DataRetention Archive, DataRetention Downloads) {
+    #region Variables
+
     public static RetentionPreferences Default { get; } = new(CurrentTabCleanup.After12Hours,
         DataRetention.Forever, DataRetention.Forever, DataRetention.Forever);
+
     public TimeSpan? TabLifetime => CurrentTabs switch {
         CurrentTabCleanup.After12Hours => TimeSpan.FromHours(12),
         CurrentTabCleanup.After24Hours => TimeSpan.FromDays(1),
@@ -11,6 +14,11 @@ public sealed record RetentionPreferences(CurrentTabCleanup CurrentTabs, DataRet
         CurrentTabCleanup.After30Days => TimeSpan.FromDays(30),
         _ => null
     };
+
+    #endregion
+
+    #region Actions - Retention
+
     public static TimeSpan? Lifetime(DataRetention duration) => duration switch {
         DataRetention.OneDay => TimeSpan.FromDays(1),
         DataRetention.OneWeek => TimeSpan.FromDays(7),
@@ -19,8 +27,11 @@ public sealed record RetentionPreferences(CurrentTabCleanup CurrentTabs, DataRet
         DataRetention.OneYear => TimeSpan.FromDays(365),
         _ => null
     };
+
     public void Validate() {
         if (!Enum.IsDefined(CurrentTabs) || !Enum.IsDefined(History) || !Enum.IsDefined(Archive) || !Enum.IsDefined(Downloads))
             throw new BrowserRuleException("invalid_retention");
     }
+
+    #endregion
 }

@@ -2,6 +2,23 @@ namespace CrestCore.Domain;
 
 /// <summary>The content a tab presents. Persisted native kind names are resolved at the boundary.</summary>
 public sealed record TabContent {
+    #region Variables
+
+    public string Name { get; }
+    public TabRenderType RenderType { get; }
+    public string? NativeKind { get; }
+    public string Symbol { get; }
+    public bool IsStartPage { get; }
+    public bool IsWebPage => RenderType == TabRenderType.WebRender && !IsStartPage;
+    public static TabContent Web { get; } = new("New tab", TabRenderType.WebRender, null, "globe");
+    public static TabContent StartPage { get; } = new("Start Page", TabRenderType.UiNative, null, "flag.fill", true);
+    public static TabContent Settings { get; } = new("Settings", TabRenderType.UiNative, "settings", "gearshape");
+    public static TabContent GettingStarted { get; } = new("Getting Started", TabRenderType.UiNative, "getting-started", "book.closed.fill");
+
+    #endregion
+
+    #region Constructors
+
     private TabContent(string name, TabRenderType renderType, string? nativeKind, string symbol, bool isStartPage = false) {
         Name = name;
         RenderType = renderType;
@@ -10,19 +27,9 @@ public sealed record TabContent {
         IsStartPage = isStartPage;
     }
 
-    public string Name { get; }
-    public TabRenderType RenderType { get; }
-    public string? NativeKind { get; }
-    public string Symbol { get; }
-    public bool IsStartPage { get; }
-    public bool IsWebPage => RenderType == TabRenderType.WebRender && !IsStartPage;
+    #endregion
 
-    public string Title(string? url) => IsWebPage ? url ?? "New tab" : Name;
-
-    public static TabContent Web { get; } = new("New tab", TabRenderType.WebRender, null, "globe");
-    public static TabContent StartPage { get; } = new("Start Page", TabRenderType.UiNative, null, "flag.fill", true);
-    public static TabContent Settings { get; } = new("Settings", TabRenderType.UiNative, "settings", "gearshape");
-    public static TabContent GettingStarted { get; } = new("Getting Started", TabRenderType.UiNative, "getting-started", "book.closed.fill");
+    #region Actions - Content decoding
 
     public static TabContent Native(string kind, string title, string symbol = "square") {
         if (string.IsNullOrWhiteSpace(kind)) throw new BrowserRuleException("invalid_native_kind");
@@ -35,4 +42,12 @@ public sealed record TabContent {
 
     public static TabContent FromStored(string? nativeKind, string? url, string title)
         => nativeKind is { } kind ? Native(kind, title) : url is null ? StartPage : Web;
+
+    #endregion
+
+    #region Mutators
+
+    public string Title(string? url) => IsWebPage ? url ?? "New tab" : Name;
+
+    #endregion
 }

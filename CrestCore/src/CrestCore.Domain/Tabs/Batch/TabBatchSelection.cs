@@ -2,6 +2,8 @@ namespace CrestCore.Domain;
 
 public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnlyList<BatchTab> Tabs,
     IReadOnlyList<BatchFolder> Folders) {
+    #region Actions - Batch
+
     public void Validate(BrowserTabCollection source) {
         void Require(bool valid) { if (!valid) throw new BrowserRuleException("stale_selection"); }
         Require(Roots.Count > 0 && Roots.Distinct().Count() == Roots.Count
@@ -32,5 +34,8 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
                 throw new BrowserRuleException("incomplete_split");
         }
     }
+
     private static BatchTab Member(BrowserTab tab) => new(tab.Id, tab.Placement, tab.FolderId, tab.SplitGroupId);
+
+    #endregion
 }

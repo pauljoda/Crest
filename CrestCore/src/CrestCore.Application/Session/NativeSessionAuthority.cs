@@ -10,6 +10,8 @@ namespace CrestCore.Application;
 /// Published documents are immutable, so storage can serialize an older checkpoint
 /// on its worker while the UI continues editing the current revision.
 public sealed partial class NativeSessionAuthority {
+    #region Variables
+
     public const int MaximumBytes = 64 * 1024 * 1024;
     internal static readonly object Gate = new();
     private SessionDocument document;
@@ -18,18 +20,11 @@ public sealed partial class NativeSessionAuthority {
     private readonly bool privateBrowsing;
     public ulong Revision { get; private set; } = 1;
     public Adapter? Engine { get; private set; }
+    private static readonly IReadOnlyList<string> Sections = SpaceSections.Names;
 
-    /// Process-local registration shares the transport descriptor contract. It
-    /// cannot be changed by session edits, restored files or remote sync records.
-    public void RegisterEngine(ReadOnlySpan<byte> descriptor) {
-        var engine = Protocol.Descriptor(descriptor);
-        if (engine.Role != "engine" || !engine.Supports("pages") || !engine.Supports("navigation"))
-            throw new BrowserRuleException("invalid_engine_registration");
-        lock (Gate) {
-            if (Engine is not null) throw new BrowserRuleException("engine_already_registered");
-            Engine = engine;
-        }
-    }
+    #endregion
+
+    #region Constructors
 
     public NativeSessionAuthority(ReadOnlySpan<byte> bytes) {
         var input = Parse(bytes);
@@ -46,21 +41,43 @@ public sealed partial class NativeSessionAuthority {
         Validate(document);
     }
 
+    #endregion
+
+    #region Actions - Engine registration
+
+    /// Process-local registration shares the transport descriptor contract. It
+    /// cannot be changed by session edits, restored files or remote sync records.
+    public void RegisterEngine(ReadOnlySpan<byte> descriptor) {
+        var engine = Protocol.Descriptor(descriptor);
+        if (engine.Role != "engine" || !engine.Supports("pages") || !engine.Supports("navigation"))
+            throw new BrowserRuleException("invalid_engine_registration");
+        lock (Gate) {
+            if (Engine is not null) throw new BrowserRuleException("engine_already_registered");
+            Engine = engine;
+        }
+    }
+
+    #endregion
+
+    #region Actions - Document validation
+
     private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
         if (bytes.Length == 0 || bytes.Length > MaximumBytes) throw new BrowserRuleException("session_size_limit");
         return JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
     }
+
     internal static Guid Id(JsonNode? value) {
         if (value is JsonObject obj) value = obj["rawValue"];
         var id = Guid.Parse(value!.GetValue<string>());
         if (id == Guid.Empty) throw new BrowserRuleException("invalid_identity");
         return id;
     }
+
     private static Guid RecordId(JsonNode value, string section) => Id(section == "archivedTabs" ? value["tab"]!["id"] : value["id"]);
-    private static readonly IReadOnlyList<string> Sections = SpaceSections.Names;
 
     private static JsonObject Fields(JsonObject input, IReadOnlyCollection<string> excluded)
         => new(input.Where(f => !excluded.Contains(f.Key)).Select(f => new KeyValuePair<string, JsonNode?>(f.Key, f.Value?.DeepClone())));
+
     private static void Validate(SessionDocument value) {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
@@ -86,6 +103,10 @@ public sealed partial class NativeSessionAuthority {
         // An empty temporary workspace and a briefly stale window selection are
         // valid native states. Window reconciliation handles their presentation.
     }
+
+    #endregion
+
+    #region Actions - Session revisions
 
     private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null) {
         RequireWritable();
@@ -139,6 +160,7 @@ public sealed partial class NativeSessionAuthority {
         ValidateBorrowedDocument(next);
         return next;
     }
+
     private void RequireWritable(bool requireCurrentBorrowedPolicy = true) {
         if (released) throw new BrowserRuleException("session_released");
         if (replacement is not null) throw new BrowserRuleException("session_transaction_in_progress");
@@ -147,6 +169,7 @@ public sealed partial class NativeSessionAuthority {
             if (requireCurrentBorrowedPolicy) RequireBorrowedRevision(borrowedSourceRevision);
         }
     }
+
     public ulong Commit(ulong expected, ReadOnlySpan<byte> delta) {
         lock (Gate) {
             var next = Prepare(expected, delta);
@@ -154,6 +177,7 @@ public sealed partial class NativeSessionAuthority {
             document = next; Revision = revision; return revision;
         }
     }
+
     public static (ulong Source, ulong Destination) CommitPair(
         NativeSessionAuthority source, ulong sourceRevision, ReadOnlySpan<byte> sourceDelta,
         NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> destinationDelta) {
@@ -167,10 +191,13 @@ public sealed partial class NativeSessionAuthority {
             return (ar, br);
         }
     }
+
     public NativeSessionCheckpoint Checkpoint(ulong expected, ReadOnlySpan<byte> selection) {
         lock (Gate) {
             if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
             return new(document, Parse(selection));
         }
     }
+
+    #endregion
 }

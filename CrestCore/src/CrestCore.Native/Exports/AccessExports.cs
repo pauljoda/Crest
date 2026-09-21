@@ -8,7 +8,14 @@ using CrestCore.Domain;
 namespace CrestCore.Native;
 
 public static unsafe partial class Exports {
+    #region Variables
+
     private static readonly ConcurrentDictionary<ulong, SpaceAccessAuthority> AccessAuthorities = new();
+
+    #endregion
+
+    #region Actions - Native exports
+
     private static bool AccessIdentity(byte* space, byte* profile, out SpaceAccessAssignment assignment) {
         assignment = default;
         if (space == null || profile == null) return false;
@@ -102,4 +109,6 @@ public static unsafe partial class Exports {
     public static int AccessDestroy(ulong handle) {
         try { return AccessAuthorities.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle; } catch { return CoreStatus.InternalError; }
     }
+
+    #endregion
 }
