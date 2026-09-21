@@ -1645,6 +1645,10 @@
     "owned-core-tab-and-split-commands": {
       "category": "internal",
       "message": "Move tab copying, placement, durable close and split operations into commands against the shared core's owned state."
+    },
+    "shared-core-multi-selection-commands": {
+      "category": "improved",
+      "message": "Apply selected-tab and folder changes together, and preserve the full selection when an unsaved-page close is canceled."
     }
   }
 }

@@ -36,6 +36,8 @@ public sealed partial class NativeSessionAuthority
             if (edited is null) return new SpaceDocument(value, space.Sections);
             var sections = space.Sections.ToDictionary(p => p.Key, p => p.Value);
             foreach (var section in new[] { "tabs", "folders" }) sections[section] = edited[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
+            if (edited["archivedTabs"] is JsonArray archive && archive.Count > 0)
+                sections["archivedTabs"] = space.Sections["archivedTabs"].Concat(archive.Select(n => n!.DeepClone())).ToArray();
             return new SpaceDocument(Fields(edited, Sections), sections);
         }).ToArray();
         var next = new SessionDocument(metadata, spaces); Validate(next); return next;

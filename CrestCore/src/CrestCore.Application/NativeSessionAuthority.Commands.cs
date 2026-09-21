@@ -18,6 +18,7 @@ public sealed partial class NativeSessionAuthority
             if (request["operation"]!.GetValue<string>() == "workspace.import") return PrepareWorkspaceCommand(expected, request);
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
             var operation = request["operation"]!.GetValue<string>();
+            if (operation == "tabs.batch") return PrepareTabBatch(expected, request);
             if (operation.StartsWith("history.", StringComparison.Ordinal)
                 || operation.StartsWith("records.", StringComparison.Ordinal)
                 || operation is "archive.restore" or "split.title" or "split.icon" or "split.tint")

@@ -32,6 +32,17 @@ struct BrowserTabBatchActions {
 
     @discardableResult
     func perform(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) -> Bool {
+        if action == .close || action == .delete {
+            do { try validate(request, action: action) }
+            catch { browser.tabMultiSelection.message = message(for: error); return false }
+            let assignments = request.ids.map { BrowserTabRuntimeAssignment(tabID: $0,
+                spaceID: request.assignment.spaceID, profileID: request.assignment.profileID) }
+            return browser.performPageDismissal(of: assignments) { commit(request, action: action) }
+        }
+        return commit(request, action: action)
+    }
+
+    private func commit(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) -> Bool {
         do {
             try authorize(request, action: action)
             try browser.commitTabBatch(request, action: action)

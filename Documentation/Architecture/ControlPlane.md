@@ -234,8 +234,15 @@ reordering, relocation and dissolution also execute against the authority's owne
 records. Opening a link into a split is one atomic command, including any copies
 of pinned or saved members. The core copies split metadata and returns asset
 references; native adapters supply current page URL/title observations and prepare
-opaque navigation history for accepted copies. Multi-selection batches still
-prepare value edits and remain part of the ownership migration.
+opaque navigation history for accepted copies. Multi-selection batches use the
+same owned authority. Their captured tab and folder
+membership is revalidated before filing, copying, splitting, archiving, deleting
+or transferring a selection. A batch reserves one session/journal commit; rejected
+commands and canceled native close prompts publish no subset. Swift retains
+selection presentation, current page observations and opaque copy history.
+Native close confirmation precedes batch Archive/Delete, and the command checks
+the selection again when confirmation returns. Batch deletion commits explicit
+tombstones with tab removal, while archiving retains its non-deletion cause.
 
 History visits and removal, archive restoration, automatic cleanup, retention and
 split identity metadata now prepare against the authority's owned records. The

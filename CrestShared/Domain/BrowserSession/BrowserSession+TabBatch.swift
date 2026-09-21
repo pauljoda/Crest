@@ -6,14 +6,21 @@ extension BrowserSession {
         _ request: BrowserTabBatchRequest, action: BrowserTabBatchAction,
         fallbackTabID: TabID? = nil, at date: Date = .now
     ) throws -> BrowserTabBatchResult {
+        #if CREST_CORE_BACKED
+        let prepared = try BrowserCoreTabBatch.preview(request, action: action, session: self, fallback: fallbackTabID, at: date)
+        self = prepared.session
+        return prepared.result
+        #else
         let source = try request.validate(in: self)
         var draft = self
         let result = try draft.prepareTabBatch(
             request, action: action, source: source, fallback: fallbackTabID, date: date)
         self = draft
         return result
+        #endif
     }
 
+    #if !CREST_CORE_BACKED
     private mutating func prepareTabBatch(
         _ request: BrowserTabBatchRequest, action: BrowserTabBatchAction, source: BrowserSpace,
         fallback: TabID?, date: Date
@@ -170,4 +177,5 @@ extension BrowserSession {
         spaces[index].tabs.removeAll { selected.contains($0.id) }
         spaces[index].tabs.insert(contentsOf: ids.compactMap { byID[$0] }, at: insertion)
     }
+    #endif
 }

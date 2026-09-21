@@ -323,6 +323,24 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
+    func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: [String: Any], window: BrowserSession,
+        at date: Date) throws -> (command: PreparedChange, result: BrowserTabBatchResult) {
+        let data = try JSONSerialization.data(withJSONObject: [
+            "version": 1, "operation": "tabs.batch", "spaceId": request.assignment.spaceID.rawValue.uuidString,
+            "profileId": request.assignment.profileID.uuidString, "arguments": arguments,
+            "window": try Self.selection(for: window), "now": date.timeIntervalSinceReferenceDate
+        ])
+        let handle = try prepareCommand(data)
+        do {
+            let response = try JSONDecoder().decode(BrowserCoreTabBatch.Response.self, from: readCommand(handle))
+            var current = projection
+            current.selectedSpaceID = window.selectedSpaceID
+            for i in current.spaces.indices { current.spaces[i].selectedTabID = window.space(id: current.spaces[i].id)?.selectedTabID }
+            let prepared = try BrowserCoreTabBatch.applying(response, to: current)
+            return (PreparedChange(handle: handle, session: prepared.session), prepared.result)
+        } catch { crest_session_release_command(handle); throw error }
+    }
+
     func prepareSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
         window: BrowserSession, at date: Date) throws -> PreparedChange {
         let space = spaceID.flatMap { window.space(id: $0) }

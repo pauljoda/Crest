@@ -5,6 +5,41 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
+    func testBatchDeletionCommitsExplicitTombstonesWithSavedTabRemoval() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storage = try BrowserTransactionalSessionPersistence(
+            url: directory.appendingPathComponent("session.sqlite"), favicons: InMemoryBrowserFaviconStore())
+        var original = BrowserSession.preview
+        original.selectedSpaceID = original.spaces[0].id
+        let tabs = Array(original.spaces[0].tabs.filter { $0.url != nil && !$0.isStartPage }.prefix(2))
+        XCTAssertEqual(tabs.count, 2)
+        let ids = Set(tabs.map(\.id))
+        for index in original.spaces[0].tabs.indices where ids.contains(original.spaces[0].tabs[index].id) {
+            original.spaces[0].tabs[index].placement = .saved
+            original.spaces[0].tabs[index].folderID = nil
+            original.spaces[0].tabs[index].splitGroupID = nil
+        }
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: original)
+        try storage.migrateIfNeeded(session: original, journal: journal)
+        let sync = BrowserSyncCoordinator(persistence: storage.journalPersistence)
+        let store = BrowserStore(session: original, persistence: storage, syncCoordinator: sync)
+        let request = BrowserTabBatchRequest(ids: tabs.map(\.id), in: original.spaces[0])
+        try store.commitTabBatch(request, action: .delete)
+        let saved = try XCTUnwrap(storage.load())
+        XCTAssertTrue(saved.spaces[0].tabs.allSatisfy { !ids.contains($0.id) })
+        XCTAssertEqual(saved, store.session)
+        let committed = try XCTUnwrap(storage.journalPersistence.load())
+        XCTAssertEqual(committed, sync.journal)
+        for tab in tabs {
+            let record = try XCTUnwrap(committed.records.first {
+                $0.id == BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue)
+            })
+            XCTAssertEqual(record.tombstone?.reason, .explicitDelete)
+        }
+    }
+
     func testRecordCommandsPreserveNativeAssetsAndOtherWindowSelection() throws {
         var original = BrowserSession.preview
         let spaceID = original.spaces[0].id

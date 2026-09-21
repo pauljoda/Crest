@@ -190,6 +190,16 @@ final class BrowserStoreFamily {
         try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: source, at: .now)
     }
 
+    func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: [String: Any], from store: BrowserStore,
+        at date: Date) throws -> (command: BrowserCoreSessionAuthority.PreparedChange, result: BrowserTabBatchResult) {
+        try core.prepareTabBatch(request, arguments: arguments, window: store.session, at: date)
+    }
+
+    func commitTabBatch(_ command: BrowserCoreSessionAuthority.PreparedChange,
+        deletionReason: BrowserSyncTombstoneReason, from store: BrowserStore, at date: Date) throws {
+        try commitPreparedChange(command, previous: authoritativeSession, deletionReason: deletionReason, from: store, at: date)
+    }
+
     private func commitPreparedChange(_ command: BrowserCoreSessionAuthority.PreparedChange,
         previous: BrowserSession, deletionReason: BrowserSyncTombstoneReason, from source: BrowserStore, at date: Date) throws {
         let revision = reserveSyncRevision()

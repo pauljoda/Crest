@@ -216,6 +216,37 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(session.spaces[0].splitGroupMembers(of: group).map(\.id), result.copies.map(\.copy))
     }
 
+    func testBatchDismissalDefersAllChangesAndRevalidatesAfterNativeConfirmation() throws {
+        final class DeferredDismissal: BrowserPageDismissalAuthorizing {
+            var assignments: [BrowserTabRuntimeAssignment] = []
+            var operation: (@MainActor () -> Bool)?
+            func performDismissal(of assignments: [BrowserTabRuntimeAssignment], in browser: BrowserStore,
+                operation: @escaping @MainActor () -> Bool) -> Bool {
+                self.assignments = assignments; self.operation = operation; return false
+            }
+        }
+        let session = makeSession(count: 3), source = session.spaces[0]
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let gate = DeferredDismissal(); browser.family.pageDismissalAuthorizer = gate
+        let actions = BrowserTabBatchActions(browser: browser, spaceAccess: BrowserSpaceAccessController())
+        let request = BrowserTabBatchRequest(ids: Array(source.tabs.prefix(2).map(\.id)), in: source)
+        XCTAssertFalse(actions.perform(request, action: .close))
+        XCTAssertEqual(gate.assignments.map(\.tabID), request.ids)
+        XCTAssertEqual(browser.session, session)
+        gate.operation = nil // Native cancellation never commits a subset.
+        XCTAssertEqual(browser.session, session)
+        XCTAssertFalse(actions.perform(request, action: .close))
+        browser.session.spaces[0].tabs[0].placement = .saved
+        let changed = browser.session
+        XCTAssertFalse(try XCTUnwrap(gate.operation)())
+        XCTAssertEqual(browser.session, changed)
+        browser.session = session
+        XCTAssertFalse(actions.perform(request, action: .close))
+        XCTAssertTrue(try XCTUnwrap(gate.operation)())
+        XCTAssertEqual(browser.session.spaces[0].archivedTabs.count, 2)
+        XCTAssertEqual(browser.session.spaces[0].tabs.map(\.id), [source.tabs[2].id])
+    }
+
     func testMissingMemberAtCaptureRefusesEntireBatch() {
         var session = makeSession(count: 2)
         let before = session

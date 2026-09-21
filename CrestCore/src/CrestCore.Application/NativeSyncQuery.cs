@@ -19,6 +19,7 @@ public static class NativeSyncQuery
         {
             JsonNode value = request["operation"]!.GetValue<string>() switch
             {
+                "batch.preview" => PreviewBatch(request),
                 "transfer.preview" => NativeTabTransfer.Evaluate(request["source"]!.AsObject(), request["destination"]!.AsObject(),
                     request["arguments"]!.AsObject(), request["now"]!.GetValue<double>()),
                 "project" => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
@@ -40,6 +41,13 @@ public static class NativeSyncQuery
         var bytes = Encoding.UTF8.GetBytes(result.ToJsonString());
         if (bytes.Length > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         return bytes;
+    }
+
+    private static JsonNode PreviewBatch(JsonObject request)
+    {
+        var core = new NativeSessionAuthority(Encoding.UTF8.GetBytes(request["session"]!.ToJsonString()));
+        var command = request["command"]!.AsObject();
+        return JsonNode.Parse(core.PrepareCommand(1, Encoding.UTF8.GetBytes(command.ToJsonString())).Output)!;
     }
 
     private static JsonObject Materialize(JsonObject request)

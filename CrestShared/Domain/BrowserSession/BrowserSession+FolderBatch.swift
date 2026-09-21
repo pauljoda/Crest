@@ -1,5 +1,6 @@
 import Foundation
 
+#if !CREST_CORE_BACKED
 extension BrowserSession {
     /// Folder batches move containers, not just their visible tabs. Work stays
     /// in applyTabBatch's draft until every destination has passed validation.
@@ -103,3 +104,4 @@ extension BrowserSession {
         else { throw BrowserTabBatchError.invalidDestination }
     }
 }
+#endif
