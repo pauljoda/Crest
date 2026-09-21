@@ -1717,6 +1717,10 @@
     "native-core-consistent-csharp-formatting": {
       "category": "internal",
       "message": "Use a consistent C# brace style across the native core."
+    },
+    "native-core-source-organization": {
+      "category": "internal",
+      "message": "Organize the native core by browser responsibility and clarify its session model."
     }
   }
 }
