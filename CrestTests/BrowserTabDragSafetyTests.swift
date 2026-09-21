@@ -329,7 +329,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         XCTAssertNil(context.sidebarInteraction.tabDragState.sessionToken)
     }
 
-    func testExactStoreMoveWithDuplicateTabIDsMutatesOnlyTheCapturedSource() throws {
+    func testRepairedDuplicateIDsRejectTheStaleDragAndMoveOnlyTheCapturedSource() throws {
         let duplicateTabID = Self.tabID(30)
         let decoyTab = Self.makeTab(
             id: duplicateTabID,
@@ -359,12 +359,17 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             name: "Destination",
             tabs: []
         )
-        let browser = Self.makeBrowser(
-            spaces: [decoy, capturedSource, destination],
-            selectedSpaceID: destination.id
-        )
+        var restored = BrowserSession(spaces: [decoy, capturedSource, destination], selectedSpaceID: destination.id)
+        restored.repairRuntimeIntegrity()
+        let browser = BrowserStore(session: restored, persistence: InMemoryBrowserSessionPersistence())
+        let repairedID = try XCTUnwrap(restored.space(id: capturedSource.id)?.tabs.first?.id)
+        XCTAssertNotEqual(repairedID, duplicateTabID)
+        let stale = BrowserTabDragItem(tabID: duplicateTabID, spaceID: capturedSource.id, profileID: capturedSource.profile.id)
+        let before = browser.session
+        XCTAssertFalse(browser.moveTab(stale, to: .pinned, matching: BrowserSpaceRuntimeAssignment(space: destination)))
+        XCTAssertEqual(browser.session, before)
         let item = BrowserTabDragItem(
-            tabID: duplicateTabID,
+            tabID: repairedID,
             spaceID: capturedSource.id,
             profileID: capturedSource.profile.id
         )
@@ -389,64 +394,24 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
         XCTAssertEqual(currentDecoy.tabs.map(\.title), ["Decoy"])
         XCTAssertTrue(currentSource.tabs.isEmpty)
-        XCTAssertEqual(currentDestination.tabs.map(\.title), ["Captured"])
+        XCTAssertEqual(currentDestination.tabs.filter { !$0.isStartPage }.map(\.title), ["Captured"])
         XCTAssertEqual(currentDestination.tabs.first?.placement, .pinned)
     }
 
-    func testExactStoreMoveRejectsADuplicateTabIDInTheDestination() {
-        let duplicateTabID = Self.tabID(37)
-        let sourceTab = Self.makeTab(
-            id: duplicateTabID,
-            title: "Source",
-            placement: .current
-        )
-        let destinationTab = Self.makeTab(
-            id: duplicateTabID,
-            title: "Destination",
-            placement: .saved
-        )
-        let source = Self.makeSpace(
-            id: Self.spaceID(38),
-            profileID: Self.uuid(39),
-            name: "Source",
-            tabs: [sourceTab]
-        )
-        let destination = Self.makeSpace(
-            id: Self.spaceID(40),
-            profileID: Self.uuid(41),
-            name: "Destination",
-            tabs: [destinationTab]
-        )
-        let browser = Self.makeBrowser(
-            spaces: [source, destination],
-            selectedSpaceID: destination.id
-        )
-        let originalSession = browser.session
-        let item = BrowserTabDragItem(
-            tabID: duplicateTabID,
-            spaceID: source.id,
-            profileID: source.profile.id
-        )
-        let destinationAssignment = BrowserSpaceRuntimeAssignment(
-            space: destination
-        )
-        let action = BrowserTabDragAction(
-            browser: browser,
-            spaceAccess: BrowserSpaceAccessController(
-                authenticator: InMemoryAuthenticator()
-            )
-        )
-
-        XCTAssertFalse(action.canMove(item, into: destinationAssignment))
-        XCTAssertFalse(
-            action.move(
-                item,
-                to: .pinned,
-                matching: destinationAssignment
-            )
-        )
-        XCTAssertEqual(browser.session, originalSession)
+    #if CREST_CORE_BACKED
+    func testDuplicateTabProposalCannotChangeTheLiveFamily() {
+        let source = Self.makeSpace(id: Self.spaceID(38), profileID: Self.uuid(39), name: "Source",
+            tabs: [Self.makeTab(id: Self.tabID(37), title: "Source", placement: .current)])
+        let destination = Self.makeSpace(id: Self.spaceID(40), profileID: Self.uuid(41), name: "Destination", tabs: [])
+        let browser = Self.makeBrowser(spaces: [source, destination], selectedSpaceID: destination.id)
+        let original = browser.session
+        let observer = browser.makeWindowStore()
+        browser.session.spaces[1].tabs.append(source.tabs[0])
+        XCTAssertEqual(browser.session, original)
+        XCTAssertEqual(observer.session.tabIDs, original.tabIDs)
+        XCTAssertNotNil(browser.localSyncErrorDescription)
     }
+    #endif
 
     func testStaleMenuCloseAndDeleteActionsRejectChangedPlacement() throws {
         let closeContext = makeContext(sourcePlacement: .current)

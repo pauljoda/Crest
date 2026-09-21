@@ -79,6 +79,7 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
             .success([URL(fileURLWithPath: "/preview/crest-browser-data.json")])
         )
         await waitUntil { context.operations.portableImportRequestCount == 1 }
+        XCTAssertFalse(context.model.status?.isError ?? true, String(describing: context.model.status))
 
         for (spaceID, profileID) in existingAssignments {
             XCTAssertEqual(
@@ -117,8 +118,7 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: session,
-            persistence: InMemoryBrowserSessionPersistence(),
-            browsingMode: .privateBrowsing
+            persistence: InMemoryBrowserSessionPersistence()
         )
         let spaceAccess = BrowserSpaceAccessController(
             authenticator: TestAuthenticator()

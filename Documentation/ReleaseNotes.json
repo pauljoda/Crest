@@ -1581,6 +1581,14 @@
     "shared-core-tab-transfers": {
       "category": "improved",
       "message": "Move tabs between Spaces and temporary windows while preserving their identity and saving changes consistently with sync."
+    },
+    "shared-core-normal-app-composition": {
+      "category": "internal",
+      "message": "Build the normal Mac and mobile apps with the portable browser core and keep review isolation independent of engine and state ownership."
+    },
+    "core-popup-and-split-compatibility": {
+      "category": "fixed",
+      "message": "Keep blank popup pages connected to their opener and preserve split groups when filing selected tabs together."
     }
   }
 }

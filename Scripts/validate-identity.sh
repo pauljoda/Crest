@@ -52,7 +52,7 @@ if rg -n \
   --glob '!Scripts/validate-identity.sh' \
   --glob '!*.xcuserstate' \
   --glob '!DerivedData/**' \
-  "${prototype_environment}" \
+  "(^|[^[:alnum:]_])${prototype_environment}" \
   .; then
   print -u2 "Prototype launch environment remains in the repository."
   exit 1
@@ -61,7 +61,8 @@ fi
 rg -q '^name: Crest$' project.yml
 rg -q '^  Crest:$' project.yml
 rg -q '^  CrestMobile:$' project.yml
-rg -q 'PRODUCT_BUNDLE_IDENTIFIER: com\.pauldavis\.crest$' project.yml
+rg -q 'CREST_MAC_BUNDLE_IDENTIFIER: com\.pauldavis\.crest$' project.yml
+rg -q 'CREST_MOBILE_BUNDLE_IDENTIFIER: com\.pauldavis\.crest$' project.yml
 rg -q 'PRODUCT_MODULE_NAME: Crest$' project.yml
 rg -q 'PRODUCT_MODULE_NAME: CrestMobile$' project.yml
 

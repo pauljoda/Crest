@@ -32,7 +32,7 @@ final class BrowserMacApplication {
 
     init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil,
         profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover()) {
-        #if CREST_CORE_BACKED
+        #if CREST_REVIEW_BUILD
         setenv("CREST_ISOLATED_SESSION", "1", 1)
         #if CREST_CHROMIUM_HOST
         setenv("CREST_ISOLATED_PERSISTENCE_ID", "chromium-native-ui-review", 0)

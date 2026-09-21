@@ -46,8 +46,9 @@ extension BrowserSession {
                 guard before.map({ !selected.contains($0) }) ?? true,
                     folder == nil || source.folders.contains(where: { $0.id == folder && $0.location == location })
                 else { throw BrowserTabBatchError.invalidDestination }
-                // fileTabs preserves storage order; arrange the selected block in
-                // visible order first, while keeping the surrounding rows in place.
+                // Give filing a contiguous block in visible order. Interleaving
+                // selected slots can temporarily split a group before the core
+                // validates the next command.
                 orderBatchMembers(ids, in: source.id)
                 guard
                     fileTabs(
@@ -165,10 +166,8 @@ extension BrowserSession {
         guard let index = spaces.firstIndex(where: { $0.id == spaceID }) else { return }
         let selected = Set(ids)
         let byID = Dictionary(uniqueKeysWithValues: spaces[index].tabs.map { ($0.id, $0) })
-        var iterator = ids.makeIterator()
-        spaces[index].tabs = spaces[index].tabs.map { tab in
-            guard selected.contains(tab.id), let id = iterator.next(), let value = byID[id] else { return tab }
-            return value
-        }
+        guard let insertion = spaces[index].tabs.firstIndex(where: { selected.contains($0.id) }) else { return }
+        spaces[index].tabs.removeAll { selected.contains($0.id) }
+        spaces[index].tabs.insert(contentsOf: ids.compactMap { byID[$0] }, at: insertion)
     }
 }

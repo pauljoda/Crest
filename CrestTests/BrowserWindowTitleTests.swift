@@ -76,10 +76,10 @@ final class BrowserWindowTitleTests: XCTestCase {
         model.pages.select(session: model.browser.session)
         let page = try XCTUnwrap(model.pages.activePage)
         try await load("Live Alpha", into: page)
-        var destination = model.browser.selectedSpace!
-        destination = BrowserSpace(
+        let beta = BrowserTab(title: "Beta", url: URL(string: "https://beta.crest.test"), placement: .current)
+        let destination = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Other", symbol: "circle", accent: .indigo,
-            folders: [], tabs: [destination.tabs[1]], selectedTabID: destination.tabs[1].id
+            folders: [], tabs: [beta], selectedTabID: beta.id
         )
         model.browser.session.spaces.append(destination)
         model.browser.selectSpace(destination.id)

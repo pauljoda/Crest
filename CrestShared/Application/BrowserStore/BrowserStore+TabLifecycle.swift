@@ -120,12 +120,12 @@ extension BrowserStore {
     /// `createWebViewWith`, so this has to answer synchronously with both the tab
     /// and its Space: the page pool builds the adopting page from them without
     /// consulting session state itself. `window.open()` without a destination
-    /// arrives as a nil URL and becomes an `about:blank` tab, because a tab
+    /// arrives as a nil or empty URL and becomes an `about:blank` tab, because a tab
     /// without a URL is a start page rather than a web page.
     func openPopupTab(url: URL?, in spaceID: SpaceID, selecting: Bool = true) -> BrowserPopupTabRegistration? {
         guard !deletingSpaceIDs.contains(spaceID),
             let space = session.space(id: spaceID),
-            let destinationURL = url ?? URL(string: "about:blank")
+            let destinationURL = url.flatMap({ $0.absoluteString.isEmpty ? nil : $0 }) ?? URL(string: "about:blank")
         else { return nil }
         let requestedIndex = BrowserTabInsertionPolicy.requestedIndex(
             after: space.selectedTabID,

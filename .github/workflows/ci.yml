@@ -49,6 +49,7 @@ jobs:
         run: |
           command -v xcodegen >/dev/null || brew install xcodegen
           command -v rg >/dev/null || brew install ripgrep
+          Scripts/control-plane/install-dotnet.sh
 
       - name: Generate the project
         run: Scripts/bootstrap.sh

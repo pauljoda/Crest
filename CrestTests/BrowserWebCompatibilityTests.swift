@@ -607,7 +607,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             XCTAssertEqual(
                 openResult,
                 "window",
-                "window.open() must hand the page a real window."
+                "window.open() must hand the page a real window. Core error: \(store.localSyncErrorDescription ?? "none")"
             )
             let popupTab = try XCTUnwrap(
                 store.selectedSpace?.tabs.first { $0.id != openerTab.id }

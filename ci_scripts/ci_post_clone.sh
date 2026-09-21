@@ -95,3 +95,5 @@ CREST_VERSION_REPOSITORY_ROOT="$repository_path" \
     "$repository_path/Scripts/check-version.sh" --static
 
 echo "Validated manual ${CI_PRODUCT_PLATFORM} archive for ${cloud_commit} from ${repository_url} with ${expected_scheme} on submission-supported Xcode ${xcode_version} (${xcode_build})."
+
+"$repository_path/Scripts/control-plane/install-dotnet.sh"

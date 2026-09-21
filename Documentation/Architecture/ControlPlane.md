@@ -12,9 +12,11 @@ publishing a release as part of this migration.
 
 The working Chromium host establishes that the rendering approach is viable.
 It does not complete core ownership, sync, platform services or shipping
-composition. `CrestChromiumUI`, `CrestNativeCore` and `CrestMobileNativeCore` use
-the original views with `CREST_CORE_BACKED`; the normal `Crest` and `CrestMobile`
-targets still have their previous composition. The live native app uses
+composition. The normal `Crest` and `CrestMobile` targets now use the same
+`CREST_CORE_BACKED` state composition as `CrestChromiumUI`, `CrestNativeCore` and
+`CrestMobileNativeCore`. `CREST_REVIEW_BUILD` separately enforces isolated launch
+for the review targets. The normal Mac target still hosts WebKit; the native
+Chromium distribution remains a separate packaging step. The live native app uses
 `NativeSessionAuthority`; `BrowserSessionKernel` and its registered adapters
 remain a separate integration path. Completion requires one production authority
 and one capability contract, rather than maintaining two implementations of
@@ -411,6 +413,30 @@ host, rather than assuming Chrome compatibility from the engine name.
 
 Install .NET SDK 10.0.201 or a servicing patch, Xcode, and XcodeGen. Regenerate
 `Crest.xcodeproj` with `xcodegen generate` after changing `project.yml`.
+
+The normal `Crest` and `CrestMobile` targets build and embed their core from source.
+`Scripts/control-plane/build-apple-core.py` selects the runtime for the destination,
+uses Release NativeAOT for both Debug and Release apps, and caches it under the
+current build's products directory. Source, SDK and platform changes invalidate
+the cache; concurrent target requests share a build lock. NativeAOT intermediates
+also stay in Derived Data. No managed runtime is required on the user's device.
+Explicit `CREST_CORE_LIBRARY_DIR` or `CREST_CORE_FRAMEWORK_DIR` overrides use a
+previously published library, so callers must keep it matched to the checked-out
+contracts. The existing review scripts use those overrides.
+
+CI installs the pinned SDK with Microsoft's [SDK install script](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script)
+through `Scripts/control-plane/install-dotnet.sh`. Local Xcode builds find `dotnet`
+in PATH, `~/.dotnet`, or the standard macOS SDK location; `CREST_DOTNET` can select
+another installation. Network access is needed for the first SDK/package restore.
+
+Core ownership no longer implicitly enables isolation. `CREST_REVIEW_BUILD`
+forces isolation in the review apps; tests and previews use the existing launch
+policy. To review the normal Mac target without registering the installed app's
+identity, set `CREST_MAC_BUNDLE_IDENTIFIER` to a separate identifier and
+`CREST_MAC_ENTITLEMENTS` to its compatible entitlements, then launch with
+`CREST_ISOLATED_SESSION=1` and a unique `CREST_ISOLATED_PERSISTENCE_ID`.
+Normal device provisioning and the remaining physical-device migration validation
+are still required before distribution.
 
 Build an isolated app into a new absolute path:
 

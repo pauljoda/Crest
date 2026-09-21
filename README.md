@@ -114,6 +114,7 @@ Requirements:
 - Apple silicon Mac
 - Xcode with macOS and iOS SDKs supporting the 26.1 deployment targets
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+- .NET SDK pinned by `CrestCore/global.json`, installable with `Scripts/control-plane/install-dotnet.sh`
 
 ```bash
 git clone https://github.com/pauljoda/Crest.git
@@ -121,6 +122,8 @@ cd Crest
 Scripts/bootstrap.sh
 open Crest.xcodeproj
 ```
+
+Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator. Its intermediate files stay in Derived Data; the installed app does not require a .NET runtime. See the [control-plane build workflow](Documentation/Architecture/ControlPlane.md#build-workflow) for isolated review builds and Chromium packaging.
 
 `project.yml` is the source of truth for targets and build settings. Run `xcodegen generate` after changing source roots, targets, or project configuration.
 

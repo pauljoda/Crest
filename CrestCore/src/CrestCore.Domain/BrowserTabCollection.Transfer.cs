@@ -42,7 +42,11 @@ public sealed partial class BrowserTabCollection
         tabs.Remove(tab); folders.Clear(); folders.AddRange(ordered);
         tab.Place(placement, folder, now); tab.SetSplit(null); tab.MarkPosition(now);
         destination.tabs.Insert(insertion, tab);
-        NormalizeSplits(now); destination.RepairSplitMembership();
+        // Cross-Space organization retains a singleton's stored membership,
+        // as checkpoint repair does for incomplete sync batches. A window
+        // transfer explicitly detaches and normalizes its source run.
+        if (afterSelection) NormalizeSplits(now); else RepairSplitMembership();
+        destination.RepairSplitMembership();
         return selected == id ? fallback is { } next && tabs.Any(t => t.Id == next) ? next : null : selected;
     }
 }

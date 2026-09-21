@@ -119,7 +119,7 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
         let input: BrowserNativeMouseInput
         let tabID: TabID
         let destinationWindow: NSWindow
-        let outside = CGPoint(x: 1_320, y: -120)
+        private(set) var outside = CGPoint(x: 1_320, y: -120)
         var request: BrowserMacWindowRequest?
         var capturedDropPoint: CGPoint?
         var capturedGrabFraction: CGPoint?
@@ -172,6 +172,11 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
                         })))
             coordinator.attach(window, to: source.id)
             window.makeKeyAndOrderFront(nil)
+            // The app's initial scene or an earlier test may have another
+            // visible window. This fixture specifically exercises empty desktop.
+            let rightEdge = NSApp.orderedWindows.filter { $0.isVisible && !$0.ignoresMouseEvents }
+                .map { $0.frame.maxX }.max() ?? window.frame.maxX
+            outside.x = rightEdge - window.frame.minX + 80
             pump()
         }
 
