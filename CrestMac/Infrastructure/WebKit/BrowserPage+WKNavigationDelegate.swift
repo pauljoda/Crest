@@ -113,36 +113,23 @@ extension BrowserPage: WKNavigationDelegate {
             isOptionModified: isOptionModified,
             peekModifier: BrowserLinkPreferenceStore.shared.preferences.peekClickModifier
         )
-        if let request = BrowserPeekPolicy.request(
-            destinationURL: navigationAction.request.url,
-            context: navigationContext,
+        let decision = BrowserLinkNavigationDecision.classify(
+            destinationURL: navigationAction.request.url, context: navigationContext,
             isUserActivatedLink: navigationAction.navigationType == .linkActivated,
             isTopLevelNavigation: navigationAction.targetFrame?.isMainFrame ?? true,
-            isAlternateModified: clickIntent == .peek,
+            isPeekModified: clickIntent == .peek,
             isNewTabModified: clickIntent == .newTab || isMiddleClick,
-            sourcePresentation: sourcePresentation
-        ) {
+            isShiftModified: isShiftModified,
+            focusesNewTabs: opensModifiedLinksInForeground
+                || BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks)
+        if let request = decision.peekRequest(destinationURL: navigationAction.request.url,
+            context: navigationContext, sourcePresentation: sourcePresentation) {
             openPeek(request)
             decisionHandler(.cancel)
             return
         }
-        switch BrowserModifiedLinkDisposition.classify(
-            destinationURL: navigationAction.request.url,
-            isUserActivatedLink: navigationAction.navigationType == .linkActivated,
-            isCommandModified: clickIntent == .newTab,
-            isShiftModified: isShiftModified,
-            isMiddleClick: isMiddleClick,
-            focusesNewTabs: opensModifiedLinksInForeground
-                || BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks
-        ) {
-        case .navigate:
-            break
-        case .backgroundTab:
-            openModifiedLink(navigationAction.request, spaceID, false)
-            decisionHandler(.cancel)
-            return
-        case .foregroundTab:
-            openModifiedLink(navigationAction.request, spaceID, true)
+        if decision == .foregroundTab || decision == .backgroundTab {
+            openModifiedLink(navigationAction.request, spaceID, decision == .foregroundTab)
             decisionHandler(.cancel)
             return
         }

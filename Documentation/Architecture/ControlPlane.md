@@ -546,8 +546,19 @@ window, and cancels on source changes, navigation, Escape or window deactivation
 Image, file, webpage-custom-data and selected-text drags keep Chromium's path;
 Chromium's internal drag-tracking ID is permitted for ordinary link pulls. Pointer
 samples stay native; promoting the resulting Peek uses the core completion
-command. Modifier-click and protected saved-site navigation still need the
-equivalent Chromium navigation-policy bridge.
+command.
+
+`LinkNavigationPolicy` owns saved-site protection, Peek priority and modified-link
+tab selection in the .NET domain. WebKit on Mac and mobile invokes that policy
+once per navigation decision through the bounded native policy ABI. Chromium's
+navigation throttle consults the same policy for user-activated top-level links
+in owned pages. Off-site links from saved and pinned tabs open the native Peek
+card; same-site links retain normal engine navigation. The saved-site boundary
+ignores `www.` while keeping other subdomains distinct. Scripts, form submissions,
+subframes, address-bar loads and redirects keep their engine paths. Deferred Peek
+presentation is invalidated by source navigation, closure or reassignment.
+Chromium modifier-click interception still needs to carry trusted input and
+request metadata through its separate new-tab and download navigation paths.
 
 The native page adapter propagates card viewport changes to Chromium during
 attachment, navigation and resizing. Keyboard equivalents first reach the page;

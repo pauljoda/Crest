@@ -14,6 +14,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     private let profileID: UUID
     var observer: (String, [String: Any]) -> Void
     var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
+    var protectedLinkHandler: (URL) -> (() -> Void)? = { _ in nil }
     private var host: (any CrestChromiumEngineHost)?
     private var requestedURL: URL?
     private var pendingInteractionState: Data?
@@ -247,6 +248,20 @@ final class ChromiumNativePage: BrowserPageEngine {
                     guard let self, !self.disposed, let url = URL(string: address) else { return false }
                     return self.linkHandler(action, url, label)
                 }
+            }
+            host?.setProtectedLinkHandler(page: id) { [weak self] address in
+                var deferred: CrestDeferredNavigation?
+                MainActor.assumeIsolated {
+                    guard let self, !self.disposed, let url = URL(string: address),
+                        let action = self.protectedLinkHandler(url) else { return }
+                    deferred = { [weak self] in
+                        MainActor.assumeIsolated {
+                            guard let self, !self.disposed else { return }
+                            action()
+                        }
+                    }
+                }
+                return deferred
             }
             attachIfPossible()
             setZoom(zoom)

@@ -1609,6 +1609,10 @@
     "chromium-native-link-peek": {
       "category": "improved",
       "message": "Use page context menus and pull links into Peek while browsing with Chromium."
+    },
+    "shared-core-saved-link-navigation": {
+      "category": "improved",
+      "message": "Keep saved and pinned pages open when following off-site links in Chromium, using the same Peek rules as WebKit."
     }
   }
 }

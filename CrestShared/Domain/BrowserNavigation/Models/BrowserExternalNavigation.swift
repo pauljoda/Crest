@@ -32,20 +32,15 @@ enum BrowserModifiedLinkDisposition: Equatable, Sendable {
         isMiddleClick: Bool,
         focusesNewTabs: Bool = false
     ) -> BrowserModifiedLinkDisposition {
-        guard isUserActivatedLink,
-            isCommandModified || isMiddleClick,
-            let destinationURL,
-            BrowserExternalURLPolicy.accepts(destinationURL)
-        else {
-            return .navigate
+        guard let destinationURL else { return .navigate }
+        switch BrowserLinkNavigationDecision.classify(destinationURL: destinationURL, context: nil,
+            isUserActivatedLink: isUserActivatedLink, isTopLevelNavigation: true,
+            isPeekModified: false, isNewTabModified: isCommandModified || isMiddleClick,
+            isShiftModified: isShiftModified, focusesNewTabs: focusesNewTabs) {
+        case .foregroundTab: return .foregroundTab(destinationURL)
+        case .backgroundTab: return .backgroundTab(destinationURL)
+        default: return .navigate
         }
-        return BrowserLinkOpeningPolicy.selectsNewTab(
-            isNewTabGesture: true,
-            isShiftModified: isShiftModified,
-            focusesNewTabs: focusesNewTabs
-        )
-            ? .foregroundTab(destinationURL)
-            : .backgroundTab(destinationURL)
     }
 }
 

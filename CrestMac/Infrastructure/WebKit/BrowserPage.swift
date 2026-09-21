@@ -347,6 +347,23 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             }
         }
         linkDrag?.observeNativeMouseDown()
+        chromiumPage?.protectedLinkHandler = { [weak self] destination in
+            guard let self, let context = self.navigationContext,
+                let sourceWindow = self.pageEngine.nativeView.window,
+                let request = BrowserPeekPolicy.request(destinationURL: destination, context: context,
+                    isUserActivatedLink: true, isTopLevelNavigation: true, isAlternateModified: false)
+            else { return nil }
+            // The engine cancels first, then invokes this action after leaving
+            // its navigation stack. A moved/reassigned source must not open Peek.
+            return { [weak self, weak sourceWindow] in
+                guard let self, let sourceWindow, self.pageEngine.nativeView.window === sourceWindow,
+                    let current = self.navigationContext,
+                    current.tabID == context.tabID, current.assignment == context.assignment,
+                    current.placement == context.placement, current.savedURL == context.savedURL,
+                    current.automaticallyOpensPeek else { return }
+                self.openPeek(request)
+            }
+        }
         #else
         let webView = desktopWebView
         desktopWebView.menuHost = self

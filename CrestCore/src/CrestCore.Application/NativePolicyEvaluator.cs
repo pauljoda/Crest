@@ -18,6 +18,23 @@ public static class NativePolicyEvaluator
         var request = Protocol.Parse(utf8);
         if (request.GetProperty("version").GetInt32() != 1) throw new ProtocolException("version_mismatch");
         var operation = Protocol.Text(request, "operation");
+        if (operation == "navigation.link")
+        {
+            Protocol.Members(request, "version", "operation", "url", "userActivatedLink", "topLevel",
+                "peekModified", "newTabModified", "shiftModified", "focusesNewTabs", "hasContext",
+                "placement", "savedUrl", "automaticallyOpensPeek");
+            var decision = LinkNavigationPolicy.Decide(request.GetProperty("url").GetString(),
+                request.GetProperty("userActivatedLink").GetBoolean(), request.GetProperty("topLevel").GetBoolean(),
+                request.GetProperty("peekModified").GetBoolean(), request.GetProperty("newTabModified").GetBoolean(),
+                request.GetProperty("shiftModified").GetBoolean(), request.GetProperty("focusesNewTabs").GetBoolean(),
+                request.GetProperty("hasContext").GetBoolean(), request.GetProperty("placement").GetString(),
+                request.GetProperty("savedUrl").GetString(), request.GetProperty("automaticallyOpensPeek").GetBoolean());
+            return Encode(new() { ["decision"] = decision switch {
+                LinkNavigationDecision.PeekModifier => "peekModifier", LinkNavigationDecision.PeekSavedSite => "peekSavedSite",
+                LinkNavigationDecision.BackgroundTab => "backgroundTab", LinkNavigationDecision.ForegroundTab => "foregroundTab",
+                _ => "navigate"
+            }});
+        }
         if (operation is "records.expired" or "history.remove_range")
         {
             Protocol.Members(request, operation == "records.expired"

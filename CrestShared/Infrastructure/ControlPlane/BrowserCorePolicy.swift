@@ -3,10 +3,26 @@ import CrestCoreABI
 import Foundation
 import os
 
-/// A stateless native boundary. The existing store remains the sole session
-/// owner while coherent domain operations move behind its established API.
+/// A stateless boundary for synchronous domain decisions. Session mutations
+/// remain commands to the core session authority.
 enum BrowserCorePolicy {
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "CorePolicy")
+    static func linkNavigation(destinationURL: URL?, context: BrowserPageNavigationContext?,
+        isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isPeekModified: Bool,
+        isNewTabModified: Bool, isShiftModified: Bool, focusesNewTabs: Bool) -> BrowserLinkNavigationDecision {
+        guard let response = evaluate([
+            "version": 1, "operation": "navigation.link",
+            "url": destinationURL?.absoluteString as Any? ?? NSNull(),
+            "userActivatedLink": isUserActivatedLink, "topLevel": isTopLevelNavigation,
+            "peekModified": isPeekModified, "newTabModified": isNewTabModified,
+            "shiftModified": isShiftModified, "focusesNewTabs": focusesNewTabs,
+            "hasContext": context != nil, "placement": context?.placement.rawValue as Any? ?? NSNull(),
+            "savedUrl": context?.savedURL?.absoluteString as Any? ?? NSNull(),
+            "automaticallyOpensPeek": context?.automaticallyOpensPeek ?? false
+        ]), let value = response["decision"] as? String,
+            let decision = BrowserLinkNavigationDecision(rawValue: value) else { return .navigate }
+        return decision
+    }
     static func addressIntent(_ input: String, provider: BrowserSearchProvider) -> BrowserAddressIntent? {
         #if CREST_CHROMIUM_HOST
         let allowsInternalPages = true

@@ -67,6 +67,7 @@
 #include "extensions/common/manifest.h"
 #include "components/sessions/content/session_tab_helper.h"
 #include "content/public/browser/render_frame_host.h"
+#include "content/public/browser/navigation_throttle.h"
 #include "content/public/browser/render_widget_host_view.h"
 #include "chrome/browser/media/webrtc/media_capture_devices_dispatcher.h"
 #include "chrome/browser/media/webrtc/media_stream_capture_indicator.h"
@@ -674,8 +675,10 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   std::string profile;
   Observation observation;
   BOOL (^link_handler)(NSString*, NSString*, NSString*) = nil;
+  CrestDeferredNavigation (^protected_link_handler)(NSString*) = nil;
   bool closing = false;
   uint64_t navigation_revision = 0;
+  uint64_t navigation_generation = 0;
   std::unique_ptr<ExtensionPopup> extension_popup;
   std::unique_ptr<PageDocumentService> document_service;
   void Publish(bool committed = false, NSString* failure = nil) {
@@ -712,8 +715,10 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   }
   void TitleWasSet(content::NavigationEntry*) override { Publish(); }
   void DidStartNavigation(content::NavigationHandle* navigation) override {
-    if (navigation->IsInPrimaryMainFrame() && !navigation->IsSameDocument())
+    if (navigation->IsInPrimaryMainFrame() && !navigation->IsSameDocument()) {
+      ++navigation_generation;
       observation(@"navigation_started", @{});
+    }
   }
   void DidFinishNavigation(content::NavigationHandle* navigation) override {
     if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted()) ++navigation_revision;
@@ -1124,6 +1129,10 @@ Page* FindPage(NSString* identifier) {
 - (void)setLinkHandlerForPage:(NSString*)pageID handler:(BOOL (^)(NSString*, NSString*, NSString*))handler {
   CHECK(NSThread.isMainThread);
   if (Page* page = FindPage(pageID)) page->link_handler = [handler copy];
+}
+- (void)setProtectedLinkHandlerForPage:(NSString*)pageID handler:(CrestDeferredNavigation (^)(NSString*))handler {
+  CHECK(NSThread.isMainThread);
+  if (Page* page = FindPage(pageID)) page->protected_link_handler = [handler copy];
 }
 - (NSData*)interactionStateForPage:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
@@ -1675,6 +1684,50 @@ Page* FindPage(NSString* identifier) {
 @end
 
 namespace crest {
+namespace {
+class LinkNavigationThrottle final : public content::NavigationThrottle {
+ public:
+  explicit LinkNavigationThrottle(content::NavigationThrottleRegistry& registry)
+      : NavigationThrottle(registry) {}
+  const char* GetNameForLogging() override { return "CrestLinkNavigationThrottle"; }
+  ThrottleCheckResult WillStartRequest() override {
+    auto* navigation = navigation_handle();
+    // Only an actual link in an owned page can protect a saved tab. Forms,
+    // scripts, browser commands, subframes and redirects keep engine semantics.
+    if (State().disposing || !navigation->IsInPrimaryMainFrame() ||
+        !navigation->IsRendererInitiated() || !navigation->HasUserGesture() ||
+        !navigation->WasInitiatedByLinkClick() || navigation->IsFormSubmission() ||
+        navigation->WasStartedFromContextMenu() || navigation->IsPost() ||
+        !navigation->GetURL().SchemeIsHTTPOrHTTPS() || navigation->GetURL().spec().size() > 8192)
+      return PROCEED;
+    auto* contents = navigation->GetWebContents();
+    for (auto& [id, page] : State().pages) {
+      if (page->web_contents() != contents || !page->protected_link_handler) continue;
+      auto action = page->protected_link_handler(base::SysUTF8ToNSString(navigation->GetURL().spec()));
+      if (!action) return PROCEED;
+      auto weak = contents->GetWeakPtr();
+      const auto revision = page->navigation_revision;
+      const auto generation = page->navigation_generation;
+      // Do not mount/reparent native content while Chromium's navigation stack
+      // is live. A later navigation or teardown invalidates this presentation.
+      dispatch_async(dispatch_get_main_queue(), ^{
+        if (!weak || State().disposing) return;
+        for (auto& [current_id, current] : State().pages) {
+          if (current->web_contents() == weak.get() && current->navigation_revision == revision &&
+              current->navigation_generation == generation) { action(); return; }
+        }
+      });
+      return CANCEL_AND_IGNORE;
+    }
+    return PROCEED;
+  }
+};
+}  // namespace
+
+void AddNavigationThrottle(content::NavigationThrottleRegistry& registry) {
+  if (IsEnabled()) registry.AddThrottle(std::make_unique<LinkNavigationThrottle>(registry));
+}
+
 bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data) {
   // File, image, selection and custom payload drags retain Chromium's native path.
   // Chromium adds its own drag ID to every payload, including ordinary links.

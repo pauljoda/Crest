@@ -86,5 +86,9 @@
   "content/public/browser/web_contents_view_delegate.h": {
     "before": "60cf4992f87376a9abbe408e4af59eb77dbd879d796dc5077d0b4ceae70bb400",
     "after": "2f36a2c8d75b2528cfadc64bb79871fe365ca86c6ac3c71738517ef185108dd3"
+  },
+  "chrome/browser/chrome_content_browser_client.cc": {
+    "before": "425114fffb4a0cbad49c140ddc51edafec54570e2cd81b98b2dbdf3a674cdfa3",
+    "after": "4f89bdb342670b3ae2832127aa66acf0418ea9bda0bb5fcc26021e1bf033c532"
   }
 }

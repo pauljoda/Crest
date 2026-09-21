@@ -10,41 +10,50 @@ enum BrowserPeekPolicy {
         isNewTabModified: Bool = false,
         sourcePresentation: BrowserPeekSourcePresentation? = nil
     ) -> BrowserPeekRequest? {
-        guard isUserActivatedLink,
-            isTopLevelNavigation,
-            let destinationURL,
-            BrowserExternalURLPolicy.accepts(destinationURL),
-            let context
-        else { return nil }
+        let decision = BrowserLinkNavigationDecision.classify(
+            destinationURL: destinationURL, context: context,
+            isUserActivatedLink: isUserActivatedLink, isTopLevelNavigation: isTopLevelNavigation,
+            isPeekModified: isAlternateModified, isNewTabModified: isNewTabModified)
+        return decision.peekRequest(destinationURL: destinationURL, context: context,
+            sourcePresentation: sourcePresentation)
+    }
+}
 
-        if isAlternateModified {
-            return BrowserPeekRequest(
-                url: destinationURL,
-                sourceTabID: context.tabID,
-                sourceTitle: context.title,
-                spaceAssignment: context.assignment,
-                trigger: .modifierClick,
-                sourcePresentation: sourcePresentation
-            )
-        }
+/// Engine-neutral policy result. Native views only construct the presentation
+/// after the core has selected the destination's browsing behavior.
+enum BrowserLinkNavigationDecision: String {
+    case navigate, peekModifier, peekSavedSite, backgroundTab, foregroundTab
 
-        guard !isNewTabModified else { return nil }
-
-        guard context.automaticallyOpensPeek,
+    static func classify(destinationURL: URL?, context: BrowserPageNavigationContext?,
+        isUserActivatedLink: Bool, isTopLevelNavigation: Bool,
+        isPeekModified: Bool, isNewTabModified: Bool, isShiftModified: Bool = false,
+        focusesNewTabs: Bool = false) -> Self {
+        #if CREST_CORE_BACKED
+        return BrowserCorePolicy.linkNavigation(destinationURL: destinationURL, context: context,
+            isUserActivatedLink: isUserActivatedLink, isTopLevelNavigation: isTopLevelNavigation,
+            isPeekModified: isPeekModified, isNewTabModified: isNewTabModified,
+            isShiftModified: isShiftModified, focusesNewTabs: focusesNewTabs)
+        #else
+        guard isUserActivatedLink, let destinationURL,
+            BrowserExternalURLPolicy.accepts(destinationURL) else { return .navigate }
+        if isTopLevelNavigation, context != nil, isPeekModified { return .peekModifier }
+        if isNewTabModified { return focusesNewTabs != isShiftModified ? .foregroundTab : .backgroundTab }
+        if isTopLevelNavigation, let context, context.automaticallyOpensPeek,
             context.placement == .pinned || context.placement == .saved,
-            let savedURL = context.savedURL,
-            !BrowserSavedSitePolicy.isSameSite(savedURL, destinationURL)
-        else {
-            return nil
+            let savedURL = context.savedURL, !BrowserSavedSitePolicy.isSameSite(savedURL, destinationURL) {
+            return .peekSavedSite
         }
+        return .navigate
+        #endif
+    }
 
-        return BrowserPeekRequest(
-            url: destinationURL,
-            sourceTabID: context.tabID,
-            sourceTitle: context.title,
-            spaceAssignment: context.assignment,
-            trigger: .protectedSavedSite,
-            sourcePresentation: sourcePresentation
-        )
+    func peekRequest(destinationURL: URL?, context: BrowserPageNavigationContext?,
+        sourcePresentation: BrowserPeekSourcePresentation? = nil) -> BrowserPeekRequest? {
+        guard self == .peekModifier || self == .peekSavedSite,
+            let destinationURL, let context else { return nil }
+        return BrowserPeekRequest(url: destinationURL, sourceTabID: context.tabID,
+            sourceTitle: context.title, spaceAssignment: context.assignment,
+            trigger: self == .peekModifier ? .modifierClick : .protectedSavedSite,
+            sourcePresentation: sourcePresentation)
     }
 }

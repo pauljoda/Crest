@@ -41,6 +41,18 @@ public sealed class NativePolicyTests
         Assert.Null(enabled["searchQuery"]);
     }
     [Fact]
+    public void LinkPolicyWireContractAcceptsNullableContextAndRejectsExtraInstructions()
+    {
+        var request = new JsonObject { ["version"] = 1, ["operation"] = "navigation.link", ["url"] = "https://example.com/",
+            ["userActivatedLink"] = true, ["topLevel"] = true, ["peekModified"] = false, ["newTabModified"] = true,
+            ["shiftModified"] = true, ["focusesNewTabs"] = false, ["hasContext"] = false, ["placement"] = null,
+            ["savedUrl"] = null, ["automaticallyOpensPeek"] = false };
+        var response = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
+        Assert.Equal("foregroundTab", response["decision"]!.GetValue<string>());
+        request["engineCommand"] = "navigate";
+        Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())));
+    }
+    [Fact]
     public void PurePolicyRejectsUnknownVersionsAndOperations()
     {
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate("{\"version\":2,\"operation\":\"address.intent\"}"u8));

@@ -569,3 +569,25 @@
 
    // Shows a context menu.
    //
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -3,6 +3,9 @@
+ // found in the LICENSE file.
+
+ #include "chrome/browser/chrome_content_browser_client.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+
+ #include <algorithm>
+ #include <iterator>
+@@ -5615,6 +5618,9 @@
+ void ChromeContentBrowserClient::CreateThrottlesForNavigation(
+     content::NavigationThrottleRegistry& registry) {
+   CreateAndAddChromeThrottlesForNavigation(registry);
++#if BUILDFLAG(IS_MAC)
++  crest::AddNavigationThrottle(registry);
++#endif
+ }
+
+ std::vector<std::unique_ptr<content::CommitDeferringCondition>>

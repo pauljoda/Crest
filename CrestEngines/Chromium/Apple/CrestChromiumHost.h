@@ -1,6 +1,7 @@
 #import <AppKit/AppKit.h>
 
 NS_ASSUME_NONNULL_BEGIN
+typedef void (^CrestDeferredNavigation)(void);
 // In-process, main-thread native port. Objects and blocks never enter .NET.
 @protocol CrestChromiumEngineHost <NSObject>
 - (void)setBrowserObserver:(void (^)(NSDictionary<NSString *, id> *values))observer;
@@ -20,6 +21,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setLinkHandlerForPage:(NSString *)pageID
                      handler:(BOOL (^)(NSString *action, NSString *url, NSString *label))handler
     NS_SWIFT_NAME(setLinkHandler(page:handler:));
+- (void)setProtectedLinkHandlerForPage:(NSString *)pageID
+    handler:(CrestDeferredNavigation _Nullable (^)(NSString *url))handler
+    NS_SWIFT_NAME(setProtectedLinkHandler(page:handler:));
 - (nullable NSData *)interactionStateForPage:(NSString *)pageID;
 - (BOOL)restorePage:(NSString *)pageID interactionState:(NSData *)state expectedURL:(NSString *)url;
 - (BOOL)preparePage:(NSString *)pageID forWindow:(NSString *)windowID;

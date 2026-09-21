@@ -7,7 +7,7 @@
 
 class Browser;
 class GURL;
-namespace content { class WebContents; struct DropData; }
+namespace content { class WebContents; class NavigationThrottleRegistry; struct DropData; }
 
 namespace crest {
 // Enabled only by the explicitly selected Crest host command-line switch.
@@ -21,6 +21,7 @@ bool DeferQuit();
 bool CompletePageClosePreparation(content::WebContents* contents, bool proceed);
 // Called after Chromium has approved a renderer's drag request.
 bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data);
+void AddNavigationThrottle(content::NavigationThrottleRegistry& registry);
 #ifdef __OBJC__
 NSWindow* WindowForBrowser(Browser* browser);
 void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url);
