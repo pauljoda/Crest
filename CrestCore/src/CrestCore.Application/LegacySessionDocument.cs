@@ -55,12 +55,12 @@ public sealed class LegacySessionDocument
     private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString().ToUpperInvariant() };
     private static JsonNode? SwiftId(Guid? id) => id is { } value ? SwiftId(value) : null;
     private static double Seconds(DateTimeOffset date) => (date - SwiftEpoch).TotalSeconds;
-    private static void WriteDate(JsonObject value, string key, DateTimeOffset? date)
+    private static void WriteDate(JsonObject value, string key, DateTimeOffset? date, bool editTimestamp = false)
     {
         // Swift Date stores a Double, with precision that differs from .NET ticks.
         // Preserve its original number when the domain has not changed this field.
         if (date is { } d && value[key] is { } originalDate && Date(originalDate) == d) return;
-        value[key] = date is { } updated ? Seconds(updated) : null;
+        value[key] = date is { } updated ? editTimestamp ? NativeEditTimestamp.Encode(updated) : Seconds(updated) : null;
     }
     private static JsonObject Copy(Dictionary<Guid, JsonObject> originals, Guid id)
         => originals.TryGetValue(id, out var value) ? (JsonObject)value.DeepClone() : new();
@@ -183,8 +183,8 @@ public sealed class LegacySessionDocument
         value["placement"] = t.Placement.ToString().ToLowerInvariant(); value["folderID"] = SwiftId(t.FolderId?.Value);
         value["savedURL"] = t.SavedUrl; value["customTitle"] = t.CustomTitle;
         WriteDate(value, "lastActivatedAt", t.LastActivatedAt);
-        WriteDate(value, "positionModifiedAt", t.PositionModifiedAt);
-        WriteDate(value, "titleModifiedAt", t.TitleModifiedAt);
+        WriteDate(value, "positionModifiedAt", t.PositionModifiedAt, editTimestamp: true);
+        WriteDate(value, "titleModifiedAt", t.TitleModifiedAt, editTimestamp: true);
         value["keepsPageLoaded"] = t.KeepsPageLoaded; value["splitGroupID"] = SwiftId(t.SplitGroupId);
         value["symbol"] ??= t.Kind == TabKind.StartPage ? "flag.fill" : t.Kind == TabKind.Settings ? "gearshape" : "globe";
         if (t.NativeKind is { } nativeKind)

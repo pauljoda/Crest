@@ -1,0 +1,16 @@
+using CrestCore.Domain;
+
+namespace CrestCore.Application;
+
+internal static class NativeEditTimestamp
+{
+    private const double SwiftEpochOffset = 978307200;
+
+    // Preserve Swift Date's Unix-to-reference-epoch floating-point conversion,
+    // including its binary representation, so repair cannot invent a new edit.
+    internal static double Normalize(double referenceSeconds) =>
+        BrowserEditTimestamp.NormalizeUnixSeconds(referenceSeconds + SwiftEpochOffset) - SwiftEpochOffset;
+
+    internal static double Encode(DateTimeOffset value) =>
+        BrowserEditTimestamp.NormalizeUnixSeconds((value - DateTimeOffset.UnixEpoch).TotalSeconds) - SwiftEpochOffset;
+}

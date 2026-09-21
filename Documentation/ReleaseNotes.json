@@ -1637,6 +1637,10 @@
     "shared-core-history-and-retention-commands": {
       "category": "internal",
       "message": "Move history, archive restoration, retention and split identity edits into commands against the shared core's owned records."
+    },
+    "stable-tab-edit-sync-timestamps": {
+      "category": "fixed",
+      "message": "Prevent tab renames and moves from creating extra changes when received on another device."
     }
   }
 }

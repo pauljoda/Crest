@@ -37,7 +37,7 @@ public sealed partial class BrowserTabCollection
         var tab = BrowserTab.Restore(source with
         {
             Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null,
-            LastActivatedAt = now, PositionModifiedAt = now
+            LastActivatedAt = now, PositionModifiedAt = BrowserEditTimestamp.Normalize(now)
         });
         InsertTab(tab, null);
         return tab;

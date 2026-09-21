@@ -132,4 +132,58 @@ public sealed partial class BrowserContractsTests
         Assert.Equal(fixture.Space.Value.ToString("D"), result["error"]!["value"]!.GetValue<string>());
         Assert.Equal(input, Bytes(request));
     }
+
+    [Theory]
+    [InlineData("tab.rename", 811679532.599763)]
+    [InlineData("tab.move", 811679532.600512)]
+    public void ReceivingCommandEditsDoesNotCreateAnotherRevisionDuringRepair(string operation, double now)
+    {
+        var fixture = SavedSession();
+        var source = NativeSessionMaintenance.Repair(fixture.Document["session"]!.AsObject(), now)["session"]!;
+        source.AsObject().Remove("disposableSeedMarker");
+        source["spaces"]![0]!["history"] = new JsonArray();
+        source["spaces"]![0]!["archivedTabs"] = new JsonArray();
+        var initial = JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()));
+        initial["records"] = new JsonArray(); initial["pendingRecordIDs"] = new JsonArray();
+        byte[] Stage(JsonNode session) => JournalCommand(initial, "stage", new()
+        { ["session"] = session.DeepClone(), ["deletionReason"] = "superseded", ["now"] = now });
+        var sender = new NativeSyncJournal(Bytes(initial)).Apply(Stage(source));
+        NativeSyncSessionTransition Receive(NativeSyncJournal journal, JsonNode local, string kind, NativeSyncJournal remote)
+            => NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject
+            {
+                ["version"] = 1, ["operation"] = kind, ["session"] = local.DeepClone(),
+                ["preferences"] = initial["preferences"]!.DeepClone(),
+                ["records"] = JsonNode.Parse(remote.Read())!["records"]!.DeepClone(), ["now"] = now
+            }));
+        var receiver = Receive(new NativeSyncJournal(Bytes(initial)), source, "replace", sender);
+        var authority = new NativeSessionAuthority(Bytes(source));
+        var arguments = new JsonObject { ["tabId"] = fixture.Tab.Value.ToString() };
+        if (operation == "tab.rename") arguments["title"] = "Renamed on the other device";
+        else { arguments["placement"] = "current"; arguments["detach"] = true; }
+        var request = JsonNode.Parse(SpaceCommand(source, operation, arguments))!;
+        request["now"] = now;
+        authority.PrepareCommand(1, Bytes(request)).Commit();
+        source = JsonNode.Parse(authority.Checkpoint(2, Selection(source)).Read("core"))!;
+        sender = sender.Apply(Stage(source));
+        var sent = JsonNode.Parse(sender.Read())!;
+        receiver = Receive(receiver.Journal, receiver.Materialization["session"]!, "merge", sender);
+        // Repeated delivery and a journal reload must remain acknowledgements, not edits.
+        for (int i = 0; i < 2; i++)
+        {
+            var received = JsonNode.Parse(receiver.Journal.Apply(Stage(receiver.Materialization["session"]!)).Read())!;
+            Assert.Empty(received["pendingRecordIDs"]!.AsArray());
+            Assert.Equal(sent["logicalClock"]!.GetValue<ulong>(), received["logicalClock"]!.GetValue<ulong>());
+            var sentRecords = sent["records"]!.AsArray(); var receivedRecords = received["records"]!.AsArray();
+            Assert.Equal(sentRecords.Count, receivedRecords.Count);
+            foreach (var record in sentRecords)
+            {
+                var match = Assert.Single(receivedRecords, r => JsonNode.DeepEquals(record!["id"], r!["id"]))!;
+                Assert.True(JsonNode.DeepEquals(record!["version"], match["version"]));
+            }
+            var actual = receiver.Materialization["session"]!["spaces"]![0]!["tabs"]![0]!;
+            var field = operation == "tab.rename" ? "customTitle" : "placement";
+            Assert.True(JsonNode.DeepEquals(source["spaces"]![0]!["tabs"]![0]![field], actual[field]));
+            receiver = Receive(new NativeSyncJournal(Bytes(received)), receiver.Materialization["session"]!, "merge", sender);
+        }
+    }
 }

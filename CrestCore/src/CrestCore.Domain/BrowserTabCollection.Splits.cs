@@ -19,8 +19,8 @@ public sealed partial class BrowserTabCollection
     private BrowserTab CopyTab(BrowserTab source, TabId id, DateTimeOffset now) => BrowserTab.Restore(source.Capture() with
     {
         Id = id, Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null, SavedUrl = null,
-        LastActivatedAt = now, PositionModifiedAt = now,
-        TitleModifiedAt = source.CustomTitle is null ? null : now, KeepsPageLoaded = false
+        LastActivatedAt = now, PositionModifiedAt = BrowserEditTimestamp.Normalize(now),
+        TitleModifiedAt = source.CustomTitle is null ? null : BrowserEditTimestamp.Normalize(now), KeepsPageLoaded = false
     });
 
     public BrowserTab DuplicateTab(TabId sourceId, IIdSource ids, DateTimeOffset now)

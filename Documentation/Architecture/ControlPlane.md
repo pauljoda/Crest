@@ -337,6 +337,9 @@ read projections and schedules native background work and storage.
 Sync compares UUID fields by identity and timestamps by their exact binary date
 value. Different JSON number spellings from native encoders do not create edits;
 logical clocks retain integer precision and ordinary strings remain case-sensitive.
+New tab title and position edits use the same millisecond precision and native
+date encoding as checkpoint repair. Receiving or restaging those edits must not
+advance a record's logical clock merely because it crossed the native boundary.
 
 Receiving an archive changes its local presentation to "synced" while retaining
 the accepted record's original cause on upload. Archive display order follows

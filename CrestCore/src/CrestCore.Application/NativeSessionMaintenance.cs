@@ -27,10 +27,7 @@ public static class NativeSessionMaintenance
     private static void NormalizeDate(JsonObject node, string field)
     {
         if (node[field] is not { } value) return;
-        double seconds = value.GetValue<double>();
-        if (!double.IsFinite(seconds)) throw new BrowserRuleException("invalid_saved_date");
-        const double epochOffset = 978307200;
-        node[field] = Math.Round((seconds + epochOffset) * 1000, MidpointRounding.AwayFromZero) / 1000 - epochOffset;
+        node[field] = NativeEditTimestamp.Normalize(value.GetValue<double>());
     }
     private static void NormalizeTab(JsonObject tab)
     {

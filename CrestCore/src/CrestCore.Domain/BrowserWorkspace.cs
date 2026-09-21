@@ -66,7 +66,7 @@ public sealed class BrowserTab(TabId id, TabKind kind, string? url, PageId? page
     {
         title = title?.Trim();
         if (title?.Length > 4096) throw new BrowserRuleException("invalid_title");
-        CustomTitle = string.IsNullOrEmpty(title) ? null : title; TitleModifiedAt = now;
+        CustomTitle = string.IsNullOrEmpty(title) ? null : title; TitleModifiedAt = BrowserEditTimestamp.Normalize(now);
     }
     public void SetResidency(bool keepLoaded) => KeepsPageLoaded = keepLoaded;
     public void CreatePage(PageId page, bool allowsInternalPages = false)
@@ -127,7 +127,7 @@ public sealed class BrowserTab(TabId id, TabKind kind, string? url, PageId? page
     }
     public void Fail(string reason) { Phase = TabPhase.Failed; Failure = reason; IsLoading = false; }
     internal void SetSplit(Guid? id) => SplitGroupId = id;
-    internal void MarkPosition(DateTimeOffset now) => PositionModifiedAt = now;
+    internal void MarkPosition(DateTimeOffset now) => PositionModifiedAt = BrowserEditTimestamp.Normalize(now);
     public void Place(TabPlacement placement, FolderId? folder, DateTimeOffset? now = null, bool preservesSplit = false)
     {
         if (Placement == placement && FolderId == folder) return;
@@ -135,7 +135,7 @@ public sealed class BrowserTab(TabId id, TabKind kind, string? url, PageId? page
         if (placement == TabPlacement.Current) SavedUrl = null;
         Placement = placement; FolderId = folder;
         if (!preservesSplit) SplitGroupId = null;
-        if (now is not null) PositionModifiedAt = now;
+        if (now is { } changedAt) MarkPosition(changedAt);
     }
 }
 
@@ -242,7 +242,7 @@ public sealed partial class BrowserSpace(SpaceId id, ProfileId profileId, string
         var archived = archive.Find(a => a.Id == id) ?? throw new BrowserRuleException("unknown_archive");
         var tab = BrowserTab.Restore(archived.Tab with
         { Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null, SavedUrl = null,
-            LastActivatedAt = now, PositionModifiedAt = now });
+            LastActivatedAt = now, PositionModifiedAt = BrowserEditTimestamp.Normalize(now) });
         Add(tab, null); archive.Remove(archived); return tab;
     }
     public void Place(TabId id, TabPlacement placement, FolderId? folder, DateTimeOffset? now = null)

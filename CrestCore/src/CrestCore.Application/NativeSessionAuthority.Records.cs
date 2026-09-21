@@ -168,8 +168,7 @@ public sealed partial class NativeSessionAuthority
         if (JsonNode.DeepEquals(existing?[field], value)) return;
         var group = existing ?? new JsonObject { ["id"] = new JsonObject { ["rawValue"] = id.ToString("D") } };
         group[field] = value;
-        const double epochOffset = 978307200;
-        group[clock] = Math.Round((now + epochOffset) * 1000, MidpointRounding.AwayFromZero) / 1000 - epochOffset;
+        group[clock] = NativeEditTimestamp.Normalize(now);
         if (existing is null) groups.Add((JsonNode)group);
         if (fields["splitGroups"] is null) fields["splitGroups"] = groups;
         change["splitGroups"] = groups.DeepClone();
