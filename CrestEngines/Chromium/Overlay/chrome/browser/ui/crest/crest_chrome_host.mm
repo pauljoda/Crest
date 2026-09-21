@@ -53,6 +53,7 @@
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/permissions/permission_request.h"
 #include "components/permissions/permission_uma_util.h"
+#include "chrome/browser/devtools/devtools_toggle_action.h"
 #include "chrome/browser/devtools/devtools_window.h"
 #include "chrome/browser/extensions/extension_action_runner.h"
 #include "chrome/browser/extensions/extension_view.h"
@@ -1298,8 +1299,37 @@ Page* FindPage(NSString* identifier) {
     params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
     params.window_action = NavigateParams::WindowAction::kNoAction;
     Navigate(&params);
-  } else if ([command isEqualToString:@"engine.inspect"]) {
-    DevToolsWindow::OpenDevToolsWindow(contents, DevToolsOpenedByAction::kMainMenuOrMainShortcut);
+  } else if ([command isEqualToString:@"engine.inspect"] ||
+             [command isEqualToString:@"engine.inspect_console"] ||
+             [command isEqualToString:@"engine.inspect_elements"] ||
+             [command isEqualToString:@"engine.inspect_network"]) {
+    // DevToolsToggleAction is the only public way to choose a starting panel,
+    // and it covers Console and Elements. Network has no toggle action, and the
+    // frontend's panel parameter is private to DevToolsWindow, so a Network
+    // request opens DevTools without selecting a panel; the engine reports that
+    // back as an inspector opened on no known panel.
+    DevToolsToggleAction action = DevToolsToggleAction::Show();
+    DevToolsOpenedByAction opened_by = DevToolsOpenedByAction::kMainMenuOrMainShortcut;
+    if ([command isEqualToString:@"engine.inspect_console"]) {
+      action = DevToolsToggleAction::ShowConsolePanel();
+      opened_by = DevToolsOpenedByAction::kConsoleShortcut;
+    } else if ([command isEqualToString:@"engine.inspect_elements"]) {
+      action = DevToolsToggleAction::ShowElementsPanel();
+    }
+    DevToolsWindow::OpenDevToolsWindow(contents, action, opened_by);
+  } else if ([command isEqualToString:@"engine.inspect_visible"]) {
+    // A state query: the answer is this command's result, not an action.
+    return DevToolsWindow::GetInstanceForInspectedWebContents(contents) != nullptr;
+  } else if ([command isEqualToString:@"engine.inspect_close"]) {
+    if (!DevToolsWindow::GetInstanceForInspectedWebContents(contents)) return NO;
+    // Only the browser-scoped toggle is public, and it acts on the tab strip's
+    // active contents. Crest presents pages itself, so make this page current
+    // before toggling its inspector shut.
+    const int index = page->browser->tab_strip_model()->GetIndexOfWebContents(contents);
+    if (index < 0) return NO;
+    page->browser->tab_strip_model()->ActivateTabAt(index);
+    DevToolsWindow::ToggleDevToolsWindow(page->browser, DevToolsToggleAction::Toggle(),
+        DevToolsOpenedByAction::kMainMenuOrMainShortcut);
   } else if ([command isEqualToString:@"engine.zoom"]) {
     const double factor = url.doubleValue;
     auto* zoom = zoom::ZoomController::FromWebContents(contents);
@@ -1858,29 +1888,39 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
   for (auto& [id, page] : State().pages) {
     if (page->web_contents() != contents || !page->link_handler) continue;
     NSString* address = base::SysUTF8ToNSString(url.spec());
-    if (!page->link_handler(@"can_peek", address, @"")) return;
     auto weak = contents->GetWeakPtr();
     const uint64_t revision = page->navigation_revision;
-    CrestLinkMenuAction* action = [[CrestLinkMenuAction alloc] init];
-    action.run = ^{
-      // Return from menu tracking before mounting the native Peek card.
-      dispatch_async(dispatch_get_main_queue(), ^{
-        if (!weak || State().disposing) return;
-        for (auto& [current_id, current] : State().pages) {
-          if (current->web_contents() == weak.get() && current->navigation_revision == revision && current->link_handler) {
-            current->link_handler(@"peek", address, @"");
-            return;
+    // Each row is bound to the source page and its navigation revision: the
+    // engine answers availability now, and the action re-resolves the same page
+    // after menu tracking ends rather than holding a raw page pointer.
+    auto append = [&](NSString* title, NSString* invocation) {
+      CrestLinkMenuAction* action = [[CrestLinkMenuAction alloc] init];
+      action.run = ^{
+        // Return from menu tracking before mounting native UI or mutating the
+        // owning window's tab state.
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if (!weak || State().disposing) return;
+          for (auto& [current_id, current] : State().pages) {
+            if (current->web_contents() == weak.get() && current->navigation_revision == revision && current->link_handler) {
+              current->link_handler(invocation, address, @"");
+              return;
+            }
           }
-        }
-      });
+        });
+      };
+      NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:title action:@selector(invoke:) keyEquivalent:@""];
+      item.target = action;
+      item.representedObject = action;
+      // MenuControllerCocoa maps existing items by model index. Append native
+      // actions so asynchronous engine updates still address their original rows.
+      [menu addItem:item];
     };
-    NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:@"Open Link in Peek" action:@selector(invoke:) keyEquivalent:@""];
-    item.target = action;
-    item.representedObject = action;
-    // MenuControllerCocoa maps existing items by model index. Append native
-    // actions so asynchronous engine updates still address their original rows.
+    const bool can_peek = page->link_handler(@"can_peek", address, @"");
+    const bool can_split = page->link_handler(@"can_split", address, @"");
+    if (!can_peek && !can_split) return;
     [menu addItem:NSMenuItem.separatorItem];
-    [menu addItem:item];
+    if (can_peek) append(@"Open Link in Peek", @"peek");
+    if (can_split) append(@"Open Link in Split View", @"split");
     return;
   }
 }

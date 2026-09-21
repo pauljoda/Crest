@@ -1661,6 +1661,18 @@
     "chromium-extension-action-menu": {
       "category": "new",
       "message": "Right-click an extension button to open its settings, enable or disable it, manage it, view it on the Chrome Web Store, or remove it from the current Space."
+    },
+    "chromium-open-link-in-split-view": {
+      "category": "new",
+      "message": "Open Link in Split View is available from the page context menu in Chromium-powered windows."
+    },
+    "chromium-devtools-panel-selection": {
+      "category": "improved",
+      "message": "Developer commands open the requested Console or Elements panel and toggle it closed on repeat in Chromium-powered windows."
+    },
+    "chromium-setup-window-sizing": {
+      "category": "fixed",
+      "message": "The setup window opens at its intended size so the preview no longer sits against the window edge."
     }
   }
 }

@@ -342,6 +342,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                     sourceTitle: context.title, spaceAssignment: context.assignment,
                     trigger: .contextMenu))
                 return true
+            // The engine asks while AppKit holds the main thread building the
+            // menu, so availability answers from store state. The action runs
+            // the same shared command the WebKit menu route uses.
+            case "can_split": return self.splitLinkHost.canOpenLink(context.tabID, context.assignment)
+            case "split":
+                self.openLinkInSplitView(destination)
+                return true
             case "drag": return self.linkDrag?.beginNativeLink(url: destination, label: label) == true
             default: return false
             }

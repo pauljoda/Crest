@@ -17,11 +17,11 @@ composition. The normal `Crest` and `CrestMobile` targets now use the same
 `CrestMobileNativeCore`. `CREST_REVIEW_BUILD` separately enforces isolated launch
 for the review targets. The normal Mac target still hosts WebKit; the native
 Chromium distribution remains a separate packaging step. The live native app uses
-`NativeSessionAuthority`. The message-based `BrowserSessionKernel` remains in
-source for its core contract tests, but its prototype Apple apps and adapters
-have been removed. Completion requires consolidating the remaining lifetime and
-authentication rules and retiring the unused protocol runtime, rather than
-maintaining two implementations of browser behavior.
+`NativeSessionAuthority`. The message-based `BrowserSessionKernel`, `BrowserKernel`
+and `CoreRuntime` protocol runtime has been retired, along with its prototype
+Apple apps, adapters and C lifecycle exports. Browser behavior now has one
+implementation; completion is the remaining ownership, sync and distribution work
+below.
 
 ### Ownership after migration
 
@@ -42,7 +42,7 @@ assets and opaque engine data stay outside semantic records.
 
 | Step | Work | Completion evidence |
 | --- | --- | --- |
-| 1. Finish core ownership | Move remaining Space, branding, preference, workspace, transfer, import, cleanup and restore decisions from Swift proposals to semantic commands. Consolidate the authority and kernel paths around the real UI. Keep existing checkpoint compatibility and fail atomically when a command cannot commit. | Mac and mobile native UI perform the same operations against the core. Multiple windows reconcile correctly; restart restores accepted state. Remaining Swift mutations are presentation or adapter work, with no parallel domain implementation. |
+| 1. Finish core ownership | Move remaining Space, branding, preference, workspace, transfer, import, cleanup and restore decisions from Swift proposals to semantic commands. Consolidate the remaining Swift mutations around the real UI. Keep existing checkpoint compatibility and fail atomically when a command cannot commit. | Mac and mobile native UI perform the same operations against the core. Multiple windows reconcile correctly; restart restores accepted state. Remaining Swift mutations are presentation or adapter work, with no parallel domain implementation. |
 | 2. Move sync semantics | Port the existing record model, projection, order tokens, merge, materialization and tombstone policy to the core. Retain native CloudKit transport and account handling. Preserve wire compatibility and local-only records. | Focused record tests cover concurrent edits, delayed batches, explicit deletion, retention, older clients and restart. Chromium Mac and WebKit mobile then converge through real CloudKit in an isolated sync namespace, verified from records as well as UI. |
 | 3. Finish engine and service integration | Use the same registered page/profile contracts in the real UI. Complete tab/window before-unload, Crest download ledger integration, favicons, restoration, profile deletion, transfers and recovery. Inventory current reader, translation, capture, print, media, authentication, notification and page-action callers; adapt each supported feature and remove dormant WebKit objects from the Chromium path. | Exercise each migrated user flow in the native app. Capability declarations match actual adapter behavior and govern UI availability. Close cancellation, private/locked Space boundaries and interrupted operations preserve state. Unsupported engine features have explicit product behavior. |
 | 4. Complete native extensions | Preserve the restored toolbar, Site Controls, permission review, multi-Space installation and native Settings. Complete applicable action context menus, commands, extension-created windows and side panels. Keep Chromium responsible for verification, runtime permissions, updates and execution. Resolve iCloud Passwords through valid Crest signing and Apple's helper requirements. | uBlock Origin Lite filters real requests and retains profile settings. iCloud Passwords completes pairing and autofill with the properly entitled build and user participation where required. Installation, copying, removal and private access preserve Space ownership. |
@@ -170,15 +170,15 @@ same 6,000-by-24,000 CSS-pixel bounds as WebKit, and export data is limited to 6
 Archives use the engine's actual format: `.mhtml` for Chromium and `.webarchive`
 for WebKit. Chromium printing renders a PDF and presents the native PDFKit print
 sheet, whose paper settings scale the rendered pages. Reader and Apple translation
-still need Chromium adapters. Its inspector currently opens DevTools without
-selecting a requested panel. Local-file opening also remains to be wired into the
+still need Chromium adapters. Developer commands open and toggle DevTools on the
+requested panel, except Network, which DevTools only exposes to Chromium's own
+frontend. Local-file opening also remains to be wired into the
 native command route; entering a `file://` archive path in the current address
 resolver does not reopen it.
-Chromium's page context menu still needs the existing Open Link in Split View
-action; the shared store command and WebKit menu route support it.
-The original message-based kernel's page creation and lifetime rules still need
-consolidation with the native composition. This boundary does not finish the core
-authority migration.
+Chromium's page context menu now offers Open Link in Split View through the same
+shared store command the WebKit menu route uses.
+Page creation and lifetime remain owned by the native composition and its engine
+ports. This boundary does not finish the core authority migration.
 
 Space unlocking uses a process-local `SpaceAccessAuthority` in the .NET domain.
 The native access controller presents Apple's authentication prompt and publishes
@@ -390,12 +390,12 @@ compact Space and returns an atomic edit.
 It excludes images, history and existing archive records. The native projection
 keeps those records and presentation metadata, applies the returned tab/folder
 values, and reconciles native pages through the existing pools. The core's
-`BrowserTabCollection` contains the organization rules shared with the asynchronous
-kernel; profile access and page lifetime remain separate responsibilities.
+`BrowserTabCollection` owns the tab, folder and split organization rules; profile
+access and page lifetime remain separate responsibilities.
 
 `crest_core_evaluate_policy` is a bounded, synchronous pure-function boundary:
-it performs no I/O, engine operation, callback, or wait on the asynchronous
-executor. The same domain rules also serve the asynchronous browser kernel.
+it performs no I/O, engine operation, callback, or executor wait. It evaluates the
+same `CrestCore.Domain` policies the session authority applies.
 Record-removal calls send batches of timestamps and receive indices; they carry
 no page objects, URLs, titles, profile data, or complete session snapshots. The
 native caller validates all batches before applying a category's removals. Its
@@ -437,22 +437,33 @@ pools. The Chromium composition implements those same native ports through
 and have been removed. Native rendering, request security and input remain with
 the selected engine.
 
-## Remaining authority consolidation
+## Retired protocol runtime
 
-The original message-based `BrowserSessionKernel`, `BrowserKernel` and C runtime
-remain in the .NET source and ABI for their retained contract tests. No Apple app
-uses that runtime. Its page lifetime, authentication, residency and correlated
-completion rules must be reconciled with the actual native store and adapter
-paths before the obsolete orchestration is removed. Removing the prototype UI
-does not by itself complete this consolidation.
+The message-based `BrowserSessionKernel`, `BrowserKernel` and `CoreRuntime`, the
+`Envelope`/`CoreOptions` wire types, the `crest_core_create` through
+`crest_core_destroy` lifecycle exports and the kernel-only `BrowserWorkspace`
+and `BrowserWindow` aggregates have been removed. Their former rules now belong to:
 
-The retained native authority and persistence tests protect accepted revisions,
-checkpoint restoration, native asset ownership, window selection, durable
-session/journal commits and rollback. The removed Apple compatibility suite
-exercised the retired Swift message queue, chunked projections and prototype
-checkpoint writer. Those transport-specific contracts no longer have an Apple
-caller. Core protocol tests remain until the old C runtime is retired; the actual
-app's session migration and storage contracts remain covered in its own suite.
+| Former kernel rule | Live owner |
+| --- | --- |
+| Session, window, Space, tab, folder and split editing | `NativeSessionAuthority` commands and `BrowserTabCollection` |
+| Value-only Space edits | `NativeSessionEditor` behind `crest_core_edit_session` |
+| History, archive and retention sweeps | `NativeSessionMaintenance`, `NativeSessionAuthority.Records` and `crest_core_evaluate_policy` |
+| Address, search and link decisions | `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
+| Space locking and device authentication | `SpaceAccessAuthority` behind `crest_access_*` |
+| Cross-workspace transfer and borrowed workspaces | `NativeTabTransfer` and `NativeSessionAuthority.Borrowing`/`Transfer` |
+| Sync projection, ordering, conflict and deletion | `NativeSyncAuthority` and the `crest_sync_*` entry points |
+| Correlated completion invariants | Prepare/reserve/commit revisions on the session and sync handles |
+
+Page creation, closure, residency and content blocking are native engine work
+driven by the store and page interfaces; they are no longer modeled as core
+messages. The remaining C ABI is the synchronous session, sync, access and policy
+surface described in `CrestContracts/README.md`, exercised end to end by
+`CrestContracts/tests/native_abi.c`.
+
+`NativeSessionAuthority` does not reject edits to a locked Space; `accessPolicy`
+is durable session data and access enforcement lives in the native controllers
+consulting `crest_access_*`. Moving that gate into the core is open work.
 
 Follow the migration completion contract above for the outstanding ownership,
 engine-service, sync-convergence and distribution work. Capability declarations

@@ -47,9 +47,22 @@ final class ChromiumNativePage: BrowserPageEngine {
         return host.command("engine.inspect", page: id, url: nil)
     }
     func toggleInspector(_ panel: BrowserDeveloperPanel, current: BrowserDeveloperPanel?) -> BrowserWebInspectorToggleResult {
-        // The host currently opens its inspector without selecting an individual panel.
-        // Do not report a requested panel as selected when Chromium did not select it.
-        showInspector() ? .opened(nil) : .unavailable
+        guard created, !disposed, let host else { return .unavailable }
+        let isOpen = host.command("engine.inspect_visible", page: id, url: nil)
+        if isOpen, current == panel {
+            return host.command("engine.inspect_close", page: id, url: nil) ? .closed : .unavailable
+        }
+        let command: String
+        switch panel {
+        case .console: command = "engine.inspect_console"
+        case .elements: command = "engine.inspect_elements"
+        case .network: command = "engine.inspect_network"
+        }
+        guard host.command(command, page: id, url: nil) else { return .unavailable }
+        // Chromium selects a starting panel for Console and Elements only. A
+        // Network request opens DevTools wherever it was, so report no panel
+        // rather than claiming a selection the engine did not make.
+        return .opened(panel == .network ? nil : panel)
     }
     var interactionState: Data? {
         guard created, !disposed, let host, let state = host.interactionState(forPage: id) else { return nil }

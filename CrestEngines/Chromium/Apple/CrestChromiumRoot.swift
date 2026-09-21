@@ -293,8 +293,15 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         window.title = BrowserOnboardingWindowActivation.windowTitle
         window.contentMinSize = NSSize(width: 980, height: 660)
         window.isReleasedWhenClosed = false
+        // Match the SwiftUI scene's hidden title bar before the first layout.
+        // The shared onboarding configurator applies the same settings, but it
+        // only runs once its view reaches a window, which is after this window
+        // has already laid its content out under an opaque title bar.
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
         onboardingWindow = window
-        window.contentViewController = NSHostingController(rootView: BrowserOnboardingWindow(
+        let content = NSHostingController(rootView: BrowserOnboardingWindow(
             request: request, browser: browser, cloudSync: application.cloudSync,
             progress: application.onboardingProgress, spaceAccess: application.spaceAccess,
             hostClose: { [weak window] in window?.close() },
@@ -303,6 +310,15 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
                 if let id = source?.id, let browserWindow = self.windows[id] { browserWindow.makeKeyAndOrderFront(nil) }
                 else { self.openWindow(.normal(sourceWindowID: nil)) }
             }))
+        // A hosting controller reports its content's ideal size as the window's
+        // preferred content size by default, and the setup content is fully
+        // flexible above its 980-by-660 minimum. AppKit would therefore shrink
+        // this window to that minimum, leaving the preview panes flush with the
+        // window edge instead of the 1180-by-820 layout the SwiftUI scene opens
+        // with. Let the requested content rect stand instead.
+        content.sizingOptions = []
+        window.contentViewController = content
+        window.setContentSize(NSSize(width: 1180, height: 820))
         NotificationCenter.default.addObserver(self, selector: #selector(windowClosed(_:)),
             name: NSWindow.willCloseNotification, object: window)
         window.center()
