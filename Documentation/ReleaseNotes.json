@@ -1589,6 +1589,10 @@
     "core-popup-and-split-compatibility": {
       "category": "fixed",
       "message": "Keep blank popup pages connected to their opener and preserve split groups when filing selected tabs together."
+    },
+    "native-engine-service-registration": {
+      "category": "internal",
+      "message": "Register native engine capabilities with the portable core and route document output and inspector actions through the page adapter."
     }
   }
 }

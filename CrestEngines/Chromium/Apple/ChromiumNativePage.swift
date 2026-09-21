@@ -6,6 +6,7 @@ import Observation
 /// portable session retain their tab identities; this object owns only a page.
 @Observable @MainActor
 final class ChromiumNativePage: BrowserPageEngine {
+    let registration = BrowserEngineRegistration.chromium
     let id = UUID().uuidString
     let surface = ChromiumNativePageView()
     var isPrivateBrowsing = false
@@ -26,6 +27,15 @@ final class ChromiumNativePage: BrowserPageEngine {
     }
 
     var nativeView: NSView { surface }
+    func showInspector() -> Bool {
+        guard created, !disposed, let host else { return false }
+        return host.command("engine.inspect", page: id, url: nil)
+    }
+    func toggleInspector(_ panel: BrowserDeveloperPanel, current: BrowserDeveloperPanel?) -> BrowserWebInspectorToggleResult {
+        // The host currently opens its inspector without selecting an individual panel.
+        // Do not report a requested panel as selected when Chromium did not select it.
+        showInspector() ? .opened(nil) : .unavailable
+    }
     var interactionState: Data? {
         guard created, !disposed, let host, let state = host.interactionState(forPage: id) else { return nil }
         return BrowserEngineInteractionState(engine: "chromium", version: host.engineVersion(), payload: state).encoded()

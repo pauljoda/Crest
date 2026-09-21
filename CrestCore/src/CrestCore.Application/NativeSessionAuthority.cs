@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -19,6 +20,21 @@ public sealed partial class NativeSessionAuthority
     internal sealed record SessionDocument(JsonObject Metadata, IReadOnlyList<SpaceDocument> Spaces);
     internal sealed record SpaceDocument(JsonObject Metadata, IReadOnlyDictionary<string, IReadOnlyList<JsonNode>> Sections);
     public ulong Revision { get; private set; } = 1;
+    public Adapter? Engine { get; private set; }
+
+    /// Process-local registration shares the transport descriptor contract. It
+    /// cannot be changed by session edits, restored files or remote sync records.
+    public void RegisterEngine(ReadOnlySpan<byte> descriptor)
+    {
+        var engine = Protocol.Descriptor(descriptor);
+        if (engine.Role != "engine" || !engine.Supports("pages") || !engine.Supports("navigation"))
+            throw new BrowserRuleException("invalid_engine_registration");
+        lock (Gate)
+        {
+            if (Engine is not null) throw new BrowserRuleException("engine_already_registered");
+            Engine = engine;
+        }
+    }
 
     public NativeSessionAuthority(ReadOnlySpan<byte> bytes)
     {

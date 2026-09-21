@@ -72,7 +72,9 @@ struct BrowserDeveloperToolbar: View {
                     page.copyFullPageCapture()
                 }
             }
+            .disabled(!page.pageEngine.registration.supports("full-page-capture"))
             Button("Capture", systemImage: "camera", action: page.beginRegionCapture)
+                .disabled(!page.pageEngine.registration.supports("viewport-capture"))
             Divider()
             Button("Toggle Console", systemImage: "apple.terminal") { page.toggleDeveloperPanel(.console) }
             Button("Toggle Network Panel", systemImage: "network") { page.toggleDeveloperPanel(.network) }

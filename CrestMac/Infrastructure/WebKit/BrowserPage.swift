@@ -686,27 +686,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     @discardableResult
     func showWebInspector() -> Bool {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { chromiumPage.command("engine.inspect"); return true }
-        #endif
-        guard let webView = webKitView else { return false }
-        return BrowserWebInspectorAccess.show(
-            inspectorOwner: webView,
-            isInspectable: webView.isInspectable
-        )
+        pageEngine.showInspector()
     }
 
     func toggleDeveloperPanel(_ panel: BrowserDeveloperPanel) {
-        #if CREST_CHROMIUM_HOST
-        if let chromiumPage { chromiumPage.command("engine.inspect"); return }
-        #endif
-        guard let webView = webKitView else { return }
-        let result = BrowserWebInspectorAccess.toggle(
-            panel,
-            currentPanel: developerPanel,
-            inspectorOwner: webView,
-            isInspectable: webView.isInspectable
-        )
+        let result = pageEngine.toggleInspector(panel, current: developerPanel)
         switch result {
         case .opened(let openedPanel):
             developerPanel = openedPanel
@@ -904,54 +888,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         return true
     }
 
-    private func fullPageSnapshot(
-        snapshotWidth: CGFloat? = nil
-    ) async throws -> NSImage {
-        guard url != nil else {
+    private func fullPageSnapshot(snapshotWidth: CGFloat? = nil) async throws -> NSImage {
+        guard url != nil, let service = pageEngine.documentServices else {
             throw BrowserDeveloperCaptureError.pageUnavailable
         }
-        guard let webView = webKitView else { throw BrowserDeveloperCaptureError.pageUnavailable }
-        let result = try await webView.evaluateJavaScript(
-            """
-            (() => {
-              const root = document.documentElement;
-              const body = document.body;
-              return [
-                Math.max(root?.scrollWidth ?? 0, body?.scrollWidth ?? 0, innerWidth),
-                Math.max(root?.scrollHeight ?? 0, body?.scrollHeight ?? 0, innerHeight)
-              ];
-            })()
-            """
-        )
-        guard let dimensions = result as? [NSNumber],
-            dimensions.count == 2
-        else {
-            throw BrowserDeveloperCaptureError.dimensionsUnavailable
-        }
-
-        let width = min(
-            max(CGFloat(dimensions[0].doubleValue), webView.bounds.width),
-            6_000
-        )
-        let height = min(
-            max(CGFloat(dimensions[1].doubleValue), webView.bounds.height),
-            24_000
-        )
-        let configuration = Self.snapshotConfiguration(
-            rect: CGRect(x: 0, y: 0, width: width, height: height)
-        )
-        let desiredWidth = snapshotWidth ?? min(width, 1_600)
-        configuration.snapshotWidth = NSNumber(value: Double(desiredWidth))
-        return try await webView.takeSnapshot(configuration: configuration)
-    }
-
-    private static func snapshotConfiguration(
-        rect: CGRect
-    ) -> WKSnapshotConfiguration {
-        let configuration = WKSnapshotConfiguration()
-        configuration.rect = rect
-        configuration.afterScreenUpdates = true
-        return configuration
+        return try await service.fullPageSnapshot(width: snapshotWidth)
     }
 
     private static func copyImageToPasteboard(_ image: NSImage) -> Bool {
@@ -1047,10 +988,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func printPage() {
-        guard let webView = webKitView else { return }
-        guard url != nil, let window = nativeView.window else { return }
+        guard let service = pageEngine.documentServices,
+            url != nil, let window = nativeView.window else { return }
         let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
-        let operation = webView.printOperation(with: printInfo)
+        let operation = service.printOperation(with: printInfo)
         operation.jobTitle = title.isEmpty ? url?.host() ?? ProductIdentity.name : title
         printOperation = operation
         operation.runModal(
@@ -1062,9 +1003,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func pdfData() async throws -> Data {
-        guard let webView = webKitView else { throw BrowserPageExportError.pageUnavailable }
-        guard url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await webView.pdf(configuration: WKPDFConfiguration())
+        guard url != nil, let service = pageEngine.documentServices else { throw BrowserPageExportError.pageUnavailable }
+        return try await service.pdfData()
     }
 
     func exportPDF() {
@@ -1093,13 +1033,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func webArchiveData() async throws -> Data {
-        guard let webView = webKitView else { throw BrowserPageExportError.pageUnavailable }
-        guard url != nil else { throw BrowserPageExportError.pageUnavailable }
-        return try await withCheckedThrowingContinuation { continuation in
-            webView.createWebArchiveData { result in
-                continuation.resume(with: result)
-            }
-        }
+        guard url != nil, let service = pageEngine.documentServices else { throw BrowserPageExportError.pageUnavailable }
+        return try await service.webArchiveData()
     }
 
     func exportWebArchive() {

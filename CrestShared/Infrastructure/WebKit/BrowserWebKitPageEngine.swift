@@ -6,6 +6,7 @@ import WebKit
 /// history stays with its engine rather than leaking WKBackForwardListItem to UI.
 @Observable @MainActor
 final class BrowserWebKitPageEngine: BrowserPageEngine {
+    let registration = BrowserEngineRegistration.webKit
     let webView: WKWebView
     var history = BrowserPageNavigationHistory()
     var nativeView: BrowserEngineView { webView }
@@ -65,6 +66,13 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
             hasPictureInPicture: false)
     }
     #if os(macOS)
+    func showInspector() -> Bool {
+        BrowserWebInspectorAccess.show(inspectorOwner: webView, isInspectable: webView.isInspectable)
+    }
+    func toggleInspector(_ panel: BrowserDeveloperPanel, current: BrowserDeveloperPanel?) -> BrowserWebInspectorToggleResult {
+        BrowserWebInspectorAccess.toggle(panel, currentPanel: current,
+            inspectorOwner: webView, isInspectable: webView.isInspectable)
+    }
     // WKWebView travels with the retained page; its lifetime is not owned by an NSWindow.
     func transferOwnership(to windowID: BrowserWindowID) -> Bool { true }
 
@@ -80,3 +88,51 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     #endif
 
 }
+
+#if os(macOS)
+extension BrowserWebKitPageEngine: BrowserPageDocumentServices {
+    var documentServices: (any BrowserPageDocumentServices)? { self }
+
+    func fullPageSnapshot(width snapshotWidth: CGFloat?) async throws -> NSImage {
+        let result = try await webView.evaluateJavaScript(
+            """
+            (() => {
+              const root = document.documentElement;
+              const body = document.body;
+              return [
+                Math.max(root?.scrollWidth ?? 0, body?.scrollWidth ?? 0, innerWidth),
+                Math.max(root?.scrollHeight ?? 0, body?.scrollHeight ?? 0, innerHeight)
+              ];
+            })()
+            """
+        )
+        guard let dimensions = result as? [NSNumber],
+            dimensions.count == 2
+        else {
+            throw BrowserDeveloperCaptureError.dimensionsUnavailable
+        }
+
+        let width = min(
+            max(CGFloat(dimensions[0].doubleValue), webView.bounds.width),
+            6_000
+        )
+        let height = min(
+            max(CGFloat(dimensions[1].doubleValue), webView.bounds.height),
+            24_000
+        )
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = CGRect(x: 0, y: 0, width: width, height: height)
+        configuration.afterScreenUpdates = true
+        let desiredWidth = snapshotWidth ?? min(width, 1_600)
+        configuration.snapshotWidth = NSNumber(value: Double(desiredWidth))
+        return try await webView.takeSnapshot(configuration: configuration)
+    }
+    func pdfData() async throws -> Data { try await webView.pdf(configuration: WKPDFConfiguration()) }
+    func webArchiveData() async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            webView.createWebArchiveData { continuation.resume(with: $0) }
+        }
+    }
+    func printOperation(with info: NSPrintInfo) -> NSPrintOperation { webView.printOperation(with: info) }
+}
+#endif

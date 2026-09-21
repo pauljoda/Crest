@@ -342,14 +342,14 @@ struct BrowserCommands: Commands {
                 action: commandPages.exportPDF
             )
             .keyboardShortcut(shortcut(.exportPDF))
-            .disabled(!commandPages.hasActivePage)
+            .disabled(!actions.canPerform(.exportPDF))
             Button(
                 "Save Web Archive…",
                 systemImage: BrowserShortcutCommand.saveWebArchive.paletteSymbol,
                 action: commandPages.exportWebArchive
             )
             .keyboardShortcut(shortcut(.saveWebArchive))
-            .disabled(!commandPages.hasActivePage)
+            .disabled(!actions.canPerform(.saveWebArchive))
         }
 
         CommandMenu("Develop") {
@@ -362,7 +362,7 @@ struct BrowserCommands: Commands {
                 action: commandPages.showWebInspector
             )
             .keyboardShortcut(shortcut(.showWebInspector))
-            .disabled(!commandPages.hasActivePage)
+            .disabled(!actions.canPerform(.showWebInspector))
         }
 
         CommandGroup(replacing: .printItem) {
@@ -372,7 +372,7 @@ struct BrowserCommands: Commands {
                 action: commandPages.printPage
             )
             .keyboardShortcut(shortcut(.printPage))
-            .disabled(!commandPages.hasActivePage)
+            .disabled(!actions.canPerform(.printPage))
         }
 
         CommandGroup(after: .sidebar) {

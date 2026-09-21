@@ -406,10 +406,6 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private func canPerform(_ command: BrowserShortcutCommand) -> Bool {
         guard !quitting, NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil else { return false }
         switch command {
-        // These page services still need Chromium adapters. Do not send them
-        // to a nonexistent WebKit document or a disconnected SwiftUI scene.
-        case .toggleContentBlocking, .toggleTranslationToolbar,
-             .exportPDF, .saveWebArchive, .printPage: return false
         case .newWindow, .newPrivateWindow: return true
         case .closeWindow, .closeTabOrWindow:
             return actions != nil || quickWindows.values.contains(where: { $0.window === NSApp.keyWindow })

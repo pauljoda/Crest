@@ -88,6 +88,7 @@ struct BrowserCommandActions {
     }
 
     func perform(_ command: BrowserShortcutCommand) {
+        guard canPerform(command) else { return }
         switch command {
         case .newWindow: openNewWindow()
         case .newBlankWindow: openBlankWindow()
@@ -160,7 +161,9 @@ struct BrowserCommandActions {
         if let number = command.spaceNumber { return number <= browser.session.spaces.count }
         switch command {
         case .newBlankWindow: return !browser.isPrivateBrowsing && browser.selectedSpace != nil
-        case .newQuickWindow, .showArchive, .toggleContentBlocking: return browser.selectedSpace != nil
+        case .newQuickWindow, .showArchive: return browser.selectedSpace != nil
+        case .toggleContentBlocking:
+            return browser.selectedSpace != nil && BrowserEngineRegistration.current.supports("content-blocking")
         case .back: return pages.canGoBack
         case .forward: return pages.canGoForward
         case .reloadPage, .reloadFromOrigin: return canReloadSelectedTab
@@ -169,11 +172,14 @@ struct BrowserCommandActions {
         case .duplicateTab: return canDuplicateSelectedTab
         case .reopenClosedTab: return browser.selectedSpace?.archivedTabs.isEmpty == false
         case .archiveTab: return canArchiveSelectedTab
-        case .toggleReaderMode: return pages.readerModeState.canToggle
-        case .toggleTranslationToolbar: return pages.hasActivePage && !pages.readerModeState.isActive
+        case .toggleReaderMode: return supportsPageCapability("reader") && pages.readerModeState.canToggle
+        case .toggleTranslationToolbar: return supportsPageCapability("translation") && !pages.readerModeState.isActive
         case .zoomIn, .zoomOut, .actualSize: return pages.hasActivePage && pages.activePage?.developerViewport == nil
-        case .findInPage, .copyPageLink, .copyPageLinkAsMarkdown, .sharePage,
-             .exportPDF, .saveWebArchive, .printPage, .showWebInspector, .toggleDeveloperToolbar:
+        case .exportPDF: return supportsPageCapability("pdf")
+        case .saveWebArchive: return supportsPageCapability("web-archive")
+        case .printPage: return supportsPageCapability("print")
+        case .showWebInspector: return supportsPageCapability("inspector")
+        case .findInPage, .copyPageLink, .copyPageLinkAsMarkdown, .sharePage, .toggleDeveloperToolbar:
             return pages.hasActivePage
         case .splitWithNextTab: return canSplitWithNextTab
         case .focusNextSplitCard, .focusPreviousSplitCard, .removeTabFromSplit, .separateSplitTabs:
@@ -182,6 +188,10 @@ struct BrowserCommandActions {
         case .moveSplitCardRight: return canMoveFocusedSplitCard(.right)
         default: return true
         }
+    }
+
+    private func supportsPageCapability(_ capability: String) -> Bool {
+        pages.hasActivePage && pages.activePage?.pageEngine.registration.supports(capability) == true
     }
 
     private func numberedIndex(

@@ -103,20 +103,13 @@ enum CoreAdapterDescriptor {
         id: String, role: String, implementation: String, supported: [String],
         unverified: [String] = [], unavailable: [String] = [], limitations: [String] = []
     ) throws -> Data {
-        var capabilities: [String: Any] = [:]
-        for capability in supported + unverified + unavailable {
-            capabilities[capability] = [
-                "status": supported.contains(capability) ? "supported" : unavailable.contains(capability) ? "unavailable" : "unverified",
-                "contractVersion": 1,
-                "scope": "\(platform) \(ProcessInfo.processInfo.operatingSystemVersionString); ephemeral profiles",
-                "limitations": limitations,
-                "evidence": "Experimental adapter contract; promotion requires live parity validation",
-            ]
-        }
-        return try JSONSerialization.data(withJSONObject: [
-            "adapterId": id, "role": role, "implementationId": implementation,
-            "implementationVersion": "1", "protocolVersion": 1, "capabilities": capabilities,
-        ])
+        try BrowserAdapterRegistration(
+            id: id, role: role, implementation: implementation,
+            scope: "\(platform) \(ProcessInfo.processInfo.operatingSystemVersionString); ephemeral profiles",
+            supported: supported, unverified: unverified, unavailable: unavailable,
+            limitations: limitations,
+            evidence: "Message adapter contract; promotion requires live parity validation"
+        ).encoded()
     }
 }
 

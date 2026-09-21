@@ -25,7 +25,13 @@ final class BrowserCoreSessionAuthority {
                 crest_session_create($0.bindMemory(to: UInt8.self).baseAddress, data.count, &handle, &initialRevision)
             }
             guard result == CREST_OK else { throw CoreError.rejected(result) }
-            owner = SessionHandle(value: handle); revision = initialRevision
+            let sessionOwner = SessionHandle(value: handle)
+            let descriptor = try BrowserEngineRegistration.current.encoded()
+            let registered = descriptor.withUnsafeBytes {
+                crest_session_register_engine(handle, $0.bindMemory(to: UInt8.self).baseAddress, descriptor.count)
+            }
+            guard registered == CREST_OK else { throw CoreError.rejected(registered) }
+            owner = sessionOwner; revision = initialRevision
         } catch {
             preconditionFailure("Could not initialize the core session: \(error)")
         }

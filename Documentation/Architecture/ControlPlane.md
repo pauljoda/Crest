@@ -151,10 +151,21 @@ created for a WebKit page. Chromium snapshots come from its compositor, and
 idle-tab decisions use Chromium playback, capture and picture-in-picture state.
 Missing media observations keep the page resident until its engine can answer.
 
-Registration and remaining page services still need consolidation. Reader mode,
-Apple page translation, full-page capture and Web Archive export remain WebKit
-services. The original message-based adapter/kernel also remains separate.
-Completing this native boundary does not finish the core authority migration.
+The process composition now registers its native engine with each core session
+using the same versioned descriptor schema as the message adapters. Registration
+is local, immutable for that session, and excluded from persistence and sync.
+A restored session accepts the destination device's engine without changing shared
+browser records. Required page/navigation contracts must be supported at version
+1; unverified, unavailable and unknown capabilities do not authorize a feature.
+The native page port exposes this declaration without crossing the ABI for each
+interaction. Document export, printing, full-page capture and inspector commands
+now use native engine services. Save panels and print sheets remain native UI.
+The command route and developer capture controls consult the registered services;
+Chromium does not advertise WebKit's PDF, Web Archive, full-page capture, reader
+or Apple translation implementations. Its inspector currently opens DevTools
+without selecting a requested panel. Those Chromium services still need adapters.
+The original message-based adapter/kernel and page creation/lifetime composition
+also remain separate. This boundary does not finish the core authority migration.
 
 ## Existing UI migration
 
