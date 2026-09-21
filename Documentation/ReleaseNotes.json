@@ -1749,6 +1749,14 @@
     "chromium-extension-shortcuts": {
       "category": "new",
       "message": "Extension keyboard shortcuts work in Chromium-powered windows, with a Keyboard Shortcuts link in Extensions settings for engine-managed bindings."
+    },
+    "chromium-link-menu-actions-run": {
+      "category": "fixed",
+      "message": "Open Link in Peek and Open Link in Split View from the Chromium page context menu now open the link instead of doing nothing."
+    },
+    "chromium-devtools-close-command": {
+      "category": "fixed",
+      "message": "Repeating a developer panel command in Chromium-powered windows closes Developer Tools as intended."
     }
   }
 }

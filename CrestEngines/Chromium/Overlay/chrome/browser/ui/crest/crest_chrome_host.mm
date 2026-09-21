@@ -1545,15 +1545,15 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     // A state query: the answer is this command's result, not an action.
     return DevToolsWindow::GetInstanceForInspectedWebContents(contents) != nullptr;
   } else if ([command isEqualToString:@"engine.inspect_close"]) {
-    if (!DevToolsWindow::GetInstanceForInspectedWebContents(contents)) return NO;
-    // Only the browser-scoped toggle is public, and it acts on the tab strip's
-    // active contents. Crest presents pages itself, so make this page current
-    // before toggling its inspector shut.
-    const int index = page->browser->tab_strip_model()->GetIndexOfWebContents(contents);
-    if (index < 0) return NO;
-    page->browser->tab_strip_model()->ActivateTabAt(index);
-    DevToolsWindow::ToggleDevToolsWindow(page->browser, DevToolsToggleAction::Toggle(),
-        DevToolsOpenedByAction::kMainMenuOrMainShortcut);
+    auto* inspector = DevToolsWindow::GetInstanceForInspectedWebContents(contents);
+    if (!inspector) return NO;
+    // `CanDockDevTools` is false in this host, so every inspector is undocked
+    // and the browser-scoped toggle only ever reveals one again. Close the
+    // frontend contents instead: that is the same path its own window close
+    // takes, including the frontend's before-unload handling.
+    content::WebContents* frontend = inspector->GetDevToolsWebContents();
+    if (!frontend) return NO;
+    frontend->Close();
   } else if ([command isEqualToString:@"engine.zoom"]) {
     const double factor = url.doubleValue;
     auto* zoom = zoom::ZoomController::FromWebContents(contents);
@@ -2184,15 +2184,24 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
     // engine answers availability now, and the action re-resolves the same page
     // after menu tracking ends rather than holding a raw page pointer.
     auto append = [&](NSString* title, NSString* invocation) {
+      // A block written inside this lambda cannot read the enclosing function's
+      // locals through the lambda's own by-reference captures: the lambda is
+      // gone long before a menu action runs, so those references dangle and the
+      // action silently declines. Copy what the action needs into this scope,
+      // where the block captures each value itself.
+      const base::WeakPtr<content::WebContents> source = weak;
+      NSString* const destination = address;
+      const uint64_t expected_revision = revision;
       CrestLinkMenuAction* action = [[CrestLinkMenuAction alloc] init];
       action.run = ^{
         // Return from menu tracking before mounting native UI or mutating the
         // owning window's tab state.
         dispatch_async(dispatch_get_main_queue(), ^{
-          if (!weak || State().disposing) return;
+          if (!source || State().disposing) return;
           for (auto& [current_id, current] : State().pages) {
-            if (current->web_contents() == weak.get() && current->navigation_revision == revision && current->link_handler) {
-              current->link_handler(invocation, address, @"");
+            if (current->web_contents() == source.get() &&
+                current->navigation_revision == expected_revision && current->link_handler) {
+              current->link_handler(invocation, destination, @"");
               return;
             }
           }
