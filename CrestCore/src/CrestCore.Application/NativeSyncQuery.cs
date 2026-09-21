@@ -22,6 +22,8 @@ public static class NativeSyncQuery
                 "project" => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
                     request["records"]!.AsArray().Select(n => n!.AsObject())),
                 "materialize" => Materialize(request),
+                "workspace.preview" => NativeWorkspaceImport.Preview(request["session"]!.AsObject(), request["arguments"]!.AsObject(),
+                    request["mode"]!.GetValue<string>(), request["now"]!.GetValue<double>()),
                 "session.repair" => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
                     request["emptySpace"] as JsonObject),
                 "session.retain" => NativeSessionMaintenance.Retain(request["session"]!.AsObject(), request["now"]!.GetValue<double>()),

@@ -288,6 +288,9 @@ targets:
       - path: CrestTests/BrowserCloudSyncStateTests.swift
       - path: CrestTests/BrowserLaunchEnvironmentTests.swift
       - path: CrestTests/BrowserCoreSessionAuthorityTests.swift
+      - path: CrestTests/BrowserManualSetupPlanTests.swift
+      - path: CrestTests/BrowserImportReviewPlanTests.swift
+      - path: CrestTests/BrowserPortableArchiveTests.swift
       - path: CrestTests/BrowserSyncTests.swift
       - path: CrestTests/SuspendingBrowserSpaceDataDeleter.swift
     dependencies:

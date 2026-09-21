@@ -119,7 +119,7 @@ public static unsafe partial class Exports
     {
         if (length == null || destination == null && capacity != 0) return CoreStatus.InvalidArgument;
         *length = 0;
-        if (capacity > NativeSessionEditor.MaximumBytes) return CoreStatus.LimitExceeded;
+        if (capacity > NativeSessionAuthority.MaximumBytes) return CoreStatus.LimitExceeded;
         if (!SessionCommands.TryGetValue(handle, out var command)) return CoreStatus.InvalidHandle;
         try
         {

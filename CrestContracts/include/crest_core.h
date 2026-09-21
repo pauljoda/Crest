@@ -142,7 +142,7 @@ CREST_API crest_status_t CREST_CALL crest_session_release_checkpoint(uint64_t ch
 /* Commands operate on the owned session using only arguments and window
  * selection. Prepare/read do not mutate; decode the projection before commit.
  * Commit rejects a stale revision and a second commit of the same command.
- * Input/output <= 4 MiB. Always release the command, including failed commits.
+ * Input/output <= 4 MiB for page/Space edits, <= 64 MiB for workspace imports. Always release the command, including failed commits.
  * Keep its originating session alive until the command is released. */
 CREST_API crest_status_t CREST_CALL crest_session_prepare_command(
     uint64_t session, uint64_t expected_revision, const uint8_t* input, size_t length, uint64_t* out_command);

@@ -13,9 +13,10 @@ public sealed partial class NativeSessionAuthority
         {
             RequireWritable();
             if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
-            if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
             var request = Parse(bytes);
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+            if (request["operation"]!.GetValue<string>() == "workspace.import") return PrepareWorkspaceCommand(expected, request);
+            if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
             if (request["operation"]!.GetValue<string>().StartsWith("space.", StringComparison.Ordinal))
                 return PrepareSpaceCommand(expected, request);
             var spaceId = Id(request["spaceId"]);
@@ -71,6 +72,7 @@ public sealed partial class NativeSessionAuthority
         lock (Gate)
         {
             RequireWritable();
+            command.RequireAccepted();
             if (command.ExpectedRevision != Revision) throw new BrowserRuleException("stale_session_revision");
             var nextRevision = checked(Revision + 1);
             document = command.Document;
@@ -86,9 +88,11 @@ public sealed class NativeSessionCommand
     internal ulong ExpectedRevision { get; }
     internal NativeSessionAuthority.SessionDocument Document { get; }
     public byte[] Output { get; }
+    private readonly string? rejection;
+    internal void RequireAccepted() { if (rejection is not null) throw new BrowserRuleException(rejection); }
     internal NativeSessionCommand(NativeSessionAuthority owner, ulong revision,
-        NativeSessionAuthority.SessionDocument document, byte[] output)
-    { this.owner = owner; ExpectedRevision = revision; Document = document; Output = output; }
+        NativeSessionAuthority.SessionDocument document, byte[] output, string? rejection = null)
+    { this.owner = owner; ExpectedRevision = revision; Document = document; Output = output; this.rejection = rejection; }
     public ulong Commit() => owner.CommitCommand(this);
     public NativeSessionReplacement Reserve(ReadOnlySpan<byte> selection) => owner.ReserveCommand(this, selection);
 }

@@ -37,6 +37,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             }
         }
     }
+    private var onboardingWindow: NSWindow?
     private var privateWindow: NSWindow?
     private var privateSourceProfile: UUID?
     static var privateSourceProfileID: UUID? { instance?.privateSourceProfile }
@@ -229,6 +230,36 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         window.makeKeyAndOrderFront(nil)
     }
 
+    func openOnboardingWindow(_ request: BrowserOnboardingRequest) {
+        if let onboardingWindow {
+            // Reopening setup brings its current draft forward.
+            onboardingWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+        let source = activeModel
+        let browser = source?.browser ?? application.browser
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 820),
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.identifier = NSUserInterfaceItemIdentifier(BrowserOnboardingCoordinator.sceneID)
+        window.title = BrowserOnboardingWindowActivation.windowTitle
+        window.contentMinSize = NSSize(width: 980, height: 660)
+        window.isReleasedWhenClosed = false
+        onboardingWindow = window
+        window.contentViewController = NSHostingController(rootView: BrowserOnboardingWindow(
+            request: request, browser: browser, cloudSync: application.cloudSync,
+            progress: application.onboardingProgress, spaceAccess: application.spaceAccess,
+            hostClose: { [weak window] in window?.close() },
+            hostOpenBrowser: { [weak self] in
+                guard let self else { return }
+                if let id = source?.id, let browserWindow = self.windows[id] { browserWindow.makeKeyAndOrderFront(nil) }
+                else { self.openWindow(.normal(sourceWindowID: nil)) }
+            }))
+        NotificationCenter.default.addObserver(self, selector: #selector(windowClosed(_:)),
+            name: NSWindow.willCloseNotification, object: window)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+    }
+
     func openWindow(_ request: BrowserMacWindowRequest) {
         if let existing = windows[request.id] { existing.makeKeyAndOrderFront(nil); return }
         guard application.windowCoordinator.model(for: request) != nil else { return }
@@ -286,6 +317,12 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     @objc private func windowClosed(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
+        if window === onboardingWindow {
+            onboardingWindow = nil
+            window.contentViewController = nil
+            NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
+            return
+        }
         if let id = quickWindows.first(where: { $0.value.window === window })?.key,
             let quick = quickWindows.removeValue(forKey: id) {
             quick.model.releaseForDismissal()

@@ -259,6 +259,9 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
     }
 
     func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
+        #if CREST_CORE_BACKED
+        return try BrowserCoreWorkspaceImport.preview(BrowserCoreWorkspaceImport.review(self), existing: existing)
+        #else
         guard hasIncludedSpaces else {
             throw ValidationError.noIncludedSpaces
         }
@@ -349,8 +352,10 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
         }
         result.repairRuntimeIntegrity()
         return result
+        #endif
     }
 
+    #if !CREST_CORE_BACKED
     private func reviewedTabs(
         from review: BrowserImportSpaceReview,
         overflow: Set<TabID>,
@@ -462,6 +467,8 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
         }
         return tabs.first?.id
     }
+
+    #endif
 
     private static func bestMatchingSpace(
         for sourceName: String,

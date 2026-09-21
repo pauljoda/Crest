@@ -139,7 +139,7 @@ final class BrowserCoreSessionAuthority {
     }
 
     func prepareSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
-        window: BrowserSession, at date: Date) throws -> PreparedSpace {
+        window: BrowserSession, at date: Date) throws -> PreparedChange {
         let space = spaceID.flatMap { window.space(id: $0) }
         let data = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": operation,
@@ -163,21 +163,35 @@ final class BrowserCoreSessionAuthority {
                 next.spaces[index].history = existing.history
                 next.spaces[index].archivedTabs = existing.archivedTabs
             }
-            return PreparedSpace(handle: handle, session: next)
+            return PreparedChange(handle: handle, session: next)
         } catch {
             crest_session_release_command(handle)
             throw error
         }
     }
 
-    final class PreparedSpace {
+    func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, window: BrowserSession) throws -> PreparedChange {
+        let input = try JSONSerialization.data(withJSONObject: [
+            "version": 1, "operation": "workspace.import", "mode": request.mode,
+            "arguments": request.arguments, "window": Self.selection(for: window),
+            "now": Date.now.timeIntervalSinceReferenceDate
+        ])
+        let handle = try prepareCommand(input)
+        do {
+            let result = try JSONDecoder().decode(BrowserCoreWorkspaceImport.Result.self, from: readCommand(handle))
+            let next = try result.materialize(existing: window, request: request)
+            return PreparedChange(handle: handle, session: next)
+        } catch { crest_session_release_command(handle); throw error }
+    }
+
+    final class PreparedChange {
         fileprivate let handle: UInt64
         let session: BrowserSession
         fileprivate init(handle: UInt64, session: BrowserSession) { self.handle = handle; self.session = session }
         deinit { crest_session_release_command(handle) }
     }
 
-    func commitDurably(_ command: PreparedSpace, sync: BrowserCoreSyncTransaction? = nil,
+    func commitDurably(_ command: PreparedChange, sync: BrowserCoreSyncTransaction? = nil,
         persist: (any BrowserSessionCheckpoint) throws -> Void) throws {
         let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: command.session))
         var replacement: UInt64 = 0, checkpoint: UInt64 = 0
@@ -226,7 +240,7 @@ final class BrowserCoreSessionAuthority {
     private func readCommand(_ command: UInt64) throws -> Data {
         var length = 0
         let measured = crest_session_read_command(command, nil, 0, &length)
-        guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 4 * 1024 * 1024 else {
+        guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 64 * 1024 * 1024 else {
             throw CoreError.rejected(measured)
         }
         let capacity = length

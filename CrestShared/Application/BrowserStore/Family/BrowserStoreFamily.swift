@@ -140,6 +140,17 @@ final class BrowserStoreFamily {
         deletionReason: BrowserSyncTombstoneReason = .superseded, from source: BrowserStore, at date: Date = .now) throws {
         let previous = authoritativeSession
         let command = try core.prepareSpace(operation, in: spaceID, arguments: arguments, window: source.session, at: date)
+        try commitPreparedChange(command, previous: previous, deletionReason: deletionReason, from: source, at: date)
+    }
+
+    func importWorkspace(_ request: BrowserCoreWorkspaceImport.Request, from source: BrowserStore) throws {
+        let previous = authoritativeSession
+        let command = try core.prepareWorkspace(request, window: source.session)
+        try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: source, at: .now)
+    }
+
+    private func commitPreparedChange(_ command: BrowserCoreSessionAuthority.PreparedChange,
+        previous: BrowserSession, deletionReason: BrowserSyncTombstoneReason, from source: BrowserStore, at date: Date) throws {
         let revision = reserveSyncRevision()
         if let sync = source.syncCoordinator {
             sync.advanceStoreRevision(to: revision)

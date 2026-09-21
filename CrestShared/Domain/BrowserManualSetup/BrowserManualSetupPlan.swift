@@ -193,7 +193,14 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
             : "globe"
     }
 
+    #if CREST_CORE_BACKED
+    var coreSpaceOrderWasEdited: Bool { spaceOrderWasEdited == true }
+    #endif
+
     func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
+        #if CREST_CORE_BACKED
+        return try BrowserCoreWorkspaceImport.preview(BrowserCoreWorkspaceImport.manual(self), existing: existing)
+        #else
         let newSpaces = spaces.filter(\.isNew)
         guard
             existing.spaces.count + newSpaces.count
@@ -256,8 +263,10 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         result.disposableSeedMarker = nil
         result.repairRuntimeIntegrity()
         return result
+        #endif
     }
 
+    #if !CREST_CORE_BACKED
     private func append(_ tabs: [BrowserTab], to space: inout BrowserSpace) throws {
         let pinnedTotal = space.pinnedTabs.count + tabs.filter { $0.placement == .pinned }.count
         guard pinnedTotal <= BrowserSpace.maximumPinnedTabs else {
@@ -292,6 +301,8 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         tabs.last(where: { $0.placement == .current })?.id
             ?? tabs.first?.id
     }
+
+    #endif
 
     private static func title(for url: URL) -> String {
         let host = url.host(percentEncoded: false) ?? url.absoluteString

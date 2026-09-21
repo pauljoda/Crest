@@ -198,6 +198,18 @@ identity is checked before editing; borrowed workspaces cannot change their sour
 profiles. The core enforces new private Space defaults and prevents removal of
 the last Space. Native profile cleanup and authentication remain platform work.
 
+Portable archive import, reviewed import, and manual setup use one core workspace
+operation for both preview and commit. The core merges folders, enforces Space
+and pin limits, preserves existing profile identities, repairs imported identity
+collisions, applies draft ordering, and graduates a reviewed first-install seed.
+Native code supplies the reviewed intent and opaque appearance vocabulary;
+favicon bytes are reattached using positional references returned by the core.
+Accepted imports reserve publication while the session and sync journal are
+saved together, then reconcile all windows. Rejected and stale preparations
+cannot publish or reserve storage. The Chromium process host presents the original
+setup/import window through the native window port, including completion and
+dismissal; the SwiftUI app continues to use its existing scene.
+
 `crest_core_evaluate_sync` runs wire-compatible conflict resolution and stable
 fractional ordering in the core. Record identity is validated on both sides of
 the boundary. `NativeSyncJournal` owns immutable journal snapshots: local staging,

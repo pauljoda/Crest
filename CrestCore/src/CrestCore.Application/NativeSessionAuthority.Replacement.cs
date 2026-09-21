@@ -63,6 +63,7 @@ public sealed partial class NativeSessionAuthority
         lock (Gate)
         {
             RequireWritable();
+            command.RequireAccepted();
             if (command.ExpectedRevision != Revision)
                 throw new CrestCore.Domain.BrowserRuleException("stale_session_revision");
             var nextRevision = checked(Revision + 1);

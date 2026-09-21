@@ -115,6 +115,9 @@ extension BrowserStore {
 
     func importPortableArchive(_ imported: BrowserPortableImport) throws {
         guard !imported.spaces.isEmpty else { return }
+        #if CREST_CORE_BACKED
+        try family.importWorkspace(BrowserCoreWorkspaceImport.portable(imported.spaces), from: self)
+        #else
         guard
             session.spaces.count + imported.spaces.count
                 <= BrowserPortableArchive.maximumSpaceCount
@@ -129,16 +132,25 @@ extension BrowserStore {
         // An import lands whole Spaces, with their history and their icons, so
         // this is one of the few mutations that really does rewrite everything.
         persist()
+        #endif
     }
 
     func commitReviewedImport(_ plan: BrowserImportReviewPlan) throws {
+        #if CREST_CORE_BACKED
+        try family.importWorkspace(BrowserCoreWorkspaceImport.review(plan), from: self)
+        #else
         session = try plan.preview(mergingInto: session)
         persist()
+        #endif
     }
 
     func commitManualSetup(_ plan: BrowserManualSetupPlan) throws {
+        #if CREST_CORE_BACKED
+        try family.importWorkspace(BrowserCoreWorkspaceImport.manual(plan), from: self)
+        #else
         session = try plan.preview(mergingInto: session)
         persist()
+        #endif
     }
 
     func updateSpaceIdentity(

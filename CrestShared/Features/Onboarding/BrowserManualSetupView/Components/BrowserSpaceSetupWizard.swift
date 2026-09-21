@@ -81,6 +81,7 @@ struct BrowserSpaceSetupWizard: View {
                             .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 12)))
                         }
                         .frame(maxWidth: 1020, maxHeight: 580)
+                        .padding(.horizontal, wide ? 24 : 0)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     #endif
                 } else {

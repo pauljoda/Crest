@@ -1569,6 +1569,14 @@
     "cross-device-space-data-cleanup": {
       "category": "fixed",
       "message": "Clean up local website and extension data when a Space is deleted on another device, and retry interrupted cleanup safely."
+    },
+    "shared-core-import-and-setup": {
+      "category": "improved",
+      "message": "Keep imported browsing data and setup changes consistent across windows and save them together with sync state."
+    },
+    "setup-preview-window-inset": {
+      "category": "fixed",
+      "message": "Keep the setup sidebar preview comfortably inset from the window edge."
     }
   }
 }

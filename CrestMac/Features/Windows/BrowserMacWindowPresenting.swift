@@ -4,6 +4,7 @@
 @MainActor
 protocol BrowserMacWindowPresenting: AnyObject {
     func openWindow(_ request: BrowserMacWindowRequest)
+    func openOnboardingWindow(_ request: BrowserOnboardingRequest)
     func openPrivateWindow()
     func openQuickWindow(_ request: BrowserQuickWindowRequest)
 }
