@@ -7,6 +7,7 @@ extension BrowserShortcutCommand {
         case .closeTabOrWindow, .closeWindow: "xmark.square"
         case .archiveTab: "archivebox"
         case .openLocation: "magnifyingglass"
+        case .openFile: "folder"
         case .back: "chevron.left"
         case .forward: "chevron.right"
         case .reloadPage, .reloadFromOrigin: "arrow.clockwise"

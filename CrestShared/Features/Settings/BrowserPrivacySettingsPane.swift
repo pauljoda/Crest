@@ -37,10 +37,12 @@ struct BrowserPrivacySettingsPane: View {
                     )
                 }
 
-                BrowserContentBlockingSettingsSection(
-                    policy: contentBlockingPolicyBinding,
-                    errorDescription: contentBlockingErrorDescription
-                )
+                if supportsContentBlocking {
+                    BrowserContentBlockingSettingsSection(
+                        policy: contentBlockingPolicyBinding,
+                        errorDescription: contentBlockingErrorDescription
+                    )
+                }
 
                 BrowserSavedSitePermissionSection(
                     records: records,
@@ -94,6 +96,14 @@ struct BrowserPrivacySettingsPane: View {
             in: selectedSpace,
             accessController: spaceAccess
         )
+    }
+
+    /// Crest's own blocking is a WebKit content-rule list. The engine running this
+    /// process either applies it or it does not, and a preference that cannot reach
+    /// the engine is worse than an absent one: in Chromium blocking comes from an
+    /// extension instead, so the section is not shown at all.
+    private var supportsContentBlocking: Bool {
+        BrowserEngineRegistration.current.supports("content-blocking")
     }
 
     private var contentBlockingPolicyBinding: Binding<BrowserContentBlockingPolicy> {

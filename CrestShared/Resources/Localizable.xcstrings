@@ -11686,6 +11686,12 @@
         }
       }
     },
+    "Open File" : {
+
+    },
+    "Open File…" : {
+
+    },
     "Open First Tab" : {
       "extractionState" : "stale",
       "localizations" : {

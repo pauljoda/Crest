@@ -1677,6 +1677,18 @@
     "shared-core-page-lifecycle-policy": {
       "category": "internal",
       "message": "Move memory-pressure release planning, tab dismissal and renderer recovery decisions into the shared core; native adapters keep page creation, media veto, unload and disposal."
+    },
+    "open-local-files": {
+      "category": "new",
+      "message": "Open local HTML, PDF, text, image and saved page archive files from File > Open File, by typing a path in the address bar, or by opening them from Finder."
+    },
+    "chromium-selection-translation": {
+      "category": "improved",
+      "message": "Translate selected text in Chromium-powered windows using on-device translation; whole-page translation and Reader remain WebKit features."
+    },
+    "chromium-content-blocking-mapping": {
+      "category": "improved",
+      "message": "Content blocking controls appear only where the browsing engine supports them; Chromium-powered windows rely on extensions such as uBlock Origin Lite."
     }
   }
 }

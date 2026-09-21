@@ -29,6 +29,7 @@ struct BrowserCommandActions {
     /// tabs themselves.
     static let paletteCommands: [BrowserShortcutCommand] = [
         .newWindow,
+        .openFile,
         .newBlankWindow,
         .newQuickWindow,
         .newPrivateWindow,
@@ -94,6 +95,7 @@ struct BrowserCommandActions {
         case .newBlankWindow: openBlankWindow()
         case .newTab: openNewTab()
         case .openLocation: openLocation()
+        case .openFile: openFile()
         case .newQuickWindow: openQuickWindow()
         case .newPrivateWindow: openPrivateWindow()
         case .closeTabOrWindow: closeTabOrWindow()
@@ -163,7 +165,9 @@ struct BrowserCommandActions {
         case .newBlankWindow: return !browser.isPrivateBrowsing && browser.selectedSpace != nil
         case .newQuickWindow, .showArchive: return browser.selectedSpace != nil
         case .toggleContentBlocking:
-            return browser.selectedSpace != nil && BrowserEngineRegistration.current.supports("content-blocking")
+            return browser.selectedSpace != nil && supportsEngineCapability("content-blocking")
+        case .openFile:
+            return browser.selectedSpace != nil && supportsEngineCapability("local-files")
         case .back: return pages.canGoBack
         case .forward: return pages.canGoForward
         case .reloadPage, .reloadFromOrigin: return canReloadSelectedTab
@@ -192,6 +196,15 @@ struct BrowserCommandActions {
 
     private func supportsPageCapability(_ capability: String) -> Bool {
         pages.hasActivePage && pages.activePage?.pageEngine.registration.supports(capability) == true
+    }
+
+    /// The same question as `supportsPageCapability` for commands that are about
+    /// the window rather than the document in it, so they stay available in the
+    /// moment before a page exists. The active page's own engine still answers
+    /// whenever there is one.
+    private func supportsEngineCapability(_ capability: String) -> Bool {
+        (pages.activePage?.pageEngine.registration ?? BrowserEngineRegistration.current)
+            .supports(capability)
     }
 
     private func numberedIndex(
@@ -327,6 +340,50 @@ struct BrowserCommandActions {
 
     func openLocation() {
         chrome.openLocation(browser.selectedTab?.url?.absoluteString ?? "")
+    }
+
+    /// Opens local documents as ordinary tabs in the Space on screen.
+    ///
+    /// The archive entry follows the active page's engine, not the platform: a
+    /// panel offering a `.webarchive` to Chromium would be offering a document
+    /// the engine cannot read.
+    func openFile() {
+        guard let space = browser.selectedSpace else { return }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        let format = pages.activePage?.pageEngine.documentServices?.archiveFormat ?? .registered
+        let actions = self
+        Task { @MainActor in
+            let panel = NSOpenPanel()
+            panel.allowedContentTypes = BrowserLocalFileOpenPolicy.contentTypes(archive: format)
+            panel.allowsMultipleSelection = true
+            panel.canChooseDirectories = false
+            panel.canChooseFiles = true
+            panel.title = String(localized: "Open File")
+            panel.prompt = String(localized: "Open")
+            let response: NSApplication.ModalResponse
+            if let window = NSApp.keyWindow {
+                response = await panel.beginSheetModal(for: window)
+            } else {
+                response = panel.runModal()
+            }
+            guard response == .OK else { return }
+            actions.openLocalDocuments(panel.urls, in: assignment)
+        }
+    }
+
+    func openLocalDocuments(
+        _ urls: [URL],
+        in assignment: BrowserSpaceRuntimeAssignment
+    ) {
+        var selected: URL?
+        for url in urls where BrowserLocalFilePolicy.accepts(url) {
+            guard browser.openNewTab(url: url, matching: assignment) != nil else { continue }
+            selected = url
+        }
+        guard let selected else { return }
+        pages.select(session: browser.session)
+        pages.load(selected)
+        chrome.dismissCommandPalette()
     }
 
     // MARK: - Page

@@ -41,6 +41,42 @@ public sealed class NativePolicyTests
         Assert.Equal(address, enabled["url"]!.GetValue<string>());
         Assert.Null(enabled["searchQuery"]);
     }
+    [Theory]
+    [InlineData("file:///Users/crest/Saved%20Page.webarchive", "file:///Users/crest/Saved%20Page.webarchive")]
+    [InlineData("file://localhost/tmp/archive.mhtml", "file:///tmp/archive.mhtml")]
+    [InlineData("/tmp/Saved Page.html", "file:///tmp/Saved%20Page.html")]
+    [InlineData("file://example.com/tmp/page.html", null)]
+    [InlineData("file:", null)]
+    public void LocalDocumentAddressesResolveToFileURLsAndRemainValidTabURLs(string input, string? url)
+    {
+        var request = new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = input,
+            ["searchTemplate"] = "https://kagi.com/search?q=%s" };
+        var values = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
+        if (url is null)
+        {
+            Assert.False(values["url"]!.GetValue<string>()
+                .StartsWith("file:", StringComparison.OrdinalIgnoreCase));
+            Assert.Throws<BrowserRuleException>(() => BrowserSpace.ValidateUrl(input));
+            return;
+        }
+        Assert.Equal(url, values["url"]!.GetValue<string>());
+        Assert.Null(values["searchQuery"]);
+        BrowserSpace.ValidateUrl(url);
+    }
+    [Fact]
+    public void HomeRelativeAddressesResolveAgainstThisDeviceOnly()
+    {
+        var request = new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = "~/Saved.webarchive",
+            ["searchTemplate"] = "https://kagi.com/search?q=%s" };
+        var values = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
+        var resolved = values["url"]!.GetValue<string>();
+        Assert.StartsWith("file:///", resolved);
+        Assert.EndsWith("/Saved.webarchive", resolved);
+        Assert.Null(values["searchQuery"]);
+        request["input"] = "~notapath";
+        var search = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
+        Assert.Equal("~notapath", search["searchQuery"]!.GetValue<string>());
+    }
     [Fact]
     public void LinkPolicyWireContractAcceptsNullableContextAndRejectsExtraInstructions()
     {

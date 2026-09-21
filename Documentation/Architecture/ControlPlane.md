@@ -15,8 +15,11 @@ It does not complete core ownership, sync, platform services or shipping
 composition. The normal `Crest` and `CrestMobile` targets now use the same
 `CREST_CORE_BACKED` state composition as `CrestChromiumUI`, `CrestNativeCore` and
 `CrestMobileNativeCore`. `CREST_REVIEW_BUILD` separately enforces isolated launch
-for the review targets. The normal Mac target still hosts WebKit; the native
-Chromium distribution remains a separate packaging step. The live native app uses
+for the review targets. The normal Mac target still hosts WebKit. The Chromium
+host also builds as `CrestChromiumUIProduct` without `CREST_REVIEW_BUILD`, which
+`package-chromium-host.py --product` assembles into Crest's own desktop identity;
+signing and provisioning that identity is the remaining external requirement for
+distribution. The live native app uses
 `NativeSessionAuthority`. The message-based `BrowserSessionKernel`, `BrowserKernel`
 and `CoreRuntime` protocol runtime has been retired, along with its prototype
 Apple apps, adapters and C lifecycle exports. Browser behavior now has one
@@ -59,7 +62,15 @@ and native keyboard events use the existing command actions and persisted shortc
 assignments. Blank and Quick Windows mount their original native views; Quick
 Window dismissal releases its lease and promotion returns it to its source
 workspace. Unsupported page services remain disabled until their adapter is wired.
-Remaining identity work includes external links and normal distribution composition.
+External URL and document opens, Dock reopen and saved normal windows now reach
+the native UI: Chromium's `AppController` hands opens to Crest's own external-URL
+policy and Space or Quick Window routing, reopen activates an existing window or
+opens the initial one, and startup restores the normal windows that were open at
+quit. A product package registers Crest for HTTP, HTTPS and HTML documents and
+carries the app's Sparkle feed, so default-browser selection and update checks
+use the existing app paths. Review packages keep neither, and their
+default-browser affordance in Settings still reports the registration as
+unavailable rather than hiding itself.
 
 Validate coherent user flows as they are wired into the app. Retain focused tests
 for state, persistence, synchronization, ownership and authorization. Do not make
@@ -169,12 +180,17 @@ pending export; requests time out after 45 seconds. Full-page captures use the
 same 6,000-by-24,000 CSS-pixel bounds as WebKit, and export data is limited to 64 MiB.
 Archives use the engine's actual format: `.mhtml` for Chromium and `.webarchive`
 for WebKit. Chromium printing renders a PDF and presents the native PDFKit print
-sheet, whose paper settings scale the rendered pages. Reader and Apple translation
-still need Chromium adapters. Developer commands open and toggle DevTools on the
+sheet, whose paper settings scale the rendered pages. Reader and whole-page Apple
+translation stay unavailable in Chromium and their menu items are absent rather
+than dimmed; Chromium's page context menu translates a selection through Apple's
+on-device translation instead. Developer commands open and toggle DevTools on the
 requested panel, except Network, which DevTools only exposes to Chromium's own
-frontend. Local-file opening also remains to be wired into the
-native command route; entering a `file://` archive path in the current address
-resolver does not reopen it.
+frontend. Local documents now open on both engines: File ▸ Open File… offers the
+document kinds the registered engine reads, including its own archive format, and
+the address route resolves `file://` URLs, absolute paths and home-relative paths
+to the same URL in the core and in the Swift fallback. Local-file tabs have no
+host, so the sync projection's scheme filter already keeps them on the device that
+opened them.
 Chromium's page context menu now offers Open Link in Split View through the same
 shared store command the WebKit menu route uses.
 Page creation and lifetime remain owned by the native composition and its engine
@@ -280,8 +296,11 @@ destination Space. Archive-on-dismiss uses the same domain collection and keeps
 window selection unchanged, including when a retained snapshot was relocked.
 Process-local completion receipts prevent a late dismissal or repeated promotion
 from creating another record. Canceling a prepared storage reservation does not
-consume the request. These receipts are not synced or restored; native page
-creation, suspension and disposal still need lifecycle consolidation.
+consume the request. These receipts are not synced or restored. Page lifecycle
+ownership is now split the same way on both engines: residency release planning,
+tab dismissal and renderer-recovery decisions are core policy operations, while
+the native adapters own page creation, the media residency veto, unload and
+disposal.
 
 Portable archive import, reviewed import, and manual setup use one core workspace
 operation for both preview and commit. The core merges folders, enforces Space
@@ -455,9 +474,13 @@ and `BrowserWindow` aggregates have been removed. Their former rules now belong 
 | Sync projection, ordering, conflict and deletion | `NativeSyncAuthority` and the `crest_sync_*` entry points |
 | Correlated completion invariants | Prepare/reserve/commit revisions on the session and sync handles |
 
-Page creation, closure, residency and content blocking are native engine work
-driven by the store and page interfaces; they are no longer modeled as core
-messages. The remaining C ABI is the synchronous session, sync, access and policy
+Page creation, closure, residency operations and content blocking are native
+engine work driven by the store and page interfaces; they are no longer modeled
+as core messages. The decisions behind them are core policy operations: which
+pages a memory squeeze may release, in what order and how many, what dismissing
+a tab means, and when a terminated renderer stops reloading. The adapter keeps
+the per-page veto for media playback, capture and Picture in Picture.
+The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.
 

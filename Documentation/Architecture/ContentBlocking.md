@@ -33,6 +33,18 @@ This division is intentional:
 - A failed extension cannot change Crest’s bundled rules or another Space’s
   extension state.
 
+## Chromium
+
+Crest's built-in protection is a WebKit content-rule list, so it has no effect in
+the Chromium host. Chromium's own subresource filter depends on Safe Browsing
+list distribution that Crest does not run, and Crest does not convert its rules
+into a second format for one engine. The Chromium engine therefore declares
+`content-blocking` unavailable, and every surface that would set the per-Space
+preference is absent rather than dimmed: the Privacy settings section is hidden,
+and the page menu item is not installed. Blocking in Chromium comes from an
+extension — uBlock Origin Lite and its peers — on the same terms as the broader
+blocking described above.
+
 ## Compatibility
 
 Balanced protection can occasionally break a site because it blocks known

@@ -49,7 +49,7 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
 
         let file = submenu("File", in: bar)
         commands([.newWindow, .newBlankWindow, .newTab, .newQuickWindow, .newPrivateWindow,
-                  nil, .closeTabOrWindow, .closeWindow, nil, .printPage], in: file)
+                  nil, .openFile, nil, .closeTabOrWindow, .closeWindow, nil, .printPage], in: file)
         let edit = submenu("Edit", in: bar)
         standard("Undo", "undo:", key: "z", in: edit)
         standard("Redo", "redo:", key: "z", modifiers: [.command, .shift], in: edit)
@@ -62,7 +62,7 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
         standard("Select All", "selectAll:", key: "a", in: edit)
 
         let view = submenu("View", in: bar)
-        commands([.toggleSidebar, .toggleTranslationToolbar, nil, .showHistory, .showArchive, .showDownloads], in: view)
+        commands([.toggleSidebar, nil, .showHistory, .showArchive, .showDownloads], in: view)
         view.addItem(.separator())
         standard("Enter Full Screen", "toggleFullScreen:", key: "f", modifiers: [.command, .control], in: view)
         commands([.openLocation, nil, .back, .forward, .reloadPage, .stopLoading, .reloadFromOrigin],
@@ -76,9 +76,13 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
         let spaces = submenu("Spaces", in: bar)
         commands([.previousSpace, .nextSpace, nil], in: spaces)
         commands((1...9).compactMap(BrowserShortcutCommand.spaceSelection).map(Optional.some), in: spaces)
-        commands([.toggleTranslationToolbar, .toggleReaderMode, .toggleContentBlocking, nil, .findInPage,
-                  nil, .zoomIn, .zoomOut, .actualSize, nil, .copyPageLink, .copyPageLinkAsMarkdown,
-                  .sharePage, .exportPDF, .saveWebArchive], in: submenu("Page", in: bar))
+        // Reader, whole-page Apple translation and Crest's own content blocking have
+        // no Chromium adapter. Their items are absent rather than permanently dimmed;
+        // selection translation stays on Chromium's own page context menu, and broader
+        // blocking comes from an extension.
+        commands([.findInPage, nil, .zoomIn, .zoomOut, .actualSize, nil, .copyPageLink,
+                  .copyPageLinkAsMarkdown, .sharePage, .exportPDF, .saveWebArchive],
+                 in: submenu("Page", in: bar))
         commands([.toggleDeveloperToolbar, nil, .showWebInspector], in: submenu("Develop", in: bar))
         let window = submenu("Window", in: bar)
         standard("Minimize", "performMiniaturize:", key: "m", in: window)
@@ -101,8 +105,6 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
             let context = actions()
             switch command {
             case .toggleDeveloperToolbar: item.state = context?.pages.activePage?.isDeveloperModeEnabled == true ? .on : .off
-            case .toggleTranslationToolbar: item.state = context?.pages.activePage?.translation.showsToolbar == true ? .on : .off
-            case .toggleReaderMode: item.state = context?.pages.readerModeState.isActive == true ? .on : .off
             default: break
             }
             return canPerform(command)
@@ -147,7 +149,7 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
             case .toggleSelectedTabPinned: title = String(localized: "Pin or Unpin Tab")
             case .reopenClosedTab: title = String(localized: "Reopen Closed Tab")
             case .toggleDeveloperToolbar: title = String(localized: "Show Developer Toolbar")
-            case .toggleTranslationToolbar: title = String(localized: "Show Translation Toolbar")
+            case .openFile: title = String(localized: "Open File…")
             case .toggleSidebar: title = String(localized: "Toggle Sidebar")
             case .printPage: title = String(localized: "Print…")
             case .sharePage: title = String(localized: "Share…")

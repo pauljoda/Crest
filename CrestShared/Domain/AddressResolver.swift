@@ -18,6 +18,7 @@ enum AddressResolver {
         let value = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
         if let explicitURL = explicitURL(from: value) { return .open(explicitURL) }
+        if let fileURL = BrowserLocalFilePolicy.fileURL(from: value) { return .open(fileURL) }
         if let localhostURL = localhostURL(from: value) { return .open(localhostURL) }
         if let domainURL = domainURL(from: value) { return .open(domainURL) }
         guard let url = searchProvider.searchURL(for: value) else { return nil }

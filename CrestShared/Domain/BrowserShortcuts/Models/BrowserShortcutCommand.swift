@@ -75,6 +75,7 @@ enum BrowserShortcutCommand:
     case moveSplitCardRight
     case toggleDeveloperToolbar
     case toggleTranslationToolbar
+    case openFile
 
     var id: Self { self }
 

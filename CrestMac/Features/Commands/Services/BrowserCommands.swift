@@ -62,6 +62,14 @@ struct BrowserCommands: Commands {
             .keyboardShortcut(shortcut(.newPrivateWindow))
             Divider()
             Button(
+                "Open File…",
+                systemImage: BrowserShortcutCommand.openFile.paletteSymbol,
+                action: actions.openFile
+            )
+            .keyboardShortcut(shortcut(.openFile))
+            .disabled(!actions.canPerform(.openFile))
+            Divider()
+            Button(
                 "Close Current Tab or Window",
                 systemImage: BrowserShortcutCommand.closeTabOrWindow.paletteSymbol,
                 action: closeTabOrWindow

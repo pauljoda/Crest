@@ -57,7 +57,8 @@ enum BrowserEngineRegistration {
         scope: "Native \(platform) page and profile ports",
         supported: ["pages", "navigation", "find", "zoom", "interaction-state", "page-residency",
                     "popups", "workspace-profiles", "workspace-transfer", "profile-deletion",
-                    "content-blocking", "downloads", "permissions", "reader", "translation"] + desktopWebKit,
+                    "content-blocking", "downloads", "permissions", "reader", "translation",
+                    "local-files"] + desktopWebKit,
         unavailable: ["extensions"],
         evidence: "Existing native WebKit services and retained page, popup, profile and navigation contracts")
 
@@ -75,7 +76,7 @@ enum BrowserEngineRegistration {
         supported: ["pages", "navigation", "find", "zoom", "interaction-state", "page-residency",
                     "popups", "workspace-profiles", "workspace-transfer", "profile-deletion",
                     "before-unload", "downloads", "permissions", "viewport-capture", "inspector", "internal-pages",
-                    "full-page-capture", "pdf", "web-archive", "print"],
+                    "full-page-capture", "pdf", "web-archive", "print", "local-files"],
         unverified: ["extensions"],
         unavailable: ["reader", "translation", "content-blocking"],
         limitations: ["Extension actions and installation are wired; full API parity and Apple password-helper pairing remain incomplete."],

@@ -33,7 +33,17 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     var forwardHistory: [BrowserNavigationHistoryItem] {
         history.forwardItems.enumerated().map { Self.item($0.element, depth: $0.offset + 1) }
     }
-    func load(_ request: URLRequest) { webView.load(request) }
+    func load(_ request: URLRequest) {
+        // A local document needs an explicit read-access root before WebKit will
+        // give the document its own file origin; an ordinary request would load
+        // the page without its stylesheets, scripts or images. The folder holding
+        // the file is that root, which is what a saved page's resources sit in.
+        if let url = request.url, BrowserLocalFilePolicy.accepts(url) {
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+            return
+        }
+        webView.load(request)
+    }
     func navigateHistory(by offset: Int) {
         guard offset != 0 else { return }
         history.synchronize(with: webView.backForwardList)

@@ -17,6 +17,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery)
         }
         if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && explicitUrl.Scheme is "http" or "https"
             && explicitUrl.Host.Length > 0) return new(value, null);
+        if (LocalFile(value) is { } localFile) return new(localFile, null);
         if (!value.Any(char.IsWhiteSpace))
         {
             if (Uri.TryCreate("http://" + value, UriKind.Absolute, out var local)
@@ -25,5 +26,31 @@ public sealed record AddressResolution(string Url, string? SearchQuery)
                 && domain.Host.Length > 0) return new("https://" + value, null);
         }
         return new(provider.Search(value), value);
+    }
+
+    /// An explicit `file://` URL, or an absolute path the person typed. Only these
+    /// three spellings reach a local document; everything else stays a search, and
+    /// nothing here touches the file system, so the decision stays deterministic.
+    private static string? LocalFile(string value)
+    {
+        string candidate = value;
+        if (candidate.StartsWith('~'))
+        {
+            if (candidate.Length > 1 && candidate[1] != '/') return null;
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (home.Length == 0) return null;
+            candidate = home.TrimEnd('/') + candidate[1..];
+        }
+        else if (!candidate.StartsWith('/') && !candidate.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var parsed) || parsed.Scheme != "file"
+            || parsed.UserInfo.Length > 0 || parsed.AbsolutePath.Length == 0) return null;
+        if (parsed.Host.Length == 0) return parsed.AbsoluteUri;
+        // `file://localhost/…` names this device the long way round; anything else
+        // is a remote authority Crest does not read as a local document.
+        if (!parsed.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return null;
+        return new UriBuilder(parsed) { Host = string.Empty }.Uri.AbsoluteUri;
     }
 }

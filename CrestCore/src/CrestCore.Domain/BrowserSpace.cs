@@ -310,6 +310,9 @@ public sealed partial class BrowserSpace(SpaceId id, ProfileId profileId, string
     {
         if (url is null || url.Length > 16384 || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
             || (parsed.Scheme is not ("http" or "https") && url != "about:blank"
+                // A local document is a legitimate tab URL on every engine. It stays
+                // out of sync, which the sync projection decides by scheme, not here.
+                && !(parsed.Scheme == "file" && parsed.Host.Length == 0 && parsed.AbsolutePath.Length > 0)
                 && !(allowsInternalPages && parsed.Scheme is "chrome" or "crest" && parsed.Host.Length > 0)
                 && !(allowsInternalPages && parsed.Scheme == "chrome-extension" && parsed.Host.Length == 32
                     && parsed.Host.All(c => c is >= 'a' and <= 'p')))

@@ -23,6 +23,17 @@ struct BrowserExternalLinkHandler: ViewModifier {
     }
 
     private func open(_ url: URL) async {
+        // A document opened from Finder, Open With, or `open -a Crest` has no host
+        // for the link-preference rules to route on, and it is not a web link. It
+        // belongs in the Space already on screen.
+        if url.isFileURL {
+            guard BrowserExternalURLPolicy.acceptsLocalDocument(url),
+                let spaceID = browser.selectedSpace?.id,
+                let assignment = await accessibleAssignment(for: spaceID)
+            else { return }
+            actions.openLocalDocuments([url], in: assignment)
+            return
+        }
         guard BrowserExternalURLPolicy.accepts(url) else { return }
         let decision = BrowserLinkPreferenceStore.shared.routingDecision(
             for: url,
@@ -55,6 +66,19 @@ struct BrowserExternalLinkHandler: ViewModifier {
             pages.load(url)
             chrome.dismissCommandPalette()
         }
+    }
+
+    /// One implementation of local-document opening, shared with the File menu's
+    /// Open File… rather than copied here.
+    private var actions: BrowserCommandActions {
+        BrowserCommandActions(
+            browser: browser,
+            pages: pages,
+            chrome: chrome,
+            openWindow: openWindow,
+            spaceAccess: spaceAccess,
+            targetWindowID: targetWindowID
+        )
     }
 
     private func accessibleAssignment(

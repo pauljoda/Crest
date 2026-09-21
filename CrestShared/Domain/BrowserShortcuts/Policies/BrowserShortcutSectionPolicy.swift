@@ -5,7 +5,7 @@ enum BrowserShortcutSectionPolicy {
         switch command {
         case .newBlankWindow, .newWindow, .newTab, .newQuickWindow, .newPrivateWindow,
             .closeTabOrWindow, .closeWindow, .openLocation, .back, .forward,
-            .reloadPage, .stopLoading, .reloadFromOrigin:
+            .reloadPage, .stopLoading, .reloadFromOrigin, .openFile:
             .everyday
         case .toggleSelectedTabPinned, .duplicateTab, .reopenClosedTab,
             .clearUnpinnedTabs, .archiveTab, .previousTab, .nextTab,

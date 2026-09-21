@@ -29,6 +29,7 @@ enum BrowserShortcutDefaultPolicy {
         case .closeTabOrWindow: character("w", [.command])
         case .closeWindow: character("w", [.command, .shift])
         case .openLocation: character("l", [.command])
+        case .openFile: nil
         case .back: character("[", [.command])
         case .forward: character("]", [.command])
         case .reloadPage: character("r", [.command])
