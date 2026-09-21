@@ -23,14 +23,15 @@ public sealed partial class BrowserTabCollection
         TitleModifiedAt = source.CustomTitle is null ? null : BrowserEditTimestamp.Normalize(now), KeepsPageLoaded = false
     });
 
-    public BrowserTab DuplicateTab(TabId sourceId, IIdSource ids, DateTimeOffset now)
+    public BrowserTab DuplicateTab(TabId sourceId, IIdSource ids, DateTimeOffset now,
+        TabPlacement placement = TabPlacement.Current, int? requestedIndex = null)
     {
         var source = Tab(sourceId);
         if (source.Phase == TabPhase.Closing) throw new BrowserRuleException("page_closing");
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException("tab_limit");
         var copy = CopyTab(source, new(ids.Next()), now);
-        int index = tabs.FindIndex(t => t.Placement == TabPlacement.Current);
-        tabs.Insert(index < 0 ? tabs.Count : index, copy);
+        copy.Place(placement, null, now);
+        InsertTab(copy, requestedIndex, duplicate: true);
         return copy;
     }
 
@@ -108,6 +109,29 @@ public sealed partial class BrowserTabCollection
             tabs.Insert(tabs.IndexOf(members[^1]) + 1, tab);
         }
         tab.SetSplit(null); tab.MarkPosition(now); NormalizeSplits(now);
+    }
+
+    public bool StepSplitMember(TabId id, int offset, DateTimeOffset now)
+    {
+        var members = SplitMembers(id);
+        int current = members.ToList().FindIndex(t => t.Id == id);
+        long destination = (long)current + offset;
+        return offset != 0 && destination >= 0 && destination < members.Count
+            && MoveSplitMember(id, (int)destination, now);
+    }
+
+    public bool DissolveSplit(Guid id, DateTimeOffset now)
+    {
+        var members = tabs.Where(t => t.SplitGroupId == id).ToArray();
+        foreach (var tab in members) { tab.SetSplit(null); tab.MarkPosition(now); }
+        return members.Length > 0;
+    }
+
+    public void MoveSplitGroup(Guid id, TabPlacement placement, FolderId? folder, TabId? before, DateTimeOffset now)
+    {
+        var members = tabs.Where(t => t.SplitGroupId == id).Select(t => t.Id).ToArray();
+        if (members.Length == 0) throw new BrowserRuleException("unknown_split_group");
+        FileTabs(members, placement, folder, now, before);
     }
 
     internal void RepairSplitMembership()

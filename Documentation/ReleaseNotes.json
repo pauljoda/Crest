@@ -1641,6 +1641,10 @@
     "stable-tab-edit-sync-timestamps": {
       "category": "fixed",
       "message": "Prevent tab renames and moves from creating extra changes when received on another device."
+    },
+    "owned-core-tab-and-split-commands": {
+      "category": "internal",
+      "message": "Move tab copying, placement, durable close and split operations into commands against the shared core's owned state."
     }
   }
 }

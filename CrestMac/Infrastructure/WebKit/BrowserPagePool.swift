@@ -1999,6 +1999,15 @@ final class BrowserPagePool:
 }
 
 extension BrowserPagePool: BrowserTabCopying {
+    func sourceForTabCopy(_ source: BrowserTab, in space: BrowserSpace) -> BrowserTab {
+        var observed = source
+        if let page = tabRuntimes[source.id]?.page, page.spaceID == space.id, page.profileID == space.profile.id {
+            observed.url = page.displayURL ?? source.url
+            observed.title = page.title.isEmpty ? source.title : page.title
+        }
+        return observed
+    }
+
     func prepareTabCopy(from source: BrowserTab, to copy: inout BrowserTab, in space: BrowserSpace) {
         let state: Data?
         if let page = tabRuntimes[source.id]?.page, page.spaceID == space.id, page.profileID == space.profile.id {

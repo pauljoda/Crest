@@ -123,6 +123,73 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
+    public void OwnedTabCopiesUseCurrentRecordsAndRejectAStalePublication()
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!;
+        var core = new NativeSessionAuthority(Bytes(session));
+        JsonObject Arguments(Guid id) => new() { ["tabId"] = fixture.Tab.Value.ToString(), ["ids"] = new JsonArray(id.ToString()),
+            ["copyObservations"] = new JsonArray(new JsonObject { ["tabId"] = fixture.Tab.Value.ToString(),
+                ["url"] = "https://example.com/live-child", ["title"] = "Live title" }) };
+        var rejected = core.PrepareCommand(1, SpaceCommand(session, "tab.copy", Arguments(Guid.NewGuid())));
+        core.PrepareCommand(1, SpaceCommand(session, "tab.rename", new()
+        { ["tabId"] = fixture.Tab.Value.ToString(), ["title"] = "Latest name" })).Commit();
+        Assert.Throws<BrowserRuleException>(() => rejected.Commit());
+        var id = Guid.NewGuid();
+        var accepted = core.PrepareCommand(2, SpaceCommand(session, "tab.copy", Arguments(id)));
+        accepted.Commit();
+        var space = JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read("core"))!["spaces"]![0]!;
+        var copy = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == id)!;
+        var original = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == fixture.Tab.Value)!;
+        Assert.Equal("Latest name", copy["customTitle"]!.GetValue<string>());
+        Assert.Equal("Live title", copy["title"]!.GetValue<string>());
+        Assert.Equal("https://example.com/live-child", copy["url"]!.GetValue<string>());
+        Assert.Equal("current", copy["placement"]!.GetValue<string>());
+        Assert.Null(copy["splitGroupID"]); Assert.Null(copy["savedURL"]);
+        Assert.True(JsonNode.DeepEquals(original["futureTabProperty"], copy["futureTabProperty"]));
+        Assert.Equal("saved", original["placement"]!.GetValue<string>());
+        Assert.Equal("https://example.com/article#one", original["url"]!.GetValue<string>());
+        Assert.Single(JsonNode.Parse(accepted.Output)!["copies"]!.AsArray());
+    }
+
+    [Fact]
+    public void OwnedSplitLinkCopiesMetadataAndMovesOrDissolvesTheAcceptedGroupAtomically()
+    {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!;
+        var space = session["spaces"]![0]!; var original = space["tabs"]![0]!;
+        var peer = original.DeepClone(); peer["id"] = SwiftId(Guid.NewGuid());
+        space["tabs"]!.AsArray().Add(peer);
+        space["splitGroups"] = new JsonArray(new JsonObject { ["id"] = original["splitGroupID"]!.DeepClone(),
+            ["customTitle"] = "Saved pair", ["titleModifiedAt"] = 800000000.0 });
+        var core = new NativeSessionAuthority(Bytes(session));
+        JsonObject LinkArgs(Guid id) => new() { ["targetId"] = fixture.Tab.Value.ToString(),
+            ["ids"] = new JsonArray(Enumerable.Range(0, 6).Select(_ => (JsonNode)JsonValue.Create(Guid.NewGuid().ToString())!).ToArray()),
+            ["tab"] = new JsonObject { ["id"] = SwiftId(id), ["title"] = "Link", ["url"] = "https://example.org/link",
+                ["placement"] = "current", ["lastActivatedAt"] = 800000002.0 } };
+        var linked = Guid.NewGuid();
+        var command = core.PrepareCommand(1, SpaceCommand(session, "split.open_link", LinkArgs(linked)));
+        command.Commit();
+        var output = JsonNode.Parse(command.Output)!; var updated = output["space"]!;
+        Assert.Equal(5, updated["tabs"]!.AsArray().Count);
+        Assert.Equal(2, output["copies"]!.AsArray().Count);
+        var group = updated["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == linked)!["splitGroupID"]!;
+        Assert.NotEqual(original["splitGroupID"]!.ToJsonString(), group.ToJsonString());
+        var groupId = Guid.Parse(group["rawValue"]!.GetValue<string>());
+        Assert.Equal("Saved pair", updated["splitGroups"]!.AsArray().Single(g => Guid.Parse(g!["id"]!["rawValue"]!.GetValue<string>()) == groupId)!["customTitle"]!.GetValue<string>());
+        var before = core.Checkpoint(2, Selection(session)).Read("core");
+        Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(2, SpaceCommand(session, "split.move", new()
+        { ["groupId"] = groupId.ToString(), ["placement"] = "pinned" })));
+        Assert.Equal(before, core.Checkpoint(2, Selection(session)).Read("core"));
+        core.PrepareCommand(2, SpaceCommand(session, "split.move", new()
+        { ["groupId"] = groupId.ToString(), ["placement"] = "saved", ["folderId"] = original["folderID"]!["rawValue"]!.DeepClone() })).Commit();
+        core.PrepareCommand(3, SpaceCommand(session, "split.dissolve", new() { ["groupId"] = groupId.ToString() })).Commit();
+        var final = JsonNode.Parse(core.Checkpoint(4, Selection(session)).Read("core"))!["spaces"]![0]!;
+        Assert.Equal(5, final["tabs"]!.AsArray().Count);
+        Assert.All(final["tabs"]!.AsArray(), t => Assert.Equal("saved", t!["placement"]!.GetValue<string>()));
+        Assert.Single(final["splitGroups"]!.AsArray());
+        Assert.Equal(2, final["tabs"]!.AsArray().Count(t => t!["splitGroupID"] is not null));
+    }
+
+    [Fact]
     public void SpaceCommandsPreserveCollectionsAndCannotApplyToReplacedProfiles()
     {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;

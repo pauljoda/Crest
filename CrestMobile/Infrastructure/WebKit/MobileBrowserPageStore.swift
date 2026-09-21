@@ -1551,6 +1551,15 @@ final class MobileBrowserPageStore:
 }
 
 extension MobileBrowserPageStore: BrowserTabCopying {
+    func sourceForTabCopy(_ source: BrowserTab, in space: BrowserSpace) -> BrowserTab {
+        var observed = source
+        if let page = pagesByTabID[source.id], page.spaceID == space.id, page.profileID == space.profile.id {
+            observed.url = page.displayURL ?? source.url
+            if let title = page.title, !title.isEmpty { observed.title = title }
+        }
+        return observed
+    }
+
     func prepareTabCopy(from source: BrowserTab, to copy: inout BrowserTab, in space: BrowserSpace) {
         let state: Data?
         if let page = pagesByTabID[source.id], page.spaceID == space.id, page.profileID == space.profile.id {

@@ -283,19 +283,11 @@ extension BrowserSession {
         at date: Date = .now
     ) -> TabID? {
         #if CREST_CORE_BACKED
-        guard let source = space(id: spaceID)?.tabs.first(where: { $0.id == tabID }) else { return nil }
-        let copy = BrowserTab(title: source.title, url: source.url, nativeContent: source.nativeContent,
-            symbol: source.symbol, faviconURL: source.faviconURL, iconAccent: source.iconAccent,
-            iconMode: source.iconMode, placement: placement, lastActivatedAt: date,
-            customTitle: source.customTitle, titleModifiedAt: source.customTitle == nil ? nil : date)
-        guard let value = BrowserCoreSessionEditing.tabValue(copy),
-            let result = applyCoreEdit("tab.duplicate", in: spaceID, arguments: [
-                "tab": value, "index": requestedIndex as Any? ?? NSNull(), "select": shouldSelect
-            ], at: date), let id = result.tabId,
-            let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == id })
+        guard let result = applyCoreEdit("tab.copy", in: spaceID, arguments: [
+                "tabId": tabID.rawValue.uuidString, "ids": [UUID().uuidString], "placement": placement.rawValue,
+                "index": requestedIndex as Any? ?? NSNull(), "select": shouldSelect
+            ], at: date), let id = result.tabId
         else { return nil }
-        spaces[spaceIndex].tabs[tabIndex].faviconData = source.faviconData
         return TabID(rawValue: id)
         #else
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
@@ -1026,6 +1018,11 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        return applyCoreEdit("split.reorder", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString, "offset": offset
+        ], at: date)?.changed ?? false
+        #else
         guard offset != 0,
             let space = space(id: spaceID),
             let groupID = space.splitGroup(containing: tabID)
@@ -1043,6 +1040,7 @@ extension BrowserSession {
             in: spaceID,
             at: date
         )
+        #endif
     }
 
     /// "Separate All Tabs": every member of the group becomes a plain tab in
@@ -1053,6 +1051,10 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        return applyCoreEdit("split.dissolve", in: spaceID,
+            arguments: ["groupId": groupID.rawValue.uuidString], at: date)?.changed ?? false
+        #else
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }) else {
             return false
         }
@@ -1066,6 +1068,7 @@ extension BrowserSession {
         guard didClear else { return false }
         normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
         return true
+        #endif
     }
 
     /// Moves a whole group to a new placement, folder, or anchor as one
@@ -1086,6 +1089,14 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
+        #if CREST_CORE_BACKED
+        guard spaceID == selectedSpaceID else { return false }
+        return applyCoreEdit("split.move", in: spaceID, arguments: [
+            "groupId": groupID.rawValue.uuidString, "placement": placement.rawValue,
+            "folderId": requestedFolderID?.rawValue.uuidString as Any? ?? NSNull(),
+            "before": destinationTabID?.rawValue.uuidString as Any? ?? NSNull()
+        ], at: date)?.changed ?? false
+        #else
         guard spaceID == selectedSpaceID,
             BrowserSplitGroupPolicy.allowsMembership(placement: placement),
             let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID })
@@ -1116,6 +1127,7 @@ extension BrowserSession {
         }
         normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
         return true
+        #endif
     }
 
     /// Runs `BrowserSplitGroupNormalizer` and then dissolves any run left with

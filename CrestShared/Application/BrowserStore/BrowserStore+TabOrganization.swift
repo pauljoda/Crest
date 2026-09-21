@@ -4,8 +4,8 @@ import Foundation
 
 extension BrowserStore {
     func pinSelectedTab() {
-        guard selectedSpace != nil else { return }
-        session.moveSelectedTab(to: .pinned)
+        guard let id = selectedTab?.id, let spaceID = selectedSpace?.id,
+            moveSessionTab(id, in: spaceID, to: .pinned) else { return }
         persist(scope: .core)
     }
 
@@ -15,9 +15,9 @@ extension BrowserStore {
     }
 
     func saveSelectedTab() {
-        guard selectedSpace != nil else { return }
-        let folderID = selectedSpace?.folders.first { $0.location == .saved }?.id
-        session.moveSelectedTab(to: .saved, folderID: folderID)
+        guard let id = selectedTab?.id, let space = selectedSpace else { return }
+        let folderID = space.folders.first { $0.location == .saved }?.id
+        guard moveSessionTab(id, in: space.id, to: .saved, folderID: folderID) else { return }
         persist(scope: .core)
     }
 
@@ -49,8 +49,8 @@ extension BrowserStore {
 
         let moved: Bool
         if actualSourceSpaceID == session.selectedSpaceID {
-            moved = session.moveTab(
-                id,
+            moved = moveSessionTab(
+                id, in: actualSourceSpaceID,
                 to: placement,
                 folderID: folderID,
                 before: destinationTabID
@@ -97,8 +97,8 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == id })
         else { return false }
         guard
-            session.moveTab(
-                id,
+            moveSessionTab(
+                id, in: assignment.spaceID,
                 to: placement,
                 folderID: folderID,
                 before: destinationTabID
@@ -152,8 +152,8 @@ extension BrowserStore {
 
         let moved: Bool
         if sourceAssignment == destinationAssignment {
-            moved = session.moveTab(
-                item.tabID,
+            moved = moveSessionTab(
+                item.tabID, in: sourceAssignment.spaceID,
                 to: placement,
                 folderID: folderID,
                 before: destinationTabID,
@@ -341,7 +341,17 @@ extension BrowserStore {
 
     @discardableResult
     func duplicateTab(_ id: TabID, in spaceID: SpaceID) -> TabID? {
+        #if CREST_CORE_BACKED
+        guard let space = session.space(id: spaceID),
+            let result = family.execute("tab.copy", in: spaceID, arguments: [
+                "tabId": id.rawValue.uuidString, "ids": [UUID().uuidString],
+                "copyObservations": copyObservations(for: [id], in: space)
+            ], from: self, at: .now), let rawID = result.tabId else { return nil }
+        let duplicateID = TabID(rawValue: rawID)
+        prepareAcceptedCopies(result, from: space)
+        #else
         guard let duplicateID = session.duplicateTab(id, in: spaceID) else { return nil }
+        #endif
         persist(scope: .favicon(for: duplicateID))
         return duplicateID
     }
@@ -388,6 +398,14 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == item.tabID }),
             space.tabs.contains(where: { $0.id == targetTabID })
         else { return false }
+        #if CREST_CORE_BACKED
+        guard let result = family.execute("split.join", in: space.id, arguments: [
+            "tabId": item.tabID.rawValue.uuidString, "targetId": targetTabID.rawValue.uuidString,
+            "index": memberIndex as Any? ?? NSNull(), "ids": (0..<6).map { _ in UUID().uuidString },
+            "copyObservations": splitCopyObservations(source: item.tabID, target: targetTabID, in: space)
+        ], from: self, at: .now) else { return false }
+        persistSplitCommand(result, from: space)
+        #else
         var draft = session
         guard
             let copies = draft.addTabToSplitPreservingDurableTabs(
@@ -398,9 +416,11 @@ extension BrowserStore {
             )
         else { return false }
         commitSplitCopies(copies, in: space, session: draft)
+        #endif
         return true
     }
 
+    #if !CREST_CORE_BACKED
     private func commitSplitCopies(
         _ copies: [(source: TabID, copy: TabID)],
         in space: BrowserSpace,
@@ -421,6 +441,7 @@ extension BrowserStore {
                 writesCore: true, history: .nothing, favicons: .only(Set(copies.map(\.copy))))
         )
     }
+    #endif
 
     /// Removal relocates the departing tab past its run, so it goes through the
     /// same selected-Space requirement every other placement move has.
@@ -431,9 +452,14 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             session.selectedSpaceID == assignment.spaceID,
-            space.tabs.contains(where: { $0.id == tabID }),
-            session.removeTabFromSplit(tabID, in: assignment.spaceID)
+            space.tabs.contains(where: { $0.id == tabID })
         else { return false }
+        #if CREST_CORE_BACKED
+        guard family.execute("split.leave", in: space.id, arguments: ["tabId": tabID.rawValue.uuidString],
+            from: self, at: .now)?.changed == true else { return false }
+        #else
+        guard session.removeTabFromSplit(tabID, in: assignment.spaceID) else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -450,13 +476,20 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             session.selectedSpaceID == assignment.spaceID,
-            space.tabs.contains(where: { $0.id == tabID }),
-            session.moveSplitMember(
+            space.tabs.contains(where: { $0.id == tabID })
+        else { return false }
+        #if CREST_CORE_BACKED
+        guard family.execute("split.reorder", in: space.id,
+            arguments: ["tabId": tabID.rawValue.uuidString, "index": memberIndex],
+            from: self, at: .now)?.changed == true else { return false }
+        #else
+        guard session.moveSplitMember(
                 tabID,
                 toMemberIndex: memberIndex,
                 in: assignment.spaceID
             )
         else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -471,9 +504,15 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             session.selectedSpaceID == assignment.spaceID,
-            space.tabs.contains(where: { $0.id == tabID }),
-            session.moveSplitMember(tabID, by: offset, in: assignment.spaceID)
+            space.tabs.contains(where: { $0.id == tabID })
         else { return false }
+        #if CREST_CORE_BACKED
+        guard family.execute("split.reorder", in: space.id,
+            arguments: ["tabId": tabID.rawValue.uuidString, "offset": offset],
+            from: self, at: .now)?.changed == true else { return false }
+        #else
+        guard session.moveSplitMember(tabID, by: offset, in: assignment.spaceID) else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -507,9 +546,14 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard let space = space(matching: assignment),
-            let groupID = space.tabs.first(where: { $0.id == tabID })?.splitGroupID,
-            session.dissolveSplit(groupID, in: assignment.spaceID)
+            let groupID = space.tabs.first(where: { $0.id == tabID })?.splitGroupID
         else { return false }
+        #if CREST_CORE_BACKED
+        guard family.execute("split.dissolve", in: space.id, arguments: ["groupId": groupID.rawValue.uuidString],
+            from: self, at: .now)?.changed == true else { return false }
+        #else
+        guard session.dissolveSplit(groupID, in: assignment.spaceID) else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -683,8 +727,8 @@ extension BrowserStore {
     /// "Open Link in Split View": the link opens as a new tab beside the tab it
     /// came from, and the two present as one split.
     ///
-    /// Uses ordinary tab insertion in a draft session, then commits the new tab
-    /// and any durable destination copies together after the join succeeds.
+    /// The core commits the new tab and any durable destination copies together
+    /// after validating the complete join.
     @discardableResult
     func openLinkInSplit(
         url: URL,
@@ -694,6 +738,18 @@ extension BrowserStore {
         guard canOpenLinkInSplit(joining: targetTabID, matching: assignment),
             let space = space(matching: assignment)
         else { return nil }
+        #if CREST_CORE_BACKED
+        let date = Date.now
+        guard let tab = BrowserCoreSessionEditing.tabValue(BrowserTab(title: url.host() ?? url.absoluteString,
+            url: url, placement: .current, lastActivatedAt: date)),
+            let result = family.execute("split.open_link", in: space.id, arguments: [
+                "tab": tab, "targetId": targetTabID.rawValue.uuidString,
+                "ids": (0..<6).map { _ in UUID().uuidString },
+                "copyObservations": splitCopyObservations(source: nil, target: targetTabID, in: space)
+            ], from: self, at: date), let rawID = result.tabId else { return nil }
+        let openedID = TabID(rawValue: rawID)
+        persistSplitCommand(result, from: space)
+        #else
         var draft = session
         guard
             let openedID = draft.openTab(
@@ -705,6 +761,7 @@ extension BrowserStore {
             )
         else { return nil }
         commitSplitCopies(copies, in: space, session: draft)
+        #endif
         return openedID
     }
 
@@ -772,8 +829,16 @@ extension BrowserStore {
                     $0.id == destinationTabID
                         && $0.placement == placement
                         && $0.folderID == folderID
-                }),
-            session.moveSplitGroup(
+                })
+        else { return false }
+        #if CREST_CORE_BACKED
+        guard family.execute("split.move", in: space.id, arguments: [
+            "groupId": groupID.rawValue.uuidString, "placement": placement.rawValue,
+            "folderId": folderID?.rawValue.uuidString as Any? ?? NSNull(),
+            "before": destinationTabID?.rawValue.uuidString as Any? ?? NSNull()
+        ], from: self, at: .now)?.changed == true else { return false }
+        #else
+        guard session.moveSplitGroup(
                 groupID,
                 to: placement,
                 folderID: folderID,
@@ -781,6 +846,7 @@ extension BrowserStore {
                 in: assignment.spaceID
             )
         else { return false }
+        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }

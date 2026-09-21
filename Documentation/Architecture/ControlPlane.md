@@ -174,6 +174,8 @@ still need Chromium adapters. Its inspector currently opens DevTools without
 selecting a requested panel. Local-file opening also remains to be wired into the
 native command route; entering a `file://` archive path in the current address
 resolver does not reopen it.
+Chromium's page context menu still needs the existing Open Link in Split View
+action; the shared store command and WebKit menu route support it.
 The original message-based kernel's page creation and lifetime rules still need
 consolidation with the native composition. This boundary does not finish the core
 authority migration.
@@ -226,6 +228,14 @@ The core prepares the edit against its owned records, the native adapter decodes
 the resulting projection, and a revision-checked commit publishes both sides.
 Abandoned preparations do not change state. Favicon bytes stay native, and
 existing history and archive records do not cross the command boundary.
+
+Single-tab duplication, same-Space moves, durable close, and split creation,
+reordering, relocation and dissolution also execute against the authority's owned
+records. Opening a link into a split is one atomic command, including any copies
+of pinned or saved members. The core copies split metadata and returns asset
+references; native adapters supply current page URL/title observations and prepare
+opaque navigation history for accepted copies. Multi-selection batches still
+prepare value edits and remain part of the ownership migration.
 
 History visits and removal, archive restoration, automatic cleanup, retention and
 split identity metadata now prepare against the authority's owned records. The
