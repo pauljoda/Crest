@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json.Nodes;
 using CrestCore.Application;
 using CrestCore.Domain;
 
@@ -38,6 +39,47 @@ public static unsafe partial class Exports
         if (!ValidSessionInput(bytes, count) || count > 65536) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
         try { session.RegisterEngine(new(bytes, (int)count)); return CoreStatus.Ok; }
+        catch (Exception e) { return SessionError(e); }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_create_borrowed", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionCreateBorrowed(ulong source, ulong expected, byte* bytes, nuint count,
+        ulong* handle, ulong* revision, ulong* projection)
+    {
+        if (handle == null || revision == null || projection == null) return CoreStatus.InvalidArgument;
+        *handle = 0; *revision = 0; *projection = 0;
+        if (!ValidSessionInput(bytes, count) || count > 1024) return CoreStatus.InvalidArgument;
+        if (!Sessions.TryGetValue(source, out var owner)) return CoreStatus.InvalidHandle;
+        try
+        {
+            var request = JsonNode.Parse(new ReadOnlySpan<byte>(bytes, (int)count))!;
+            var child = owner.CreateBorrowed(expected, Guid.Parse(request["spaceId"]!.GetValue<string>()),
+                Guid.Parse(request["profileId"]!.GetValue<string>()));
+            var initial = child.PrepareBorrowedRefresh(child.Revision);
+            var childId = checked((ulong)Interlocked.Increment(ref nextHandle));
+            var commandId = checked((ulong)Interlocked.Increment(ref nextHandle));
+            if (!Sessions.TryAdd(childId, child)) return CoreStatus.InternalError;
+            if (!SessionCommands.TryAdd(commandId, initial))
+            { Sessions.TryRemove(childId, out _); child.Release(); return CoreStatus.InternalError; }
+            *handle = childId; *revision = child.Revision; *projection = commandId;
+            return CoreStatus.Ok;
+        }
+        catch (Exception e) { return SessionError(e); }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_prepare_borrowed_refresh", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionPrepareBorrowedRefresh(ulong handle, ulong expected, ulong* command)
+    {
+        if (command == null) return CoreStatus.InvalidArgument;
+        *command = 0;
+        if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
+        try
+        {
+            var value = session.PrepareBorrowedRefresh(expected);
+            var id = checked((ulong)Interlocked.Increment(ref nextHandle));
+            if (!SessionCommands.TryAdd(id, value)) return CoreStatus.InternalError;
+            *command = id; return CoreStatus.Ok;
+        }
         catch (Exception e) { return SessionError(e); }
     }
 
@@ -103,7 +145,11 @@ public static unsafe partial class Exports
         catch (Exception e) { return SessionError(e); }
     }
     [UnmanagedCallersOnly(EntryPoint = "crest_session_destroy", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionDestroy(ulong handle) => Sessions.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
+    public static int SessionDestroy(ulong handle)
+    {
+        if (!Sessions.TryRemove(handle, out var session)) return CoreStatus.InvalidHandle;
+        session.Release(); return CoreStatus.Ok;
+    }
     [UnmanagedCallersOnly(EntryPoint = "crest_session_release_checkpoint", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionReleaseCheckpoint(ulong handle) => Checkpoints.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
 

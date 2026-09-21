@@ -81,7 +81,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         temporary.pinTab(tabID)
         source.updateSpaceIdentity(assignment.spaceID, name: "Source renamed", symbol: "book", accent: .orange)
 
-        XCTAssertTrue(temporary.reconcileTemporarySource(from: source.session))
+        XCTAssertTrue(temporary.reconcileTemporarySource())
         XCTAssertEqual(temporary.selectedSpace?.name, "Source renamed")
         XCTAssertEqual(temporary.selectedSpace?.tabs.map(\.id), [tabID])
         XCTAssertEqual(temporary.selectedSpace?.pinnedTabs.map(\.id), [tabID])
@@ -91,11 +91,11 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         replacement.spaces[0] = BrowserSpace(
             id: assignment.spaceID, profile: BrowsingProfile(), name: "Replacement", symbol: "globe", accent: .indigo,
             folders: [], tabs: [], selectedTabID: nil)
-        XCTAssertFalse(temporary.reconcileTemporarySource(from: replacement))
-        XCTAssertEqual(temporary.session, before)
-        replacement.spaces.removeAll()
-        XCTAssertFalse(temporary.reconcileTemporarySource(from: replacement))
-        XCTAssertEqual(temporary.session, before)
+        source.session = replacement
+        XCTAssertFalse(temporary.reconcileTemporarySource())
+        XCTAssertTrue(temporary.session.spaces.isEmpty)
+        // Revocation hides access, but must not rewrite the local browsing records.
+        XCTAssertEqual(temporary.family.authoritativeSession, before)
     }
 
     func testTemporaryProfileSettingsUseTheSourceAuthorityImmediately() throws {

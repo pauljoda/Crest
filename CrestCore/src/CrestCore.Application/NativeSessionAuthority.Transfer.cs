@@ -72,6 +72,8 @@ public sealed partial class NativeSessionAuthority
             if (source.workspaceKind != BrowserWorkspaceKind.Temporary && destination.workspaceKind != BrowserWorkspaceKind.Temporary)
                 throw new BrowserRuleException("temporary_workspace_required");
             if (source.privateBrowsing != destination.privateBrowsing) throw new BrowserRuleException("private_workspace_boundary");
+            if (!ReferenceEquals(source.borrowedSource ?? source, destination.borrowedSource ?? destination))
+                throw new BrowserRuleException("different_profile_owner");
             var request = Parse(bytes);
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
             var spaceId = Id(request["spaceId"]); var profileId = Id(request["profileId"]);

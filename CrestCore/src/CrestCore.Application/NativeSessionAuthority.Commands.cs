@@ -72,11 +72,12 @@ public sealed partial class NativeSessionAuthority
     {
         lock (Gate)
         {
-            RequireWritable();
+            RequireWritable(requireCurrentBorrowedPolicy: false);
             command.RequireAccepted();
             if (command.ExpectedRevision != Revision) throw new BrowserRuleException("stale_session_revision");
             var nextRevision = checked(Revision + 1);
             document = command.Document;
+            borrowedSourceRevision = command.BorrowedSourceRevision ?? borrowedSourceRevision;
             Revision = nextRevision;
             return Revision;
         }
@@ -90,10 +91,18 @@ public sealed class NativeSessionCommand
     internal NativeSessionAuthority.SessionDocument Document { get; }
     public byte[] Output { get; }
     private readonly string? rejection;
-    internal void RequireAccepted() { if (rejection is not null) throw new BrowserRuleException(rejection); }
+    internal ulong? BorrowedSourceRevision { get; }
+    internal void RequireAccepted()
+    {
+        if (rejection is not null) throw new BrowserRuleException(rejection);
+        owner.RequireBorrowedRevision(BorrowedSourceRevision);
+    }
     internal NativeSessionCommand(NativeSessionAuthority owner, ulong revision,
         NativeSessionAuthority.SessionDocument document, byte[] output, string? rejection = null)
-    { this.owner = owner; ExpectedRevision = revision; Document = document; Output = output; this.rejection = rejection; }
+    {
+        this.owner = owner; ExpectedRevision = revision; Document = document; Output = output; this.rejection = rejection;
+        BorrowedSourceRevision = owner.BorrowedRevision;
+    }
     public ulong Commit() => owner.CommitCommand(this);
     public NativeSessionReplacement Reserve(ReadOnlySpan<byte> selection) => owner.ReserveCommand(this, selection);
 }

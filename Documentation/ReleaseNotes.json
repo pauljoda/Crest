@@ -1597,6 +1597,10 @@
     "chromium-native-document-output": {
       "category": "new",
       "message": "Export PDFs, save offline web archives, capture full pages, and print Chromium pages through Crest’s native controls."
+    },
+    "core-owned-temporary-window-profiles": {
+      "category": "improved",
+      "message": "Keep Blank Windows and detached tabs in step with their Space settings while preserving their separate browsing history."
     }
   }
 }

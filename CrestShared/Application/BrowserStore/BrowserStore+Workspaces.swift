@@ -13,6 +13,15 @@ extension BrowserStore {
     /// Borrows a Space's profile and policies while keeping browsing records
     /// in a separate, memory-only family. The window starts without a tab.
     func makeTemporaryWindowStore(in assignment: BrowserSpaceRuntimeAssignment) -> BrowserStore? {
+        guard space(matching: assignment) != nil else { return nil }
+        let settingsBrowser = profileSettingsBrowser.makeWindowStore(
+            restoresTabSelection: false, selectingSpaceID: assignment.spaceID)
+        #if CREST_CORE_BACKED
+        let workspaceFamily: BrowserStoreFamily
+        do { workspaceFamily = try settingsBrowser.family.makeBorrowed(in: assignment, settingsBrowser: settingsBrowser) }
+        catch { localSyncErrorDescription = "Core workspace creation failed: \(error)"; return nil }
+        let workspace = workspaceFamily.authoritativeSession
+        #else
         guard var space = space(matching: assignment) else { return nil }
         space.folders = []
         space.tabs = []
@@ -23,8 +32,9 @@ extension BrowserStore {
         let workspace = BrowserSession(
             spaces: [space], selectedSpaceID: space.id, defaultSpaceID: space.id
         )
-        let settingsBrowser = profileSettingsBrowser.makeWindowStore(
-            restoresTabSelection: false, selectingSpaceID: assignment.spaceID)
+        let workspaceFamily = BrowserStoreFamily(session: workspace, browsingMode: browsingMode,
+            temporarySourceAssignment: assignment, temporarySettingsBrowser: settingsBrowser)
+        #endif
         return BrowserStore(
             session: workspace,
             persistence: InMemoryBrowserSessionPersistence(),
@@ -32,9 +42,7 @@ extension BrowserStore {
             syncCoordinator: nil,
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
-            family: BrowserStoreFamily(
-                session: workspace, browsingMode: browsingMode,
-                temporarySourceAssignment: assignment, temporarySettingsBrowser: settingsBrowser),
+            family: workspaceFamily,
             linkPreferences: linkPreferences
         )
     }
@@ -53,7 +61,13 @@ extension BrowserStore {
     /// Refreshes borrowed identity and policy without importing any source tabs,
     /// folders, history, or archive. The scene closes when the source is gone.
     @discardableResult
-    func reconcileTemporarySource(from source: BrowserSession) -> Bool {
+    func reconcileTemporarySource() -> Bool {
+        #if CREST_CORE_BACKED
+        guard family.refreshBorrowed() else { return false }
+        persist(scope: .core)
+        return true
+        #else
+        guard let source = family.temporarySettingsBrowser?.session else { return false }
         guard let assignment = temporarySourceAssignment,
             let sourceSpace = source.space(id: assignment.spaceID), assignment.matches(sourceSpace),
             let local = family.authoritativeSession.space(id: assignment.spaceID)
@@ -66,6 +80,7 @@ extension BrowserStore {
         session = updated
         persist(scope: .core)
         return true
+        #endif
     }
 
     /// Transfers data ownership without invoking close/delete or archiving the

@@ -236,8 +236,7 @@ public sealed partial class BrowserContractsTests
         Assert.Single(cleared["spaces"]!.AsArray());
         Assert.Null(cleared["spaceDeletions"]);
         Assert.Equal("Private", cleared["spaces"]![0]!["name"]!.GetValue<string>());
-        session["coreWorkspaceKind"] = "temporary";
-        var borrowed = new NativeSessionAuthority(Bytes(session));
+        var borrowed = Borrow(authority, cleared);
         Assert.Throws<BrowserRuleException>(() => borrowed.PrepareCommand(1,
             SpaceCommand(session, "space.identity", new() { ["name"] = "Changed", ["symbol"] = "globe", ["accent"] = "teal" })));
     }

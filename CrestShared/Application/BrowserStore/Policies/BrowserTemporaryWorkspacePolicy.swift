@@ -1,3 +1,4 @@
+#if !CREST_CORE_BACKED
 enum BrowserTemporaryWorkspacePolicy {
     static func borrowing(_ source: BrowserSpace, keeping local: BrowserSpace) -> BrowserSpace {
         var borrowed = source
@@ -12,3 +13,4 @@ enum BrowserTemporaryWorkspacePolicy {
         return borrowed
     }
 }
+#endif

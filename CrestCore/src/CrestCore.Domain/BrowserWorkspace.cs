@@ -276,7 +276,7 @@ public sealed partial class BrowserSpace(SpaceId id, ProfileId profileId, string
     }
     public void ReconcileBorrowedPolicy(BrowserSpace source)
     {
-        if (source.Id != Id || source.ProfileId != ProfileId) throw new BrowserRuleException("profile_lease_revoked");
+        BorrowedProfilePolicy.RequireSource(Id, ProfileId, source.Id, source.ProfileId, !source.IsDeleting);
         Name = source.Name; Search = source.Search; Retention = source.Retention; ContentBlocking = source.ContentBlocking;
         RequiresAuthentication = source.RequiresAuthentication;
         SupportsDeviceAuthentication = source.SupportsDeviceAuthentication;

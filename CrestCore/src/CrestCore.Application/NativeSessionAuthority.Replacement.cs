@@ -52,6 +52,7 @@ public sealed partial class NativeSessionAuthority
             {
                 value.SyncTransaction?.Commit();
                 document = value.Document; Revision = value.Revision;
+                borrowedSourceRevision = value.BorrowedSourceRevision ?? borrowedSourceRevision;
             }
             replacement = null;
             return Revision;
@@ -62,14 +63,14 @@ public sealed partial class NativeSessionAuthority
     {
         lock (Gate)
         {
-            RequireWritable();
+            RequireWritable(requireCurrentBorrowedPolicy: false);
             command.RequireAccepted();
             if (command.ExpectedRevision != Revision)
                 throw new CrestCore.Domain.BrowserRuleException("stale_session_revision");
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(command.Document, Parse(selection));
             _ = checkpoint.Read("core");
-            replacement = new(this, command.Document, nextRevision, checkpoint);
+            replacement = new(this, command.Document, nextRevision, checkpoint, command.BorrowedSourceRevision);
             return replacement;
         }
     }
@@ -81,11 +82,15 @@ public sealed class NativeSessionReplacement : IDisposable
     private bool completed;
     internal NativeSessionAuthority.SessionDocument Document { get; }
     internal ulong Revision { get; }
+    internal ulong? BorrowedSourceRevision { get; }
     public NativeSessionCheckpoint Checkpoint { get; }
     internal NativeSyncTransaction? SyncTransaction { get; private set; }
     internal NativeSessionReplacement(NativeSessionAuthority owner, NativeSessionAuthority.SessionDocument document,
-        ulong revision, NativeSessionCheckpoint checkpoint)
-    { this.owner = owner; Document = document; Revision = revision; Checkpoint = checkpoint; }
+        ulong revision, NativeSessionCheckpoint checkpoint, ulong? borrowedSourceRevision = null)
+    {
+        this.owner = owner; Document = document; Revision = revision; Checkpoint = checkpoint;
+        BorrowedSourceRevision = borrowedSourceRevision;
+    }
     public void BindSync(NativeSyncTransaction value)
     {
         lock (NativeSessionAuthority.Gate)

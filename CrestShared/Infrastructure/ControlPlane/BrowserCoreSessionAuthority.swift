@@ -10,6 +10,8 @@ final class BrowserCoreSessionAuthority {
     private(set) var projection: BrowserSession
     @ObservationIgnored private var revision: UInt64
     @ObservationIgnored private let owner: SessionHandle
+    @ObservationIgnored private var borrowedSource: BrowserCoreSessionAuthority?
+    @ObservationIgnored private var borrowedSourceRevision: UInt64?
 
     init(session: BrowserSession, workspaceKind: String = "persistent", privateBrowsing: Bool = false) {
         projection = session
@@ -35,6 +37,47 @@ final class BrowserCoreSessionAuthority {
         } catch {
             preconditionFailure("Could not initialize the core session: \(error)")
         }
+    }
+
+    private init(owner: SessionHandle, revision: UInt64, projection: BrowserSession,
+        borrowedSource: BrowserCoreSessionAuthority) {
+        self.owner = owner; self.revision = revision; self.projection = projection
+        self.borrowedSource = borrowedSource; borrowedSourceRevision = borrowedSource.revision
+    }
+
+    func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment) throws -> BrowserCoreSessionAuthority {
+        let input = try JSONSerialization.data(withJSONObject: [
+            "spaceId": assignment.spaceID.rawValue.uuidString, "profileId": assignment.profileID.uuidString])
+        var handle: UInt64 = 0, initialRevision: UInt64 = 0, command: UInt64 = 0
+        let status = input.withUnsafeBytes {
+            crest_session_create_borrowed(owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress,
+                input.count, &handle, &initialRevision, &command)
+        }
+        guard status == CREST_OK else { throw CoreError.rejected(status) }
+        let child = SessionHandle(value: handle)
+        defer { crest_session_release_command(command) }
+        struct Result: Decodable { let session: BrowserSession }
+        let session = try JSONDecoder().decode(Result.self, from: readCommand(command)).session
+        return BrowserCoreSessionAuthority(owner: child, revision: initialRevision, projection: session, borrowedSource: self)
+    }
+
+    /// Only the source authority supplies policy. Native callers cannot substitute
+    /// a session snapshot or turn local organization into canonical profile edits.
+    @discardableResult
+    func refreshBorrowed() throws -> Bool {
+        guard let borrowedSource, borrowedSourceRevision != borrowedSource.revision else { return false }
+        var command: UInt64 = 0
+        let prepared = crest_session_prepare_borrowed_refresh(owner.value, revision, &command)
+        guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
+        defer { crest_session_release_command(command) }
+        let next = try decodeMetadataProjection(readCommand(command))
+        var accepted: UInt64 = 0
+        let committed = crest_session_commit_command(command, &accepted)
+        guard committed == CREST_OK else { throw CoreError.rejected(committed) }
+        revision = accepted; borrowedSourceRevision = borrowedSource.revision
+        let changed = projection != next
+        projection = next
+        return changed
     }
 
     func replace(with next: BrowserSession) throws {
@@ -222,24 +265,28 @@ final class BrowserCoreSessionAuthority {
         ])
         let handle = try prepareCommand(data)
         do {
-            let output = try readCommand(handle)
-            struct Result: Decodable { let session: BrowserSession }
-            var next = try JSONDecoder().decode(Result.self, from: output).session
-            for index in next.spaces.indices {
-                guard let existing = self.projection.space(id: next.spaces[index].id) else { continue }
-                guard next.spaces[index].profile == existing.profile else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
-                // Space commands return only metadata for existing Spaces.
-                // Collections and native assets are unchanged in the authority.
-                next.spaces[index].tabs = existing.tabs
-                next.spaces[index].folders = existing.folders
-                next.spaces[index].history = existing.history
-                next.spaces[index].archivedTabs = existing.archivedTabs
-            }
+            let next = try decodeMetadataProjection(readCommand(handle))
             return PreparedChange(handle: handle, session: next)
         } catch {
             crest_session_release_command(handle)
             throw error
         }
+    }
+
+    private func decodeMetadataProjection(_ output: Data) throws -> BrowserSession {
+        struct Result: Decodable { let session: BrowserSession }
+        var next = try JSONDecoder().decode(Result.self, from: output).session
+        for index in next.spaces.indices {
+            guard let existing = projection.space(id: next.spaces[index].id) else { continue }
+            guard next.spaces[index].profile == existing.profile else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+            // The command keeps these collections in the core. Reattach native
+            // read models and image assets without moving them across the ABI.
+            next.spaces[index].tabs = existing.tabs
+            next.spaces[index].folders = existing.folders
+            next.spaces[index].history = existing.history
+            next.spaces[index].archivedTabs = existing.archivedTabs
+        }
+        return next
     }
 
     func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, window: BrowserSession) throws -> PreparedChange {

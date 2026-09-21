@@ -10,10 +10,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let original = BrowserSession.preview
         let assignment = BrowserSpaceRuntimeAssignment(space: original.spaces[0])
         let tab = original.spaces[0].tabs[0]
-        var empty = original
-        empty.spaces[0].tabs = []; empty.spaces[0].selectedTabID = nil
         let a = BrowserCoreSessionAuthority(session: original)
-        let b = BrowserCoreSessionAuthority(session: empty, workspaceKind: "temporary")
+        let b = try a.makeBorrowed(in: assignment)
+        let empty = b.projection
         let command = try BrowserCoreSessionAuthority.prepareTransfer(source: a, sourceWindow: original,
             destination: b, destinationWindow: empty, tabID: tab.id, assignment: assignment, fallback: nil, selecting: true)
         XCTAssertThrowsError(try BrowserCoreSessionAuthority.commitTransfer(command, source: a, destination: b) { _, _ in

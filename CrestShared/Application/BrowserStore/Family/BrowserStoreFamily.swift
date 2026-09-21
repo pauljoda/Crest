@@ -11,6 +11,9 @@ final class BrowserStoreFamily {
     private var stores: [WeakStore] = []
     #if CREST_CORE_BACKED
     private let core: BrowserCoreSessionAuthority
+    private struct WeakFamily { weak var value: BrowserStoreFamily? }
+    private var borrowedFamilies: [WeakFamily] = []
+    private var borrowedSourceIsAvailable = true
     var authoritativeSession: BrowserSession { core.projection }
     #else
     private(set) var authoritativeSession: BrowserSession
@@ -34,8 +37,9 @@ final class BrowserStoreFamily {
         temporarySettingsBrowser: BrowserStore? = nil
     ) {
         #if CREST_CORE_BACKED
+        precondition(temporarySourceAssignment == nil, "Borrowed workspaces must be created by their core owner")
         core = BrowserCoreSessionAuthority(session: session,
-            workspaceKind: temporarySourceAssignment != nil ? "temporary" : browsingMode.isPrivate ? "private" : "persistent",
+            workspaceKind: browsingMode.isPrivate ? "private" : "persistent",
             privateBrowsing: browsingMode.isPrivate)
         #else
         authoritativeSession = session
@@ -43,6 +47,34 @@ final class BrowserStoreFamily {
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
     }
+
+    #if CREST_CORE_BACKED
+    private init(core: BrowserCoreSessionAuthority, assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) {
+        self.core = core; temporarySourceAssignment = assignment; temporarySettingsBrowser = settingsBrowser
+    }
+
+    func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) throws -> BrowserStoreFamily {
+        let child = BrowserStoreFamily(core: try core.makeBorrowed(in: assignment),
+            assignment: assignment, settingsBrowser: settingsBrowser)
+        borrowedFamilies.removeAll { $0.value == nil }
+        borrowedFamilies.append(WeakFamily(value: child))
+        return child
+    }
+
+    func refreshBorrowed() -> Bool {
+        guard temporarySourceAssignment != nil else { return false }
+        let previous = authoritativeSession
+        do {
+            let changed = try core.refreshBorrowed()
+            borrowedSourceIsAvailable = true
+            if changed { reconcileStores(after: previous, from: nil) }
+            return true
+        } catch {
+            borrowedSourceIsAvailable = false
+            return false
+        }
+    }
+    #endif
 
     /// Composition supplies the engine adapter once. Sync schedules it only
     /// after the core intent and accepted journal have committed together.
@@ -70,6 +102,13 @@ final class BrowserStoreFamily {
             return authoritativeSession
         }
         var current = authoritativeSession
+        #if CREST_CORE_BACKED
+        guard borrowedSourceIsAvailable, source.space(matching: assignment) != nil else {
+            current.spaces = []
+            return current
+        }
+        return current
+        #else
         guard let borrowed = source.space(matching: assignment),
             let local = current.space(id: assignment.spaceID)
         else {
@@ -78,6 +117,7 @@ final class BrowserStoreFamily {
         }
         current.spaces = [BrowserTemporaryWorkspacePolicy.borrowing(borrowed, keeping: local)]
         return current
+        #endif
     }
 
     func register(_ store: BrowserStore) {
@@ -286,6 +326,10 @@ final class BrowserStoreFamily {
                 from: previous, to: authoritativeSession, adoptingSelection: store === source
             )
         }
+        #if CREST_CORE_BACKED
+        borrowedFamilies.removeAll { $0.value == nil }
+        for child in borrowedFamilies.compactMap(\.value) { _ = child.refreshBorrowed() }
+        #endif
     }
 
     @discardableResult

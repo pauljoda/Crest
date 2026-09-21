@@ -220,6 +220,16 @@ identity is checked before editing; borrowed workspaces cannot change their sour
 profiles. The core enforces new private Space defaults and prevents removal of
 the last Space. Native profile cleanup and authentication remain platform work.
 
+Blank Windows and detached-tab windows request a borrowed workspace from the canonical core authority.
+The core binds the source Space and profile identity, inherits its engine and
+private-browsing registration, and creates empty local browsing collections.
+Policy refresh reads the source authority directly and preserves local tabs,
+folders, history, archive, split groups and selection. A native snapshot cannot
+create a borrower or replace its canonical policy. Prepared commands reject a
+changed source revision; source deletion, replacement or release revokes access.
+The Swift family publishes accepted projections and schedules native window
+reconciliation. It no longer merges borrowed profile policy itself.
+
 Portable archive import, reviewed import, and manual setup use one core workspace
 operation for both preview and commit. The core merges folders, enforces Space
 and pin limits, preserves existing profile identities, repairs imported identity
@@ -237,7 +247,8 @@ the core's owned records. The core decides placement, split cleanup and
 destination selection, and validates the source window's fallback selection. A workspace transfer reserves both revisions
 until the persistent owner's session and sync journal are saved; cancellation
 leaves both graphs unchanged. Private browsing and stale profile identities
-cannot cross that boundary. The native coordinator moves the existing page
+cannot cross that boundary, and matching IDs cannot transfer between unrelated
+profile owners. The native coordinator moves the existing page
 through the engine adapter after the state commit, without navigating it again.
 Compact transfer projections exclude history, archive and native image bytes.
 
@@ -366,7 +377,7 @@ integration column describes work still needed in the original UI composition.
 | --- | --- | --- |
 | `BrowserStore+TabLifecycle`, `BrowserSession+Tabs` | Tab commands, organization and accepted session ownership now used by the original UI | Direct commands against the owned session and native page effects |
 | `BrowserStoreSelection`, `BrowserWindowState` | Durable window-scoped selection, acknowledged group handoff and destination failure rollback | Full window chrome bindings |
-| `BrowserStore+Workspaces`, `BrowserStoreFamily` | Core session ownership and atomic cross-family edits in the original UI; workspace lifecycle in the kernel | Move native workspace orchestration and profile lifetime behind core commands |
+| `BrowserStore+Workspaces`, `BrowserStoreFamily` | Core session ownership, bound profile borrowing and atomic cross-family edits in the original UI; workspace lifecycle in the kernel | Consolidate native page disposal and profile lifetime with the kernel lifecycle contracts |
 | `BrowserStore+Spaces`, `BrowserSession+Organization`, address/search policy | Space/profile, organization, address resolution, search/content-blocking preferences and resumable deletion | Full branding and production profile deletion adapters |
 | `BrowserStore+Folders`, split-group domain | Nested folders, tab boundaries, subtree moves, filing, duplication, split mutations and multiple native page presentation | Batch close, appearance commands and full native UI bindings |
 | Page pools and platform page stores | Registered page/profile ports | Wrap both platform pools, preserve scene/runtime lifetime and recovery |

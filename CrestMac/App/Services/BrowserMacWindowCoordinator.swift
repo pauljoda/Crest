@@ -135,7 +135,7 @@ final class BrowserMacWindowCoordinator {
 
     func reconcileTemporaryWorkspaces() {
         let invalid = windows.values.filter {
-            $0.isTemporary && !$0.browser.reconcileTemporarySource(from: browser.session)
+            $0.isTemporary && !$0.browser.reconcileTemporarySource()
         }
         for model in invalid {
             model.pages.closeWindowWorkspace()

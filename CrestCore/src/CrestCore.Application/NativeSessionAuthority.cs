@@ -43,7 +43,7 @@ public sealed partial class NativeSessionAuthority
         {
             null or "persistent" => BrowserWorkspaceKind.Persistent,
             "private" => BrowserWorkspaceKind.Private,
-            "temporary" => BrowserWorkspaceKind.Temporary,
+            "temporary" => throw new BrowserRuleException("borrowed_source_required"),
             _ => throw new BrowserRuleException("invalid_workspace_kind")
         };
         privateBrowsing = input["corePrivateBrowsing"]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
@@ -147,11 +147,18 @@ public sealed partial class NativeSessionAuthority
                 throw new BrowserRuleException("space_deletion_in_progress");
         }
         Validate(next);
+        ValidateBorrowedDocument(next);
         return next;
     }
-    private void RequireWritable()
+    private void RequireWritable(bool requireCurrentBorrowedPolicy = true)
     {
+        if (released) throw new BrowserRuleException("session_released");
         if (replacement is not null) throw new BrowserRuleException("session_transaction_in_progress");
+        if (borrowedSource is not null)
+        {
+            _ = RequireBorrowedSource();
+            if (requireCurrentBorrowedPolicy) RequireBorrowedRevision(borrowedSourceRevision);
+        }
     }
     public ulong Commit(ulong expected, ReadOnlySpan<byte> delta)
     {

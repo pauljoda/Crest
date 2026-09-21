@@ -127,6 +127,13 @@ CREST_API crest_status_t CREST_CALL crest_session_create(
    as crest_core_register_adapter; never saved or synced with browser records. */
 CREST_API crest_status_t CREST_CALL crest_session_register_engine(
     uint64_t session, const uint8_t* descriptor, size_t length);
+/* Borrow a canonical profile into a new memory-only session. The projection is
+   read/released with the command API; creation is already accepted at revision 1. */
+CREST_API crest_status_t CREST_CALL crest_session_create_borrowed(
+    uint64_t source, uint64_t expected_revision, const uint8_t* request, size_t length,
+    uint64_t* out_session, uint64_t* out_revision, uint64_t* out_projection);
+CREST_API crest_status_t CREST_CALL crest_session_prepare_borrowed_refresh(
+    uint64_t session, uint64_t expected_revision, uint64_t* out_command);
 CREST_API crest_status_t CREST_CALL crest_session_commit(
     uint64_t session, uint64_t expected_revision, const uint8_t* delta, size_t length, uint64_t* out_revision);
 /* Semantic same-profile workspace transfer. Reserve excludes both writers until
