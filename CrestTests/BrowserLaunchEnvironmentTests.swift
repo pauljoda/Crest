@@ -291,7 +291,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
 
 
     @MainActor
-    func testProductionCompositionRedirectsFixtureInputsToInMemoryOwners() {
+    func testProductionCompositionRedirectsFixtureInputsToInMemoryOwners() throws {
         let environments = [
             BrowserLaunchEnvironment(
                 values: ["CREST_RESET_SESSION": "1"],
@@ -306,7 +306,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         ]
 
         for environment in environments {
-            let store = BrowserStore.production(
+            let store = try BrowserStore.production(
                 launchEnvironment: environment
             )
 

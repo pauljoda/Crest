@@ -78,6 +78,13 @@ public sealed class NativeSyncJournal
         ulong clock = fields["logicalClock"]!.GetValue<ulong>();
         var operation = request["operation"]!.GetValue<string>();
         var args = request["arguments"]!.AsObject();
+        if (operation == "recover")
+        {
+            var identity = Id(args["deviceID"]);
+            if (identity == Id(fields["deviceID"])) throw new BrowserRuleException("invalid_recovery_identity");
+            fields["deviceID"] = identity.ToString("D").ToUpperInvariant();
+            return new(fields, next, queued);
+        }
         JsonObject Version()
         {
             if (clock == ulong.MaxValue) throw new BrowserRuleException("sync_clock_exhausted");

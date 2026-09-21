@@ -8,6 +8,19 @@ import SwiftUI
 final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     static let extensions = ChromiumExtensionStore()
     private static var instance: CrestChromiumRoot?
+    private static var recoveryWindow: NSWindow?
+    private static var recoveryKeyMonitor: Any?
+    private static var launch: BrowserApplicationLaunch<CrestChromiumRoot>?
+    private struct RecoveryContent: View {
+        let launch: BrowserApplicationLaunch<CrestChromiumRoot>
+
+        var body: some View {
+            BrowserSessionRecoveryView(launch: launch)
+                .onChange(of: launch.value != nil, initial: true) {
+                    if let root = launch.value { CrestChromiumRoot.finishStart(root) }
+                }
+        }
+    }
     static var engineHost: (any CrestChromiumEngineHost)? { instance?.host }
     private let host: any CrestChromiumEngineHost
     private let application: BrowserMacApplication
@@ -48,12 +61,48 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     @objc(startWithHost:)
     static func start(host: any CrestChromiumEngineHost) {
+        guard instance == nil, launch == nil else { return }
+        let launch = BrowserApplicationLaunch { try CrestChromiumRoot(host: host) }
+        Self.launch = launch
+        if let root = launch.value { finishStart(root); return }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 580, height: 380),
+            styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window.title = "Crest Recovery"
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: RecoveryContent(launch: launch))
+        recoveryWindow = window
+        let menu = NSMenu()
+        let item = NSMenuItem()
+        let applicationMenu = NSMenu(title: ProductIdentity.name)
+        let quit = NSMenuItem(title: "Quit Crest", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quit.target = NSApp
+        applicationMenu.addItem(quit)
+        item.submenu = applicationMenu
+        menu.addItem(item)
+        NSApp.mainMenu = menu
+        recoveryKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+                event.charactersIgnoringModifiers == "q" {
+                NSApp.terminate(nil)
+                return nil
+            }
+            return event
+        }
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private static func finishStart(_ root: CrestChromiumRoot) {
         guard instance == nil else { return }
-        let root = CrestChromiumRoot(host: host)
         instance = root
         BrowserMacWindowPresentation.host = root
         BrowserMacAppIconPreference.restore()
         root.openWindow(.initial)
+        if let recoveryKeyMonitor { NSEvent.removeMonitor(recoveryKeyMonitor) }
+        recoveryKeyMonitor = nil
+        recoveryWindow?.close()
+        recoveryWindow = nil
         root.browserMenu = CrestChromiumMenu(shortcuts: root.application.shortcuts,
             actions: { [weak root] in root?.actions },
             perform: { [weak root] in root?.perform($0) },
@@ -68,9 +117,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private init(host: any CrestChromiumEngineHost) {
+    private init(host: any CrestChromiumEngineHost) throws {
         self.host = host
-        application = BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
+        application = try BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
             profileRemover: ChromiumProfileRemover(host: host))
         super.init()
         downloads = ChromiumDownloadAdapter(host: host) { [weak self] values, profileID in

@@ -6,7 +6,7 @@ import SQLite3
 /// share a SQLite transaction; native image bytes remain in the favicon store.
 /// The serial queue orders local saves, remote merges and upload acknowledgments.
 final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @unchecked Sendable {
-    enum StorageError: Error { case sqlite(Int32), invalidCheckpoint, unsupportedVersion, incompleteSession }
+    enum StorageError: Error { case sqlite(Int32), invalidCheckpoint, unsupportedVersion, incompleteSession, interruptedRestore }
     let url: URL
     private let queue = DispatchQueue(label: "com.pauldavis.crest.core-storage", qos: .utility)
     private var db: OpaquePointer?
@@ -17,8 +17,39 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
     init(url: URL, favicons: any BrowserFaviconStoring) throws {
         self.url = url
         self.favicons = favicons
+        guard !FileManager.default.fileExists(atPath: BrowserSessionRecovery.restoreMarker(for: url).path) else {
+            throw StorageError.interruptedRestore
+        }
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        // A writable SQLite connection can truncate a damaged WAL even when
+        // opening the main database fails. Validate existing files read-only
+        // before allowing that connection to alter recovery evidence.
+        if FileManager.default.fileExists(atPath: url.path) {
+            var validation: OpaquePointer?
+            // A cleanly closed WAL database has no sidecar. Apple's read-only
+            // VFS cannot recreate it; inspect that standalone checkpoint without
+            // WAL discovery. With a sidecar present, SQLite must read it normally.
+            let standalone = !FileManager.default.fileExists(atPath: url.path + "-wal")
+            let source = standalone ? url.absoluteString + "?immutable=1" : url.path
+            let opened = sqlite3_open_v2(source, &validation,
+                SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_URI, nil)
+            guard opened == SQLITE_OK, let validation else {
+                if let validation { sqlite3_close(validation) }
+                throw StorageError.sqlite(opened)
+            }
+            db = validation
+            do {
+                let version = try storageVersion()
+                guard version == 0 || version == 1 else { throw StorageError.unsupportedVersion }
+                if version == 1 {
+                    _ = try readSession()
+                    if let data = try read("journal") { _ = try BrowserSyncJournal.decodeSnapshot(data) }
+                }
+            } catch { sqlite3_close(validation); db = nil; throw error }
+            sqlite3_close(validation)
+            db = nil
+        }
         var connection: OpaquePointer?
         let result = sqlite3_open_v2(url.path, &connection,
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil)
@@ -29,13 +60,10 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
         db = connection
         do {
             sqlite3_busy_timeout(db, 2000)
+            let version = try storageVersion()
+            guard version == 0 || version == 1 else { throw StorageError.unsupportedVersion }
             try execute("PRAGMA journal_mode=WAL")
             try execute("PRAGMA synchronous=FULL")
-            let version = try statement("PRAGMA user_version") { stmt in
-                guard sqlite3_step(stmt) == SQLITE_ROW else { throw StorageError.invalidCheckpoint }
-                return sqlite3_column_int(stmt, 0)
-            }
-            guard version == 0 || version == 1 else { throw StorageError.unsupportedVersion }
             try transaction {
                 try execute("CREATE TABLE IF NOT EXISTS checkpoint (part TEXT PRIMARY KEY, data BLOB NOT NULL)")
                 try execute("PRAGMA user_version=1")
@@ -46,6 +74,45 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
         } catch { sqlite3_close(db); db = nil; throw error }
     }
     deinit { if let db { sqlite3_close(db) } }
+
+    private func storageVersion() throws -> Int32 {
+        try statement("PRAGMA user_version") { stmt in
+            guard sqlite3_step(stmt) == SQLITE_ROW else { throw StorageError.invalidCheckpoint }
+            return sqlite3_column_int(stmt, 0)
+        }
+    }
+
+    /// Once per successful launch, preserve a complete database snapshot. SQLite's
+    /// backup API includes committed WAL pages without copying live sidecars.
+    func saveRecoveryCheckpoint() throws {
+        try queue.sync {
+            guard try readSession() != nil, let journal = try read("journal") else { return }
+            _ = try BrowserSyncJournal.decodeSnapshot(journal)
+            let destination = BrowserSessionRecovery.checkpointURL(for: url)
+            let temporary = destination.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + ".sqlite")
+            defer { BrowserSessionRecovery.removeTemporaryDatabase(temporary) }
+            var target: OpaquePointer?
+            let opened = sqlite3_open(temporary.path, &target)
+            guard opened == SQLITE_OK, let target else {
+                if let target { sqlite3_close(target) }
+                throw StorageError.sqlite(opened)
+            }
+            do {
+                guard let backup = sqlite3_backup_init(target, "main", db, "main") else {
+                    throw StorageError.sqlite(sqlite3_errcode(target))
+                }
+                let step = sqlite3_backup_step(backup, -1)
+                let finished = sqlite3_backup_finish(backup)
+                guard step == SQLITE_DONE, finished == SQLITE_OK else {
+                    throw StorageError.sqlite(step == SQLITE_DONE ? finished : step)
+                }
+                let mode = sqlite3_exec(target, "PRAGMA journal_mode=DELETE", nil, nil, nil)
+                guard mode == SQLITE_OK else { throw StorageError.sqlite(mode) }
+            } catch { sqlite3_close(target); throw error }
+            guard sqlite3_close(target) == SQLITE_OK else { throw StorageError.sqlite(SQLITE_BUSY) }
+            try BrowserSessionRecovery.atomicReplace(temporary, destination: destination)
+        }
+    }
 
     /// Called only before stores or background staging exist. Legacy data is
     /// retained for rollback; an existing checkpoint always wins over it.

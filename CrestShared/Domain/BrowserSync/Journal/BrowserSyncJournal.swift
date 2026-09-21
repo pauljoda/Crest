@@ -53,6 +53,14 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     }
 
     #if CREST_CORE_BACKED
+    /// A restored checkpoint must not reuse versions issued after the backup.
+    /// Existing versions and pending uploads remain unchanged.
+    func recoveredForNewDevice() throws -> Self {
+        let owner = try core ?? BrowserCoreSyncJournal(self)
+        return try Self.acceptingCoreSnapshot(owner.applying("recover", preferences: preferences,
+            arguments: ["deviceID": UUID().uuidString]))
+    }
+
     private mutating func applyCore(_ operation: String, arguments: [String: Any]) throws {
         let owner = try core ?? BrowserCoreSyncJournal(self)
         let prepared = try owner.applying(operation, preferences: preferences, arguments: arguments)

@@ -2,29 +2,53 @@ import SwiftUI
 
 @main
 struct CrestMobileApp: App {
-    @State private var browser: BrowserStore
-    @State private var cloudSync: BrowserCloudSyncController
-    @State private var onboardingProgress: BrowserOnboardingProgressStore
-    @State private var onboardingCoordinator: BrowserOnboardingCoordinator
-    @State private var pages: MobileBrowserPageStore
-    @State private var spaceAccess: BrowserSpaceAccessController
-    @State private var shortcuts: BrowserShortcutStore
-    @State private var sidebarWidgets: BrowserSidebarWidgetRuntime
-    private let permissionCenter: BrowserSitePermissionCenter
-    private let pageStoreRegistry: MobileBrowserPageStoreRegistry
-    private let mediaSessions: BrowserMediaSessionStore
-    private let tabStateArchive: (any BrowserTabStateArchiving)?
-    private let windowStatePersistence: any BrowserWindowStatePersisting
-    private let startupBehavior: BrowserStartupBehavior
-    private let automaticallyPresentsOnboarding: Bool
-    private let usesEphemeralWebsiteDataStores: Bool
-    private let presentsInstalledApplicationUI: Bool
+    @State private var launch = BrowserApplicationLaunch { try BrowserMobileApplication() }
+
+    var body: some Scene {
+        WindowGroup(for: BrowserWindowID.self) { $windowID in
+            if let application = launch.value, application.presentsInstalledApplicationUI {
+                application.windowContent(id: windowID)
+            } else if launch.failure != nil {
+                BrowserSessionRecoveryView(launch: launch)
+            } else {
+                EmptyView()
+            }
+        } defaultValue: {
+            BrowserWindowID()
+        }
+        .commands {
+            if let application = launch.value {
+                MobileBrowserCommands(shortcuts: application.shortcuts)
+            }
+        }
+    }
+}
+
+@MainActor
+private final class BrowserMobileApplication {
+    let browser: BrowserStore
+    let cloudSync: BrowserCloudSyncController
+    let onboardingProgress: BrowserOnboardingProgressStore
+    let onboardingCoordinator: BrowserOnboardingCoordinator
+    let pages: MobileBrowserPageStore
+    let spaceAccess: BrowserSpaceAccessController
+    let shortcuts: BrowserShortcutStore
+    let sidebarWidgets: BrowserSidebarWidgetRuntime
+    let permissionCenter: BrowserSitePermissionCenter
+    let pageStoreRegistry: MobileBrowserPageStoreRegistry
+    let mediaSessions: BrowserMediaSessionStore
+    let tabStateArchive: (any BrowserTabStateArchiving)?
+    let windowStatePersistence: any BrowserWindowStatePersisting
+    let startupBehavior: BrowserStartupBehavior
+    let automaticallyPresentsOnboarding: Bool
+    let usesEphemeralWebsiteDataStores: Bool
+    let presentsInstalledApplicationUI: Bool
     /// Only an installed launch watches the kernel's pressure events. An isolated
     /// launch keeps its residency exactly where a test put it without involving
     /// the installed browser session.
-    private let monitorsMemoryPressure: Bool
+    let monitorsMemoryPressure: Bool
 
-    init() {
+    init() throws {
         #if CREST_REVIEW_BUILD
         setenv("CREST_ISOLATED_SESSION", "1", 1)
         setenv("CREST_ISOLATED_PERSISTENCE_ID", "core-native-ui-review", 0)
@@ -43,10 +67,7 @@ struct CrestMobileApp: App {
         if shouldReset && !usesIsolatedLaunch {
             BrowserLinkPreferenceStore.shared.reset()
         }
-        let browser =
-            usesIsolatedLaunch
-            ? BrowserStore.isolatedLaunch(launchEnvironment: launchEnvironment)
-            : BrowserStore.production(launchEnvironment: launchEnvironment)
+        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment)
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let cloudSync =
             usesIsolatedLaunch
@@ -116,28 +137,24 @@ struct CrestMobileApp: App {
             openPeek: { request in transientBrowsing.presentPeek(request) }
         )
 
-        _browser = State(initialValue: browser)
-        _cloudSync = State(initialValue: cloudSync)
-        _onboardingProgress = State(
-            initialValue: BrowserOnboardingProgressStore.launchStore(
-                isIsolated: usesIsolatedLaunch,
-                forceWelcome: forceOnboarding,
-                forceSetup: launchEnvironment.forcesMobileOnboardingSetup,
-                persistentIsolationID: launchEnvironment.persistentIsolationID
-            )
+        self.browser = browser
+        self.cloudSync = cloudSync
+        onboardingProgress = BrowserOnboardingProgressStore.launchStore(
+            isIsolated: usesIsolatedLaunch,
+            forceWelcome: forceOnboarding,
+            forceSetup: launchEnvironment.forcesMobileOnboardingSetup,
+            persistentIsolationID: launchEnvironment.persistentIsolationID
         )
         let onboardingCoordinator = BrowserOnboardingCoordinator()
-        _onboardingCoordinator = State(initialValue: onboardingCoordinator)
-        _pages = State(initialValue: pages)
-        _spaceAccess = State(initialValue: spaceAccess)
-        _sidebarWidgets = State(initialValue: sidebarWidgets)
+        self.onboardingCoordinator = onboardingCoordinator
+        self.pages = pages
+        self.spaceAccess = spaceAccess
+        self.sidebarWidgets = sidebarWidgets
         // A hardware keyboard on iPad reads the same rebindable command table
         // the Mac menu bar does, composed exactly the way the Mac composes it.
-        _shortcuts = State(
-            initialValue: BrowserShortcutStore.launch(
-                usesIsolatedLaunch: usesIsolatedLaunch,
-                reset: shouldReset
-            )
+        shortcuts = BrowserShortcutStore.launch(
+            usesIsolatedLaunch: usesIsolatedLaunch,
+            reset: shouldReset
         )
         self.permissionCenter = permissionCenter
         pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
@@ -184,44 +201,33 @@ struct CrestMobileApp: App {
         return .showcase(profileID: profileID)
     }
 
-    var body: some Scene {
-        WindowGroup(for: BrowserWindowID.self) { $windowID in
-            if presentsInstalledApplicationUI {
-                MobileBrowserWindowScene(
-                    id: windowID,
-                    rootBrowser: browser,
-                    permissionCenter: permissionCenter,
-                    pageStoreRegistry: pageStoreRegistry,
-                    spaceAccess: spaceAccess,
-                    tabStateArchive: tabStateArchive,
-                    windowStatePersistence: windowStatePersistence,
-                    startupBehavior: startupBehavior,
-                    monitorsMemoryPressure: monitorsMemoryPressure,
-                    usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
-                    onboardingProgress: onboardingProgress,
-                    onboardingCoordinator: onboardingCoordinator,
-                    automaticallyPresentsOnboarding: automaticallyPresentsOnboarding,
-                    mediaSessions: mediaSessions,
-                    sidebarWidgets: sidebarWidgets
-                )
-                .environment(cloudSync)
-                .environment(onboardingCoordinator)
-                .environment(
-                    \.browserSidebarWidgetRuntime,
-                    sidebarWidgets
-                )
-                .task {
-                    browser.family.configureSpaceDataCleanup(pageStoreRegistry, from: browser)
-                    await cloudSync.start()
-                }
-            } else {
-                EmptyView()
-            }
-        } defaultValue: {
-            BrowserWindowID()
-        }
-        .commands {
-            MobileBrowserCommands(shortcuts: shortcuts)
+    func windowContent(id windowID: BrowserWindowID) -> some View {
+        MobileBrowserWindowScene(
+            id: windowID,
+            rootBrowser: browser,
+            permissionCenter: permissionCenter,
+            pageStoreRegistry: pageStoreRegistry,
+            spaceAccess: spaceAccess,
+            tabStateArchive: tabStateArchive,
+            windowStatePersistence: windowStatePersistence,
+            startupBehavior: startupBehavior,
+            monitorsMemoryPressure: monitorsMemoryPressure,
+            usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
+            onboardingProgress: onboardingProgress,
+            onboardingCoordinator: onboardingCoordinator,
+            automaticallyPresentsOnboarding: automaticallyPresentsOnboarding,
+            mediaSessions: mediaSessions,
+            sidebarWidgets: sidebarWidgets
+        )
+        .environment(cloudSync)
+        .environment(onboardingCoordinator)
+        .environment(
+            \.browserSidebarWidgetRuntime,
+            sidebarWidgets
+        )
+        .task {
+            self.browser.family.configureSpaceDataCleanup(self.pageStoreRegistry, from: self.browser)
+            await self.cloudSync.start()
         }
     }
 }

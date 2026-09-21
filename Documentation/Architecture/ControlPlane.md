@@ -342,8 +342,18 @@ than array position. Deleted members and tombstoned payloads are not resurrected
 New incompatible schemas still require a newer client.
 
 Live cross-engine CloudKit validation must compare record identities and versions,
-including fresh-profile adoption and repeated merges. An unreadable transactional store currently
-stops startup with the file preserved; a native recovery flow is still needed.
+including fresh-profile adoption and repeated merges. An unreadable transactional
+store opens native recovery UI before browser services or sync are constructed.
+Successful launches preserve a complete SQLite checkpoint when session and journal
+data are available. Restoring it validates every session part, retains the original
+database and sidecars in a separate recovery directory, and uses an interruption
+marker so a partial restore cannot become a fresh-install seed. A session saved by
+a newer storage version requires an app update instead of offering rollback.
+The core gives a restored journal a new local device identity while preserving
+record versions and pending uploads. The matching CloudKit transport discards its
+newer cursor and requires a complete merge before sending changes; account-change
+confirmation remains enforced. Recovery checkpoints may predate recent local
+edits, and the confirmation explains that limitation.
 Native presentation codecs continue to normalize platform glyphs and branding values.
 
 Value-only operations still use `crest_core_edit_session`, which receives one

@@ -31,7 +31,7 @@ final class BrowserMacApplication {
     let presentsInstalledApplicationUI: Bool
 
     init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil,
-        profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover()) {
+        profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover()) throws {
         #if CREST_REVIEW_BUILD
         setenv("CREST_ISOLATED_SESSION", "1", 1)
         #if CREST_CHROMIUM_HOST
@@ -66,10 +66,7 @@ final class BrowserMacApplication {
         if shouldReset && !usesIsolatedLaunch {
             BrowserLinkPreferenceStore.shared.reset()
         }
-        let browser =
-            usesIsolatedLaunch
-            ? BrowserStore.isolatedLaunch(launchEnvironment: launchEnvironment)
-            : BrowserStore.production(launchEnvironment: launchEnvironment)
+        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment)
         let privateBrowser = BrowserStore.privateBrowsing()
         let cloudSync =
             usesIsolatedLaunch

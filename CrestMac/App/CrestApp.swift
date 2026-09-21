@@ -4,45 +4,21 @@ import SwiftUI
 @main
 #endif
 struct CrestApp: App {
-    @State private var application = BrowserMacApplication()
-
-    private var browser: BrowserStore { application.browser }
-    private var cloudSync: BrowserCloudSyncController { application.cloudSync }
-    private var onboardingProgress: BrowserOnboardingProgressStore { application.onboardingProgress }
-    private var onboardingCoordinator: BrowserOnboardingCoordinator { application.onboardingCoordinator }
-    private var pages: BrowserPagePool { application.pages }
-    private var chrome: BrowserChromeState { application.chrome }
-    private var transientBrowsing: BrowserTransientBrowsingCoordinator { application.transientBrowsing }
-    private var windowCoordinator: BrowserMacWindowCoordinator { application.windowCoordinator }
-    private var privateBrowser: BrowserStore { application.privateBrowser }
-    private var privatePages: BrowserPagePool { application.privatePages }
-    private var privateChrome: BrowserChromeState { application.privateChrome }
-    private var privateTransientBrowsing: BrowserTransientBrowsingCoordinator { application.privateTransientBrowsing }
-    private var spaceAccess: BrowserSpaceAccessController { application.spaceAccess }
-    private var shortcuts: BrowserShortcutStore { application.shortcuts }
-    private var spaceSettingsPresentation: BrowserSpaceSettingsPresentationState { application.spaceSettingsPresentation }
-    private var windowTransparency: BrowserWindowTransparencyStore { application.windowTransparency }
-    private var splitFocus: BrowserSplitFocusPreferenceStore { application.splitFocus }
-    private var softwareUpdates: BrowserSoftwareUpdateService { application.softwareUpdates }
-    private var sidebarWidgets: BrowserSidebarWidgetRuntime { application.sidebarWidgets }
-    private var pagePoolRegistry: BrowserPagePoolRegistry { application.pagePoolRegistry }
-    private var systemNowPlaying: BrowserSystemNowPlayingCoordinator? { application.systemNowPlaying }
-    private var startupBehavior: BrowserStartupBehavior { application.startupBehavior }
-    private var presentsInstalledApplicationUI: Bool { application.presentsInstalledApplicationUI }
+    @State private var launch = BrowserApplicationLaunch { try BrowserMacApplication() }
 
     var body: some Scene {
         WindowGroup(
             ProductIdentity.name,
-            id: presentsInstalledApplicationUI
+            id: (launch.value?.presentsInstalledApplicationUI ?? true)
                 ? BrowserSceneID.browser.rawValue
                 : "crest-xctest-host",
             for: BrowserMacWindowRequest.self
         ) { $request in
-            if presentsInstalledApplicationUI {
+            if let application = launch.value, application.presentsInstalledApplicationUI {
                 Group {
-                    if onboardingProgress.isLaunchGateActive {
+                    if application.onboardingProgress.isLaunchGateActive {
                         BrowserMacOnboardingLaunchGate(
-                            coordinator: onboardingCoordinator
+                            coordinator: application.onboardingCoordinator
                         )
                     } else {
                         application.browserWindowContent(request ?? .initial)
@@ -50,8 +26,10 @@ struct CrestApp: App {
                 }
                 .task {
                     BrowserMacAppIconPreference.restore()
-                    await cloudSync.start()
+                    await application.cloudSync.start()
                 }
+            } else if launch.failure != nil {
+                BrowserSessionRecoveryView(launch: launch)
             } else {
                 EmptyView()
             }
@@ -66,19 +44,21 @@ struct CrestApp: App {
             matching: BrowserExternalLinkScenePolicy.primarySceneActivation
         )
         .commands {
-            BrowserCommands(
-                browser: browser,
-                pages: pages,
-                chrome: chrome,
-                shortcuts: shortcuts,
-                softwareUpdates: softwareUpdates,
-                spaceAccess: spaceAccess
-            )
+            if let application = launch.value {
+                BrowserCommands(
+                    browser: application.browser,
+                    pages: application.pages,
+                    chrome: application.chrome,
+                    shortcuts: application.shortcuts,
+                    softwareUpdates: application.softwareUpdates,
+                    spaceAccess: application.spaceAccess
+                )
+            }
         }
 
         WindowGroup(ProductIdentity.name, id: BrowserSceneID.blankWindow.rawValue, for: BrowserMacWindowRequest.self) {
             $request in
-            if presentsInstalledApplicationUI, let request {
+            if let application = launch.value, application.presentsInstalledApplicationUI, let request {
                 application.browserWindowContent(request)
             }
         }
@@ -95,17 +75,17 @@ struct CrestApp: App {
             id: BrowserSceneID.quickWindow.rawValue,
             for: BrowserQuickWindowRequest.self
         ) { $request in
-            if presentsInstalledApplicationUI {
+            if let application = launch.value, application.presentsInstalledApplicationUI {
                 BrowserQuickWindowScene(
                     request: $request,
-                    browser: browser,
-                    pages: pages,
-                    spaceAccess: spaceAccess,
-                    pagePoolRegistry: pagePoolRegistry,
-                    windowCoordinator: windowCoordinator
+                    browser: application.browser,
+                    pages: application.pages,
+                    spaceAccess: application.spaceAccess,
+                    pagePoolRegistry: application.pagePoolRegistry,
+                    windowCoordinator: application.windowCoordinator
                 )
                 .modifier(BrowserChromeAppearancePersistence())
-                .environment(windowTransparency)
+                .environment(application.windowTransparency)
                 .frame(
                     minWidth: BrowserQuickWindowLayout.minimumWidth,
                     minHeight: BrowserQuickWindowLayout.minimumHeight
@@ -136,7 +116,7 @@ struct CrestApp: App {
         .restorationBehavior(.disabled)
 
         Window("Private Browsing", id: BrowserSceneID.privateBrowser.rawValue) {
-            if presentsInstalledApplicationUI {
+            if let application = launch.value, application.presentsInstalledApplicationUI {
                 application.privateWindowContent
             } else {
                 EmptyView()
@@ -153,8 +133,8 @@ struct CrestApp: App {
             "What's New in Crest",
             id: BrowserSceneID.softwareUpdateDetails.rawValue
         ) {
-            if presentsInstalledApplicationUI {
-                BrowserSoftwareUpdateDetailsView(model: softwareUpdates.model)
+            if let application = launch.value, application.presentsInstalledApplicationUI {
+                BrowserSoftwareUpdateDetailsView(model: application.softwareUpdates.model)
                     .tint(CrestBrandTheme.accent)
             } else {
                 EmptyView()
@@ -167,15 +147,15 @@ struct CrestApp: App {
         .restorationBehavior(.disabled)
 
         Window("Crest Setup", id: BrowserOnboardingCoordinator.sceneID) {
-            if presentsInstalledApplicationUI {
+            if let application = launch.value, application.presentsInstalledApplicationUI {
                 BrowserOnboardingWindow(
-                    request: onboardingCoordinator.request,
-                    browser: browser,
-                    cloudSync: cloudSync,
-                    progress: onboardingProgress,
-                    spaceAccess: spaceAccess
+                    request: application.onboardingCoordinator.request,
+                    browser: application.browser,
+                    cloudSync: application.cloudSync,
+                    progress: application.onboardingProgress,
+                    spaceAccess: application.spaceAccess
                 )
-                .task { await cloudSync.start() }
+                .task { await application.cloudSync.start() }
             } else {
                 EmptyView()
             }
@@ -185,7 +165,7 @@ struct CrestApp: App {
         .windowStyle(.hiddenTitleBar)
         // Setup is opened by the launch gate on a first run and by Settings on
         // request. Restoring it instead would reopen a finished wizard over the
-        // browser on every launch after the one that ran it — a window nothing
+        // application.browser on every launch after the one that ran it — a window nothing
         // asked for, standing in front of everything the sidebar needs to hit.
         .restorationBehavior(.disabled)
     }

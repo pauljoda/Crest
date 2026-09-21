@@ -1629,6 +1629,10 @@
     "preserve-archive-sync-round-trip": {
       "category": "fixed",
       "message": "Keep archived tabs stable when syncing to a new device."
+    },
+    "recover-unreadable-core-session": {
+      "category": "fixed",
+      "message": "Recover an unreadable browsing session from a saved checkpoint while preserving the original files."
     }
   }
 }

@@ -6,17 +6,17 @@ import CryptoKit
 extension BrowserStore {
     static func production(
         launchEnvironment: BrowserLaunchEnvironment = .current
-    ) -> BrowserStore {
+    ) throws -> BrowserStore {
         // Keep the persistence boundary safe even if a future composition root
         // accidentally calls `production` for a fixture or preview launch.
         // Sample Spaces must never replace the installed session or be staged as
         // Cloud tombstones for the user's real Space IDs.
         if BrowserLaunchIsolationPolicy.requiresIsolation(launchEnvironment) {
-            return isolatedLaunch(launchEnvironment: launchEnvironment)
+            return try isolatedLaunch(launchEnvironment: launchEnvironment)
         }
         #if CREST_CORE_BACKED
-        let storage = transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence(),
-            journal: UserDefaultsBrowserSyncJournalPersistence(), isolationID: nil)
+        let storage = try transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence(),
+            journal: UserDefaultsBrowserSyncJournalPersistence(), isolationID: nil, environment: launchEnvironment)
         return production(persistence: storage, syncPersistence: storage.journalPersistence,
             credentialVault: KeychainCredentialVault())
         #else
@@ -58,9 +58,9 @@ extension BrowserStore {
 
     static func isolatedLaunch(
         launchEnvironment: BrowserLaunchEnvironment
-    ) -> BrowserStore {
+    ) throws -> BrowserStore {
         if let isolationID = launchEnvironment.persistentIsolationID {
-            if let store = persistentIsolatedLaunch(
+            if let store = try persistentIsolatedLaunch(
                 launchEnvironment: launchEnvironment,
                 isolationID: isolationID
             ) {
@@ -94,7 +94,7 @@ extension BrowserStore {
     private static func persistentIsolatedLaunch(
         launchEnvironment: BrowserLaunchEnvironment,
         isolationID: String
-    ) -> BrowserStore? {
+    ) throws -> BrowserStore? {
         let namespace = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
             isolationID: isolationID
         )
@@ -104,8 +104,8 @@ extension BrowserStore {
             faviconStore: InMemoryBrowserFaviconStore()
         )
         #if CREST_CORE_BACKED
-        let persistence = transactionalStorage(legacy: legacy,
-            journal: InMemoryBrowserSyncJournalPersistence(), isolationID: isolationID)
+        let persistence = try transactionalStorage(legacy: legacy,
+            journal: InMemoryBrowserSyncJournalPersistence(), isolationID: isolationID, environment: launchEnvironment)
         #else
         let persistence = legacy
         #endif
@@ -134,7 +134,9 @@ extension BrowserStore {
 
     #if CREST_CORE_BACKED
     private static func transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence,
-        journal: any BrowserSyncJournalPersisting, isolationID: String?) -> BrowserTransactionalSessionPersistence {
+        journal: any BrowserSyncJournalPersisting, isolationID: String?,
+        environment: BrowserLaunchEnvironment) throws -> BrowserTransactionalSessionPersistence {
+        var storeURL: URL?
         do {
             var directory = try FileManager.default.url(for: .applicationSupportDirectory,
                 in: .userDomainMask, appropriateFor: nil, create: true)
@@ -151,14 +153,15 @@ extension BrowserStore {
             } else {
                 icons = BrowserFaviconFileStore(rootDirectory: directory.appendingPathComponent("Favicons", isDirectory: true))
             }
-            let storage = try BrowserTransactionalSessionPersistence(
-                url: directory.appendingPathComponent("session.sqlite"), favicons: icons)
+            let url = directory.appendingPathComponent("session.sqlite")
+            storeURL = url
+            let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: icons)
             try storage.migrateIfNeeded(session: migrationSession(legacy), journal: journal.load())
+            try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
+            try? storage.saveRecoveryCheckpoint()
             return storage
         } catch {
-            // Do not replace an unreadable database with seed data or stage
-            // deletions from it. Recovery UI can safely use the preserved file.
-            preconditionFailure("Cannot open the core session store: \(error)")
+            throw BrowserSessionStartupFailure(storeURL: storeURL, underlying: error)
         }
     }
     private static func migrationSession(_ legacy: UserDefaultsBrowserSessionPersistence) throws -> BrowserSession? {
