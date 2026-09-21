@@ -223,7 +223,7 @@ public static class NativeSessionEditor
             var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o =>
                 NativeSessionAuthority.Id(o!["tabId"]) == source.Value);
             var tab = space.Tab(copy);
-            if (tab.Kind == TabKind.Web && observation is not null)
+            if (tab.Content.IsWebPage && observation is not null)
                 tab.Observe(observation["url"]?.GetValue<string>(), observation["title"]!.GetValue<string>(), false, false, false, null);
             copies.Add((JsonNode)new JsonObject { ["source"] = source.Value.ToString(), ["copy"] = copy.Value.ToString() });
         }

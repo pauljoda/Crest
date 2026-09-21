@@ -15,6 +15,7 @@ public sealed partial class NativeSessionAuthority
             if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
             var request = Parse(bytes);
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+            RequireAccessibleCommand(request);
             if (request["operation"]!.GetValue<string>() == "workspace.import") return PrepareWorkspaceCommand(expected, request);
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
             var operation = request["operation"]!.GetValue<string>();

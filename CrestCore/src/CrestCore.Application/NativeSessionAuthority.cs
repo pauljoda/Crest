@@ -73,11 +73,16 @@ public sealed partial class NativeSessionAuthority
     private static void Validate(SessionDocument value)
     {
         var spaces = value.Spaces;
-        var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>();
+        var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in spaces)
         {
             if (!ids.Add(Id(space.Metadata["id"]))) throw new BrowserRuleException("duplicate_space");
-            _ = Id(space.Metadata["profile"]!["id"]);
+            // A Space is exactly one profile and a profile belongs to exactly one
+            // Space. Two Spaces sharing a profile would share cookies, credentials
+            // and extension access across an isolation boundary the user relies on,
+            // and would make "which Space owns this profile" unanswerable.
+            if (!profiles.Add(Id(space.Metadata["profile"]!["id"])))
+                throw new BrowserRuleException("duplicate_space_profile");
             foreach (var tab in space.Sections["tabs"])
                 if (!tabs.Add(Id(tab!["id"]))) throw new BrowserRuleException("duplicate_tab");
         }

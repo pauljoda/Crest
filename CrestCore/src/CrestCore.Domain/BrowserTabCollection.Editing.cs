@@ -103,7 +103,7 @@ public sealed partial class BrowserTabCollection
         if (removed.Length != removing.Count || !deleting && removed.Any(t => t.Placement != TabPlacement.Current))
             throw new BrowserRuleException("unknown_current_tab");
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
-        foreach (var tab in removed.Where(t => t.Kind != TabKind.StartPage))
+        foreach (var tab in removed.Where(t => !t.Content.IsStartPage))
         {
             var value = tab.Capture() with { SplitGroupId = null };
             if (resetArchivePlacement) value = value with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null };

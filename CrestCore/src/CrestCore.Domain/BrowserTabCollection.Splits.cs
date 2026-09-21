@@ -40,7 +40,7 @@ public sealed partial class BrowserTabCollection
     public SplitJoin JoinSplit(TabId sourceId, TabId targetId, int? memberIndex, IIdSource ids, DateTimeOffset now)
     {
         var source = Tab(sourceId); var target = Tab(targetId);
-        if (sourceId == targetId || source.Kind == TabKind.StartPage || target.Kind == TabKind.StartPage)
+        if (sourceId == targetId || source.Content.IsStartPage || target.Content.IsStartPage)
             throw new BrowserRuleException("invalid_split");
         var targetMembers = SplitMembers(targetId);
         bool sameGroup = targetMembers.Any(t => t.Id == sourceId);

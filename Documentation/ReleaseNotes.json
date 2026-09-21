@@ -1701,6 +1701,18 @@
     "chromium-extension-windows-and-side-panels": {
       "category": "new",
       "message": "Windows created by extensions open as Crest windows in the matching Space, and extensions with a side panel can open it beside the current page from their toolbar menu."
+    },
+    "native-core-tab-content-and-access": {
+      "category": "internal",
+      "message": "Organize native core tab content and enforce Space access during session commands."
+    },
+    "native-core-startup-recovery": {
+      "category": "internal",
+      "message": "Preserve installed session data when the native core first takes ownership."
+    },
+    "chromium-side-panel-command-routing": {
+      "category": "internal",
+      "message": "Route extension side panel requests to the owning Chromium window."
     }
   }
 }

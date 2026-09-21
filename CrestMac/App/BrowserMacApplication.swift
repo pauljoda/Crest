@@ -78,6 +78,8 @@ final class BrowserMacApplication {
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
         let spaceAccess = BrowserSpaceAccessController()
+        browser.attachSpaceAccess(spaceAccess)
+        privateBrowser.attachSpaceAccess(spaceAccess)
         let spaceSettingsPresentation =
             BrowserSpaceSettingsPresentationState()
         let permissionCenter =

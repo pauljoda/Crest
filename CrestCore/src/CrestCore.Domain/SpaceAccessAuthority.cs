@@ -14,6 +14,14 @@ public sealed class SpaceAccessAuthority
     public bool IsLocked(SpaceAccessAssignment assignment, bool requiresAuthentication) =>
         requiresAuthentication && !unlocked.Contains(assignment);
 
+    /// Command gate for the session authority. A Space whose durable policy
+    /// requires authentication stays unreadable and unwritable in this process
+    /// until a matching grant exists, independent of what any view believes.
+    public void RequireAccessible(SpaceAccessAssignment assignment, bool requiresAuthentication)
+    {
+        if (IsLocked(assignment, requiresAuthentication)) throw new BrowserRuleException("space_locked");
+    }
+
     /// Zero means no authentication is needed. Nonzero request IDs never repeat
     /// within this authority, including after cancellation and retry.
     public ulong Begin(SpaceAccessAssignment assignment, bool requiresAuthentication)

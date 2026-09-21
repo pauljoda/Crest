@@ -12,6 +12,32 @@ public sealed partial class BrowserContractsTests
         Encoding.UTF8.GetBytes(new JsonObject { ["version"] = 1, ["operation"] = operation,
             ["space"] = space.DeepClone(), ["arguments"] = arguments, ["now"] = 800000001.0 }.ToJsonString());
 
+    [Theory]
+    [InlineData("getting-started")]
+    [InlineData("future-native-view")]
+    public void NativeContentKindsSurviveDomainRestoreAndSessionWrite(string kind)
+    {
+        var fixture = SavedSession();
+        var saved = fixture.Document["session"]!["spaces"]![0]!["tabs"]![0]!.AsObject();
+        saved["url"] = null;
+        saved["savedURL"] = null;
+        saved["title"] = "Stored native title";
+        saved["nativeContent"] = new JsonObject { ["kind"] = kind, ["resourceID"] = Guid.NewGuid().ToString() };
+
+        var document = new LegacySessionDocument(fixture.Document);
+        var state = document.Read(new SystemIdSource());
+        var tab = BrowserTab.Restore(state.Spaces[0].Tabs[0]);
+        Assert.Equal(TabRenderType.UiNative, tab.Content.RenderType);
+        Assert.Equal(kind, tab.Content.NativeKind);
+        Assert.Equal("Stored native title", tab.Title);
+        Assert.Equal(TabPhase.Ready, tab.Phase);
+
+        var written = document.Write(state);
+        var output = written["session"]!["spaces"]![0]!["tabs"]![0]!;
+        Assert.True(JsonNode.DeepEquals(saved["nativeContent"], output["nativeContent"]));
+        Assert.Equal("Stored native title", output["title"]!.GetValue<string>());
+    }
+
     [Fact]
     public void NativeOpenAndClosePreserveDurableTabsAndPublishTheRequestedSelection()
     {

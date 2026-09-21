@@ -102,11 +102,59 @@ static void session_boundary(void) {
     assert(crest_session_destroy(session) == CREST_INVALID_HANDLE);
     assert(crest_session_checkpoint(session, 1, (const uint8_t*)selection, (size_t)size, &checkpoint) == CREST_INVALID_HANDLE);
 }
+/* A session that consults the access authority refuses commands against a
+ * locked Space until that exact Space/profile pair holds a grant. */
+static void locked_space_boundary(void) {
+    static const char* tab_id = "66666666-6666-6666-6666-666666666666";
+    char json[1024];
+    int size = snprintf(json, sizeof(json),
+        "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},"
+        "\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"accessPolicy\":\"deviceOwnerAuthentication\","
+        "\"tabs\":[{\"id\":{\"rawValue\":\"%s\"},\"title\":\"Page\",\"url\":\"https://example.com/\","
+        "\"placement\":\"current\",\"lastActivatedAt\":800000000}"
+        "],\"selectedTabID\":{\"rawValue\":\"%s\"},\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}",
+        space_id, space_id, profile_id, tab_id, tab_id);
+    assert(size > 0 && (size_t)size < sizeof(json));
+    uint64_t session = 0, revision = 0, access = 0, command = 0, request = 0;
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK);
+    assert(crest_access_create(&access) == CREST_OK);
+    assert(crest_session_attach_access(session, access + 1000) == CREST_INVALID_HANDLE);
+    assert(crest_session_attach_access(session, access) == CREST_OK);
+    assert(crest_session_attach_access(session, access) == CREST_OK);
+
+    char edit[1024];
+    size = snprintf(edit, sizeof(edit),
+        "{\"version\":1,\"operation\":\"tab.rename\",\"spaceId\":{\"rawValue\":\"%s\"},"
+        "\"profileId\":\"%s\",\"now\":800000002,"
+        "\"arguments\":{\"tabId\":\"%s\",\"title\":\"Renamed\"},"
+        "\"window\":{\"selectedSpaceID\":{\"rawValue\":\"%s\"},"
+        "\"selectedTabs\":[{\"spaceID\":{\"rawValue\":\"%s\"},\"tabID\":{\"rawValue\":\"%s\"}}]}}",
+        space_id, profile_id, tab_id, space_id, space_id, tab_id);
+    assert(size > 0 && (size_t)size < sizeof(edit));
+    assert(crest_session_prepare_command(session, revision, (const uint8_t*)edit, (size_t)size, &command)
+        == CREST_INVALID_MESSAGE && command == 0);
+
+    uint8_t space[16], profile[16];
+    memset(space, 0x44, sizeof(space)); memset(profile, 0x55, sizeof(profile));
+    assert(crest_access_begin(access, space, profile, 1, &request) == CREST_OK && request != 0);
+    assert(crest_access_complete(access, space, profile, request, 1) == CREST_OK);
+    assert(crest_session_prepare_command(session, revision, (const uint8_t*)edit, (size_t)size, &command) == CREST_OK
+        && command != 0);
+    assert(crest_session_release_command(command) == CREST_OK);
+
+    assert(crest_access_lock_space(access, space) == CREST_OK);
+    command = 0;
+    assert(crest_session_prepare_command(session, revision, (const uint8_t*)edit, (size_t)size, &command)
+        == CREST_INVALID_MESSAGE && command == 0);
+    assert(crest_access_destroy(access) == CREST_OK);
+    assert(crest_session_destroy(session) == CREST_OK);
+}
 int main(void) {
     assert(crest_core_abi_version() == CREST_ABI_VERSION);
     policy_boundary();
     access_boundary();
     session_boundary();
-    puts("Native ABI buffer ownership, size retry, handle and session checks passed.");
+    locked_space_boundary();
+    puts("Native ABI buffer ownership, size retry, handle, session and lock checks passed.");
     return 0;
 }

@@ -5,7 +5,9 @@ import Foundation
 /// native views only observe their changes and the platform presents the prompt.
 @MainActor
 final class BrowserCoreSpaceAccess {
-    private let handle: UInt64
+    /// The session authority consults the same authority these grants live in,
+    /// so the handle is shared rather than copied.
+    let handle: UInt64
 
     init() {
         var value: UInt64 = 0

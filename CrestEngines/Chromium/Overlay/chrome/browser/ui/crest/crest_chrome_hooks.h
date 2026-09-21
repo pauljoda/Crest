@@ -5,6 +5,8 @@
 #import <Cocoa/Cocoa.h>
 #endif
 
+#include <string>
+
 class Browser;
 class GURL;
 namespace content { class WebContents; class NavigationThrottleRegistry; struct DropData; struct OpenURLParams; }
@@ -29,6 +31,13 @@ bool CompletePageClosePreparation(content::WebContents* contents, bool proceed);
 // Called after Chromium has approved a renderer's drag request.
 bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data);
 void AddNavigationThrottle(content::NavigationThrottleRegistry& registry);
+// Extension side panels are cards in Crest's own page row, so this build never
+// creates Chrome's Views side-panel UI. `chrome.sidePanel.open()`, `close()`
+// and an action click that toggles a panel are routed to the card that belongs
+// to `contents`. Both return false when no Crest page owns `contents`, which
+// leaves Chromium's own behavior in place.
+bool OpenExtensionSidePanel(content::WebContents* contents, const std::string& extension_id);
+bool CloseExtensionSidePanel(content::WebContents* contents, const std::string& extension_id);
 // Applies semantic policy after Chromium validates a renderer's original request.
 bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& params);
 #ifdef __OBJC__

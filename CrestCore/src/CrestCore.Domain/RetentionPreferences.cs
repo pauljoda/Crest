@@ -32,7 +32,7 @@ public sealed partial class BrowserSpace
     public IReadOnlyList<BrowserTab> ExpiredTabs(DateTimeOffset now, IReadOnlySet<TabId> protectedTabs)
     {
         if (IsLocked || Retention.TabLifetime is not { } lifetime) return [];
-        return tabs.Where(t => t.Placement == TabPlacement.Current && t.Kind != TabKind.StartPage
+        return tabs.Where(t => t.Placement == TabPlacement.Current && !t.Content.IsStartPage
             && t.Phase is not (TabPhase.Creating or TabPhase.Closing or TabPhase.Unloading) && !protectedTabs.Contains(t.Id)
             && now - t.LastActivatedAt > lifetime).ToArray();
     }

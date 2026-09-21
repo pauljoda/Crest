@@ -10,8 +10,8 @@ public sealed class OrganizationContractsTests
     private static BrowserSpace Space() => new(new(Guid.NewGuid()), new(Guid.NewGuid()), "Organization");
     private static BrowserTab Tab(BrowserSpace space, string name, Guid? split = null)
     {
-        var state = new TabState(new(Guid.NewGuid()), TabKind.Web, $"https://example.com/{name}", name,
-            TabPlacement.Current, null, null, null, Now, null, null, false, split, null);
+        var state = new TabState(new(Guid.NewGuid()), TabContent.Web, $"https://example.com/{name}", name,
+            TabPlacement.Current, null, null, null, Now, null, null, false, split);
         var tab = BrowserTab.Restore(state); space.Add(tab, null); return tab;
     }
     [Fact]

@@ -128,6 +128,8 @@
 + (BOOL)deferQuit;
 + (BOOL)reopen;
 + (BOOL)openExternalURLs:(NSArray<NSURL*>*)urls;
++ (void)routeSidePanel:(NSString*)extensionID page:(NSString*)pageID
+               request:(CrestSidePanelRequest)request;
 @end
 
 @interface CrestLinkMenuAction : NSObject
@@ -214,8 +216,9 @@ class ExtensionPopup final : public extensions::ExtensionView,
 class ExtensionSidePanel final : public extensions::ExtensionView,
                                  public extensions::ExtensionHostObserver {
  public:
-  ExtensionSidePanel(std::unique_ptr<extensions::ExtensionViewHost> host, void (^closed)(void))
-      : host_(std::move(host)), closed_([closed copy]) {
+  ExtensionSidePanel(std::unique_ptr<extensions::ExtensionViewHost> host,
+                     std::string extension_id, void (^closed)(void))
+      : host_(std::move(host)), extension_id_(std::move(extension_id)), closed_([closed copy]) {
     container_ = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 600)];
     container_.autoresizesSubviews = YES;
     host_->set_view(this);
@@ -234,6 +237,10 @@ class ExtensionSidePanel final : public extensions::ExtensionView,
   }
   ~ExtensionSidePanel() override { Close(); }
   NSView* container() { return container_; }
+  const std::string& extension_id() const { return extension_id_; }
+  // The extension retracted its entry or unloaded. Tell the core to drop the
+  // card; the panel document goes away with this object.
+  void Retract() { Dismiss(); }
   void Close() {
     weak_factory_.InvalidateWeakPtrs();
     closed_ = nil;
@@ -260,6 +267,7 @@ class ExtensionSidePanel final : public extensions::ExtensionView,
     if (closed) closed();
   }
   std::unique_ptr<extensions::ExtensionViewHost> host_;
+  std::string extension_id_;
   void (^__strong closed_)(void);
   NSView* __strong container_ = nil;
   base::WeakPtrFactory<ExtensionSidePanel> weak_factory_{this};
@@ -370,6 +378,12 @@ struct HostState {
 };
 HostState& State() { static base::NoDestructor<HostState> state; return *state; }
 
+// Drops any open panel card for `extension_id` in `profile`, for one tab or
+// for all of them. An extension that unloads or turns its entry off has no
+// panel left to show.
+void RetractSidePanels(Profile* profile, const std::string& extension_id,
+                       std::optional<int> tab_id);
+
 // Chromium owns the wipe, profile registry and crash-recoverable disk cleanup.
 // Keep the profile alive until the wipe and deletion marker have both completed.
 class NativeProfileDeletion final : public content::BrowsingDataRemover::Observer,
@@ -443,6 +457,7 @@ class NativeProfileDeletion final : public content::BrowsingDataRemover::Observe
 class ExtensionStateObserver
     : public extensions::ExtensionRegistryObserver,
       public extensions::ExtensionActionDispatcher::Observer,
+      public extensions::SidePanelService::Observer,
       public ToolbarActionsModel::Observer,
       public extensions::IconImage::Observer {
  public:
@@ -454,6 +469,7 @@ class ExtensionStateObserver
   ~ExtensionStateObserver() override {
     extensions::ExtensionRegistry::Get(profile_)->RemoveObserver(this);
     if (dispatcher_observed_) extensions::ExtensionActionDispatcher::Get(profile_)->RemoveObserver(this);
+    if (side_panel_observed_) extensions::SidePanelService::Get(profile_)->RemoveObserver(this);
     if (auto* model = ToolbarActionsModel::Get(profile_)) model->RemoveObserver(this);
   }
   // The best currently-loaded icon for an extension, preferring the action's
@@ -497,6 +513,7 @@ class ExtensionStateObserver
   void OnExtensionUnloaded(content::BrowserContext* browser_context,
                            const extensions::Extension* extension,
                            extensions::UnloadedExtensionReason reason) override {
+    RetractSidePanels(profile_, extension->id(), std::nullopt);
     RebuildIcons();
     PostExtensionsChanged();
   }
@@ -512,6 +529,19 @@ class ExtensionStateObserver
     RebuildIcons();
     PostExtensionsChanged();
   }
+
+  // extensions::SidePanelService::Observer:
+  // `chrome.sidePanel.setOptions` can retract an entry the core is showing.
+  // Chromium hands over the extension's merged options, so an entry that no
+  // longer resolves to an enabled document closes its card.
+  void OnPanelOptionsChanged(
+      const extensions::ExtensionId& extension_id,
+      const extensions::api::side_panel::PanelOptions& options) override {
+    if (options.enabled.value_or(true) && options.path && !options.path->empty()) return;
+    RetractSidePanels(profile_, extension_id,
+                      options.tab_id ? std::optional<int>(*options.tab_id) : std::nullopt);
+  }
+  void OnSidePanelServiceShutdown() override { side_panel_observed_ = false; }
 
   // extensions::ExtensionActionDispatcher::Observer:
   void OnExtensionActionUpdated(
@@ -547,6 +577,10 @@ class ExtensionStateObserver
     extensions::ExtensionRegistry::Get(profile_)->AddObserver(this);
     extensions::ExtensionActionDispatcher::Get(profile_)->AddObserver(this);
     dispatcher_observed_ = true;
+    if (auto* panels = extensions::SidePanelService::Get(profile_)) {
+      panels->AddObserver(this);
+      side_panel_observed_ = true;
+    }
     if (ToolbarActionsModel* model = ToolbarActionsModel::Get(profile_)) {
       model->AddObserver(this);
     }
@@ -594,6 +628,7 @@ class ExtensionStateObserver
 
   raw_ptr<Profile> profile_;
   bool dispatcher_observed_ = false;
+  bool side_panel_observed_ = false;
   std::map<std::string, std::unique_ptr<extensions::IconImage>> icons_;
 };
 
@@ -828,6 +863,32 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
 };
 
 void OfferNativePage(base::WeakPtr<content::WebContents> contents, bool foreground);
+
+// The Crest page that owns `contents`, or an empty string when no page does:
+// a panel document, a popup or an engine tab that was never adopted.
+std::string PageIdentifierForContents(content::WebContents* contents) {
+  if (!contents) return std::string();
+  for (const auto& [id, page] : State().pages) {
+    if (page->web_contents() == contents) return id;
+  }
+  return std::string();
+}
+
+void RetractSidePanels(Profile* profile, const std::string& extension_id,
+                       std::optional<int> tab_id) {
+  if (!profile) return;
+  for (const auto& [id, page] : State().pages) {
+    if (!page->side_panel || page->side_panel->extension_id() != extension_id) continue;
+    auto* contents = page->web_contents();
+    if (!contents || !page->browser) continue;
+    // A private window's pages run in the off-the-record profile, while the
+    // registry and panel options belong to the profile it was derived from.
+    if (page->browser->GetProfile()->GetOriginalProfile() != profile->GetOriginalProfile()) continue;
+    if (tab_id && sessions::SessionTabHelper::IdForTab(contents).id() != *tab_id) continue;
+    page->side_panel->Retract();
+    page->side_panel.reset();
+  }
+}
 
 struct BrowserOwner final : TabStripModelObserver {
   BrowserOwner(Browser* value, std::string native_window)
@@ -1536,6 +1597,13 @@ const extensions::Extension* SidePanelExtension(NSString* extension_id, Page* pa
   // This path is invoked only by the user's native extension action button.
   const auto result = runner->RunAction(extension, true);
   if (result == extensions::ExtensionAction::ShowAction::kNone) return YES;
+  if (result == extensions::ExtensionAction::ShowAction::kToggleSidePanel) {
+    // The action opens a panel instead of a popup. The card belongs to the
+    // core, so the click toggles the one this page is already showing.
+    [NSClassFromString(@"CrestRoot") routeSidePanel:extensionID page:pageID
+                                           request:CrestSidePanelRequestToggle];
+    return YES;
+  }
   if (result != extensions::ExtensionAction::ShowAction::kShowPopup) return NO;
   auto* action = extensions::ExtensionActionManager::Get(profile)->GetExtensionAction(*extension);
   if (!action) return NO;
@@ -1563,7 +1631,7 @@ const extensions::Extension* SidePanelExtension(NSString* extension_id, Page* pa
   auto panel = extensions::ExtensionViewHostFactory::CreateSidePanelHost(*extension, url,
       page->browser, page->browser->tab_strip_model()->GetTabForWebContents(contents));
   if (!panel) return nil;
-  page->side_panel = std::make_unique<ExtensionSidePanel>(std::move(panel), closed);
+  page->side_panel = std::make_unique<ExtensionSidePanel>(std::move(panel), extension->id(), closed);
   return page->side_panel->container();
 }
 - (void)closeSidePanelForPage:(NSString*)pageID {
@@ -2316,6 +2384,25 @@ bool DeferQuit() {
 bool Reopen() {
   if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
   return [NSClassFromString(@"CrestRoot") reopen];
+}
+namespace {
+// Hands one panel request to the core, which owns the card.
+bool RouteSidePanel(content::WebContents* contents, const std::string& extension_id,
+                    CrestSidePanelRequest request) {
+  if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
+  const std::string page = PageIdentifierForContents(contents);
+  if (page.empty()) return false;
+  [NSClassFromString(@"CrestRoot") routeSidePanel:base::SysUTF8ToNSString(extension_id)
+                                            page:base::SysUTF8ToNSString(page)
+                                         request:request];
+  return true;
+}
+}  // namespace
+bool OpenExtensionSidePanel(content::WebContents* contents, const std::string& extension_id) {
+  return RouteSidePanel(contents, extension_id, CrestSidePanelRequestOpen);
+}
+bool CloseExtensionSidePanel(content::WebContents* contents, const std::string& extension_id) {
+  return RouteSidePanel(contents, extension_id, CrestSidePanelRequestClose);
 }
 bool OpenExternalURLs(NSArray<NSURL*>* urls) {
   // Before the native root exists there is nothing to route into, and after a

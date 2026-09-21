@@ -77,6 +77,7 @@ private final class BrowserMobileApplication {
             Task { await cloudSync?.localChangesDidStage() }
         }
         let spaceAccess = BrowserSpaceAccessController()
+        browser.attachSpaceAccess(spaceAccess)
         let permissionCenter =
             usesIsolatedLaunch
             ? BrowserSitePermissionCenter()

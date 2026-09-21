@@ -26,7 +26,7 @@ public sealed partial class BrowserTabCollection
 
     private static TabState TransientState(TabState source, DateTimeOffset now)
     {
-        if (source.Kind != TabKind.Web || string.IsNullOrEmpty(source.Url))
+        if (!source.Content.IsWebPage || string.IsNullOrEmpty(source.Url))
             throw new BrowserRuleException("invalid_transient_page");
         return source with { Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null,
             SavedUrl = null, LastActivatedAt = now };
@@ -54,7 +54,7 @@ public sealed partial class BrowserTabCollection
 
     public TabId? CleanupCurrentTabs(TabId? selected, TimeSpan lifetime, DateTimeOffset now)
     {
-        var expired = tabs.Where(t => t.Placement == TabPlacement.Current && t.Kind != TabKind.StartPage
+        var expired = tabs.Where(t => t.Placement == TabPlacement.Current && !t.Content.IsStartPage
             && t.Id != selected && now - t.LastActivatedAt > lifetime).ToArray();
         var ids = expired.Select(t => t.Id).ToHashSet();
         var nextFolders = new FolderTree(folders).PreserveOrder(ids, tabs);

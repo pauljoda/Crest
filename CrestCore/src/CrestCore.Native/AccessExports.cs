@@ -33,6 +33,19 @@ public static unsafe partial class Exports
         catch { return CoreStatus.InternalError; }
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_attach_access", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionAttachAccess(ulong session, ulong access)
+    {
+        try
+        {
+            if (!Sessions.TryGetValue(session, out var authority)) return CoreStatus.InvalidHandle;
+            if (!AccessAuthorities.TryGetValue(access, out var grants)) return CoreStatus.InvalidHandle;
+            authority.AttachAccess(grants);
+            return CoreStatus.Ok;
+        }
+        catch (Exception e) { return SessionError(e); }
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_access_is_locked", CallConvs = [typeof(CallConvCdecl)])]
     public static int AccessIsLocked(ulong handle, byte* space, byte* profile, int required, int* locked)
     {

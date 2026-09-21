@@ -37,7 +37,7 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
         var ids = Tabs.Select(t => t.Id).ToHashSet();
         foreach (var member in Tabs)
         {
-            Require(source.Tab(member.Id).Kind != TabKind.StartPage);
+            Require(!source.Tab(member.Id).Content.IsStartPage);
             if (source.SplitMembers(member.Id).Any(t => !ids.Contains(t.Id)))
                 throw new BrowserRuleException("incomplete_split");
         }
@@ -81,7 +81,7 @@ public sealed partial class BrowserTabCollection
                 case TabBatchKind.NewFolder:
                     FileBatchRoots(request, action with { Folder = CreateFolder(action.Placement) }, now); break;
                 case TabBatchKind.KeepLoaded:
-                    Require(members.All(t => t.Kind == TabKind.Web), "web_pages_only");
+                    Require(members.All(t => t.Content.IsWebPage), "web_pages_only");
                     foreach (var tab in members) tab.SetResidency(action.KeepLoaded);
                     break;
                 default: throw new BrowserRuleException("folder_action_unavailable");
@@ -116,7 +116,7 @@ public sealed partial class BrowserTabCollection
                     Require(action.Target is not null && !selectedIds.Contains(action.Target.Value));
                     var target = Tab(action.Target!.Value);
                     Require(target.Placement == TabPlacement.Current && target.FolderId is null
-                        && target.SplitGroupId is null && target.Kind != TabKind.StartPage);
+                        && target.SplitGroupId is null && !target.Content.IsStartPage);
                     wrapped = [target.Id, .. requested];
                 }
                 OrderBatchMembers(wrapped);
@@ -134,7 +134,7 @@ public sealed partial class BrowserTabCollection
                 break;
             case TabBatchKind.Split:
                 var targetId = action.Target ?? requested[0];
-                Require(Tab(targetId).Kind != TabKind.StartPage);
+                Require(!Tab(targetId).Content.IsStartPage);
                 var existing = SplitMembers(targetId).Select(t => t.Id).ToHashSet();
                 Require(existing.Union(selectedIds).Count() is >= 2 and <= MaximumSplitMembers, "split_capacity");
                 var insertion = action.Index;
@@ -175,7 +175,7 @@ public sealed partial class BrowserTabCollection
                 }
                 break;
             case TabBatchKind.KeepLoaded:
-                Require(members.All(t => t.Kind == TabKind.Web), "web_pages_only");
+                Require(members.All(t => t.Content.IsWebPage), "web_pages_only");
                 foreach (var tab in members) tab.SetResidency(action.KeepLoaded);
                 break;
             case TabBatchKind.SeparateSplits:

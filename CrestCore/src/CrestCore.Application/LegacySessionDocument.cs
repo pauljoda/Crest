@@ -77,12 +77,14 @@ public sealed class LegacySessionDocument
         var id = Id(t["id"]); Remember(tabs, id, t);
         var nativeKind = t["nativeContent"] is JsonObject native ? Text(native["kind"]) : null;
         var url = nativeKind is null ? Text(t["url"]) : null;
-        var kind = nativeKind == "settings" ? TabKind.Settings : nativeKind is not null ? TabKind.Native : url is null ? TabKind.StartPage : TabKind.Web;
+        var storedTitle = Text(t["title"]);
+        var content = TabContent.FromStored(nativeKind, url, storedTitle ?? "");
+        var title = storedTitle ?? content.Title(url);
         var folder = OptionalId(t["folderID"]);
-        return new(new(id), kind, url, Text(t["title"]) ?? "Start Page", Placement(t["placement"]),
+        return new(new(id), content, url, title, Placement(t["placement"]),
             folder is { } f ? new FolderId(f) : null, Text(t["savedURL"]), Text(t["customTitle"]),
             Date(t["lastActivatedAt"]), OptionalDate(t["positionModifiedAt"]), OptionalDate(t["titleModifiedAt"]),
-            t["keepsPageLoaded"]?.GetValue<bool>() ?? false, OptionalId(t["splitGroupID"]), nativeKind);
+            t["keepsPageLoaded"]?.GetValue<bool>() ?? false, OptionalId(t["splitGroupID"]));
     }
     internal TabState ReadNewTab(JsonObject value) => ReadTab(value);
     public WorkspaceState Read(IIdSource ids)
@@ -186,8 +188,8 @@ public sealed class LegacySessionDocument
         WriteDate(value, "positionModifiedAt", t.PositionModifiedAt, editTimestamp: true);
         WriteDate(value, "titleModifiedAt", t.TitleModifiedAt, editTimestamp: true);
         value["keepsPageLoaded"] = t.KeepsPageLoaded; value["splitGroupID"] = SwiftId(t.SplitGroupId);
-        value["symbol"] ??= t.Kind == TabKind.StartPage ? "flag.fill" : t.Kind == TabKind.Settings ? "gearshape" : "globe";
-        if (t.NativeKind is { } nativeKind)
+        value["symbol"] ??= t.Content.Symbol;
+        if (t.Content.NativeKind is { } nativeKind)
         {
             var native = value["nativeContent"] as JsonObject ?? new(); native["kind"] = nativeKind;
             if (native.Parent is null) value["nativeContent"] = native;

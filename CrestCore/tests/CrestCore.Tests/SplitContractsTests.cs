@@ -9,9 +9,9 @@ public sealed class SplitContractsTests
     private static BrowserSpace Space() => new(new(Guid.NewGuid()), new(Guid.NewGuid()), "Splits");
     private static BrowserTab Tab(BrowserSpace space, string title, TabPlacement placement = TabPlacement.Current, Guid? split = null)
     {
-        var tab = BrowserTab.Restore(new(new(Guid.NewGuid()), TabKind.Web, "https://example.com/" + title, title,
+        var tab = BrowserTab.Restore(new(new(Guid.NewGuid()), TabContent.Web, "https://example.com/" + title, title,
             placement, null, placement == TabPlacement.Current ? null : "https://saved.example/", "Custom " + title,
-            Now, null, null, true, split, null));
+            Now, null, null, true, split));
         space.Add(tab, null); return tab;
     }
     [Fact]
@@ -21,10 +21,10 @@ public sealed class SplitContractsTests
         var saved = Tab(space, "saved", TabPlacement.Saved); var group = Guid.NewGuid();
         var first = Tab(space, "first", split: group); var second = Tab(space, "second", split: group);
         var third = Tab(space, "third", split: group);
-        var fromSaved = new BrowserTab(new(Guid.NewGuid()), TabKind.Web, "https://example.org", null);
+        var fromSaved = new BrowserTab(new(Guid.NewGuid()), TabContent.Web, "https://example.org", null);
         space.AddOpenedTab(fromSaved, saved.Id);
         Assert.Equal(new[] { pinned.Id, saved.Id, fromSaved.Id, first.Id, second.Id, third.Id }, space.Tabs.Select(t => t.Id));
-        var fromSplit = new BrowserTab(new(Guid.NewGuid()), TabKind.Web, "https://example.org/next", null);
+        var fromSplit = new BrowserTab(new(Guid.NewGuid()), TabContent.Web, "https://example.org/next", null);
         space.AddOpenedTab(fromSplit, second.Id);
         Assert.Equal(fromSplit.Id, space.Tabs[^1].Id);
         space.Place(second.Id, TabPlacement.Pinned, null, Now);

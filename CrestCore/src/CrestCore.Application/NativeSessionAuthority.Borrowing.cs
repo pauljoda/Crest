@@ -18,7 +18,7 @@ public sealed partial class NativeSessionAuthority
     private NativeSessionAuthority(SessionDocument initial, NativeSessionAuthority source, Guid space, Guid profile)
     {
         document = initial; workspaceKind = BrowserWorkspaceKind.Temporary;
-        privateBrowsing = source.privateBrowsing; Engine = source.Engine;
+        privateBrowsing = source.privateBrowsing; Engine = source.Engine; access = source.access;
         borrowedSource = source; borrowedSpace = space; borrowedProfile = profile;
         borrowedSourceRevision = source.Revision;
         Validate(document);
@@ -31,6 +31,7 @@ public sealed partial class NativeSessionAuthority
             RequireWritable();
             SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
             if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
+            RequireAccessible(spaceId);
             var original = TransferSpace(spaceId, profileId);
             var fields = original.Metadata.DeepClone().AsObject();
             fields["selectedTabID"] = null; fields["splitGroups"] = new JsonArray();

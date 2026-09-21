@@ -10,6 +10,8 @@ final class BrowserSpaceAccessController {
 
     @ObservationIgnored private let authenticator: any BrowserDeviceAuthenticating
     @ObservationIgnored private let core = BrowserCoreSpaceAccess()
+    /// The core session authority gates its commands on these same grants.
+    var coreAccess: BrowserCoreSpaceAccess { core }
     @ObservationIgnored private var activeRequest: UInt64?
     private var accessRevision: UInt = 0
     /// Invoked after the unlocked set changes so a service holding live access

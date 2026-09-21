@@ -1,10 +1,10 @@
 namespace CrestCore.Domain;
 
 // Durable values deliberately omit native pages, presentation leases, and engine history stacks.
-public sealed record TabState(TabId Id, TabKind Kind, string? Url, string Title,
+public sealed record TabState(TabId Id, TabContent Content, string? Url, string Title,
     TabPlacement Placement, FolderId? FolderId, string? SavedUrl, string? CustomTitle,
     DateTimeOffset LastActivatedAt, DateTimeOffset? PositionModifiedAt, DateTimeOffset? TitleModifiedAt,
-    bool KeepsPageLoaded, Guid? SplitGroupId, string? NativeKind);
+    bool KeepsPageLoaded, Guid? SplitGroupId);
 public sealed record FolderState(FolderId Id, string Name, TabPlacement Location,
     FolderId? ParentId, bool IsCollapsed, DateTimeOffset? CollapseModifiedAt = null, TabId? OrderAnchorTabId = null);
 public sealed record ArchiveState(TabState Tab, DateTimeOffset ClosedAt, string Reason);

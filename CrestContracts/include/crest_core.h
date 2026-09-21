@@ -143,6 +143,12 @@ CREST_API crest_status_t CREST_CALL crest_session_create(
    descriptor; never saved or synced with browser records. */
 CREST_API crest_status_t CREST_CALL crest_session_register_engine(
     uint64_t session, const uint8_t* descriptor, size_t length);
+/* Attach the process-local Space access authority this session must consult.
+   A command that reads or mutates a Space whose stored policy requires
+   authentication is rejected while that Space holds no grant; locking, sync
+   materialization, deletion intents and retention sweeps are unaffected.
+   Attaching the same authority again succeeds; a different one is rejected. */
+CREST_API crest_status_t CREST_CALL crest_session_attach_access(uint64_t session, uint64_t access);
 /* Borrow a canonical profile into a new memory-only session. The projection is
    read/released with the command API; creation is already accepted at revision 1. */
 CREST_API crest_status_t CREST_CALL crest_session_create_borrowed(

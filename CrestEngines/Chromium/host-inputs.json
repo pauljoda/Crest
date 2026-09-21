@@ -158,5 +158,9 @@
   "content/browser/renderer_host/navigator.h": {
     "before": "2b7a3770a08eafe6b35477ca98a9b63037f6ff013a42e58b26a7b28f0f894d4c",
     "after": "9ddad30e255ab43a2b84442946df06a83985ca69c4dbf4b25c1e7856a39724f3"
+  },
+  "chrome/browser/ui/views/side_panel/extensions/extension_side_panel_utils.cc": {
+    "before": "b52441c7f4fd190eb5c23317974fb5b2d4ab87ca56f57db91bfbde4782acfea0",
+    "after": "08e022a1ebefe89d1ee8fa1c5cd348ab5b5ad1dbf256bce1ba72aafd814321c4"
   }
 }

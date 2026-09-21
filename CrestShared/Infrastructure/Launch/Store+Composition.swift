@@ -153,15 +153,31 @@ extension BrowserStore {
             } else {
                 icons = BrowserFaviconFileStore(rootDirectory: directory.appendingPathComponent("Favicons", isDirectory: true))
             }
-            let url = directory.appendingPathComponent("session.sqlite")
-            storeURL = url
-            let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: icons)
+            storeURL = directory.appendingPathComponent("session.sqlite")
+            return try migratedStorage(directory: directory, legacy: legacy, journal: journal,
+                favicons: icons, environment: environment)
+        } catch {
+            throw BrowserSessionStartupFailure(storeURL: storeURL, underlying: error)
+        }
+    }
+
+    /// Opens the core checkpoint under `directory` and, on the first launch that
+    /// finds no checkpoint there, carries the installed release's defaults
+    /// session and sync journal into it. The legacy values are left in place, so
+    /// this is also the seam an upgrade test drives with its own directory,
+    /// defaults suite and favicon store.
+    static func migratedStorage(directory: URL, legacy: UserDefaultsBrowserSessionPersistence,
+        journal: any BrowserSyncJournalPersisting, favicons: any BrowserFaviconStoring,
+        environment: BrowserLaunchEnvironment) throws -> BrowserTransactionalSessionPersistence {
+        let url = directory.appendingPathComponent("session.sqlite")
+        do {
+            let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: favicons)
             try storage.migrateIfNeeded(session: migrationSession(legacy), journal: journal.load())
             try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
             try? storage.saveRecoveryCheckpoint()
             return storage
         } catch {
-            throw BrowserSessionStartupFailure(storeURL: storeURL, underlying: error)
+            throw BrowserSessionStartupFailure(storeURL: url, underlying: error)
         }
     }
     private static func migrationSession(_ legacy: UserDefaultsBrowserSessionPersistence) throws -> BrowserSession? {

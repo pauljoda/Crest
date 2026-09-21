@@ -1,5 +1,37 @@
 #if CREST_CHROMIUM_HOST
 import AppKit
+import SwiftUI
+
+/// The panel hosts the engine can reach, one per browser window.
+///
+/// `chrome.sidePanel.open()`, `chrome.sidePanel.close()` and an action click
+/// that toggles a panel all arrive from the engine with a page identifier and
+/// no view context, so the window whose row owns the card has to be found
+/// rather than injected the way the extension controls receive it.
+@MainActor
+enum ChromiumExtensionSidePanelHosts {
+    private static var hosts: [BrowserWindowID: BrowserExtensionSidePanelHost] = [:]
+
+    static func register(_ host: BrowserExtensionSidePanelHost, for window: BrowserWindowID) {
+        hosts[window] = host
+    }
+    static func forget(_ window: BrowserWindowID) { hosts[window] = nil }
+    static func host(for window: BrowserWindowID) -> BrowserExtensionSidePanelHost? {
+        hosts[window]
+    }
+}
+
+/// Publishes a window's panel host for the engine's own side-panel requests.
+struct ChromiumExtensionSidePanelRegistration: ViewModifier {
+    let host: BrowserExtensionSidePanelHost
+    let window: BrowserWindowID
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { ChromiumExtensionSidePanelHosts.register(host, for: window) }
+            .onDisappear { ChromiumExtensionSidePanelHosts.forget(window) }
+    }
+}
 
 extension BrowserExtensionSidePanelHost {
     /// The action the extension action's context menu should offer, or `nil`
@@ -16,20 +48,57 @@ extension BrowserExtensionSidePanelHost {
         guard let host, page.hasSidePanel(action.id) else { return nil }
         return { [weak host, weak page] in
             guard let host, let page else { return }
-            let view = page.openSidePanel(action.id) { [weak host] in
-                MainActor.assumeIsolated { host?.dismiss(action.id) }
-            }
-            guard let view else {
-                CrestChromiumRoot.showNativeNotice(
-                    "This extension's side panel is unavailable on this page.",
-                    icon: "sidebar.right")
-                return
-            }
-            host.present(
-                BrowserExtensionSidePanelHost.Panel(
-                    id: action.id, title: action.displayName, icon: action.icon, view: view,
-                    close: { [weak page] in page?.closeSidePanel() }))
+            present(action.id, title: action.displayName, icon: action.icon, page: page, host: host)
         }
+    }
+
+    /// Applies a request the engine made for `page`'s own window.
+    ///
+    /// The engine has already checked that the extension has an entry for the
+    /// tab, so the only remaining decision is what the window is showing: a
+    /// second request for the panel already on screen toggles or is ignored
+    /// rather than rebuilding the same document.
+    static func route(
+        _ request: CrestSidePanelRequest,
+        extensionID: String,
+        page: ChromiumNativePage,
+        host: BrowserExtensionSidePanelHost
+    ) {
+        let isShowing = host.panel?.id == extensionID
+        switch request {
+        case .close:
+            if isShowing { host.close() }
+        case .toggle where isShowing:
+            host.close()
+        case .open where isShowing:
+            break
+        default:
+            let action = CrestChromiumRoot.extensions.actions(for: page).first { $0.id == extensionID }
+            present(extensionID, title: action?.displayName ?? extensionID,
+                icon: action?.icon, page: page, host: host)
+        }
+    }
+
+    private static func present(
+        _ extensionID: String,
+        title: String,
+        icon: NSImage?,
+        page: ChromiumNativePage,
+        host: BrowserExtensionSidePanelHost
+    ) {
+        let view = page.openSidePanel(extensionID) { [weak host] in
+            MainActor.assumeIsolated { host?.dismiss(extensionID) }
+        }
+        guard let view else {
+            CrestChromiumRoot.showNativeNotice(
+                "This extension's side panel is unavailable on this page.",
+                icon: "sidebar.right")
+            return
+        }
+        host.present(
+            BrowserExtensionSidePanelHost.Panel(
+                id: extensionID, title: title, icon: icon, view: view,
+                close: { [weak page] in page?.closeSidePanel() }))
     }
 }
 #endif

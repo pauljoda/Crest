@@ -128,6 +128,13 @@ final class BrowserCoreSessionAuthority {
         guard result == CREST_OK else { throw CoreError.rejected(result) }
     }
 
+    /// Gates commands on Space access grants. Native controllers keep their own
+    /// checks; this makes the records refuse a locked Space even so.
+    func attachAccess(_ access: BrowserCoreSpaceAccess) throws {
+        let result = crest_session_attach_access(owner.value, access.handle)
+        guard result == CREST_OK else { throw CoreError.rejected(result) }
+    }
+
     func prepareTabMove(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
         destination: BrowserSpaceRuntimeAssignment, arguments: [String: Any], window: BrowserSession,
         at date: Date) throws -> PreparedChange {

@@ -2,6 +2,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 typedef void (^CrestDeferredNavigation)(void);
+// Which extension side-panel card change the engine asked the core for. A
+// panel is a Crest page card, so the engine never opens or closes one itself.
+typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
+    CrestSidePanelRequestOpen,
+    CrestSidePanelRequestClose,
+    CrestSidePanelRequestToggle,
+};
 // In-process, main-thread native port. Objects and blocks never enter .NET.
 @protocol CrestChromiumEngineHost <NSObject>
 - (void)setBrowserObserver:(void (^)(NSDictionary<NSString *, id> *values))observer;

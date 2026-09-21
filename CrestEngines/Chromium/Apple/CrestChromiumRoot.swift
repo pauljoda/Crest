@@ -586,15 +586,30 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     /// window instead. A profile with no Space to host it is declined, so the
     /// engine drops those tabs rather than routing them into an unrelated
     /// Space. An off-the-record profile belongs to the private window and is
-    /// declined outright when that window is closed.
+    /// declined outright when that window is closed. A Space that is locked or
+    /// being deleted is declined as well, so engine-created tabs never appear
+    /// inside one the user has not unlocked.
     @objc(reserveEngineWindowForProfile:)
     static func reserveEngineWindow(forProfile profileID: String) -> [String: String]? {
         guard let instance, !instance.quitting, let profile = UUID(uuidString: profileID) else { return nil }
-        if let space = instance.application.privateBrowser.session.spaces.first(where: { $0.profile.id == profile }) {
-            guard let identifier = instance.privateWindow?.identifier?.rawValue else { return nil }
+        // A profile belongs to exactly one Space. Resolve that Space instead of
+        // accepting whichever one matched first, and refuse an ambiguous answer.
+        func host(in browser: BrowserStore) -> BrowserSpace? {
+            let owners = browser.session.spaces.filter { $0.profile.id == profile }
+            guard owners.count == 1, let space = owners.first,
+                !browser.deletingSpaceIDs.contains(space.id),
+                !instance.application.spaceAccess.isLocked(space)
+            else { return nil }
+            return space
+        }
+        let privateBrowser = instance.application.privateBrowser
+        if privateBrowser.session.spaces.contains(where: { $0.profile.id == profile }) {
+            guard let space = host(in: privateBrowser),
+                let identifier = instance.privateWindow?.identifier?.rawValue
+            else { return nil }
             return ["windowId": identifier, "spaceId": space.id.rawValue.uuidString]
         }
-        guard let space = extensionSpaces.first(where: { $0.profile.id == profile }) else { return nil }
+        guard let space = host(in: instance.application.browser) else { return nil }
         return ["windowId": BrowserWindowID().rawValue.uuidString, "spaceId": space.id.rawValue.uuidString]
     }
 

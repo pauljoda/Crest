@@ -206,6 +206,15 @@ locking always revokes access. These grants never enter checkpoints or sync.
 The small C ABI uses fixed UUID bytes and synchronous calls, without JSON or a
 message executor. Durable access-policy changes still use session commands, and
 native page, credential and extension callers retain their existing access gates.
+Each store family attaches that authority to its core session with
+`crest_session_attach_access`, and a borrowed workspace inherits its source's.
+The session authority then rejects a prepared command against a Space whose
+stored policy requires authentication and holds no grant, with `space_locked`,
+before any preparation runs. Changing the policy itself, Space deletion intents,
+retention and cleanup sweeps still apply to a locked Space, because none of them
+returns its tabs, folders, history or archive. Sync staging, merging and
+materialization commit as session replacements rather than commands, so
+background convergence on a locked Space is unaffected.
 
 ## Existing UI migration
 
@@ -274,6 +283,10 @@ disclosure, reordering and removal also use the authority's commands. Profile
 identity is checked before editing; borrowed workspaces cannot change their source
 profiles. The core enforces new private Space defaults and prevents removal of
 the last Space. Native profile cleanup and authentication remain platform work.
+A Space and its profile are one to one in every accepted document: a restored
+session, value delta or import that would give two Spaces the same profile is
+rejected as `duplicate_space_profile`, and checkpoint repair gives the colliding
+Space a fresh profile instead of sharing another Space's browsing data.
 
 Blank Windows and detached-tab windows request a borrowed workspace from the canonical core authority.
 The core binds the source Space and profile identity, inherits its engine and
@@ -484,9 +497,11 @@ The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.
 
-`NativeSessionAuthority` does not reject edits to a locked Space; `accessPolicy`
-is durable session data and access enforcement lives in the native controllers
-consulting `crest_access_*`. Moving that gate into the core is open work.
+`NativeSessionAuthority` rejects prepared commands that would read or mutate a
+locked Space once its store family has attached the access authority; the native
+controllers keep their own gates, so the core gate is defence in depth rather
+than the only check. Value deltas committed outside the command API, including
+sync replacement, remain ungated by design.
 
 Follow the migration completion contract above for the outstanding ownership,
 engine-service, sync-convergence and distribution work. Capability declarations

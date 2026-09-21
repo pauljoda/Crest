@@ -79,6 +79,7 @@ public sealed partial class NativeSessionAuthority
             var request = Parse(bytes);
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
             var spaceId = Id(request["spaceId"]); var profileId = Id(request["profileId"]);
+            source.RequireAccessible(spaceId); destination.RequireAccessible(spaceId);
             var a = source.TransferSpace(spaceId, profileId); var b = destination.TransferSpace(spaceId, profileId);
             var args = request["arguments"]!.DeepClone().AsObject();
             var tabId = Id(args["tabId"]);

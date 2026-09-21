@@ -997,3 +997,119 @@
 
    // Called when a document requests a navigation in another document through a
    // `blink::RemoteFrame`. If `method` is "POST", then `post_body` needs to
+--- a/chrome/browser/ui/views/side_panel/extensions/extension_side_panel_utils.cc
++++ b/chrome/browser/ui/views/side_panel/extensions/extension_side_panel_utils.cc
+@@ -4,6 +4,9 @@
+ 
+ #include "chrome/browser/ui/extensions/extension_side_panel_utils.h"
+ 
++#include <string>
++
++#include "build/build_config.h"
+ #include "chrome/browser/profiles/profile.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_features.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+@@ -34,9 +37,48 @@
+ 
+ }  // namespace
+ 
++#if BUILDFLAG(IS_MAC)
++// Declared in chrome/browser/ui/crest/crest_chrome_hooks.h. Crest hosts an
++// extension side panel as a card in its own page row and never creates the
++// Views side-panel UI below, so every entry point that reaches these helpers
++// is routed to that card instead. The declarations are repeated here rather
++// than included because this target cannot depend on the one that owns the
++// header: //chrome/browser/ui:ui already depends on this target.
++namespace crest {
++bool IsEnabled();
++bool OpenExtensionSidePanel(content::WebContents* contents,
++                            const std::string& extension_id);
++bool CloseExtensionSidePanel(content::WebContents* contents,
++                             const std::string& extension_id);
++}  // namespace crest
++
++namespace {
++
++// The contents whose Crest card owns `browser_window`'s panel. A window-wide
++// request has no tab of its own, so it belongs to the active tab's card.
++content::WebContents* CrestPanelContents(BrowserWindowInterface* browser_window,
++                                         content::WebContents* web_contents) {
++  if (web_contents) {
++    return web_contents;
++  }
++  tabs::TabInterface* active_tab =
++      browser_window ? browser_window->GetActiveTabInterface() : nullptr;
++  return active_tab ? active_tab->GetContents() : nullptr;
++}
++
++}  // namespace
++#endif
++
+ // Defined in extension_side_panel_utils.h
+ void ToggleExtensionSidePanel(BrowserWindowInterface* browser_window,
+                               const ExtensionId& extension_id) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) {
++    crest::OpenExtensionSidePanel(
++        CrestPanelContents(browser_window, nullptr), extension_id);
++    return;
++  }
++#endif
+   SidePanelUI* side_panel_ui = browser_window->GetFeatures().side_panel_ui();
+ 
+   SidePanelEntry::Key extension_key =
+@@ -48,6 +90,13 @@
+ void OpenGlobalExtensionSidePanel(BrowserWindowInterface& browser_window,
+                                   content::WebContents* web_contents,
+                                   const ExtensionId& extension_id) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) {
++    crest::OpenExtensionSidePanel(
++        CrestPanelContents(&browser_window, web_contents), extension_id);
++    return;
++  }
++#endif
+   SidePanelUI* side_panel_ui = browser_window.GetFeatures().side_panel_ui();
+ 
+   SidePanelEntry::Key extension_key =
+@@ -115,6 +164,12 @@
+ void OpenContextualExtensionSidePanel(BrowserWindowInterface& browser_window,
+                                       content::WebContents& web_contents,
+                                       const ExtensionId& extension_id) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) {
++    crest::OpenExtensionSidePanel(&web_contents, extension_id);
++    return;
++  }
++#endif
+   SidePanelEntry::Key extension_key =
+       SidePanelEntry::Key(SidePanelEntry::Id::kExtension, extension_id);
+ 
+@@ -134,6 +189,13 @@
+ // Declared in extension_side_panel_utils.h
+ void CloseGlobalExtensionSidePanel(BrowserWindowInterface* browser_window,
+                                    const ExtensionId& extension_id) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) {
++    crest::CloseExtensionSidePanel(
++        CrestPanelContents(browser_window, nullptr), extension_id);
++    return;
++  }
++#endif
+   SidePanelUI* side_panel_ui = browser_window->GetFeatures().side_panel_ui();
+   SidePanelEntry::Key extension_key =
+       SidePanelEntry::Key(SidePanelEntry::Id::kExtension, extension_id);
+@@ -167,6 +229,13 @@
+ void CloseContextualExtensionSidePanel(BrowserWindowInterface* browser_window,
+                                        content::WebContents* web_contents,
+                                        const ExtensionId& extension_id) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled()) {
++    crest::CloseExtensionSidePanel(
++        CrestPanelContents(browser_window, web_contents), extension_id);
++    return;
++  }
++#endif
+   const SidePanelEntry::Key extension_key(SidePanelEntry::Id::kExtension,
+                                           extension_id);
+ 

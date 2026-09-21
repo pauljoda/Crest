@@ -50,7 +50,7 @@ public sealed partial class NativeSessionAuthority
             {
                 legacy.CopyTabMetadata(pair.Source, pair.Copy);
                 var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o => Id(o!["tabId"]) == pair.Source.Value);
-                if (a.Tab(pair.Copy).Kind == TabKind.Web && observation is not null)
+                if (a.Tab(pair.Copy).Content.IsWebPage && observation is not null)
                     a.Tab(pair.Copy).Observe(observation["url"]?.GetValue<string>(), observation["title"]!.GetValue<string>(),
                         false, false, false, null);
             }
