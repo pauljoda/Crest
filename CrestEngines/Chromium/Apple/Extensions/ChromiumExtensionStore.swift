@@ -71,7 +71,9 @@ final class ChromiumExtensionStore {
               let windowID = window.identifier?.rawValue else { return false }
         let destination: String?
         switch command {
-        case "store": destination = "https://chromewebstore.google.com/"
+        case "store": destination = extensionID.isEmpty
+            ? "https://chromewebstore.google.com/"
+            : "https://chromewebstore.google.com/detail/\(extensionID)"
         case "manage": destination = "chrome://extensions/"
         case "details": destination = "chrome://extensions/?id=\(extensionID)"
         case "options": destination = installed[space.profile.id]?.first { $0.id == extensionID }?.options
@@ -88,16 +90,107 @@ final class ChromiumExtensionStore {
     func togglePin(_ action: BrowserExtensionActionPresentation, space: BrowserSpace) {
         _ = command(action.isPinned ? "unpin" : "pin", extensionID: action.id, space: space)
     }
-    func presentMenu(_ action: BrowserExtensionActionPresentation, space: BrowserSpace, anchor: BrowserExtensionPopupAnchor?) {
-        let menu = NSMenu()
-        let handler = ExtensionMenuHandler { [weak self] in self?.togglePin(action, space: space) }
-        let item = NSMenuItem(title: action.isPinned ? "Unpin from Toolbar" : "Pin to Toolbar", action: #selector(ExtensionMenuHandler.invoke), keyEquivalent: "")
-        item.target = handler
-        menu.addItem(item)
+    /// Reports the installed record backing an action so the menu can offer only
+    /// the verbs the extension actually supports. The profile is already prepared
+    /// whenever an action is presented, so the host answers synchronously.
+    private func installedRecord(_ extensionID: String, in space: BrowserSpace) -> Installed? {
+        if let cached = installed[space.profile.id] { return cached.first { $0.id == extensionID } }
+        guard authorized(space), let host = CrestChromiumRoot.engineHost else { return nil }
+        let items = host.extensions(forProfile: space.profile.id.uuidString).map(Installed.init)
+        guard !items.isEmpty else { return nil }
+        installed[space.profile.id] = items
+        revision &+= 1
+        return items.first { $0.id == extensionID }
+    }
+    func presentMenu(_ action: BrowserExtensionActionPresentation, space: BrowserSpace,
+                     anchor: BrowserExtensionPopupAnchor?, isPrivate: Bool = false) {
+        let menu = NSMenu(title: action.displayName)
+        menu.autoenablesItems = false
+        let handler = ExtensionMenuHandler()
+        let record = installedRecord(action.id, in: space)
+        // A private window must never change the Space's persistent extension
+        // state, so only the navigation verbs are offered from one.
+        if !isPrivate {
+            if record.map({ !$0.options.isEmpty && $0.enabled }) ?? true {
+                menu.addItem(handler.item(String(localized: "Extension Settings…")) { [weak self] in
+                    self?.command("options", extensionID: action.id, space: space)
+                })
+            }
+            menu.addItem(handler.item(action.isPinned
+                ? String(localized: "Unpin from Toolbar") : String(localized: "Pin to Toolbar")) { [weak self] in
+                self?.togglePin(action, space: space)
+            })
+            if let record {
+                menu.addItem(handler.item(record.enabled
+                    ? String(localized: "Disable Extension") : String(localized: "Enable Extension")) { [weak self] in
+                    self?.command(record.enabled ? "disable" : "enable", extensionID: action.id, space: space)
+                })
+            }
+            menu.addItem(.separator())
+        }
+        menu.addItem(handler.item(String(localized: "Manage Extension…")) { [weak self] in
+            self?.command("details", extensionID: action.id, space: space)
+        })
+        menu.addItem(handler.item(String(localized: "Manage Extensions…")) { [weak self] in
+            self?.command("manage", space: space)
+        })
+        if record?.webStore ?? false {
+            menu.addItem(handler.item(String(localized: "View on Chrome Web Store")) { [weak self] in
+                self?.command("store", extensionID: action.id, space: space)
+            })
+        }
+        if !isPrivate, let record {
+            menu.addItem(.separator())
+            menu.addItem(handler.item(String(localized: "Remove Extension…")) { [weak self] in
+                self?.confirmRemoval(record, space: space)
+            })
+        }
         if let source = anchor?.presentationSource(fallbackWindow: CrestChromiumRoot.activeNativeWindow) {
             menu.popUp(positioning: nil, at: NSPoint(x: source.rect.minX, y: source.rect.minY), in: source.view)
         } else { menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil) }
         withExtendedLifetime(handler) {}
+    }
+    /// Mirrors the confirmation the extension settings pane requires before an
+    /// uninstall. The menu's tracking loop owns the event while an item runs, so
+    /// the alert is presented once the menu has dismissed.
+    private func confirmRemoval(_ record: Installed, space: BrowserSpace) {
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, self.authorized(space) else { return }
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = String(localized: "Remove \(record.name)?")
+            alert.informativeText = String(localized:
+                "\(record.name) and its Space-local data will be removed. Other Spaces are unchanged.")
+            alert.addButton(withTitle: String(localized: "Remove from \(space.name)"))
+            alert.addButton(withTitle: String(localized: "Cancel"))
+            alert.buttons.first?.hasDestructiveAction = true
+            let complete: (NSApplication.ModalResponse) -> Void = { response in
+                MainActor.assumeIsolated {
+                    guard response == .alertFirstButtonReturn else { return }
+                    guard self.command("remove", extensionID: record.id, space: space) else {
+                        self.reportFailure(); return
+                    }
+                }
+            }
+            if let window = CrestChromiumRoot.activeNativeWindow {
+                alert.beginSheetModal(for: window, completionHandler: complete)
+            } else {
+                complete(alert.runModal())
+            }
+        }
+    }
+    private func reportFailure() {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Couldn’t Complete Extension Action")
+        alert.informativeText = String(localized:
+            "Chromium could not complete this action. Check the extension’s details for policy or permission requirements.")
+        alert.addButton(withTitle: String(localized: "OK"))
+        if let window = CrestChromiumRoot.activeNativeWindow {
+            alert.beginSheetModal(for: window, completionHandler: nil)
+        } else {
+            alert.runModal()
+        }
     }
     func install(_ id: String, in space: BrowserSpace, anchor: NSView?, copies: Set<SpaceID> = []) {
         guard installation == nil, authorized(space), let window = anchor?.window ?? CrestChromiumRoot.activeNativeWindow else { return }
@@ -136,10 +229,22 @@ final class ChromiumExtensionStore {
     }
 }
 
+/// Owns the menu item closures; `NSMenuItem.target` is weak, so this has to
+/// outlive the menu's tracking loop.
 @MainActor private final class ExtensionMenuHandler: NSObject {
-    let action: () -> Void
-    init(_ action: @escaping () -> Void) { self.action = action }
-    @objc func invoke() { action() }
+    private var handlers: [() -> Void] = []
+    func item(_ title: String, perform: @escaping () -> Void) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: #selector(invoke(_:)), keyEquivalent: "")
+        item.target = self
+        item.isEnabled = true
+        item.tag = handlers.count
+        handlers.append(perform)
+        return item
+    }
+    @objc private func invoke(_ sender: NSMenuItem) {
+        guard handlers.indices.contains(sender.tag) else { return }
+        handlers[sender.tag]()
+    }
 }
 
 @Observable @MainActor

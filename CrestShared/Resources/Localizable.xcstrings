@@ -163,6 +163,9 @@
         }
       }
     },
+    "%@ and its Space-local data will be removed. Other Spaces are unchanged." : {
+
+    },
     "%@ and its Space-local data will be removed. The host app and other Spaces are unchanged." : {
       "localizations" : {
         "ar" : {
@@ -4343,6 +4346,9 @@
     "Chrome Web Store signature verified" : {
 
     },
+    "Chromium could not complete this action. Check the extension’s details for policy or permission requirements." : {
+
+    },
     "clean tidy archive unpinned tabs" : {
       "localizations" : {
         "ar" : {
@@ -6585,6 +6591,9 @@
         }
       }
     },
+    "Disable Extension" : {
+
+    },
     "Disabled" : {
 
     },
@@ -7249,6 +7258,9 @@
 
     },
     "Empty Quick Window using %@" : {
+
+    },
+    "Enable Extension" : {
 
     },
     "Enable this route" : {
@@ -10523,6 +10535,9 @@
     "Manage Extensions…" : {
 
     },
+    "Manage Extension…" : {
+
+    },
     "Manage Saved Passwords…" : {
       "localizations" : {
         "ar" : {
@@ -12581,6 +12596,9 @@
     "Pin to Sidebar" : {
 
     },
+    "Pin to Toolbar" : {
+
+    },
     "Pin what matters, save what can wait, and close the rest." : {
 
     },
@@ -13489,6 +13507,9 @@
         }
       }
     },
+    "Remove %@?" : {
+
+    },
     "Remove Background Color" : {
       "localizations" : {
         "ar" : {
@@ -13539,6 +13560,9 @@
           }
         }
       }
+    },
+    "Remove Extension…" : {
+
     },
     "Remove from %@" : {
       "localizations" : {
@@ -18147,6 +18171,9 @@
     "Unpin from Sidebar" : {
 
     },
+    "Unpin from Toolbar" : {
+
+    },
     "Unsupported APIs" : {
       "localizations" : {
         "ar" : {
@@ -18654,6 +18681,9 @@
           }
         }
       }
+    },
+    "View on Chrome Web Store" : {
+
     },
     "View pages side by side, change focus, and rearrange cards." : {
 

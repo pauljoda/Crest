@@ -12,7 +12,10 @@ struct BrowserPinnedExtensionStrip: View {
             if !actions.isEmpty, let page {
                 BrowserPinnedExtensionStripContent(actions: actions,
                     perform: { action, anchor in page.runExtension(action.id, anchor: anchor) },
-                    presentMenu: { action, anchor in store.presentMenu(action, space: space, anchor: anchor) })
+                    presentMenu: { action, anchor in
+                        store.presentMenu(action, space: space, anchor: anchor,
+                            isPrivate: page.isPrivateBrowsing)
+                    })
                     .padding(.top, BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
                         + (space.tabSections.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset))
                     .transition(.opacity)
@@ -41,7 +44,10 @@ struct ChromiumExtensionControls: View {
                 togglePinned: { store.togglePin($0, space: space) },
                 presentMenu: { action, anchor in
                     let retained = anchor?.replacingSourceWindow(page.surface.window)
-                    afterDismiss { store.presentMenu(action, space: space, anchor: retained) }
+                    afterDismiss {
+                        store.presentMenu(action, space: space, anchor: retained,
+                            isPrivate: page.isPrivateBrowsing)
+                    }
                 })
             if !page.isPrivateBrowsing, let id = ChromiumNativePage.webStoreExtensionID(url) {
                 Button("Install Extension…", systemImage: "plus.app") {

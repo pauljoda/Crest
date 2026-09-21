@@ -1657,6 +1657,10 @@
     "retire-message-kernel-runtime": {
       "category": "internal",
       "message": "Retire the unused message-based browser kernel runtime; the native session authority is the single implementation of browser rules."
+    },
+    "chromium-extension-action-menu": {
+      "category": "new",
+      "message": "Right-click an extension button to open its settings, enable or disable it, manage it, view it on the Chrome Web Store, or remove it from the current Space."
     }
   }
 }
