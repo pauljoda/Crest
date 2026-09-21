@@ -1,13 +1,11 @@
 namespace CrestCore.Domain;
 
-public sealed partial class BrowserTabCollection
-{
+public sealed partial class BrowserTabCollection {
     /// Moves ownership without closing, archiving, or creating a replacement tab.
     /// All destination checks precede mutation of either collection.
     public TabId? TransferTo(BrowserTabCollection destination, TabId id, TabId? selected, TabId? fallback,
         TabPlacement? requestedPlacement, FolderId? requestedFolder, TabId? before,
-        bool afterSelection, TabId? destinationSelection, DateTimeOffset now)
-    {
+        bool afterSelection, TabId? destinationSelection, DateTimeOffset now) {
         if (ReferenceEquals(this, destination)) throw new BrowserRuleException("same_collection_transfer");
         var tab = Tab(id);
         if (destination.tabs.Any(t => t.Id == id) || destination.archive.Any(t => t.Id == id))
@@ -21,19 +19,16 @@ public sealed partial class BrowserTabCollection
         if (before == id) throw new BrowserRuleException("invalid_tab_anchor");
         bool Matches(BrowserTab t) => t.Placement == placement && t.FolderId == folder;
         int insertion = before is { } anchor ? destination.tabs.FindIndex(t => t.Id == anchor && Matches(t)) : -1;
-        if (insertion < 0)
-        {
+        if (insertion < 0) {
             int last = destination.tabs.FindLastIndex(Matches);
-            insertion = last >= 0 ? last + 1 : placement switch
-            {
+            insertion = last >= 0 ? last + 1 : placement switch {
                 TabPlacement.Pinned => destination.tabs.FindIndex(t => t.Placement != TabPlacement.Pinned),
                 TabPlacement.Saved => destination.tabs.FindIndex(t => t.Placement == TabPlacement.Current),
                 _ => destination.tabs.Count
             };
             if (insertion < 0) insertion = destination.tabs.Count;
         }
-        if (afterSelection && destination.tabs.FindIndex(t => t.Id == destinationSelection) is var origin && origin >= 0)
-        {
+        if (afterSelection && destination.tabs.FindIndex(t => t.Id == destinationSelection) is var origin && origin >= 0) {
             insertion = origin + 1;
             if (destination.tabs[origin].SplitGroupId is { } group)
                 while (insertion < destination.tabs.Count && destination.tabs[insertion].SplitGroupId == group) insertion++;

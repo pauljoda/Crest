@@ -2,12 +2,10 @@ namespace CrestCore.Domain;
 
 public sealed record SplitJoin(TabId SelectedTab, IReadOnlyList<(TabId Source, TabId Copy)> Copies);
 
-public sealed partial class BrowserTabCollection
-{
+public sealed partial class BrowserTabCollection {
     public const int MaximumSplitMembers = 4;
 
-    public IReadOnlyList<BrowserTab> SplitMembers(TabId id)
-    {
+    public IReadOnlyList<BrowserTab> SplitMembers(TabId id) {
         var tab = Tab(id);
         if (tab.SplitGroupId is not { } group) return [tab];
         int index = tabs.IndexOf(tab), first = index, last = index;
@@ -16,16 +14,20 @@ public sealed partial class BrowserTabCollection
         return tabs.GetRange(first, last - first + 1);
     }
 
-    private BrowserTab CopyTab(BrowserTab source, TabId id, DateTimeOffset now) => BrowserTab.Restore(source.Capture() with
-    {
-        Id = id, Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null, SavedUrl = null,
-        LastActivatedAt = now, PositionModifiedAt = BrowserEditTimestamp.Normalize(now),
-        TitleModifiedAt = source.CustomTitle is null ? null : BrowserEditTimestamp.Normalize(now), KeepsPageLoaded = false
+    private BrowserTab CopyTab(BrowserTab source, TabId id, DateTimeOffset now) => BrowserTab.Restore(source.Capture() with {
+        Id = id,
+        Placement = TabPlacement.Current,
+        FolderId = null,
+        SplitGroupId = null,
+        SavedUrl = null,
+        LastActivatedAt = now,
+        PositionModifiedAt = BrowserEditTimestamp.Normalize(now),
+        TitleModifiedAt = source.CustomTitle is null ? null : BrowserEditTimestamp.Normalize(now),
+        KeepsPageLoaded = false
     });
 
     public BrowserTab DuplicateTab(TabId sourceId, IIdSource ids, DateTimeOffset now,
-        TabPlacement placement = TabPlacement.Current, int? requestedIndex = null)
-    {
+        TabPlacement placement = TabPlacement.Current, int? requestedIndex = null) {
         var source = Tab(sourceId);
         if (source.Phase == TabPhase.Closing) throw new BrowserRuleException("page_closing");
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException("tab_limit");
@@ -37,8 +39,7 @@ public sealed partial class BrowserTabCollection
 
     // Saved and pinned tabs remain durable shortcuts. Joining them creates
     // current copies; the entire join is validated before changing either run.
-    public SplitJoin JoinSplit(TabId sourceId, TabId targetId, int? memberIndex, IIdSource ids, DateTimeOffset now)
-    {
+    public SplitJoin JoinSplit(TabId sourceId, TabId targetId, int? memberIndex, IIdSource ids, DateTimeOffset now) {
         var source = Tab(sourceId); var target = Tab(targetId);
         if (sourceId == targetId || source.Content.IsStartPage || target.Content.IsStartPage)
             throw new BrowserRuleException("invalid_split");
@@ -56,15 +57,13 @@ public sealed partial class BrowserTabCollection
         var copies = new List<(TabId Source, TabId Copy)>();
         var members = new List<BrowserTab>();
         BrowserTab joiner = source;
-        foreach (var member in targetMembers)
-        {
+        foreach (var member in targetMembers) {
             var resolved = copyTarget ? CopyTab(member, new(ids.Next()), now) : member;
             if (copyTarget) copies.Add((member.Id, resolved.Id));
             if (member.Id == sourceId) joiner = resolved;
             else members.Add(resolved);
         }
-        if (copySource)
-        {
+        if (copySource) {
             joiner = CopyTab(source, new(ids.Next()), now);
             copies.Add((source.Id, joiner.Id));
         }
@@ -77,18 +76,14 @@ public sealed partial class BrowserTabCollection
         var nextFolders = new FolderTree(folders).PreserveOrder(moving, tabs);
         var remaining = tabs.Where(t => !moving.Contains(t.Id)).ToList();
         int insertion;
-        if (copyTarget)
-        {
+        if (copyTarget) {
             insertion = remaining.FindIndex(t => t.Placement == TabPlacement.Current);
             if (insertion < 0) insertion = remaining.Count;
-        }
-        else
-        {
+        } else {
             int first = tabs.IndexOf(targetMembers[0]);
             insertion = tabs.Take(first).Count(t => !moving.Contains(t.Id));
         }
-        foreach (var member in members)
-        {
+        foreach (var member in members) {
             member.Place(copyTarget ? TabPlacement.Current : target.Placement, folder, now, preservesSplit: true);
             member.SetSplit(group); member.MarkPosition(now);
         }
@@ -98,21 +93,18 @@ public sealed partial class BrowserTabCollection
         return new(joiner.Id, copies);
     }
 
-    public void LeaveSplit(TabId id, DateTimeOffset now)
-    {
+    public void LeaveSplit(TabId id, DateTimeOffset now) {
         var tab = Tab(id);
         if (tab.SplitGroupId is null) return;
         var members = SplitMembers(id);
-        if (members.Count > 2 && members[^1] != tab)
-        {
+        if (members.Count > 2 && members[^1] != tab) {
             tabs.Remove(tab);
             tabs.Insert(tabs.IndexOf(members[^1]) + 1, tab);
         }
         tab.SetSplit(null); tab.MarkPosition(now); NormalizeSplits(now);
     }
 
-    public bool StepSplitMember(TabId id, int offset, DateTimeOffset now)
-    {
+    public bool StepSplitMember(TabId id, int offset, DateTimeOffset now) {
         var members = SplitMembers(id);
         int current = members.ToList().FindIndex(t => t.Id == id);
         long destination = (long)current + offset;
@@ -120,22 +112,19 @@ public sealed partial class BrowserTabCollection
             && MoveSplitMember(id, (int)destination, now);
     }
 
-    public bool DissolveSplit(Guid id, DateTimeOffset now)
-    {
+    public bool DissolveSplit(Guid id, DateTimeOffset now) {
         var members = tabs.Where(t => t.SplitGroupId == id).ToArray();
         foreach (var tab in members) { tab.SetSplit(null); tab.MarkPosition(now); }
         return members.Length > 0;
     }
 
-    public void MoveSplitGroup(Guid id, TabPlacement placement, FolderId? folder, TabId? before, DateTimeOffset now)
-    {
+    public void MoveSplitGroup(Guid id, TabPlacement placement, FolderId? folder, TabId? before, DateTimeOffset now) {
         var members = tabs.Where(t => t.SplitGroupId == id).Select(t => t.Id).ToArray();
         if (members.Length == 0) throw new BrowserRuleException("unknown_split_group");
         FileTabs(members, placement, folder, now, before);
     }
 
-    internal void RepairSplitMembership()
-    {
+    internal void RepairSplitMembership() {
         var groups = SplitMembershipPolicy.Repair(tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
         for (int index = 0; index < tabs.Count; index++) tabs[index].SetSplit(groups[index]);
     }

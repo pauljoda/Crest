@@ -16,20 +16,17 @@ public sealed record ResidencyCandidate(string TabId, double? InactiveSince, boo
 /// engine. The native adapter still owns the per-page veto: a page playing or
 /// capturing media, holding Picture in Picture, or whose media state is unknown
 /// stays resident whatever this policy proposes.
-public static class PageResidencyPolicy
-{
+public static class PageResidencyPolicy {
     /// How far from the focused card a presented member must sit before critical
     /// pressure may reclaim it. The focused card and both neighbours are one
     /// swipe away, so evicting them would trade a background page for a blank.
     public const int ProtectedNeighbourDistance = 1;
     public const int MaximumCandidates = 256;
 
-    public static int ReleaseLimit(MemoryPressureLevel level, int eligiblePageCount, MemoryPressurePlatform platform)
-    {
+    public static int ReleaseLimit(MemoryPressureLevel level, int eligiblePageCount, MemoryPressurePlatform platform) {
         if (eligiblePageCount < 0) throw new BrowserRuleException("invalid_page_count");
         if (eligiblePageCount == 0) return 0;
-        return (platform, level) switch
-        {
+        return (platform, level) switch {
             (MemoryPressurePlatform.Desktop, MemoryPressureLevel.Warning) => 1,
             (MemoryPressurePlatform.Desktop, MemoryPressureLevel.Critical) => Math.Max(1, (eligiblePageCount + 1) / 2),
             (MemoryPressurePlatform.Mobile, MemoryPressureLevel.Warning) => 0,
@@ -47,13 +44,11 @@ public static class PageResidencyPolicy
     /// termination instead of a reclaim, which costs every card rather than one.
     public static (IReadOnlyList<string> OffScreen, IReadOnlyList<string> PresentedFallback) ReleasePlan(
         IReadOnlyList<ResidencyCandidate> candidates, MemoryPressureLevel level,
-        MemoryPressurePlatform platform, int? focusedIndex)
-    {
+        MemoryPressurePlatform platform, int? focusedIndex) {
         if (candidates.Count > MaximumCandidates) throw new BrowserRuleException("residency_candidate_limit");
         if (candidates.Select(candidate => candidate.TabId).Distinct(StringComparer.Ordinal).Count() != candidates.Count)
             throw new BrowserRuleException("duplicate_residency_candidate");
-        foreach (var candidate in candidates)
-        {
+        foreach (var candidate in candidates) {
             if (candidate.InactiveSince is { } stamp && !double.IsFinite(stamp))
                 throw new BrowserRuleException("invalid_residency_stamp");
             if (candidate.IsPresented != candidate.PresentedIndex.HasValue || candidate.PresentedIndex < 0)
@@ -79,12 +74,10 @@ public static class PageResidencyPolicy
 
 /// How many times a renderer termination may be answered by reloading before
 /// the page shows a failure instead of reloading forever.
-public static class PageProcessRecoveryPolicy
-{
+public static class PageProcessRecoveryPolicy {
     public const int MaximumAutomaticReloads = 2;
 
-    public static ProcessRecoveryAction Decide(int consecutiveTerminations)
-    {
+    public static ProcessRecoveryAction Decide(int consecutiveTerminations) {
         if (consecutiveTerminations < 1) throw new BrowserRuleException("invalid_termination_count");
         return consecutiveTerminations <= MaximumAutomaticReloads
             ? ProcessRecoveryAction.Reload

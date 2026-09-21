@@ -4,17 +4,14 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-public sealed partial class NativeSessionAuthority
-{
-    private NativeSessionCommand PrepareWorkspaceCommand(ulong expected, JsonObject request)
-    {
+public sealed partial class NativeSessionAuthority {
+    private NativeSessionCommand PrepareWorkspaceCommand(ulong expected, JsonObject request) {
         if (workspaceKind != BrowserWorkspaceKind.Persistent) throw new BrowserRuleException("persistent_workspace_required");
         var source = document.Metadata.DeepClone().AsObject();
         var window = request["window"]!;
         var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
         source["selectedSpaceID"] = window["selectedSpaceID"]!.DeepClone();
-        source["spaces"] = new JsonArray(document.Spaces.Select(space =>
-        {
+        source["spaces"] = new JsonArray(document.Spaces.Select(space => {
             var value = space.Metadata.DeepClone().AsObject();
             value["selectedTabID"] = selection.GetValueOrDefault(Id(value["id"]))?.DeepClone();
             foreach (var section in Sections) value[section] = new JsonArray(space.Sections[section].Select(n => n.DeepClone()).ToArray());

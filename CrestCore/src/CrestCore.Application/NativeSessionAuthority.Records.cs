@@ -3,14 +3,12 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-public sealed partial class NativeSessionAuthority
-{
+public sealed partial class NativeSessionAuthority {
     private static readonly DateTimeOffset RecordEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     // The caller sends intent and window selection. Existing history and archive
     // entries come from the authority; only changed read models cross back.
-    private NativeSessionCommand PrepareRecordCommand(ulong expected, JsonObject request)
-    {
+    private NativeSessionCommand PrepareRecordCommand(ulong expected, JsonObject request) {
         var operation = request["operation"]!.GetValue<string>();
         var args = request["arguments"]!.AsObject();
         var now = request["now"]!.GetValue<double>();
@@ -22,25 +20,24 @@ public sealed partial class NativeSessionAuthority
         var window = request["window"]!;
         var selected = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
         var changes = new JsonArray();
-        var spaces = document.Spaces.Select(original =>
-        {
+        var spaces = document.Spaces.Select(original => {
             var fields = original.Metadata.DeepClone().AsObject();
             var spaceId = Id(fields["id"]);
             fields["selectedTabID"] = selected.GetValueOrDefault(spaceId)?.DeepClone();
             if (target is { } requested && requested != spaceId || PendingDeletion(document.Metadata, spaceId) is not null)
                 return new SpaceDocument(fields, original.Sections);
             var sections = original.Sections.ToDictionary(pair => pair.Key, pair => pair.Value);
-            var change = new JsonObject { ["spaceId"] = spaceId.ToString("D"),
-                ["profileId"] = Id(fields["profile"]!["id"]).ToString("D") };
+            var change = new JsonObject {
+                ["spaceId"] = spaceId.ToString("D"),
+                ["profileId"] = Id(fields["profile"]!["id"]).ToString("D")
+            };
             if (operation.StartsWith("history.", StringComparison.Ordinal))
                 EditHistory(operation, args, now, sections, change);
             else if (operation.StartsWith("split.", StringComparison.Ordinal))
                 EditSplitMetadata(operation, args, now, fields, sections, change);
-            else
-            {
+            else {
                 JsonObject? editArguments = null;
-                if (operation == "archive.restore")
-                {
+                if (operation == "archive.restore") {
                     var tabId = Id(args["tabId"]);
                     var archiveIndex = Array.FindIndex(sections["archivedTabs"].ToArray(), a => Id(a["tab"]!["id"]) == tabId);
                     if (archiveIndex < 0) throw new BrowserRuleException("unknown_archived_tab");
@@ -48,28 +45,27 @@ public sealed partial class NativeSessionAuthority
                     editArguments = new() { ["tab"] = archived["tab"]!.DeepClone() };
                     sections["archivedTabs"] = sections["archivedTabs"].Where((_, index) => index != archiveIndex).ToArray();
                     change["removedArchiveIndices"] = new JsonArray(JsonValue.Create(archiveIndex));
-                }
-                else if (operation is "records.sweep" or "records.cleanup")
-                {
+                } else if (operation is "records.sweep" or "records.cleanup") {
                     var term = fields["browsingPreferences"]?["currentTabCleanupPolicy"]?.GetValue<string>();
                     var policy = Enum.TryParse<CurrentTabCleanup>(term, true, out var parsed) && Enum.IsDefined(parsed)
                         ? parsed : CurrentTabCleanup.After12Hours;
                     if ((RetentionPreferences.Default with { CurrentTabs = policy }).TabLifetime is { } lifetime)
                         editArguments = new() { ["lifetime"] = lifetime.TotalSeconds };
-                }
-                else throw new BrowserRuleException("unknown_record_command");
-                if (editArguments is not null)
-                {
+                } else throw new BrowserRuleException("unknown_record_command");
+                if (editArguments is not null) {
                     var compact = fields.DeepClone().AsObject();
                     foreach (var section in Sections)
                         compact[section] = new JsonArray(section is "history" or "archivedTabs" ? []
                             : sections[section].Select(n => n.DeepClone()).ToArray());
-                    var edit = JsonNode.Parse(NativeSessionEditor.Evaluate(TransferOutput(new JsonObject
-                    { ["version"] = 1, ["operation"] = operation == "archive.restore" ? "tab.restore_archive" : "tab.cleanup",
-                        ["space"] = compact, ["arguments"] = editArguments, ["now"] = now })))!.AsObject();
+                    var edit = JsonNode.Parse(NativeSessionEditor.Evaluate(TransferOutput(new JsonObject {
+                        ["version"] = 1,
+                        ["operation"] = operation == "archive.restore" ? "tab.restore_archive" : "tab.cleanup",
+                        ["space"] = compact,
+                        ["arguments"] = editArguments,
+                        ["now"] = now
+                    })))!.AsObject();
                     var result = edit["space"]!;
-                    if (operation == "archive.restore" || !JsonNode.DeepEquals(compact["tabs"], result["tabs"]))
-                    {
+                    if (operation == "archive.restore" || !JsonNode.DeepEquals(compact["tabs"], result["tabs"])) {
                         foreach (var section in new[] { "tabs", "folders" })
                             sections[section] = result[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
                         fields["selectedTabID"] = result["selectedTabID"]?.DeepClone();
@@ -78,12 +74,10 @@ public sealed partial class NativeSessionAuthority
                         change["tabEdit"] = edit;
                     }
                 }
-                if (operation == "records.sweep")
-                {
+                if (operation == "records.sweep") {
                     foreach (var (section, preference, date, output) in new[] {
                         ("history", "history", "lastVisitedAt", "removedHistory"),
-                        ("archivedTabs", "archive", "archivedAt", "removedArchiveIndices") })
-                    {
+                        ("archivedTabs", "archive", "archivedAt", "removedArchiveIndices") }) {
                         var term = fields["browsingPreferences"]?["dataRetention"]?[preference]?.GetValue<string>();
                         var policy = Enum.TryParse<DataRetention>(term, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : DataRetention.Forever;
                         if (RetentionPreferences.Lifetime(policy) is not { } lifetime) continue;
@@ -110,11 +104,9 @@ public sealed partial class NativeSessionAuthority
     private static JsonArray IDs(IEnumerable<Guid> ids) => new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
 
     private static void EditHistory(string operation, JsonObject args, double now,
-        Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change)
-    {
+        Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change) {
         var history = sections["history"];
-        if (operation == "history.visit")
-        {
+        if (operation == "history.visit") {
             var url = HistoryPolicy.Normalize(args["url"]!.GetValue<string>());
             if (url is null) return;
             var previous = history.FirstOrDefault(h => h["url"]!.GetValue<string>() == url);
@@ -132,8 +124,7 @@ public sealed partial class NativeSessionAuthority
             return;
         }
         HashSet<int> removed;
-        switch (operation)
-        {
+        switch (operation) {
             case "history.clear": removed = Enumerable.Range(0, history.Count).ToHashSet(); break;
             case "history.remove_url":
                 var url = HistoryPolicy.Normalize(args["url"]!.GetValue<string>());
@@ -151,15 +142,17 @@ public sealed partial class NativeSessionAuthority
     }
 
     private static void EditSplitMetadata(string operation, JsonObject args, double now, JsonObject fields,
-        Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change)
-    {
+        Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change) {
         var id = Id(args["groupId"]);
         var run = sections["tabs"].SkipWhile(t => t["splitGroupID"] is null || Id(t["splitGroupID"]) != id)
             .TakeWhile(t => t["splitGroupID"] is not null && Id(t["splitGroupID"]) == id);
         if (run.Take(2).Count() < 2) throw new BrowserRuleException("unknown_split_group");
         var (field, clock) = operation switch {
-            "split.title" => ("customTitle", "titleModifiedAt"), "split.icon" => ("customIconSymbol", "iconModifiedAt"),
-            "split.tint" => ("tint", "tintModifiedAt"), _ => throw new BrowserRuleException("unknown_split_command") };
+            "split.title" => ("customTitle", "titleModifiedAt"),
+            "split.icon" => ("customIconSymbol", "iconModifiedAt"),
+            "split.tint" => ("tint", "tintModifiedAt"),
+            _ => throw new BrowserRuleException("unknown_split_command")
+        };
         var groups = fields["splitGroups"] as JsonArray ?? new JsonArray();
         var existing = groups.FirstOrDefault(g => Id(g!["id"]) == id)?.AsObject();
         var value = args["value"]?.DeepClone();

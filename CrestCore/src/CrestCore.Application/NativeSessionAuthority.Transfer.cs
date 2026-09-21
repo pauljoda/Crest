@@ -4,18 +4,15 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-public sealed partial class NativeSessionAuthority
-{
-    private SpaceDocument TransferSpace(Guid spaceId, Guid profileId)
-    {
+public sealed partial class NativeSessionAuthority {
+    private SpaceDocument TransferSpace(Guid spaceId, Guid profileId) {
         if (PendingDeletion(document.Metadata, spaceId) is not null) throw new BrowserRuleException("space_deletion_in_progress");
         var space = document.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == spaceId)
             ?? throw new BrowserRuleException("unknown_space");
         if (Id(space.Metadata["profile"]!["id"]) != profileId) throw new BrowserRuleException("wrong_profile_identity");
         return space;
     }
-    private static JsonObject TransferProjection(SpaceDocument space, JsonNode window)
-    {
+    private static JsonObject TransferProjection(SpaceDocument space, JsonNode window) {
         var value = space.Metadata.DeepClone().AsObject();
         value["selectedTabID"] = window["selectedTabs"]!.AsArray()
             .FirstOrDefault(n => Id(n!["spaceID"]) == Id(value["id"]))?["tabID"]?.DeepClone();
@@ -23,13 +20,11 @@ public sealed partial class NativeSessionAuthority
             space.Sections[section].Select(n => n.DeepClone()).ToArray());
         return value;
     }
-    private static SessionDocument ApplyTransfer(SessionDocument document, JsonNode window, params JsonObject[] edits)
-    {
+    private static SessionDocument ApplyTransfer(SessionDocument document, JsonNode window, params JsonObject[] edits) {
         var metadata = document.Metadata.DeepClone().AsObject();
         metadata["selectedSpaceID"] = window["selectedSpaceID"]!.DeepClone();
         var selections = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
-        var spaces = document.Spaces.Select(space =>
-        {
+        var spaces = document.Spaces.Select(space => {
             var value = space.Metadata.DeepClone().AsObject();
             value["selectedTabID"] = selections.GetValueOrDefault(Id(value["id"]))?.DeepClone();
             var edited = edits.FirstOrDefault(n => Id(n["id"]) == Id(value["id"]));
@@ -42,14 +37,12 @@ public sealed partial class NativeSessionAuthority
         }).ToArray();
         var next = new SessionDocument(metadata, spaces); Validate(next); return next;
     }
-    private static byte[] TransferOutput(JsonObject result)
-    {
+    private static byte[] TransferOutput(JsonObject result) {
         var bytes = Encoding.UTF8.GetBytes(result.ToJsonString());
         if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
         return bytes;
     }
-    private NativeSessionCommand PrepareTabTransfer(ulong expected, JsonObject request)
-    {
+    private NativeSessionCommand PrepareTabTransfer(ulong expected, JsonObject request) {
         var sourceId = Id(request["spaceId"]); var destinationId = Id(request["destinationSpaceId"]);
         if (sourceId == destinationId) throw new BrowserRuleException("same_space_transfer");
         var source = TransferSpace(sourceId, Id(request["profileId"]));
@@ -63,10 +56,8 @@ public sealed partial class NativeSessionAuthority
     }
 
     public static NativeSessionTransfer PrepareTransfer(NativeSessionAuthority source, ulong sourceRevision,
-        NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> bytes)
-    {
-        lock (Gate)
-        {
+        NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> bytes) {
+        lock (Gate) {
             source.RequireWritable(); destination.RequireWritable();
             if (ReferenceEquals(source, destination)) throw new BrowserRuleException("same_session_transfer");
             if (sourceRevision != source.Revision || destinationRevision != destination.Revision)
@@ -98,18 +89,15 @@ public sealed partial class NativeSessionAuthority
                 new(destination, destinationRevision, nextDestination, []), TransferOutput(result));
         }
     }
-    internal static byte[] TransferSelection(SessionDocument value) => Encoding.UTF8.GetBytes(new JsonObject
-    {
+    internal static byte[] TransferSelection(SessionDocument value) => Encoding.UTF8.GetBytes(new JsonObject {
         ["selectedSpaceID"] = value.Metadata["selectedSpaceID"]!.DeepClone(),
-        ["selectedTabs"] = new JsonArray(value.Spaces.Select(s => (JsonNode)new JsonObject
-        { ["spaceID"] = s.Metadata["id"]!.DeepClone(), ["tabID"] = s.Metadata["selectedTabID"]?.DeepClone() }).ToArray())
+        ["selectedTabs"] = new JsonArray(value.Spaces.Select(s => (JsonNode)new JsonObject { ["spaceID"] = s.Metadata["id"]!.DeepClone(), ["tabID"] = s.Metadata["selectedTabID"]?.DeepClone() }).ToArray())
     }.ToJsonString());
 }
 
 /// Holds two validated revisions until the one durable owner has saved. Neither
 /// graph can change while reserved, and a failed save cancels both reservations.
-public sealed class NativeSessionTransfer : IDisposable
-{
+public sealed class NativeSessionTransfer : IDisposable {
     private readonly NativeSessionAuthority source, destination;
     private readonly NativeSessionCommand sourceCommand, destinationCommand;
     private NativeSessionReplacement? a, b;
@@ -118,31 +106,23 @@ public sealed class NativeSessionTransfer : IDisposable
     public NativeSessionCheckpoint SourceCheckpoint => a!.Checkpoint;
     public NativeSessionCheckpoint DestinationCheckpoint => b!.Checkpoint;
     internal NativeSessionTransfer(NativeSessionAuthority source, NativeSessionCommand a,
-        NativeSessionAuthority destination, NativeSessionCommand b, byte[] output)
-    { this.source = source; sourceCommand = a; this.destination = destination; destinationCommand = b; Output = output; }
-    public void Reserve(NativeSyncTransaction? sync = null)
-    {
-        lock (NativeSessionAuthority.Gate)
-        {
+        NativeSessionAuthority destination, NativeSessionCommand b, byte[] output) { this.source = source; sourceCommand = a; this.destination = destination; destinationCommand = b; Output = output; }
+    public void Reserve(NativeSyncTransaction? sync = null) {
+        lock (NativeSessionAuthority.Gate) {
             if (completed || a is not null) throw new BrowserRuleException("invalid_transfer_transaction");
-            try
-            {
+            try {
                 a = sourceCommand.Reserve(NativeSessionAuthority.TransferSelection(sourceCommand.Document));
                 b = destinationCommand.Reserve(NativeSessionAuthority.TransferSelection(destinationCommand.Document));
-                if (sync is not null)
-                {
+                if (sync is not null) {
                     if (ReferenceEquals(sync.Owner.Session, source)) a.BindSync(sync);
                     else if (ReferenceEquals(sync.Owner.Session, destination)) b.BindSync(sync);
                     else throw new BrowserRuleException("invalid_sync_session_owner");
                 }
-            }
-            catch { a?.Dispose(); b?.Dispose(); a = b = null; throw; }
+            } catch { a?.Dispose(); b?.Dispose(); a = b = null; throw; }
         }
     }
-    public (ulong Source, ulong Destination) Commit()
-    {
-        lock (NativeSessionAuthority.Gate)
-        {
+    public (ulong Source, ulong Destination) Commit() {
+        lock (NativeSessionAuthority.Gate) {
             if (completed || a is null || b is null) throw new BrowserRuleException("invalid_transfer_transaction");
             // At most one side is persistent. Publish its journal first; the
             // two reserved session commits then cannot fail or interleave.
@@ -150,9 +130,7 @@ public sealed class NativeSessionTransfer : IDisposable
             var result = (a.Commit(), b.Commit()); completed = true; return result;
         }
     }
-    public void Dispose()
-    {
-        lock (NativeSessionAuthority.Gate)
-        { if (completed) return; a?.Dispose(); b?.Dispose(); completed = true; }
+    public void Dispose() {
+        lock (NativeSessionAuthority.Gate) { if (completed) return; a?.Dispose(); b?.Dispose(); completed = true; }
     }
 }

@@ -3,20 +3,17 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed class SplitContractsTests
-{
+public sealed class SplitContractsTests {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-09-19T12:00:00Z");
     private static BrowserSpace Space() => new(new(Guid.NewGuid()), new(Guid.NewGuid()), "Splits");
-    private static BrowserTab Tab(BrowserSpace space, string title, TabPlacement placement = TabPlacement.Current, Guid? split = null)
-    {
+    private static BrowserTab Tab(BrowserSpace space, string title, TabPlacement placement = TabPlacement.Current, Guid? split = null) {
         var tab = BrowserTab.Restore(new(new(Guid.NewGuid()), TabContent.Web, "https://example.com/" + title, title,
             placement, null, placement == TabPlacement.Current ? null : "https://saved.example/", "Custom " + title,
             Now, null, null, true, split));
         space.Add(tab, null); return tab;
     }
     [Fact]
-    public void OpeningFromSavedTabsOrSplitMembersHonorsTheCurrentSectionAndWholeRun()
-    {
+    public void OpeningFromSavedTabsOrSplitMembersHonorsTheCurrentSectionAndWholeRun() {
         var space = Space(); var pinned = Tab(space, "pinned", TabPlacement.Pinned);
         var saved = Tab(space, "saved", TabPlacement.Saved); var group = Guid.NewGuid();
         var first = Tab(space, "first", split: group); var second = Tab(space, "second", split: group);
@@ -33,8 +30,7 @@ public sealed class SplitContractsTests
         Assert.Equal(group, first.SplitGroupId); Assert.Equal(group, third.SplitGroupId);
     }
     [Fact]
-    public void JoiningDurableTabsCopiesTheDestinationRunAndKeepsOriginalsUntouched()
-    {
+    public void JoiningDurableTabsCopiesTheDestinationRunAndKeepsOriginalsUntouched() {
         var space = Space(); var group = Guid.NewGuid();
         var first = Tab(space, "first", TabPlacement.Saved, group);
         var second = Tab(space, "second", TabPlacement.Saved, group);
@@ -53,8 +49,7 @@ public sealed class SplitContractsTests
         Assert.Single(members.Select(t => t.SplitGroupId).Distinct());
     }
     [Fact]
-    public void ReorderingDurableMembersKeepsTheirIdentityAndPlacement()
-    {
+    public void ReorderingDurableMembersKeepsTheirIdentityAndPlacement() {
         var space = Space(); var group = Guid.NewGuid();
         var first = Tab(space, "first", TabPlacement.Saved, group); var second = Tab(space, "second", TabPlacement.Saved, group);
         var result = space.JoinSplit(second.Id, first.Id, 0, new SystemIdSource(), Now);
@@ -62,8 +57,7 @@ public sealed class SplitContractsTests
         Assert.All(space.Tabs, t => { Assert.Equal(TabPlacement.Saved, t.Placement); Assert.Equal(group, t.SplitGroupId); });
     }
     [Fact]
-    public void LeavingMiddleOfRunKeepsSurvivorsContiguousAndExplicitMutationDissolvesSingleton()
-    {
+    public void LeavingMiddleOfRunKeepsSurvivorsContiguousAndExplicitMutationDissolvesSingleton() {
         var space = Space(); var group = Guid.NewGuid();
         var first = Tab(space, "first", split: group); var second = Tab(space, "second", split: group);
         var third = Tab(space, "third", split: group); var tail = Tab(space, "tail");
@@ -75,8 +69,7 @@ public sealed class SplitContractsTests
         Assert.Equal(Now.AddMinutes(1), third.PositionModifiedAt);
     }
     [Fact]
-    public void FullSplitRefusesWithoutCopyingOrChangingAnyTab()
-    {
+    public void FullSplitRefusesWithoutCopyingOrChangingAnyTab() {
         var space = Space(); var group = Guid.NewGuid();
         var first = Tab(space, "first", TabPlacement.Saved, group);
         for (int i = 0; i < 3; i++) Tab(space, "member" + i, TabPlacement.Saved, group);
@@ -86,8 +79,7 @@ public sealed class SplitContractsTests
         Assert.Equal(before, space.Tabs.Select(t => t.Capture()));
     }
     [Fact]
-    public void RestoreRepairsMalformedRunsWithoutErasingSingletonMembershipOrPositionClock()
-    {
+    public void RestoreRepairsMalformedRunsWithoutErasingSingletonMembershipOrPositionClock() {
         var space = Space(); var group = Guid.NewGuid(); var single = Tab(space, "single", split: group);
         Tab(space, "separator"); var repeated = Tab(space, "repeated", split: group);
         var pinned = Tab(space, "pinned", TabPlacement.Pinned, Guid.NewGuid());

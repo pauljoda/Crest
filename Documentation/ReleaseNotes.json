@@ -1713,6 +1713,10 @@
     "chromium-side-panel-command-routing": {
       "category": "internal",
       "message": "Route extension side panel requests to the owning Chromium window."
+    },
+    "native-core-consistent-csharp-formatting": {
+      "category": "internal",
+      "message": "Use a consistent C# brace style across the native core."
     }
   }
 }

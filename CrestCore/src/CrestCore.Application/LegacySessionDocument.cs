@@ -5,8 +5,7 @@ namespace CrestCore.Application;
 
 /// Reads Crest's existing Swift Codable session. Unowned/additive fields survive
 /// round trips verbatim as JSON values; only fields owned by the domain are replaced.
-public sealed class LegacySessionDocument
-{
+public sealed class LegacySessionDocument {
     private static readonly DateTimeOffset SwiftEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private readonly JsonObject original;
     private readonly Dictionary<Guid, JsonObject> spaces = [];
@@ -20,33 +19,28 @@ public sealed class LegacySessionDocument
     private readonly Dictionary<Guid, ContentBlockingPolicy> contentBlockingPolicies = [];
 
     public LegacySessionDocument(JsonObject? source = null) => original = (JsonObject?)source?.DeepClone() ?? new();
-    public void CopyTabMetadata(TabId source, TabId destination)
-    {
+    public void CopyTabMetadata(TabId source, TabId destination) {
         if (tabs.TryGetValue(source.Value, out var value)) tabs[destination.Value] = (JsonObject)value.DeepClone();
     }
-    internal bool SetFolderMetadata(FolderId id, string field, JsonNode value)
-    {
+    internal bool SetFolderMetadata(FolderId id, string field, JsonNode value) {
         if (!folders.TryGetValue(id.Value, out var metadata)) folders[id.Value] = metadata = new();
         if (JsonNode.DeepEquals(metadata[field], value)) return false;
         metadata[field] = value.DeepClone();
         return true;
     }
-    internal void TransferTabMetadata(TabId tab, LegacySessionDocument destination)
-    {
+    internal void TransferTabMetadata(TabId tab, LegacySessionDocument destination) {
         if (tabs.TryGetValue(tab.Value, out var value)) destination.tabs[tab.Value] = (JsonObject)value.DeepClone();
     }
     private static JsonObject Object(JsonNode? node) => node as JsonObject ?? throw new BrowserRuleException("invalid_saved_state");
     private static JsonArray Array(JsonNode? node) => node is null ? [] : node as JsonArray ?? throw new BrowserRuleException("invalid_saved_state");
     private static string? Text(JsonNode? node) => node is null ? null : node.GetValue<string>();
-    private static Guid Id(JsonNode? node)
-    {
+    private static Guid Id(JsonNode? node) {
         if (node is JsonObject o) node = o["rawValue"];
         if (!Guid.TryParseExact(Text(node), "D", out var id) || id == Guid.Empty) throw new BrowserRuleException("invalid_saved_identity");
         return id;
     }
     private static Guid? OptionalId(JsonNode? node) => node is null ? null : Id(node);
-    private static DateTimeOffset Date(JsonNode? node)
-    {
+    private static DateTimeOffset Date(JsonNode? node) {
         var seconds = node?.GetValue<double>() ?? 0;
         if (!double.IsFinite(seconds)) throw new BrowserRuleException("invalid_saved_date");
         return SwiftEpoch.AddSeconds(seconds);
@@ -55,8 +49,7 @@ public sealed class LegacySessionDocument
     private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString().ToUpperInvariant() };
     private static JsonNode? SwiftId(Guid? id) => id is { } value ? SwiftId(value) : null;
     private static double Seconds(DateTimeOffset date) => (date - SwiftEpoch).TotalSeconds;
-    private static void WriteDate(JsonObject value, string key, DateTimeOffset? date, bool editTimestamp = false)
-    {
+    private static void WriteDate(JsonObject value, string key, DateTimeOffset? date, bool editTimestamp = false) {
         // Swift Date stores a Double, with precision that differs from .NET ticks.
         // Preserve its original number when the domain has not changed this field.
         if (date is { } d && value[key] is { } originalDate && Date(originalDate) == d) return;
@@ -64,16 +57,15 @@ public sealed class LegacySessionDocument
     }
     private static JsonObject Copy(Dictionary<Guid, JsonObject> originals, Guid id)
         => originals.TryGetValue(id, out var value) ? (JsonObject)value.DeepClone() : new();
-    private static void Remember(Dictionary<Guid, JsonObject> values, Guid id, JsonObject value)
-    {
+    private static void Remember(Dictionary<Guid, JsonObject> values, Guid id, JsonObject value) {
         if (!values.TryAdd(id, value)) throw new BrowserRuleException("duplicate_persisted_identity");
     }
-    private static TabPlacement Placement(JsonNode? node) => Text(node) switch
-    {
-        "current" => TabPlacement.Current, "pinned" => TabPlacement.Pinned, _ => TabPlacement.Saved
+    private static TabPlacement Placement(JsonNode? node) => Text(node) switch {
+        "current" => TabPlacement.Current,
+        "pinned" => TabPlacement.Pinned,
+        _ => TabPlacement.Saved
     };
-    private TabState ReadTab(JsonObject t)
-    {
+    private TabState ReadTab(JsonObject t) {
         var id = Id(t["id"]); Remember(tabs, id, t);
         var nativeKind = t["nativeContent"] is JsonObject native ? Text(native["kind"]) : null;
         var url = nativeKind is null ? Text(t["url"]) : null;
@@ -87,17 +79,14 @@ public sealed class LegacySessionDocument
             t["keepsPageLoaded"]?.GetValue<bool>() ?? false, OptionalId(t["splitGroupID"]));
     }
     internal TabState ReadNewTab(JsonObject value) => ReadTab(value);
-    public WorkspaceState Read(IIdSource ids)
-    {
+    public WorkspaceState Read(IIdSource ids) {
         spaces.Clear(); tabs.Clear(); folders.Clear(); archives.Clear(); histories.Clear(); windows.Clear(); searchPreferences.Clear(); retentionPreferences.Clear();
         var session = Object(original["session"]);
         var states = new List<SpaceState>();
-        foreach (var value in Array(session["spaces"]))
-        {
+        foreach (var value in Array(session["spaces"])) {
             var s = Object(value); var id = Id(s["id"]); Remember(spaces, id, s);
             var folderStates = new List<FolderState>();
-            foreach (var fv in Array(s["folders"]))
-            {
+            foreach (var fv in Array(s["folders"])) {
                 var f = Object(fv); var fid = Id(f["id"]); Remember(folders, fid, f);
                 var parent = OptionalId(f["parentID"]);
                 folderStates.Add(new(new(fid), Text(f["title"]) ?? "Folder", Text(f["location"]) == "current" ? TabPlacement.Current : TabPlacement.Saved,
@@ -105,14 +94,12 @@ public sealed class LegacySessionDocument
                     OptionalDate(f["collapseModifiedAt"]), OptionalId(f["orderAnchorTabID"]) is { } anchor ? new TabId(anchor) : null));
             }
             var archived = new List<ArchiveState>();
-            foreach (var av in Array(s["archivedTabs"]))
-            {
+            foreach (var av in Array(s["archivedTabs"])) {
                 var a = Object(av); var tab = ReadTab(Object(a["tab"])); Remember(archives, tab.Id.Value, a);
                 archived.Add(new(tab, Date(a["archivedAt"]), Text(a["reason"]) ?? "closed"));
             }
             var visits = new List<HistoryVisit>();
-            foreach (var hv in Array(s["history"]))
-            {
+            foreach (var hv in Array(s["history"])) {
                 var h = Object(hv); var hid = Id(h["id"]); Remember(histories, hid, h);
                 visits.Add(new(hid, Text(h["url"]) ?? throw new BrowserRuleException("invalid_saved_url"), Text(h["title"]) ?? "",
                     Date(h["firstVisitedAt"]), Date(h["lastVisitedAt"]), h["visitCount"]?.GetValue<int>() ?? 1));
@@ -120,15 +107,12 @@ public sealed class LegacySessionDocument
             var selected = OptionalId(s["selectedTabID"]);
             var preferences = s["browsingPreferences"] as JsonObject;
             var customProviders = new List<SearchProvider>();
-            foreach (var item in Array(preferences?["customSearchProviders"]))
-            {
-                try
-                {
+            foreach (var item in Array(preferences?["customSearchProviders"])) {
+                try {
                     var custom = Object(item);
                     customProviders.Add(SearchProvider.Custom(Id(custom["id"]), Text(custom["name"]) ?? "",
                         Text(custom["searchURLTemplate"]) ?? "", Text(custom["suggestionURLTemplate"])));
-                }
-                catch (BrowserRuleException) { /* Invalid legacy custom providers are excluded just as in Swift. */ }
+                } catch (BrowserRuleException) { /* Invalid legacy custom providers are excluded just as in Swift. */ }
             }
             var search = SearchPreferences.Restore(Text(preferences?["selectedSearchProviderID"]) ?? Text(preferences?["searchProvider"]),
                 customProviders, preferences?["searchSuggestionsEnabled"]?.GetValue<bool>() ?? false);
@@ -148,8 +132,7 @@ public sealed class LegacySessionDocument
                 ReadEnum(preferences?["contentBlockingPolicy"], ContentBlockingPolicy.Balanced, ContentBlockingPolicy.Balanced)));
         }
         var windowStates = new List<WindowState>();
-        foreach (var value in Array(original["windows"]))
-        {
+        foreach (var value in Array(original["windows"])) {
             var w = Object(value); var id = Id(w["id"]); Remember(windows, id, w);
             var selections = new Dictionary<SpaceId, TabId?>();
             // Codable dictionaries with struct keys use an alternating key/value array.
@@ -165,8 +148,7 @@ public sealed class LegacySessionDocument
         }
         var defaultId = OptionalId(session["defaultSpaceID"]);
         var selectedId = OptionalId(session["selectedSpaceID"]);
-        var deletions = Array(original["spaceDeletions"]).Select(value =>
-        {
+        var deletions = Array(original["spaceDeletions"]).Select(value => {
             var deletion = Object(value);
             return new SpaceDeletionState(new(Id(deletion["spaceId"])), new(Id(deletion["profileId"])),
                 Date(deletion["requestedAt"]), deletion["completed"]?.GetValue<bool>() ?? false);
@@ -176,10 +158,8 @@ public sealed class LegacySessionDocument
     }
     private static T ReadEnum<T>(JsonNode? value, T missing, T unknown) where T : struct, Enum
         => value is null ? missing : Enum.TryParse<T>(Text(value), true, out var result) && Enum.IsDefined(result) ? result : unknown;
-    internal static string EnumName<T>(T value) where T : struct, Enum
-    { var text = value.ToString(); return char.ToLowerInvariant(text[0]) + text[1..]; }
-    private JsonObject WriteTab(TabState t)
-    {
+    internal static string EnumName<T>(T value) where T : struct, Enum { var text = value.ToString(); return char.ToLowerInvariant(text[0]) + text[1..]; }
+    private JsonObject WriteTab(TabState t) {
         var value = Copy(tabs, t.Id.Value);
         value["id"] = SwiftId(t.Id.Value); value["title"] = t.Title; value["url"] = t.Url;
         value["placement"] = t.Placement.ToString().ToLowerInvariant(); value["folderID"] = SwiftId(t.FolderId?.Value);
@@ -189,30 +169,27 @@ public sealed class LegacySessionDocument
         WriteDate(value, "titleModifiedAt", t.TitleModifiedAt, editTimestamp: true);
         value["keepsPageLoaded"] = t.KeepsPageLoaded; value["splitGroupID"] = SwiftId(t.SplitGroupId);
         value["symbol"] ??= t.Content.Symbol;
-        if (t.Content.NativeKind is { } nativeKind)
-        {
+        if (t.Content.NativeKind is { } nativeKind) {
             var native = value["nativeContent"] as JsonObject ?? new(); native["kind"] = nativeKind;
             if (native.Parent is null) value["nativeContent"] = native;
-        }
-        else value.Remove("nativeContent");
+        } else value.Remove("nativeContent");
         return value;
     }
-    public JsonObject Write(WorkspaceState state)
-    {
+    public JsonObject Write(WorkspaceState state) {
         var document = (JsonObject)original.DeepClone();
         var session = document["session"] as JsonObject ?? new();
         if (session.Parent is null) document["session"] = session;
         document["workspaceId"] = state.Id.Value.ToString(); document["formatVersion"] = 1;
-        document["spaceDeletions"] = new JsonArray((state.SpaceDeletions ?? []).Select(d => (JsonNode)new JsonObject
-        {
-            ["spaceId"] = d.Space.Value.ToString(), ["profileId"] = d.Profile.Value.ToString(),
-            ["requestedAt"] = Seconds(d.RequestedAt), ["completed"] = d.Completed
+        document["spaceDeletions"] = new JsonArray((state.SpaceDeletions ?? []).Select(d => (JsonNode)new JsonObject {
+            ["spaceId"] = d.Space.Value.ToString(),
+            ["profileId"] = d.Profile.Value.ToString(),
+            ["requestedAt"] = Seconds(d.RequestedAt),
+            ["completed"] = d.Completed
         }).ToArray());
         session["selectedSpaceID"] = SwiftId(state.SelectedSpaceId?.Value);
         session["defaultSpaceID"] = SwiftId(state.DefaultSpaceId?.Value);
         var spaceValues = new JsonArray(); session["spaces"] = spaceValues;
-        foreach (var space in state.Spaces)
-        {
+        foreach (var space in state.Spaces) {
             var s = Copy(spaces, space.Id.Value); spaceValues.Add((JsonNode)s);
             s["id"] = SwiftId(space.Id.Value);
             var profile = s["profile"] as JsonObject ?? new();
@@ -223,22 +200,21 @@ public sealed class LegacySessionDocument
                 s["accessPolicy"] = space.RequiresAuthentication ? "deviceOwnerAuthentication" : "open";
             s["name"] = space.Name; s["symbol"] ??= "square.grid.2x2.fill"; s["accent"] ??= "indigo";
             s["selectedTabID"] = SwiftId(space.SelectedTabId?.Value);
-            if (space.Search is { } search && searchPreferences.GetValueOrDefault(space.Id.Value) != search)
-            {
+            if (space.Search is { } search && searchPreferences.GetValueOrDefault(space.Id.Value) != search) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
                 preferences["selectedSearchProviderID"] = search.SelectedId;
                 preferences["searchProvider"] = search.SelectedId.StartsWith("custom:", StringComparison.Ordinal) ? "google" : search.SelectedId;
                 preferences["searchSuggestionsEnabled"] = search.SuggestionsEnabled;
                 preferences["currentTabCleanupPolicy"] ??= "after12Hours";
-                preferences["customSearchProviders"] = new JsonArray(search.CustomProviders.Select(p => (JsonNode)new JsonObject
-                {
-                    ["id"] = Guid.Parse(p.Id[7..]).ToString().ToUpperInvariant(), ["name"] = p.Name,
-                    ["searchURLTemplate"] = p.SearchTemplate, ["suggestionURLTemplate"] = p.SuggestionTemplate
+                preferences["customSearchProviders"] = new JsonArray(search.CustomProviders.Select(p => (JsonNode)new JsonObject {
+                    ["id"] = Guid.Parse(p.Id[7..]).ToString().ToUpperInvariant(),
+                    ["name"] = p.Name,
+                    ["searchURLTemplate"] = p.SearchTemplate,
+                    ["suggestionURLTemplate"] = p.SuggestionTemplate
                 }).ToArray());
             }
-            if (space.Retention is { } retention && retentionPreferences.GetValueOrDefault(space.Id.Value) != retention)
-            {
+            if (space.Retention is { } retention && retentionPreferences.GetValueOrDefault(space.Id.Value) != retention) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
                 preferences["currentTabCleanupPolicy"] = EnumName(retention.CurrentTabs);
@@ -247,39 +223,33 @@ public sealed class LegacySessionDocument
                 durations["history"] = EnumName(retention.History); durations["archive"] = EnumName(retention.Archive);
                 durations["downloads"] = EnumName(retention.Downloads);
             }
-            if (!contentBlockingPolicies.TryGetValue(space.Id.Value, out var originalBlocking) || originalBlocking != space.ContentBlocking)
-            {
+            if (!contentBlockingPolicies.TryGetValue(space.Id.Value, out var originalBlocking) || originalBlocking != space.ContentBlocking) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
                 preferences["contentBlockingPolicy"] = EnumName(space.ContentBlocking);
             }
             s["tabs"] = new JsonArray(space.Tabs.Select(t => (JsonNode)WriteTab(t)).ToArray());
-            s["folders"] = new JsonArray(space.Folders.Select(f =>
-            {
+            s["folders"] = new JsonArray(space.Folders.Select(f => {
                 var value = Copy(folders, f.Id.Value); value["id"] = SwiftId(f.Id.Value); value["title"] = f.Name;
                 value["location"] = f.Location.ToString().ToLowerInvariant(); value["parentID"] = SwiftId(f.ParentId?.Value);
                 value["isCollapsed"] = f.IsCollapsed; WriteDate(value, "collapseModifiedAt", f.CollapseModifiedAt);
                 value["orderAnchorTabID"] = SwiftId(f.OrderAnchorTabId?.Value); return (JsonNode)value;
             }).ToArray());
-            s["archivedTabs"] = new JsonArray(space.Archive.Select(a =>
-            {
+            s["archivedTabs"] = new JsonArray(space.Archive.Select(a => {
                 var value = Copy(archives, a.Tab.Id.Value); value["tab"] = WriteTab(a.Tab);
                 WriteDate(value, "archivedAt", a.ClosedAt); value["reason"] = a.Reason; return (JsonNode)value;
             }).ToArray());
-            s["history"] = new JsonArray(space.History.Select(h =>
-            {
+            s["history"] = new JsonArray(space.History.Select(h => {
                 var value = Copy(histories, h.Id); value["id"] = h.Id.ToString().ToUpperInvariant();
                 value["url"] = h.Url; value["title"] = h.Title; WriteDate(value, "firstVisitedAt", h.FirstVisitedAt);
                 WriteDate(value, "lastVisitedAt", h.VisitedAt); value["visitCount"] = h.VisitCount; return (JsonNode)value;
             }).ToArray());
         }
-        document["windows"] = new JsonArray(state.Windows.Select(w =>
-        {
+        document["windows"] = new JsonArray(state.Windows.Select(w => {
             var value = Copy(windows, w.Id.Value); value["id"] = SwiftId(w.Id.Value); value["selectedSpaceID"] = SwiftId(w.SpaceId.Value);
             if (w.PlatformSceneId is { } scene) value["platformSceneId"] = scene; else value.Remove("platformSceneId");
             var pairs = new JsonArray(); var captured = new JsonArray();
-            foreach (var selection in w.Selections)
-            {
+            foreach (var selection in w.Selections) {
                 captured.Add((JsonNode)SwiftId(selection.Key.Value));
                 if (selection.Value is { } tab) { pairs.Add((JsonNode)SwiftId(selection.Key.Value)); pairs.Add((JsonNode)SwiftId(tab.Value)); }
             }

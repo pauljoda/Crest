@@ -5,10 +5,8 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed partial class BrowserContractsTests
-{
-    private static JsonNode GuardedSession(bool withOpenSecondSpace = false)
-    {
+public sealed partial class BrowserContractsTests {
+    private static JsonNode GuardedSession(bool withOpenSecondSpace = false) {
         var session = SavedSession().Document["session"]!;
         session["spaces"]![0]!["accessPolicy"] = "deviceOwnerAuthentication";
         if (withOpenSecondSpace)
@@ -22,33 +20,38 @@ public sealed partial class BrowserContractsTests
         => Assert.True(access.Complete(access.Begin(identity, true), identity, true));
 
     [Fact]
-    public void LockedSpaceCommandsAreRejectedBeforePreparationUntilAGrantExistsAndAgainAfterRelocking()
-    {
+    public void LockedSpaceCommandsAreRejectedBeforePreparationUntilAGrantExistsAndAgainAfterRelocking() {
         var session = GuardedSession();
         var access = new SpaceAccessAuthority();
         var core = new NativeSessionAuthority(Bytes(session));
         core.AttachAccess(access);
         var identity = Identity(session);
-        var rename = SpaceCommand(session, "tab.rename", new()
-        { ["tabId"] = session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
-        var folder = SpaceCommand(session, "folder.rename", new()
-        { ["folderId"] = session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
+        var rename = SpaceCommand(session, "tab.rename", new() { ["tabId"] = session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
+        var folder = SpaceCommand(session, "folder.rename", new() { ["folderId"] = session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
         var visit = SpaceCommand(session, "history.visit",
             new() { ["url"] = "https://example.com/secret", ["title"] = "Secret" });
         foreach (var request in new[] { rename, folder, visit })
             Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(1, request)).Code);
         Assert.Equal(1UL, core.Revision);
         // A locked Space must not even be named as an import destination.
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(1, Bytes(new JsonObject
-        {
-            ["version"] = 1, ["operation"] = "workspace.import", ["mode"] = "manual", ["now"] = 800000002.0,
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(1, Bytes(new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "workspace.import",
+            ["mode"] = "manual",
+            ["now"] = 800000002.0,
             ["window"] = JsonNode.Parse(Selection(session)),
-            ["arguments"] = new JsonObject
-            {
+            ["arguments"] = new JsonObject {
                 ["sources"] = new JsonArray(session["spaces"]![0]!.DeepClone()),
-                ["drafts"] = new JsonArray(new JsonObject { ["sourceIndex"] = 0, ["isNew"] = false,
-                    ["customization"] = new JsonObject { ["name"] = "Reading", ["symbol"] = "book",
-                        ["accent"] = "indigo", ["branding"] = new JsonObject() } })
+                ["drafts"] = new JsonArray(new JsonObject {
+                    ["sourceIndex"] = 0,
+                    ["isNew"] = false,
+                    ["customization"] = new JsonObject {
+                        ["name"] = "Reading",
+                        ["symbol"] = "book",
+                        ["accent"] = "indigo",
+                        ["branding"] = new JsonObject()
+                    }
+                })
             }
         }))).Code);
 
@@ -58,8 +61,7 @@ public sealed partial class BrowserContractsTests
 
         access.Lock(identity.Space);
         var current = JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read("core"))!;
-        var relocked = JsonNode.Parse(SpaceCommand(current, "tab.rename", new()
-        { ["tabId"] = current["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "After relock" }))!;
+        var relocked = JsonNode.Parse(SpaceCommand(current, "tab.rename", new() { ["tabId"] = current["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "After relock" }))!;
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
             () => core.PrepareCommand(2, Bytes(relocked))).Code);
         // Taking protection away is the decision authentication guards.
@@ -75,8 +77,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void SyncMaterializationAndDeletionStillReachALockedSpaceWhileItsCommandsStayRejected()
-    {
+    public void SyncMaterializationAndDeletionStillReachALockedSpaceWhileItsCommandsStayRejected() {
         var session = GuardedSession(withOpenSecondSpace: true);
         var access = new SpaceAccessAuthority();
         var core = new NativeSessionAuthority(Bytes(session));
@@ -98,8 +99,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void ALockedSpaceCannotBeBorrowedOrTransferredIntoATemporaryWorkspace()
-    {
+    public void ALockedSpaceCannotBeBorrowedOrTransferredIntoATemporaryWorkspace() {
         var session = GuardedSession();
         var access = new SpaceAccessAuthority();
         var owner = new NativeSessionAuthority(Bytes(session));
@@ -113,9 +113,10 @@ public sealed partial class BrowserContractsTests
         // source also stops edits inside the Blank Window that borrowed it.
         access.Lock(identity.Space);
         var local = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(1, Bytes(new JsonObject
-        {
-            ["version"] = 1, ["operation"] = "tab.rename", ["now"] = 800000100.0,
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(1, Bytes(new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "tab.rename",
+            ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
             ["window"] = JsonNode.Parse(Selection(local)),
@@ -124,8 +125,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void TwoSpacesCannotShareOneProfileThroughRestore_CommitOrImport()
-    {
+    public void TwoSpacesCannotShareOneProfileThroughRestore_CommitOrImport() {
         var session = SavedSession().Document["session"]!;
         var space = session["spaces"]![0]!;
         var second = space.DeepClone(); second["id"] = SwiftId(Guid.NewGuid());
@@ -138,11 +138,13 @@ public sealed partial class BrowserContractsTests
 
         var core = new NativeSessionAuthority(Bytes(session));
         var metadata = second.DeepClone();
-        Assert.Equal("duplicate_space_profile", Assert.Throws<BrowserRuleException>(() => core.Commit(1, Bytes(new JsonObject
-        {
-            ["version"] = 1, ["spaces"] = new JsonArray(new JsonObject
-            { ["id"] = second["id"]!.DeepClone(), ["metadata"] = metadata,
-              ["tabs"] = new JsonObject { ["replace"] = new JsonArray() } }),
+        Assert.Equal("duplicate_space_profile", Assert.Throws<BrowserRuleException>(() => core.Commit(1, Bytes(new JsonObject {
+            ["version"] = 1,
+            ["spaces"] = new JsonArray(new JsonObject {
+                ["id"] = second["id"]!.DeepClone(),
+                ["metadata"] = metadata,
+                ["tabs"] = new JsonObject { ["replace"] = new JsonArray() }
+            }),
             ["spaceOrder"] = new JsonArray(space["id"]!.DeepClone(), second["id"]!.DeepClone())
         }))).Code);
         Assert.Equal(1UL, core.Revision);

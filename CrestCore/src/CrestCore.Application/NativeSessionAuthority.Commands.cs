@@ -3,14 +3,11 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-public sealed partial class NativeSessionAuthority
-{
+public sealed partial class NativeSessionAuthority {
     /// Prepares against owned records. The native caller decodes the resulting
     /// projection before committing, so a failed read cannot leave its UI behind.
-    public NativeSessionCommand PrepareCommand(ulong expected, ReadOnlySpan<byte> bytes)
-    {
-        lock (Gate)
-        {
+    public NativeSessionCommand PrepareCommand(ulong expected, ReadOnlySpan<byte> bytes) {
+        lock (Gate) {
             RequireWritable();
             if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
             var request = Parse(bytes);
@@ -35,8 +32,7 @@ public sealed partial class NativeSessionAuthority
         }
     }
 
-    private NativeSessionCommand PrepareTabCommand(ulong expected, JsonObject request)
-    {
+    private NativeSessionCommand PrepareTabCommand(ulong expected, JsonObject request) {
         var spaceId = Id(request["spaceId"]);
         if (PendingDeletion(document.Metadata, spaceId) is not null)
             throw new BrowserRuleException("space_deletion_in_progress");
@@ -50,18 +46,18 @@ public sealed partial class NativeSessionAuthority
         foreach (var section in Sections)
             compact[section] = new JsonArray(section is "history" or "archivedTabs" ? [] :
                 original.Sections[section].Select(n => n.DeepClone()).ToArray());
-        var editorRequest = new JsonObject
-        {
-            ["version"] = 1, ["operation"] = request["operation"]!.DeepClone(),
-            ["arguments"] = request["arguments"]!.DeepClone(), ["now"] = request["now"]!.DeepClone(),
+        var editorRequest = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = request["operation"]!.DeepClone(),
+            ["arguments"] = request["arguments"]!.DeepClone(),
+            ["now"] = request["now"]!.DeepClone(),
             ["space"] = compact,
         };
         var output = NativeSessionEditor.Evaluate(System.Text.Encoding.UTF8.GetBytes(editorRequest.ToJsonString()));
         if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
         var result = JsonNode.Parse(output)!;
         var edited = result["space"]!;
-        var nextSpaces = document.Spaces.Select(space =>
-        {
+        var nextSpaces = document.Spaces.Select(space => {
             var fields = space.Metadata.DeepClone().AsObject();
             fields["selectedTabID"] = selection.GetValueOrDefault(Id(fields["id"]))?.DeepClone();
             if (Id(fields["id"]) != spaceId) return new SpaceDocument(fields, space.Sections);
@@ -84,10 +80,8 @@ public sealed partial class NativeSessionAuthority
         return new NativeSessionCommand(this, expected, next, output);
     }
 
-    internal ulong CommitCommand(NativeSessionCommand command)
-    {
-        lock (Gate)
-        {
+    internal ulong CommitCommand(NativeSessionCommand command) {
+        lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
             command.RequireAccepted();
             if (command.ExpectedRevision != Revision) throw new BrowserRuleException("stale_session_revision");
@@ -101,8 +95,7 @@ public sealed partial class NativeSessionAuthority
     }
 }
 
-public sealed class NativeSessionCommand
-{
+public sealed class NativeSessionCommand {
     private readonly NativeSessionAuthority owner;
     internal ulong ExpectedRevision { get; }
     internal NativeSessionAuthority.SessionDocument Document { get; }
@@ -110,15 +103,13 @@ public sealed class NativeSessionCommand
     private readonly string? rejection;
     internal ulong? BorrowedSourceRevision { get; }
     internal Guid? TransientCompletion { get; }
-    internal void RequireAccepted()
-    {
+    internal void RequireAccepted() {
         if (rejection is not null) throw new BrowserRuleException(rejection);
         owner.RequireBorrowedRevision(BorrowedSourceRevision);
         owner.RequirePendingTransient(TransientCompletion);
     }
     internal NativeSessionCommand(NativeSessionAuthority owner, ulong revision,
-        NativeSessionAuthority.SessionDocument document, byte[] output, string? rejection = null, Guid? transientCompletion = null)
-    {
+        NativeSessionAuthority.SessionDocument document, byte[] output, string? rejection = null, Guid? transientCompletion = null) {
         this.owner = owner; ExpectedRevision = revision; Document = document; Output = output; this.rejection = rejection;
         BorrowedSourceRevision = owner.BorrowedRevision;
         TransientCompletion = transientCompletion;

@@ -4,13 +4,11 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-public sealed partial class NativeSessionAuthority
-{
+public sealed partial class NativeSessionAuthority {
     private static bool SameDeletionIntent(JsonNode left, JsonNode right) =>
         Id(left["spaceID"]) == Id(right["spaceID"]) && Id(left["profileID"]) == Id(right["profileID"])
         && Id(left["operationID"]) == Id(right["operationID"]);
-    private static bool EqualDeletionIntents(JsonNode? left, JsonNode? right)
-    {
+    private static bool EqualDeletionIntents(JsonNode? left, JsonNode? right) {
         if (left is not null and not JsonArray || right is not null and not JsonArray)
             throw new BrowserRuleException("invalid_deletion_intent");
         var a = left as JsonArray ?? new(); var b = right as JsonArray ?? new();
@@ -22,8 +20,7 @@ public sealed partial class NativeSessionAuthority
     private static JsonNode? PendingDeletion(JsonObject metadata, Guid id)
         => Deletions(metadata).FirstOrDefault(d => Id(d!["spaceID"]) == id);
 
-    private NativeSessionCommand PrepareSpaceCommand(ulong expected, JsonObject request)
-    {
+    private NativeSessionCommand PrepareSpaceCommand(ulong expected, JsonObject request) {
         SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
         var operation = request["operation"]!.GetValue<string>();
         var args = request["arguments"]!.AsObject();
@@ -31,17 +28,14 @@ public sealed partial class NativeSessionAuthority
         var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
         var metadata = document.Metadata.DeepClone().AsObject();
         metadata["selectedSpaceID"] = window["selectedSpaceID"]!.DeepClone();
-        var spaces = document.Spaces.Select(s =>
-        {
+        var spaces = document.Spaces.Select(s => {
             var fields = s.Metadata.DeepClone().AsObject();
             fields["selectedTabID"] = selection.GetValueOrDefault(Id(fields["id"]))?.DeepClone();
             return new SpaceDocument(fields, s.Sections);
         }).ToList();
         Guid? created = null;
-        if (operation is "space.create" or "space.reset_private")
-        {
-            if (operation == "space.reset_private")
-            {
+        if (operation is "space.create" or "space.reset_private") {
+            if (operation == "space.reset_private") {
                 if (workspaceKind != BrowserWorkspaceKind.Private) throw new BrowserRuleException("not_private_workspace");
                 var fresh = args["template"]!;
                 if (spaces.Any(s => Id(s.Metadata["id"]) == Id(fresh["id"])
@@ -63,31 +57,26 @@ public sealed partial class NativeSessionAuthority
             if (sections["history"].Count != 0 || sections["archivedTabs"].Count != 0 || sections["folders"].Count != 0
                 || sections["tabs"].Count != 1 || sections["tabs"][0]["url"] is not null)
                 throw new BrowserRuleException("invalid_new_space");
-            if (workspaceKind == BrowserWorkspaceKind.Private)
-            {
+            if (workspaceKind == BrowserWorkspaceKind.Private) {
                 fields["symbol"] = "eyeglasses";
                 fields["accent"] = "indigo";
                 var browsing = fields["browsingPreferences"]!.AsObject();
                 browsing["selectedSearchProviderID"] = "duckDuckGo";
                 browsing["searchProvider"] = "duckDuckGo";
                 browsing["currentTabCleanupPolicy"] = "never";
-                fields["credentialPreferences"] = new JsonObject
-                {
-                    ["isEnabled"] = false, ["syncsCrestPasswordsWithICloud"] = false,
+                fields["credentialPreferences"] = new JsonObject {
+                    ["isEnabled"] = false,
+                    ["syncsCrestPasswordsWithICloud"] = false,
                     ["alsoOffersSaveToSystemPasswords"] = false
                 };
             }
             spaces.Add(new(fields, sections));
             metadata["selectedSpaceID"] = supplied["id"]!.DeepClone();
             created = id;
-        }
-        else if (operation == "space.reorder")
-        {
+        } else if (operation == "space.reorder") {
             spaces = SpaceOrganizationPolicy.Move(spaces,
                 args["offsets"]!.AsArray().Select(n => n!.GetValue<int>()), args["destination"]!.GetValue<int>()).ToList();
-        }
-        else
-        {
+        } else {
             var id = Id(request["spaceId"]);
             var index = spaces.FindIndex(s => Id(s.Metadata["id"]) == id);
             if (index < 0) throw new BrowserRuleException("unknown_space");
@@ -98,12 +87,10 @@ public sealed partial class NativeSessionAuthority
             var pending = PendingDeletion(metadata, id);
             if (pending is not null && operation is not ("space.deletion.begin" or "space.remove"))
                 throw new BrowserRuleException("space_deletion_in_progress");
-            switch (operation)
-            {
+            switch (operation) {
                 case "space.deletion.begin":
                     var operationId = Id(args["operationID"]);
-                    if (pending is not null)
-                    {
+                    if (pending is not null) {
                         if (Id(pending["operationID"]) != operationId)
                             throw new BrowserRuleException("wrong_deletion_operation");
                         break;
@@ -111,9 +98,11 @@ public sealed partial class NativeSessionAuthority
                     SpaceOrganizationPolicy.RequireRemovable(spaces.Count - Deletions(metadata).Count);
                     var deletions = Deletions(metadata);
                     if (metadata["spaceDeletions"] is null) metadata["spaceDeletions"] = deletions;
-                    deletions.Add((JsonNode)new JsonObject { ["spaceID"] = fields["id"]!.DeepClone(),
+                    deletions.Add((JsonNode)new JsonObject {
+                        ["spaceID"] = fields["id"]!.DeepClone(),
                         ["profileID"] = fields["profile"]!["id"]!.DeepClone(),
-                        ["operationID"] = operationId.ToString("D") });
+                        ["operationID"] = operationId.ToString("D")
+                    });
                     if (Id(metadata["selectedSpaceID"]) == id)
                         metadata["selectedSpaceID"] = spaces.First(s => PendingDeletion(metadata, Id(s.Metadata["id"])) is null)
                             .Metadata["id"]!.DeepClone();
@@ -146,8 +135,7 @@ public sealed partial class NativeSessionAuthority
                     break;
                 case "space.saved_expansion":
                     var expanded = args["value"]!.GetValue<bool>();
-                    if (fields["isSavedTabsExpanded"]?.GetValue<bool>() != expanded)
-                    {
+                    if (fields["isSavedTabsExpanded"]?.GetValue<bool>() != expanded) {
                         fields["isSavedTabsExpanded"] = expanded;
                         fields["savedTabsExpansionModifiedAt"] = request["now"]!.DeepClone();
                     }
@@ -170,8 +158,7 @@ public sealed partial class NativeSessionAuthority
         var next = new SessionDocument(metadata, spaces);
         Validate(next);
         var projection = metadata.DeepClone().AsObject();
-        projection["spaces"] = new JsonArray(spaces.Select(s =>
-        {
+        projection["spaces"] = new JsonArray(spaces.Select(s => {
             var value = s.Metadata.DeepClone().AsObject();
             foreach (var section in Sections)
                 value[section] = new JsonArray(created == Id(s.Metadata["id"])

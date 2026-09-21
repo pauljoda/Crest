@@ -9,12 +9,10 @@ namespace CrestCore.Application;
 /// Applies a domain edit to one compact Space projection. The native store
 /// publishes the returned value atomically, then reconciles its live pages.
 /// History, existing archive records and image payloads never cross this path.
-public static class NativeSessionEditor
-{
+public static class NativeSessionEditor {
     public const int MaximumBytes = 4 * 1024 * 1024;
     private static readonly DateTimeOffset SwiftEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    public static byte[] Evaluate(ReadOnlySpan<byte> input)
-    {
+    public static byte[] Evaluate(ReadOnlySpan<byte> input) {
         if (input.Length > MaximumBytes) throw new ProtocolException("session_edit_limit");
         var parsed = Protocol.Parse(input);
         if (parsed.GetProperty("version").GetInt32() != 1) throw new ProtocolException("version_mismatch");
@@ -39,11 +37,9 @@ public static class NativeSessionEditor
         var changed = true;
         FolderId? Folder(string name) => args[name] is null ? null : new(Guid.Parse(args[name]!.GetValue<string>()));
         TabPlacement Placement(string name) => Enum.Parse<TabPlacement>(args[name]!.GetValue<string>(), true);
-        switch (operation)
-        {
+        switch (operation) {
             case "tab.promote_transient":
-                if (args["tab"] is JsonObject transient)
-                {
+                if (args["tab"] is JsonObject transient) {
                     result = space.PromoteTransient(document.ReadNewTab(transient), selected, now).Id;
                     selected = result;
                 }
@@ -63,28 +59,26 @@ public static class NativeSessionEditor
             case "tab.cleanup":
                 selected = space.CleanupCurrentTabs(selected, TimeSpan.FromSeconds(args["lifetime"]!.GetValue<double>()), now);
                 break;
-            case "tab.open":
-            {
-                var supplied = args["tab"]!.AsObject();
-                var tab = BrowserTab.Restore(document.ReadNewTab(supplied));
-                space.InsertTab(tab, index);
-                result = tab.Id;
-                if (args["select"]!.GetValue<bool>()) { selected = tab.Id; selectSpace = true; }
-                break;
-            }
+            case "tab.open": {
+                    var supplied = args["tab"]!.AsObject();
+                    var tab = BrowserTab.Restore(document.ReadNewTab(supplied));
+                    space.InsertTab(tab, index);
+                    result = tab.Id;
+                    if (args["select"]!.GetValue<bool>()) { selected = tab.Id; selectSpace = true; }
+                    break;
+                }
             case "tab.activate":
                 result = Id("tabId"); space.Tab(result.Value).Activate(now); selected = result; selectSpace = true;
                 break;
-            case "tab.copy":
-            {
-                var source = Id("tabId");
-                var copy = space.DuplicateTab(source, new SuppliedIds(args["ids"]!.AsArray()), now,
-                    args["placement"] is null ? TabPlacement.Current : Placement("placement"), index);
-                result = copy.Id;
-                if (args["select"]?.GetValue<bool>() != false) { selected = copy.Id; selectSpace = true; }
-                CopyPage(source, copy.Id);
-                break;
-            }
+            case "tab.copy": {
+                    var source = Id("tabId");
+                    var copy = space.DuplicateTab(source, new SuppliedIds(args["ids"]!.AsArray()), now,
+                        args["placement"] is null ? TabPlacement.Current : Placement("placement"), index);
+                    result = copy.Id;
+                    if (args["select"]?.GetValue<bool>() != false) { selected = copy.Id; selectSpace = true; }
+                    CopyPage(source, copy.Id);
+                    break;
+                }
             case "tab.rename":
                 var renamed = space.Tab(Id("tabId")); var title = args["title"]?.GetValue<string>();
                 changed = renamed.CustomTitle != (string.IsNullOrWhiteSpace(title) ? null : title.Trim());
@@ -99,25 +93,23 @@ public static class NativeSessionEditor
                     args["detach"]!.GetValue<bool>(), now);
                 break;
             case "split.open_link":
-            case "split.join":
-            {
-                if (operation == "split.open_link")
-                {
-                    var tab = BrowserTab.Restore(document.ReadNewTab(args["tab"]!.AsObject()));
-                    space.InsertTab(tab, null);
-                    args["tabId"] = tab.Id.Value.ToString(); result = tab.Id;
+            case "split.join": {
+                    if (operation == "split.open_link") {
+                        var tab = BrowserTab.Restore(document.ReadNewTab(args["tab"]!.AsObject()));
+                        space.InsertTab(tab, null);
+                        args["tabId"] = tab.Id.Value.ToString(); result = tab.Id;
+                    }
+                    var target = space.Tab(Id("targetId"));
+                    if (target.Placement != TabPlacement.Current) sourceGroup = target.SplitGroupId;
+                    var joined = space.JoinSplit(Id("tabId"), Id("targetId"), index,
+                        new SuppliedIds(args["ids"]!.AsArray()), now);
+                    selected = joined.SelectedTab; selectSpace = true;
+                    copiedGroup = sourceGroup is not null && joined.Copies.Any(p => p.Source == target.Id)
+                        ? space.Tab(joined.SelectedTab).SplitGroupId : null;
+                    foreach (var pair in joined.Copies)
+                        CopyPage(pair.Source, pair.Copy);
+                    break;
                 }
-                var target = space.Tab(Id("targetId"));
-                if (target.Placement != TabPlacement.Current) sourceGroup = target.SplitGroupId;
-                var joined = space.JoinSplit(Id("tabId"), Id("targetId"), index,
-                    new SuppliedIds(args["ids"]!.AsArray()), now);
-                selected = joined.SelectedTab; selectSpace = true;
-                copiedGroup = sourceGroup is not null && joined.Copies.Any(p => p.Source == target.Id)
-                    ? space.Tab(joined.SelectedTab).SplitGroupId : null;
-                foreach (var pair in joined.Copies)
-                    CopyPage(pair.Source, pair.Copy);
-                break;
-            }
             case "split.join_in_place":
                 changed = space.JoinSplitInPlace(Id("tabId"), Id("targetId"), index, Guid.Parse(args["groupId"]!.GetValue<string>()), now);
                 selected = Id("tabId");
@@ -177,24 +169,22 @@ public static class NativeSessionEditor
                 break;
             case "tab.close":
             case "tab.delete":
-            case "tab.clear_current":
-            {
-                var deleting = operation == "tab.delete";
-                var clear = operation == "tab.clear_current";
-                var ids = clear ? space.Tabs.Where(t => t.Placement == TabPlacement.Current).Select(t => t.Id).ToArray() : [Id("tabId")];
-                if (ids.Length == 0) throw new BrowserRuleException("no_current_tabs");
-                selected = space.DismissTabs(ids, selected, OptionalId("fallbackTabId"), now, deleting,
-                    ensureSelection: deleting || clear, resetArchivePlacement: deleting || args["resetArchivePlacement"]?.GetValue<bool>() == true);
-                break;
-            }
+            case "tab.clear_current": {
+                    var deleting = operation == "tab.delete";
+                    var clear = operation == "tab.clear_current";
+                    var ids = clear ? space.Tabs.Where(t => t.Placement == TabPlacement.Current).Select(t => t.Id).ToArray() : [Id("tabId")];
+                    if (ids.Length == 0) throw new BrowserRuleException("no_current_tabs");
+                    selected = space.DismissTabs(ids, selected, OptionalId("fallbackTabId"), now, deleting,
+                        ensureSelection: deleting || clear, resetArchivePlacement: deleting || args["resetArchivePlacement"]?.GetValue<bool>() == true);
+                    break;
+                }
             default: throw new ProtocolException("unknown_session_edit");
         }
         var next = state with { Spaces = [space.Capture(state.Spaces[0], selected)] };
         var output = document.Write(next)["session"]!["spaces"]![0]!.DeepClone();
         if (sourceGroup is { } oldGroup && copiedGroup is { } newGroup
             && original["splitGroups"] is JsonArray originalGroups
-            && originalGroups.FirstOrDefault(g => NativeSessionAuthority.Id(g!["id"]) == oldGroup) is { } metadata)
-        {
+            && originalGroups.FirstOrDefault(g => NativeSessionAuthority.Id(g!["id"]) == oldGroup) is { } metadata) {
             var copy = metadata.DeepClone();
             copy["id"] = new JsonObject { ["rawValue"] = newGroup.ToString() };
             foreach (var field in new[] { "titleModifiedAt", "iconModifiedAt", "tintModifiedAt" })
@@ -205,20 +195,22 @@ public static class NativeSessionEditor
         bool prunesGroups = operation is "tab.close" or "tab.delete" or "tab.clear_current" or "split.join" or "split.open_link"
             or "split.join_in_place" or "split.leave" or "split.dissolve"
             || operation is "tab.move" or "tabs.file" && args["detach"]?.GetValue<bool>() == true;
-        if (prunesGroups && output["splitGroups"] is JsonArray groups)
-        {
+        if (prunesGroups && output["splitGroups"] is JsonArray groups) {
             var retained = space.Tabs.Where(t => t.SplitGroupId is not null).Select(t => t.SplitGroupId!.Value).ToHashSet();
             for (int i = groups.Count - 1; i >= 0; i--)
                 if (!retained.Contains(Guid.Parse(groups[i]!["id"]!["rawValue"]!.GetValue<string>()))) groups.RemoveAt(i);
         }
         // Archives are new records only; their images remain in the native cache.
         foreach (var archived in output["archivedTabs"]!.AsArray()) archived!["tab"]!.AsObject().Remove("faviconData");
-        return Encoding.UTF8.GetBytes(new JsonObject
-        { ["space"] = output, ["tabId"] = result?.Value.ToString(), ["selectSpace"] = selectSpace,
-            ["copies"] = copies, ["changed"] = changed }.ToJsonString());
+        return Encoding.UTF8.GetBytes(new JsonObject {
+            ["space"] = output,
+            ["tabId"] = result?.Value.ToString(),
+            ["selectSpace"] = selectSpace,
+            ["copies"] = copies,
+            ["changed"] = changed
+        }.ToJsonString());
 
-        void CopyPage(TabId source, TabId copy)
-        {
+        void CopyPage(TabId source, TabId copy) {
             document.CopyTabMetadata(source, copy);
             var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o =>
                 NativeSessionAuthority.Id(o!["tabId"]) == source.Value);
@@ -228,14 +220,12 @@ public static class NativeSessionEditor
             copies.Add((JsonNode)new JsonObject { ["source"] = source.Value.ToString(), ["copy"] = copy.Value.ToString() });
         }
     }
-    private static JsonNode FolderSymbol(JsonNode value)
-    {
+    private static JsonNode FolderSymbol(JsonNode value) {
         string symbol = value.GetValue<string>();
         if (symbol.Length == 0 || Encoding.UTF8.GetByteCount(symbol) > 128) throw new BrowserRuleException("invalid_folder_symbol");
         return JsonValue.Create(symbol)!;
     }
-    private sealed class SuppliedIds(JsonArray values) : IIdSource
-    {
+    private sealed class SuppliedIds(JsonArray values) : IIdSource {
         private readonly Queue<Guid> values = new(values.Select(n => Guid.Parse(n!.GetValue<string>())));
         public Guid Next() => values.Dequeue();
     }

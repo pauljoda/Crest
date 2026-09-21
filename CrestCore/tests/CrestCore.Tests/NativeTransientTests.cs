@@ -5,29 +5,33 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed partial class BrowserContractsTests
-{
-    private static JsonObject TransientRequest(JsonNode session, int destination = 0, bool empty = false)
-    {
+public sealed partial class BrowserContractsTests {
+    private static JsonObject TransientRequest(JsonNode session, int destination = 0, bool empty = false) {
         var source = session["spaces"]![0]!; var target = session["spaces"]![destination]!;
         var tab = source["tabs"]![0]!.DeepClone(); tab["id"] = SwiftId(Guid.NewGuid());
-        return new()
-        {
-            ["version"] = 1, ["operation"] = "transient.promote", ["spaceId"] = target["id"]!.DeepClone(),
-            ["profileId"] = target["profile"]!["id"]!.DeepClone(), ["window"] = JsonNode.Parse(Selection(session)),
-            ["now"] = 800000100.0, ["arguments"] = new JsonObject
-            {
-                ["requestId"] = Guid.NewGuid().ToString(), ["sourceSpaceId"] = source["id"]!.DeepClone(),
-                ["sourceProfileId"] = source["profile"]!["id"]!.DeepClone(), ["leaseSpaceId"] = source["id"]!.DeepClone(),
-                ["leaseProfileId"] = source["profile"]!["id"]!.DeepClone(), ["sourceAccessible"] = true,
-                ["destinationAccessible"] = true, ["supportsLiveAdoption"] = true, ["tab"] = empty ? null : tab
+        return new() {
+            ["version"] = 1,
+            ["operation"] = "transient.promote",
+            ["spaceId"] = target["id"]!.DeepClone(),
+            ["profileId"] = target["profile"]!["id"]!.DeepClone(),
+            ["window"] = JsonNode.Parse(Selection(session)),
+            ["now"] = 800000100.0,
+            ["arguments"] = new JsonObject {
+                ["requestId"] = Guid.NewGuid().ToString(),
+                ["sourceSpaceId"] = source["id"]!.DeepClone(),
+                ["sourceProfileId"] = source["profile"]!["id"]!.DeepClone(),
+                ["leaseSpaceId"] = source["id"]!.DeepClone(),
+                ["leaseProfileId"] = source["profile"]!["id"]!.DeepClone(),
+                ["sourceAccessible"] = true,
+                ["destinationAccessible"] = true,
+                ["supportsLiveAdoption"] = true,
+                ["tab"] = empty ? null : tab
             }
         };
     }
 
     [Fact]
-    public void TransientPromotionCommitsOnceAndCancelledStorageDoesNotConsumeTheRequest()
-    {
+    public void TransientPromotionCommitsOnceAndCancelledStorageDoesNotConsumeTheRequest() {
         var session = SavedSession().Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session)); var request = TransientRequest(session);
         var directEdit = request.DeepClone(); directEdit["operation"] = "tab.promote_transient";
@@ -51,14 +55,12 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void TransientPromotionChecksOwnedProfilesAndAccessBeforePublishing()
-    {
+    public void TransientPromotionChecksOwnedProfilesAndAccessBeforePublishing() {
         var session = SavedSession().Document["session"]!;
         session["spaces"]!.AsArray().Add(SavedSession().Document["session"]!["spaces"]![0]!.DeepClone());
         var owner = new NativeSessionAuthority(Bytes(session)); var request = TransientRequest(session, 1);
         var args = request["arguments"]!;
-        foreach (var key in new[] { "sourceAccessible", "destinationAccessible" })
-        {
+        foreach (var key in new[] { "sourceAccessible", "destinationAccessible" }) {
             args[key] = false;
             Assert.Equal("transient_space_locked", Assert.Throws<BrowserRuleException>(() => owner.PrepareCommand(1, Bytes(request))).Code);
             args[key] = true;
@@ -85,8 +87,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void TransientArchiveKeepsSelectionAndRejectsDuplicateOrRevokedCompletion()
-    {
+    public void TransientArchiveKeepsSelectionAndRejectsDuplicateOrRevokedCompletion() {
         var session = SavedSession().Document["session"]!;
         session["spaces"]!.AsArray().Add(SavedSession().Document["session"]!["spaces"]![0]!.DeepClone());
         var owner = new NativeSessionAuthority(Bytes(session)); var request = TransientRequest(session);
@@ -108,8 +109,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void EmptyTransientPromotionSelectsWithoutCreatingATab()
-    {
+    public void EmptyTransientPromotionSelectsWithoutCreatingATab() {
         var session = SavedSession().Document["session"]!;
         session["spaces"]!.AsArray().Add(SavedSession().Document["session"]!["spaces"]![0]!.DeepClone());
         var owner = new NativeSessionAuthority(Bytes(session)); var request = TransientRequest(session, 1, empty: true);

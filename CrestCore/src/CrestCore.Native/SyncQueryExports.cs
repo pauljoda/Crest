@@ -5,34 +5,28 @@ using CrestCore.Application;
 
 namespace CrestCore.Native;
 
-public static unsafe partial class Exports
-{
+public static unsafe partial class Exports {
     private static readonly ConcurrentDictionary<ulong, byte[]> SyncQueries = new();
-    private static ulong RetainSyncQuery(byte[] result)
-    {
+    private static ulong RetainSyncQuery(byte[] result) {
         var id = checked((ulong)Interlocked.Increment(ref nextHandle));
         if (!SyncQueries.TryAdd(id, result)) throw new InvalidOperationException("Duplicate sync query handle");
         return id;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_query_prepare", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SyncQueryPrepare(byte* input, nuint count, ulong* handle)
-    {
+    public static int SyncQueryPrepare(byte* input, nuint count, ulong* handle) {
         if (handle == null) return CoreStatus.InvalidArgument;
         *handle = 0;
         if (input == null || count == 0) return CoreStatus.InvalidArgument;
         if (count > NativeSyncQuery.MaximumBytes) return CoreStatus.LimitExceeded;
-        try
-        {
+        try {
             var result = NativeSyncQuery.Prepare(new(input, (int)count));
             *handle = RetainSyncQuery(result); return CoreStatus.Ok;
-        }
-        catch (Exception error) { return SyncJournalError(error); }
+        } catch (Exception error) { return SyncJournalError(error); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_query_read", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SyncQueryRead(ulong handle, byte* destination, nuint capacity, nuint* length)
-    {
+    public static int SyncQueryRead(ulong handle, byte* destination, nuint capacity, nuint* length) {
         if (length == null) return CoreStatus.InvalidArgument;
         *length = 0;
         if (destination == null && capacity != 0) return CoreStatus.InvalidArgument;

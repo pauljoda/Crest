@@ -7,18 +7,15 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed class NativePolicyTests
-{
+public sealed class NativePolicyTests {
     [Theory]
     [InlineData("apple.com", "https://apple.com", null)]
     [InlineData("localhost:3000", "http://localhost:3000", null)]
     [InlineData("https://webkit.org/blog/", "https://webkit.org/blog/", null)]
     [InlineData("  Café + Swift/URL & WebKit  ", "https://kagi.com/search?q=Caf%C3%A9%20%2B%20Swift%2FURL%20%26%20WebKit", "Café + Swift/URL & WebKit")]
     [InlineData("   ", null, null)]
-    public void ExistingAddressCallSitesKeepTheirIntentAndURLSpelling(string input, string? url, string? query)
-    {
-        var bytes = Encoding.UTF8.GetBytes(new JsonObject
-        { ["version"] = 1, ["operation"] = "address.intent", ["input"] = input, ["searchTemplate"] = "https://kagi.com/search?q=%s" }.ToJsonString());
+    public void ExistingAddressCallSitesKeepTheirIntentAndURLSpelling(string input, string? url, string? query) {
+        var bytes = Encoding.UTF8.GetBytes(new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = input, ["searchTemplate"] = "https://kagi.com/search?q=%s" }.ToJsonString());
         var result = NativePolicyEvaluator.Evaluate(bytes);
         Assert.Equal(result, NativePolicyEvaluator.Evaluate(bytes));
         var values = JsonNode.Parse(result)!;
@@ -30,10 +27,13 @@ public sealed class NativePolicyTests
     [InlineData("crest://extensions/?id=abcdefghijklmnopabcdefghijklmnop#details")]
     [InlineData("CREST://version/")]
     [InlineData("chrome-extension://abcdefghijklmnopabcdefghijklmnop/options.html")]
-    public void InternalAddressesRequireTheSelectedEngineCapability(string address)
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = address,
-            ["searchTemplate"] = "https://kagi.com/search?q=%s" };
+    public void InternalAddressesRequireTheSelectedEngineCapability(string address) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "address.intent",
+            ["input"] = address,
+            ["searchTemplate"] = "https://kagi.com/search?q=%s"
+        };
         var disabled = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         Assert.Equal(address, disabled["searchQuery"]!.GetValue<string>());
         request["allowsInternalPages"] = true;
@@ -47,13 +47,15 @@ public sealed class NativePolicyTests
     [InlineData("/tmp/Saved Page.html", "file:///tmp/Saved%20Page.html")]
     [InlineData("file://example.com/tmp/page.html", null)]
     [InlineData("file:", null)]
-    public void LocalDocumentAddressesResolveToFileURLsAndRemainValidTabURLs(string input, string? url)
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = input,
-            ["searchTemplate"] = "https://kagi.com/search?q=%s" };
+    public void LocalDocumentAddressesResolveToFileURLsAndRemainValidTabURLs(string input, string? url) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "address.intent",
+            ["input"] = input,
+            ["searchTemplate"] = "https://kagi.com/search?q=%s"
+        };
         var values = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
-        if (url is null)
-        {
+        if (url is null) {
             Assert.False(values["url"]!.GetValue<string>()
                 .StartsWith("file:", StringComparison.OrdinalIgnoreCase));
             Assert.Throws<BrowserRuleException>(() => BrowserSpace.ValidateUrl(input));
@@ -64,10 +66,13 @@ public sealed class NativePolicyTests
         BrowserSpace.ValidateUrl(url);
     }
     [Fact]
-    public void HomeRelativeAddressesResolveAgainstThisDeviceOnly()
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = "~/Saved.webarchive",
-            ["searchTemplate"] = "https://kagi.com/search?q=%s" };
+    public void HomeRelativeAddressesResolveAgainstThisDeviceOnly() {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "address.intent",
+            ["input"] = "~/Saved.webarchive",
+            ["searchTemplate"] = "https://kagi.com/search?q=%s"
+        };
         var values = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         var resolved = values["url"]!.GetValue<string>();
         Assert.StartsWith("file:///", resolved);
@@ -78,25 +83,46 @@ public sealed class NativePolicyTests
         Assert.Equal("~notapath", search["searchQuery"]!.GetValue<string>());
     }
     [Fact]
-    public void LinkPolicyWireContractAcceptsNullableContextAndRejectsExtraInstructions()
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "navigation.link", ["url"] = "https://example.com/",
-            ["userActivatedLink"] = true, ["topLevel"] = true, ["peekModified"] = false, ["newTabModified"] = true,
-            ["shiftModified"] = true, ["focusesNewTabs"] = false, ["hasContext"] = false, ["placement"] = null,
-            ["savedUrl"] = null, ["automaticallyOpensPeek"] = false };
+    public void LinkPolicyWireContractAcceptsNullableContextAndRejectsExtraInstructions() {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "navigation.link",
+            ["url"] = "https://example.com/",
+            ["userActivatedLink"] = true,
+            ["topLevel"] = true,
+            ["peekModified"] = false,
+            ["newTabModified"] = true,
+            ["shiftModified"] = true,
+            ["focusesNewTabs"] = false,
+            ["hasContext"] = false,
+            ["placement"] = null,
+            ["savedUrl"] = null,
+            ["automaticallyOpensPeek"] = false
+        };
         var response = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         Assert.Equal("foregroundTab", response["decision"]!.GetValue<string>());
         request["engineCommand"] = "navigate";
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())));
     }
     [Fact]
-    public void ModifiedLinkWireKeepsPreferenceAndOwnershipExplicit()
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "navigation.modified_link", ["url"] = "https://example.com/",
-            ["userActivatedLink"] = true, ["topLevel"] = true, ["commandModified"] = true, ["optionModified"] = false,
-            ["middleClick"] = false, ["peekModifier"] = "command", ["shiftModified"] = false,
-            ["focusesNewTabs"] = false, ["hasContext"] = true, ["placement"] = "open", ["savedUrl"] = null,
-            ["automaticallyOpensPeek"] = false };
+    public void ModifiedLinkWireKeepsPreferenceAndOwnershipExplicit() {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "navigation.modified_link",
+            ["url"] = "https://example.com/",
+            ["userActivatedLink"] = true,
+            ["topLevel"] = true,
+            ["commandModified"] = true,
+            ["optionModified"] = false,
+            ["middleClick"] = false,
+            ["peekModifier"] = "command",
+            ["shiftModified"] = false,
+            ["focusesNewTabs"] = false,
+            ["hasContext"] = true,
+            ["placement"] = "open",
+            ["savedUrl"] = null,
+            ["automaticallyOpensPeek"] = false
+        };
         string Decision() => JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!["decision"]!.GetValue<string>();
         Assert.Equal("peekModifier", Decision());
         request["hasContext"] = false;
@@ -112,8 +138,7 @@ public sealed class NativePolicyTests
         Assert.Throws<ProtocolException>(() => Decision());
     }
     [Fact]
-    public void CustomSearchTemplatesRejectCredentialAndLocalTargetsAndHaveStableSelectionFallback()
-    {
+    public void CustomSearchTemplatesRejectCredentialAndLocalTargetsAndHaveStableSelectionFallback() {
         foreach (var template in new[] {
             "http://example.org/?q=%s", "https://example.org/?q=%s&token=secret", "https://localhost/?q=%s",
             "https://192.168.1.1/?q=%s", "https://%s.example.org/", "https://example.org/#%s",
@@ -130,15 +155,13 @@ public sealed class NativePolicyTests
     }
 
     [Fact]
-    public void PurePolicyRejectsUnknownVersionsAndOperations()
-    {
+    public void PurePolicyRejectsUnknownVersionsAndOperations() {
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate("{\"version\":2,\"operation\":\"address.intent\"}"u8));
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate("{\"version\":1,\"operation\":\"native.invoke\"}"u8));
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate(new byte[NativePolicyEvaluator.MaximumInputBytes + 1]));
     }
     [Fact]
-    public void RetentionAndExplicitDeletionKeepTheirDifferentBoundaryRules()
-    {
+    public void RetentionAndExplicitDeletionKeepTheirDifferentBoundaryRules() {
         // Retention excludes an exact cutoff and future records. Explicit
         // deletion includes its start and excludes its end.
         var expiry = JsonNode.Parse(NativePolicyEvaluator.Evaluate(
@@ -160,18 +183,21 @@ public sealed class NativePolicyTests
     [InlineData("critical", "mobile", 8, 1)]
     [InlineData("critical", "desktop", 0, 0)]
     [InlineData("warning", "desktop", 0, 0)]
-    public void MemoryPressureBudgetsDifferByPlatformAndSeverity(string level, string platform, int eligible, int limit)
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "residency.release_limit",
-            ["level"] = level, ["platform"] = platform, ["eligiblePageCount"] = eligible };
+    public void MemoryPressureBudgetsDifferByPlatformAndSeverity(string level, string platform, int eligible, int limit) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "residency.release_limit",
+            ["level"] = level,
+            ["platform"] = platform,
+            ["eligiblePageCount"] = eligible
+        };
         var response = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         Assert.Equal(limit, response["limit"]!.GetValue<int>());
         request["level"] = "moderate";
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())));
     }
     [Fact]
-    public void ReleasePlanOrdersOffScreenPagesLeastRecentlyUsedAndExcludesHeldPages()
-    {
+    public void ReleasePlanOrdersOffScreenPagesLeastRecentlyUsedAndExcludesHeldPages() {
         var plan = ReleasePlan("critical", "desktop", null,
             Candidate("00000000-0000-0000-0000-00000000000a", 30),
             Candidate("00000000-0000-0000-0000-00000000000b", 10),
@@ -190,8 +216,7 @@ public sealed class NativePolicyTests
         Assert.Empty(TabIds(plan, "fallbackTabIDs"));
     }
     [Fact]
-    public void PresentedCardsOnlyFallBackUnderCriticalMobilePressureBeyondTheFocusedNeighbours()
-    {
+    public void PresentedCardsOnlyFallBackUnderCriticalMobilePressureBeyondTheFocusedNeighbours() {
         JsonNode Plan(string level, string platform, int focused) => ReleasePlan(level, platform, focused,
             Candidate("00000000-0000-0000-0000-000000000101", 40, presentedIndex: 0),
             Candidate("00000000-0000-0000-0000-000000000102", 30, presentedIndex: 1),
@@ -211,17 +236,30 @@ public sealed class NativePolicyTests
         Assert.Empty(TabIds(Plan("critical", "mobile", 0), "tabIDs"));
     }
     [Fact]
-    public void ReleasePlanRejectsInconsistentPresentationAndRepeatedTabs()
-    {
-        var duplicate = new JsonObject { ["version"] = 1, ["operation"] = "residency.release_plan",
-            ["level"] = "critical", ["platform"] = "mobile", ["focusedIndex"] = null,
+    public void ReleasePlanRejectsInconsistentPresentationAndRepeatedTabs() {
+        var duplicate = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "residency.release_plan",
+            ["level"] = "critical",
+            ["platform"] = "mobile",
+            ["focusedIndex"] = null,
             ["candidates"] = new JsonArray(Candidate("00000000-0000-0000-0000-000000000201", 1),
-                Candidate("00000000-0000-0000-0000-000000000201", 2)) };
+                Candidate("00000000-0000-0000-0000-000000000201", 2))
+        };
         Assert.Throws<BrowserRuleException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(duplicate.ToJsonString())));
-        var presented = new JsonObject { ["version"] = 1, ["operation"] = "residency.release_plan",
-            ["level"] = "critical", ["platform"] = "mobile", ["focusedIndex"] = 0,
-            ["candidates"] = new JsonArray(new JsonObject { ["tabID"] = "00000000-0000-0000-0000-000000000202",
-                ["inactiveSince"] = 1, ["isPresented"] = true, ["presentedIndex"] = null }) };
+        var presented = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "residency.release_plan",
+            ["level"] = "critical",
+            ["platform"] = "mobile",
+            ["focusedIndex"] = 0,
+            ["candidates"] = new JsonArray(new JsonObject {
+                ["tabID"] = "00000000-0000-0000-0000-000000000202",
+                ["inactiveSince"] = 1,
+                ["isPresented"] = true,
+                ["presentedIndex"] = null
+            })
+        };
         Assert.Throws<BrowserRuleException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(presented.ToJsonString())));
     }
     [Theory]
@@ -229,10 +267,12 @@ public sealed class NativePolicyTests
     [InlineData(2, "reload")]
     [InlineData(3, "showFailure")]
     [InlineData(9, "showFailure")]
-    public void RendererTerminationsReloadTwiceBeforeShowingFailure(int terminations, string action)
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "residency.process_recovery",
-            ["consecutiveTerminations"] = terminations };
+    public void RendererTerminationsReloadTwiceBeforeShowingFailure(int terminations, string action) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "residency.process_recovery",
+            ["consecutiveTerminations"] = terminations
+        };
         var response = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         Assert.Equal(action, response["action"]!.GetValue<string>());
         Assert.Equal(2, response["maximumAutomaticReloads"]!.GetValue<int>());
@@ -247,26 +287,36 @@ public sealed class NativePolicyTests
     [InlineData("current", true, 1, "closeWindow")]
     [InlineData(null, false, 4, "closeWindow")]
     public void DismissingATabUnloadsDurableTabsAndClosesTheLoneStartPageWindow(
-        string? placement, bool isStartPage, int tabCount, string action)
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "tabs.dismissal",
-            ["placement"] = placement, ["isStartPage"] = isStartPage, ["tabCount"] = tabCount };
+        string? placement, bool isStartPage, int tabCount, string action) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "tabs.dismissal",
+            ["placement"] = placement,
+            ["isStartPage"] = isStartPage,
+            ["tabCount"] = tabCount
+        };
         var response = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         Assert.Equal(action, response["action"]!.GetValue<string>());
         request["placement"] = "archived";
         Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())));
     }
     private static JsonObject Candidate(string tabId, double? inactiveSince,
-        bool keepsPageLoaded = false, int? presentedIndex = null) => new()
-    {
-        ["tabID"] = tabId, ["inactiveSince"] = inactiveSince, ["keepsPageLoaded"] = keepsPageLoaded,
-        ["isPresented"] = presentedIndex.HasValue, ["presentedIndex"] = presentedIndex
-    };
-    private static JsonNode ReleasePlan(string level, string platform, int? focusedIndex, params JsonObject[] candidates)
-    {
-        var request = new JsonObject { ["version"] = 1, ["operation"] = "residency.release_plan",
-            ["level"] = level, ["platform"] = platform, ["focusedIndex"] = focusedIndex,
-            ["candidates"] = new JsonArray(candidates.Select(candidate => candidate.DeepClone()).ToArray()) };
+        bool keepsPageLoaded = false, int? presentedIndex = null) => new() {
+            ["tabID"] = tabId,
+            ["inactiveSince"] = inactiveSince,
+            ["keepsPageLoaded"] = keepsPageLoaded,
+            ["isPresented"] = presentedIndex.HasValue,
+            ["presentedIndex"] = presentedIndex
+        };
+    private static JsonNode ReleasePlan(string level, string platform, int? focusedIndex, params JsonObject[] candidates) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "residency.release_plan",
+            ["level"] = level,
+            ["platform"] = platform,
+            ["focusedIndex"] = focusedIndex,
+            ["candidates"] = new JsonArray(candidates.Select(candidate => candidate.DeepClone()).ToArray())
+        };
         var bytes = Encoding.UTF8.GetBytes(request.ToJsonString());
         var result = NativePolicyEvaluator.Evaluate(bytes);
         Assert.Equal(result, NativePolicyEvaluator.Evaluate(bytes));

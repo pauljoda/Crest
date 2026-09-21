@@ -2,11 +2,9 @@ namespace CrestCore.Domain;
 
 /// First occurrences retain identity. A collision receives a fresh identity
 /// without inheriting another page's or profile's runtime resources.
-public sealed class RuntimeIdentityRegistry(IIdSource ids)
-{
+public sealed class RuntimeIdentityRegistry(IIdSource ids) {
     private readonly HashSet<Guid> seen = [];
-    public Guid Claim(Guid preferred)
-    {
+    public Guid Claim(Guid preferred) {
         if (preferred != Guid.Empty && seen.Add(preferred)) return preferred;
         Guid replacement;
         do { replacement = ids.Next(); } while (replacement == Guid.Empty || !seen.Add(replacement));

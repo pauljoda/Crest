@@ -3,13 +3,11 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed class SpaceAccessAuthorityTests
-{
+public sealed class SpaceAccessAuthorityTests {
     private static SpaceAccessAssignment Assignment() => new(Guid.NewGuid(), Guid.NewGuid());
 
     [Fact]
-    public void GrantsRequireMatchingRequestAndExactProfileAndCannotReplay()
-    {
+    public void GrantsRequireMatchingRequestAndExactProfileAndCannotReplay() {
         var access = new SpaceAccessAuthority();
         var target = Assignment();
         var replacement = target with { Profile = Guid.NewGuid() };
@@ -25,8 +23,7 @@ public sealed class SpaceAccessAuthorityTests
     }
 
     [Fact]
-    public void RelockingInvalidatesOldCompletionEvenAfterAnotherAttemptStarts()
-    {
+    public void RelockingInvalidatesOldCompletionEvenAfterAnotherAttemptStarts() {
         var access = new SpaceAccessAuthority();
         var target = Assignment();
         var old = access.Begin(target, true);
@@ -40,8 +37,7 @@ public sealed class SpaceAccessAuthorityTests
     }
 
     [Fact]
-    public void InactiveScenePreservesPromptButExplicitLockAllCancelsItAndRevokesGrants()
-    {
+    public void InactiveScenePreservesPromptButExplicitLockAllCancelsItAndRevokesGrants() {
         var access = new SpaceAccessAuthority();
         var first = Assignment();
         var second = Assignment();
@@ -56,8 +52,7 @@ public sealed class SpaceAccessAuthorityTests
     }
 
     [Fact]
-    public void DenialConsumesRequestAndAllowsRetryWithoutGrantingOtherProfiles()
-    {
+    public void DenialConsumesRequestAndAllowsRetryWithoutGrantingOtherProfiles() {
         var access = new SpaceAccessAuthority();
         var target = Assignment();
         var request = access.Begin(target, true);
@@ -72,8 +67,7 @@ public sealed class SpaceAccessAuthorityTests
     }
 
     [Fact]
-    public void LockingOneSpaceRevokesAllItsProfilesWithoutCancelingAnotherPrompt()
-    {
+    public void LockingOneSpaceRevokesAllItsProfilesWithoutCancelingAnotherPrompt() {
         var access = new SpaceAccessAuthority();
         var first = Assignment();
         var replacement = first with { Profile = Guid.NewGuid() };

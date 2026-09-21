@@ -5,11 +5,9 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed partial class BrowserContractsTests
-{
+public sealed partial class BrowserContractsTests {
     [Fact]
-    public void BorrowingUsesOwnedPolicyAndCannotCreateOrRewriteAProfileFromASnapshot()
-    {
+    public void BorrowingUsesOwnedPolicyAndCannotCreateOrRewriteAProfileFromASnapshot() {
         var session = SavedSession().Document["session"]!;
         session["spaces"]![0]!["futureProfilePolicy"] = new JsonObject { ["retained"] = true };
         var owner = new NativeSessionAuthority(Bytes(session));
@@ -23,8 +21,10 @@ public sealed partial class BrowserContractsTests
         Assert.Null(space["selectedTabID"]);
         var metadata = space.DeepClone(); metadata["name"] = "Not the owner";
         Assert.Equal("borrowed_profile_requires_owner", Assert.Throws<BrowserRuleException>(() =>
-            child.Commit(1, Bytes(new JsonObject { ["version"] = 1, ["spaces"] = new JsonArray(new JsonObject
-            { ["id"] = space["id"]!.DeepClone(), ["metadata"] = metadata }) }))).Code);
+            child.Commit(1, Bytes(new JsonObject {
+                ["version"] = 1,
+                ["spaces"] = new JsonArray(new JsonObject { ["id"] = space["id"]!.DeepClone(), ["metadata"] = metadata })
+            }))).Code);
         Assert.Equal(1UL, child.Revision);
         var fabricated = projected.DeepClone(); fabricated["coreWorkspaceKind"] = "temporary";
         Assert.Equal("borrowed_source_required", Assert.Throws<BrowserRuleException>(() =>
@@ -34,20 +34,24 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void BorrowedPolicyRefreshPreservesLocalRecordsAndRejectsPreparedEditsAfterOwnerChanges()
-    {
+    public void BorrowedPolicyRefreshPreservesLocalRecordsAndRejectsPreparedEditsAfterOwnerChanges() {
         var session = SavedSession().Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session)); var child = Borrow(owner, session);
         var initial = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
         var localTab = session["spaces"]![0]!["tabs"]![0]!.DeepClone();
         localTab["folderID"] = null; localTab["splitGroupID"] = null; localTab["placement"] = "current";
-        child.Commit(1, Bytes(new JsonObject { ["version"] = 1, ["spaces"] = new JsonArray(new JsonObject
-        { ["id"] = initial["spaces"]![0]!["id"]!.DeepClone(),
-          ["tabs"] = new JsonObject { ["replace"] = new JsonArray(localTab) } }) }));
+        child.Commit(1, Bytes(new JsonObject {
+            ["version"] = 1,
+            ["spaces"] = new JsonArray(new JsonObject {
+                ["id"] = initial["spaces"]![0]!["id"]!.DeepClone(),
+                ["tabs"] = new JsonObject { ["replace"] = new JsonArray(localTab) }
+            })
+        }));
         var local = JsonNode.Parse(child.Checkpoint(2, Selection(initial)).Read("core"))!;
-        var request = Bytes(new JsonObject
-        {
-            ["version"] = 1, ["operation"] = "tab.rename", ["now"] = 800000100.0,
+        var request = Bytes(new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "tab.rename",
+            ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
             ["window"] = JsonNode.Parse(Selection(local)),
@@ -70,8 +74,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void DeletingOrReleasingTheOwnerRevokesBorrowedCommandsWithoutRewritingTheirRecords()
-    {
+    public void DeletingOrReleasingTheOwnerRevokesBorrowedCommandsWithoutRewritingTheirRecords() {
         var session = SavedSession().Document["session"]!;
         var extra = session["spaces"]![0]!.DeepClone();
         extra["id"] = SwiftId(Guid.NewGuid()); extra["profile"]!["id"] = Guid.NewGuid().ToString();

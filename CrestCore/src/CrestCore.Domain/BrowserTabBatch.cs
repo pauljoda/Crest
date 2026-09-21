@@ -4,10 +4,8 @@ public sealed record BatchItem(Guid Id, bool IsFolder);
 public sealed record BatchTab(TabId Id, TabPlacement Placement, FolderId? FolderId, Guid? SplitGroupId);
 public sealed record BatchFolder(FolderId Id, FolderId? ParentId, TabPlacement Location);
 public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnlyList<BatchTab> Tabs,
-    IReadOnlyList<BatchFolder> Folders)
-{
-    public void Validate(BrowserTabCollection source)
-    {
+    IReadOnlyList<BatchFolder> Folders) {
+    public void Validate(BrowserTabCollection source) {
         void Require(bool valid) { if (!valid) throw new BrowserRuleException("stale_selection"); }
         Require(Roots.Count > 0 && Roots.Distinct().Count() == Roots.Count
             && Tabs.Select(t => t.Id).Distinct().Count() == Tabs.Count);
@@ -19,15 +17,11 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
         Require(source.Folders.Where(f => allFolders.Contains(f.Id))
             .Select(f => new BatchFolder(f.Id, f.ParentId, f.Location)).SequenceEqual(Folders));
         List<BatchTab> members = [];
-        foreach (var root in Roots)
-        {
-            if (root.IsFolder)
-            {
+        foreach (var root in Roots) {
+            if (root.IsFolder) {
                 var subtree = tree.Subtree(new(root.Id));
                 members.AddRange(source.Tabs.Where(t => t.FolderId is { } f && subtree.Contains(f)).Select(Member));
-            }
-            else
-            {
+            } else {
                 var tab = source.Tab(new(root.Id));
                 Require(tab.FolderId is not { } f || !allFolders.Contains(f));
                 members.Add(Member(tab));
@@ -35,8 +29,7 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
         }
         Require(members.SequenceEqual(Tabs));
         var ids = Tabs.Select(t => t.Id).ToHashSet();
-        foreach (var member in Tabs)
-        {
+        foreach (var member in Tabs) {
             Require(!source.Tab(member.Id).Content.IsStartPage);
             if (source.SplitMembers(member.Id).Any(t => !ids.Contains(t.Id)))
                 throw new BrowserRuleException("incomplete_split");
@@ -53,13 +46,11 @@ public sealed record TabBatchResult(TabId? Selection, TabId? DestinationSelectio
     IReadOnlyList<(TabId Source, TabId Copy)> Copies, IReadOnlyList<(Guid Source, Guid Copy)> GroupCopies,
     FolderId? CreatedFolder);
 
-public sealed partial class BrowserTabCollection
-{
+public sealed partial class BrowserTabCollection {
     /// Operates on a detached command candidate. The authority publishes it only
     /// after the complete batch, native projection and storage have succeeded.
     public TabBatchResult ApplyBatch(TabBatchSelection request, TabBatchAction action, TabId? selected,
-        TabId? fallback, BrowserTabCollection? destination, TabId? destinationSelection, IIdSource ids, DateTimeOffset now)
-    {
+        TabId? fallback, BrowserTabCollection? destination, TabId? destinationSelection, IIdSource ids, DateTimeOffset now) {
         request.Validate(this);
         var requested = request.Tabs.Select(t => t.Id).ToArray();
         var selectedIds = requested.ToHashSet();
@@ -69,14 +60,11 @@ public sealed partial class BrowserTabCollection
         List<(Guid Source, Guid Copy)> groupCopies = [];
         FolderId? createdFolder = null;
         void Require(bool valid, string code = "invalid_destination") { if (!valid) throw new BrowserRuleException(code); }
-        FolderId CreateFolder(TabPlacement placement)
-        {
+        FolderId CreateFolder(TabPlacement placement) {
             var folder = new FolderId(ids.Next()); AddFolder(folder, "New Folder", placement); createdFolder = folder; return folder;
         }
-        if (request.Folders.Count > 0)
-        {
-            switch (action.Kind)
-            {
+        if (request.Folders.Count > 0) {
+            switch (action.Kind) {
                 case TabBatchKind.File: FileBatchRoots(request, action, now); break;
                 case TabBatchKind.NewFolder:
                     FileBatchRoots(request, action with { Folder = CreateFolder(action.Placement) }, now); break;
@@ -89,21 +77,17 @@ public sealed partial class BrowserTabCollection
             return new(selected, destinationSelection, copies, groupCopies, createdFolder);
         }
         Require(requested.Length > 0, "stale_selection");
-        switch (action.Kind)
-        {
+        switch (action.Kind) {
             case TabBatchKind.File:
                 Require(action.Before is not { } anchor || !selectedIds.Contains(anchor));
-                if (action.Placement == TabPlacement.Pinned)
-                {
+                if (action.Placement == TabPlacement.Pinned) {
                     Require(groups.Count == 0, "cannot_pin_split");
                     Require(tabs.Count(t => t.Placement == TabPlacement.Pinned && !selectedIds.Contains(t.Id)) + members.Length <= 12,
                         "pinned_capacity");
                     Require(action.Folder is null && action.BeforeFolder is null
                         && (action.Before is not { } before || tabs.Any(t => t.Id == before && t.Placement == TabPlacement.Pinned)));
                     foreach (var tab in requested) MoveTab(tab, TabPlacement.Pinned, null, action.Before, false, now);
-                }
-                else
-                {
+                } else {
                     OrderBatchMembers(requested);
                     FileTabs(requested, action.Placement, action.Folder, now, action.Before, action.BeforeFolder);
                 }
@@ -111,8 +95,7 @@ public sealed partial class BrowserTabCollection
             case TabBatchKind.NewFolder:
             case TabBatchKind.NewFolderAround:
                 var wrapped = requested;
-                if (action.Kind == TabBatchKind.NewFolderAround)
-                {
+                if (action.Kind == TabBatchKind.NewFolderAround) {
                     Require(action.Target is not null && !selectedIds.Contains(action.Target.Value));
                     var target = Tab(action.Target!.Value);
                     Require(target.Placement == TabPlacement.Current && target.FolderId is null
@@ -138,14 +121,12 @@ public sealed partial class BrowserTabCollection
                 var existing = SplitMembers(targetId).Select(t => t.Id).ToHashSet();
                 Require(existing.Union(selectedIds).Count() is >= 2 and <= MaximumSplitMembers, "split_capacity");
                 var insertion = action.Index;
-                foreach (var id in requested.Where(id => !existing.Contains(id)))
-                {
+                foreach (var id in requested.Where(id => !existing.Contains(id))) {
                     var oldGroup = Tab(targetId).SplitGroupId;
                     var joined = JoinSplit(id, targetId, insertion, ids, now);
                     copies.AddRange(joined.Copies); selected = joined.SelectedTab;
                     var targetCopy = joined.Copies.FirstOrDefault(p => p.Source == targetId);
-                    if (targetCopy != default)
-                    {
+                    if (targetCopy != default) {
                         targetId = targetCopy.Copy;
                         if (oldGroup is { } old) groupCopies.Add((old, Tab(targetId).SplitGroupId!.Value));
                     }
@@ -164,8 +145,7 @@ public sealed partial class BrowserTabCollection
             case TabBatchKind.Duplicate:
                 foreach (var tab in members)
                     copies.Add((tab.Id, DuplicateTab(tab.Id, ids, now, requestedIndex: tabs.Count).Id));
-                foreach (var group in groups)
-                {
+                foreach (var group in groups) {
                     var copied = members.Where(t => t.SplitGroupId == group)
                         .Select(t => copies.Single(p => p.Source == t.Id).Copy).ToArray();
                     if (copied.Length < 2) continue;
@@ -185,15 +165,13 @@ public sealed partial class BrowserTabCollection
         return new(selected, destinationSelection, copies, groupCopies, createdFolder);
     }
 
-    private void OrderBatchMembers(IReadOnlyList<TabId> requested)
-    {
+    private void OrderBatchMembers(IReadOnlyList<TabId> requested) {
         var members = requested.Select(Tab).ToArray(); var ids = requested.ToHashSet();
         int insertion = tabs.FindIndex(t => ids.Contains(t.Id));
         tabs.RemoveAll(t => ids.Contains(t.Id)); tabs.InsertRange(insertion, members);
     }
 
-    private void FileBatchRoots(TabBatchSelection request, TabBatchAction action, DateTimeOffset now)
-    {
+    private void FileBatchRoots(TabBatchSelection request, TabBatchAction action, DateTimeOffset now) {
         var folderIds = request.Folders.Select(f => f.Id).ToHashSet();
         var tabIds = request.Tabs.Select(t => t.Id).ToHashSet();
         if (action.Placement == TabPlacement.Pinned || action.Folder is { } parent && folderIds.Contains(parent)
@@ -208,26 +186,20 @@ public sealed partial class BrowserTabCollection
                 || Tab(anchor).Placement != action.Placement || SplitMembers(anchor)[0].Id != anchor))
             throw new BrowserRuleException("invalid_destination");
         List<(BatchItem Item, TabId[] Tabs)> blocks = []; HashSet<TabId> included = [];
-        foreach (var root in request.Roots)
-        {
+        foreach (var root in request.Roots) {
             if (root.IsFolder) blocks.Add((root, []));
-            else if (!included.Contains(new(root.Id)))
-            {
+            else if (!included.Contains(new(root.Id))) {
                 var members = SplitMembers(new(root.Id)).Select(t => t.Id).ToArray();
                 included.UnionWith(members); blocks.Add((root, members));
             }
         }
         var tabAnchor = action.Before; var folderAnchor = action.BeforeFolder;
-        foreach (var block in blocks.AsEnumerable().Reverse())
-        {
-            if (block.Item.IsFolder)
-            {
+        foreach (var block in blocks.AsEnumerable().Reverse()) {
+            if (block.Item.IsFolder) {
                 var folder = new FolderId(block.Item.Id);
                 MoveFolder(folder, action.Placement, action.Folder, now, folderAnchor, tabAnchor);
                 folderAnchor = folder; tabAnchor = null;
-            }
-            else
-            {
+            } else {
                 FileTabs(block.Tabs, action.Placement, action.Folder, now, tabAnchor, folderAnchor);
                 tabAnchor = block.Tabs[0]; folderAnchor = null;
             }

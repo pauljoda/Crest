@@ -5,27 +5,30 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed partial class BrowserContractsTests
-{
-    private static JsonObject EngineDescriptor(string implementation = "test.webkit", string role = "engine") => new()
-    {
-        ["adapterId"] = "engine", ["role"] = role, ["implementationId"] = implementation,
-        ["implementationVersion"] = "1", ["protocolVersion"] = 1,
-        ["capabilities"] = new JsonObject
-        {
-            ["pages"] = EngineCapability(), ["navigation"] = EngineCapability(),
-            ["pdf"] = EngineCapability("unavailable"), ["extensions"] = EngineCapability("unverified")
+public sealed partial class BrowserContractsTests {
+    private static JsonObject EngineDescriptor(string implementation = "test.webkit", string role = "engine") => new() {
+        ["adapterId"] = "engine",
+        ["role"] = role,
+        ["implementationId"] = implementation,
+        ["implementationVersion"] = "1",
+        ["protocolVersion"] = 1,
+        ["capabilities"] = new JsonObject {
+            ["pages"] = EngineCapability(),
+            ["navigation"] = EngineCapability(),
+            ["pdf"] = EngineCapability("unavailable"),
+            ["extensions"] = EngineCapability("unverified")
         }
     };
-    private static JsonObject EngineCapability(string status = "supported") => new()
-    {
-        ["status"] = status, ["contractVersion"] = 1, ["scope"] = "Native test port",
-        ["limitations"] = new JsonArray(), ["evidence"] = "Contract test"
+    private static JsonObject EngineCapability(string status = "supported") => new() {
+        ["status"] = status,
+        ["contractVersion"] = 1,
+        ["scope"] = "Native test port",
+        ["limitations"] = new JsonArray(),
+        ["evidence"] = "Contract test"
     };
 
     [Fact]
-    public void EngineRegistrationIsLocalAndDoesNotTravelWithRestoredBrowserState()
-    {
+    public void EngineRegistrationIsLocalAndDoesNotTravelWithRestoredBrowserState() {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
         authority.RegisterEngine(Bytes(EngineDescriptor()));
@@ -46,8 +49,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void EngineRegistrationRejectsWrongRolesUnknownNavigationVersionsAndReplacement()
-    {
+    public void EngineRegistrationRejectsWrongRolesUnknownNavigationVersionsAndReplacement() {
         var authority = new NativeSessionAuthority(Bytes(SavedSession().Document["session"]!));
         Assert.Throws<BrowserRuleException>(() => authority.RegisterEngine(Bytes(EngineDescriptor(role: "services"))));
         var descriptor = EngineDescriptor();

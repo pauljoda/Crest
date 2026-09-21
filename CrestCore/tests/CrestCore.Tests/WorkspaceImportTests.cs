@@ -5,17 +5,18 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed partial class BrowserContractsTests
-{
-    private static byte[] ImportCommand(JsonNode session, JsonArray sources) => Bytes(new JsonObject
-    {
-        ["version"] = 1, ["operation"] = "workspace.import", ["mode"] = "portable", ["now"] = 800000000.0,
-        ["arguments"] = new JsonObject { ["sources"] = sources }, ["window"] = JsonNode.Parse(Selection(session))
+public sealed partial class BrowserContractsTests {
+    private static byte[] ImportCommand(JsonNode session, JsonArray sources) => Bytes(new JsonObject {
+        ["version"] = 1,
+        ["operation"] = "workspace.import",
+        ["mode"] = "portable",
+        ["now"] = 800000000.0,
+        ["arguments"] = new JsonObject { ["sources"] = sources },
+        ["window"] = JsonNode.Parse(Selection(session))
     });
 
     [Fact]
-    public void ImportReidentifiesCollisionsWithoutPublishingUntilDurableCommit()
-    {
+    public void ImportReidentifiesCollisionsWithoutPublishingUntilDurableCommit() {
         var session = SavedSession().Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session));
         var command = owner.PrepareCommand(1, ImportCommand(session, new JsonArray(session["spaces"]![0]!.DeepClone())));
@@ -34,8 +35,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void RejectedImportCannotBeCommittedOrReservedAndKeepsTheSourceIntact()
-    {
+    public void RejectedImportCannotBeCommittedOrReservedAndKeepsTheSourceIntact() {
         var session = SavedSession().Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session));
         var sources = new JsonArray(Enumerable.Range(0, 64).Select(_ => session["spaces"]![0]!.DeepClone()).ToArray());

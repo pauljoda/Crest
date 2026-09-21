@@ -5,8 +5,7 @@ namespace CrestCore.Application;
 
 /// Shared preview/command implementation. Sources contain semantic records only;
 /// positional asset references let the native caller retain opaque image bytes.
-public sealed class NativeWorkspaceImport
-{
+public sealed class NativeWorkspaceImport {
     private sealed record Origin(int Source, int Space, int Tab, string Section);
     private readonly Dictionary<JsonNode, Origin> origins = new(ReferenceEqualityComparer.Instance);
     private static Guid Id(JsonNode? n) => NativeSessionAuthority.Id(n);
@@ -15,71 +14,57 @@ public sealed class NativeWorkspaceImport
     private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString("D") };
     private static Guid? OptionalId(JsonNode? n) => n is null ? null : Id(n);
 
-    public static JsonObject Preview(JsonObject session, JsonObject arguments, string mode, double now)
-    {
-        try { return new NativeWorkspaceImport().Apply(session, arguments, mode, now); }
-        catch (BrowserRuleException error) { return new() { ["error"] = error.Code }; }
+    public static JsonObject Preview(JsonObject session, JsonObject arguments, string mode, double now) {
+        try { return new NativeWorkspaceImport().Apply(session, arguments, mode, now); } catch (BrowserRuleException error) { return new() { ["error"] = error.Code }; }
     }
 
-    private void Track(JsonNode space, int source, int index)
-    {
+    private void Track(JsonNode space, int source, int index) {
         foreach (var section in new[] { "tabs", "archivedTabs" })
             for (int ti = 0; ti < Items(space, section).Count; ti++)
                 origins[Items(space, section)[ti]!] = new(source, index, ti, section);
     }
-    private JsonNode Copy(JsonNode node)
-    {
+    private JsonNode Copy(JsonNode node) {
         var copy = node.DeepClone();
         if (origins.TryGetValue(node, out var origin)) origins[copy] = origin;
         return copy;
     }
     private void Tabs(JsonNode space, IEnumerable<JsonNode> tabs) => space["tabs"] = new JsonArray(tabs.Select(Copy).ToArray());
-    private static void Customize(JsonNode space, JsonNode values)
-    {
+    private static void Customize(JsonNode space, JsonNode values) {
         space["name"] = SpaceOrganizationPolicy.Name(values["name"]!.GetValue<string>());
         space["symbol"] = SpaceOrganizationPolicy.Symbol(values["symbol"]!.GetValue<string>());
         space["accent"] = values["accent"]!.DeepClone();
         space["branding"] = values["branding"]!.DeepClone();
     }
-    private static void Available(JsonNode session, Guid id)
-    {
+    private static void Available(JsonNode session, Guid id) {
         if (Items(session, "spaceDeletions").Any(d => Id(d!["spaceID"]) == id))
             throw new BrowserRuleException("space_deletion_in_progress");
     }
-    private static void SelectAdded(JsonNode space, IEnumerable<JsonNode> tabs)
-    {
+    private static void SelectAdded(JsonNode space, IEnumerable<JsonNode> tabs) {
         var chosen = tabs.LastOrDefault(t => Placement(t) == "current") ?? tabs.FirstOrDefault();
         if (chosen is not null) space["selectedTabID"] = chosen["id"]!.DeepClone();
     }
 
-    public JsonObject Apply(JsonObject source, JsonObject arguments, string mode, double now)
-    {
+    public JsonObject Apply(JsonObject source, JsonObject arguments, string mode, double now) {
         var session = source.DeepClone().AsObject(); var spaces = Items(session, "spaces");
         var originalSpaces = new HashSet<JsonNode>(spaces.Select(s => s!), ReferenceEqualityComparer.Instance);
         Dictionary<JsonNode, HashSet<Guid>> originalFolderIds = new(ReferenceEqualityComparer.Instance);
         Dictionary<JsonNode, HashSet<Guid>> originalHistoryIds = new(ReferenceEqualityComparer.Instance);
-        for (int si = 0; si < spaces.Count; si++)
-        {
+        for (int si = 0; si < spaces.Count; si++) {
             var space = spaces[si]!;
             originalFolderIds[space] = Items(space, "folders").Select(f => Id(f!["id"])).ToHashSet();
             originalHistoryIds[space] = Items(space, "history").Select(h => Id(h!["id"])).ToHashSet();
             Track(space, 0, si);
         }
-        var inputs = Items(arguments, "sources").Select((n, i) =>
-        { var value = n!.DeepClone().AsObject(); Track(value, i + 1, 0); return value; }).ToArray();
+        var inputs = Items(arguments, "sources").Select((n, i) => { var value = n!.DeepClone().AsObject(); Track(value, i + 1, 0); return value; }).ToArray();
         JsonNode? affected = null;
-        if (mode == "portable")
-        {
+        if (mode == "portable") {
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Length);
             foreach (var input in inputs) spaces.Add((JsonNode)input);
             affected = inputs.FirstOrDefault();
-        }
-        else if (mode == "manual")
-        {
+        } else if (mode == "manual") {
             var drafts = Items(arguments, "drafts");
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, drafts.Count(d => d!["isNew"]!.GetValue<bool>()));
-            foreach (var draft in drafts)
-            {
+            foreach (var draft in drafts) {
                 var input = inputs[draft!["sourceIndex"]!.GetValue<int>()]; var id = Id(input["id"]);
                 bool created = draft["isNew"]!.GetValue<bool>();
                 var destination = created ? input : spaces.FirstOrDefault(s => Id(s!["id"]) == id);
@@ -95,8 +80,7 @@ public sealed class NativeWorkspaceImport
                 WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => Placement(t) == "pinned"));
                 var ordered = new[] { "pinned", "saved", "current" }.SelectMany(p => added.Where(t => Placement(t) == p)).ToArray();
                 if (created) Tabs(destination, ordered);
-                else
-                {
+                else {
                     var list = old.ToList();
                     var firstCurrent = list.FindIndex(t => Placement(t) == "current");
                     if (firstCurrent < 0) firstCurrent = list.Count;
@@ -112,28 +96,23 @@ public sealed class NativeWorkspaceImport
                 if (created) spaces.Add(destination);
                 if (created || added.Length > 0) affected ??= destination;
             }
-            if (arguments["orderWasEdited"]?.GetValue<bool>() == true)
-            {
+            if (arguments["orderWasEdited"]?.GetValue<bool>() == true) {
                 var order = drafts.Select(d => Id(inputs[d!["sourceIndex"]!.GetValue<int>()]["id"])).ToArray();
                 var sorted = order.Select(id => spaces.FirstOrDefault(s => Id(s!["id"]) == id)).OfType<JsonNode>()
                     .Concat(spaces.Where(s => !order.Contains(Id(s!["id"]))).Select(s => s!)).ToArray();
                 spaces.Clear(); foreach (var space in sorted) spaces.Add(space);
             }
             session.Remove("disposableSeedMarker");
-        }
-        else if (mode == "review")
-        {
+        } else if (mode == "review") {
             var reviews = Items(arguments, "reviews").Where(r => r!["included"]!.GetValue<bool>()).ToArray();
             if (reviews.Length == 0) throw new BrowserRuleException("no_included_spaces");
             bool replaceSeed = session["disposableSeedMarker"] is not null;
             WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count, reviews.Count(r => r!["destinationID"] is null));
-            if (replaceSeed)
-            {
+            if (replaceSeed) {
                 if (Items(session, "spaceDeletions").Count > 0) throw new BrowserRuleException("space_deletion_in_progress");
                 spaces.Clear(); session.Remove("defaultSpaceID");
             }
-            foreach (var review in reviews)
-            {
+            foreach (var review in reviews) {
                 var input = inputs[review!["sourceIndex"]!.GetValue<int>()];
                 var destinationId = OptionalId(review["destinationID"]);
                 var destination = destinationId is null ? input : spaces.FirstOrDefault(s => Id(s!["id"]) == destinationId);
@@ -156,8 +135,7 @@ public sealed class NativeWorkspaceImport
                     f["title"]!.GetValue<string>(), f["location"]?.GetValue<string>() == "current" ? TabPlacement.Current : TabPlacement.Saved,
                     OptionalId(f["parentID"]) is { } parent ? new FolderId(parent) : null)).ToArray());
                 Dictionary<Guid, Guid> mapping = [];
-                foreach (var folder in tree.Where(f => required.Contains(f.Id.Value)))
-                {
+                foreach (var folder in tree.Where(f => required.Contains(f.Id.Value))) {
                     var original = byId[folder.Id.Value];
                     Guid? parent = folder.ParentId is { } p && mapping.TryGetValue(p.Value, out var mapped) ? mapped : null;
                     var match = folders.FirstOrDefault(f => OptionalId(f!["parentID"]) == parent
@@ -174,22 +152,23 @@ public sealed class NativeWorkspaceImport
                 }
                 int pinned = destinationId is null ? 0 : Items(destination, "tabs").Count(t => Placement(t!) == "pinned");
                 var overflowFolder = folders.FirstOrDefault(f => string.Equals(f!["title"]!.GetValue<string>(), "Imported Pinned Tabs", StringComparison.OrdinalIgnoreCase));
-                var edited = additions.Select(tab =>
-                {
+                var edited = additions.Select(tab => {
                     var copy = Copy(tab); var placement = PlacementFor(tab); copy["placement"] = placement;
-                    if (placement == "pinned" && ++pinned > WorkspaceImportPolicy.MaximumPinnedTabs)
-                    {
+                    if (placement == "pinned" && ++pinned > WorkspaceImportPolicy.MaximumPinnedTabs) {
                         copy["placement"] = placement = "saved";
-                        if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders)
-                        {
-                            overflowFolder = new JsonObject { ["id"] = SwiftId(Guid.NewGuid()), ["title"] = "Imported Pinned Tabs",
-                                ["location"] = "saved", ["symbol"] = "pin.slash", ["isCollapsed"] = false };
+                        if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
+                            overflowFolder = new JsonObject {
+                                ["id"] = SwiftId(Guid.NewGuid()),
+                                ["title"] = "Imported Pinned Tabs",
+                                ["location"] = "saved",
+                                ["symbol"] = "pin.slash",
+                                ["isCollapsed"] = false
+                            };
                             folders.Add(overflowFolder);
                         }
                         copy["folderID"] = overflowFolder?["id"]?.DeepClone();
-                    }
-                    else copy["folderID"] = placement == "saved" && OptionalId(tab["folderID"]) is { } old && mapping.TryGetValue(old, out var folder)
-                        ? SwiftId(folder) : null;
+                    } else copy["folderID"] = placement == "saved" && OptionalId(tab["folderID"]) is { } old && mapping.TryGetValue(old, out var folder)
+                          ? SwiftId(folder) : null;
                     copy["savedURL"] = placement == "current" ? null : copy["savedURL"]?.DeepClone() ?? copy["url"]?.DeepClone();
                     if (placement == "pinned") copy["symbol"] = "pin.fill";
                     return copy;
@@ -205,18 +184,15 @@ public sealed class NativeWorkspaceImport
                 affected ??= destination;
             }
             if (affected is not null) session.Remove("disposableSeedMarker");
-        }
-        else throw new BrowserRuleException("unknown_workspace_command");
+        } else throw new BrowserRuleException("unknown_workspace_command");
         // Folder and history record IDs are global in sync, even though their
         // native collections are nested under Spaces. Reserve existing IDs first
         // so an imported Space placed earlier cannot steal another Space's records.
         var folderIds = originalFolderIds.Values.SelectMany(ids => ids).ToHashSet();
         var historyIds = originalHistoryIds.Values.SelectMany(ids => ids).ToHashSet();
-        foreach (var space in spaces.Select(s => s!))
-        {
+        foreach (var space in spaces.Select(s => s!)) {
             Dictionary<Guid, Guid> mapping = [];
-            foreach (var folder in Items(space, "folders"))
-            {
+            foreach (var folder in Items(space, "folders")) {
                 var old = Id(folder!["id"]); var id = old;
                 if (!originalSpaces.Contains(space) || !originalFolderIds[space].Contains(old))
                     while (!folderIds.Add(id)) id = Guid.NewGuid();
@@ -226,8 +202,7 @@ public sealed class NativeWorkspaceImport
                 if (OptionalId(folder!["parentID"]) is { } parent && mapping.TryGetValue(parent, out var id)) folder["parentID"] = SwiftId(id);
             foreach (var tab in Items(space, "tabs"))
                 if (OptionalId(tab!["folderID"]) is { } folder && mapping.TryGetValue(folder, out var id)) tab["folderID"] = SwiftId(id);
-            foreach (var entry in Items(space, "history"))
-            {
+            foreach (var entry in Items(space, "history")) {
                 var old = Id(entry!["id"]); var id = old;
                 if (!originalSpaces.Contains(space) || !originalHistoryIds[space].Contains(old))
                     while (!historyIds.Add(id)) id = Guid.NewGuid();
@@ -238,15 +213,18 @@ public sealed class NativeWorkspaceImport
         if (affected is not null) session["selectedSpaceID"] = affected["id"]!.DeepClone();
         var assets = new JsonArray();
         for (int si = 0; si < spaces.Count; si++)
-            foreach (var section in new[] { "tabs", "archivedTabs" })
-            {
+            foreach (var section in new[] { "tabs", "archivedTabs" }) {
                 int ti = 0;
-                foreach (var node in Items(spaces[si]!, section))
-                {
+                foreach (var node in Items(spaces[si]!, section)) {
                     if (section == "archivedTabs" && node!["tab"]!["url"] is null && node["tab"]!["nativeContent"] is null) continue;
-                    if (origins.TryGetValue(node!, out var origin)) assets.Add((JsonNode)new JsonObject
-                    { ["spaceIndex"] = si, ["tabIndex"] = ti, ["section"] = section,
-                        ["sourceIndex"] = origin.Source, ["sourceSpaceIndex"] = origin.Space, ["sourceTabIndex"] = origin.Tab });
+                    if (origins.TryGetValue(node!, out var origin)) assets.Add((JsonNode)new JsonObject {
+                        ["spaceIndex"] = si,
+                        ["tabIndex"] = ti,
+                        ["section"] = section,
+                        ["sourceIndex"] = origin.Source,
+                        ["sourceSpaceIndex"] = origin.Space,
+                        ["sourceTabIndex"] = origin.Tab
+                    });
                     ti++;
                 }
             }

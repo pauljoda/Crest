@@ -17,8 +17,6 @@ csharp_new_line_before_open_brace = none
 csharp_new_line_before_else = false
 csharp_new_line_before_catch = false
 csharp_new_line_before_finally = false
-
-[CrestCore/src/CrestCore.Domain/{BrowserIdentity,BrowserRecords,BrowserTab,TabContent}.cs]
 dotnet_diagnostic.IDE0055.severity = warning
 
 [*.md]

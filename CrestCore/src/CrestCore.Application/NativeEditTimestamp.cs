@@ -2,8 +2,7 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-internal static class NativeEditTimestamp
-{
+internal static class NativeEditTimestamp {
     private const double SwiftEpochOffset = 978307200;
 
     // Preserve Swift Date's Unix-to-reference-epoch floating-point conversion,

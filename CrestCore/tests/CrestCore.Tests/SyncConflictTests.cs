@@ -5,11 +5,9 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed partial class BrowserContractsTests
-{
+public sealed partial class BrowserContractsTests {
     [Fact]
-    public void SyncOrderInsertionKeepsExistingTokensAndCompactsExhaustedGaps()
-    {
+    public void SyncOrderInsertionKeepsExistingTokensAndCompactsExhaustedGaps() {
         var original = SyncOrderTokens.Allocate([null, null, null]);
         var inserted = SyncOrderTokens.Allocate([original[0], null, original[1], original[2]]);
         Assert.Equal(original[0], inserted[0]); Assert.Equal(original[1], inserted[2]); Assert.Equal(original[2], inserted[3]);
@@ -20,22 +18,26 @@ public sealed partial class BrowserContractsTests
         Assert.Equal(original, SyncOrderTokens.Allocate(["A", "invalid", null]));
     }
 
-    private static JsonObject SyncTabRecord(Guid id, Guid space, ulong clock, Guid device) => new()
-    {
+    private static JsonObject SyncTabRecord(Guid id, Guid space, ulong clock, Guid device) => new() {
         ["id"] = new JsonObject { ["kind"] = "tab", ["value"] = id.ToString() },
         ["spaceID"] = SwiftId(space),
         ["version"] = new JsonObject { ["logicalClock"] = clock, ["deviceID"] = device.ToString() },
-        ["payload"] = new JsonObject { ["type"] = "tab", ["value"] = new JsonObject
-        {
-            ["id"] = SwiftId(id), ["spaceID"] = SwiftId(space), ["url"] = "https://example.com/",
-            ["title"] = "Example", ["placement"] = "saved", ["lastActivatedAt"] = 50.0,
-            ["orderToken"] = "7fffffffffffffff"
-        } }
+        ["payload"] = new JsonObject {
+            ["type"] = "tab",
+            ["value"] = new JsonObject {
+                ["id"] = SwiftId(id),
+                ["spaceID"] = SwiftId(space),
+                ["url"] = "https://example.com/",
+                ["title"] = "Example",
+                ["placement"] = "saved",
+                ["lastActivatedAt"] = 50.0,
+                ["orderToken"] = "7fffffffffffffff"
+            }
+        }
     };
 
     [Fact]
-    public void SyncMergesPositionAndTitleIndependentlyAcrossEngineAgnosticRecords()
-    {
+    public void SyncMergesPositionAndTitleIndependentlyAcrossEngineAgnosticRecords() {
         var first = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 1, Guid.NewGuid());
         var second = first.DeepClone().AsObject();
         second["version"]!["logicalClock"] = 10UL;
@@ -56,8 +58,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void ExplicitDeletionWinsButNewActivationCanSurviveRetention()
-    {
+    public void ExplicitDeletionWinsButNewActivationCanSurviveRetention() {
         var live = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 1, Guid.NewGuid());
         var deleted = live.DeepClone().AsObject();
         deleted.Remove("payload"); deleted["version"]!["logicalClock"] = 2UL;
@@ -70,8 +71,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void ArchiveArrivalCannotRemoveProtectedOrExplicitlyDeletedTabsBeforeTheirTombstone()
-    {
+    public void ArchiveArrivalCannotRemoveProtectedOrExplicitlyDeletedTabsBeforeTheirTombstone() {
         var device = Guid.NewGuid(); var older = new SyncVersion(1, device); var newer = new SyncVersion(2, device);
         Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Saved, 0, older, "closed", 100, newer));
         Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Current, 0, older, "deletedOnAnotherDevice", 100, newer));

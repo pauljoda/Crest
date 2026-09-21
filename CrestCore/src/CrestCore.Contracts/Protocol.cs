@@ -7,47 +7,37 @@ namespace CrestCore.Contracts;
 public sealed class ProtocolException(string code) : Exception(code);
 public sealed record Capability(string Status, int Version, string Scope, string[] Limitations, string Evidence);
 public sealed record Adapter(string Id, string Role, string Implementation, string Version,
-    IReadOnlyDictionary<string, Capability> Capabilities)
-{
+    IReadOnlyDictionary<string, Capability> Capabilities) {
     public bool Supports(string name) => Capabilities.TryGetValue(name, out var c)
         && c.Status == "supported" && c.Version == 1;
 }
-public static class Protocol
-{
+public static class Protocol {
     public const int Version = 1;
-    public static JsonElement Parse(ReadOnlySpan<byte> utf8)
-    {
+    public static JsonElement Parse(ReadOnlySpan<byte> utf8) {
         // GetString with a throwing decoder rejects malformed UTF-8 before System.Text.Json replacement behavior.
         _ = new UTF8Encoding(false, true).GetString(utf8);
         using var doc = JsonDocument.Parse(utf8.ToArray(), new() { MaxDepth = 24 });
         ValidateMembers(doc.RootElement);
         return doc.RootElement.Clone();
     }
-    private static void ValidateMembers(JsonElement e)
-    {
-        if (e.ValueKind == JsonValueKind.Object)
-        {
+    private static void ValidateMembers(JsonElement e) {
+        if (e.ValueKind == JsonValueKind.Object) {
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var p in e.EnumerateObject())
-            {
+            foreach (var p in e.EnumerateObject()) {
                 if (!seen.Add(p.Name)) throw new ProtocolException("duplicate_member");
                 ValidateMembers(p.Value);
             }
-        }
-        else if (e.ValueKind == JsonValueKind.Array) foreach (var item in e.EnumerateArray()) ValidateMembers(item);
-        else if (e.ValueKind == JsonValueKind.String)
-        {
+        } else if (e.ValueKind == JsonValueKind.Array) foreach (var item in e.EnumerateArray()) ValidateMembers(item);
+        else if (e.ValueKind == JsonValueKind.String) {
             // GetString also validates escaped surrogate pairs.
             _ = new UTF8Encoding(false, true).GetBytes(e.GetString()!);
         }
     }
-    public static void Members(JsonElement e, params string[] names)
-    {
+    public static void Members(JsonElement e, params string[] names) {
         if (e.ValueKind != JsonValueKind.Object || e.EnumerateObject().Any(p => !names.Contains(p.Name)))
             throw new ProtocolException("unexpected_member");
     }
-    public static string Text(JsonElement e, string key, int max = 16384)
-    {
+    public static string Text(JsonElement e, string key, int max = 16384) {
         var p = e.GetProperty(key);
         if (p.ValueKind != JsonValueKind.String || p.GetString() is not { } s || s.Length == 0 || s.Length > max)
             throw new ProtocolException("invalid_string");
@@ -55,13 +45,11 @@ public static class Protocol
     }
     public static string? OptionalText(JsonElement e, string key, int max = 16384)
         => !e.TryGetProperty(key, out var p) || p.ValueKind == JsonValueKind.Null ? null : Text(e, key, max);
-    public static Guid Id(JsonElement e, string key)
-    {
+    public static Guid Id(JsonElement e, string key) {
         _ = Text(e, key, 36);
         return Id(e.GetProperty(key));
     }
-    public static Guid Id(JsonElement value)
-    {
+    public static Guid Id(JsonElement value) {
         if (value.ValueKind != JsonValueKind.String) throw new ProtocolException("invalid_uuid");
         string s = value.GetString()!;
         if (!Guid.TryParseExact(s, "D", out var id) || s != id.ToString("D") || id == Guid.Empty)
@@ -70,30 +58,26 @@ public static class Protocol
     }
     public static Guid? OptionalId(JsonElement e, string key)
         => !e.TryGetProperty(key, out var p) || p.ValueKind == JsonValueKind.Null ? null : Id(e, key);
-    public static ulong Counter(JsonElement e, string key)
-    {
+    public static ulong Counter(JsonElement e, string key) {
         string s = Text(e, key, 20);
         if (!ulong.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
             || value == 0 || s != value.ToString(CultureInfo.InvariantCulture)) throw new ProtocolException("invalid_counter");
         return value;
     }
-    public static string Endpoint(JsonElement e, string key)
-    {
+    public static string Endpoint(JsonElement e, string key) {
         string s = Text(e, key, 96);
         if (s[0] is < 'a' or > 'z' || s.Any(c => !(char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '.' or '-' or '_')))
             throw new ProtocolException("invalid_endpoint");
         return s;
     }
-    public static Adapter Descriptor(ReadOnlySpan<byte> bytes)
-    {
+    public static Adapter Descriptor(ReadOnlySpan<byte> bytes) {
         var e = Parse(bytes);
         Members(e, "adapterId", "role", "implementationId", "implementationVersion", "protocolVersion", "capabilities");
         if (e.GetProperty("protocolVersion").GetInt32() != Version) throw new ProtocolException("version_mismatch");
         string id = Endpoint(e, "adapterId"), role = Text(e, "role");
         if (id == "core" || role is not ("ui" or "engine" or "platform" or "services")) throw new ProtocolException("invalid_adapter");
         var capabilities = new Dictionary<string, Capability>();
-        foreach (var p in e.GetProperty("capabilities").EnumerateObject())
-        {
+        foreach (var p in e.GetProperty("capabilities").EnumerateObject()) {
             if (capabilities.Count >= 128 || p.Name.Length > 128) throw new ProtocolException("capability_limit");
             var c = p.Value;
             Members(c, "status", "contractVersion", "scope", "limitations", "evidence");

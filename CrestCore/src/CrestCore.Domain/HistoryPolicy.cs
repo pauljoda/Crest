@@ -1,15 +1,12 @@
 namespace CrestCore.Domain;
 
-public static class HistoryPolicy
-{
+public static class HistoryPolicy {
     public const int MaximumEntries = 5000;
-    public static string? Normalize(string url)
-    {
+    public static string? Normalize(string url) {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var value) || value.Scheme is not ("http" or "https")) return null;
         return url.Split('#', 2)[0];
     }
-    public static HistoryVisit Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryVisit? previous)
-    {
+    public static HistoryVisit Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryVisit? previous) {
         if (Normalize(normalizedUrl) != normalizedUrl || newId == Guid.Empty
             || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException("invalid_history_visit");
         string resolvedTitle = string.IsNullOrEmpty(title) ? new Uri(normalizedUrl).Host : title;

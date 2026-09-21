@@ -1,9 +1,7 @@
 namespace CrestCore.Domain;
 
-public readonly record struct SyncVersion(ulong Clock, Guid Device) : IComparable<SyncVersion>
-{
-    public int CompareTo(SyncVersion other)
-    {
+public readonly record struct SyncVersion(ulong Clock, Guid Device) : IComparable<SyncVersion> {
+    public int CompareTo(SyncVersion other) {
         int clock = Clock.CompareTo(other.Clock);
         return clock != 0 ? clock : string.Compare(Device.ToString("D"), other.Device.ToString("D"), StringComparison.Ordinal);
     }
@@ -13,10 +11,8 @@ public sealed record SyncRecordStamp(string Kind, Guid Id, Guid Space, SyncVersi
     string? DeletionReason, double? DeletedAt, double? ActivatedAt);
 
 /// Conflict decisions are shared by every engine and cloud transport.
-public static class SyncConflictPolicy
-{
-    public static int Winner(SyncRecordStamp first, SyncRecordStamp second)
-    {
+public static class SyncConflictPolicy {
+    public static int Winner(SyncRecordStamp first, SyncRecordStamp second) {
         if (first.Id != second.Id || first.Kind != second.Kind || first.Space != second.Space)
             throw new BrowserRuleException("sync_identity_mismatch");
         if (first.DeletionReason == "explicitDelete") return 0;
@@ -26,8 +22,7 @@ public static class SyncConflictPolicy
         return first.Version.CompareTo(second.Version) < 0 ? 1 : 0;
     }
 
-    public static int? Latest(double? first, double? second)
-    {
+    public static int? Latest(double? first, double? second) {
         if (first == second) return null;
         if (first is null) return 1;
         if (second is null) return 0;

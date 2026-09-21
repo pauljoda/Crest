@@ -2,11 +2,9 @@ namespace CrestCore.Domain;
 
 /// Synchronous value edits used by native hosts that still own page lifetimes.
 /// No engine calls or page creation take place while an edit is evaluated.
-public sealed partial class BrowserTabCollection
-{
+public sealed partial class BrowserTabCollection {
     public bool MoveTab(TabId id, TabPlacement placement, FolderId? requestedFolder, TabId? before,
-        bool detachSplit, DateTimeOffset now)
-    {
+        bool detachSplit, DateTimeOffset now) {
         var tab = Tab(id);
         if (before == id) throw new BrowserRuleException("invalid_tab_anchor");
         FolderId? folder = placement != TabPlacement.Pinned && folders.Any(f => f.Id == requestedFolder && f.Location == placement)
@@ -16,11 +14,9 @@ public sealed partial class BrowserTabCollection
             throw new BrowserRuleException("pinned_limit");
         bool Matches(BrowserTab t) => t.Placement == placement && t.FolderId == folder;
         int insertion = before is { } target ? remaining.FindIndex(t => t.Id == target && Matches(t)) : -1;
-        if (insertion < 0)
-        {
+        if (insertion < 0) {
             int last = remaining.FindLastIndex(t => Matches(t));
-            insertion = last >= 0 ? last + 1 : placement switch
-            {
+            insertion = last >= 0 ? last + 1 : placement switch {
                 TabPlacement.Pinned => remaining.FindIndex(t => t.Placement != TabPlacement.Pinned),
                 TabPlacement.Saved => remaining.FindIndex(t => t.Placement == TabPlacement.Current),
                 _ => remaining.Count
@@ -39,8 +35,7 @@ public sealed partial class BrowserTabCollection
         return true;
     }
 
-    public bool JoinSplitInPlace(TabId id, TabId targetId, int? memberIndex, Guid newGroup, DateTimeOffset now)
-    {
+    public bool JoinSplitInPlace(TabId id, TabId targetId, int? memberIndex, Guid newGroup, DateTimeOffset now) {
         if (id == targetId) throw new BrowserRuleException("invalid_split");
         var tab = Tab(id); var target = Tab(targetId);
         if (target.Placement == TabPlacement.Pinned) throw new BrowserRuleException("invalid_split");
@@ -58,8 +53,7 @@ public sealed partial class BrowserTabCollection
         return true;
     }
 
-    public bool MoveSplitMember(TabId id, int memberIndex, DateTimeOffset now)
-    {
+    public bool MoveSplitMember(TabId id, int memberIndex, DateTimeOffset now) {
         var tab = Tab(id); var run = SplitMembers(id);
         if (run.Count < 2) return false;
         int first = tabs.IndexOf(run[0]); int insertion = first + Math.Clamp(memberIndex, 0, run.Count - 1);
@@ -71,21 +65,18 @@ public sealed partial class BrowserTabCollection
         return true;
     }
 
-    public void InsertTab(BrowserTab tab, int? requestedIndex, bool duplicate = false)
-    {
+    public void InsertTab(BrowserTab tab, int? requestedIndex, bool duplicate = false) {
         if (tab.Placement == TabPlacement.Pinned && tabs.Count(t => t.Placement == TabPlacement.Pinned) >= 12)
             throw new BrowserRuleException("pinned_limit");
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException("tab_limit");
         if (tabs.Any(t => t.Id == tab.Id)) throw new BrowserRuleException("duplicate_tab");
         int First(Func<BrowserTab, bool> predicate) { int i = tabs.FindIndex(t => predicate(t)); return i < 0 ? tabs.Count : i; }
-        int lower = tab.Placement switch
-        {
+        int lower = tab.Placement switch {
             TabPlacement.Pinned => 0,
             TabPlacement.Saved => Math.Min(First(t => t.Placement == TabPlacement.Saved), First(t => t.Placement == TabPlacement.Current)),
             _ => First(t => t.Placement == TabPlacement.Current)
         };
-        int upper = tab.Placement switch
-        {
+        int upper = tab.Placement switch {
             TabPlacement.Pinned => First(t => t.Placement != TabPlacement.Pinned),
             TabPlacement.Saved => First(t => t.Placement == TabPlacement.Current),
             _ => tabs.Count
@@ -96,15 +87,13 @@ public sealed partial class BrowserTabCollection
     }
 
     public TabId? DismissTabs(IReadOnlyCollection<TabId> requested, TabId? selected, TabId? fallback,
-        DateTimeOffset now, bool deleting, bool ensureSelection, bool resetArchivePlacement)
-    {
+        DateTimeOffset now, bool deleting, bool ensureSelection, bool resetArchivePlacement) {
         var removing = requested.ToHashSet();
         var removed = tabs.Where(t => removing.Contains(t.Id)).ToArray();
         if (removed.Length != removing.Count || !deleting && removed.Any(t => t.Placement != TabPlacement.Current))
             throw new BrowserRuleException("unknown_current_tab");
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
-        foreach (var tab in removed.Where(t => !t.Content.IsStartPage))
-        {
+        foreach (var tab in removed.Where(t => !t.Content.IsStartPage)) {
             var value = tab.Capture() with { SplitGroupId = null };
             if (resetArchivePlacement) value = value with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null };
             archive.Add(new(value, now, deleting ? "deleted" : "closed"));

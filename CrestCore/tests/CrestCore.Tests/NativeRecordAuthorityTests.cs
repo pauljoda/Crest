@@ -5,11 +5,9 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed partial class BrowserContractsTests
-{
+public sealed partial class BrowserContractsTests {
     [Fact]
-    public void OwnedHistoryVisitsPreserveIdentityAndStaleCommandsCannotReplaceNewerVisits()
-    {
+    public void OwnedHistoryVisitsPreserveIdentityAndStaleCommandsCannotReplaceNewerVisits() {
         var f = SavedSession(); var session = f.Document["session"]!;
         session["spaces"]![0]!["history"] = new JsonArray();
         var core = new NativeSessionAuthority(Bytes(session));
@@ -34,16 +32,20 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void OwnedHistoryDeletionUsesLastVisitHalfOpenRangeAndCancelledStoragePreservesHistory()
-    {
+    public void OwnedHistoryDeletionUsesLastVisitHalfOpenRangeAndCancelledStoragePreservesHistory() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         space["history"] = new JsonArray(new[] { 10.0, 20.0, 30.0 }.Select(time => (JsonNode)new JsonObject {
-            ["id"] = Guid.NewGuid().ToString(), ["url"] = $"https://example.org/{time}", ["title"] = "Visit",
-            ["firstVisitedAt"] = 0.0, ["lastVisitedAt"] = time, ["visitCount"] = 2 }).ToArray());
+            ["id"] = Guid.NewGuid().ToString(),
+            ["url"] = $"https://example.org/{time}",
+            ["title"] = "Visit",
+            ["firstVisitedAt"] = 0.0,
+            ["lastVisitedAt"] = time,
+            ["visitCount"] = 2
+        }).ToArray());
         var core = new NativeSessionAuthority(Bytes(session));
         var before = core.Checkpoint(1, Selection(session)).Read(f.Space.Value.ToString());
         var clear = core.PrepareCommand(1, SpaceCommand(session, "history.clear", new()));
-        using (clear.Reserve(Selection(session))) {}
+        using (clear.Reserve(Selection(session))) { }
         Assert.Equal(before, core.Checkpoint(1, Selection(session)).Read(f.Space.Value.ToString()));
         core.PrepareCommand(1, SpaceCommand(session, "history.remove_range", new() { ["start"] = 10.0, ["end"] = 30.0 })).Commit();
         var retained = JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read(f.Space.Value.ToString()))!.AsArray();
@@ -53,8 +55,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void ArchiveRestoreReadsTheOwnedRecordAndCannotRestoreItTwice()
-    {
+    public void ArchiveRestoreReadsTheOwnedRecordAndCannotRestoreItTwice() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         var tab = space["tabs"]![0]!.DeepClone(); var id = Guid.NewGuid(); tab["id"] = SwiftId(id);
         space["archivedTabs"] = new JsonArray(new JsonObject { ["tab"] = tab, ["archivedAt"] = 0.0, ["reason"] = "closed" });
@@ -71,8 +72,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void ArchiveRetentionRemovesOnlyTheExpiredOccurrenceOfALegacyRepeatedIdentity()
-    {
+    public void ArchiveRetentionRemovesOnlyTheExpiredOccurrenceOfALegacyRepeatedIdentity() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         var tab = space["tabs"]![0]!.DeepClone(); tab["id"] = SwiftId(Guid.NewGuid());
         space["browsingPreferences"]!["dataRetention"] = new JsonObject { ["archive"] = "oneDay" };
@@ -90,8 +90,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void OwnedCleanupPreservesSelectionAndUsesCoreRetentionPreferences()
-    {
+    public void OwnedCleanupPreservesSelectionAndUsesCoreRetentionPreferences() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         var current = space["tabs"]![0]!.DeepClone(); var currentId = Guid.NewGuid(); current["id"] = SwiftId(currentId);
         current["placement"] = "current"; current["folderID"] = null; current["splitGroupID"] = null; current["lastActivatedAt"] = 0.0;
@@ -113,8 +112,7 @@ public sealed partial class BrowserContractsTests
     }
 
     [Fact]
-    public void SplitIdentityEditsKeepIndependentFieldClocksAndRejectMissingGroups()
-    {
+    public void SplitIdentityEditsKeepIndependentFieldClocksAndRejectMissingGroups() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         var first = space["tabs"]![0]!; var group = Guid.Parse(first["splitGroupID"]!["rawValue"]!.GetValue<string>());
         var second = first.DeepClone(); second["id"] = SwiftId(Guid.NewGuid()); space["tabs"]!.AsArray().Add(second);

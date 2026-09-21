@@ -5,29 +5,24 @@ using CrestCore.Application;
 
 namespace CrestCore.Native;
 
-public static unsafe partial class Exports
-{
+public static unsafe partial class Exports {
     private static readonly ConcurrentDictionary<ulong, NativeSessionTransfer> SessionTransfers = new();
     [UnmanagedCallersOnly(EntryPoint = "crest_session_prepare_transfer", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionPrepareTransfer(ulong source, ulong sourceRevision, ulong destination, ulong destinationRevision,
-        byte* bytes, nuint count, ulong* transfer)
-    {
+        byte* bytes, nuint count, ulong* transfer) {
         if (transfer == null) return CoreStatus.InvalidArgument;
         *transfer = 0;
         if (!ValidSessionInput(bytes, count)) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(source, out var a) || !Sessions.TryGetValue(destination, out var b)) return CoreStatus.InvalidHandle;
-        try
-        {
+        try {
             var value = NativeSessionAuthority.PrepareTransfer(a, sourceRevision, b, destinationRevision, new(bytes, (int)count));
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionTransfers.TryAdd(id, value)) { value.Dispose(); return CoreStatus.InternalError; }
             *transfer = id; return CoreStatus.Ok;
-        }
-        catch (Exception e) { return SessionError(e); }
+        } catch (Exception e) { return SessionError(e); }
     }
     [UnmanagedCallersOnly(EntryPoint = "crest_session_read_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionReadTransfer(ulong handle, byte* destination, nuint capacity, nuint* length)
-    {
+    public static int SessionReadTransfer(ulong handle, byte* destination, nuint capacity, nuint* length) {
         if (length == null || destination == null && capacity != 0) return CoreStatus.InvalidArgument;
         *length = 0;
         if (capacity > NativeSessionEditor.MaximumBytes) return CoreStatus.LimitExceeded;
@@ -37,36 +32,30 @@ public static unsafe partial class Exports
         value.Output.CopyTo(new Span<byte>(destination, (int)capacity)); return CoreStatus.Ok;
     }
     [UnmanagedCallersOnly(EntryPoint = "crest_session_reserve_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionReserveTransfer(ulong handle, ulong transaction, ulong* sourceCheckpoint, ulong* destinationCheckpoint)
-    {
+    public static int SessionReserveTransfer(ulong handle, ulong transaction, ulong* sourceCheckpoint, ulong* destinationCheckpoint) {
         if (sourceCheckpoint == null || destinationCheckpoint == null) return CoreStatus.InvalidArgument;
         *sourceCheckpoint = 0; *destinationCheckpoint = 0;
         if (!SessionTransfers.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
         NativeSyncTransaction? sync = null;
         if (transaction != 0 && !SyncTransactions.TryGetValue(transaction, out sync)) return CoreStatus.InvalidHandle;
         ulong a = 0, b = 0;
-        try
-        {
+        try {
             value.Reserve(sync);
             a = checked((ulong)Interlocked.Increment(ref nextHandle)); b = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!Checkpoints.TryAdd(a, value.SourceCheckpoint) || !Checkpoints.TryAdd(b, value.DestinationCheckpoint))
                 throw new InvalidOperationException("handle_collision");
             *sourceCheckpoint = a; *destinationCheckpoint = b; return CoreStatus.Ok;
-        }
-        catch (Exception e) { Checkpoints.TryRemove(a, out _); Checkpoints.TryRemove(b, out _); value.Dispose(); return SessionError(e); }
+        } catch (Exception e) { Checkpoints.TryRemove(a, out _); Checkpoints.TryRemove(b, out _); value.Dispose(); return SessionError(e); }
     }
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommitTransfer(ulong handle, ulong* sourceRevision, ulong* destinationRevision)
-    {
+    public static int SessionCommitTransfer(ulong handle, ulong* sourceRevision, ulong* destinationRevision) {
         if (sourceRevision == null || destinationRevision == null) return CoreStatus.InvalidArgument;
         *sourceRevision = 0; *destinationRevision = 0;
         if (!SessionTransfers.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
-        try { var result = value.Commit(); *sourceRevision = result.Source; *destinationRevision = result.Destination; return CoreStatus.Ok; }
-        catch (Exception e) { return SessionError(e); }
+        try { var result = value.Commit(); *sourceRevision = result.Source; *destinationRevision = result.Destination; return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
     }
     [UnmanagedCallersOnly(EntryPoint = "crest_session_release_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionReleaseTransfer(ulong handle)
-    {
+    public static int SessionReleaseTransfer(ulong handle) {
         if (!SessionTransfers.TryRemove(handle, out var value)) return CoreStatus.InvalidHandle;
         value.Dispose(); return CoreStatus.Ok;
     }

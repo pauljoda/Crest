@@ -5,10 +5,8 @@ namespace CrestCore.Application;
 /// Additive fields in an accepted wire record belong to that record. A local
 /// projection replaces fields this client understands and carries the rest
 /// forward. Removed known fields and removed collection members stay removed.
-internal static class NativeSyncCompatibility
-{
-    private sealed record Shape(string Names, Dictionary<string, Shape>? Children = null, Shape? Element = null, bool ById = false)
-    {
+internal static class NativeSyncCompatibility {
+    private sealed record Shape(string Names, Dictionary<string, Shape>? Children = null, Shape? Element = null, bool ById = false) {
         public HashSet<string> Fields { get; } = Names.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
     }
     private static Shape List(Shape element, bool byId = false) => new("", Element: element, ById: byId);
@@ -30,8 +28,7 @@ internal static class NativeSyncCompatibility
     private static readonly Shape Tab = new(
         "id spaceID title nativeContent url savedURL symbol placement folderID splitGroupID orderToken lastActivatedAt positionModifiedAt customTitle titleModifiedAt keepsPageLoaded",
         new() { ["id"] = Identity, ["spaceID"] = Identity, ["folderID"] = Identity, ["splitGroupID"] = Identity });
-    private static readonly Dictionary<string, Shape> Values = new()
-    {
+    private static readonly Dictionary<string, Shape> Values = new() {
         ["space"] = new("id profileID name symbol accent branding browsingPreferences accessPolicy isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
             new() { ["id"] = Identity, ["branding"] = Branding, ["browsingPreferences"] = Browsing, ["splitGroups"] = List(Group, true) }),
         ["folder"] = new("id spaceID title location symbol color parentID isCollapsed collapseModifiedAt orderAnchorTabID orderToken",
@@ -41,24 +38,20 @@ internal static class NativeSyncCompatibility
         ["archive"] = new("tab archivedAt reason", new() { ["tab"] = Tab })
     };
 
-    internal static JsonObject Preserve(JsonObject current, JsonObject? previous)
-    {
+    internal static JsonObject Preserve(JsonObject current, JsonObject? previous) {
         string kind = current["type"]!.GetValue<string>();
         if (previous?["type"]?.GetValue<string>() != kind) return current;
         return Merge(new("type value", new() { ["value"] = Values[kind] }), current, previous).AsObject();
     }
 
-    private static string? MemberId(JsonNode? value)
-    {
+    private static string? MemberId(JsonNode? value) {
         var id = value?["id"];
         if (id is JsonObject wrapper) id = wrapper["rawValue"];
         return id is JsonValue raw && raw.TryGetValue<string>(out var text) ? text.ToLowerInvariant() : null;
     }
 
-    private static JsonNode Merge(Shape shape, JsonNode current, JsonNode? previous)
-    {
-        if (current is JsonObject fields && previous is JsonObject old)
-        {
+    private static JsonNode Merge(Shape shape, JsonNode current, JsonNode? previous) {
+        if (current is JsonObject fields && previous is JsonObject old) {
             var result = fields.DeepClone().AsObject();
             foreach (var (key, value) in old)
                 if (!shape.Fields.Contains(key) && !fields.ContainsKey(key)) result[key] = value?.DeepClone();
@@ -67,8 +60,7 @@ internal static class NativeSyncCompatibility
                     if (fields[key] is { } value) result[key] = Merge(child, value, old[key]);
             return result;
         }
-        if (current is JsonArray items && previous is JsonArray oldItems && shape.Element is { } element)
-        {
+        if (current is JsonArray items && previous is JsonArray oldItems && shape.Element is { } element) {
             Dictionary<string, JsonNode?>? byId = shape.ById ? oldItems.Where(n => MemberId(n) is not null)
                 .GroupBy(n => MemberId(n)!).ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal) : null;
             return new JsonArray(items.Select((item, index) => item is null ? null : Merge(element, item,

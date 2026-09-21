@@ -5,10 +5,8 @@ public enum LinkPeekModifier { Option, Command }
 
 /// Semantic link behavior shared by the native engine adapters. Engines keep
 /// ownership of request security, downloads, form submissions and rendering.
-public static class LinkNavigationPolicy
-{
-    public static (bool Peek, bool NewTab) Modifiers(bool command, bool option, bool middle, LinkPeekModifier preference)
-    {
+public static class LinkNavigationPolicy {
+    public static (bool Peek, bool NewTab) Modifiers(bool command, bool option, bool middle, LinkPeekModifier preference) {
         bool peek = preference == LinkPeekModifier.Command ? command : option;
         bool newTab = preference == LinkPeekModifier.Command ? option : command;
         return (peek, (!peek && newTab) || middle);
@@ -16,8 +14,7 @@ public static class LinkNavigationPolicy
     public static LinkNavigationDecision Decide(string? destination, bool userActivatedLink,
         bool topLevel, bool peekModified, bool newTabModified, bool shiftModified,
         bool focusesNewTabs, bool hasContext, string? placement, string? savedUrl,
-        bool automaticallyOpensPeek)
-    {
+        bool automaticallyOpensPeek) {
         if (!userActivatedLink || !TryWebUrl(destination, out var target)) return LinkNavigationDecision.Navigate;
         if (topLevel && hasContext && peekModified) return LinkNavigationDecision.PeekModifier;
         if (newTabModified)
@@ -33,8 +30,7 @@ public static class LinkNavigationPolicy
 
     // Match Crest's saved-site contract: ignore www, but keep other subdomains
     // distinct. IdnHost also compares Unicode and punycode URL spellings equally.
-    private static string NormalizeHost(Uri url)
-    {
+    private static string NormalizeHost(Uri url) {
         string host = url.IdnHost.ToLowerInvariant();
         return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
     }

@@ -9,8 +9,7 @@ namespace CrestCore.Application;
 /// Native views propose value deltas; only an accepted revision becomes visible.
 /// Published documents are immutable, so storage can serialize an older checkpoint
 /// on its worker while the UI continues editing the current revision.
-public sealed partial class NativeSessionAuthority
-{
+public sealed partial class NativeSessionAuthority {
     public const int MaximumBytes = 64 * 1024 * 1024;
     internal static readonly object Gate = new();
     private SessionDocument document;
@@ -24,23 +23,19 @@ public sealed partial class NativeSessionAuthority
 
     /// Process-local registration shares the transport descriptor contract. It
     /// cannot be changed by session edits, restored files or remote sync records.
-    public void RegisterEngine(ReadOnlySpan<byte> descriptor)
-    {
+    public void RegisterEngine(ReadOnlySpan<byte> descriptor) {
         var engine = Protocol.Descriptor(descriptor);
         if (engine.Role != "engine" || !engine.Supports("pages") || !engine.Supports("navigation"))
             throw new BrowserRuleException("invalid_engine_registration");
-        lock (Gate)
-        {
+        lock (Gate) {
             if (Engine is not null) throw new BrowserRuleException("engine_already_registered");
             Engine = engine;
         }
     }
 
-    public NativeSessionAuthority(ReadOnlySpan<byte> bytes)
-    {
+    public NativeSessionAuthority(ReadOnlySpan<byte> bytes) {
         var input = Parse(bytes);
-        workspaceKind = input["coreWorkspaceKind"]?.GetValue<string>() switch
-        {
+        workspaceKind = input["coreWorkspaceKind"]?.GetValue<string>() switch {
             null or "persistent" => BrowserWorkspaceKind.Persistent,
             "private" => BrowserWorkspaceKind.Private,
             "temporary" => throw new BrowserRuleException("borrowed_source_required"),
@@ -53,13 +48,11 @@ public sealed partial class NativeSessionAuthority
         Validate(document);
     }
 
-    private static JsonObject Parse(ReadOnlySpan<byte> bytes)
-    {
+    private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
         if (bytes.Length == 0 || bytes.Length > MaximumBytes) throw new BrowserRuleException("session_size_limit");
         return JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
     }
-    internal static Guid Id(JsonNode? value)
-    {
+    internal static Guid Id(JsonNode? value) {
         if (value is JsonObject obj) value = obj["rawValue"];
         var id = Guid.Parse(value!.GetValue<string>());
         if (id == Guid.Empty) throw new BrowserRuleException("invalid_identity");
@@ -70,12 +63,10 @@ public sealed partial class NativeSessionAuthority
 
     private static JsonObject Fields(JsonObject input, IReadOnlyCollection<string> excluded)
         => new(input.Where(f => !excluded.Contains(f.Key)).Select(f => new KeyValuePair<string, JsonNode?>(f.Key, f.Value?.DeepClone())));
-    private static void Validate(SessionDocument value)
-    {
+    private static void Validate(SessionDocument value) {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
-        foreach (var space in spaces)
-        {
+        foreach (var space in spaces) {
             if (!ids.Add(Id(space.Metadata["id"]))) throw new BrowserRuleException("duplicate_space");
             // A Space is exactly one profile and a profile belongs to exactly one
             // Space. Two Spaces sharing a profile would share cookies, credentials
@@ -87,8 +78,7 @@ public sealed partial class NativeSessionAuthority
                 if (!tabs.Add(Id(tab!["id"]))) throw new BrowserRuleException("duplicate_tab");
         }
         var pendingIds = new HashSet<Guid>();
-        foreach (var deletion in Deletions(value.Metadata))
-        {
+        foreach (var deletion in Deletions(value.Metadata)) {
             var id = Id(deletion!["spaceID"]);
             var profile = Id(deletion["profileID"]);
             _ = Id(deletion["operationID"]);
@@ -99,8 +89,7 @@ public sealed partial class NativeSessionAuthority
         // valid native states. Window reconciliation handles their presentation.
     }
 
-    private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null)
-    {
+    private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null) {
         RequireWritable();
         if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
         var delta = Parse(bytes);
@@ -109,16 +98,14 @@ public sealed partial class NativeSessionAuthority
         if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
             throw new BrowserRuleException("deletion_requires_command");
         var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));
-        foreach (var node in delta["spaces"]!.AsArray())
-        {
+        foreach (var node in delta["spaces"]!.AsArray()) {
             var change = node!.AsObject(); var id = Id(change["id"]);
             byId.TryGetValue(id, out var original);
             var fields = change["metadata"] is JsonObject supplied ? Fields(supplied, Sections) : original?.Metadata;
             if (fields is null || Id(fields["id"]) != id) throw new BrowserRuleException("wrong_space_identity");
             var sections = Sections.ToDictionary(section => section,
                 section => original?.Sections[section] ?? (IReadOnlyList<JsonNode>)System.Array.Empty<JsonNode>());
-            foreach (var section in Sections)
-            {
+            foreach (var section in Sections) {
                 if (change[section] is not JsonObject edits) continue;
                 if (edits["replace"] is JsonArray replacement) { sections[section] = replacement.Select(item => item!.DeepClone()).ToArray(); continue; }
                 var previous = sections[section];
@@ -141,8 +128,7 @@ public sealed partial class NativeSessionAuthority
         foreach (var existing in Deletions(document.Metadata))
             if (!Deletions(metadata).Any(d => SameDeletionIntent(d!, existing!)))
                 throw new BrowserRuleException("deletion_requires_command");
-        foreach (var deletion in Deletions(metadata))
-        {
+        foreach (var deletion in Deletions(metadata)) {
             var id = Id(deletion!["spaceID"]);
             var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == id);
             var retained = next.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == id);
@@ -155,20 +141,16 @@ public sealed partial class NativeSessionAuthority
         ValidateBorrowedDocument(next);
         return next;
     }
-    private void RequireWritable(bool requireCurrentBorrowedPolicy = true)
-    {
+    private void RequireWritable(bool requireCurrentBorrowedPolicy = true) {
         if (released) throw new BrowserRuleException("session_released");
         if (replacement is not null) throw new BrowserRuleException("session_transaction_in_progress");
-        if (borrowedSource is not null)
-        {
+        if (borrowedSource is not null) {
             _ = RequireBorrowedSource();
             if (requireCurrentBorrowedPolicy) RequireBorrowedRevision(borrowedSourceRevision);
         }
     }
-    public ulong Commit(ulong expected, ReadOnlySpan<byte> delta)
-    {
-        lock (Gate)
-        {
+    public ulong Commit(ulong expected, ReadOnlySpan<byte> delta) {
+        lock (Gate) {
             var next = Prepare(expected, delta);
             var revision = checked(Revision + 1);
             document = next; Revision = revision; return revision;
@@ -176,11 +158,9 @@ public sealed partial class NativeSessionAuthority
     }
     public static (ulong Source, ulong Destination) CommitPair(
         NativeSessionAuthority source, ulong sourceRevision, ReadOnlySpan<byte> sourceDelta,
-        NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> destinationDelta)
-    {
+        NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> destinationDelta) {
         if (ReferenceEquals(source, destination)) throw new BrowserRuleException("same_session_transfer");
-        lock (Gate)
-        {
+        lock (Gate) {
             var a = source.Prepare(sourceRevision, sourceDelta);
             var b = destination.Prepare(destinationRevision, destinationDelta);
             var ar = checked(source.Revision + 1); var br = checked(destination.Revision + 1);
@@ -189,52 +169,40 @@ public sealed partial class NativeSessionAuthority
             return (ar, br);
         }
     }
-    public NativeSessionCheckpoint Checkpoint(ulong expected, ReadOnlySpan<byte> selection)
-    {
-        lock (Gate)
-        {
+    public NativeSessionCheckpoint Checkpoint(ulong expected, ReadOnlySpan<byte> selection) {
+        lock (Gate) {
             if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
             return new(document, Parse(selection));
         }
     }
 }
 
-public sealed class NativeSessionCheckpoint
-{
+public sealed class NativeSessionCheckpoint {
     private readonly NativeSessionAuthority.SessionDocument document;
     private readonly JsonObject selection;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> parts = new();
-    internal NativeSessionCheckpoint(NativeSessionAuthority.SessionDocument document, JsonObject selection)
-    { this.document = document; this.selection = selection; }
+    internal NativeSessionCheckpoint(NativeSessionAuthority.SessionDocument document, JsonObject selection) { this.document = document; this.selection = selection; }
 
     public byte[] Read(string part) => parts.GetOrAdd(part, Encode);
-    private byte[] Encode(string part)
-    {
-        if (part != "core")
-        {
+    private byte[] Encode(string part) {
+        if (part != "core") {
             var id = Guid.Parse(part);
             var history = document.Spaces.Single(s => NativeSessionAuthority.Id(s.Metadata["id"]) == id).Sections["history"];
             using var historyStream = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(historyStream))
-            { writer.WriteStartArray(); foreach (var entry in history) entry.WriteTo(writer); writer.WriteEndArray(); }
+            using (var writer = new Utf8JsonWriter(historyStream)) { writer.WriteStartArray(); foreach (var entry in history) entry.WriteTo(writer); writer.WriteEndArray(); }
             return historyStream.ToArray();
         }
         using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
-        {
+        using (var writer = new Utf8JsonWriter(stream)) {
             writer.WriteStartObject();
-            foreach (var field in document.Metadata.Where(f => f.Key != "selectedSpaceID"))
-            { writer.WritePropertyName(field.Key); if (field.Value is { } value) value.WriteTo(writer); else writer.WriteNullValue(); }
+            foreach (var field in document.Metadata.Where(f => f.Key != "selectedSpaceID")) { writer.WritePropertyName(field.Key); if (field.Value is { } value) value.WriteTo(writer); else writer.WriteNullValue(); }
             writer.WritePropertyName("selectedSpaceID"); selection["selectedSpaceID"]!.WriteTo(writer);
             writer.WriteStartArray("spaces");
             var tabs = selection["selectedTabs"]!.AsArray().ToDictionary(v => NativeSessionAuthority.Id(v!["spaceID"]), v => v!["tabID"]);
-            foreach (var space in document.Spaces)
-            {
+            foreach (var space in document.Spaces) {
                 writer.WriteStartObject();
-                foreach (var field in space.Metadata.Where(f => f.Key != "selectedTabID"))
-                { writer.WritePropertyName(field.Key); if (field.Value is { } value) value.WriteTo(writer); else writer.WriteNullValue(); }
-                foreach (var section in space.Sections)
-                {
+                foreach (var field in space.Metadata.Where(f => f.Key != "selectedTabID")) { writer.WritePropertyName(field.Key); if (field.Value is { } value) value.WriteTo(writer); else writer.WriteNullValue(); }
+                foreach (var section in space.Sections) {
                     writer.WriteStartArray(section.Key);
                     if (section.Key != "history") foreach (var record in section.Value) record.WriteTo(writer);
                     writer.WriteEndArray();

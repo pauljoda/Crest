@@ -3,8 +3,7 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed class LinkNavigationPolicyTests
-{
+public sealed class LinkNavigationPolicyTests {
     [Theory]
     [InlineData(true, false, false, LinkPeekModifier.Option, LinkNavigationDecision.BackgroundTab)]
     [InlineData(false, true, false, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
@@ -16,8 +15,7 @@ public sealed class LinkNavigationPolicyTests
     [InlineData(false, false, true, LinkPeekModifier.Command, LinkNavigationDecision.BackgroundTab)]
     [InlineData(false, true, true, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
     public void ConfigurableModifiersAndMiddleClickUseOneNavigationPolicy(bool command, bool option, bool middle,
-        LinkPeekModifier preference, LinkNavigationDecision expected)
-    {
+        LinkPeekModifier preference, LinkNavigationDecision expected) {
         var (peek, newTab) = LinkNavigationPolicy.Modifiers(command, option, middle, preference);
         Assert.Equal(expected, Decide(peek: peek, newTab: newTab));
         Assert.Equal(expected == LinkNavigationDecision.BackgroundTab ? LinkNavigationDecision.ForegroundTab : expected,
@@ -25,8 +23,7 @@ public sealed class LinkNavigationPolicyTests
     }
 
     [Fact]
-    public void HoldingBothKeysDoesNotTurnDeclinedPeekIntoANewTab()
-    {
+    public void HoldingBothKeysDoesNotTurnDeclinedPeekIntoANewTab() {
         var (peek, newTab) = LinkNavigationPolicy.Modifiers(true, true, false, LinkPeekModifier.Option);
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: peek, newTab: newTab, owned: false));
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: peek, newTab: newTab, topLevel: false));
@@ -55,8 +52,7 @@ public sealed class LinkNavigationPolicyTests
         LinkNavigationDecision expected) => Assert.Equal(expected, Decide(newTab: true, shift: shift, focus: focus));
 
     [Fact]
-    public void PeekModifierWinsOverNewTabButRequiresAnOwnedTopLevelLink()
-    {
+    public void PeekModifierWinsOverNewTabButRequiresAnOwnedTopLevelLink() {
         Assert.Equal(LinkNavigationDecision.PeekModifier, Decide(peek: true, newTab: true));
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: true, owned: false));
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: true, topLevel: false));
@@ -65,8 +61,7 @@ public sealed class LinkNavigationPolicyTests
     }
 
     [Fact]
-    public void EngineNavigationsAndMissingSavedContextNeverBecomeAutomaticPeek()
-    {
+    public void EngineNavigationsAndMissingSavedContextNeverBecomeAutomaticPeek() {
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(userLink: false));
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(topLevel: false));
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(owned: false));
