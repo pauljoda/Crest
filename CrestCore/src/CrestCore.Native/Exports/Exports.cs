@@ -33,7 +33,7 @@ public static unsafe partial class Exports {
             if (capacity < *length) return CoreStatus.BufferTooSmall;
             result.CopyTo(new Span<byte>(destination, (int)capacity));
             return CoreStatus.Ok;
-        } catch (ProtocolException error) { return error.Message == "version_mismatch" ? CoreStatus.VersionMismatch : CoreStatus.InvalidMessage; } catch { return CoreStatus.InvalidMessage; }
+        } catch (ProtocolException error) { return error.Code == ProtocolErrorCodes.VersionMismatch ? CoreStatus.VersionMismatch : CoreStatus.InvalidMessage; } catch { return CoreStatus.InvalidMessage; }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_core_evaluate_sync", CallConvs = [typeof(CallConvCdecl)])]
@@ -49,7 +49,7 @@ public static unsafe partial class Exports {
             if (capacity < *length) return CoreStatus.BufferTooSmall;
             result.CopyTo(new Span<byte>(destination, (int)capacity));
             return CoreStatus.Ok;
-        } catch (CrestCore.Domain.BrowserRuleException error) { return error.Code == "version_mismatch" ? CoreStatus.VersionMismatch : CoreStatus.InvalidMessage; } catch { return CoreStatus.InvalidMessage; }
+        } catch (CrestCore.Domain.BrowserRuleException error) { return error.Code == CrestCore.Domain.BrowserRuleCodes.VersionMismatch ? CoreStatus.VersionMismatch : CoreStatus.InvalidMessage; } catch { return CoreStatus.InvalidMessage; }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_core_evaluate_policy", CallConvs = [typeof(CallConvCdecl)])]
@@ -66,7 +66,7 @@ public static unsafe partial class Exports {
             if (capacity < *length) return CoreStatus.BufferTooSmall;
             result.CopyTo(new Span<byte>(destination, (int)capacity));
             return CoreStatus.Ok;
-        } catch (ProtocolException error) { return error.Message == "version_mismatch" ? CoreStatus.VersionMismatch : CoreStatus.InvalidMessage; } catch { return CoreStatus.InvalidMessage; }
+        } catch (ProtocolException error) { return error.Code == ProtocolErrorCodes.VersionMismatch ? CoreStatus.VersionMismatch : CoreStatus.InvalidMessage; } catch { return CoreStatus.InvalidMessage; }
     }
 
     #endregion

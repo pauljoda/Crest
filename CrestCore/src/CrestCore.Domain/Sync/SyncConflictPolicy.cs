@@ -6,7 +6,7 @@ public static class SyncConflictPolicy {
 
     public static int Winner(SyncRecordStamp first, SyncRecordStamp second) {
         if (first.Id != second.Id || first.Kind != second.Kind || first.Space != second.Space)
-            throw new BrowserRuleException("sync_identity_mismatch");
+            throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
         if (first.DeletionReason == SyncDeletionReasons.ExplicitDelete) return 0;
         if (second.DeletionReason == SyncDeletionReasons.ExplicitDelete) return 1;
         if (first.DeletedAt is { } firstDeleted && second.Kind == SyncRecordKinds.Tab && second.ActivatedAt > firstDeleted) return 1;

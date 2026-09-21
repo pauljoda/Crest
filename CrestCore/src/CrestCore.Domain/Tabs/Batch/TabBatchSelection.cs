@@ -5,7 +5,7 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
     #region Actions - Batch
 
     public void Validate(BrowserTabCollection source) {
-        void Require(bool valid) { if (!valid) throw new BrowserRuleException("stale_selection"); }
+        void Require(bool valid) { if (!valid) throw new BrowserRuleException(BrowserRuleCodes.StaleSelection); }
         Require(Roots.Count > 0 && Roots.Distinct().Count() == Roots.Count
             && Tabs.Select(t => t.Id).Distinct().Count() == Tabs.Count);
         var tree = new FolderTree(source.Folders);
@@ -31,7 +31,7 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
         foreach (var member in Tabs) {
             Require(!source.Tab(member.Id).Content.IsStartPage);
             if (source.SplitMembers(member.Id).Any(t => !ids.Contains(t.Id)))
-                throw new BrowserRuleException("incomplete_split");
+                throw new BrowserRuleException(BrowserRuleCodes.IncompleteSplit);
         }
     }
 

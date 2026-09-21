@@ -11,7 +11,7 @@ public sealed partial class BrowserSpace {
 
     public void SetContentBlocking(ContentBlockingPolicy policy) {
         EnsureAccessible();
-        if (!Enum.IsDefined(policy)) throw new BrowserRuleException("invalid_content_blocking_policy");
+        if (!Enum.IsDefined(policy)) throw new BrowserRuleException(BrowserRuleCodes.InvalidContentBlockingPolicy);
         ContentBlocking = policy;
     }
 

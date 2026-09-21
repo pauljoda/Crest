@@ -7,7 +7,7 @@ public static class SyncOrderTokens {
     #region Actions - Sync
 
     public static IReadOnlyList<string> Allocate(IReadOnlyList<string?> existing) {
-        if (existing.Count > 250_000) throw new BrowserRuleException("sync_record_limit");
+        if (existing.Count > 250_000) throw new BrowserRuleException(BrowserRuleCodes.SyncRecordLimit);
         if (existing.Count == 0) return [];
         var candidates = existing.Select((token, index) => (token, index))
             .Where(v => v.token is { Length: 16 } token && ulong.TryParse(token, NumberStyles.HexNumber,

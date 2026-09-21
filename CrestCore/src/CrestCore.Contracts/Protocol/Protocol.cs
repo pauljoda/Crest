@@ -25,7 +25,7 @@ public static class Protocol {
         if (e.ValueKind == JsonValueKind.Object) {
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var p in e.EnumerateObject()) {
-                if (!seen.Add(p.Name)) throw new ProtocolException("duplicate_member");
+                if (!seen.Add(p.Name)) throw new ProtocolException(ProtocolErrorCodes.DuplicateMember);
                 ValidateMembers(p.Value);
             }
         } else if (e.ValueKind == JsonValueKind.Array) foreach (var item in e.EnumerateArray()) ValidateMembers(item);
@@ -37,13 +37,13 @@ public static class Protocol {
 
     public static void Members(JsonElement e, params string[] names) {
         if (e.ValueKind != JsonValueKind.Object || e.EnumerateObject().Any(p => !names.Contains(p.Name)))
-            throw new ProtocolException("unexpected_member");
+            throw new ProtocolException(ProtocolErrorCodes.UnexpectedMember);
     }
 
     public static string Text(JsonElement e, string key, int max = 16384) {
         var p = e.GetProperty(key);
         if (p.ValueKind != JsonValueKind.String || p.GetString() is not { } s || s.Length == 0 || s.Length > max)
-            throw new ProtocolException("invalid_string");
+            throw new ProtocolException(ProtocolErrorCodes.InvalidString);
         return s;
     }
 
@@ -56,10 +56,10 @@ public static class Protocol {
     }
 
     public static Guid Id(JsonElement value) {
-        if (value.ValueKind != JsonValueKind.String) throw new ProtocolException("invalid_uuid");
+        if (value.ValueKind != JsonValueKind.String) throw new ProtocolException(ProtocolErrorCodes.InvalidUuid);
         string s = value.GetString()!;
         if (!Guid.TryParseExact(s, "D", out var id) || s != id.ToString("D") || id == Guid.Empty)
-            throw new ProtocolException("invalid_uuid");
+            throw new ProtocolException(ProtocolErrorCodes.InvalidUuid);
         return id;
     }
 
@@ -69,14 +69,14 @@ public static class Protocol {
     public static ulong Counter(JsonElement e, string key) {
         string s = Text(e, key, 20);
         if (!ulong.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
-            || value == 0 || s != value.ToString(CultureInfo.InvariantCulture)) throw new ProtocolException("invalid_counter");
+            || value == 0 || s != value.ToString(CultureInfo.InvariantCulture)) throw new ProtocolException(ProtocolErrorCodes.InvalidCounter);
         return value;
     }
 
     public static string Endpoint(JsonElement e, string key) {
         string s = Text(e, key, 96);
         if (s[0] is < 'a' or > 'z' || s.Any(c => !(char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '.' or '-' or '_')))
-            throw new ProtocolException("invalid_endpoint");
+            throw new ProtocolException(ProtocolErrorCodes.InvalidEndpoint);
         return s;
     }
 
@@ -87,20 +87,20 @@ public static class Protocol {
     public static Adapter Descriptor(ReadOnlySpan<byte> bytes) {
         var e = Parse(bytes);
         Members(e, "adapterId", "role", "implementationId", "implementationVersion", "protocolVersion", "capabilities");
-        if (e.GetProperty("protocolVersion").GetInt32() != Version) throw new ProtocolException("version_mismatch");
+        if (e.GetProperty("protocolVersion").GetInt32() != Version) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
         string id = Endpoint(e, "adapterId"), role = Text(e, "role");
-        if (id == "core" || !AdapterRoles.Includes(role)) throw new ProtocolException("invalid_adapter");
+        if (id == "core" || !AdapterRoles.Includes(role)) throw new ProtocolException(ProtocolErrorCodes.InvalidAdapter);
         var capabilities = new Dictionary<string, Capability>();
         foreach (var p in e.GetProperty("capabilities").EnumerateObject()) {
-            if (capabilities.Count >= 128 || p.Name.Length > 128) throw new ProtocolException("capability_limit");
+            if (capabilities.Count >= 128 || p.Name.Length > 128) throw new ProtocolException(ProtocolErrorCodes.CapabilityLimit);
             var c = p.Value;
             Members(c, "status", "contractVersion", "scope", "limitations", "evidence");
             string status = Text(c, "status");
-            if (!CapabilityStatuses.Includes(status)) throw new ProtocolException("invalid_status");
+            if (!CapabilityStatuses.Includes(status)) throw new ProtocolException(ProtocolErrorCodes.InvalidStatus);
             int version = c.GetProperty("contractVersion").GetInt32();
-            if (version < 1) throw new ProtocolException("invalid_version");
-            var limits = c.GetProperty("limitations").EnumerateArray().Select(l => l.GetString() ?? throw new ProtocolException("invalid_limit")).ToArray();
-            if (limits.Length > 32 || limits.Any(l => l.Length > 512)) throw new ProtocolException("invalid_limit");
+            if (version < 1) throw new ProtocolException(ProtocolErrorCodes.InvalidVersion);
+            var limits = c.GetProperty("limitations").EnumerateArray().Select(l => l.GetString() ?? throw new ProtocolException(ProtocolErrorCodes.InvalidLimit)).ToArray();
+            if (limits.Length > 32 || limits.Any(l => l.Length > 512)) throw new ProtocolException(ProtocolErrorCodes.InvalidLimit);
             capabilities.Add(p.Name, new(status, version, Text(c, "scope", 256), limits, Text(c, "evidence", 512)));
         }
         return new(id, role, Text(e, "implementationId", 128), Text(e, "implementationVersion", 128), capabilities);

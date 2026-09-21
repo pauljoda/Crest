@@ -17,7 +17,7 @@ public sealed partial class NativeSessionAuthority {
 
     internal void RequirePendingTransient(Guid? id) {
         if (id is { } value && completedTransients.Contains(value))
-            throw new BrowserRuleException("transient_already_completed");
+            throw new BrowserRuleException(BrowserRuleCodes.TransientAlreadyCompleted);
     }
 
     private NativeSessionCommand PrepareTransientCommand(ulong expected, JsonObject request) {
@@ -36,7 +36,7 @@ public sealed partial class NativeSessionAuthority {
             adopt = TransientPagePolicy.CanAdopt(new(new(sourceSpace), new(sourceProfile)), lease,
                 new(new(spaceId), new(profileId)), args["sourceAccessible"]!.GetValue<bool>(),
                 args["destinationAccessible"]!.GetValue<bool>(), args["supportsLiveAdoption"]!.GetValue<bool>());
-        } else if (operation != "transient.archive") throw new BrowserRuleException("unknown_transient_command");
+        } else if (operation != "transient.archive") throw new BrowserRuleException(BrowserRuleCodes.UnknownTransientCommand);
         var edit = request.DeepClone().AsObject();
         edit["operation"] = operation == "transient.promote" ? "tab.promote_transient" : "tab.archive_transient";
         var prepared = PrepareTabCommand(expected, edit);

@@ -21,7 +21,7 @@ public static class PageResidencyPolicy {
     #region Actions - Lifecycle
 
     public static int ReleaseLimit(MemoryPressureLevel level, int eligiblePageCount, MemoryPressurePlatform platform) {
-        if (eligiblePageCount < 0) throw new BrowserRuleException("invalid_page_count");
+        if (eligiblePageCount < 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidPageCount);
         if (eligiblePageCount == 0) return 0;
         return (platform, level) switch {
             (MemoryPressurePlatform.Desktop, MemoryPressureLevel.Warning) => 1,
@@ -42,16 +42,16 @@ public static class PageResidencyPolicy {
     public static (IReadOnlyList<string> OffScreen, IReadOnlyList<string> PresentedFallback) ReleasePlan(
         IReadOnlyList<ResidencyCandidate> candidates, MemoryPressureLevel level,
         MemoryPressurePlatform platform, int? focusedIndex) {
-        if (candidates.Count > MaximumCandidates) throw new BrowserRuleException("residency_candidate_limit");
+        if (candidates.Count > MaximumCandidates) throw new BrowserRuleException(BrowserRuleCodes.ResidencyCandidateLimit);
         if (candidates.Select(candidate => candidate.TabId).Distinct(StringComparer.Ordinal).Count() != candidates.Count)
-            throw new BrowserRuleException("duplicate_residency_candidate");
+            throw new BrowserRuleException(BrowserRuleCodes.DuplicateResidencyCandidate);
         foreach (var candidate in candidates) {
             if (candidate.InactiveSince is { } stamp && !double.IsFinite(stamp))
-                throw new BrowserRuleException("invalid_residency_stamp");
+                throw new BrowserRuleException(BrowserRuleCodes.InvalidResidencyStamp);
             if (candidate.IsPresented != candidate.PresentedIndex.HasValue || candidate.PresentedIndex < 0)
-                throw new BrowserRuleException("invalid_presented_candidate");
+                throw new BrowserRuleException(BrowserRuleCodes.InvalidPresentedCandidate);
         }
-        if (focusedIndex < 0) throw new BrowserRuleException("invalid_focused_index");
+        if (focusedIndex < 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidFocusedIndex);
         var offScreen = Ordered(candidates.Where(candidate => !candidate.IsPresented && !candidate.KeepsPageLoaded));
         var fallback = level == MemoryPressureLevel.Critical && platform == MemoryPressurePlatform.Mobile
             && focusedIndex is { } focus

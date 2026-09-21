@@ -19,11 +19,11 @@ public sealed partial class NativeSessionAuthority {
         var operation = request["operation"]!.GetValue<string>();
         var args = request["arguments"]!.AsObject();
         var now = request["now"]!.GetValue<double>();
-        if (!double.IsFinite(now)) throw new BrowserRuleException("invalid_date");
+        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidDate);
         var target = request["spaceId"] is null ? (Guid?)null : Id(request["spaceId"]);
         if (target is { } id) _ = TransferSpace(id, Id(request["profileId"]));
         else if (operation is not ("records.sweep" or "records.cleanup"))
-            throw new BrowserRuleException("missing_space_identity");
+            throw new BrowserRuleException(BrowserRuleCodes.MissingSpaceIdentity);
         var window = request["window"]!;
         var selected = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
         var changes = new JsonArray();
@@ -47,7 +47,7 @@ public sealed partial class NativeSessionAuthority {
                 if (operation == "archive.restore") {
                     var tabId = Id(args["tabId"]);
                     var archiveIndex = Array.FindIndex(sections["archivedTabs"].ToArray(), a => Id(a["tab"]!["id"]) == tabId);
-                    if (archiveIndex < 0) throw new BrowserRuleException("unknown_archived_tab");
+                    if (archiveIndex < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownArchivedTab);
                     var archived = sections["archivedTabs"][archiveIndex];
                     editArguments = new() { ["tab"] = archived["tab"]!.DeepClone() };
                     sections["archivedTabs"] = sections["archivedTabs"].Where((_, index) => index != archiveIndex).ToArray();
@@ -58,7 +58,7 @@ public sealed partial class NativeSessionAuthority {
                         ? parsed : CurrentTabCleanup.After12Hours;
                     if ((RetentionPreferences.Default with { CurrentTabs = policy }).TabLifetime is { } lifetime)
                         editArguments = new() { ["lifetime"] = lifetime.TotalSeconds };
-                } else throw new BrowserRuleException("unknown_record_command");
+                } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
                     var compact = fields.DeepClone().AsObject();
                     foreach (var section in Sections)
@@ -141,7 +141,7 @@ public sealed partial class NativeSessionAuthority {
                 removed = RecordRemovalPolicy.WithinRange(history.Select(h => h["lastVisitedAt"]!.GetValue<double>()).ToArray(),
                     args["start"]!.GetValue<double>(), args["end"]!.GetValue<double>()).ToHashSet();
                 break;
-            default: throw new BrowserRuleException("unknown_history_command");
+            default: throw new BrowserRuleException(BrowserRuleCodes.UnknownHistoryCommand);
         }
         if (removed.Count == 0) return;
         change["removedHistory"] = IDs(history.Where((_, i) => removed.Contains(i)).Select(h => Id(h["id"])));
@@ -153,12 +153,12 @@ public sealed partial class NativeSessionAuthority {
         var id = Id(args["groupId"]);
         var run = sections["tabs"].SkipWhile(t => t["splitGroupID"] is null || Id(t["splitGroupID"]) != id)
             .TakeWhile(t => t["splitGroupID"] is not null && Id(t["splitGroupID"]) == id);
-        if (run.Take(2).Count() < 2) throw new BrowserRuleException("unknown_split_group");
+        if (run.Take(2).Count() < 2) throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitGroup);
         var (field, clock) = operation switch {
             "split.title" => ("customTitle", "titleModifiedAt"),
             "split.icon" => ("customIconSymbol", "iconModifiedAt"),
             "split.tint" => ("tint", "tintModifiedAt"),
-            _ => throw new BrowserRuleException("unknown_split_command")
+            _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitCommand)
         };
         var groups = fields["splitGroups"] as JsonArray ?? new JsonArray();
         var existing = groups.FirstOrDefault(g => Id(g!["id"]) == id)?.AsObject();

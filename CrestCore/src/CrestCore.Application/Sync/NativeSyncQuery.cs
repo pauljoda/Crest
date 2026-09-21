@@ -17,9 +17,9 @@ public static class NativeSyncQuery {
     #region Actions - Queries
 
     public static byte[] Prepare(ReadOnlySpan<byte> input) {
-        if (input.Length is 0 or > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        if (input.Length is 0 or > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
-        if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+        if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         JsonObject result;
         try {
             JsonNode value = request["operation"]!.GetValue<string>() switch {
@@ -34,14 +34,14 @@ public static class NativeSyncQuery {
                 "session.repair" => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
                     request["emptySpace"] as JsonObject),
                 "session.retain" => NativeSessionMaintenance.Retain(request["session"]!.AsObject(), request["now"]!.GetValue<double>()),
-                _ => throw new BrowserRuleException("unknown_sync_operation")
+                _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)
             };
             result = new() { ["value"] = value };
         } catch (NativeSyncDocumentException error) {
             return Failure(error);
         }
         var bytes = Encoding.UTF8.GetBytes(result.ToJsonString());
-        if (bytes.Length > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        if (bytes.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         return bytes;
     }
 
@@ -63,7 +63,7 @@ public static class NativeSyncQuery {
 
     public static byte[] Success(JsonNode value) {
         var bytes = Encoding.UTF8.GetBytes(new JsonObject { ["value"] = value }.ToJsonString());
-        if (bytes.Length > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        if (bytes.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         return bytes;
     }
 

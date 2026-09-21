@@ -17,19 +17,19 @@ public static class NativeSyncEvaluator {
     #region Actions - Sync validation
 
     public static byte[] Evaluate(ReadOnlySpan<byte> bytes) {
-        if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
-        if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+        if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         JsonNode result = request["operation"]!.GetValue<string>() switch {
             NativeSyncOperations.Resolve => Resolve(request["first"]!.AsObject(), request["second"]!.AsObject()),
             NativeSyncOperations.Reconcile => Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject())),
             NativeSyncOperations.OrderAllocate => new JsonArray(SyncOrderTokens.Allocate(
                 request["tokens"]!.AsArray().Select(n => n?.GetValue<string>()).ToArray())
                 .Select(t => (JsonNode)JsonValue.Create(t)!).ToArray()),
-            _ => throw new BrowserRuleException("unknown_sync_operation")
+            _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)
         };
         var output = Encoding.UTF8.GetBytes(result.ToJsonString());
-        if (output.Length > MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        if (output.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         return output;
     }
 
@@ -38,7 +38,7 @@ public static class NativeSyncEvaluator {
     private static double? Date(JsonNode value, string field) {
         if (value[field] is null) return null;
         double date = value[field]!.GetValue<double>();
-        if (!double.IsFinite(date)) throw new BrowserRuleException("invalid_sync_date");
+        if (!double.IsFinite(date)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDate);
         return date;
     }
 
@@ -55,22 +55,22 @@ public static class NativeSyncEvaluator {
 
     private static SyncRecordStamp Stamp(JsonNode record) {
         string kind = Kind(record);
-        if (!SyncRecordKinds.Includes(kind)) throw new BrowserRuleException("invalid_sync_kind");
+        if (!SyncRecordKinds.Includes(kind)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncKind);
         var payload = Payload(record);
         var tombstone = record["tombstone"];
-        if ((payload is null) == (tombstone is null)) throw new BrowserRuleException("invalid_sync_record");
-        if (payload is not null && Text(record["payload"]!, "type") != kind) throw new BrowserRuleException("sync_identity_mismatch");
+        if ((payload is null) == (tombstone is null)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncRecord);
+        if (payload is not null && Text(record["payload"]!, "type") != kind) throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
         var recordId = Id(record["id"]!["value"]);
         var spaceId = Id(record["spaceID"]);
-        if (kind == SyncRecordKinds.Space && recordId != spaceId) throw new BrowserRuleException("sync_identity_mismatch");
+        if (kind == SyncRecordKinds.Space && recordId != spaceId) throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
         if (payload is not null) {
             var identity = kind == SyncRecordKinds.Archive ? payload["tab"]! : payload;
             if (Id(identity["id"]) != recordId || (kind != SyncRecordKinds.Space && Id(identity["spaceID"]) != spaceId))
-                throw new BrowserRuleException("sync_identity_mismatch");
+                throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
         }
         var reason = tombstone?["reason"]?.GetValue<string>();
         if (tombstone is not null && !SyncDeletionReasons.Includes(reason))
-            throw new BrowserRuleException("invalid_sync_deletion");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDeletion);
         return new(kind, recordId, spaceId, Version(record), reason,
             tombstone is null ? null : Date(tombstone, "deletedAt"), kind == SyncRecordKinds.Tab && payload is not null ? Date(payload, "lastActivatedAt") : null);
     }
@@ -106,7 +106,7 @@ public static class NativeSyncEvaluator {
     }
 
     private static TabPlacement Placement(JsonNode payload)
-        => TabPlacementCodes.Parse(Text(payload, "placement")) ?? throw new BrowserRuleException("invalid_sync_placement");
+        => TabPlacementCodes.Parse(Text(payload, "placement")) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
 
     private static void Copy(JsonObject to, JsonObject from, params string[] fields) {
         foreach (string field in fields) {

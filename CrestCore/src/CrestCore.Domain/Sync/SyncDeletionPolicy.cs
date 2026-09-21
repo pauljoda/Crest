@@ -8,7 +8,7 @@ public static class SyncDeletionPolicy {
     public static string? Reason(string kind, TabPlacement? placement, string? archiveReason,
         bool owningSpaceRemains, string fallback) {
         if (!SyncDeletionReasons.Includes(fallback))
-            throw new BrowserRuleException("invalid_sync_deletion");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDeletion);
         if (kind != SyncRecordKinds.Tab) return kind is SyncRecordKinds.Space or SyncRecordKinds.Folder
             ? fallback == SyncDeletionReasons.ExplicitDelete ? fallback : null : fallback;
         if (archiveReason is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice)

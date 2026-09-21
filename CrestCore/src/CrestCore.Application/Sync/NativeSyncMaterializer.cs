@@ -46,9 +46,9 @@ public static class NativeSyncMaterializer {
         HashSet<Guid> profiles = [];
         foreach (var remote in Ordered(Payloads(records, SyncRecordKinds.Space))) {
             var id = Id(remote["id"]); var profile = Id(remote["profileID"]);
-            if (!profiles.Add(profile)) throw Error("duplicateProfile", profile);
+            if (!profiles.Add(profile)) throw Error(NativeSyncDocumentErrorCodes.DuplicateProfile, profile);
             localSpaces.TryGetValue(id, out var local);
-            if (local is not null && Id(local["profile"]!["id"]) != profile) throw Error("immutableProfileChanged", id);
+            if (local is not null && Id(local["profile"]!["id"]) != profile) throw Error(NativeSyncDocumentErrorCodes.ImmutableProfileChanged, id);
             if (pending.Contains(id) && local is not null) { spaces.Add(local.DeepClone()); continue; }
             var folders = Folders(id, records, policy, local, owners, deleted);
             var tabs = Tabs(id, records, policy, local, folders, owners, deleted);
@@ -78,7 +78,7 @@ public static class NativeSyncMaterializer {
         }
         foreach (var id in pending.Where(id => !spaces.Any(s => Id(s!["id"]) == id))) {
             var local = localSpaces[id];
-            if (!profiles.Add(Id(local["profile"]!["id"]))) throw Error("duplicateProfile", Id(local["profile"]!["id"]));
+            if (!profiles.Add(Id(local["profile"]!["id"]))) throw Error(NativeSyncDocumentErrorCodes.DuplicateProfile, Id(local["profile"]!["id"]));
             spaces.Add(local.DeepClone());
         }
         var result = session.DeepClone().AsObject();
@@ -94,7 +94,7 @@ public static class NativeSyncMaterializer {
         IReadOnlyDictionary<FolderId, SpaceId> owners, HashSet<FolderId> deleted) {
         var synced = Ordered(Payloads(records, SyncRecordKinds.Folder, space).Where(f => policy.Includes(Placement(f, "location")))).ToArray();
         IReadOnlyList<BrowserFolder> resolved;
-        try { resolved = SyncFolderMaterialization.Resolve(new(space), synced.Select(Folder).ToArray(), owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error("invalidFolderHierarchy", space); }
+        try { resolved = SyncFolderMaterialization.Resolve(new(space), synced.Select(Folder).ToArray(), owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(NativeSyncDocumentErrorCodes.InvalidFolderHierarchy, space); }
         var byId = synced.ToDictionary(f => Id(f["id"]));
         var result = resolved.Select(folder => {
             var value = Fields(byId[folder.Id.Value], "id", "title", "location", "symbol", "color", "isCollapsed", "collapseModifiedAt", "orderAnchorTabID");
@@ -137,14 +137,14 @@ public static class NativeSyncMaterializer {
         foreach (var tab in synced) {
             FolderId? folder = OptionalId(tab["folderID"]) is { } fid ? new(fid) : null;
             if (Placement(tab) != TabPlacement.Pinned && folder is { } missing && !folderIds.Contains(missing)) {
-                if (owners.TryGetValue(missing, out var owner) && owner.Value != space) throw Error("danglingFolder", Id(tab["id"]));
+                if (owners.TryGetValue(missing, out var owner) && owner.Value != space) throw Error(NativeSyncDocumentErrorCodes.DanglingFolder, Id(tab["id"]));
                 if (!SyncFolderMaterialization.TryPromote(missing, folderIds, localFolders, deleted, out folder)) continue;
             }
             var value = Tab(tab, byId.GetValueOrDefault(Id(tab["id"])));
             if (Placement(tab) != TabPlacement.Pinned && folder is { } resolved) value["folderID"] = SwiftId(resolved.Value);
             result.Add(value);
         }
-        if (result.Count(t => Placement(t) == TabPlacement.Pinned) > 12) throw Error("tooManyPinnedTabs", space);
+        if (result.Count(t => Placement(t) == TabPlacement.Pinned) > 12) throw Error(NativeSyncDocumentErrorCodes.TooManyPinnedTabs, space);
         foreach (var (tab, index) in localOnly) result.Insert(Math.Min(index, result.Count), tab);
         return result;
     }

@@ -19,7 +19,7 @@ public static class NativeSyncProjection {
         => new(names.Where(n => source[n] is not null).Select(n => new KeyValuePair<string, JsonNode?>(n, source[n]!.DeepClone())));
 
     internal static TabPlacement Placement(JsonNode value, string field = "placement")
-        => TabPlacementCodes.Parse(Text(value[field])) ?? throw new BrowserRuleException("invalid_sync_placement");
+        => TabPlacementCodes.Parse(Text(value[field])) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
 
     internal static string? SavedUrl(JsonNode tab) => Text(tab["savedURL"])
         ?? (Placement(tab) == TabPlacement.Current ? null : Text(tab["url"]));
@@ -47,8 +47,8 @@ public static class NativeSyncProjection {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         void Add(string kind, JsonObject value) {
             string name = kind + ":" + Id(kind == SyncRecordKinds.Archive ? value["tab"]!["id"] : value["id"]).ToString("D");
-            if (!seen.Add(name)) throw new NativeSyncDocumentException("duplicateRecord", name);
-            if (seen.Count > NativeSyncJournal.MaximumRecords) throw new NativeSyncDocumentException("recordLimitExceeded", seen.Count.ToString());
+            if (!seen.Add(name)) throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.DuplicateRecord, name);
+            if (seen.Count > NativeSyncJournal.MaximumRecords) throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.RecordLimitExceeded, seen.Count.ToString());
             result.Add((JsonNode)new JsonObject { ["type"] = kind, ["value"] = value });
         }
         IReadOnlyList<string> Tokens(string kind, IReadOnlyList<JsonNode> items, bool archived = false)
@@ -74,7 +74,7 @@ public static class NativeSyncProjection {
                 var tree = new FolderTree(folders.Select(f => new BrowserFolder(new(Id(f["id"])), Text(f["title"])!,
                     Placement(f, "location"), f["parentID"] is { } parent ? new FolderId(Id(parent)) : null)).ToArray());
                 IReadOnlyList<BrowserFolder> display;
-                try { display = tree.DisplayOrder(); } catch (BrowserRuleException) { throw new NativeSyncDocumentException("invalidFolderHierarchy", Id(space["id"]).ToString("D")); }
+                try { display = tree.DisplayOrder(); } catch (BrowserRuleException) { throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.InvalidFolderHierarchy, Id(space["id"]).ToString("D")); }
                 var byId = folders.ToDictionary(f => new FolderId(Id(f["id"])));
                 var folderTokens = new Dictionary<FolderId, string>();
                 foreach (var parent in new FolderId?[] { null }.Concat(display.Select(f => (FolderId?)f.Id))) {

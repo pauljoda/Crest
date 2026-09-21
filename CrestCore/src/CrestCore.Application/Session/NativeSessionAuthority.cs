@@ -31,8 +31,8 @@ public sealed partial class NativeSessionAuthority {
         workspaceKind = input["coreWorkspaceKind"]?.GetValue<string>() switch {
             null or "persistent" => BrowserWorkspaceKind.Persistent,
             "private" => BrowserWorkspaceKind.Private,
-            "temporary" => throw new BrowserRuleException("borrowed_source_required"),
-            _ => throw new BrowserRuleException("invalid_workspace_kind")
+            "temporary" => throw new BrowserRuleException(BrowserRuleCodes.BorrowedSourceRequired),
+            _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidWorkspaceKind)
         };
         privateBrowsing = input["corePrivateBrowsing"]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
         document = new(Fields(input, ["spaces", "coreWorkspaceKind", "corePrivateBrowsing"]), input["spaces"]!.AsArray().Select(node =>
@@ -51,9 +51,9 @@ public sealed partial class NativeSessionAuthority {
         var engine = Protocol.Descriptor(descriptor);
         if (engine.Role != AdapterRoles.Engine || !engine.Supports(EngineCapabilities.Pages)
             || !engine.Supports(EngineCapabilities.Navigation))
-            throw new BrowserRuleException("invalid_engine_registration");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidEngineRegistration);
         lock (Gate) {
-            if (Engine is not null) throw new BrowserRuleException("engine_already_registered");
+            if (Engine is not null) throw new BrowserRuleException(BrowserRuleCodes.EngineAlreadyRegistered);
             Engine = engine;
         }
     }
@@ -63,14 +63,14 @@ public sealed partial class NativeSessionAuthority {
     #region Actions - Document validation
 
     private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
-        if (bytes.Length == 0 || bytes.Length > MaximumBytes) throw new BrowserRuleException("session_size_limit");
+        if (bytes.Length == 0 || bytes.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionSizeLimit);
         return JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
     }
 
     internal static Guid Id(JsonNode? value) {
         if (value is JsonObject obj) value = obj["rawValue"];
         var id = Guid.Parse(value!.GetValue<string>());
-        if (id == Guid.Empty) throw new BrowserRuleException("invalid_identity");
+        if (id == Guid.Empty) throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
         return id;
     }
 
@@ -83,15 +83,15 @@ public sealed partial class NativeSessionAuthority {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in spaces) {
-            if (!ids.Add(Id(space.Metadata["id"]))) throw new BrowserRuleException("duplicate_space");
+            if (!ids.Add(Id(space.Metadata["id"]))) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpace);
             // A Space is exactly one profile and a profile belongs to exactly one
             // Space. Two Spaces sharing a profile would share cookies, credentials
             // and extension access across an isolation boundary the user relies on,
             // and would make "which Space owns this profile" unanswerable.
             if (!profiles.Add(Id(space.Metadata["profile"]!["id"])))
-                throw new BrowserRuleException("duplicate_space_profile");
+                throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
             foreach (var tab in space.Tabs)
-                if (!tabs.Add(Id(tab!["id"]))) throw new BrowserRuleException("duplicate_tab");
+                if (!tabs.Add(Id(tab!["id"]))) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         }
         var pendingIds = new HashSet<Guid>();
         foreach (var deletion in Deletions(value.Metadata)) {
@@ -99,7 +99,7 @@ public sealed partial class NativeSessionAuthority {
             var profile = Id(deletion["profileID"]);
             _ = Id(deletion["operationID"]);
             if (!pendingIds.Add(id) || !spaces.Any(s => Id(s.Metadata["id"]) == id && Id(s.Metadata["profile"]!["id"]) == profile))
-                throw new BrowserRuleException("invalid_deletion_intent");
+                throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent);
         }
         // An empty temporary workspace and a briefly stale window selection are
         // valid native states. Window reconciliation handles their presentation.
@@ -111,18 +111,18 @@ public sealed partial class NativeSessionAuthority {
 
     private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null) {
         RequireWritable();
-        if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
+        if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
         var delta = Parse(bytes);
-        if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+        if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         var metadata = delta["metadata"] is JsonObject suppliedMetadata ? Fields(suppliedMetadata, ["spaces"]) : document.Metadata;
         if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
-            throw new BrowserRuleException("deletion_requires_command");
+            throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
         var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));
         foreach (var node in delta["spaces"]!.AsArray()) {
             var change = node!.AsObject(); var id = Id(change["id"]);
             byId.TryGetValue(id, out var original);
             var fields = change["metadata"] is JsonObject supplied ? Fields(supplied, Sections) : original?.Metadata;
-            if (fields is null || Id(fields["id"]) != id) throw new BrowserRuleException("wrong_space_identity");
+            if (fields is null || Id(fields["id"]) != id) throw new BrowserRuleException(BrowserRuleCodes.WrongSpaceIdentity);
             var sections = Sections.ToDictionary(section => section,
                 section => original?.Sections[section] ?? (IReadOnlyList<JsonNode>)System.Array.Empty<JsonNode>());
             foreach (var section in Sections) {
@@ -135,7 +135,7 @@ public sealed partial class NativeSessionAuthority {
                 var order = edits["order"] is JsonArray suppliedRecords
                     ? suppliedRecords.Select(Id).ToArray() : previous.Select(v => RecordId(v!, section)).ToArray();
                 if (order.Length != records.Count || order.Distinct().Count() != order.Length || order.Any(id => !records.ContainsKey(id)))
-                    throw new BrowserRuleException("invalid_record_order");
+                    throw new BrowserRuleException(BrowserRuleCodes.InvalidRecordOrder);
                 sections[section] = order.Select(key => records[key]).ToArray();
             }
             byId[id] = new(fields, sections);
@@ -143,11 +143,11 @@ public sealed partial class NativeSessionAuthority {
         var spaceOrder = delta["spaceOrder"] is JsonArray suppliedOrder
             ? suppliedOrder.Select(Id).ToArray() : document.Spaces.Select(s => Id(s.Metadata["id"])).ToArray();
         if (spaceOrder.Distinct().Count() != spaceOrder.Length || spaceOrder.Any(id => !byId.ContainsKey(id)))
-            throw new BrowserRuleException("invalid_space_order");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidSpaceOrder);
         var next = new SessionDocument(metadata, spaceOrder.Select(id => byId[id]).ToArray());
         foreach (var existing in Deletions(document.Metadata))
             if (!Deletions(metadata).Any(d => SameDeletionIntent(d!, existing!)))
-                throw new BrowserRuleException("deletion_requires_command");
+                throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
         foreach (var deletion in Deletions(metadata)) {
             var id = Id(deletion!["spaceID"]);
             var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == id);
@@ -155,7 +155,7 @@ public sealed partial class NativeSessionAuthority {
             if (retained is null || !JsonNode.DeepEquals(Fields(original.Metadata, ["selectedTabID"]), Fields(retained.Metadata, ["selectedTabID"]))
                 || Sections.Any(section => original.Sections[section].Count != retained.Sections[section].Count
                     || original.Sections[section].Zip(retained.Sections[section]).Any(pair => !JsonNode.DeepEquals(pair.First, pair.Second))))
-                throw new BrowserRuleException("space_deletion_in_progress");
+                throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
         }
         Validate(next);
         ValidateBorrowedDocument(next);
@@ -163,8 +163,8 @@ public sealed partial class NativeSessionAuthority {
     }
 
     private void RequireWritable(bool requireCurrentBorrowedPolicy = true) {
-        if (released) throw new BrowserRuleException("session_released");
-        if (replacement is not null) throw new BrowserRuleException("session_transaction_in_progress");
+        if (released) throw new BrowserRuleException(BrowserRuleCodes.SessionReleased);
+        if (replacement is not null) throw new BrowserRuleException(BrowserRuleCodes.SessionTransactionInProgress);
         if (borrowedSource is not null) {
             _ = RequireBorrowedSource();
             if (requireCurrentBorrowedPolicy) RequireBorrowedRevision(borrowedSourceRevision);
@@ -182,7 +182,7 @@ public sealed partial class NativeSessionAuthority {
     public static (ulong Source, ulong Destination) CommitPair(
         NativeSessionAuthority source, ulong sourceRevision, ReadOnlySpan<byte> sourceDelta,
         NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> destinationDelta) {
-        if (ReferenceEquals(source, destination)) throw new BrowserRuleException("same_session_transfer");
+        if (ReferenceEquals(source, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameSessionTransfer);
         lock (Gate) {
             var a = source.Prepare(sourceRevision, sourceDelta);
             var b = destination.Prepare(destinationRevision, destinationDelta);
@@ -195,7 +195,7 @@ public sealed partial class NativeSessionAuthority {
 
     public NativeSessionCheckpoint Checkpoint(ulong expected, ReadOnlySpan<byte> selection) {
         lock (Gate) {
-            if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
+            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             return new(document, Parse(selection));
         }
     }

@@ -1729,6 +1729,10 @@
     "native-core-shared-semantic-codes": {
       "category": "internal",
       "message": "Use shared semantic codes across native core policies and protocol adapters."
+    },
+    "native-core-shared-error-codes": {
+      "category": "internal",
+      "message": "Keep native core error codes consistent across policies and native status mapping."
     }
   }
 }

@@ -32,7 +32,7 @@ public sealed record TabContent {
     #region Actions - Content decoding
 
     public static TabContent Native(string kind, string title, string symbol = "square") {
-        if (string.IsNullOrWhiteSpace(kind)) throw new BrowserRuleException("invalid_native_kind");
+        if (string.IsNullOrWhiteSpace(kind)) throw new BrowserRuleException(BrowserRuleCodes.InvalidNativeKind);
         return kind switch {
             "settings" => Settings,
             "getting-started" => GettingStarted,

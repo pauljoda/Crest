@@ -12,16 +12,16 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
     #region Actions - Sync
 
     public static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, ReadOnlySpan<byte> input) {
-        if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
-        if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+        if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         bool replacing = request["operation"]!.GetValue<string>() switch {
             NativeSyncOperations.Merge => false,
             NativeSyncOperations.Replace => true,
-            _ => throw new BrowserRuleException("unknown_sync_operation")
+            _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)
         };
         double now = request["now"]!.GetValue<double>();
-        if (!double.IsFinite(now)) throw new BrowserRuleException("invalid_saved_date");
+        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         var preferences = request["preferences"]!;
         var local = request["session"]!.AsObject();
         var incoming = request["records"]!.AsArray();

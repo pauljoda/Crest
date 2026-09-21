@@ -32,7 +32,7 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
 
     private static TabContent ValidContent(TabContent content, string? url, PageId? pageId) {
         if (content is null || content.IsWebPage != (url is not null) || !content.IsWebPage && pageId is not null)
-            throw new BrowserRuleException("invalid_tab_content");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidTabContent);
         return content;
     }
 
@@ -67,14 +67,14 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
 
     public void CreatePage(PageId page, bool allowsInternalPages = false) {
         if (!Content.IsWebPage || Phase is not (TabPhase.Dormant or TabPhase.Failed))
-            throw new BrowserRuleException("invalid_transition");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidTransition);
         BrowserSpace.ValidateUrl(Url, allowsInternalPages);
         PageId = page; Generation++; Phase = TabPhase.Creating; Failure = null;
     }
 
     public void NavigateStartPage(string url, PageId page, bool allowsInternalPages = false) {
         if (!Content.IsStartPage || Placement != TabPlacement.Current)
-            throw new BrowserRuleException("not_start_page_draft");
+            throw new BrowserRuleException(BrowserRuleCodes.NotStartPageDraft);
         BrowserSpace.ValidateUrl(url, allowsInternalPages);
         Content = TabContent.Web; Url = url; Title = Content.Title(url);
         Phase = TabPhase.Dormant;
@@ -82,29 +82,29 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
     }
 
     public void Created() {
-        if (Phase != TabPhase.Creating) throw new BrowserRuleException("invalid_transition");
+        if (Phase != TabPhase.Creating) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransition);
         Phase = TabPhase.Ready;
     }
 
     public void Observe(string? url, string title, bool loading, bool back, bool forward, string? failure) {
-        if (Phase == TabPhase.Creating) throw new BrowserRuleException("page_not_ready");
+        if (Phase == TabPhase.Creating) throw new BrowserRuleException(BrowserRuleCodes.PageNotReady);
         if (url is not null) Url = url;
         Title = title; IsLoading = loading; CanGoBack = back; CanGoForward = forward; Failure = failure;
     }
 
     public void RequestClose() {
-        if (Phase == TabPhase.Closing) throw new BrowserRuleException("already_closing");
+        if (Phase == TabPhase.Closing) throw new BrowserRuleException(BrowserRuleCodes.AlreadyClosing);
         Phase = TabPhase.Closing;
     }
 
     public void RequestUnload() {
         if (!Content.IsWebPage || Phase != TabPhase.Ready || KeepsPageLoaded || IsLoading)
-            throw new BrowserRuleException("page_not_unloadable");
+            throw new BrowserRuleException(BrowserRuleCodes.PageNotUnloadable);
         Phase = TabPhase.Unloading;
     }
 
     public void CancelUnload() {
-        if (Phase != TabPhase.Unloading) throw new BrowserRuleException("invalid_transition");
+        if (Phase != TabPhase.Unloading) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransition);
         Phase = TabPhase.Ready;
     }
 
@@ -124,7 +124,7 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
 
     public void Rename(string? title, DateTimeOffset now) {
         title = title?.Trim();
-        if (title?.Length > 4096) throw new BrowserRuleException("invalid_title");
+        if (title?.Length > 4096) throw new BrowserRuleException(BrowserRuleCodes.InvalidTitle);
         CustomTitle = string.IsNullOrEmpty(title) ? null : title; TitleModifiedAt = BrowserEditTimestamp.Normalize(now);
     }
 

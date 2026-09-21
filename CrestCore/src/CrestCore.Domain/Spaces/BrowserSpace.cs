@@ -70,14 +70,14 @@ public sealed partial class BrowserSpace {
     public void Lock() { unlocked = false; AccessGeneration++; }
 
     public void Unlock(ProfileId profile, ulong generation) {
-        if (!SupportsDeviceAuthentication) throw new BrowserRuleException("unsupported_access_policy");
-        if (ProfileId != profile || AccessGeneration != generation) throw new BrowserRuleException("stale_authentication");
+        if (!SupportsDeviceAuthentication) throw new BrowserRuleException(BrowserRuleCodes.UnsupportedAccessPolicy);
+        if (ProfileId != profile || AccessGeneration != generation) throw new BrowserRuleException(BrowserRuleCodes.StaleAuthentication);
         unlocked = true;
     }
 
     public void EnsureAccessible() {
-        if (IsDeleting) throw new BrowserRuleException("space_deleting");
-        if (IsLocked) throw new BrowserRuleException("space_locked");
+        if (IsDeleting) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeleting);
+        if (IsLocked) throw new BrowserRuleException(BrowserRuleCodes.SpaceLocked);
     }
 
     public void ReconcileBorrowedPolicy(BrowserSpace source) {
@@ -93,18 +93,18 @@ public sealed partial class BrowserSpace {
     #region Actions - Tabs
 
     public void Add(BrowserTab tab, TabId? after) {
-        if (tabs.Count >= MaximumTabs) throw new BrowserRuleException("tab_limit");
-        if (tabs.Any(t => t.Id == tab.Id)) throw new BrowserRuleException("duplicate_tab");
+        if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
+        if (tabs.Any(t => t.Id == tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         int index = after is null ? -1 : tabs.FindIndex(t => t.Id == after);
         tabs.Insert(index < 0 ? tabs.Count : index + 1, tab);
     }
 
     public void ValidateTransferFrom(BrowserSpace source, TabId id) {
         EnsureAccessible(); source.EnsureAccessible();
-        if (source == this || source.Id != Id || source.ProfileId != ProfileId) throw new BrowserRuleException("wrong_profile");
-        if (tabs.Count >= MaximumTabs) throw new BrowserRuleException("tab_limit");
-        if (tabs.Any(t => t.Id == id) || archive.Any(t => t.Id == id)) throw new BrowserRuleException("duplicate_tab");
-        if (source.Tab(id).Phase is TabPhase.Creating or TabPhase.Closing or TabPhase.Unloading) throw new BrowserRuleException("page_busy");
+        if (source == this || source.Id != Id || source.ProfileId != ProfileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfile);
+        if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
+        if (tabs.Any(t => t.Id == id) || archive.Any(t => t.Id == id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
+        if (source.Tab(id).Phase is TabPhase.Creating or TabPhase.Closing or TabPhase.Unloading) throw new BrowserRuleException(BrowserRuleCodes.PageBusy);
     }
 
     public void AddOpenedTab(BrowserTab tab, TabId? after) {
@@ -117,9 +117,9 @@ public sealed partial class BrowserSpace {
     }
 
     public void Remove(BrowserTab tab, DateTimeOffset now, bool archiveTab, string reason = ArchiveReasons.Closed) {
-        if (!tabs.Contains(tab)) throw new BrowserRuleException("unknown_tab");
+        if (!tabs.Contains(tab)) throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
         var orderedFolders = new FolderTree(folders).PreserveOrder([tab.Id], tabs);
-        if (!tabs.Remove(tab)) throw new BrowserRuleException("unknown_tab");
+        if (!tabs.Remove(tab)) throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
         folders.Clear(); folders.AddRange(orderedFolders);
         if (reason != ArchiveReasons.AutoCleanup) NormalizeSplits(now);
         if (archiveTab && !tab.Content.IsStartPage) {
@@ -132,10 +132,10 @@ public sealed partial class BrowserSpace {
         EnsureAccessible();
         var tab = Tab(id);
         if (folder is not null && !folders.Any(f => f.Id == folder && f.Location == placement))
-            throw new BrowserRuleException("invalid_folder_placement");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         if (placement == TabPlacement.Pinned && (folder is not null ||
             tab.Placement != TabPlacement.Pinned && tabs.Count(t => t.Placement == TabPlacement.Pinned) >= 12))
-            throw new BrowserRuleException("pinned_limit");
+            throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         var nextFolders = new FolderTree(folders).PreserveOrder([tab.Id], tabs);
         var remaining = tabs.Where(t => t.Id != id).ToList();
         int last = remaining.FindLastIndex(t => t.Placement == placement && t.FolderId == folder);
@@ -167,7 +167,7 @@ public sealed partial class BrowserSpace {
     }
 
     public BrowserTab RestoreArchived(TabId id, DateTimeOffset now) {
-        var archived = archive.Find(a => a.Id == id) ?? throw new BrowserRuleException("unknown_archive");
+        var archived = archive.Find(a => a.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownArchive);
         var tab = BrowserTab.Restore(archived.Tab with {
             Placement = TabPlacement.Current,
             FolderId = null,
@@ -207,7 +207,7 @@ public sealed partial class BrowserSpace {
 
     public static string ValidName(string name) {
         name = name.Trim();
-        if (name.Length is 0 or > 200) throw new BrowserRuleException("invalid_name");
+        if (name.Length is 0 or > 200) throw new BrowserRuleException(BrowserRuleCodes.InvalidName);
         return name;
     }
 
@@ -223,7 +223,7 @@ public sealed partial class BrowserSpace {
                 && !(allowsInternalPages && parsed.Scheme == BrowserUrlConstants.ChromeExtensionScheme && parsed.Host.Length == 32
                     && parsed.Host.All(c => c is >= 'a' and <= 'p')))
             || !string.IsNullOrEmpty(parsed.UserInfo))
-            throw new BrowserRuleException("unsupported_url");
+            throw new BrowserRuleException(BrowserRuleCodes.UnsupportedUrl);
     }
 
     #endregion
@@ -260,7 +260,7 @@ public sealed partial class BrowserSpace {
 
     #region Collection views
 
-    public BrowserTab Tab(TabId id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException("unknown_tab");
+    public BrowserTab Tab(TabId id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
 
     #endregion
 

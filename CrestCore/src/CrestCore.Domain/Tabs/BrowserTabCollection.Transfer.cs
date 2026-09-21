@@ -8,17 +8,17 @@ public sealed partial class BrowserTabCollection {
     public TabId? TransferTo(BrowserTabCollection destination, TabId id, TabId? selected, TabId? fallback,
         TabPlacement? requestedPlacement, FolderId? requestedFolder, TabId? before,
         bool afterSelection, TabId? destinationSelection, DateTimeOffset now) {
-        if (ReferenceEquals(this, destination)) throw new BrowserRuleException("same_collection_transfer");
+        if (ReferenceEquals(this, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameCollectionTransfer);
         var tab = Tab(id);
         if (destination.tabs.Any(t => t.Id == id) || destination.archive.Any(t => t.Id == id))
-            throw new BrowserRuleException("duplicate_tab");
-        if (destination.tabs.Count >= MaximumTabs) throw new BrowserRuleException("tab_limit");
+            throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
+        if (destination.tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         var placement = requestedPlacement ?? tab.Placement;
         FolderId? folder = placement != TabPlacement.Pinned && destination.folders.Any(f => f.Id == requestedFolder && f.Location == placement)
             ? requestedFolder : null;
         if (placement == TabPlacement.Pinned && destination.tabs.Count(t => t.Placement == placement) >= 12)
-            throw new BrowserRuleException("pinned_limit");
-        if (before == id) throw new BrowserRuleException("invalid_tab_anchor");
+            throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
+        if (before == id) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
         bool Matches(BrowserTab t) => t.Placement == placement && t.FolderId == folder;
         int insertion = before is { } anchor ? destination.tabs.FindIndex(t => t.Id == anchor && Matches(t)) : -1;
         if (insertion < 0) {

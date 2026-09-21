@@ -15,7 +15,7 @@ public sealed partial class BrowserTabCollection {
         List<(TabId Source, TabId Copy)> copies = [];
         List<(Guid Source, Guid Copy)> groupCopies = [];
         FolderId? createdFolder = null;
-        void Require(bool valid, string code = "invalid_destination") { if (!valid) throw new BrowserRuleException(code); }
+        void Require(bool valid, string code = BrowserRuleCodes.InvalidDestination) { if (!valid) throw new BrowserRuleException(code); }
         FolderId CreateFolder(TabPlacement placement) {
             var folder = new FolderId(ids.Next()); AddFolder(folder, "New Folder", placement); createdFolder = folder; return folder;
         }
@@ -28,11 +28,11 @@ public sealed partial class BrowserTabCollection {
                     Require(members.All(t => t.Content.IsWebPage), "web_pages_only");
                     foreach (var tab in members) tab.SetResidency(action.KeepLoaded);
                     break;
-                default: throw new BrowserRuleException("folder_action_unavailable");
+                default: throw new BrowserRuleException(BrowserRuleCodes.FolderActionUnavailable);
             }
             return new(selected, destinationSelection, copies, groupCopies, createdFolder);
         }
-        Require(requested.Length > 0, "stale_selection");
+        Require(requested.Length > 0, BrowserRuleCodes.StaleSelection);
         switch (action.Kind) {
             case TabBatchKind.File:
                 Require(action.Before is not { } anchor || !selectedIds.Contains(anchor));
@@ -133,14 +133,14 @@ public sealed partial class BrowserTabCollection {
         if (action.Placement == TabPlacement.Pinned || action.Folder is { } parent && folderIds.Contains(parent)
             || action.Before is { } before && tabIds.Contains(before)
             || action.BeforeFolder is { } beforeFolder && folderIds.Contains(beforeFolder))
-            throw new BrowserRuleException("invalid_destination");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
         var tree = new FolderTree(folders);
         if (action.Folder is { } owner && tree.Folder(owner).Location != action.Placement
             || action.BeforeFolder is { } sibling && (tree.Folder(sibling).ParentId != action.Folder
                 || tree.Folder(sibling).Location != action.Placement)
             || action.BeforeFolder is null && action.Before is { } anchor && (Tab(anchor).FolderId != action.Folder
                 || Tab(anchor).Placement != action.Placement || SplitMembers(anchor)[0].Id != anchor))
-            throw new BrowserRuleException("invalid_destination");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
         List<(BatchItem Item, TabId[] Tabs)> blocks = []; HashSet<TabId> included = [];
         foreach (var root in request.Roots) {
             if (root.IsFolder) blocks.Add((root, []));

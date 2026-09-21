@@ -27,7 +27,7 @@ public static class TabPlacementCodes {
         TabPlacement.Current => Current,
         TabPlacement.Pinned => Pinned,
         TabPlacement.Saved => Saved,
-        _ => throw new BrowserRuleException("invalid_placement")
+        _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidPlacement)
     };
 
     #endregion

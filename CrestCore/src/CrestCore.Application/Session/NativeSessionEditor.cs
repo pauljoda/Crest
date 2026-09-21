@@ -34,9 +34,9 @@ public static class NativeSessionEditor {
     #region Actions - Session editing
 
     public static byte[] Evaluate(ReadOnlySpan<byte> input) {
-        if (input.Length > MaximumBytes) throw new ProtocolException("session_edit_limit");
+        if (input.Length > MaximumBytes) throw new ProtocolException(ProtocolErrorCodes.SessionEditLimit);
         var parsed = Protocol.Parse(input);
-        if (parsed.GetProperty("version").GetInt32() != 1) throw new ProtocolException("version_mismatch");
+        if (parsed.GetProperty("version").GetInt32() != 1) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
         var request = JsonNode.Parse(input)!.AsObject();
         var operation = Protocol.Text(parsed, "operation");
         var original = request["space"]!.AsObject();
@@ -160,7 +160,7 @@ public static class NativeSessionEditor {
             case "folder.color":
             case "folder.symbol":
                 var styledFolder = Folder("folderId")!.Value;
-                if (!space.Folders.Any(f => f.Id == styledFolder)) throw new BrowserRuleException("unknown_folder");
+                if (!space.Folders.Any(f => f.Id == styledFolder)) throw new BrowserRuleException(BrowserRuleCodes.UnknownFolder);
                 var field = operation == "folder.color" ? "color" : "symbol";
                 changed = document.SetFolderMetadata(styledFolder, field,
                     field == "color" ? args["value"]!.AsObject() : FolderSymbol(args["value"]!));
@@ -194,12 +194,12 @@ public static class NativeSessionEditor {
                     var deleting = operation == "tab.delete";
                     var clear = operation == "tab.clear_current";
                     var ids = clear ? space.Tabs.Where(t => t.Placement == TabPlacement.Current).Select(t => t.Id).ToArray() : [Id("tabId")];
-                    if (ids.Length == 0) throw new BrowserRuleException("no_current_tabs");
+                    if (ids.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.NoCurrentTabs);
                     selected = space.DismissTabs(ids, selected, OptionalId("fallbackTabId"), now, deleting,
                         ensureSelection: deleting || clear, resetArchivePlacement: deleting || args["resetArchivePlacement"]?.GetValue<bool>() == true);
                     break;
                 }
-            default: throw new ProtocolException("unknown_session_edit");
+            default: throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit);
         }
         var next = state with { Spaces = [space.Capture(state.Spaces[0], selected)] };
         var output = document.Write(next)["session"]!["spaces"]![0]!.DeepClone();
@@ -244,7 +244,7 @@ public static class NativeSessionEditor {
 
     private static JsonNode FolderSymbol(JsonNode value) {
         string symbol = value.GetValue<string>();
-        if (symbol.Length == 0 || Encoding.UTF8.GetByteCount(symbol) > 128) throw new BrowserRuleException("invalid_folder_symbol");
+        if (symbol.Length == 0 || Encoding.UTF8.GetByteCount(symbol) > 128) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderSymbol);
         return JsonValue.Create(symbol)!;
     }
 

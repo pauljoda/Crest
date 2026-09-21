@@ -20,9 +20,9 @@ public static class NativePolicyEvaluator {
     #region Actions - Policy
 
     public static byte[] Evaluate(ReadOnlySpan<byte> utf8) {
-        if (utf8.Length > MaximumInputBytes) throw new ProtocolException("policy_input_limit");
+        if (utf8.Length > MaximumInputBytes) throw new ProtocolException(ProtocolErrorCodes.PolicyInputLimit);
         var request = Protocol.Parse(utf8);
-        if (request.GetProperty("version").GetInt32() != 1) throw new ProtocolException("version_mismatch");
+        if (request.GetProperty("version").GetInt32() != 1) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
         var operation = Protocol.Text(request, "operation");
         if (operation is "navigation.link" or "navigation.modified_link") {
             bool peek, newTab;
@@ -33,7 +33,7 @@ public static class NativePolicyEvaluator {
                 var preference = Protocol.Text(request, "peekModifier") switch {
                     "option" => LinkPeekModifier.Option,
                     "command" => LinkPeekModifier.Command,
-                    _ => throw new ProtocolException("invalid_peek_modifier")
+                    _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPeekModifier)
                 };
                 (peek, newTab) = LinkNavigationPolicy.Modifiers(request.GetProperty("commandModified").GetBoolean(),
                     request.GetProperty("optionModified").GetBoolean(), request.GetProperty("middleClick").GetBoolean(), preference);
@@ -65,7 +65,7 @@ public static class NativePolicyEvaluator {
                 ? ["version", "operation", "timestamps", "now", "lifetime"]
                 : ["version", "operation", "timestamps", "start", "end"]);
             var timestamps = request.GetProperty("timestamps").EnumerateArray().Select(value => value.GetDouble()).ToArray();
-            if (timestamps.Length > 512) throw new ProtocolException("record_batch_limit");
+            if (timestamps.Length > 512) throw new ProtocolException(ProtocolErrorCodes.RecordBatchLimit);
             var indices = operation == "records.expired"
                 ? RecordRemovalPolicy.Expired(timestamps, request.GetProperty("now").GetDouble(), request.GetProperty("lifetime").GetDouble())
                 : RecordRemovalPolicy.WithinRange(timestamps, request.GetProperty("start").GetDouble(), request.GetProperty("end").GetDouble());
@@ -82,7 +82,7 @@ public static class NativePolicyEvaluator {
                 Protocol.Members(old, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
                 previous = new(Protocol.Id(old, "id"), Protocol.Text(old, "url"), old.GetProperty("title").GetString() ?? "",
                     Date(old, "firstVisitedAt"), Date(old, "lastVisitedAt"), old.GetProperty("visitCount").GetInt32());
-                if (previous.VisitCount < 1) throw new ProtocolException("invalid_visit_count");
+                if (previous.VisitCount < 1) throw new ProtocolException(ProtocolErrorCodes.InvalidVisitCount);
             }
             string? title = request.TryGetProperty("title", out var name) && name.ValueKind != JsonValueKind.Null ? name.GetString() : null;
             var visit = HistoryPolicy.Record(Protocol.Text(request, "url"), title, Date(request, "now"), Protocol.Id(request, "newId"), previous);
@@ -116,7 +116,7 @@ public static class NativePolicyEvaluator {
                     Optional(value, "isPresented")?.GetBoolean() ?? false,
                     Optional(value, "presentedIndex") is { } index ? index.GetInt32() : null));
                 if (candidates.Count > PageResidencyPolicy.MaximumCandidates)
-                    throw new ProtocolException("residency_candidate_limit");
+                    throw new ProtocolException(ProtocolErrorCodes.ResidencyCandidateLimit);
             }
             var plan = PageResidencyPolicy.ReleasePlan(candidates, Level(request), Platform(request),
                 Optional(request, "focusedIndex") is { } focus ? focus.GetInt32() : null);
@@ -133,7 +133,7 @@ public static class NativePolicyEvaluator {
         if (operation == "tabs.dismissal") {
             Protocol.Members(request, "version", "operation", "placement", "isStartPage", "tabCount");
             var placement = Optional(request, "placement") is null ? (TabPlacement?)null
-                : (TabPlacementCodes.Parse(Protocol.Text(request, "placement")) ?? throw new ProtocolException("invalid_placement"));
+                : (TabPlacementCodes.Parse(Protocol.Text(request, "placement")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement));
             var action = TabDismissalPolicy.Decide(placement,
                 Optional(request, "isStartPage")?.GetBoolean() ?? false,
                 request.GetProperty("tabCount").GetInt32());
@@ -146,9 +146,9 @@ public static class NativePolicyEvaluator {
             });
         }
         Protocol.Members(request, "version", "operation", "input", "searchTemplate", "allowsInternalPages");
-        if (Protocol.Text(request, "operation") != "address.intent") throw new ProtocolException("unknown_policy");
+        if (Protocol.Text(request, "operation") != "address.intent") throw new ProtocolException(ProtocolErrorCodes.UnknownPolicy);
         // An empty address is a successful no-navigation decision.
-        var input = request.GetProperty("input").GetString() ?? throw new ProtocolException("invalid_input");
+        var input = request.GetProperty("input").GetString() ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
         var template = Protocol.Text(request, "searchTemplate", 2048);
         var provider = SearchProvider.Custom(Guid.Parse("00000000-0000-0000-0000-000000000001"), "Native provider", template, null);
         bool allowsInternalPages = request.TryGetProperty("allowsInternalPages", out var internalPages) && internalPages.GetBoolean();
@@ -170,18 +170,18 @@ public static class NativePolicyEvaluator {
     private static MemoryPressureLevel Level(JsonElement request) => Protocol.Text(request, "level") switch {
         "warning" => MemoryPressureLevel.Warning,
         "critical" => MemoryPressureLevel.Critical,
-        _ => throw new ProtocolException("invalid_pressure_level")
+        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPressureLevel)
     };
 
     private static MemoryPressurePlatform Platform(JsonElement request) => Protocol.Text(request, "platform") switch {
         "desktop" => MemoryPressurePlatform.Desktop,
         "mobile" => MemoryPressurePlatform.Mobile,
-        _ => throw new ProtocolException("invalid_pressure_platform")
+        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPressurePlatform)
     };
 
     private static DateTimeOffset Date(JsonElement value, string field) {
         double seconds = value.GetProperty(field).GetDouble();
-        if (!double.IsFinite(seconds)) throw new ProtocolException("invalid_date");
+        if (!double.IsFinite(seconds)) throw new ProtocolException(ProtocolErrorCodes.InvalidDate);
         return DateTimeOffset.UnixEpoch.AddSeconds(seconds);
     }
 

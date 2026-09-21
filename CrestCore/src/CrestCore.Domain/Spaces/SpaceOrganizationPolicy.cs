@@ -14,11 +14,11 @@ public static class SpaceOrganizationPolicy {
     }
 
     public static void RequireOwnedProfiles(BrowserWorkspaceKind kind) {
-        if (kind == BrowserWorkspaceKind.Temporary) throw new BrowserRuleException("borrowed_profile");
+        if (kind == BrowserWorkspaceKind.Temporary) throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfile);
     }
 
     public static void RequireRemovable(int count) {
-        if (count <= 1) throw new BrowserRuleException("cannot_delete_last_space");
+        if (count <= 1) throw new BrowserRuleException(BrowserRuleCodes.CannotDeleteLastSpace);
     }
 
     #endregion

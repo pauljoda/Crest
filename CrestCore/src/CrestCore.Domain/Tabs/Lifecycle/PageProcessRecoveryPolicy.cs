@@ -12,7 +12,7 @@ public static class PageProcessRecoveryPolicy {
     #region Actions - Lifecycle
 
     public static ProcessRecoveryAction Decide(int consecutiveTerminations) {
-        if (consecutiveTerminations < 1) throw new BrowserRuleException("invalid_termination_count");
+        if (consecutiveTerminations < 1) throw new BrowserRuleException(BrowserRuleCodes.InvalidTerminationCount);
         return consecutiveTerminations <= MaximumAutomaticReloads
             ? ProcessRecoveryAction.Reload
             : ProcessRecoveryAction.ShowFailure;

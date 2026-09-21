@@ -40,7 +40,7 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) {
             RequireWritable();
             SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
-            if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
+            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             RequireAccessible(spaceId);
             var original = TransferSpace(spaceId, profileId);
             var fields = original.Metadata.DeepClone().AsObject();
@@ -55,7 +55,7 @@ public sealed partial class NativeSessionAuthority {
     }
 
     private SpaceDocument RequireBorrowedSource() {
-        var source = borrowedSource ?? throw new BrowserRuleException("not_borrowed_workspace");
+        var source = borrowedSource ?? throw new BrowserRuleException(BrowserRuleCodes.NotBorrowedWorkspace);
         var original = source.document.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == borrowedSpace);
         BorrowedProfilePolicy.RequireSource(new(borrowedSpace), new(borrowedProfile),
             new(original is null ? Guid.Empty : Id(original.Metadata["id"])),
@@ -78,19 +78,19 @@ public sealed partial class NativeSessionAuthority {
         var original = RequireBorrowedSource();
         if (value.Spaces.Count != 1 || !JsonNode.DeepEquals(
             Fields(value.Spaces[0].Metadata, LocalBorrowedFields), Fields(original.Metadata, LocalBorrowedFields)))
-            throw new BrowserRuleException("borrowed_profile_requires_owner");
+            throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfileRequiresOwner);
     }
 
     internal void RequireBorrowedRevision(ulong? expected) {
         if (borrowedSource is null) return;
         _ = RequireBorrowedSource();
-        if (expected != borrowedSource.Revision) throw new BrowserRuleException("stale_borrowed_source");
+        if (expected != borrowedSource.Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleBorrowedSource);
     }
 
     public NativeSessionCommand PrepareBorrowedRefresh(ulong expected) {
         lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
-            if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
+            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             var original = RequireBorrowedSource(); var local = document.Spaces.Single();
             var next = new SessionDocument(document.Metadata,
                 [new(BorrowedMetadata(original, local), local.Sections)]);
@@ -107,7 +107,7 @@ public sealed partial class NativeSessionAuthority {
             return (JsonNode)fields;
         }).ToArray());
         var output = Encoding.UTF8.GetBytes(new JsonObject { ["session"] = projection }.ToJsonString());
-        if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
+        if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         return output;
     }
 

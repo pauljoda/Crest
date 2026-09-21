@@ -23,7 +23,7 @@ public static unsafe partial class Exports {
 
     private static bool ValidSessionInput(byte* bytes, nuint count) => bytes != null && count is > 0 and <= NativeSessionAuthority.MaximumBytes;
 
-    private static int SessionError(Exception error) => error is BrowserRuleException rule && rule.Code == "stale_session_revision"
+    private static int SessionError(Exception error) => error is BrowserRuleException rule && rule.Code == BrowserRuleCodes.StaleSessionRevision
         ? CoreStatus.InvalidState : CoreStatus.InvalidMessage;
 
     #endregion

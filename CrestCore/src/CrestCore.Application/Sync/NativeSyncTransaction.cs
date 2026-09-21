@@ -28,7 +28,7 @@ public sealed class NativeSyncTransaction : IDisposable {
     #region Actions - Sync
 
     internal void Build(ReadOnlySpan<byte> input) {
-        if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException("sync_size_limit");
+        if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         request["preferences"] = Journal.Preferences;
         if (request["operation"]!.GetValue<string>() is NativeSyncOperations.Merge or NativeSyncOperations.Replace) {
@@ -47,7 +47,7 @@ public sealed class NativeSyncTransaction : IDisposable {
             // A paired session replacement may already have published this
             // journal under the same core lock as the browser revision.
             if (committed) return;
-            if (completed) throw new BrowserRuleException("invalid_sync_transaction");
+            if (completed) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncTransaction);
             Owner.Commit(this); completed = committed = true;
         }
     }

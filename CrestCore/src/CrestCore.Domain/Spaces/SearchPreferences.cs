@@ -41,19 +41,19 @@ public sealed class SearchPreferences {
     #region Mutators
 
     public SearchPreferences Select(string id, bool suggestions) {
-        if (!Providers.Any(p => p.Id == id)) throw new BrowserRuleException("unknown_search_provider");
+        if (!Providers.Any(p => p.Id == id)) throw new BrowserRuleException(BrowserRuleCodes.UnknownSearchProvider);
         return new(id, CustomProviders, suggestions);
     }
 
     public SearchPreferences Upsert(SearchProvider provider) {
-        if (!provider.Id.StartsWith("custom:", StringComparison.Ordinal)) throw new BrowserRuleException("invalid_search_provider");
+        if (!provider.Id.StartsWith("custom:", StringComparison.Ordinal)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchProvider);
         var validated = SearchProvider.Custom(Guid.Parse(provider.Id[7..]), provider.Name, provider.SearchTemplate, provider.SuggestionTemplate);
         string Fold(string value) => string.Concat(value.Normalize(NormalizationForm.FormD)
             .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)).ToUpperInvariant();
         if (CustomProviders.Any(p => p.Id != validated.Id && Fold(p.Name) == Fold(validated.Name)))
-            throw new BrowserRuleException("duplicate_search_name");
+            throw new BrowserRuleException(BrowserRuleCodes.DuplicateSearchName);
         var values = CustomProviders.ToList(); int index = values.FindIndex(p => p.Id == validated.Id);
-        if (index < 0) { if (values.Count >= 32) throw new BrowserRuleException("search_provider_limit"); values.Add(validated); } else values[index] = validated;
+        if (index < 0) { if (values.Count >= 32) throw new BrowserRuleException(BrowserRuleCodes.SearchProviderLimit); values.Add(validated); } else values[index] = validated;
         return new(SelectedId, values.AsReadOnly(), SuggestionsEnabled);
     }
 
@@ -66,7 +66,7 @@ public sealed class SearchPreferences {
         var value = input.Trim();
         var resolution = value == BrowserUrlConstants.AboutBlank ? new AddressResolution(value, null)
             : AddressResolution.Resolve(input, Providers.Single(p => p.Id == SelectedId), allowsInternalPages)
-                ?? throw new BrowserRuleException("invalid_address");
+                ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidAddress);
         string address = resolution.Url;
         if (resolution.SearchQuery is null && Uri.TryCreate(address, UriKind.Absolute, out var uri)
             && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)) address = uri.AbsoluteUri;

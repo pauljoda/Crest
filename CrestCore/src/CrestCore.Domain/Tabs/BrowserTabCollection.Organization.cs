@@ -5,12 +5,12 @@ public sealed partial class BrowserTabCollection {
 
     public void AddFolder(FolderId id, string name, TabPlacement location = TabPlacement.Saved, FolderId? parent = null) {
         var tree = new FolderTree(folders);
-        if (folders.Count >= FolderTree.MaximumCount) throw new BrowserRuleException("folder_limit");
-        if (folders.Any(f => f.Id == id)) throw new BrowserRuleException("duplicate_folder");
-        if (location == TabPlacement.Pinned) throw new BrowserRuleException("invalid_folder_placement");
+        if (folders.Count >= FolderTree.MaximumCount) throw new BrowserRuleException(BrowserRuleCodes.FolderLimit);
+        if (folders.Any(f => f.Id == id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateFolder);
+        if (location == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         int insertion = folders.Count;
         if (parent is { } p) {
-            if (tree.Depth(p) + 1 >= FolderTree.MaximumDepth) throw new BrowserRuleException("folder_depth_limit");
+            if (tree.Depth(p) + 1 >= FolderTree.MaximumDepth) throw new BrowserRuleException(BrowserRuleCodes.FolderDepthLimit);
             location = tree.Folder(p).Location;
             var subtree = tree.Subtree(p); insertion = folders.FindLastIndex(f => subtree.Contains(f.Id)) + 1;
         }
@@ -39,7 +39,7 @@ public sealed partial class BrowserTabCollection {
 
     private static void ValidateInsertion(IReadOnlyList<BrowserTab> remaining, int insertion) {
         if (insertion > 0 && insertion < remaining.Count && remaining[insertion].SplitGroupId is { } split
-            && remaining[insertion - 1].SplitGroupId == split) throw new BrowserRuleException("split_boundary");
+            && remaining[insertion - 1].SplitGroupId == split) throw new BrowserRuleException(BrowserRuleCodes.SplitBoundary);
     }
 
     private static int SectionEnd(List<BrowserTab> remaining, TabPlacement location) {
@@ -57,12 +57,12 @@ public sealed partial class BrowserTabCollection {
 
     public void FileTabs(IReadOnlyCollection<TabId> requested, TabPlacement location, FolderId? folder,
         DateTimeOffset now, TabId? before = null, FolderId? beforeFolder = null, bool detachSplitMembers = false) {
-        if (requested.Count == 0 || location == TabPlacement.Pinned) throw new BrowserRuleException("invalid_folder_placement");
+        if (requested.Count == 0 || location == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         foreach (var id in requested) _ = Tab(id);
         var tree = new FolderTree(folders);
-        if (folder is { } parent && tree.Folder(parent).Location != location) throw new BrowserRuleException("invalid_folder_placement");
+        if (folder is { } parent && tree.Folder(parent).Location != location) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         if (beforeFolder is { } sibling && (tree.Folder(sibling).ParentId != folder || tree.Folder(sibling).Location != location))
-            throw new BrowserRuleException("invalid_folder_anchor");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderAnchor);
         var selected = requested.ToHashSet();
         var splits = detachSplitMembers ? [] : tabs.Where(t => selected.Contains(t.Id) && t.SplitGroupId is not null)
             .Select(t => t.SplitGroupId!.Value).ToHashSet();
@@ -73,7 +73,7 @@ public sealed partial class BrowserTabCollection {
         var remainingTree = new FolderTree(nextFolders);
         var anchor = beforeFolder is { } target ? remainingTree.TabAnchor(target, remaining) : before;
         if (anchor is { } a && (memberIds.Contains(a) || !remaining.Any(t => t.Id == a && t.Placement == location)))
-            throw new BrowserRuleException("invalid_tab_anchor");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
         var predecessors = remainingTree.EmptyPredecessors(beforeFolder, anchor, folder, location, remaining);
         int insertion;
         if (anchor is { } actual) insertion = remaining.FindIndex(t => t.Id == actual);
@@ -99,18 +99,18 @@ public sealed partial class BrowserTabCollection {
         FolderId? beforeFolder = null, TabId? beforeTab = null) {
         var tree = new FolderTree(folders); var source = tree.Folder(id);
         var movingIds = tree.Subtree(id);
-        if (parent is { } p && movingIds.Contains(p)) throw new BrowserRuleException("folder_cycle");
+        if (parent is { } p && movingIds.Contains(p)) throw new BrowserRuleException(BrowserRuleCodes.FolderCycle);
         int destinationDepth = parent is { } parentId ? tree.Depth(parentId) + 1 : 0;
         if (destinationDepth + movingIds.Max(tree.Depth) - tree.Depth(id) >= FolderTree.MaximumDepth)
-            throw new BrowserRuleException("folder_depth_limit");
+            throw new BrowserRuleException(BrowserRuleCodes.FolderDepthLimit);
         var destination = parent is { } owner ? tree.Folder(owner).Location : location ?? source.Location;
-        if (destination == TabPlacement.Pinned) throw new BrowserRuleException("invalid_folder_placement");
+        if (destination == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         if (beforeFolder is { } sibling && (movingIds.Contains(sibling) || tree.Folder(sibling).ParentId != parent
-            || tree.Folder(sibling).Location != destination)) throw new BrowserRuleException("invalid_folder_anchor");
+            || tree.Folder(sibling).Location != destination)) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderAnchor);
         var members = tabs.Where(t => t.FolderId is { } f && movingIds.Contains(f)).ToArray();
         var memberIds = members.Select(t => t.Id).ToHashSet();
         if (beforeTab is { } a && (memberIds.Contains(a) || !tabs.Any(t => t.Id == a && t.Placement == destination)))
-            throw new BrowserRuleException("invalid_tab_anchor");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
         var nextFolders = tree.PreserveOrder(memberIds, tabs, movingIds);
         var remaining = tabs.Where(t => !memberIds.Contains(t.Id)).ToList();
         var remainingTree = new FolderTree(nextFolders);

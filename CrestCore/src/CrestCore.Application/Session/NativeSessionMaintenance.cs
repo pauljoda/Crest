@@ -14,7 +14,7 @@ public static class NativeSessionMaintenance {
 
     private static Guid Id(JsonNode? node) {
         if (node is JsonObject wrapped) node = wrapped["rawValue"];
-        return Guid.TryParse(node?.GetValue<string>(), out var id) ? id : throw new BrowserRuleException("invalid_saved_identity");
+        return Guid.TryParse(node?.GetValue<string>(), out var id) ? id : throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedIdentity);
     }
 
     private static Guid? OptionalId(JsonNode? node) => node is null ? null : Id(node);
@@ -58,7 +58,7 @@ public static class NativeSessionMaintenance {
     };
 
     public static JsonObject Repair(JsonObject source, double now, JsonObject? emptySpace = null, IIdSource? ids = null) {
-        if (!double.IsFinite(now)) throw new BrowserRuleException("invalid_saved_date");
+        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         ids ??= new SystemIdSource();
         var result = source.DeepClone().AsObject();
         var spaces = Items(result, "spaces");
@@ -137,7 +137,7 @@ public static class NativeSessionMaintenance {
         for (int index = 0; index < spaces.Count; index++)
             if (pendingSpaces.TryGetValue(Id(spaces[index]!["id"]), out var original)) {
                 if (Id(spaces[index]!["profile"]!["id"]) != Id(original["profile"]!["id"]))
-                    throw new BrowserRuleException("invalid_deletion_intent");
+                    throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent);
                 spaces[index] = original.DeepClone();
             }
         var activeIds = spaces.Select(s => Id(s!["id"])).ToHashSet();
@@ -164,7 +164,7 @@ public static class NativeSessionMaintenance {
     }
 
     public static JsonObject Retain(JsonObject source, double now) {
-        if (!double.IsFinite(now)) throw new BrowserRuleException("invalid_saved_date");
+        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         var session = source.DeepClone().AsObject(); bool changed = false;
         var pending = (source["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
         foreach (var space in Items(session, "spaces").Where(s => !pending.Contains(Id(s!["id"]))))

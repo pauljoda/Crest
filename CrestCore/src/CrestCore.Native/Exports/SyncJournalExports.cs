@@ -18,9 +18,9 @@ public static unsafe partial class Exports {
 
     private static int SyncJournalError(Exception error) => error is BrowserRuleException rule
         ? rule.Code switch {
-            "sync_clock_exhausted" => CoreStatus.InvalidState,
-            "version_mismatch" => CoreStatus.VersionMismatch,
-            "sync_size_limit" or "sync_record_limit" => CoreStatus.LimitExceeded,
+            BrowserRuleCodes.SyncClockExhausted => CoreStatus.InvalidState,
+            BrowserRuleCodes.VersionMismatch => CoreStatus.VersionMismatch,
+            BrowserRuleCodes.SyncSizeLimit or BrowserRuleCodes.SyncRecordLimit => CoreStatus.LimitExceeded,
             _ => CoreStatus.InvalidMessage
         }
         : CoreStatus.InvalidMessage;

@@ -14,7 +14,7 @@ public sealed partial class NativeSessionAuthority {
             if (workspaceKind != CrestCore.Domain.BrowserWorkspaceKind.Persistent
                 || sync is not null && !ReferenceEquals(sync, value)
                 || value.Session is not null && !ReferenceEquals(value.Session, this))
-                throw new CrestCore.Domain.BrowserRuleException("invalid_sync_session_owner");
+                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
             sync = value; value.Session = this;
         }
     }
@@ -28,7 +28,7 @@ public sealed partial class NativeSessionAuthority {
             System.Text.Json.Nodes.JsonNode? authorizedDeletions = null;
             if (transaction is not null) {
                 if (!transaction.IsReadyToCommit || !ReferenceEquals(transaction.Owner.Session, this) || transaction.Materialization is null)
-                    throw new CrestCore.Domain.BrowserRuleException("invalid_sync_session_owner");
+                    throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
                 authorizedDeletions = transaction.MaterializedSpaceDeletions;
             }
             var next = Prepare(expected, delta, authorizedDeletions);
@@ -46,7 +46,7 @@ public sealed partial class NativeSessionAuthority {
     internal ulong CompleteReplacement(NativeSessionReplacement value, bool commit) {
         lock (Gate) {
             if (!ReferenceEquals(replacement, value))
-                throw new CrestCore.Domain.BrowserRuleException("invalid_session_transaction");
+                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
             if (commit) {
                 value.SyncTransaction?.Commit();
                 document = value.Document; Revision = value.Revision;
@@ -63,7 +63,7 @@ public sealed partial class NativeSessionAuthority {
             RequireWritable(requireCurrentBorrowedPolicy: false);
             command.RequireAccepted();
             if (command.ExpectedRevision != Revision)
-                throw new CrestCore.Domain.BrowserRuleException("stale_session_revision");
+                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.StaleSessionRevision);
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(command.Document, Parse(selection));
             _ = checkpoint.Read("core");

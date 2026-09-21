@@ -12,12 +12,12 @@ public sealed partial class NativeSessionAuthority {
     public NativeSessionCommand PrepareCommand(ulong expected, ReadOnlySpan<byte> bytes) {
         lock (Gate) {
             RequireWritable();
-            if (expected != Revision) throw new BrowserRuleException("stale_session_revision");
+            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             var request = Parse(bytes);
-            if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+            if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
             RequireAccessibleCommand(request);
             if (request["operation"]!.GetValue<string>() == "workspace.import") return PrepareWorkspaceCommand(expected, request);
-            if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
+            if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
             var operation = request["operation"]!.GetValue<string>();
             if (operation == "tabs.batch") return PrepareTabBatch(expected, request);
             if (operation.StartsWith("history.", StringComparison.Ordinal)
@@ -30,7 +30,7 @@ public sealed partial class NativeSessionAuthority {
             if (request["operation"]!.GetValue<string>().StartsWith("space.", StringComparison.Ordinal))
                 return PrepareSpaceCommand(expected, request);
             if (request["operation"]!.GetValue<string>() is "tab.promote_transient" or "tab.archive_transient")
-                throw new BrowserRuleException("transient_requires_command");
+                throw new BrowserRuleException(BrowserRuleCodes.TransientRequiresCommand);
             return PrepareTabCommand(expected, request);
         }
     }
@@ -38,10 +38,10 @@ public sealed partial class NativeSessionAuthority {
     private NativeSessionCommand PrepareTabCommand(ulong expected, JsonObject request) {
         var spaceId = Id(request["spaceId"]);
         if (PendingDeletion(document.Metadata, spaceId) is not null)
-            throw new BrowserRuleException("space_deletion_in_progress");
+            throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
         var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == spaceId);
         if (Id(request["profileId"]) != Id(original.Metadata["profile"]!["id"]))
-            throw new BrowserRuleException("wrong_profile_identity");
+            throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
         var window = request["window"]!;
         var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
         var compact = original.Metadata.DeepClone().AsObject();
@@ -57,7 +57,7 @@ public sealed partial class NativeSessionAuthority {
             ["space"] = compact,
         };
         var output = NativeSessionEditor.Evaluate(System.Text.Encoding.UTF8.GetBytes(editorRequest.ToJsonString()));
-        if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
+        if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         var result = JsonNode.Parse(output)!;
         var edited = result["space"]!;
         var nextSpaces = document.Spaces.Select(space => {
@@ -87,7 +87,7 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
             command.RequireAccepted();
-            if (command.ExpectedRevision != Revision) throw new BrowserRuleException("stale_session_revision");
+            if (command.ExpectedRevision != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             var nextRevision = checked(Revision + 1);
             document = command.Document;
             if (command.TransientCompletion is { } completed) completedTransients.Add(completed);

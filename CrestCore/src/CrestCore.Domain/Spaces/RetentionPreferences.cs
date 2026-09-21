@@ -30,7 +30,7 @@ public sealed record RetentionPreferences(CurrentTabCleanup CurrentTabs, DataRet
 
     public void Validate() {
         if (!Enum.IsDefined(CurrentTabs) || !Enum.IsDefined(History) || !Enum.IsDefined(Archive) || !Enum.IsDefined(Downloads))
-            throw new BrowserRuleException("invalid_retention");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidRetention);
     }
 
     #endregion

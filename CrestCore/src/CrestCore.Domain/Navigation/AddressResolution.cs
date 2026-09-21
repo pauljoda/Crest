@@ -6,7 +6,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
     public static AddressResolution? Resolve(string input, SearchProvider provider, bool allowsInternalPages = false) {
         string value = input.Trim();
         if (value.Length == 0) return null;
-        if (value.Length > 4096) throw new BrowserRuleException("invalid_address");
+        if (value.Length > 4096) throw new BrowserRuleException(BrowserRuleCodes.InvalidAddress);
         if (value == BrowserUrlConstants.AboutBlank || value.StartsWith(BrowserUrlConstants.ChromePrefix, StringComparison.OrdinalIgnoreCase)
             || value.StartsWith(BrowserUrlConstants.CrestPrefix, StringComparison.OrdinalIgnoreCase)
             || value.StartsWith(BrowserUrlConstants.ChromeExtensionPrefix, StringComparison.OrdinalIgnoreCase)) {

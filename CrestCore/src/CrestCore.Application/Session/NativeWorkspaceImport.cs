@@ -53,7 +53,7 @@ public sealed class NativeWorkspaceImport {
 
     private static void Available(JsonNode session, Guid id) {
         if (Items(session, "spaceDeletions").Any(d => Id(d!["spaceID"]) == id))
-            throw new BrowserRuleException("space_deletion_in_progress");
+            throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
     }
 
     private static void SelectAdded(JsonNode space, IEnumerable<JsonNode> tabs) {
@@ -88,9 +88,9 @@ public sealed class NativeWorkspaceImport {
                 if (destination is null) continue; // A draft cannot recreate an existing Space deleted elsewhere.
                 Available(session, id);
                 if (!created && Id(destination["profile"]!["id"]) != Id(input["profile"]!["id"]))
-                    throw new BrowserRuleException("wrong_profile_identity");
+                    throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
                 if (created && spaces.Any(s => Id(s!["id"]) == id || Id(s["profile"]!["id"]) == Id(input["profile"]!["id"])))
-                    throw new BrowserRuleException("duplicate_space_profile");
+                    throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
                 Customize(destination, draft["customization"]!);
                 var added = Items(input, "tabs").Select(t => t!).ToArray();
                 var old = created ? [] : Items(destination, "tabs").Select(t => t!).ToArray();
@@ -122,11 +122,11 @@ public sealed class NativeWorkspaceImport {
             session.Remove("disposableSeedMarker");
         } else if (mode == "review") {
             var reviews = Items(arguments, "reviews").Where(r => r!["included"]!.GetValue<bool>()).ToArray();
-            if (reviews.Length == 0) throw new BrowserRuleException("no_included_spaces");
+            if (reviews.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.NoIncludedSpaces);
             bool replaceSeed = session["disposableSeedMarker"] is not null;
             WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count, reviews.Count(r => r!["destinationID"] is null));
             if (replaceSeed) {
-                if (Items(session, "spaceDeletions").Count > 0) throw new BrowserRuleException("space_deletion_in_progress");
+                if (Items(session, "spaceDeletions").Count > 0) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
                 spaces.Clear(); session.Remove("defaultSpaceID");
             }
             foreach (var review in reviews) {
@@ -201,7 +201,7 @@ public sealed class NativeWorkspaceImport {
                 affected ??= destination;
             }
             if (affected is not null) session.Remove("disposableSeedMarker");
-        } else throw new BrowserRuleException("unknown_workspace_command");
+        } else throw new BrowserRuleException(BrowserRuleCodes.UnknownWorkspaceCommand);
         // Folder and history record IDs are global in sync, even though their
         // native collections are nested under Spaces. Reserve existing IDs first
         // so an imported Space placed earlier cannot steal another Space's records.

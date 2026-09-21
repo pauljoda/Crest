@@ -9,7 +9,7 @@ public sealed partial class NativeSessionAuthority {
     #region Actions - Workspace
 
     private NativeSessionCommand PrepareWorkspaceCommand(ulong expected, JsonObject request) {
-        if (workspaceKind != BrowserWorkspaceKind.Persistent) throw new BrowserRuleException("persistent_workspace_required");
+        if (workspaceKind != BrowserWorkspaceKind.Persistent) throw new BrowserRuleException(BrowserRuleCodes.PersistentWorkspaceRequired);
         var source = document.Metadata.DeepClone().AsObject();
         var window = request["window"]!;
         var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
@@ -23,7 +23,7 @@ public sealed partial class NativeSessionAuthority {
         var result = NativeWorkspaceImport.Preview(source, request["arguments"]!.AsObject(),
             request["mode"]!.GetValue<string>(), request["now"]!.GetValue<double>());
         var output = Encoding.UTF8.GetBytes(result.ToJsonString());
-        if (output.Length > MaximumBytes) throw new BrowserRuleException("session_size_limit");
+        if (output.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionSizeLimit);
         if (result["error"] is { } error) return new(this, expected, document, output, error.GetValue<string>());
         var session = result["session"]!.AsObject();
         var next = new SessionDocument(Fields(session, ["spaces"]), session["spaces"]!.AsArray().Select(node =>

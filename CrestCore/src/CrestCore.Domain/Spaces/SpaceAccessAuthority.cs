@@ -21,14 +21,14 @@ public sealed class SpaceAccessAuthority {
     /// requires authentication stays unreadable and unwritable in this process
     /// until a matching grant exists, independent of what any view believes.
     public void RequireAccessible(SpaceAccessAssignment assignment, bool requiresAuthentication) {
-        if (IsLocked(assignment, requiresAuthentication)) throw new BrowserRuleException("space_locked");
+        if (IsLocked(assignment, requiresAuthentication)) throw new BrowserRuleException(BrowserRuleCodes.SpaceLocked);
     }
 
     /// Zero means no authentication is needed. Nonzero request IDs never repeat
     /// within this authority, including after cancellation and retry.
     public ulong Begin(SpaceAccessAssignment assignment, bool requiresAuthentication) {
         if (!IsLocked(assignment, requiresAuthentication)) return 0;
-        if (pending is not null) throw new BrowserRuleException("authentication_busy");
+        if (pending is not null) throw new BrowserRuleException(BrowserRuleCodes.AuthenticationBusy);
         var request = checked(nextRequest + 1);
         nextRequest = request;
         pending = (request, assignment);

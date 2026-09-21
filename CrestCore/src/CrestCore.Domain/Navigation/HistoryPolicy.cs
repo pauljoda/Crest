@@ -17,7 +17,7 @@ public static class HistoryPolicy {
 
     public static HistoryVisit Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryVisit? previous) {
         if (Normalize(normalizedUrl) != normalizedUrl || newId == Guid.Empty
-            || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException("invalid_history_visit");
+            || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRuleCodes.InvalidHistoryVisit);
         string resolvedTitle = string.IsNullOrEmpty(title) ? new Uri(normalizedUrl).Host : title;
         if (resolvedTitle.Length == 0) resolvedTitle = normalizedUrl;
         return previous is null ? new(newId, normalizedUrl, resolvedTitle, now, now, 1)

@@ -18,13 +18,13 @@ public sealed partial class BrowserTabCollection {
 
     public void ArchiveTransient(TabState source, DateTimeOffset now) {
         if (tabs.Any(t => t.Id == source.Id) || archive.Any(t => t.Id == source.Id))
-            throw new BrowserRuleException("duplicate_tab");
+            throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         archive.Add(new(TransientState(source, now), now, ArchiveReasons.QuickWindow));
     }
 
     private static TabState TransientState(TabState source, DateTimeOffset now) {
         if (!source.Content.IsWebPage || string.IsNullOrEmpty(source.Url))
-            throw new BrowserRuleException("invalid_transient_page");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidTransientPage);
         return source with {
             Placement = TabPlacement.Current,
             FolderId = null,
@@ -48,7 +48,7 @@ public sealed partial class BrowserTabCollection {
 
     public TabId? CloseDurable(TabId id, TabId? selected, TabId? fallback, bool returnToSavedUrl) {
         var tab = Tab(id);
-        if (tab.Placement == TabPlacement.Current) throw new BrowserRuleException("not_durable_tab");
+        if (tab.Placement == TabPlacement.Current) throw new BrowserRuleException(BrowserRuleCodes.NotDurableTab);
         tab.Unload(returnToSavedUrl);
         return selected == id ? fallback is { } other && other != id && tabs.Any(t => t.Id == other)
             ? other : null : selected;

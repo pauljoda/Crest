@@ -67,7 +67,7 @@ public static unsafe partial class Exports {
             if (!AccessAuthorities.TryGetValue(handle, out var access)) return CoreStatus.InvalidHandle;
             lock (access) *request = access.Begin(assignment, required == 1);
             return CoreStatus.Ok;
-        } catch (BrowserRuleException error) when (error.Code == "authentication_busy") { return CoreStatus.Busy; } catch { return CoreStatus.InternalError; }
+        } catch (BrowserRuleException error) when (error.Code == BrowserRuleCodes.AuthenticationBusy) { return CoreStatus.Busy; } catch { return CoreStatus.InternalError; }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_access_complete", CallConvs = [typeof(CallConvCdecl)])]

@@ -14,11 +14,11 @@ public static class WorkspaceImportPolicy {
     #region Actions - State policy
 
     public static void RequireSpaceCapacity(int existing, int additions) {
-        if ((long)existing + additions > MaximumSpaces) throw new BrowserRuleException("space_limit_reached");
+        if ((long)existing + additions > MaximumSpaces) throw new BrowserRuleException(BrowserRuleCodes.SpaceLimitReached);
     }
 
     public static void RequirePinnedCapacity(int count) {
-        if (count > MaximumPinnedTabs) throw new BrowserRuleException("pinned_limit_reached");
+        if (count > MaximumPinnedTabs) throw new BrowserRuleException(BrowserRuleCodes.PinnedLimitReached);
     }
 
     public static string FolderMatchKey(string title) => string.Concat(title.Normalize(NormalizationForm.FormKD)

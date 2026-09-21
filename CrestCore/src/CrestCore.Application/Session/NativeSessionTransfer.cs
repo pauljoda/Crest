@@ -28,14 +28,14 @@ public sealed class NativeSessionTransfer : IDisposable {
 
     public void Reserve(NativeSyncTransaction? sync = null) {
         lock (NativeSessionAuthority.Gate) {
-            if (completed || a is not null) throw new BrowserRuleException("invalid_transfer_transaction");
+            if (completed || a is not null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             try {
                 a = sourceCommand.Reserve(NativeSessionAuthority.TransferSelection(sourceCommand.Document));
                 b = destinationCommand.Reserve(NativeSessionAuthority.TransferSelection(destinationCommand.Document));
                 if (sync is not null) {
                     if (ReferenceEquals(sync.Owner.Session, source)) a.BindSync(sync);
                     else if (ReferenceEquals(sync.Owner.Session, destination)) b.BindSync(sync);
-                    else throw new BrowserRuleException("invalid_sync_session_owner");
+                    else throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncSessionOwner);
                 }
             } catch { a?.Dispose(); b?.Dispose(); a = b = null; throw; }
         }
@@ -43,7 +43,7 @@ public sealed class NativeSessionTransfer : IDisposable {
 
     public (ulong Source, ulong Destination) Commit() {
         lock (NativeSessionAuthority.Gate) {
-            if (completed || a is null || b is null) throw new BrowserRuleException("invalid_transfer_transaction");
+            if (completed || a is null || b is null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             // At most one side is persistent. Publish its journal first; the
             // two reserved session commits then cannot fail or interleave.
             a.SyncTransaction?.Commit(); b.SyncTransaction?.Commit();

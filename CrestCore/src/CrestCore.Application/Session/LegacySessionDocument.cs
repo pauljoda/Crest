@@ -43,22 +43,22 @@ public sealed class LegacySessionDocument {
         => originals.TryGetValue(id, out var value) ? (JsonObject)value.DeepClone() : new();
 
     private static void Remember(Dictionary<Guid, JsonObject> values, Guid id, JsonObject value) {
-        if (!values.TryAdd(id, value)) throw new BrowserRuleException("duplicate_persisted_identity");
+        if (!values.TryAdd(id, value)) throw new BrowserRuleException(BrowserRuleCodes.DuplicatePersistedIdentity);
     }
 
     #endregion
 
     #region Actions - Decoding
 
-    private static JsonObject Object(JsonNode? node) => node as JsonObject ?? throw new BrowserRuleException("invalid_saved_state");
+    private static JsonObject Object(JsonNode? node) => node as JsonObject ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
 
-    private static JsonArray Array(JsonNode? node) => node is null ? [] : node as JsonArray ?? throw new BrowserRuleException("invalid_saved_state");
+    private static JsonArray Array(JsonNode? node) => node is null ? [] : node as JsonArray ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
 
     private static string? Text(JsonNode? node) => node is null ? null : node.GetValue<string>();
 
     private static Guid Id(JsonNode? node) {
         if (node is JsonObject o) node = o["rawValue"];
-        if (!Guid.TryParseExact(Text(node), "D", out var id) || id == Guid.Empty) throw new BrowserRuleException("invalid_saved_identity");
+        if (!Guid.TryParseExact(Text(node), "D", out var id) || id == Guid.Empty) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedIdentity);
         return id;
     }
 
@@ -66,7 +66,7 @@ public sealed class LegacySessionDocument {
 
     private static DateTimeOffset Date(JsonNode? node) {
         var seconds = node?.GetValue<double>() ?? 0;
-        if (!double.IsFinite(seconds)) throw new BrowserRuleException("invalid_saved_date");
+        if (!double.IsFinite(seconds)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         return SwiftEpoch.AddSeconds(seconds);
     }
 
@@ -113,7 +113,7 @@ public sealed class LegacySessionDocument {
             var visits = new List<HistoryVisit>();
             foreach (var hv in Array(s["history"])) {
                 var h = Object(hv); var hid = Id(h["id"]); Remember(histories, hid, h);
-                visits.Add(new(hid, Text(h["url"]) ?? throw new BrowserRuleException("invalid_saved_url"), Text(h["title"]) ?? "",
+                visits.Add(new(hid, Text(h["url"]) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedUrl), Text(h["title"]) ?? "",
                     Date(h["firstVisitedAt"]), Date(h["lastVisitedAt"]), h["visitCount"]?.GetValue<int>() ?? 1));
             }
             var selected = OptionalId(s["selectedTabID"]);
@@ -149,7 +149,7 @@ public sealed class LegacySessionDocument {
             var selections = new Dictionary<SpaceId, TabId?>();
             // Codable dictionaries with struct keys use an alternating key/value array.
             var pairs = Array(w["selectedTabIDsBySpace"]);
-            if (pairs.Count % 2 != 0) throw new BrowserRuleException("invalid_saved_selection");
+            if (pairs.Count % 2 != 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedSelection);
             for (int index = 0; index < pairs.Count; index += 2)
                 selections.Add(new(Id(pairs[index])), new TabId(Id(pairs[index + 1])));
             if (w["capturedSpaceIDs"] is not null)

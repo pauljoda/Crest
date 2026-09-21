@@ -14,7 +14,7 @@ public sealed partial class NativeSessionAuthority {
 
     private static bool EqualDeletionIntents(JsonNode? left, JsonNode? right) {
         if (left is not null and not JsonArray || right is not null and not JsonArray)
-            throw new BrowserRuleException("invalid_deletion_intent");
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent);
         var a = left as JsonArray ?? new(); var b = right as JsonArray ?? new();
         // Swift and .NET format UUID casing differently; identity is a UUID,
         // not the spelling chosen by the platform's encoder.
@@ -42,11 +42,11 @@ public sealed partial class NativeSessionAuthority {
         Guid? created = null;
         if (operation is "space.create" or "space.reset_private") {
             if (operation == "space.reset_private") {
-                if (workspaceKind != BrowserWorkspaceKind.Private) throw new BrowserRuleException("not_private_workspace");
+                if (workspaceKind != BrowserWorkspaceKind.Private) throw new BrowserRuleException(BrowserRuleCodes.NotPrivateWorkspace);
                 var fresh = args["template"]!;
                 if (spaces.Any(s => Id(s.Metadata["id"]) == Id(fresh["id"])
                     || Id(s.Metadata["profile"]!["id"]) == Id(fresh["profile"]!["id"])))
-                    throw new BrowserRuleException("duplicate_space_profile");
+                    throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
                 spaces.Clear();
                 metadata.Remove("spaceDeletions"); metadata.Remove("defaultSpaceID");
             }
@@ -54,7 +54,7 @@ public sealed partial class NativeSessionAuthority {
             var id = Id(supplied["id"]);
             var profile = Id(supplied["profile"]!["id"]);
             if (spaces.Any(s => Id(s.Metadata["id"]) == id || Id(s.Metadata["profile"]!["id"]) == profile))
-                throw new BrowserRuleException("duplicate_space_profile");
+                throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
             var fields = Fields(supplied, Sections);
             fields["name"] = operation == "space.reset_private" ? "Private" :
                 (workspaceKind == BrowserWorkspaceKind.Private ? "Private " : "Space ") + (spaces.Count + 1);
@@ -62,7 +62,7 @@ public sealed partial class NativeSessionAuthority {
                 section => (IReadOnlyList<JsonNode>)supplied[section]!.AsArray().Select(n => n!.DeepClone()).ToArray());
             if (sections["history"].Count != 0 || sections["archivedTabs"].Count != 0 || sections["folders"].Count != 0
                 || sections["tabs"].Count != 1 || sections["tabs"][0]["url"] is not null)
-                throw new BrowserRuleException("invalid_new_space");
+                throw new BrowserRuleException(BrowserRuleCodes.InvalidNewSpace);
             if (workspaceKind == BrowserWorkspaceKind.Private) {
                 fields["symbol"] = "eyeglasses";
                 fields["accent"] = SpaceAccentCodes.Indigo;
@@ -85,20 +85,20 @@ public sealed partial class NativeSessionAuthority {
         } else {
             var id = Id(request["spaceId"]);
             var index = spaces.FindIndex(s => Id(s.Metadata["id"]) == id);
-            if (index < 0) throw new BrowserRuleException("unknown_space");
+            if (index < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
             var space = spaces[index];
             if (Id(request["profileId"]) != Id(space.Metadata["profile"]!["id"]))
-                throw new BrowserRuleException("wrong_profile_identity");
+                throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
             var fields = space.Metadata;
             var pending = PendingDeletion(metadata, id);
             if (pending is not null && operation is not ("space.deletion.begin" or "space.remove"))
-                throw new BrowserRuleException("space_deletion_in_progress");
+                throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
             switch (operation) {
                 case "space.deletion.begin":
                     var operationId = Id(args["operationID"]);
                     if (pending is not null) {
                         if (Id(pending["operationID"]) != operationId)
-                            throw new BrowserRuleException("wrong_deletion_operation");
+                            throw new BrowserRuleException(BrowserRuleCodes.WrongDeletionOperation);
                         break;
                     }
                     SpaceOrganizationPolicy.RequireRemovable(spaces.Count - Deletions(metadata).Count);
@@ -117,7 +117,7 @@ public sealed partial class NativeSessionAuthority {
                     fields["name"] = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>());
                     fields["symbol"] = SpaceOrganizationPolicy.Symbol(args["symbol"]!.GetValue<string>());
                     var accent = args["accent"]!.GetValue<string>();
-                    if (!SpaceAccentCodes.Includes(accent)) throw new BrowserRuleException("invalid_accent");
+                    if (!SpaceAccentCodes.Includes(accent)) throw new BrowserRuleException(BrowserRuleCodes.InvalidAccent);
                     fields["accent"] = accent;
                     break;
                 case "space.branding":
@@ -134,7 +134,7 @@ public sealed partial class NativeSessionAuthority {
                 case "space.access":
                     var access = args["value"]!.GetValue<string>();
                     if (access is not (SpaceAccessPolicyCodes.Open or SpaceAccessPolicyCodes.DeviceOwnerAuthentication))
-                        throw new BrowserRuleException("invalid_access_policy");
+                        throw new BrowserRuleException(BrowserRuleCodes.InvalidAccessPolicy);
                     fields["accessPolicy"] = access;
                     break;
                 case "space.default":
@@ -149,7 +149,7 @@ public sealed partial class NativeSessionAuthority {
                     break;
                 case "space.remove":
                     if (pending is null || Id(pending["operationID"]) != Id(args["operationID"]))
-                        throw new BrowserRuleException("wrong_deletion_operation");
+                        throw new BrowserRuleException(BrowserRuleCodes.WrongDeletionOperation);
                     SpaceOrganizationPolicy.RequireRemovable(spaces.Count);
                     spaces.RemoveAt(index);
                     Deletions(metadata).Remove(pending);
@@ -159,7 +159,7 @@ public sealed partial class NativeSessionAuthority {
                     if (metadata["defaultSpaceID"] is { } defaultId && Id(defaultId) == id)
                         metadata["defaultSpaceID"] = metadata["selectedSpaceID"]!.DeepClone();
                     break;
-                default: throw new BrowserRuleException("unknown_space_command");
+                default: throw new BrowserRuleException(BrowserRuleCodes.UnknownSpaceCommand);
             }
         }
         var next = new SessionDocument(metadata, spaces);
@@ -173,7 +173,7 @@ public sealed partial class NativeSessionAuthority {
             return (JsonNode)value;
         }).ToArray());
         var output = Encoding.UTF8.GetBytes(new JsonObject { ["session"] = projection }.ToJsonString());
-        if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
+        if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         return new NativeSessionCommand(this, expected, next, output);
     }
 

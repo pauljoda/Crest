@@ -11,7 +11,7 @@ public sealed partial class NativeSessionAuthority {
         try {
             var window = request["window"]!;
             var sourceId = Id(request["spaceId"]);
-            if (Id(window["selectedSpaceID"]) != sourceId) throw new BrowserRuleException("stale_selection");
+            if (Id(window["selectedSpaceID"]) != sourceId) throw new BrowserRuleException(BrowserRuleCodes.StaleSelection);
             var source = TransferSpace(sourceId, Id(request["profileId"]));
             var args = request["arguments"]!.AsObject();
             var selection = args["selection"]!;
@@ -32,7 +32,7 @@ public sealed partial class NativeSessionAuthority {
             SpaceDocument? destination = null;
             if (action.Kind == TabBatchKind.MoveToSpace) {
                 var destinationId = Id(args["destinationSpaceId"]);
-                if (destinationId == sourceId) throw new BrowserRuleException("invalid_destination");
+                if (destinationId == sourceId) throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
                 destination = TransferSpace(destinationId, Id(args["destinationProfileId"]));
             }
             var spaces = new JsonArray(TransferProjection(source, window));

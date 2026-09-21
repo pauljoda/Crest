@@ -30,14 +30,14 @@ public sealed class NativeSessionReplacement : IDisposable {
     public void BindSync(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             if (completed || SyncTransaction is not null || !value.IsReadyToCommit || !ReferenceEquals(value.Owner.Session, owner))
-                throw new CrestCore.Domain.BrowserRuleException("invalid_sync_session_owner");
+                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
             SyncTransaction = value;
         }
     }
 
     public ulong Commit() {
         lock (NativeSessionAuthority.Gate) {
-            if (completed) throw new CrestCore.Domain.BrowserRuleException("invalid_session_transaction");
+            if (completed) throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
             var revision = owner.CompleteReplacement(this, true);
             completed = true;
             return revision;

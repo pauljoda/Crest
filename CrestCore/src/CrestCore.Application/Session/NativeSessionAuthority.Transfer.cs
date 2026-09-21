@@ -9,10 +9,10 @@ public sealed partial class NativeSessionAuthority {
     #region Actions - Transfer
 
     private SpaceDocument TransferSpace(Guid spaceId, Guid profileId) {
-        if (PendingDeletion(document.Metadata, spaceId) is not null) throw new BrowserRuleException("space_deletion_in_progress");
+        if (PendingDeletion(document.Metadata, spaceId) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
         var space = document.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == spaceId)
-            ?? throw new BrowserRuleException("unknown_space");
-        if (Id(space.Metadata["profile"]!["id"]) != profileId) throw new BrowserRuleException("wrong_profile_identity");
+            ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
+        if (Id(space.Metadata["profile"]!["id"]) != profileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
         return space;
     }
 
@@ -45,13 +45,13 @@ public sealed partial class NativeSessionAuthority {
 
     private static byte[] TransferOutput(JsonObject result) {
         var bytes = Encoding.UTF8.GetBytes(result.ToJsonString());
-        if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException("session_edit_limit");
+        if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         return bytes;
     }
 
     private NativeSessionCommand PrepareTabTransfer(ulong expected, JsonObject request) {
         var sourceId = Id(request["spaceId"]); var destinationId = Id(request["destinationSpaceId"]);
-        if (sourceId == destinationId) throw new BrowserRuleException("same_space_transfer");
+        if (sourceId == destinationId) throw new BrowserRuleException(BrowserRuleCodes.SameSpaceTransfer);
         var source = TransferSpace(sourceId, Id(request["profileId"]));
         var destination = TransferSpace(destinationId, Id(request["destinationProfileId"]));
         var args = request["arguments"]!.AsObject(); var window = request["window"]!.DeepClone();
@@ -66,16 +66,16 @@ public sealed partial class NativeSessionAuthority {
         NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> bytes) {
         lock (Gate) {
             source.RequireWritable(); destination.RequireWritable();
-            if (ReferenceEquals(source, destination)) throw new BrowserRuleException("same_session_transfer");
+            if (ReferenceEquals(source, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameSessionTransfer);
             if (sourceRevision != source.Revision || destinationRevision != destination.Revision)
-                throw new BrowserRuleException("stale_session_revision");
+                throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             if (source.workspaceKind != BrowserWorkspaceKind.Temporary && destination.workspaceKind != BrowserWorkspaceKind.Temporary)
-                throw new BrowserRuleException("temporary_workspace_required");
-            if (source.privateBrowsing != destination.privateBrowsing) throw new BrowserRuleException("private_workspace_boundary");
+                throw new BrowserRuleException(BrowserRuleCodes.TemporaryWorkspaceRequired);
+            if (source.privateBrowsing != destination.privateBrowsing) throw new BrowserRuleException(BrowserRuleCodes.PrivateWorkspaceBoundary);
             if (!ReferenceEquals(source.borrowedSource ?? source, destination.borrowedSource ?? destination))
-                throw new BrowserRuleException("different_profile_owner");
+                throw new BrowserRuleException(BrowserRuleCodes.DifferentProfileOwner);
             var request = Parse(bytes);
-            if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
+            if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
             var spaceId = Id(request["spaceId"]); var profileId = Id(request["profileId"]);
             source.RequireAccessible(spaceId); destination.RequireAccessible(spaceId);
             var a = source.TransferSpace(spaceId, profileId); var b = destination.TransferSpace(spaceId, profileId);
@@ -83,7 +83,7 @@ public sealed partial class NativeSessionAuthority {
             var tabId = Id(args["tabId"]);
             if (destination.document.Spaces.Any(s => s.Tabs.Any(t => Id(t["id"]) == tabId)
                 || s.ArchivedTabs.Any(t => Id(t["tab"]!["id"]) == tabId)))
-                throw new BrowserRuleException("duplicate_tab");
+                throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
             // A window transfer keeps the exact profile and makes a current tab.
             args["placement"] = TabPlacementCodes.Current; args["folderId"] = null; args["before"] = null; args["afterSelection"] = true;
             var result = NativeTabTransfer.Evaluate(TransferProjection(a, request["sourceWindow"]!),

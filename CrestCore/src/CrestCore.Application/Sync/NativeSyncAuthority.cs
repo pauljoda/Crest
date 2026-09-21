@@ -25,7 +25,7 @@ public sealed class NativeSyncAuthority(NativeSyncJournal initial) {
         NativeSyncTransaction value;
         lock (NativeSessionAuthority.Gate) {
             if (revision < latestRevision) return null;
-            if (pending is not null) throw new BrowserRuleException("sync_transaction_in_progress");
+            if (pending is not null) throw new BrowserRuleException(BrowserRuleCodes.SyncTransactionInProgress);
             value = new(this, revision, journal);
             pending = value;
         }
@@ -46,7 +46,7 @@ public sealed class NativeSyncAuthority(NativeSyncJournal initial) {
     internal void Commit(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             RequirePending(value);
-            if (!value.IsSealed) throw new BrowserRuleException("sync_transaction_not_sealed");
+            if (!value.IsSealed) throw new BrowserRuleException(BrowserRuleCodes.SyncTransactionNotSealed);
             journal = value.Journal;
             if (value.SourceRevision is { } revision) latestRevision = Math.Max(latestRevision, revision);
             pending = null;
@@ -61,7 +61,7 @@ public sealed class NativeSyncAuthority(NativeSyncJournal initial) {
     }
 
     private void RequirePending(NativeSyncTransaction value) {
-        if (!ReferenceEquals(pending, value)) throw new BrowserRuleException("invalid_sync_transaction");
+        if (!ReferenceEquals(pending, value)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncTransaction);
     }
 
     #endregion
