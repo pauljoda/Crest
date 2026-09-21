@@ -89,14 +89,14 @@ public static class Protocol {
         Members(e, "adapterId", "role", "implementationId", "implementationVersion", "protocolVersion", "capabilities");
         if (e.GetProperty("protocolVersion").GetInt32() != Version) throw new ProtocolException("version_mismatch");
         string id = Endpoint(e, "adapterId"), role = Text(e, "role");
-        if (id == "core" || role is not ("ui" or "engine" or "platform" or "services")) throw new ProtocolException("invalid_adapter");
+        if (id == "core" || !AdapterRoles.Includes(role)) throw new ProtocolException("invalid_adapter");
         var capabilities = new Dictionary<string, Capability>();
         foreach (var p in e.GetProperty("capabilities").EnumerateObject()) {
             if (capabilities.Count >= 128 || p.Name.Length > 128) throw new ProtocolException("capability_limit");
             var c = p.Value;
             Members(c, "status", "contractVersion", "scope", "limitations", "evidence");
             string status = Text(c, "status");
-            if (status is not ("supported" or "partial" or "unavailable" or "unverified")) throw new ProtocolException("invalid_status");
+            if (!CapabilityStatuses.Includes(status)) throw new ProtocolException("invalid_status");
             int version = c.GetProperty("contractVersion").GetInt32();
             if (version < 1) throw new ProtocolException("invalid_version");
             var limits = c.GetProperty("limitations").EnumerateArray().Select(l => l.GetString() ?? throw new ProtocolException("invalid_limit")).ToArray();

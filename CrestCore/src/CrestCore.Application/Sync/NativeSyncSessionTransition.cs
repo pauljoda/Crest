@@ -15,7 +15,11 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
-        bool replacing = request["operation"]!.GetValue<string>() switch { "merge" => false, "replace" => true, _ => throw new BrowserRuleException("unknown_sync_operation") };
+        bool replacing = request["operation"]!.GetValue<string>() switch {
+            NativeSyncOperations.Merge => false,
+            NativeSyncOperations.Replace => true,
+            _ => throw new BrowserRuleException("unknown_sync_operation")
+        };
         double now = request["now"]!.GetValue<double>();
         if (!double.IsFinite(now)) throw new BrowserRuleException("invalid_saved_date");
         var preferences = request["preferences"]!;
@@ -30,16 +34,16 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
                 ["arguments"] = args
             }.ToJsonString()));
         }
-        void Stage(JsonObject session, string reason) => Apply("stage", new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = reason, ["now"] = now });
-        if (!replacing && local["disposableSeedMarker"] is null) Stage(local, "superseded");
-        Apply(replacing ? "replace" : "merge", new JsonObject { ["records"] = incoming.DeepClone() });
+        void Stage(JsonObject session, string reason) => Apply(NativeSyncOperations.Stage, new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = reason, ["now"] = now });
+        if (!replacing && local["disposableSeedMarker"] is null) Stage(local, SyncDeletionReasons.Superseded);
+        Apply(replacing ? NativeSyncOperations.Replace : NativeSyncOperations.Merge, new JsonObject { ["records"] = incoming.DeepClone() });
         // Only an accepted explicit Space tombstone authorizes deleting this
         // device's profile. Missing records, tab deletion and retention do not.
         local = local.DeepClone().AsObject();
         var pendingIds = (local["spaceDeletions"] as JsonArray ?? new())
             .Select(n => NativeSessionAuthority.Id(n!["spaceID"])).ToHashSet();
-        foreach (var record in next.Records.Where(r => r!["id"]?["kind"]?.GetValue<string>() == "space"
-            && r["tombstone"]?["reason"]?.GetValue<string>() == "explicitDelete")) {
+        foreach (var record in next.Records.Where(r => r!["id"]?["kind"]?.GetValue<string>() == SyncRecordKinds.Space
+            && r["tombstone"]?["reason"]?.GetValue<string>() == SyncDeletionReasons.ExplicitDelete)) {
             var id = NativeSessionAuthority.Id(record!["id"]!["value"]);
             var space = local["spaces"]!.AsArray().FirstOrDefault(s => NativeSessionAuthority.Id(s!["id"]) == id);
             if (space is null || !pendingIds.Add(id)) continue;
@@ -73,7 +77,7 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
                 else spaces.Add(original.DeepClone());
             }
         }
-        if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? "retention" : "superseded");
+        if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? SyncDeletionReasons.Retention : SyncDeletionReasons.Superseded);
         return new(next, repaired);
     }
 

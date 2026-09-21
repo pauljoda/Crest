@@ -19,7 +19,7 @@ public sealed partial class BrowserTabCollection {
     public void ArchiveTransient(TabState source, DateTimeOffset now) {
         if (tabs.Any(t => t.Id == source.Id) || archive.Any(t => t.Id == source.Id))
             throw new BrowserRuleException("duplicate_tab");
-        archive.Add(new(TransientState(source, now), now, "quickWindow"));
+        archive.Add(new(TransientState(source, now), now, ArchiveReasons.QuickWindow));
     }
 
     private static TabState TransientState(TabState source, DateTimeOffset now) {
@@ -60,7 +60,7 @@ public sealed partial class BrowserTabCollection {
         var ids = expired.Select(t => t.Id).ToHashSet();
         var nextFolders = new FolderTree(folders).PreserveOrder(ids, tabs);
         foreach (var tab in expired)
-            archive.Add(new(tab.Capture() with { SplitGroupId = null }, now, "autoCleanup"));
+            archive.Add(new(tab.Capture() with { SplitGroupId = null }, now, ArchiveReasons.AutoCleanup));
         tabs.RemoveAll(t => ids.Contains(t.Id));
         folders.Clear(); folders.AddRange(nextFolders);
         // Maintenance preserves an empty selection and does not dissolve a

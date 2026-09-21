@@ -31,16 +31,16 @@ public sealed class LinkNavigationPolicyTests {
     }
 
     [Theory]
-    [InlineData("https://www.apple.com/news/", "saved", true, LinkNavigationDecision.Navigate)]
-    [InlineData("http://APPLE.com:8080/news/", "pinned", true, LinkNavigationDecision.Navigate)]
-    [InlineData("https://developer.apple.com/", "saved", true, LinkNavigationDecision.PeekSavedSite)]
-    [InlineData("https://example.com/", "pinned", true, LinkNavigationDecision.PeekSavedSite)]
-    [InlineData("https://example.com/", "open", true, LinkNavigationDecision.Navigate)]
-    [InlineData("https://example.com/", "saved", false, LinkNavigationDecision.Navigate)]
-    [InlineData("mailto:test@example.com", "saved", true, LinkNavigationDecision.Navigate)]
-    [InlineData("file:///tmp/example.html", "saved", true, LinkNavigationDecision.Navigate)]
-    [InlineData("crest://extensions/", "saved", true, LinkNavigationDecision.Navigate)]
-    public void SavedSiteProtectionPreservesHostsPlacementAndOptOut(string url, string placement,
+    [InlineData("https://www.apple.com/news/", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
+    [InlineData("http://APPLE.com:8080/news/", TabPlacement.Pinned, true, LinkNavigationDecision.Navigate)]
+    [InlineData("https://developer.apple.com/", TabPlacement.Saved, true, LinkNavigationDecision.PeekSavedSite)]
+    [InlineData("https://example.com/", TabPlacement.Pinned, true, LinkNavigationDecision.PeekSavedSite)]
+    [InlineData("https://example.com/", null, true, LinkNavigationDecision.Navigate)]
+    [InlineData("https://example.com/", TabPlacement.Saved, false, LinkNavigationDecision.Navigate)]
+    [InlineData("mailto:test@example.com", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
+    [InlineData("file:///tmp/example.html", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
+    [InlineData("crest://extensions/", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
+    public void SavedSiteProtectionPreservesHostsPlacementAndOptOut(string url, TabPlacement? placement,
         bool automaticallyOpensPeek, LinkNavigationDecision expected) =>
         Assert.Equal(expected, Decide(url, placement: placement, automatic: automaticallyOpensPeek));
 
@@ -77,6 +77,6 @@ public sealed class LinkNavigationPolicyTests {
 
     private static LinkNavigationDecision Decide(string? url = "https://example.com/", bool userLink = true,
         bool topLevel = true, bool peek = false, bool newTab = false, bool shift = false, bool focus = false,
-        bool owned = true, string? placement = "saved", string? savedUrl = "https://apple.com/", bool automatic = true) =>
+        bool owned = true, TabPlacement? placement = TabPlacement.Saved, string? savedUrl = "https://apple.com/", bool automatic = true) =>
         LinkNavigationPolicy.Decide(url, userLink, topLevel, peek, newTab, shift, focus, owned, placement, savedUrl, automatic);
 }

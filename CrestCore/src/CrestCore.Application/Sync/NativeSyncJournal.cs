@@ -63,11 +63,15 @@ public sealed class NativeSyncJournal {
 
     private static JsonObject PayloadId(JsonObject payload) {
         string kind = payload["type"]!.GetValue<string>();
-        var identity = kind == "archive" ? Value(payload)["tab"]! : Value(payload);
+        var identity = kind == SyncRecordKinds.Archive ? Value(payload)["tab"]! : Value(payload);
         return new() { ["kind"] = kind, ["value"] = Id(identity["id"]).ToString("D").ToUpperInvariant() };
     }
 
-    private static JsonNode PayloadSpace(JsonObject payload) => payload["type"]!.GetValue<string>() switch { "space" => Value(payload)["id"]!, "archive" => Value(payload)["tab"]!["spaceID"]!, _ => Value(payload)["spaceID"]! };
+    private static JsonNode PayloadSpace(JsonObject payload) => payload["type"]!.GetValue<string>() switch {
+        SyncRecordKinds.Space => Value(payload)["id"]!,
+        SyncRecordKinds.Archive => Value(payload)["tab"]!["spaceID"]!,
+        _ => Value(payload)["spaceID"]!
+    };
 
     #endregion
 
@@ -83,7 +87,7 @@ public sealed class NativeSyncJournal {
         ulong clock = fields["logicalClock"]!.GetValue<ulong>();
         var operation = request["operation"]!.GetValue<string>();
         var args = request["arguments"]!.AsObject();
-        if (operation == "recover") {
+        if (operation == NativeSyncOperations.Recover) {
             var identity = Id(args["deviceID"]);
             if (identity == Id(fields["deviceID"])) throw new BrowserRuleException("invalid_recovery_identity");
             fields["deviceID"] = identity.ToString("D").ToUpperInvariant();
@@ -110,11 +114,11 @@ public sealed class NativeSyncJournal {
                 ["tombstone"] = new JsonObject { ["reason"] = reason, ["deletedAt"] = now }
             };
         }
-        if (operation is "merge" or "replace" or "overwrite") {
+        if (operation is NativeSyncOperations.Merge or NativeSyncOperations.Replace or NativeSyncOperations.Overwrite) {
             var incoming = RecordMap(args["records"]!.AsArray());
             foreach (var record in incoming.Values) clock = Math.Max(clock, Clock(record));
-            if (operation == "replace") { next = incoming; queued.Clear(); } else foreach (var (id, remote) in incoming) {
-                if (operation == "overwrite" || !next.TryGetValue(id, out var local)) { next[id] = remote; continue; }
+            if (operation == NativeSyncOperations.Replace) { next = incoming; queued.Clear(); } else foreach (var (id, remote) in incoming) {
+                if (operation == NativeSyncOperations.Overwrite || !next.TryGetValue(id, out var local)) { next[id] = remote; continue; }
                 var resolved = NativeSyncEvaluator.Resolve(local, remote);
                 next[id] = resolved;
                 // An acknowledged local winner does not become pending merely
@@ -122,7 +126,7 @@ public sealed class NativeSyncJournal {
                 if (!NativeSyncEvaluator.Equivalent(resolved, local) && !NativeSyncEvaluator.Equivalent(resolved, remote)) queued.Add(id);
             }
         }
-        if (operation is "stage" or "overwrite") {
+        if (operation is NativeSyncOperations.Stage or NativeSyncOperations.Overwrite) {
             var desired = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
             var session = args["session"] as JsonObject;
             var cleaning = (session?["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
@@ -139,34 +143,35 @@ public sealed class NativeSyncJournal {
                 // Closing/restoring changes the record kind, not the tab's
                 // identity. Carry its additive fields across that transition.
                 string kind = payload["type"]!.GetValue<string>();
-                if (previousPayload is null && kind is "tab" or "archive"
-                    && next.TryGetValue((kind == "tab" ? "archive:" : "tab:") + Id(id["value"]).ToString("D"), out var counterpart)
+                if (previousPayload is null && kind is SyncRecordKinds.Tab or SyncRecordKinds.Archive
+                    && next.TryGetValue((kind == SyncRecordKinds.Tab ? SyncRecordKinds.Archive : SyncRecordKinds.Tab)
+                        + ":" + Id(id["value"]).ToString("D"), out var counterpart)
                     && Payload(counterpart) is { } other) {
-                    var oldTab = kind == "tab" ? Value(other)["tab"]! : Value(other);
+                    var oldTab = kind == SyncRecordKinds.Tab ? Value(other)["tab"]! : Value(other);
                     previousPayload = new JsonObject {
                         ["type"] = kind,
-                        ["value"] = kind == "tab" ? oldTab.DeepClone() : new JsonObject { ["tab"] = oldTab.DeepClone() }
+                        ["value"] = kind == SyncRecordKinds.Tab ? oldTab.DeepClone() : new JsonObject { ["tab"] = oldTab.DeepClone() }
                     };
                 }
                 payload = NativeSyncCompatibility.Preserve(payload, previousPayload);
                 if (!desired.TryAdd(Name(PayloadId(payload)), payload)) throw new BrowserRuleException("duplicate_sync_record");
             }
             if (desired.Count > MaximumRecords) throw new BrowserRuleException("sync_record_limit");
-            if (operation == "overwrite") {
+            if (operation == NativeSyncOperations.Overwrite) {
                 queued.Clear();
                 foreach (string id in next.Keys.Union(desired.Keys).Order(StringComparer.Ordinal).ToArray()) {
                     if (next.TryGetValue(id, out var cleaningRecord) && cleaning.Contains(Id(cleaningRecord["spaceID"]))) continue;
                     if (desired.TryGetValue(id, out var payload)) next[id] = Save(payload);
                     else {
                         if (Payload(next[id]) is { } old && !Includes(fields["preferences"]!, old)) continue;
-                        next[id] = Delete(next[id], "superseded");
+                        next[id] = Delete(next[id], SyncDeletionReasons.Superseded);
                     }
                     queued.Add(id);
                 }
             } else {
                 // Parent evidence is from the accepted journal before staging.
-                var spaces = records.Values.Where(r => Kind(r) == "space").Select(r => Id(r["spaceID"])).ToHashSet();
-                var folderRecords = records.Values.Where(r => Kind(r) == "folder").ToDictionary(r => Id(r["id"]!["value"]));
+                var spaces = records.Values.Where(r => Kind(r) == SyncRecordKinds.Space).Select(r => Id(r["spaceID"])).ToHashSet();
+                var folderRecords = records.Values.Where(r => Kind(r) == SyncRecordKinds.Folder).ToDictionary(r => Id(r["id"]!["value"]));
                 var archiveReasons = session is null
                     ? args["archiveReasons"]!.AsArray().ToDictionary(n => Id(n!["id"]), n => n!["reason"]!.GetValue<string>())
                     : NativeSyncProjection.Items(session, "spaces").SelectMany(s => NativeSyncProjection.Items(s!, "archivedTabs"))
@@ -179,48 +184,53 @@ public sealed class NativeSyncJournal {
                     if (cleaning.Contains(Id(record["spaceID"]))) continue;
                     if (Payload(record) is not { } payload || !Includes(fields["preferences"]!, payload) || desired.ContainsKey(id)) continue;
                     string? reason;
-                    if (!Portable(payload)) reason = "superseded";
+                    if (!Portable(payload)) reason = SyncDeletionReasons.Superseded;
                     else {
                         if (!spaces.Contains(Id(record["spaceID"])) || !AncestryArrived(payload, folderRecords)) continue;
                         string kind = Kind(record);
-                        var placement = kind == "tab" ? Enum.Parse<TabPlacement>(Value(payload)["placement"]!.GetValue<string>(), true) : (TabPlacement?)null;
+                        var placement = kind == SyncRecordKinds.Tab ? Enum.Parse<TabPlacement>(Value(payload)["placement"]!.GetValue<string>(), true) : (TabPlacement?)null;
                         reason = SyncDeletionPolicy.Reason(kind, placement, archiveReasons.GetValueOrDefault(Id(record["id"]!["value"])),
-                            desired.ContainsKey("space:" + Id(record["spaceID"]).ToString("D")), args["deletionReason"]!.GetValue<string>());
+                            desired.ContainsKey(SyncRecordKinds.Space + ":" + Id(record["spaceID"]).ToString("D")), args["deletionReason"]!.GetValue<string>());
                     }
                     if (reason is null) continue;
                     next[id] = Delete(record, reason); queued.Add(id);
                 }
             }
-        } else if (operation == "acknowledge") {
+        } else if (operation == NativeSyncOperations.Acknowledge) {
             foreach (var item in args["acknowledgements"]!.AsArray()) {
                 string id = Name(item!["id"]!);
                 if (item["version"] is null || next.TryGetValue(id, out var record) && NativeSyncEvaluator.Equivalent(item["version"], record["version"]))
                     queued.Remove(id);
             }
-        } else if (operation is not ("merge" or "replace" or "preferences")) throw new BrowserRuleException("unknown_sync_operation");
+        } else if (operation is not (NativeSyncOperations.Merge or NativeSyncOperations.Replace or NativeSyncOperations.Preferences))
+            throw new BrowserRuleException("unknown_sync_operation");
         if (next.Count > MaximumRecords) throw new BrowserRuleException("sync_record_limit");
         fields["logicalClock"] = clock;
         return new(fields, next, queued);
     }
 
     private static bool Includes(JsonNode preferences, JsonObject payload) => payload["type"]!.GetValue<string>() switch {
-        "space" => true,
-        "folder" => preferences[Value(payload)["location"]!.GetValue<string>() == "current" ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
-        "tab" => preferences[Value(payload)["placement"]!.GetValue<string>() == "current" ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
+        SyncRecordKinds.Space => true,
+        SyncRecordKinds.Folder => preferences[Value(payload)["location"]!.GetValue<string>() == TabPlacementCodes.Current ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
+        SyncRecordKinds.Tab => preferences[Value(payload)["placement"]!.GetValue<string>() == TabPlacementCodes.Current ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
         _ => preferences["historyAndArchive"]!.GetValue<bool>()
     };
 
     private static bool Portable(JsonObject payload) {
         string kind = payload["type"]!.GetValue<string>();
-        if (kind is "space" or "folder") return true;
-        var value = kind == "archive" ? Value(payload)["tab"]! : Value(payload);
-        return kind == "history" ? SyncContentPolicy.Includes(value["url"]?.GetValue<string>())
+        if (kind is SyncRecordKinds.Space or SyncRecordKinds.Folder) return true;
+        var value = kind == SyncRecordKinds.Archive ? Value(payload)["tab"]! : Value(payload);
+        return kind == SyncRecordKinds.History ? SyncContentPolicy.Includes(value["url"]?.GetValue<string>())
             : SyncContentPolicy.IncludesTab(value["url"]?.GetValue<string>(), value["nativeContent"] is not null, value["savedURL"]?.GetValue<string>());
     }
 
     private static bool AncestryArrived(JsonObject payload, Dictionary<Guid, JsonObject> folders) {
         var value = Value(payload);
-        JsonNode? next = payload["type"]!.GetValue<string>() switch { "folder" => value["parentID"], "tab" when value["placement"]!.GetValue<string>() != "pinned" => value["folderID"], _ => null };
+        JsonNode? next = payload["type"]!.GetValue<string>() switch {
+            SyncRecordKinds.Folder => value["parentID"],
+            SyncRecordKinds.Tab when value["placement"]!.GetValue<string>() != TabPlacementCodes.Pinned => value["folderID"],
+            _ => null
+        };
         var seen = new HashSet<Guid>();
         while (next is not null) {
             var id = Id(next);

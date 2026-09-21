@@ -36,7 +36,7 @@ public sealed partial class NativeSessionAuthority {
     /// more terms than this one. Resolve it to the guarded side, exactly as the
     /// native decoder does, instead of treating it as open.
     private static bool RequiresAuthentication(SpaceDocument space)
-        => space.Metadata["accessPolicy"] is { } policy && policy.GetValue<string>() != "open";
+        => space.Metadata["accessPolicy"] is { } policy && policy.GetValue<string>() != SpaceAccessPolicyCodes.Open;
 
     private static Guid? OptionalSpace(JsonNode? value) {
         if (value is null) return null;
@@ -56,7 +56,7 @@ public sealed partial class NativeSessionAuthority {
         // Raising protection on a Space is always allowed. Taking it away is the
         // decision authentication exists to guard, so it needs the grant.
         if (operation == "space.access" && (request["arguments"] as JsonObject)?["value"] is JsonValue policy
-            && policy.TryGetValue<string>(out var value) && value != "open") return;
+            && policy.TryGetValue<string>(out var value) && value != SpaceAccessPolicyCodes.Open) return;
         foreach (var space in CommandSpaces(request, operation)) RequireAccessible(space);
     }
 

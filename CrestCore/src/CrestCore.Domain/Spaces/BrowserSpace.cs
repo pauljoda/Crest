@@ -116,12 +116,12 @@ public sealed partial class BrowserSpace {
         Add(tab, null); tabs.Remove(tab); tabs.Insert(insertion, tab);
     }
 
-    public void Remove(BrowserTab tab, DateTimeOffset now, bool archiveTab, string reason = "closed") {
+    public void Remove(BrowserTab tab, DateTimeOffset now, bool archiveTab, string reason = ArchiveReasons.Closed) {
         if (!tabs.Contains(tab)) throw new BrowserRuleException("unknown_tab");
         var orderedFolders = new FolderTree(folders).PreserveOrder([tab.Id], tabs);
         if (!tabs.Remove(tab)) throw new BrowserRuleException("unknown_tab");
         folders.Clear(); folders.AddRange(orderedFolders);
-        if (reason != "autoCleanup") NormalizeSplits(now);
+        if (reason != ArchiveReasons.AutoCleanup) NormalizeSplits(now);
         if (archiveTab && !tab.Content.IsStartPage) {
             var state = tab.Capture() with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null, SplitGroupId = null };
             archive.Insert(0, new(state, now, reason));
@@ -157,7 +157,7 @@ public sealed partial class BrowserSpace {
 
     public void RecordVisit(BrowserTab tab, DateTimeOffset now, IIdSource ids) {
         if (tab.Url is null || tab.Failure is not null || !Uri.TryCreate(tab.Url, UriKind.Absolute, out var uri)
-            || uri.Scheme is not ("http" or "https")) return;
+            || uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return;
         string url = HistoryPolicy.Normalize(tab.Url)!;
         var old = history.Find(h => h.Url == url);
         if (old is not null) history.Remove(old);
@@ -213,12 +213,14 @@ public sealed partial class BrowserSpace {
 
     public static void ValidateUrl(string? url, bool allowsInternalPages = false) {
         if (url is null || url.Length > 16384 || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
-            || (parsed.Scheme is not ("http" or "https") && url != "about:blank"
+            || ((parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps)
+                && url != BrowserUrlConstants.AboutBlank
                 // A local document is a legitimate tab URL on every engine. It stays
                 // out of sync, which the sync projection decides by scheme, not here.
-                && !(parsed.Scheme == "file" && parsed.Host.Length == 0 && parsed.AbsolutePath.Length > 0)
-                && !(allowsInternalPages && parsed.Scheme is "chrome" or "crest" && parsed.Host.Length > 0)
-                && !(allowsInternalPages && parsed.Scheme == "chrome-extension" && parsed.Host.Length == 32
+                && !(parsed.Scheme == Uri.UriSchemeFile && parsed.Host.Length == 0 && parsed.AbsolutePath.Length > 0)
+                && !(allowsInternalPages && (parsed.Scheme == BrowserUrlConstants.ChromeScheme
+                    || parsed.Scheme == BrowserUrlConstants.CrestScheme) && parsed.Host.Length > 0)
+                && !(allowsInternalPages && parsed.Scheme == BrowserUrlConstants.ChromeExtensionScheme && parsed.Host.Length == 32
                     && parsed.Host.All(c => c is >= 'a' and <= 'p')))
             || !string.IsNullOrEmpty(parsed.UserInfo))
             throw new BrowserRuleException("unsupported_url");

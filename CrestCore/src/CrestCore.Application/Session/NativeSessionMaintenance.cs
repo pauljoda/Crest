@@ -25,10 +25,11 @@ public static class NativeSessionMaintenance {
 
     private static bool StartPage(JsonNode tab) => tab["url"] is null && tab["nativeContent"] is null;
 
-    private static TabPlacement StoredPlacement(JsonNode tab) => Text(tab["placement"]) switch { "current" => TabPlacement.Current, "pinned" => TabPlacement.Pinned, _ => TabPlacement.Saved };
+    private static TabPlacement StoredPlacement(JsonNode tab)
+        => TabPlacementCodes.Parse(Text(tab["placement"])) ?? TabPlacement.Saved;
 
     private static BrowserFolder Folder(JsonNode f) => new(new(Id(f["id"])), Text(f["title"])!,
-        Text(f["location"]) == "current" ? TabPlacement.Current : TabPlacement.Saved,
+        Text(f["location"]) == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
         OptionalId(f["parentID"]) is { } p ? new(p) : null);
 
     private static string? Trim(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
@@ -51,7 +52,7 @@ public static class NativeSessionMaintenance {
         ["id"] = SwiftId(ids.Next()),
         ["title"] = "Start Page",
         ["symbol"] = "flag.fill",
-        ["placement"] = "current",
+        ["placement"] = TabPlacementCodes.Current,
         ["lastActivatedAt"] = now,
         ["keepsPageLoaded"] = false
     };
@@ -64,7 +65,7 @@ public static class NativeSessionMaintenance {
         var pending = (source["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
         var pendingSpaces = spaces.Where(s => pending.Contains(Id(s!["id"]))).ToDictionary(s => Id(s!["id"]), s => s!.DeepClone());
         if (spaces.Count == 0 || spaces.All(s => pending.Contains(Id(s!["id"])))) {
-            var blank = emptySpace?.DeepClone().AsObject() ?? new JsonObject { ["name"] = "Space 1", ["symbol"] = "square.grid.2x2.fill", ["accent"] = "indigo" };
+            var blank = emptySpace?.DeepClone().AsObject() ?? new JsonObject { ["name"] = "Space 1", ["symbol"] = "square.grid.2x2.fill", ["accent"] = SpaceAccentCodes.Indigo };
             blank["id"] = SwiftId(ids.Next()); blank["profile"] = new JsonObject { ["id"] = ids.Next().ToString("D") };
             var tab = StartTab(now, ids);
             blank["selectedTabID"] = tab["id"]!.DeepClone();
@@ -87,7 +88,7 @@ public static class NativeSessionMaintenance {
             var folders = FolderTree.RepairPreorder(uniqueFolders.Select(Folder).ToArray());
             space["folders"] = new JsonArray(folders.Select(f => {
                 var value = folderMetadata[f.Id.Value]; value["parentID"] = f.ParentId is { } p ? SwiftId(p.Value) : null;
-                value["location"] = f.Location == TabPlacement.Current ? "current" : "saved";
+                value["location"] = f.Location == TabPlacement.Current ? TabPlacementCodes.Current : TabPlacementCodes.Saved;
                 return (JsonNode)value;
             }).ToArray());
             var folderLocations = folders.ToDictionary(f => f.Id.Value, f => f.Location);
@@ -104,7 +105,7 @@ public static class NativeSessionMaintenance {
                 });
                 var placement = StoredPlacement(tab);
                 if (placement == TabPlacement.Pinned && ++pinned > 12) placement = TabPlacement.Saved;
-                tab["placement"] = placement.ToString().ToLowerInvariant();
+                tab["placement"] = TabPlacementCodes.Name(placement);
                 if (placement == TabPlacement.Current) tab.Remove("savedURL");
                 else tab["savedURL"] ??= tab["url"]?.DeepClone();
                 if (placement == TabPlacement.Pinned || OptionalId(tab["folderID"]) is not { } folder
@@ -122,7 +123,7 @@ public static class NativeSessionMaintenance {
             for (int ti = 0; ti < tabs.Count; ti++) tabs[ti]!["splitGroupID"] = groups[ti] is { } group ? SwiftId(group) : null;
             var archive = Items(space, "archivedTabs").Where(a => !StartPage(a!["tab"]!)).Select(a => {
                 var value = a!.DeepClone().AsObject(); var tab = value["tab"]!.AsObject();
-                tab["id"] = SwiftId(tabIds.Claim(Id(tab["id"]))); tab["placement"] = "current";
+                tab["id"] = SwiftId(tabIds.Claim(Id(tab["id"]))); tab["placement"] = TabPlacementCodes.Current;
                 tab.Remove("savedURL"); tab.Remove("folderID"); tab.Remove("splitGroupID"); NormalizeTab(tab);
                 return (JsonNode)value;
             });

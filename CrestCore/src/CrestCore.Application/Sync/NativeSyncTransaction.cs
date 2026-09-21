@@ -31,7 +31,7 @@ public sealed class NativeSyncTransaction : IDisposable {
         if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException("sync_size_limit");
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         request["preferences"] = Journal.Preferences;
-        if (request["operation"]!.GetValue<string>() is "merge" or "replace") {
+        if (request["operation"]!.GetValue<string>() is NativeSyncOperations.Merge or NativeSyncOperations.Replace) {
             var result = NativeSyncSessionTransition.Prepare(Journal, Encoding.UTF8.GetBytes(request.ToJsonString()));
             Journal = result.Journal;
             MaterializedSpaceDeletions = result.Materialization["session"]!["spaceDeletions"]?.DeepClone();

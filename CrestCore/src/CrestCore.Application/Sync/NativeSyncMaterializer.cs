@@ -36,15 +36,15 @@ public static class NativeSyncMaterializer {
 
     public static JsonObject Materialize(JsonObject session, JsonNode preferences, IReadOnlyList<JsonObject> records, double now) {
         var policy = Preferences(preferences);
-        var owners = records.Where(r => Text(r["id"]?["kind"]) == "folder")
+        var owners = records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Folder)
             .ToDictionary(r => new FolderId(Id(r["id"]!["value"])), r => new SpaceId(Id(r["spaceID"])));
-        var deleted = records.Where(r => Text(r["id"]?["kind"]) == "folder" && r["tombstone"] is not null)
+        var deleted = records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Folder && r["tombstone"] is not null)
             .Select(r => new FolderId(Id(r["id"]!["value"]))).ToHashSet();
         var localSpaces = Items(session, "spaces").ToDictionary(n => Id(n!["id"]), n => n!);
         var pending = (session["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
         var spaces = new JsonArray();
         HashSet<Guid> profiles = [];
-        foreach (var remote in Ordered(Payloads(records, "space"))) {
+        foreach (var remote in Ordered(Payloads(records, SyncRecordKinds.Space))) {
             var id = Id(remote["id"]); var profile = Id(remote["profileID"]);
             if (!profiles.Add(profile)) throw Error("duplicateProfile", profile);
             localSpaces.TryGetValue(id, out var local);
@@ -63,7 +63,7 @@ public static class NativeSyncMaterializer {
                 ["id"] = SwiftId(Guid.NewGuid()),
                 ["title"] = "Start Page",
                 ["symbol"] = "flag.fill",
-                ["placement"] = "current",
+                ["placement"] = TabPlacementCodes.Current,
                 ["lastActivatedAt"] = now
             });
             var value = Fields(remote, "id", "name", "symbol", "accent", "branding", "browsingPreferences", "accessPolicy",
@@ -92,7 +92,7 @@ public static class NativeSyncMaterializer {
 
     private static List<JsonNode> Folders(Guid space, IReadOnlyList<JsonObject> records, SyncPreferences policy, JsonNode? local,
         IReadOnlyDictionary<FolderId, SpaceId> owners, HashSet<FolderId> deleted) {
-        var synced = Ordered(Payloads(records, "folder", space).Where(f => policy.Includes(Placement(f, "location")))).ToArray();
+        var synced = Ordered(Payloads(records, SyncRecordKinds.Folder, space).Where(f => policy.Includes(Placement(f, "location")))).ToArray();
         IReadOnlyList<BrowserFolder> resolved;
         try { resolved = SyncFolderMaterialization.Resolve(new(space), synced.Select(Folder).ToArray(), owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error("invalidFolderHierarchy", space); }
         var byId = synced.ToDictionary(f => Id(f["id"]));
@@ -109,7 +109,7 @@ public static class NativeSyncMaterializer {
     private static JsonObject Tab(JsonNode remote, JsonNode? local, bool archived = false) {
         var value = Fields(remote, "id", "title", "url", "nativeContent", "symbol", "lastActivatedAt", "positionModifiedAt",
             "customTitle", "titleModifiedAt", "keepsPageLoaded");
-        value["placement"] = archived ? JsonValue.Create("current") : remote["placement"]!.DeepClone();
+        value["placement"] = archived ? JsonValue.Create(TabPlacementCodes.Current) : remote["placement"]!.DeepClone();
         if (!archived) {
             if (Placement(remote) != TabPlacement.Current && SavedUrl(remote) is { } saved) value["savedURL"] = saved;
             value["splitGroupID"] = remote["splitGroupID"]?.DeepClone();
@@ -126,7 +126,7 @@ public static class NativeSyncMaterializer {
         var localOnly = locals.Select((tab, index) => (tab, index)).Where(t => !PortableTab(t.tab)).ToArray();
         var localOnlyIds = localOnly.Select(t => Id(t.tab["id"]))
             .Concat(Local(local, "archivedTabs").Where(a => !PortableTab(a["tab"]!)).Select(a => Id(a["tab"]!["id"]))).ToHashSet();
-        var synced = Ordered(Payloads(records, "tab", space)
+        var synced = Ordered(Payloads(records, SyncRecordKinds.Tab, space)
                 .Where(t => PortableTab(t) && !localOnlyIds.Contains(Id(t["id"])) && policy.Includes(Placement(t))))
             .OrderBy(t => Placement(t) switch { TabPlacement.Pinned => 0, TabPlacement.Saved => 1, _ => 2 }).ToArray();
         var syncedIds = synced.Select(t => Id(t["id"])).ToHashSet();
@@ -156,7 +156,7 @@ public static class NativeSyncMaterializer {
         var byId = Local(local, "archivedTabs").ToDictionary(a => Id(a["tab"]!["id"]));
         var localOnly = byId.Values.Where(a => !PortableTab(a["tab"]!) && !active.Contains(Id(a["tab"]!["id"]))).ToArray();
         var localOnlyIds = localOnly.Select(a => Id(a["tab"]!["id"])).ToHashSet();
-        var remote = Payloads(records, "archive", space).Where(a => PortableTab(a["tab"]!)
+        var remote = Payloads(records, SyncRecordKinds.Archive, space).Where(a => PortableTab(a["tab"]!)
             && !localOnlyIds.Contains(Id(a["tab"]!["id"])) && !active.Contains(Id(a["tab"]!["id"])))
             .OrderBy(a => Text(a["tab"]!["orderToken"]), StringComparer.Ordinal)
             .ThenBy(a => Id(a["tab"]!["id"]).ToString("D"), StringComparer.Ordinal);
@@ -170,21 +170,22 @@ public static class NativeSyncMaterializer {
             if (previous is not null) {
                 value["reason"] = previous["reason"]!.DeepClone(); value["deletionOrigin"] = previous["deletionOrigin"]?.DeepClone();
             } else {
-                value["reason"] = "synced";
-                if (Text(archive["reason"]) is "deleted" or "deletedOnAnotherDevice") value["deletionOrigin"] = "remote";
+                value["reason"] = ArchiveReasons.Synced;
+                if (Text(archive["reason"]) is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice)
+                    value["deletionOrigin"] = SyncDeletionOrigins.Remote;
             }
             result.Add(value);
         }
         var projected = result.Select(a => Id(a["tab"]!["id"])).ToHashSet();
         var localTabs = Local(local, "tabs").Where(PortableTab).ToDictionary(t => Id(t["id"]));
-        foreach (var record in records.Where(r => Text(r["id"]?["kind"]) == "tab" && Id(r["spaceID"]) == space
-            && Text(r["tombstone"]?["reason"]) == "explicitDelete")) {
+        foreach (var record in records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Tab && Id(r["spaceID"]) == space
+            && Text(r["tombstone"]?["reason"]) == SyncDeletionReasons.ExplicitDelete)) {
             var id = Id(record["id"]!["value"]);
             if (projected.Contains(id) || !localTabs.TryGetValue(id, out var tab)) continue;
             result.Add(new JsonObject {
                 ["tab"] = Tab(tab, tab, archived: true),
-                ["reason"] = "synced",
-                ["deletionOrigin"] = "remote",
+                ["reason"] = ArchiveReasons.Synced,
+                ["deletionOrigin"] = SyncDeletionOrigins.Remote,
                 ["archivedAt"] = record["tombstone"]?["deletedAt"]?.DeepClone() ?? JsonValue.Create(now)
             });
         }
@@ -195,7 +196,7 @@ public static class NativeSyncMaterializer {
         if (!policy.HistoryAndArchive) return Local(local, "history").ToList();
         var localOnly = Local(local, "history").Where(h => !SyncContentPolicy.Includes(Text(h["url"]))).ToArray();
         var localIds = localOnly.Select(h => Id(h["id"])).ToHashSet();
-        var synced = Payloads(records, "history", space).Where(h => SyncContentPolicy.Includes(Text(h["url"])) && !localIds.Contains(Id(h["id"])))
+        var synced = Payloads(records, SyncRecordKinds.History, space).Where(h => SyncContentPolicy.Includes(Text(h["url"])) && !localIds.Contains(Id(h["id"])))
             .OrderByDescending(h => h["lastVisitedAt"]!.GetValue<double>()).ThenBy(h => Id(h["id"]).ToString("D"), StringComparer.Ordinal)
             .Take(HistoryPolicy.MaximumEntries).Select(h => (JsonNode)Fields(h, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount"));
         return synced.Concat(localOnly).OrderByDescending(h => h["lastVisitedAt"]!.GetValue<double>()).ToList();

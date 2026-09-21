@@ -65,7 +65,7 @@ public sealed partial class NativeSessionAuthority {
                 throw new BrowserRuleException("invalid_new_space");
             if (workspaceKind == BrowserWorkspaceKind.Private) {
                 fields["symbol"] = "eyeglasses";
-                fields["accent"] = "indigo";
+                fields["accent"] = SpaceAccentCodes.Indigo;
                 var browsing = fields["browsingPreferences"]!.AsObject();
                 browsing["selectedSearchProviderID"] = "duckDuckGo";
                 browsing["searchProvider"] = "duckDuckGo";
@@ -117,7 +117,7 @@ public sealed partial class NativeSessionAuthority {
                     fields["name"] = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>());
                     fields["symbol"] = SpaceOrganizationPolicy.Symbol(args["symbol"]!.GetValue<string>());
                     var accent = args["accent"]!.GetValue<string>();
-                    if (accent is not ("indigo" or "orange" or "teal" or "rose")) throw new BrowserRuleException("invalid_accent");
+                    if (!SpaceAccentCodes.Includes(accent)) throw new BrowserRuleException("invalid_accent");
                     fields["accent"] = accent;
                     break;
                 case "space.branding":
@@ -133,7 +133,8 @@ public sealed partial class NativeSessionAuthority {
                     break;
                 case "space.access":
                     var access = args["value"]!.GetValue<string>();
-                    if (access is not ("open" or "deviceOwnerAuthentication")) throw new BrowserRuleException("invalid_access_policy");
+                    if (access is not (SpaceAccessPolicyCodes.Open or SpaceAccessPolicyCodes.DeviceOwnerAuthentication))
+                        throw new BrowserRuleException("invalid_access_policy");
                     fields["accessPolicy"] = access;
                     break;
                 case "space.default":

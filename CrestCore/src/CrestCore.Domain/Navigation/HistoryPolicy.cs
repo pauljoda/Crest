@@ -10,7 +10,8 @@ public static class HistoryPolicy {
     #region Actions - Navigation
 
     public static string? Normalize(string url) {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var value) || value.Scheme is not ("http" or "https")) return null;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var value)
+            || value.Scheme != Uri.UriSchemeHttp && value.Scheme != Uri.UriSchemeHttps) return null;
         return url.Split('#', 2)[0];
     }
 

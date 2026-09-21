@@ -5,7 +5,7 @@ public sealed record Adapter(string Id, string Role, string Implementation, stri
     #region Actions - Protocol
 
     public bool Supports(string name) => Capabilities.TryGetValue(name, out var c)
-        && c.Status == "supported" && c.Version == 1;
+        && c.Status == CapabilityStatuses.Supported && c.Version == 1;
 
     #endregion
 }

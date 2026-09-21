@@ -7,14 +7,17 @@ public static class SyncDeletionPolicy {
 
     public static string? Reason(string kind, TabPlacement? placement, string? archiveReason,
         bool owningSpaceRemains, string fallback) {
-        if (fallback is not ("explicitDelete" or "superseded" or "retention"))
+        if (!SyncDeletionReasons.Includes(fallback))
             throw new BrowserRuleException("invalid_sync_deletion");
-        if (kind != "tab") return kind is "space" or "folder"
-            ? fallback == "explicitDelete" ? fallback : null : fallback;
-        if (archiveReason is "deleted" or "deletedOnAnotherDevice") return "explicitDelete";
+        if (kind != SyncRecordKinds.Tab) return kind is SyncRecordKinds.Space or SyncRecordKinds.Folder
+            ? fallback == SyncDeletionReasons.ExplicitDelete ? fallback : null : fallback;
+        if (archiveReason is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice)
+            return SyncDeletionReasons.ExplicitDelete;
         if (archiveReason is not null)
-            return placement != TabPlacement.Current ? null : archiveReason == "autoCleanup" ? "retention" : "superseded";
-        return !owningSpaceRemains && fallback == "explicitDelete" ? "explicitDelete" : null;
+            return placement != TabPlacement.Current ? null : archiveReason == ArchiveReasons.AutoCleanup
+                ? SyncDeletionReasons.Retention : SyncDeletionReasons.Superseded;
+        return !owningSpaceRemains && fallback == SyncDeletionReasons.ExplicitDelete
+            ? SyncDeletionReasons.ExplicitDelete : null;
     }
 
     #endregion

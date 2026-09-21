@@ -64,12 +64,12 @@ public sealed class SearchPreferences {
 
     public string Resolve(string input, bool allowsInternalPages) {
         var value = input.Trim();
-        var resolution = value == "about:blank" ? new AddressResolution(value, null)
+        var resolution = value == BrowserUrlConstants.AboutBlank ? new AddressResolution(value, null)
             : AddressResolution.Resolve(input, Providers.Single(p => p.Id == SelectedId), allowsInternalPages)
                 ?? throw new BrowserRuleException("invalid_address");
         string address = resolution.Url;
         if (resolution.SearchQuery is null && Uri.TryCreate(address, UriKind.Absolute, out var uri)
-            && uri.Scheme is "http" or "https") address = uri.AbsoluteUri;
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)) address = uri.AbsoluteUri;
         BrowserSpace.ValidateUrl(address, allowsInternalPages);
         return address;
     }

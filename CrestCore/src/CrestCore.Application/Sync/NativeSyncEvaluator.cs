@@ -21,9 +21,9 @@ public static class NativeSyncEvaluator {
         var request = JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException("version_mismatch");
         JsonNode result = request["operation"]!.GetValue<string>() switch {
-            "resolve" => Resolve(request["first"]!.AsObject(), request["second"]!.AsObject()),
-            "reconcile" => Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject())),
-            "order.allocate" => new JsonArray(SyncOrderTokens.Allocate(
+            NativeSyncOperations.Resolve => Resolve(request["first"]!.AsObject(), request["second"]!.AsObject()),
+            NativeSyncOperations.Reconcile => Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject())),
+            NativeSyncOperations.OrderAllocate => new JsonArray(SyncOrderTokens.Allocate(
                 request["tokens"]!.AsArray().Select(n => n?.GetValue<string>()).ToArray())
                 .Select(t => (JsonNode)JsonValue.Create(t)!).ToArray()),
             _ => throw new BrowserRuleException("unknown_sync_operation")
@@ -55,24 +55,24 @@ public static class NativeSyncEvaluator {
 
     private static SyncRecordStamp Stamp(JsonNode record) {
         string kind = Kind(record);
-        if (kind is not ("space" or "folder" or "tab" or "history" or "archive")) throw new BrowserRuleException("invalid_sync_kind");
+        if (!SyncRecordKinds.Includes(kind)) throw new BrowserRuleException("invalid_sync_kind");
         var payload = Payload(record);
         var tombstone = record["tombstone"];
         if ((payload is null) == (tombstone is null)) throw new BrowserRuleException("invalid_sync_record");
         if (payload is not null && Text(record["payload"]!, "type") != kind) throw new BrowserRuleException("sync_identity_mismatch");
         var recordId = Id(record["id"]!["value"]);
         var spaceId = Id(record["spaceID"]);
-        if (kind == "space" && recordId != spaceId) throw new BrowserRuleException("sync_identity_mismatch");
+        if (kind == SyncRecordKinds.Space && recordId != spaceId) throw new BrowserRuleException("sync_identity_mismatch");
         if (payload is not null) {
-            var identity = kind == "archive" ? payload["tab"]! : payload;
-            if (Id(identity["id"]) != recordId || (kind != "space" && Id(identity["spaceID"]) != spaceId))
+            var identity = kind == SyncRecordKinds.Archive ? payload["tab"]! : payload;
+            if (Id(identity["id"]) != recordId || (kind != SyncRecordKinds.Space && Id(identity["spaceID"]) != spaceId))
                 throw new BrowserRuleException("sync_identity_mismatch");
         }
         var reason = tombstone?["reason"]?.GetValue<string>();
-        if (tombstone is not null && reason is not ("explicitDelete" or "superseded" or "retention"))
+        if (tombstone is not null && !SyncDeletionReasons.Includes(reason))
             throw new BrowserRuleException("invalid_sync_deletion");
         return new(kind, recordId, spaceId, Version(record), reason,
-            tombstone is null ? null : Date(tombstone, "deletedAt"), kind == "tab" && payload is not null ? Date(payload, "lastActivatedAt") : null);
+            tombstone is null ? null : Date(tombstone, "deletedAt"), kind == SyncRecordKinds.Tab && payload is not null ? Date(payload, "lastActivatedAt") : null);
     }
 
     internal static void ValidateRecord(JsonObject record) => _ = Stamp(record);
@@ -105,12 +105,8 @@ public static class NativeSyncEvaluator {
         return JsonNode.DeepEquals(first, second);
     }
 
-    private static TabPlacement Placement(JsonNode payload) => Text(payload, "placement") switch {
-        "pinned" => TabPlacement.Pinned,
-        "saved" => TabPlacement.Saved,
-        "current" => TabPlacement.Current,
-        _ => throw new BrowserRuleException("invalid_sync_placement")
-    };
+    private static TabPlacement Placement(JsonNode payload)
+        => TabPlacementCodes.Parse(Text(payload, "placement")) ?? throw new BrowserRuleException("invalid_sync_placement");
 
     private static void Copy(JsonObject to, JsonObject from, params string[] fields) {
         foreach (string field in fields) {
@@ -134,14 +130,14 @@ public static class NativeSyncEvaluator {
         if (a is null || b is null) return result;
         var payload = Payload(result)!;
         switch (aStamp.Kind) {
-            case "space":
+            case SyncRecordKinds.Space:
                 LatestFields(payload, a, b, "savedTabsExpansionModifiedAt", "isSavedTabsExpanded");
                 payload["splitGroups"] = MergeGroups(a["splitGroups"] as JsonArray, b["splitGroups"] as JsonArray, winner);
                 break;
-            case "folder":
+            case SyncRecordKinds.Folder:
                 LatestFields(payload, a, b, "collapseModifiedAt", "isCollapsed");
                 break;
-            case "tab":
+            case SyncRecordKinds.Tab:
                 payload["lastActivatedAt"] = Math.Max(Date(a, "lastActivatedAt")!.Value, Date(b, "lastActivatedAt")!.Value);
                 if (SyncConflictPolicy.Latest(Date(a, "positionModifiedAt"), Date(b, "positionModifiedAt")) is { } position) {
                     var source = position == 0 ? a : b;
@@ -149,14 +145,14 @@ public static class NativeSyncEvaluator {
                     if (Placement(source) == TabPlacement.Pinned) { payload.Remove("folderID"); payload.Remove("splitGroupID"); }
                 } else {
                     var placement = SyncConflictPolicy.RetainedPlacement(Placement(a), Placement(b));
-                    payload["placement"] = placement.ToString().ToLowerInvariant();
+                    payload["placement"] = TabPlacementCodes.Name(placement);
                     if (placement == TabPlacement.Pinned) payload.Remove("folderID");
                     else payload["folderID"] ??= (a["folderID"] ?? b["folderID"])?.DeepClone();
                     payload["splitGroupID"] ??= (a["splitGroupID"] ?? b["splitGroupID"])?.DeepClone();
                 }
                 LatestFields(payload, a, b, "titleModifiedAt", "customTitle");
                 break;
-            case "history":
+            case SyncRecordKinds.History:
                 payload["firstVisitedAt"] = Math.Min(Date(a, "firstVisitedAt")!.Value, Date(b, "firstVisitedAt")!.Value);
                 payload["lastVisitedAt"] = Math.Max(Date(a, "lastVisitedAt")!.Value, Date(b, "lastVisitedAt")!.Value);
                 payload["visitCount"] = Math.Max(a["visitCount"]!.GetValue<int>(), b["visitCount"]!.GetValue<int>());
@@ -183,8 +179,8 @@ public static class NativeSyncEvaluator {
     internal static JsonArray Reconcile(IEnumerable<JsonObject> records) {
         var byId = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         foreach (var node in records) { _ = Stamp(node!); byId[Name(node!)] = node!.AsObject(); }
-        foreach (var tab in byId.Values.Where(r => Kind(r) == "tab" && Payload(r) is not null).ToArray()) {
-            string archiveName = "archive:" + Id(tab["id"]!["value"]).ToString("D");
+        foreach (var tab in byId.Values.Where(r => Kind(r) == SyncRecordKinds.Tab && Payload(r) is not null).ToArray()) {
+            string archiveName = SyncRecordKinds.Archive + ":" + Id(tab["id"]!["value"]).ToString("D");
             if (!byId.TryGetValue(archiveName, out var archiveRecord) || Payload(archiveRecord) is not { } archive) continue;
             var payload = Payload(tab)!;
             bool active = SyncConflictPolicy.ActiveTabWins(Placement(payload), Date(payload, "lastActivatedAt")!.Value,

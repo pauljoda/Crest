@@ -85,7 +85,7 @@ public sealed partial class NativeSessionAuthority {
                 || s.ArchivedTabs.Any(t => Id(t["tab"]!["id"]) == tabId)))
                 throw new BrowserRuleException("duplicate_tab");
             // A window transfer keeps the exact profile and makes a current tab.
-            args["placement"] = "current"; args["folderId"] = null; args["before"] = null; args["afterSelection"] = true;
+            args["placement"] = TabPlacementCodes.Current; args["folderId"] = null; args["before"] = null; args["afterSelection"] = true;
             var result = NativeTabTransfer.Evaluate(TransferProjection(a, request["sourceWindow"]!),
                 TransferProjection(b, request["destinationWindow"]!), args, request["now"]!.GetValue<double>());
             var destinationWindow = request["destinationWindow"]!.DeepClone();

@@ -13,20 +13,21 @@ public static class LinkNavigationPolicy {
 
     public static LinkNavigationDecision Decide(string? destination, bool userActivatedLink,
         bool topLevel, bool peekModified, bool newTabModified, bool shiftModified,
-        bool focusesNewTabs, bool hasContext, string? placement, string? savedUrl,
+        bool focusesNewTabs, bool hasContext, TabPlacement? placement, string? savedUrl,
         bool automaticallyOpensPeek) {
         if (!userActivatedLink || !TryWebUrl(destination, out var target)) return LinkNavigationDecision.Navigate;
         if (topLevel && hasContext && peekModified) return LinkNavigationDecision.PeekModifier;
         if (newTabModified)
             return focusesNewTabs != shiftModified ? LinkNavigationDecision.ForegroundTab : LinkNavigationDecision.BackgroundTab;
-        if (topLevel && hasContext && automaticallyOpensPeek && placement is "pinned" or "saved"
+        if (topLevel && hasContext && automaticallyOpensPeek && placement is TabPlacement.Pinned or TabPlacement.Saved
             && TryWebUrl(savedUrl, out var saved) && NormalizeHost(saved!) != NormalizeHost(target!))
             return LinkNavigationDecision.PeekSavedSite;
         return LinkNavigationDecision.Navigate;
     }
 
     private static bool TryWebUrl(string? value, out Uri? url) =>
-        Uri.TryCreate(value, UriKind.Absolute, out url) && url.Scheme is "http" or "https" && url.Host.Length > 0;
+        Uri.TryCreate(value, UriKind.Absolute, out url)
+        && (url.Scheme == Uri.UriSchemeHttp || url.Scheme == Uri.UriSchemeHttps) && url.Host.Length > 0;
 
     // Match Crest's saved-site contract: ignore www, but keep other subdomains
     // distinct. IdnHost also compares Unicode and punycode URL spellings equally.

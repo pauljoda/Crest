@@ -33,7 +33,7 @@ public sealed record SearchProvider(string Id, string Name, string SearchTemplat
         }
         const string marker = "crest-template-probe";
         var probe = value.Replace("%s", marker, StringComparison.Ordinal).Replace("{searchTerms}", marker, StringComparison.Ordinal);
-        if (!Uri.TryCreate(probe, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Port != 443
+        if (!Uri.TryCreate(probe, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps || uri.Port != 443
             || uri.UserInfo.Length != 0 || !uri.Host.Contains('.') || uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
             || uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase) || uri.Host.Contains(marker, StringComparison.Ordinal)
             || IPAddress.TryParse(uri.Host, out _) || uri.Fragment.Contains(marker, StringComparison.Ordinal))

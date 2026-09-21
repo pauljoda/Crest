@@ -49,7 +49,8 @@ public sealed partial class NativeSessionAuthority {
     /// cannot be changed by session edits, restored files or remote sync records.
     public void RegisterEngine(ReadOnlySpan<byte> descriptor) {
         var engine = Protocol.Descriptor(descriptor);
-        if (engine.Role != "engine" || !engine.Supports("pages") || !engine.Supports("navigation"))
+        if (engine.Role != AdapterRoles.Engine || !engine.Supports(EngineCapabilities.Pages)
+            || !engine.Supports(EngineCapabilities.Navigation))
             throw new BrowserRuleException("invalid_engine_registration");
         lock (Gate) {
             if (Engine is not null) throw new BrowserRuleException("engine_already_registered");

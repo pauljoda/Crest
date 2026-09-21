@@ -20,7 +20,7 @@ public sealed class NativeWorkspaceImport {
 
     private static JsonArray Items(JsonNode n, string key) => n[key] as JsonArray ?? new();
 
-    private static string Placement(JsonNode n) => n["placement"]?.GetValue<string>() ?? "current";
+    private static string Placement(JsonNode n) => n["placement"]?.GetValue<string>() ?? TabPlacementCodes.Current;
 
     private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString("D") };
 
@@ -57,7 +57,7 @@ public sealed class NativeWorkspaceImport {
     }
 
     private static void SelectAdded(JsonNode space, IEnumerable<JsonNode> tabs) {
-        var chosen = tabs.LastOrDefault(t => Placement(t) == "current") ?? tabs.FirstOrDefault();
+        var chosen = tabs.LastOrDefault(t => Placement(t) == TabPlacementCodes.Current) ?? tabs.FirstOrDefault();
         if (chosen is not null) space["selectedTabID"] = chosen["id"]!.DeepClone();
     }
 
@@ -94,19 +94,19 @@ public sealed class NativeWorkspaceImport {
                 Customize(destination, draft["customization"]!);
                 var added = Items(input, "tabs").Select(t => t!).ToArray();
                 var old = created ? [] : Items(destination, "tabs").Select(t => t!).ToArray();
-                WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => Placement(t) == "pinned"));
-                var ordered = new[] { "pinned", "saved", "current" }.SelectMany(p => added.Where(t => Placement(t) == p)).ToArray();
+                WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => Placement(t) == TabPlacementCodes.Pinned));
+                var ordered = new[] { TabPlacementCodes.Pinned, TabPlacementCodes.Saved, TabPlacementCodes.Current }.SelectMany(p => added.Where(t => Placement(t) == p)).ToArray();
                 if (created) Tabs(destination, ordered);
                 else {
                     var list = old.ToList();
-                    var firstCurrent = list.FindIndex(t => Placement(t) == "current");
+                    var firstCurrent = list.FindIndex(t => Placement(t) == TabPlacementCodes.Current);
                     if (firstCurrent < 0) firstCurrent = list.Count;
-                    var pinIndex = list.FindIndex(t => Placement(t) != "pinned");
+                    var pinIndex = list.FindIndex(t => Placement(t) != TabPlacementCodes.Pinned);
                     if (pinIndex < 0) pinIndex = list.Count;
-                    var pins = ordered.Where(t => Placement(t) == "pinned").ToArray();
+                    var pins = ordered.Where(t => Placement(t) == TabPlacementCodes.Pinned).ToArray();
                     list.InsertRange(pinIndex, pins);
-                    list.InsertRange(firstCurrent + pins.Length, ordered.Where(t => Placement(t) == "saved"));
-                    list.AddRange(ordered.Where(t => Placement(t) == "current"));
+                    list.InsertRange(firstCurrent + pins.Length, ordered.Where(t => Placement(t) == TabPlacementCodes.Saved));
+                    list.AddRange(ordered.Where(t => Placement(t) == TabPlacementCodes.Current));
                     Tabs(destination, list);
                 }
                 SelectAdded(destination, created ? added : ordered);
@@ -142,21 +142,21 @@ public sealed class NativeWorkspaceImport {
                 var additions = Items(input, "tabs").Where(t => included.Contains(Id(t!["id"]))).Select(t => t!).ToArray();
                 var sourceFolders = Items(input, "folders");
                 var folders = destinationId is null ? new JsonArray() : Items(destination, "folders");
-                var required = additions.Where(t => PlacementFor(t) == "saved" && t["folderID"] is not null)
+                var required = additions.Where(t => PlacementFor(t) == TabPlacementCodes.Saved && t["folderID"] is not null)
                     .Select(t => Id(t["folderID"])).ToHashSet();
                 var byId = sourceFolders.ToDictionary(f => Id(f!["id"]), f => f!);
                 var pending = new Stack<Guid>(required);
                 while (pending.TryPop(out var id))
                     if (byId.TryGetValue(id, out var f) && OptionalId(f["parentID"]) is { } parent && required.Add(parent)) pending.Push(parent);
                 var tree = FolderTree.RepairPreorder(sourceFolders.Select(f => new BrowserFolder(new(Id(f!["id"])),
-                    f["title"]!.GetValue<string>(), f["location"]?.GetValue<string>() == "current" ? TabPlacement.Current : TabPlacement.Saved,
+                    f["title"]!.GetValue<string>(), f["location"]?.GetValue<string>() == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
                     OptionalId(f["parentID"]) is { } parent ? new FolderId(parent) : null)).ToArray());
                 Dictionary<Guid, Guid> mapping = [];
                 foreach (var folder in tree.Where(f => required.Contains(f.Id.Value))) {
                     var original = byId[folder.Id.Value];
                     Guid? parent = folder.ParentId is { } p && mapping.TryGetValue(p.Value, out var mapped) ? mapped : null;
                     var match = folders.FirstOrDefault(f => OptionalId(f!["parentID"]) == parent
-                        && (f["location"]?.GetValue<string>() ?? "saved") == (original["location"]?.GetValue<string>() ?? "saved")
+                        && (f["location"]?.GetValue<string>() ?? TabPlacementCodes.Saved) == (original["location"]?.GetValue<string>() ?? TabPlacementCodes.Saved)
                         && WorkspaceImportPolicy.FolderMatchKey(f["title"]!.GetValue<string>()) == WorkspaceImportPolicy.FolderMatchKey(original["title"]!.GetValue<string>()));
                     if (match is not null) { mapping[folder.Id.Value] = Id(match["id"]); continue; }
                     if (folders.Count >= WorkspaceImportPolicy.MaximumFolders) continue;
@@ -167,27 +167,27 @@ public sealed class NativeWorkspaceImport {
                     copied["isCollapsed"] = false;
                     folders.Add((JsonNode)copied); mapping[folder.Id.Value] = identity;
                 }
-                int pinned = destinationId is null ? 0 : Items(destination, "tabs").Count(t => Placement(t!) == "pinned");
+                int pinned = destinationId is null ? 0 : Items(destination, "tabs").Count(t => Placement(t!) == TabPlacementCodes.Pinned);
                 var overflowFolder = folders.FirstOrDefault(f => string.Equals(f!["title"]!.GetValue<string>(), "Imported Pinned Tabs", StringComparison.OrdinalIgnoreCase));
                 var edited = additions.Select(tab => {
                     var copy = Copy(tab); var placement = PlacementFor(tab); copy["placement"] = placement;
-                    if (placement == "pinned" && ++pinned > WorkspaceImportPolicy.MaximumPinnedTabs) {
-                        copy["placement"] = placement = "saved";
+                    if (placement == TabPlacementCodes.Pinned && ++pinned > WorkspaceImportPolicy.MaximumPinnedTabs) {
+                        copy["placement"] = placement = TabPlacementCodes.Saved;
                         if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
                             overflowFolder = new JsonObject {
                                 ["id"] = SwiftId(Guid.NewGuid()),
                                 ["title"] = "Imported Pinned Tabs",
-                                ["location"] = "saved",
+                                ["location"] = TabPlacementCodes.Saved,
                                 ["symbol"] = "pin.slash",
                                 ["isCollapsed"] = false
                             };
                             folders.Add(overflowFolder);
                         }
                         copy["folderID"] = overflowFolder?["id"]?.DeepClone();
-                    } else copy["folderID"] = placement == "saved" && OptionalId(tab["folderID"]) is { } old && mapping.TryGetValue(old, out var folder)
+                    } else copy["folderID"] = placement == TabPlacementCodes.Saved && OptionalId(tab["folderID"]) is { } old && mapping.TryGetValue(old, out var folder)
                           ? SwiftId(folder) : null;
-                    copy["savedURL"] = placement == "current" ? null : copy["savedURL"]?.DeepClone() ?? copy["url"]?.DeepClone();
-                    if (placement == "pinned") copy["symbol"] = "pin.fill";
+                    copy["savedURL"] = placement == TabPlacementCodes.Current ? null : copy["savedURL"]?.DeepClone() ?? copy["url"]?.DeepClone();
+                    if (placement == TabPlacementCodes.Pinned) copy["symbol"] = "pin.fill";
                     return copy;
                 }).ToArray();
                 destination["folders"] = destinationId is null ? folders : folders.DeepClone();

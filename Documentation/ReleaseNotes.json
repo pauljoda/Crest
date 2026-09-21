@@ -1725,6 +1725,10 @@
     "native-core-member-regions": {
       "category": "internal",
       "message": "Group native core state and behavior into consistent source sections."
+    },
+    "native-core-shared-semantic-codes": {
+      "category": "internal",
+      "message": "Use shared semantic codes across native core policies and protocol adapters."
     }
   }
 }

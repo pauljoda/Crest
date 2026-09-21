@@ -7,14 +7,15 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         string value = input.Trim();
         if (value.Length == 0) return null;
         if (value.Length > 4096) throw new BrowserRuleException("invalid_address");
-        if (value == "about:blank" || value.StartsWith("chrome://", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("crest://", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase)) {
+        if (value == BrowserUrlConstants.AboutBlank || value.StartsWith(BrowserUrlConstants.ChromePrefix, StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith(BrowserUrlConstants.CrestPrefix, StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith(BrowserUrlConstants.ChromeExtensionPrefix, StringComparison.OrdinalIgnoreCase)) {
             if (!allowsInternalPages) return new(provider.Search(value), value);
             BrowserSpace.ValidateUrl(value, allowsInternalPages: true);
             return new(value, null);
         }
-        if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && explicitUrl.Scheme is "http" or "https"
+        if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl)
+            && (explicitUrl.Scheme == Uri.UriSchemeHttp || explicitUrl.Scheme == Uri.UriSchemeHttps)
             && explicitUrl.Host.Length > 0) return new(value, null);
         if (LocalFile(value) is { } localFile) return new(localFile, null);
         if (!value.Any(char.IsWhiteSpace)) {
@@ -39,7 +40,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         } else if (!candidate.StartsWith('/') && !candidate.StartsWith("file:", StringComparison.OrdinalIgnoreCase)) {
             return null;
         }
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var parsed) || parsed.Scheme != "file"
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var parsed) || parsed.Scheme != Uri.UriSchemeFile
             || parsed.UserInfo.Length > 0 || parsed.AbsolutePath.Length == 0) return null;
         if (parsed.Host.Length == 0) return parsed.AbsoluteUri;
         // `file://localhost/…` names this device the long way round; anything else

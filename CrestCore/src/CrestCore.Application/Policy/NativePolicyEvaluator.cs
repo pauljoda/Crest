@@ -48,7 +48,7 @@ public static class NativePolicyEvaluator {
                 request.GetProperty("userActivatedLink").GetBoolean(), request.GetProperty("topLevel").GetBoolean(),
                 peek, newTab,
                 request.GetProperty("shiftModified").GetBoolean(), request.GetProperty("focusesNewTabs").GetBoolean(),
-                request.GetProperty("hasContext").GetBoolean(), request.GetProperty("placement").GetString(),
+                request.GetProperty("hasContext").GetBoolean(), TabPlacementCodes.Parse(request.GetProperty("placement").GetString()),
                 request.GetProperty("savedUrl").GetString(), request.GetProperty("automaticallyOpensPeek").GetBoolean());
             return Encode(new() {
                 ["decision"] = decision switch {
@@ -132,12 +132,8 @@ public static class NativePolicyEvaluator {
         }
         if (operation == "tabs.dismissal") {
             Protocol.Members(request, "version", "operation", "placement", "isStartPage", "tabCount");
-            var placement = Optional(request, "placement") is null ? (TabPlacement?)null : Protocol.Text(request, "placement") switch {
-                "current" => TabPlacement.Current,
-                "pinned" => TabPlacement.Pinned,
-                "saved" => TabPlacement.Saved,
-                _ => throw new ProtocolException("invalid_placement")
-            };
+            var placement = Optional(request, "placement") is null ? (TabPlacement?)null
+                : (TabPlacementCodes.Parse(Protocol.Text(request, "placement")) ?? throw new ProtocolException("invalid_placement"));
             var action = TabDismissalPolicy.Decide(placement,
                 Optional(request, "isStartPage")?.GetBoolean() ?? false,
                 request.GetProperty("tabCount").GetInt32());
