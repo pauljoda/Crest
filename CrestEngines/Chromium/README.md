@@ -431,3 +431,32 @@ A packaged experiment refuses startup without an explicit absolute
 `--crest-control-plane`. A product package names its own directory instead.
 This guard runs before Chromium loads its framework or opens any profile. The
 host restores its core-managed Spaces directly, without Chrome's profile picker.
+
+## Releasing
+
+The engine — Chromium with this host's patch and overlay compiled in — cannot
+be built on a hosted runner, so releases download a prebuilt engine.
+`Scripts/control-plane/chromium_engine.py` names it by a key over every engine
+input: the source lock, the host patch and its input hashes, the overlay, the
+host header and the scripts that prepare, configure and build it. After
+changing any of them, apply the host, build, and publish from the build Mac:
+
+```
+python3 Scripts/control-plane/publish-chromium-engine.py \
+  --source <chromium src> --ninja <chromium-tools>/bin/ninja
+```
+
+It refuses to publish unless the checkout holds this branch's patch output and
+overlay and the build has nothing left to do, then uploads the zipped
+`Chromium.app` once as the `chromium-engine-<key>` prerelease. The experimental
+release workflow downloads the engine matching its branch, builds the native
+core and `CrestChromiumUIProduct`, and packages the product with
+`package-chromium-host.py --product --distribution`: every executable, library
+and bundle is signed innermost first with the hardened runtime and a secure
+timestamp, the renderer and GPU helpers keep Chromium's JIT entitlement, and
+the app receives Crest's resolved entitlements — taken from the notarized
+WebKit export built in the same run — over Chromium's device entitlements. The
+Chromium build is the default download on `appcast-experimental.xml`; the
+WebKit build is published beside it as an alternate on
+`appcast-experimental-webkit.xml`, and each follows only its own feed.
+

@@ -63,9 +63,11 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
             BrowserSoftwareUpdateChannel.experimental.allowedSparkleChannels,
             ["experimental"]
         )
+        // This test host is the WebKit composition, which follows the
+        // alternate download's feed; the Chromium product follows the default.
         XCTAssertEqual(
             BrowserSoftwareUpdateChannel.experimental.customFeedURL?.absoluteString,
-            "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental.xml"
+            "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental-webkit.xml"
         )
     }
 

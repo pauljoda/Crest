@@ -65,8 +65,13 @@ enum BrowserSoftwareUpdateChannel: String, Identifiable, Sendable, CaseIterable 
                 string: "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml"
             )
         case .experimental:
+            // Experimental publishes the Chromium build as its default and a
+            // WebKit build as an alternate download. Each follows its own feed,
+            // so an update never changes the engine someone chose.
             URL(
-                string: "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental.xml"
+                string: BrowserEngineRegistration.current.implementationId.hasPrefix("crest.webkit")
+                    ? "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental-webkit.xml"
+                    : "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental.xml"
             )
         }
     }

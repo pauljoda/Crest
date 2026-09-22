@@ -1957,6 +1957,10 @@
     "webkit-pip-residency": {
       "category": "internal",
       "message": "Report WebKit picture-in-picture state to page residency so a page in picture-in-picture is never unloaded."
+    },
+    "experimental-chromium-release": {
+      "category": "internal",
+      "message": "Publish experimental releases with the Chromium build as the default download and a WebKit build as an alternate, each on its own update feed, from a prebuilt engine published per engine revision."
     }
   }
 }

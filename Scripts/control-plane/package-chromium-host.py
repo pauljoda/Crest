@@ -11,6 +11,62 @@ import tempfile
 from datetime import datetime, timezone
 
 
+# Chromium's browser-process device access (chrome/app/app-entitlements.plist);
+# Crest's own entitlements are applied over these.
+ENGINE_APP_ENTITLEMENTS = {
+    "com.apple.security.device.audio-input": True,
+    "com.apple.security.device.bluetooth": True,
+    "com.apple.security.device.camera": True,
+    "com.apple.security.device.print": True,
+    "com.apple.security.device.usb": True,
+    "com.apple.security.personal-information.location": True,
+    "com.apple.security.personal-information.photos-library": True,
+}
+# V8 in these helpers maps executable memory (chrome/app/helper-*-entitlements.plist).
+JIT_HELPER_SUFFIXES = ("Helper (Renderer).app", "Helper (GPU).app")
+BUNDLE_SUFFIXES = {".app", ".framework", ".xpc", ".appex", ".plugin", ".docktileplugin", ".bundle"}
+MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
+
+
+def is_macho(path):
+    with path.open("rb") as stream:
+        return stream.read(4) in MACHO_MAGICS
+
+
+def is_bundle_executable(path):
+    # An app or XPC service's own executable, or a framework's versioned binary,
+    # is signed together with its bundle.
+    if path.parent.name == "MacOS" and path.parent.parent.name == "Contents":
+        return True
+    return path.parent.parent.name == "Versions" and path.parent.parent.parent.name == f"{path.name}.framework"
+
+
+def sign_for_distribution(output, identity, app_entitlements):
+    """Sign every piece of code for notarization, innermost first: loose
+    executables and libraries, then bundles, then the app. Everything gets the
+    hardened runtime and a secure timestamp; the engine's JIT helpers keep the
+    one exception they need."""
+    def codesign(path, entitlements=None):
+        command = ["codesign", "--force", "--timestamp", "--options", "runtime", "--sign", identity]
+        with tempfile.TemporaryDirectory(prefix="crest-distribution-sign-") as temporary:
+            if entitlements:
+                plist = Path(temporary) / "entitlements.plist"
+                plist.write_bytes(plistlib.dumps(entitlements))
+                command += ["--entitlements", str(plist)]
+            subprocess.run(command + [str(path)], check=True)
+
+    depth = lambda path: len(path.parts)
+    code = [path for path in output.rglob("*") if not path.is_symlink()]
+    loose = [path for path in code if path.is_file() and is_macho(path) and not is_bundle_executable(path)]
+    bundles = [path for path in code if path.is_dir() and path.suffix in BUNDLE_SUFFIXES]
+    for path in sorted(loose, key=depth, reverse=True):
+        codesign(path)
+    for path in sorted(bundles, key=depth, reverse=True):
+        jit = path.name.endswith(JIT_HELPER_SUFFIXES)
+        codesign(path, {"com.apple.security.cs.allow-jit": True} if jit else None)
+    codesign(output, app_entitlements)
+
+
 def default_update_channel(repo):
     override = os.environ.get("CREST_DEFAULT_UPDATE_CHANNEL", "").strip()
     if override:
@@ -37,6 +93,8 @@ def main():
     parser.add_argument("--ui", type=Path, help="Built CrestChromiumUI.framework or CrestChromiumUIProduct.framework")
     parser.add_argument("--core", type=Path, help="Published CrestCore.Native.dylib")
     parser.add_argument("--output", required=True, type=Path, help="New absolute .app path outside /Applications")
+    parser.add_argument("--distribution", action="store_true",
+                        help="Sign for notarization: hardened runtime, secure timestamps and the engine's helper entitlements")
     args = parser.parse_args()
     if args.signing_identity.strip() in ("", "-"):
         parser.error("Use a stable signing identity so keychain access survives rebuilds")
@@ -214,7 +272,12 @@ def main():
     targets += sorted((p for p in frameworks.glob("*.framework") if p.name != ui.name), key=lambda p: len(p.parts), reverse=True)
     if cloud_entitlements:
         shutil.copy2(args.provisioning_profile, output / "Contents/embedded.provisionprofile")
-    for target in [*targets, output]:
+    if args.distribution:
+        sign_for_distribution(output, args.signing_identity, {
+            **(ENGINE_APP_ENTITLEMENTS if args.product else {}),
+            **(product_entitlements or {}), **(cloud_entitlements or {})})
+        targets = []
+    for target in [*targets, *([] if args.distribution else [output])]:
         if target == output and (cloud_entitlements or product_entitlements):
             existing = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(output)],
                                       capture_output=True, check=True).stdout
