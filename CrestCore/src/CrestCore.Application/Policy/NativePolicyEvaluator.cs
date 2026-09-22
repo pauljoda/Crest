@@ -37,6 +37,9 @@ public static partial class NativePolicyEvaluator {
         if (EvaluateWorkspace(operation, request) is { } workspace) return Encode(workspace);
         if (EvaluateWindows(operation, request) is { } window) return Encode(window);
         if (EvaluateSetup(operation, request) is { } setup) return Encode(setup);
+        if (EvaluateShortcuts(operation, request) is { } shortcut) return Encode(shortcut);
+        if (EvaluateLaunch(operation, request) is { } launch) return Encode(launch);
+        if (EvaluateMedia(operation, request) is { } media) return Encode(media);
         if (operation is PolicyOperation.NavigationLink or PolicyOperation.NavigationModifiedLink) {
             bool peek, newTab;
             if (operation == PolicyOperation.NavigationModifiedLink) {

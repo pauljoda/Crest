@@ -1,9 +1,13 @@
 import Observation
 
+/// The person's shortcut overrides and the live chords the core resolves from
+/// them. The core owns the catalog, conflicts and the override rules; this
+/// store persists the overrides and keeps the resolved table for dispatch.
 @Observable
 @MainActor
 final class BrowserShortcutStore {
     private var overrides: [String: BrowserShortcutOverride]
+    private var bindings: [BrowserShortcutCommand: BrowserShortcut]
     @ObservationIgnored private let persistence: any BrowserShortcutPersisting
 
     init(
@@ -14,7 +18,9 @@ final class BrowserShortcutStore {
         if reset {
             persistence.remove()
         }
-        overrides = persistence.load() ?? [:]
+        let overrides = persistence.load() ?? [:]
+        self.overrides = overrides
+        bindings = Self.resolve(overrides)
     }
 
     var hasCustomizations: Bool {
@@ -22,23 +28,7 @@ final class BrowserShortcutStore {
     }
 
     func shortcut(for command: BrowserShortcutCommand) -> BrowserShortcut? {
-        switch overrides[command.rawValue] {
-        case .custom(let shortcut): return shortcut
-        case .unassigned: return nil
-        case nil: break
-        }
-        guard let shortcut = command.defaultShortcut else { return nil }
-        #if os(macOS)
-            // The new window defaults must not take a chord a user previously
-            // assigned elsewhere. Preserve that override; resetting it restores
-            // the default without leaving an artificial unassigned record.
-            if command == .newBlankWindow || command == .newQuickWindow,
-                BrowserShortcutCommand.userFacingCases.contains(where: { overrides[$0.rawValue] == .custom(shortcut) })
-            {
-                return nil
-            }
-        #endif
-        return shortcut
+        bindings[command]
     }
 
     func isCustomized(_ command: BrowserShortcutCommand) -> Bool {
@@ -49,7 +39,7 @@ final class BrowserShortcutStore {
         assignedTo shortcut: BrowserShortcut
     ) -> [BrowserShortcutCommand] {
         BrowserShortcutCommand.userFacingCases.filter {
-            self.shortcut(for: $0) == shortcut
+            bindings[$0] == shortcut
         }
     }
 
@@ -58,29 +48,26 @@ final class BrowserShortcutStore {
         to command: BrowserShortcutCommand,
         replacingConflicts: Bool = false
     ) -> BrowserShortcutAssignmentResult {
-        guard shortcut.isValid else { return .invalid }
-        let conflicts = BrowserShortcutConflictPolicy.conflicts(
-            assigning: shortcut,
+        let answer = BrowserCorePolicy.assignShortcut(
+            shortcut,
             to: command,
-            currentAssignments: currentAssignments
+            replacingConflicts: replacingConflicts,
+            overrides: overrides,
+            commands: BrowserShortcutCommand.userFacingCases
         )
-        guard conflicts.isEmpty || replacingConflicts else {
-            return .conflict(commands: conflicts)
-        }
-
-        var revised = overrides
-        for conflict in conflicts {
-            Self.set(nil, for: conflict, in: &revised)
-        }
-        Self.set(shortcut, for: command, in: &revised)
-        save(revised)
-        return .assigned
+        if let revised = answer.overrides { save(revised) }
+        return answer.result
     }
 
     func clearShortcut(for command: BrowserShortcutCommand) {
-        var revised = overrides
-        Self.set(nil, for: command, in: &revised)
-        save(revised)
+        let answer = BrowserCorePolicy.assignShortcut(
+            nil,
+            to: command,
+            replacingConflicts: false,
+            overrides: overrides,
+            commands: BrowserShortcutCommand.userFacingCases
+        )
+        if let revised = answer.overrides { save(revised) }
     }
 
     func reset(_ command: BrowserShortcutCommand) {
@@ -92,35 +79,23 @@ final class BrowserShortcutStore {
     func resetAll() {
         guard !overrides.isEmpty else { return }
         overrides = [:]
+        bindings = Self.resolve([:])
         persistence.remove()
     }
 
-    private var currentAssignments: [BrowserShortcutCommand: BrowserShortcut] {
-        Dictionary(
-            uniqueKeysWithValues:
-                BrowserShortcutCommand.userFacingCases.compactMap { command in
-                    shortcut(for: command).map { (command, $0) }
-                }
-        )
-    }
-
-    private static func set(
-        _ shortcut: BrowserShortcut?,
-        for command: BrowserShortcutCommand,
-        in overrides: inout [String: BrowserShortcutOverride]
-    ) {
-        if shortcut == command.defaultShortcut {
-            overrides.removeValue(forKey: command.rawValue)
-            return
-        }
-        overrides[command.rawValue] =
-            shortcut.map(BrowserShortcutOverride.custom)
-            ?? .unassigned
+    private static func resolve(
+        _ overrides: [String: BrowserShortcutOverride]
+    ) -> [BrowserShortcutCommand: BrowserShortcut] {
+        BrowserCorePolicy.shortcutBindings(
+            overrides: overrides,
+            commands: BrowserShortcutCommand.userFacingCases
+        )?.shortcuts ?? [:]
     }
 
     private func save(_ revised: [String: BrowserShortcutOverride]) {
         guard revised != overrides else { return }
         overrides = revised
+        bindings = Self.resolve(revised)
         guard !revised.isEmpty else {
             persistence.remove()
             return

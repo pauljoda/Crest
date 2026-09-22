@@ -155,7 +155,7 @@ final class BrowserPagePool:
         monitorsMemoryPressure: Bool = false,
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
-            BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(.current),
+            BrowserLaunchEnvironment.current.usesEphemeralProfileStorage,
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         hostedNotificationCenter:

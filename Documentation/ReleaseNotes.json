@@ -2021,6 +2021,10 @@
     "core-window-state": {
       "category": "internal",
       "message": "Move window selection repair, split layout capture, tear-off eligibility, manual setup plans, onboarding completion and workspace import review into the portable core."
+    },
+    "core-shortcuts-launch-media": {
+      "category": "internal",
+      "message": "Move keyboard shortcut defaults and conflicts, numbered tab and Space selection, launch isolation and startup behavior, tab insertion and media session arbitration into the portable core."
     }
   }
 }

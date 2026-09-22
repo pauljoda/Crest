@@ -3,7 +3,7 @@ import WebKit
 @MainActor
 final class BrowserContentRuleListProvider: BrowserContentRuleListProviding {
     static let shared: BrowserContentRuleListProvider =
-        BrowserLaunchIsolationPolicy.requiresIsolation(.current)
+        BrowserLaunchEnvironment.current.requiresIsolation
         ? BrowserContentRuleListProvider(ruleListStore: nil)
         : BrowserContentRuleListProvider()
 

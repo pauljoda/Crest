@@ -42,22 +42,16 @@ final class BrowserMacApplication {
         #endif
         let launchEnvironment = BrowserLaunchEnvironment.current
         let shouldReset = launchEnvironment.resetsSession
-        let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
-            launchEnvironment
-        )
+        let usesIsolatedLaunch = launchEnvironment.requiresIsolation
         let usesEphemeralProfileStorage =
-            BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(
-                launchEnvironment
-            )
+            launchEnvironment.usesEphemeralProfileStorage
         BrowserMacWebTextAssistancePolicy.configure()
         BrowserWebKitFeatureFlagStore.configureForLaunch(
             usesIsolatedLaunch: usesIsolatedLaunch
         )
         let utilityDefaults: UserDefaults? = usesIsolatedLaunch ? nil : .standard
         presentsInstalledApplicationUI =
-            BrowserLaunchIsolationPolicy.presentsInstalledApplicationUI(
-                launchEnvironment
-            )
+            launchEnvironment.presentsInstalledApplicationUI
         // Import review and manual setup belong to the currently open wizard.
         // Retire drafts written by earlier releases before any new window opens.
         if !usesIsolatedLaunch {
@@ -97,7 +91,7 @@ final class BrowserMacApplication {
         let sidebarDefaults: UserDefaults?
         if usesIsolatedLaunch, let isolationID = launchEnvironment.persistentIsolationID {
             sidebarDefaults = UserDefaults(
-                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: isolationID))
+                suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: isolationID))
         } else {
             sidebarDefaults = utilityDefaults
         }
@@ -275,8 +269,8 @@ final class BrowserMacApplication {
             forceSetup: launchEnvironment.forcesMacOnboardingSetup,
             persistentIsolationID: launchEnvironment.persistentIsolationID
         )
-        let startupBehavior = BrowserMacOnboardingPolicy.startupBehavior(
-            preferred: usesIsolatedLaunch ? .lastActiveTab : BrowserStartupPreference.behavior(),
+        let startupBehavior = BrowserCorePolicy.startupBehavior(
+            for: launchEnvironment,
             hasActiveLaunchGate: onboardingProgress.isLaunchGateActive
         )
         let mainWindowState = BrowserWindowStateStore(

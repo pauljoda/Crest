@@ -1,0 +1,63 @@
+using System.Text;
+
+namespace CrestCore.Domain;
+
+/// One key chord: a typed character or a named special key, and a modifier
+/// mask. The mask keeps every bit the platform stored so equality matches the
+/// native value exactly; only the four supported bits make a chord usable.
+public sealed record ShortcutChord {
+    #region Variables
+
+    public const int Command = 1 << 0;
+    public const int Option = 1 << 1;
+    public const int Control = 1 << 2;
+    public const int Shift = 1 << 3;
+    public const int SupportedModifiers = Command | Option | Control | Shift;
+    public const int MaximumCharacterLength = 64;
+
+    public static readonly IReadOnlySet<string> SpecialKeys = new HashSet<string>(StringComparer.Ordinal) {
+        "tab", "leftArrow", "rightArrow", "upArrow", "downArrow", "escape", "returnKey", "delete",
+        "forwardDelete", "home", "end", "pageUp", "pageDown", "space",
+        "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10",
+        "f11", "f12", "f13", "f14", "f15", "f16", "f17", "f18", "f19", "f20"
+    };
+
+    public string Key { get; }
+    public bool IsSpecial { get; }
+    public int Modifiers { get; }
+
+    /// A chord needs at least one supported modifier, so a plain key keeps
+    /// reaching the focused text field.
+    public bool IsValid => (Modifiers & SupportedModifiers) != 0;
+
+    #endregion
+
+    #region Initialization
+
+    private ShortcutChord(string key, bool isSpecial, int modifiers) {
+        Key = key;
+        IsSpecial = isSpecial;
+        Modifiers = modifiers;
+    }
+
+    #endregion
+
+    #region Actions - Construction
+
+    /// A typed character, compared in canonical composition so the two
+    /// spellings of an accented key are one chord.
+    public static ShortcutChord Character(string character, int modifiers) {
+        ArgumentNullException.ThrowIfNull(character);
+        if (character.Length == 0 || character.Length > MaximumCharacterLength)
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
+        return new(character.Normalize(NormalizationForm.FormC), false, modifiers);
+    }
+
+    public static ShortcutChord Special(string key, int modifiers) {
+        ArgumentNullException.ThrowIfNull(key);
+        if (!SpecialKeys.Contains(key)) throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
+        return new(key, true, modifiers);
+    }
+
+    #endregion
+}

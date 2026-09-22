@@ -9,9 +9,9 @@ enum BrowserTranslationPreference {
 
     static let defaults: UserDefaults = {
         let environment = BrowserLaunchEnvironment.current
-        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else { return .standard }
+        guard environment.requiresIsolation else { return .standard }
         let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
-        return UserDefaults(suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id))!
+        return UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id))!
     }()
 
     nonisolated static func languageAvailability() -> LanguageAvailability {

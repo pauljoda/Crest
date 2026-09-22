@@ -10,42 +10,6 @@ protocol BrowserSystemNowPlayingDriving: AnyObject {
     func publish(_ session: BrowserMediaSessionSnapshot?)
 }
 
-/// Chooses the one browser session macOS can represent for Crest at a time.
-/// Multiple page sessions remain authoritative in the shared store and sidebar;
-/// this policy is only the deterministic projection into the app-level system UI.
-enum BrowserSystemNowPlayingSelectionPolicy {
-    static func select(
-        from sessions: [BrowserMediaSessionSnapshot]
-    ) -> BrowserMediaSessionSnapshot? {
-        sessions
-            .filter { $0.playbackState != .none }
-            .max { lhs, rhs in
-                let lhsPriority = playbackPriority(lhs.playbackState)
-                let rhsPriority = playbackPriority(rhs.playbackState)
-                if lhsPriority != rhsPriority {
-                    return lhsPriority < rhsPriority
-                }
-                if lhs.isAudible != rhs.isAudible {
-                    return !lhs.isAudible && rhs.isAudible
-                }
-                if lhs.orderingOrdinal != rhs.orderingOrdinal {
-                    return lhs.orderingOrdinal < rhs.orderingOrdinal
-                }
-                return lhs.id.id < rhs.id.id
-            }
-    }
-
-    private static func playbackPriority(
-        _ state: BrowserMediaSessionPlaybackState
-    ) -> Int {
-        switch state {
-        case .playing: 2
-        case .paused: 1
-        case .none: 0
-        }
-    }
-}
-
 /// Projects the shared page-session lifecycle into macOS Now Playing without
 /// creating a second media-session store. Its single task is explicitly owned,
 /// deduplicated, cancellable, and backed by the store's newest-only event stream.
@@ -87,10 +51,21 @@ final class BrowserSystemNowPlayingCoordinator {
         driver.publish(nil)
     }
 
+    /// macOS represents one browser session at a time; which one is the core's
+    /// `media.arbitrate` rule. Multiple page sessions stay authoritative in the
+    /// shared store and sidebar. Without an answer the current owner keeps Now
+    /// Playing while it is still playing or paused, and nothing takes over.
     private func publishSelection(
         from sessions: [BrowserMediaSessionSnapshot]
     ) {
-        let next = BrowserSystemNowPlayingSelectionPolicy.select(from: sessions)
+        let next: BrowserMediaSessionSnapshot?
+        if let arbitration = BrowserCorePolicy.mediaSessionArbitration(sessions) {
+            next = arbitration.nowPlaying
+        } else {
+            next = selectedSession.flatMap { selected in
+                sessions.first { $0.id == selected.id && $0.playbackState != .none }
+            }
+        }
         guard next != selectedSession else { return }
         selectedSession = next
         driver.publish(next)

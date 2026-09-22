@@ -56,14 +56,10 @@ private final class BrowserMobileApplication {
         let launchEnvironment = BrowserLaunchEnvironment.current
         let forceOnboarding = launchEnvironment.forcesOnboardingWelcome
         let shouldReset = launchEnvironment.resetsSession
-        let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
-            launchEnvironment
-        )
+        let usesIsolatedLaunch = launchEnvironment.requiresIsolation
         BrowserAutomaticQuoteSubstitutionPreference.registerDefault()
         presentsInstalledApplicationUI =
-            BrowserLaunchIsolationPolicy.presentsInstalledApplicationUI(
-                launchEnvironment
-            )
+            launchEnvironment.presentsInstalledApplicationUI
         if shouldReset && !usesIsolatedLaunch {
             BrowserLinkPreferenceStore.shared.reset()
         }
@@ -171,7 +167,7 @@ private final class BrowserMobileApplication {
         if usesIsolatedLaunch {
             if let isolationID = launchEnvironment.persistentIsolationID,
                 let defaults = UserDefaults(
-                    suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                    suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(
                         isolationID: isolationID
                     )
                 )
@@ -189,12 +185,7 @@ private final class BrowserMobileApplication {
                 forceOnboarding: forceOnboarding,
                 usesIsolatedLaunch: usesIsolatedLaunch
             )
-        startupBehavior =
-            launchEnvironment.presentsShowcaseSession
-            ? .showStartPage
-            : usesIsolatedLaunch
-                ? .lastActiveTab
-                : BrowserStartupPreference.behavior()
+        startupBehavior = BrowserCorePolicy.startupBehavior(for: launchEnvironment)
         monitorsMemoryPressure = !usesIsolatedLaunch
         usesEphemeralWebsiteDataStores = usesIsolatedLaunch
     }

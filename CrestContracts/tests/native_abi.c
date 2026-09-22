@@ -121,6 +121,31 @@ static void policy_boundary(void) {
     assert(crest_core_evaluate_policy((const uint8_t*)setup, strlen(setup), output, 256, &length) == CREST_OK);
     output[length] = 0;
     assert(strstr((const char*)output, "\"error\":\"pinned_limit_reached\""));
+    /* Shortcut conflicts, launch isolation and media arbitration are core rules. */
+    char answer[2048];
+    const char *conflict = "{\"version\":1,\"operation\":\"shortcuts.assign\",\"platform\":\"desktop\","
+        "\"commands\":[\"newTab\",\"findInPage\"],\"overrides\":{},\"command\":\"newTab\","
+        "\"shortcut\":{\"key\":{\"character\":\"f\"},\"modifiers\":1},\"replacingConflicts\":false}";
+    assert(crest_core_evaluate_policy((const uint8_t*)conflict, strlen(conflict), (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
+    answer[length] = 0;
+    assert(strstr(answer, "\"result\":\"conflict\"") && strstr(answer, "\"conflicts\":[\"findInPage\"]"));
+    const char *launch = "{\"version\":1,\"operation\":\"launch.plan\",\"platform\":\"mobile\",\"environment\":{"
+        "\"testRuntime\":false,\"previewRuntime\":false,\"isolatedSession\":false,\"namedProfile\":false,"
+        "\"isolatedCloudSync\":false,\"resetSession\":true,\"showcase\":false,\"inMemoryCredentials\":false,"
+        "\"onboardingWelcome\":false,\"desktopSetup\":false,\"mobileSetup\":false,\"performanceHarness\":false,"
+        "\"updateTestFeed\":false},\"storedStartupBehavior\":\"showStartPage\",\"hasActiveLaunchGate\":false}";
+    assert(crest_core_evaluate_policy((const uint8_t*)launch, strlen(launch), (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
+    answer[length] = 0;
+    assert(strstr(answer, "\"requiresIsolation\":true") && strstr(answer, "\"startupBehavior\":\"lastActiveTab\""));
+    const char *media = "{\"version\":1,\"operation\":\"media.arbitrate\",\"sessions\":["
+        "{\"id\":\"tab:b\",\"ordinal\":2,\"playbackState\":\"playing\",\"audible\":true},"
+        "{\"id\":\"tab:a\",\"ordinal\":1,\"playbackState\":\"paused\",\"audible\":true}]}";
+    assert(crest_core_evaluate_policy((const uint8_t*)media, strlen(media), (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
+    answer[length] = 0;
+    assert(strstr(answer, "\"order\":[1,0]") && strstr(answer, "\"nowPlaying\":0"));
+    const char *metadata = "{\"version\":1,\"operation\":\"media.arbitrate\",\"sessions\":["
+        "{\"id\":\"tab:a\",\"ordinal\":1,\"playbackState\":\"paused\",\"audible\":true,\"title\":\"Song\"}]}";
+    assert(crest_core_evaluate_policy((const uint8_t*)metadata, strlen(metadata), (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_INVALID_MESSAGE);
 }
 static const char* space_id = "44444444-4444-4444-4444-444444444444";
 static const char* profile_id = "55555555-5555-5555-5555-555555555555";

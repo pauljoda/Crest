@@ -9,11 +9,11 @@ final class BrowserDurableTabPreferenceStore {
 
     static let shared: BrowserDurableTabPreferenceStore = {
         let environment = BrowserLaunchEnvironment.current
-        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else {
+        guard environment.requiresIsolation else {
             return BrowserDurableTabPreferenceStore(defaults: .standard)
         }
         let defaults = environment.persistentIsolationID.flatMap {
-            UserDefaults(suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: $0))
+            UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: $0))
         }
         return BrowserDurableTabPreferenceStore(defaults: defaults)
     }()

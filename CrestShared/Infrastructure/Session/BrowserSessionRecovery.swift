@@ -83,7 +83,7 @@ enum BrowserSessionRecovery {
         let marker = cloudMarker(for: storeURL)
         guard FileManager.default.fileExists(atPath: marker.path) else { return }
         let persistence: any BrowserCloudSyncStatePersisting
-        if BrowserLaunchIsolationPolicy.requiresIsolation(environment) {
+        if environment.requiresIsolation {
             guard let configuration = BrowserCloudSyncConfiguration.configured()?.isolated(for: environment),
                 let id = environment.persistentIsolationID,
                 let isolated = FileBrowserCloudSyncStatePersistence.isolated(localProfileID: id, configuration: configuration)

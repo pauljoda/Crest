@@ -61,9 +61,9 @@ enum BrowserChromeAppearancePreference {
 
     static func defaults(for environment: BrowserLaunchEnvironment) -> UserDefaults {
         let defaults: UserDefaults
-        if BrowserLaunchIsolationPolicy.requiresIsolation(environment) {
+        if environment.requiresIsolation {
             let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
-            defaults = UserDefaults(suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id))!
+            defaults = UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id))!
         } else {
             defaults = .standard
         }

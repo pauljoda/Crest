@@ -28,13 +28,15 @@ extension BrowserStore {
     @discardableResult
     func openSessionTab(title: String, url: URL?, nativeContent: BrowserNativeTabContent? = nil,
         symbol: String = "globe", in spaceID: SpaceID, placement: TabPlacement = .current, requestedIndex: Int? = nil,
-        shouldSelect: Bool = true, at date: Date = .now) -> TabID? {
+        insertingAfter origin: TabID? = nil, shouldSelect: Bool = true, at date: Date = .now) -> TabID? {
         let tab = BrowserTab(title: title, url: url, nativeContent: nativeContent, symbol: symbol,
             placement: placement, lastActivatedAt: date)
-        guard let value = BrowserCoreSessionEditing.tabValue(tab),
-            let id = family.execute("tab.open", in: spaceID, arguments: [
-                "tab": value, "index": requestedIndex as Any? ?? NSNull(), "select": shouldSelect
-            ], from: self, at: date)?.tabId else { return nil }
+        guard let value = BrowserCoreSessionEditing.tabValue(tab) else { return nil }
+        var arguments: [String: Any] = ["tab": value, "index": requestedIndex as Any? ?? NSNull(), "select": shouldSelect]
+        // The core places a tab opened from `origin` after it and outside its split.
+        if let origin { arguments["after"] = origin.rawValue.uuidString }
+        guard let id = family.execute("tab.open", in: spaceID, arguments: arguments, from: self, at: date)?.tabId
+        else { return nil }
         return TabID(rawValue: id)
     }
 

@@ -3,7 +3,7 @@ import Foundation
 extension BrowserLinkPreferenceStore {
     static let shared: BrowserLinkPreferenceStore = {
         let persistence: any BrowserLinkPreferencesPersisting =
-            BrowserLaunchIsolationPolicy.requiresIsolation(.current)
+            BrowserLaunchEnvironment.current.requiresIsolation
             ? InMemoryBrowserLinkPreferencesPersistence()
             : UserDefaultsBrowserLinkPreferencesPersistence()
         return BrowserLinkPreferenceStore(persistence: persistence)

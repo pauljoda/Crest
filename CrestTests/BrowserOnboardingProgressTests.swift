@@ -38,7 +38,7 @@ final class BrowserOnboardingProgressTests: XCTestCase {
     @MainActor
     func testNamedIsolatedInstallKeepsCompletionAcrossLaunches() throws {
         let id = "onboarding-test-\(UUID().uuidString)"
-        let suite = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id)
+        let suite = BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id)
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let first = BrowserOnboardingProgressStore.launchStore(

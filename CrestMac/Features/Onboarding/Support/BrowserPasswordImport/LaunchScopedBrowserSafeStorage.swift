@@ -7,7 +7,7 @@ struct LaunchScopedBrowserSafeStorage: BrowserSafeStorageSecretProviding {
             SecurityBrowserSafeStorage()
         }
     ) {
-        if BrowserLaunchIsolationPolicy.requiresIsolation(launchEnvironment) {
+        if launchEnvironment.requiresIsolation {
             safeStorage = nil
         } else {
             safeStorage = systemStorage()

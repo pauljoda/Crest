@@ -51,7 +51,7 @@ enum BrowserDeferredWebsiteDataStoreCleanup {
     }
 
     private static var allowsPersistentMaintenance: Bool {
-        !BrowserLaunchIsolationPolicy.requiresIsolation(.current)
+        !BrowserLaunchEnvironment.current.requiresIsolation
     }
 
     private static func persist(_ identifiers: Set<UUID>) {

@@ -77,7 +77,7 @@ enum BrowserImportAccessStore {
         _ explicitDefaults: UserDefaults?
     ) -> UserDefaults? {
         if let explicitDefaults { return explicitDefaults }
-        guard !BrowserLaunchIsolationPolicy.requiresIsolation(.current) else {
+        guard !BrowserLaunchEnvironment.current.requiresIsolation else {
             return nil
         }
         return .standard

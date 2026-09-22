@@ -14,7 +14,7 @@ extension BrowserOnboardingProgressStore {
             persistence = UserDefaultsBrowserOnboardingProgressPersistence(
                 defaults: defaults
             )
-        } else if BrowserLaunchIsolationPolicy.requiresIsolation(.current) {
+        } else if BrowserLaunchEnvironment.current.requiresIsolation {
             persistence = InMemoryBrowserOnboardingProgressPersistence()
         } else {
             persistence = UserDefaultsBrowserOnboardingProgressPersistence()
@@ -35,7 +35,7 @@ extension BrowserOnboardingProgressStore {
         let persistence: any BrowserOnboardingProgressPersisting
         if isIsolated, let persistentIsolationID,
             let defaults = UserDefaults(
-                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(
                     isolationID: persistentIsolationID))
         {
             persistence = UserDefaultsBrowserOnboardingProgressPersistence(defaults: defaults)

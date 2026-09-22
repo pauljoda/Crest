@@ -67,6 +67,13 @@ public sealed partial class BrowserTabCollection {
         return true;
     }
 
+    /// Where a tab opened from `origin` goes: directly after it, or after its
+    /// whole split when it is in one, so a new tab never lands inside a split.
+    /// Null when `origin` is not in this Space, which leaves placement to the
+    /// tab's section.
+    public int? InsertionIndexAfter(Guid origin) =>
+        tabs.Any(t => t.Id == origin) ? tabs.IndexOf(SplitMembers(origin)[^1]) + 1 : null;
+
     public void InsertTab(BrowserTab tab, int? requestedIndex, bool duplicate = false) {
         if (tab.Placement == TabPlacement.Pinned && tabs.Count(t => t.Placement == TabPlacement.Pinned) >= 12)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);

@@ -8,9 +8,7 @@ enum BrowserWebsiteDataStore {
         environment: BrowserLaunchEnvironment = .current
     ) -> WKWebsiteDataStore {
         guard
-            !BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(
-                environment
-            )
+            !environment.usesEphemeralProfileStorage
         else {
             return .nonPersistent()
         }

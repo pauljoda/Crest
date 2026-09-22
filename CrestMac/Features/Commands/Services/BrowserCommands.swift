@@ -241,12 +241,14 @@ struct BrowserCommands: Commands {
             .disabled(!actions.isSelectedTabInSplit)
 
             Divider()
+            let tabSelections = actions.numberedSelections
             ForEach(1...9, id: \.self) { number in
+                let command = BrowserShortcutCommand.tabSelection(number)
                 Button("Select Tab \(number)", systemImage: "\(number).square") {
-                    actions.selectTab(at: number - 1)
+                    command.map(actions.perform)
                 }
                 .keyboardShortcut(tabSelectionShortcut(number))
-                .disabled(number > actions.orderedTabs.count)
+                .disabled(command.flatMap { tabSelections[$0] } == nil)
             }
         }
 
@@ -264,12 +266,14 @@ struct BrowserCommands: Commands {
             )
             .keyboardShortcut(shortcut(.nextSpace))
             Divider()
+            let spaceSelections = actions.numberedSelections
             ForEach(1...9, id: \.self) { number in
+                let command = BrowserShortcutCommand.spaceSelection(number)
                 Button("Select Space \(number)", systemImage: "\(number).square") {
-                    actions.selectSpace(at: number - 1)
+                    command.map(actions.perform)
                 }
                 .keyboardShortcut(spaceSelectionShortcut(number))
-                .disabled(number > commandBrowser.session.spaces.count)
+                .disabled(command.flatMap { spaceSelections[$0] } == nil)
             }
         }
 

@@ -48,10 +48,7 @@ extension BrowserStore {
                 url: nil,
                 symbol: BrowserTab.startPageSymbol,
                 in: space.id,
-                requestedIndex: BrowserTabInsertionPolicy.requestedIndex(
-                    after: space.selectedTabID,
-                    in: space
-                )
+                insertingAfter: space.selectedTabID
             )
         else { return nil }
         return (tabID, true)
@@ -64,10 +61,7 @@ extension BrowserStore {
             title: url.host() ?? url.absoluteString,
             url: url,
             in: space.id,
-            requestedIndex: BrowserTabInsertionPolicy.requestedIndex(
-                after: space.selectedTabID,
-                in: space
-            )
+            insertingAfter: space.selectedTabID
         )
         persist(scope: .core)
         return tabID
@@ -87,15 +81,11 @@ extension BrowserStore {
         guard !deletingSpaceIDs.contains(spaceID),
             let space = session.space(id: spaceID)
         else { return nil }
-        let requestedIndex = BrowserTabInsertionPolicy.requestedIndex(
-            after: space.selectedTabID,
-            in: space
-        )
         let tabID = openSessionTab(
             title: url.host() ?? url.absoluteString,
             url: url,
             in: spaceID,
-            requestedIndex: requestedIndex,
+            insertingAfter: space.selectedTabID,
             shouldSelect: selecting
         )
         persist(scope: .core)
@@ -127,16 +117,12 @@ extension BrowserStore {
             let space = session.space(id: spaceID),
             let destinationURL = url.flatMap({ $0.absoluteString.isEmpty ? nil : $0 }) ?? URL(string: "about:blank")
         else { return nil }
-        let requestedIndex = BrowserTabInsertionPolicy.requestedIndex(
-            after: space.selectedTabID,
-            in: space
-        )
         guard
             let tabID = openSessionTab(
                 title: destinationURL.host() ?? destinationURL.absoluteString,
                 url: destinationURL,
                 in: spaceID,
-                requestedIndex: requestedIndex,
+                insertingAfter: space.selectedTabID,
                 shouldSelect: selecting
             ),
             let updatedSpace = session.space(id: spaceID),

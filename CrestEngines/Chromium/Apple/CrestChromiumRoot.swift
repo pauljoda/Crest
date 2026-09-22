@@ -365,9 +365,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     /// window list beside the rest of its state.
     private static func restorationDefaults() -> UserDefaults? {
         let environment = BrowserLaunchEnvironment.current
-        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else { return .standard }
+        guard environment.requiresIsolation else { return .standard }
         guard let isolationID = environment.persistentIsolationID else { return nil }
-        return UserDefaults(suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: isolationID))
+        return UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: isolationID))
     }
 
     private static func storedRestorableWindowIDs(in defaults: UserDefaults?) -> [BrowserWindowID] {

@@ -32,14 +32,6 @@ enum BrowserImportReviewNavigation {
 }
 
 enum BrowserMacOnboardingPolicy {
-    static func startupBehavior(
-        preferred: BrowserStartupBehavior,
-        hasActiveLaunchGate: Bool
-    ) -> BrowserStartupBehavior {
-        // Setup owns the initial destination; normal launches use the saved preference.
-        hasActiveLaunchGate ? .lastActiveTab : preferred
-    }
-
     static func nextFirstRunStep(
         after step: BrowserOnboardingStep
     ) -> BrowserOnboardingStep? {

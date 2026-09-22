@@ -21,6 +21,8 @@ public static class ProtocolErrorCodes {
     public const string InvalidPeekModifier = "invalid_peek_modifier";
     public const string InvalidPermissionDecision = "invalid_permission_decision";
     public const string InvalidPlacement = "invalid_placement";
+    public const string InvalidPlatform = "invalid_platform";
+    public const string InvalidPlaybackState = "invalid_playback_state";
     public const string InvalidPressureLevel = "invalid_pressure_level";
     public const string InvalidPressurePlatform = "invalid_pressure_platform";
     public const string InvalidRiskReason = "invalid_risk_reason";

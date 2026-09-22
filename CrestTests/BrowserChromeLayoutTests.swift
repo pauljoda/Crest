@@ -429,7 +429,7 @@ extension BrowserChromeLayoutTests {
         let defaults = BrowserChromeAppearancePreference.defaults(for: environment)
         defer {
             defaults.removePersistentDomain(
-                forName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id))
+                forName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id))
         }
         XCTAssertFalse(defaults.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey))
         XCTAssertFalse(defaults.bool(forKey: BrowserChromeAppearancePreference.borderlessKey))

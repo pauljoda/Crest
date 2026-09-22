@@ -42,7 +42,7 @@ final class BrowserTabStateArchive: BrowserTabStateArchiving, @unchecked Sendabl
     }
 
     static func forLaunch(_ environment: BrowserLaunchEnvironment) -> BrowserTabStateArchive? {
-        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else { return production() }
+        guard environment.requiresIsolation else { return production() }
         guard !environment.isXCTestRuntime, !environment.isSwiftUIPreviewRuntime,
             let identity = environment.persistentIsolationID,
             let base = production()?.rootDirectory else { return nil }

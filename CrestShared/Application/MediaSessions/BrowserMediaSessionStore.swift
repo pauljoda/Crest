@@ -131,6 +131,7 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
     }
 
     let kindID = BrowserSidebarWidgetKindID.nowPlaying
+    /// Published sessions in the core's display order.
     private(set) var sessions: [BrowserMediaSessionSnapshot] = []
     var retainedEventIdentityCount: Int { lastSequenceByID.count }
 
@@ -150,16 +151,11 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
     @ObservationIgnored private var dismissedIDs: Set<BrowserMediaSessionID> = []
     @ObservationIgnored private var publishedInstances: [BrowserSidebarWidgetInstance] = []
 
-    /// A dismissal survives every update except a fresh start of playback, so
-    /// hiding a card mid-song sticks, while pressing play on the page — or the tab
-    /// starting new audio — brings it back.
-    static func clearsDismissal(
-        previous: BrowserMediaSessionPlaybackState?,
-        next: BrowserMediaSessionPlaybackState
-    ) -> Bool {
-        previous != .playing && next == .playing
-    }
-
+    /// Applies one page report. Which reports count, what they do to the
+    /// session, the ordinal it is shown by, the remembered-identity window and
+    /// when a hidden card returns are the core's `media.session_event` rule;
+    /// the store keeps endpoints, owners, metadata and artwork. A report the
+    /// core does not accept, or cannot answer for, changes nothing.
     func receive(
         _ event: BrowserMediaSessionPageEvent,
         owner: BrowserTabRuntimeAssignment,
@@ -170,44 +166,43 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
             tabID: owner.tabID,
             documentIdentifier: event.documentIdentifier
         )
-        guard !retiredIDs.contains(id) else { return }
-        guard event.sequence > (lastSequenceByID[id] ?? 0) else { return }
-        recordSequence(event.sequence, for: id)
+        guard let decision = BrowserCorePolicy.mediaSessionEvent(
+            event,
+            isRetired: retiredIDs.contains(id),
+            lastSequence: lastSequenceByID[id],
+            ordinal: ordinalByID[id],
+            isDismissed: dismissedIDs.contains(id),
+            previousPlayback: snapshotsByID[id]?.playbackState,
+            retainedIdentities: lastSequenceByID.count,
+            nextOrdinal: nextOrdinal
+        ) else { return }
+        recordSequence(event.sequence, for: id, evictingOldest: decision.evictOldest)
         endpointsByID[id] = WeakEndpoint(endpoint)
         ownersByID[id] = owner
-        if event.isInvalidated {
+        switch decision.disposition {
+        case .retire:
             retire(id)
             publishIfChanged()
             return
-        }
-        if !event.hasActiveSession {
+        case .clear:
             snapshotsByID[id] = nil
             publishIfChanged()
             return
+        case .publish:
+            break
         }
 
-        // One document-level Media Session belongs to one tab. If a late event
-        // from an older document arrives after navigation, it cannot coexist
-        // with the current document under that tab identity.
-        let superseded = ownersByID.keys.filter {
-            $0.tabID == owner.tabID && $0 != id
+        if decision.supersedesTabSiblings {
+            let superseded = ownersByID.keys.filter {
+                $0.tabID == owner.tabID && $0 != id
+            }
+            for supersededID in superseded { retire(supersededID) }
         }
-        for supersededID in superseded { retire(supersededID) }
 
-        let ordinal: UInt64
-        if let existing = ordinalByID[id] {
-            ordinal = existing
-        } else {
-            ordinal = nextOrdinal
-            nextOrdinal &+= 1
-            ordinalByID[id] = ordinal
-        }
-        if dismissedIDs.contains(id),
-            Self.clearsDismissal(
-                previous: snapshotsByID[id]?.playbackState,
-                next: event.playbackState
-            )
-        {
+        guard let ordinal = decision.ordinal else { return }
+        ordinalByID[id] = ordinal
+        nextOrdinal = decision.nextOrdinal
+        if decision.clearsDismissal {
             dismissedIDs.remove(id)
         }
         snapshotsByID[id] = BrowserMediaSessionSnapshot(
@@ -394,11 +389,12 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
 
     private func recordSequence(
         _ sequence: UInt64,
-        for id: BrowserMediaSessionID
+        for id: BrowserMediaSessionID,
+        evictingOldest requested: Int
     ) {
         if lastSequenceByID[id] == nil { sequenceOrder.append(id) }
         lastSequenceByID[id] = sequence
-        let overflow = sequenceOrder.count - 512
+        let overflow = min(requested, max(sequenceOrder.count - 1, 0))
         guard overflow > 0 else { return }
         for expiredID in sequenceOrder.prefix(overflow) {
             lastSequenceByID[expiredID] = nil
@@ -416,13 +412,19 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
     /// `sessions` stays the truth of what Crest observes; the widget stream is
     /// what a dismissal withholds. They are therefore published against separate
     /// guards, so hiding a card still reaches subscribers.
+    ///
+    /// The order is the core's `media.arbitrate` rule. Without an answer the
+    /// published order stands: surviving sessions keep their places and new
+    /// ones follow in the order they arrived.
     private func publishIfChanged() {
-        let next = snapshotsByID.values.sorted { lhs, rhs in
-            if lhs.orderingOrdinal != rhs.orderingOrdinal {
-                return lhs.orderingOrdinal < rhs.orderingOrdinal
-            }
-            return lhs.id.id < rhs.id.id
-        }
+        let current = Array(snapshotsByID.values)
+        let next = BrowserCorePolicy.mediaSessionArbitration(current)?.order ?? {
+            let placed = sessions.compactMap { snapshotsByID[$0.id] }
+            let placedIDs = Set(placed.map(\.id))
+            let arrivals = current.filter { !placedIDs.contains($0.id) }
+                .sorted { $0.orderingOrdinal < $1.orderingOrdinal }
+            return placed + arrivals
+        }()
         if next != sessions {
             sessions = next
             for continuation in sessionSubscribers.values {

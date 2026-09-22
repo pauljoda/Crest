@@ -26,6 +26,8 @@ internal sealed record SessionEditArguments {
     public Guid? ParentId { get; init; }
     public Guid? BeforeFolderId { get; init; }
     public Guid? Before { get; init; }
+    /// The tab a new tab opens after; the core keeps it outside that tab's split.
+    public Guid? After { get; init; }
     public Guid? GroupId { get; init; }
     public TabPlacement? Placement { get; init; }
     public SavedLocationAction? Action { get; init; }
@@ -88,6 +90,7 @@ internal sealed record SessionEditArguments {
             ParentId = Id("parentId"),
             BeforeFolderId = Id("beforeFolderId"),
             Before = Id("before"),
+            After = Id("after"),
             GroupId = Id("groupId"),
             Placement = Text("placement") is { } placement ? Enum.Parse<TabPlacement>(placement, true) : null,
             Action = Text("action") is { } action ? SavedLocationActionCodes.Parse(action) : null,
@@ -115,7 +118,7 @@ internal sealed record SessionEditArguments {
         SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient or SessionOperation.TabRestoreArchive => ["tab"],
         SessionOperation.TabCloseDurable => ["tabId", "fallbackTabId", "returnToSavedURL"],
         SessionOperation.TabCleanup => ["lifetime"],
-        SessionOperation.TabOpen => ["tab", "index", "select"],
+        SessionOperation.TabOpen => ["tab", "index", "after", "select"],
         SessionOperation.TabActivate => ["tabId"],
         SessionOperation.TabCopy => ["tabId", "ids", "placement", "index", "select", "copyObservations"],
         SessionOperation.TabRename => ["tabId", "title"],
@@ -163,7 +166,7 @@ internal sealed record SessionEditArguments {
         if (FolderSymbolValue is not null) value["value"] = FolderSymbolValue;
         PutId("tabId", TabId); PutId("targetId", TargetId); PutId("fallbackTabId", FallbackTabId);
         PutId("folderId", FolderId); PutId("parentId", ParentId); PutId("beforeFolderId", BeforeFolderId);
-        PutId("before", Before); PutId("groupId", GroupId);
+        PutId("before", Before); PutId("after", After); PutId("groupId", GroupId);
         if (Placement is { } placement) value["placement"] = TabPlacementCodes.Name(placement);
         if (Action is { } action) value["action"] = SavedLocationActionCodes.Name(action);
         if (Index is { } index) value["index"] = index;

@@ -9,7 +9,7 @@ extension BrowserStore {
         // accidentally calls `production` for a fixture or preview launch.
         // Sample Spaces must never replace the installed session or be staged as
         // Cloud tombstones for the user's real Space IDs.
-        if BrowserLaunchIsolationPolicy.requiresIsolation(launchEnvironment) {
+        if launchEnvironment.requiresIsolation {
             return try isolatedLaunch(launchEnvironment: launchEnvironment)
         }
         let storage = try transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence(),
@@ -93,7 +93,7 @@ extension BrowserStore {
         launchEnvironment: BrowserLaunchEnvironment,
         isolationID: String
     ) throws -> BrowserStore? {
-        let namespace = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+        let namespace = BrowserLaunchEnvironment.isolatedDefaultsSuiteName(
             isolationID: isolationID
         )
         guard let defaults = UserDefaults(suiteName: namespace) else { return nil }

@@ -74,7 +74,8 @@ public static class NativeSessionEditor {
             case SessionOperation.TabOpen: {
                     var supplied = args.RequiredTab;
                     var tab = BrowserTab.Restore(document.ReadNewTab(supplied));
-                    space.InsertTab(tab, index);
+                    if (index is not null && args.After is not null) throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
+                    space.InsertTab(tab, args.After is { } origin ? space.InsertionIndexAfter(origin) : index);
                     result = tab.Id;
                     if (args.Select == true) { selected = tab.Id; selectSpace = true; }
                     break;

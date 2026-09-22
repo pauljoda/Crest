@@ -61,38 +61,6 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         )
     }
 
-    func testResetLaunchesUseIsolatedStoresAndNeverReachCloudKit() {
-        XCTAssertTrue(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(
-                    values: ["CREST_RESET_SESSION": "1"],
-                    isXCTestRuntime: false
-                )
-            )
-        )
-        XCTAssertTrue(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(values: [:], isXCTestRuntime: true)
-            )
-        )
-        XCTAssertFalse(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false)
-            )
-        )
-        XCTAssertTrue(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(
-                    values: [
-                        "CREST_RESET_SESSION": "1",
-                        "CREST_PERFORMANCE_BASE_URL": "http://127.0.0.1:8080/",
-                    ],
-                    isXCTestRuntime: false
-                )
-            )
-        )
-    }
-
     func testCloudTransportStateRoundTripsThroughItsIndependentStore() throws {
         let suiteName = "BrowserCloudSyncStateTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

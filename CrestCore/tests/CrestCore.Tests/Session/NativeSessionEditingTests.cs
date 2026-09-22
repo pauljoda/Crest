@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -71,6 +72,40 @@ public sealed partial class BrowserContractsTests {
         Assert.Single(closed["archivedTabs"]!.AsArray());
         Assert.True(JsonNode.DeepEquals(SwiftId(f.Tab), closed["selectedTabID"]));
         Assert.Equal("closed", closed["archivedTabs"]![0]!["reason"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void ATabOpenedAfterASplitMemberLandsAfterTheWholeSplit() {
+        var f = SavedSession(); var space = f.Document["session"]!["spaces"]![0]!.AsObject();
+        var group = SwiftId(Guid.NewGuid()); var partner = Guid.NewGuid(); var plain = Guid.NewGuid();
+        var first = space["tabs"]![0]!.AsObject();
+        first["placement"] = "current"; first["folderID"] = null; first["savedURL"] = null; first["splitGroupID"] = group.DeepClone();
+        JsonObject Current(Guid id, JsonObject? split) => new() {
+            ["id"] = SwiftId(id),
+            ["title"] = "Page",
+            ["url"] = "https://example.org/" + id,
+            ["placement"] = "current",
+            ["symbol"] = "globe",
+            ["lastActivatedAt"] = 800000000.0,
+            ["splitGroupID"] = split
+        };
+        space["tabs"]!.AsArray().Add(Current(partner, (JsonObject)group.DeepClone()));
+        space["tabs"]!.AsArray().Add(Current(plain, null));
+        Guid[] Order(JsonObject arguments) => JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.open", arguments)))!
+            ["space"]!["tabs"]!.AsArray().Select(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>())).ToArray();
+        JsonObject Open(Guid id, Guid? after) => new() {
+            ["tab"] = Current(id, null),
+            ["after"] = after?.ToString(),
+            ["select"] = true
+        };
+
+        var opened = Guid.NewGuid();
+        Assert.Equal([f.Tab, partner, opened, plain], Order(Open(opened, f.Tab)));
+        Assert.Equal([f.Tab, partner, plain, opened], Order(Open(opened, plain)));
+        // An origin outside the Space leaves the tab to its section's default place.
+        Assert.Equal([opened, f.Tab, partner, plain], Order(Open(opened, Guid.NewGuid())));
+        var both = Open(opened, f.Tab); both["index"] = 0;
+        Assert.Throws<ProtocolException>(() => NativeSessionEditor.Evaluate(EditRequest(space, "tab.open", both)));
     }
 
     [Fact]

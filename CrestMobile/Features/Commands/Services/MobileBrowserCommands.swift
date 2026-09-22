@@ -285,12 +285,16 @@ struct MobileBrowserCommands: Commands {
 
             Divider()
 
+            let tabSelections = numberedSelections
             ForEach(1...9, id: \.self) { number in
+                let command = BrowserShortcutCommand.tabSelection(number)
                 Button("Select Tab \(number)", systemImage: "\(number).square") {
-                    context?.selectTab(number - 1)
+                    if case .tab(let index)? = command.flatMap({ numberedSelections[$0] }) {
+                        context?.selectTab(index)
+                    }
                 }
                 .keyboardShortcut(tabSelectionShortcut(number))
-                .disabled(number > (context?.tabCount ?? 0))
+                .disabled(command.flatMap { tabSelections[$0] } == nil)
             }
         }
 
@@ -315,12 +319,16 @@ struct MobileBrowserCommands: Commands {
 
             Divider()
 
+            let spaceSelections = numberedSelections
             ForEach(1...9, id: \.self) { number in
+                let command = BrowserShortcutCommand.spaceSelection(number)
                 Button("Select Space \(number)", systemImage: "\(number).square") {
-                    context?.selectSpace(number - 1)
+                    if case .space(let index)? = command.flatMap({ numberedSelections[$0] }) {
+                        context?.selectSpace(index)
+                    }
                 }
                 .keyboardShortcut(spaceSelectionShortcut(number))
-                .disabled(number > (context?.spaceCount ?? 0))
+                .disabled(command.flatMap { spaceSelections[$0] } == nil)
             }
         }
 
@@ -471,6 +479,11 @@ struct MobileBrowserCommands: Commands {
         _ command: BrowserShortcutCommand
     ) -> KeyboardShortcut? {
         shortcuts.keyboardShortcut(for: command)
+    }
+
+    /// Where each numbered selection command leads right now, per the core.
+    private var numberedSelections: [BrowserShortcutCommand: BrowserNumberedSelection] {
+        BrowserCorePolicy.numberedSelections(tabCount: context?.tabCount ?? 0, spaceCount: context?.spaceCount ?? 0)
     }
 
     private func tabSelectionShortcut(_ number: Int) -> KeyboardShortcut? {

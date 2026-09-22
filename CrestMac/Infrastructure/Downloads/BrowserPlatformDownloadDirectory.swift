@@ -79,7 +79,7 @@ final class BrowserPlatformDownloadPreferences {
     init(defaults: UserDefaults? = nil) {
         if let defaults {
             self.defaults = defaults
-        } else if BrowserLaunchIsolationPolicy.requiresIsolation(.current) {
+        } else if BrowserLaunchEnvironment.current.requiresIsolation {
             self.defaults = nil
         } else {
             self.defaults = .standard

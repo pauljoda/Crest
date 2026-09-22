@@ -147,20 +147,22 @@ struct BrowserCommandActions {
                 page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)
             }
         case .selectTab1, .selectTab2, .selectTab3, .selectTab4, .selectTab5,
-            .selectTab6, .selectTab7, .selectTab8, .selectTab9:
-            selectTab(at: numberedIndex(of: command, in: BrowserShortcutCommand.tabSelection))
-        case .selectSpace1, .selectSpace2, .selectSpace3, .selectSpace4,
+            .selectTab6, .selectTab7, .selectTab8, .selectTab9,
+            .selectSpace1, .selectSpace2, .selectSpace3, .selectSpace4,
             .selectSpace5, .selectSpace6, .selectSpace7, .selectSpace8,
             .selectSpace9:
-            selectSpace(at: numberedIndex(of: command, in: BrowserShortcutCommand.spaceSelection))
+            switch numberedSelections[command] {
+            case .tab(let index): selectTab(at: index)
+            case .space(let index): selectSpace(at: index)
+            case nil: break
+            }
         }
     }
 
     /// Availability belongs to the same command route used by menus and keys.
     /// In particular, a disabled split shortcut must leave text selection alone.
     func canPerform(_ command: BrowserShortcutCommand) -> Bool {
-        if let number = command.tabNumber { return number <= orderedTabs.count }
-        if let number = command.spaceNumber { return number <= browser.session.spaces.count }
+        if command.tabNumber != nil || command.spaceNumber != nil { return numberedSelections[command] != nil }
         switch command {
         case .newBlankWindow: return !browser.isPrivateBrowsing && browser.selectedSpace != nil
         case .newQuickWindow, .showArchive: return browser.selectedSpace != nil
@@ -210,11 +212,9 @@ struct BrowserCommandActions {
             .supports(capability)
     }
 
-    private func numberedIndex(
-        of command: BrowserShortcutCommand,
-        in resolve: (Int) -> BrowserShortcutCommand?
-    ) -> Int {
-        (1...9).first { resolve($0) == command }.map { $0 - 1 } ?? 0
+    /// Where each numbered selection command leads right now, per the core.
+    var numberedSelections: [BrowserShortcutCommand: BrowserNumberedSelection] {
+        BrowserCorePolicy.numberedSelections(tabCount: orderedTabs.count, spaceCount: browser.session.spaces.count)
     }
 
     // MARK: - Windows

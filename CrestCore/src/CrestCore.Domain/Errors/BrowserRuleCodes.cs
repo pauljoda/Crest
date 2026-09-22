@@ -19,9 +19,11 @@ public static class BrowserRuleCodes {
     public const string DuplicateCredential = "duplicate_credential";
     public const string DuplicateDownload = "duplicate_download";
     public const string DuplicateFolder = "duplicate_folder";
+    public const string DuplicateMediaSession = "duplicate_media_session";
     public const string DuplicatePersistedIdentity = "duplicate_persisted_identity";
     public const string DuplicateResidencyCandidate = "duplicate_residency_candidate";
     public const string DuplicateSearchName = "duplicate_search_name";
+    public const string DuplicateShortcutCommand = "duplicate_shortcut_command";
     public const string DuplicateSpace = "duplicate_space";
     public const string DuplicateSpaceProfile = "duplicate_space_profile";
     public const string DuplicateSyncRecord = "duplicate_sync_record";
@@ -56,6 +58,7 @@ public static class BrowserRuleCodes {
     public const string InvalidHistoryRange = "invalid_history_range";
     public const string InvalidHistoryVisit = "invalid_history_visit";
     public const string InvalidIdentity = "invalid_identity";
+    public const string InvalidMediaSessionCount = "invalid_media_session_count";
     public const string InvalidName = "invalid_name";
     public const string InvalidNativeKind = "invalid_native_kind";
     public const string InvalidNewSpace = "invalid_new_space";
@@ -79,6 +82,8 @@ public static class BrowserRuleCodes {
     public const string InvalidSearchProvider = "invalid_search_provider";
     public const string InvalidSearchTemplate = "invalid_search_template";
     public const string InvalidSessionTransaction = "invalid_session_transaction";
+    public const string InvalidShortcut = "invalid_shortcut";
+    public const string InvalidSpaceCount = "invalid_space_count";
     public const string InvalidSpaceOrder = "invalid_space_order";
     public const string InvalidSplit = "invalid_split";
     public const string InvalidSyncDate = "invalid_sync_date";
@@ -99,6 +104,7 @@ public static class BrowserRuleCodes {
     public const string InvalidTransientPage = "invalid_transient_page";
     public const string InvalidTransition = "invalid_transition";
     public const string InvalidWorkspaceKind = "invalid_workspace_kind";
+    public const string MediaSessionLimit = "media_session_limit";
     public const string MissingSpaceIdentity = "missing_space_identity";
     public const string NoCurrentTabs = "no_current_tabs";
     public const string NoIncludedSpaces = "no_included_spaces";
@@ -132,6 +138,7 @@ public static class BrowserRuleCodes {
     public const string SessionReleased = "session_released";
     public const string SessionSizeLimit = "session_size_limit";
     public const string SessionTransactionInProgress = "session_transaction_in_progress";
+    public const string ShortcutCommandLimit = "shortcut_command_limit";
     public const string SpaceDeleting = "space_deleting";
     public const string SpaceDeletionInProgress = "space_deletion_in_progress";
     public const string SpaceLimitReached = "space_limit_reached";

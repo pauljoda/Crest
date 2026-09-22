@@ -402,28 +402,6 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertNil(firstWindow.utilityPresentation.surface)
     }
 
-    func testExplicitSessionResetAlsoIsolatesPerWindowSelectionState() {
-        XCTAssertTrue(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(
-                    values: ["CREST_RESET_SESSION": "1"],
-                    isXCTestRuntime: false
-                )
-            ),
-            "An isolated reset must not restore stale per-window selection state."
-        )
-        XCTAssertTrue(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(values: [:], isXCTestRuntime: true)
-            )
-        )
-        XCTAssertFalse(
-            BrowserLaunchIsolationPolicy.requiresIsolation(
-                BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false)
-            )
-        )
-    }
-
     func testRegularPresentationDoesNotMutateTheCompactNavigationChoice() {
         let navigation = MobileBrowserNavigationState()
         navigation.adapt(to: .compact)

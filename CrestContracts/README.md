@@ -109,6 +109,25 @@ suggests each imported Space's destination, duplicates and default tabs; with
 them it reports duplicates, matched destination tabs and pinned overflow. The
 workspace import rejects a source whose split runs its repair would rewrite.
 
+`shortcuts.bindings` resolves the platform's offered `commands` (at most 128)
+against the person's `overrides` (a command name to a chord, or null when left
+unassigned) and returns each command's live chord and catalog default; chords use
+the native persisted shape `{"key":{"character":"n"},"modifiers":1}`, and
+overrides for commands the core does not know are carried through verbatim.
+`shortcuts.assign` binds or clears one command and returns `assigned` with the
+complete revised overrides, `conflict` with the offered commands already holding
+the chord, or `invalid`. `shortcuts.numbered_selection` maps each numbered
+selection command to the zero-based tab or Space it reaches for the given counts.
+`launch.plan` takes the platform's parsed launch flags, the stored startup raw
+value and whether first-run setup owns the first window, and answers isolation,
+ephemeral profile storage, installed-app presentation and the startup behavior.
+`media.session_event` decides what one sequenced page media-session report does
+(ignored, retired, withdrawn or published, with its ordinal, sibling supersession,
+identity-window eviction and dismissal clearing) and `media.arbitrate` orders at
+most 64 published sessions and names the Now Playing owner; neither carries
+metadata or artwork. The `tab.open` session edit accepts `after`, a tab the new
+tab opens after and outside the split of, instead of an explicit `index`.
+
 This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 

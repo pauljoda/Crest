@@ -623,6 +623,25 @@ identity, reconciles drafts with Spaces changed elsewhere, suggests review
 destinations, duplicates and pinned overflow through the `workspace.review`
 query, and decides what finishing setup does. The workspace import rejects a
 source whose split runs its repair would rewrite.
+
+Shortcuts, launch and media follow it too. The core's `ShortcutCatalog` holds the
+default chords, including ⌘1–⌘9 and ⌃1–⌃9 for numbered tab and Space selection,
+and `ShortcutBindingPolicy` resolves the persisted overrides, reports conflicts
+and revises the overrides when a binding applies; `BrowserShortcutStore` persists
+the overrides in their existing format and caches the resolved chords for
+dispatch, and a core that cannot answer reports a conflict rather than binding a
+chord twice. Section grouping and search for the settings list stay in Swift.
+`LaunchPolicy` decides from the platform's parsed launch flags whether a launch
+is isolated, whether its web storage is ephemeral, whether installed-app UI
+shows, and what the first window opens; without an answer a launch stays
+isolated and opens the Start Page. A tab opened from another is placed by the
+`tab.open` command's `after` anchor, after the whole split of its origin.
+`MediaSessionPolicy` arbitrates page media sessions identically for the WebKit
+bridge and Chromium's native session: stale and retired reports, sibling
+documents of a tab, the remembered-identity window, dismissal clearing, display
+order and the Now Playing owner. `BrowserMediaSessionStore` keeps endpoints,
+metadata, artwork and observation and applies the decisions; without an answer
+it keeps its current state and order.
 The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.

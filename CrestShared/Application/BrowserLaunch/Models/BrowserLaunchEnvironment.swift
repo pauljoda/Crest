@@ -19,6 +19,14 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     let isolatedSoftwareUpdateFeedURL: URL?
     let isXCTestRuntime: Bool
     let isSwiftUIPreviewRuntime: Bool
+    /// Whether this launch stays out of the installed profile. The core decides
+    /// from the flags above.
+    private(set) var requiresIsolation = true
+    /// Keeps page and extension web storage in the same privacy class: both
+    /// forget, unless a named isolated profile persists both.
+    private(set) var usesEphemeralProfileStorage = true
+    /// False only under the test runtime.
+    private(set) var presentsInstalledApplicationUI = false
 
     init(
         values: [String: String],
@@ -65,6 +73,21 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         )
         self.isXCTestRuntime = isXCTestRuntime
         self.isSwiftUIPreviewRuntime = isSwiftUIPreviewRuntime
+        let plan = BrowserCorePolicy.launchPlan(for: self)
+        requiresIsolation = plan.requiresIsolation
+        usesEphemeralProfileStorage = plan.usesEphemeralProfileStorage
+        presentsInstalledApplicationUI = plan.presentsInstalledApplicationUI
+    }
+
+    /// The preferences domain a named isolated profile persists into.
+    ///
+    /// Every owner of that profile's state — the browser session, the
+    /// credential vault prefix, the extension registry — is addressed through
+    /// this one name, so a relaunch with the same
+    /// `CREST_ISOLATED_PERSISTENCE_ID` finds all of it again and none of it
+    /// lands in the installed app's own domain.
+    static func isolatedDefaultsSuiteName(isolationID: String) -> String {
+        "\(ProductIdentity.serviceNamespace).isolated.\(isolationID)"
     }
 
     private static func isEnabled(

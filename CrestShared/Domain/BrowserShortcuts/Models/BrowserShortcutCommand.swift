@@ -109,24 +109,37 @@ extension BrowserShortcutCommand {
         isOffered(by: BrowserEngineRegistration.current)
     }
 
+    /// Crest's default chord, from the core's catalog.
     var defaultShortcut: BrowserShortcut? {
-        BrowserShortcutDefaultPolicy.shortcut(for: self)
+        BrowserCorePolicy.defaultShortcuts[self]
     }
 
+    // The numbered commands' labels. What each one selects is the core's
+    // `shortcuts.numbered_selection` rule.
+    private static let tabSelections: [Self] = [
+        .selectTab1, .selectTab2, .selectTab3, .selectTab4, .selectTab5,
+        .selectTab6, .selectTab7, .selectTab8, .selectTab9,
+    ]
+
+    private static let spaceSelections: [Self] = [
+        .selectSpace1, .selectSpace2, .selectSpace3, .selectSpace4, .selectSpace5,
+        .selectSpace6, .selectSpace7, .selectSpace8, .selectSpace9,
+    ]
+
     static func tabSelection(_ number: Int) -> BrowserShortcutCommand? {
-        BrowserShortcutNumberedSelectionPolicy.tabCommand(number)
+        tabSelections.indices.contains(number - 1) ? tabSelections[number - 1] : nil
     }
 
     static func spaceSelection(_ number: Int) -> BrowserShortcutCommand? {
-        BrowserShortcutNumberedSelectionPolicy.spaceCommand(number)
+        spaceSelections.indices.contains(number - 1) ? spaceSelections[number - 1] : nil
     }
 
     var tabNumber: Int? {
-        BrowserShortcutNumberedSelectionPolicy.tabNumber(for: self)
+        Self.tabSelections.firstIndex(of: self).map { $0 + 1 }
     }
 
     var spaceNumber: Int? {
-        BrowserShortcutNumberedSelectionPolicy.spaceNumber(for: self)
+        Self.spaceSelections.firstIndex(of: self).map { $0 + 1 }
     }
 
     var section: BrowserShortcutSection {

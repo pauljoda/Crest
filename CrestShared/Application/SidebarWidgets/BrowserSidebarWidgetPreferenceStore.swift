@@ -71,7 +71,7 @@ final class BrowserSidebarWidgetPreferenceStore {
         environment: BrowserLaunchEnvironment,
         productionDefaults: UserDefaults = .standard
     ) -> BrowserSidebarWidgetPreferenceStore {
-        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else {
+        guard environment.requiresIsolation else {
             return BrowserSidebarWidgetPreferenceStore(
                 persistence: UserDefaultsBrowserSidebarWidgetPreferencePersistence(
                     defaults: productionDefaults
@@ -81,7 +81,7 @@ final class BrowserSidebarWidgetPreferenceStore {
         guard
             let isolationID = environment.persistentIsolationID,
             let defaults = UserDefaults(
-                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(
                     isolationID: isolationID
                 )
             )

@@ -94,12 +94,12 @@ final class InMemoryBrowserDefaultPageZoomPersistence:
 final class BrowserDefaultPageZoomStore {
     static let shared: BrowserDefaultPageZoomStore = {
         let environment = BrowserLaunchEnvironment.current
-        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else {
+        guard environment.requiresIsolation else {
             return BrowserDefaultPageZoomStore(persistence: UserDefaultsBrowserDefaultPageZoomPersistence())
         }
         if let id = environment.persistentIsolationID,
             let defaults = UserDefaults(
-                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id)
+                suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id)
             )
         {
             return BrowserDefaultPageZoomStore(

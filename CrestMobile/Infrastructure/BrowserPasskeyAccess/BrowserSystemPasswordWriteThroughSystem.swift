@@ -18,9 +18,7 @@ enum BrowserSystemPasswordWriteThroughSystem {
             supportsSystemAPI: supportsSystemAPI,
             hasManagedBrowserCapability: hasManagedBrowserCapability,
             isLaunchIsolated:
-                BrowserLaunchIsolationPolicy.requiresIsolation(
-                    launchEnvironment
-                )
+                launchEnvironment.requiresIsolation
         )
     }
 

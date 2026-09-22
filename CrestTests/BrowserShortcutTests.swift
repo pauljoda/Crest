@@ -33,18 +33,6 @@ final class BrowserShortcutTests: XCTestCase {
         XCTAssertNil(store.command(for: event, isEnabled: { _ in true }))
     }
 
-    func testDefaultShortcutCatalogContainsNoDuplicateChords() {
-        let assignments = Dictionary(grouping: BrowserShortcutCommand.allCases) {
-            $0.defaultShortcut
-        }
-        let duplicateAssignments = assignments.compactMap { shortcut, commands -> [BrowserShortcutCommand]? in
-            guard shortcut != nil, commands.count > 1 else { return nil }
-            return commands
-        }
-
-        XCTAssertTrue(duplicateAssignments.isEmpty)
-    }
-
     func testCommandsForAnEngineFeatureAreOfferedOnlyWhereTheEngineDeclaresIt() {
         let engineFeatures: Set<BrowserShortcutCommand> = [
             .toggleReaderMode, .toggleContentBlocking, .toggleTranslationToolbar,
@@ -61,30 +49,6 @@ final class BrowserShortcutTests: XCTestCase {
         XCTAssertFalse(shortcut("t", []).isValid)
         XCTAssertTrue(shortcut("t", [.command]).isValid)
         XCTAssertTrue(special(.leftArrow, [.control, .option]).isValid)
-    }
-
-    @MainActor
-    func testConflictingAssignmentDoesNotMutateUntilReplacementIsConfirmed() {
-        let store = BrowserShortcutStore.inMemory()
-        let replacement = shortcut("g", [.command, .shift])
-
-        XCTAssertEqual(store.assign(replacement, to: .newTab), .assigned)
-        XCTAssertEqual(
-            store.assign(replacement, to: .newWindow),
-            .conflict(commands: [.newTab])
-        )
-        XCTAssertEqual(store.shortcut(for: .newTab), replacement)
-        XCTAssertEqual(
-            store.shortcut(for: .newWindow),
-            BrowserShortcutCommand.newWindow.defaultShortcut
-        )
-
-        XCTAssertEqual(
-            store.assign(replacement, to: .newWindow, replacingConflicts: true),
-            .assigned
-        )
-        XCTAssertNil(store.shortcut(for: .newTab))
-        XCTAssertEqual(store.shortcut(for: .newWindow), replacement)
     }
 
     @MainActor

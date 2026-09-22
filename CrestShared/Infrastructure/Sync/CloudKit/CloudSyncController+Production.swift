@@ -9,7 +9,7 @@ extension BrowserCloudSyncController {
         enabledKey: String = UserDefaultsBrowserCloudSyncPreferences.defaultEnabledKey
     ) {
         if defaults == nil,
-            BrowserLaunchIsolationPolicy.requiresIsolation(.current)
+            BrowserLaunchEnvironment.current.requiresIsolation
         {
             self.init(
                 workflow: browser,

@@ -96,7 +96,7 @@ final class MobileBrowserPageStore:
         monitorsMemoryPressure: Bool = false,
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
-            BrowserLaunchIsolationPolicy.requiresIsolation(.current),
+            BrowserLaunchEnvironment.current.requiresIsolation,
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         mediaSessionStore: BrowserMediaSessionStore? = nil,
