@@ -149,10 +149,38 @@ mismatched mode, and the host loads whichever of the two names a bundle
 contains. A product bundle carries a
 `Crest-Native-Host` resource instead of `Crest-Isolated-Experiment`: it hosts the
 native UI for launches that carry no switches — Finder, the default-browser role,
-Dock reopen — and uses Chromium's default profile directory for its own bundle
-identity. Signing and provisioning that identity for distribution remain
+Dock reopen. Signing and provisioning that identity for distribution remain
 external requirements; the packager still refuses `/Applications` and never
 replaces an installed Crest.
+
+A product bundle keeps its engine state in
+`~/Library/Application Support/Crest/Chromium`, not in
+`~/Library/Application Support/Chromium`, which every other Chromium on the
+machine — including Crest's own review and baseline packages — also opens by
+default. The browser executable resolves that directory in `main`, before the
+Chromium framework is loaded and therefore before any profile is read, and
+passes it as `--user-data-dir`; an explicit `--user-data-dir` on the command line
+still wins. The first launch after that move adopts the `Crest-*` engine profile
+directories the previous default directory still holds, and only those:
+`Default`, `Local State` and everything else there belongs to whichever Chromium
+created that directory and is left alone. Each adopted directory is named on
+standard error. `Local State` is not copied, so Chromium rebuilds its profile
+list; Crest's core restores its Spaces by path and does not read that list. If
+the new directory cannot be created, or a profile cannot be moved, the adoption
+is undone and the launch falls back to the previous directory and says so.
+
+Crest mode never shows Chrome's profile picker. Startup resolves to a browser
+window on the `Default` profile, and `ProfilePicker::Show` returns without
+creating its window, so no route — startup, Dock reopen, a profile menu — can put
+a "Welcome to Chromium profiles" window in front of the native UI.
+
+A product bundle is launched with no switches, so the browser process declares
+`--crest-control-plane` on its own command line at
+`ChromeMainDelegate::BasicStartupComplete` when the bundle marker names the
+native host. The Crest gates that test that switch — the iCloud Passwords
+native-messaging fallback, declared-URL extension updates, private profile window
+creation and startup profile selection — are otherwise dead in a product bundle,
+and some of them sit in components that cannot include `//chrome` headers.
 
 External opens, document opens and reopen reach the native UI through
 `AppController`. `crest::OpenExternalURLs` applies Crest's own external-URL
@@ -276,12 +304,21 @@ Chromium's own shortcut page for changing them.
 
 Packaged experiments require `--signing-identity` with a stable Apple Development
 or Developer ID identity. Ad-hoc signing changes the keychain trust identity on
-rebuilds and is rejected. The host and baseline use separate Crest-named Safe
-Storage entries; neither requests Chromium's shared keychain item. Keep the same
+rebuilds and is rejected. A keychain item's access list trusts the signatures
+that created it, and a profile directory does not namespace it, so every Crest
+bundle takes a Safe Storage item of its own keyed on its bundle ID: `Crest Safe
+Storage` for `com.pauldavis.crest`, `Crest Review Safe Storage` for the review
+package, `Crest Chromium Baseline Safe Storage` for the baseline. A Crest bundle
+never falls through to Chromium's shared `Chromium Safe Storage` item, whose
+access list is what made macOS ask for the login password when a differently
+signed Crest build opened it. Changing a bundle's Safe Storage name rotates its
+encryption key: cookies and passwords written under the previous name do not
+decrypt, and Chromium rewrites that state on the next launch. Keep the same
 signing identity and bundle identifier across rebuilds. Encryption remains
 backed by the macOS keychain.
 
-The packaged executable refuses startup without an explicit absolute
-`--user-data-dir`. A native-host package also requires `--crest-control-plane`.
+A packaged experiment refuses startup without an explicit absolute
+`--user-data-dir`, and a review native-host package also requires
+`--crest-control-plane`. A product package names its own directory instead.
 This guard runs before Chromium loads its framework or opens any profile. The
 host restores its core-managed Spaces directly, without Chrome's profile picker.

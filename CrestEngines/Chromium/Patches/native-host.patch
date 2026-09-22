@@ -181,61 +181,103 @@
      read_anything_side_panel_controller_ =
 --- a/chrome/app/chrome_exe_main_mac.cc
 +++ b/chrome/app/chrome_exe_main_mac.cc
-@@ -19,6 +19,8 @@
+@@ -19,7 +19,14 @@
  #include <unistd.h>
-
+ 
  #include <memory>
 +#include <string>
 +#include <string_view>
-
++#include <vector>
+ 
++#if !defined(HELPER_EXECUTABLE)
++#include "chrome/app/crest_user_data_dir.h"
++#endif
++
  #include "base/allocator/early_zone_registration_apple.h"
  #include "base/compiler_specific.h"
-@@ -155,6 +157,35 @@
-   if (rv != 0) {
+ #include "build/branding_buildflags.h"
+@@ -156,6 +163,59 @@
      FatalError("_NSGetExecutablePath: get path failed.");
    }
-+
+ 
 +#if !defined(HELPER_EXECUTABLE)
++  const std::string executable(exec_path.get());
++  const auto directory = executable.substr(0, executable.find_last_of('/'));
++  bool named_profile_root = false;
++  bool crest_host = false;
++  for (int i = 1; i < argc; ++i) {
++    const std::string_view argument(UNSAFE_TODO(argv[i]));
++    if (argument.starts_with("--user-data-dir=/") &&
++        argument.size() > std::string_view("--user-data-dir=/").size()) {
++      named_profile_root = true;
++    }
++    crest_host |= argument == "--crest-control-plane";
++  }
++
 +  // Packaged Crest experiments must never fall back to Chromium's default
 +  // user profile when Finder or an automation tool launches without arguments.
 +  // This runs before loading the framework or creating any browser services.
-+  const std::string executable(exec_path.get());
-+  const auto directory = executable.substr(0, executable.find_last_of('/'));
 +  const auto marker = directory + "/../Resources/Crest-Isolated-Experiment";
 +  if (access(marker.c_str(), F_OK) == 0) {
-+    bool isolated_profile = false;
-+    bool crest_host = false;
-+    for (int i = 1; i < argc; ++i) {
-+      const std::string_view argument(UNSAFE_TODO(argv[i]));
-+      if (argument.starts_with("--user-data-dir=/") &&
-+          argument.size() > std::string_view("--user-data-dir=/").size()) {
-+        isolated_profile = true;
-+      }
-+      crest_host |= argument == "--crest-control-plane";
-+    }
 +    const auto host_framework =
 +        directory + "/../Frameworks/CrestChromiumUI.framework";
-+    if (!isolated_profile ||
++    if (!named_profile_root ||
 +        (access(host_framework.c_str(), F_OK) == 0 && !crest_host)) {
 +      fprintf(stderr, "Crest experiment requires an explicit absolute "
 +                      "--user-data-dir and its host mode.\n");
 +      return 64;
 +    }
 +  }
++
++  // A product bundle is launched with no switches at all — Finder, a login
++  // item, the default-browser role, Dock reopen — so it names its own engine
++  // profile root here instead of opening the directory every other Chromium on
++  // this machine also opens by default. Adoption of the engine profiles an
++  // earlier build left there happens in the same step, before the framework is
++  // loaded and therefore before any profile is read.
++  std::string product_user_data_switch;
++  std::vector<char*> product_argv;
++  const auto product_marker = directory + "/../Resources/Crest-Native-Host";
++  const char* home = getenv("HOME");
++  if (!named_profile_root && home && *home &&
++      access(product_marker.c_str(), F_OK) == 0) {
++    product_user_data_switch =
++        "--user-data-dir=" + crest::AdoptProductUserDataDirectory(home);
++    for (int i = 0; i < argc; ++i) {
++      product_argv.push_back(UNSAFE_TODO(argv[i]));
++    }
++    product_argv.push_back(product_user_data_switch.data());
++    product_argv.push_back(nullptr);
++    argc = static_cast<int>(product_argv.size()) - 1;
++    argv = product_argv.data();
++  }
 +#endif
-
++
  #if defined(HELPER_EXECUTABLE)
    sandbox::SeatbeltExecServer::CreateFromArgumentsResult seatbelt =
+       sandbox::SeatbeltExecServer::CreateFromArguments(exec_path.get(), argc,
 --- a/chrome/browser/ui/startup/startup_browser_creator.cc
 +++ b/chrome/browser/ui/startup/startup_browser_creator.cc
-@@ -1558,6 +1558,15 @@
+@@ -34,6 +34,9 @@
+ #include "base/trace_event/trace_event.h"
+ #include "build/branding_buildflags.h"
+ #include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+ #include "chrome/browser/app_mode/app_mode_utils.h"
+ #include "chrome/browser/apps/app_service/app_service_proxy.h"
+ #include "chrome/browser/apps/app_service/app_service_proxy_factory.h"
+@@ -1558,6 +1561,17 @@
      bool ignore_profile_picker) {
    ProfileManager* profile_manager = g_browser_process->profile_manager();
    const base::FilePath& user_data_dir = profile_manager->user_data_dir();
 +#if BUILDFLAG(IS_MAC)
 +  // Crest's core restores its Spaces and owns profile selection. The bootstrap
 +  // profile never presents Chrome's profile picker or restores Chrome tabs.
-+  if (command_line.HasSwitch("crest-control-plane")) {
++  // This is keyed on the host itself, not on the switch, because a product
++  // bundle is launched with no switches at all.
++  if (crest::IsEnabled()) {
 +    return {.path = profiles::GetDefaultProfileDir(user_data_dir),
 +            .mode = StartupProfileMode::kBrowserWindow};
 +  }
@@ -246,53 +288,69 @@
  // all others.
 --- a/components/os_crypt/common/keychain_password_mac.mm
 +++ b/components/os_crypt/common/keychain_password_mac.mm
-@@ -9,6 +9,7 @@
+@@ -7,8 +7,11 @@
+ #import <Security/Security.h>
+ 
  #include <atomic>
-
++#include <string>
++#include <string_view>
+ 
  #include "base/apple/osstatus_logging.h"
 +#include "base/apple/foundation_util.h"
  #include "base/apple/scoped_cftyperef.h"
  #include "base/base64.h"
  #include "base/containers/span.h"
-@@ -41,6 +42,22 @@
- const char kDefaultServiceName[] = "Chromium Safe Storage";
+@@ -42,6 +45,34 @@
  const char kDefaultAccountName[] = "Chromium";
  #endif
-+
-+// A profile directory does not namespace OSCrypt's macOS keychain item.
-+// Keep packaged Crest experiments separate from Chromium, Chrome, and Crest's
-+// credential vault. Normal Chromium builds retain their upstream names.
+ 
++// A profile directory does not namespace OSCrypt's macOS keychain item, and a
++// keychain item's ACL trusts the signatures that created it. Every Crest bundle
++// therefore takes a Crest-owned item of its own, keyed on its bundle ID:
++// sharing Chromium's item is what makes macOS ask for the login password when a
++// differently signed Crest build opens it. A Crest bundle never falls through
++// to the shared Chromium name. Normal Chromium builds keep their upstream ones.
 +std::string CrestKeychainName(bool service) {
-+  const auto bundle = base::apple::BaseBundleID();
-+  if (bundle == "com.pauldavis.crest.control-plane.chromium") {
-+    return service ? "Crest Chromium Experiment Safe Storage"
-+                   : "com.pauldavis.crest.control-plane.chromium";
++  const std::string bundle(base::apple::BaseBundleID());
++  constexpr std::string_view kCrest = "com.pauldavis.crest";
++  if (bundle != kCrest && !bundle.starts_with("com.pauldavis.crest.")) {
++    return service ? kDefaultServiceName : kDefaultAccountName;
 +  }
-+  if (bundle == "com.pauldavis.crest.chromium-baseline") {
-+    return service ? "Crest Chromium Baseline Safe Storage"
-+                   : "com.pauldavis.crest.chromium-baseline";
++  if (!service) {
++    return bundle;
 +  }
-+  return service ? kDefaultServiceName : kDefaultAccountName;
++  if (bundle == kCrest) {
++    return "Crest Safe Storage";
++  }
++  const std::string suffix = bundle.substr(kCrest.size() + 1);
++  if (suffix == "control-plane.chromium") {
++    return "Crest Review Safe Storage";
++  }
++  if (suffix == "chromium-baseline") {
++    return "Crest Chromium Baseline Safe Storage";
++  }
++  return "Crest " + suffix + " Safe Storage";
 +}
-
++
  // These values are persisted to logs. Entries should not be renumbered and
  // numeric values should never be reused.
-@@ -110,13 +127,13 @@
-
+ enum class FindGenericPasswordResult {
+@@ -110,13 +141,13 @@
+ 
  // static
  KeychainPassword::KeychainNameType& KeychainPassword::GetServiceName() {
 -  static KeychainNameContainerType service_name(kDefaultServiceName);
 +  static KeychainNameContainerType service_name(CrestKeychainName(true));
    return *service_name;
  }
-
+ 
  // static
  KeychainPassword::KeychainNameType& KeychainPassword::GetAccountName() {
 -  static KeychainNameContainerType account_name(kDefaultAccountName);
 +  static KeychainNameContainerType account_name(CrestKeychainName(false));
    return *account_name;
  }
-
+ 
 --- a/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
 +++ b/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
 @@ -34,6 +34,8 @@
@@ -1228,3 +1286,63 @@
    BrowserWindowCreateParams create_params(window_type, *window_profile,
                                            user_gesture());
  
+--- a/chrome/browser/ui/views/profiles/profile_picker_view.cc
++++ b/chrome/browser/ui/views/profiles/profile_picker_view.cc
+@@ -20,6 +20,9 @@
+ #include "base/time/time.h"
+ #include "base/trace_event/trace_event.h"
+ #include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
+ #include "chrome/app/chrome_command_ids.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/feature_engagement/tracker_factory.h"
+@@ -154,6 +157,16 @@
+ 
+ // static
+ void ProfilePicker::Show(Params&& params) {
++#if BUILDFLAG(IS_MAC)
++  // Crest is a single-window browser whose core owns Space and profile
++  // selection, so Chrome's profile picker has nothing to choose and no window
++  // to live in. Every route to it — startup, Dock reopen, the profile menu —
++  // is refused here rather than at each caller.
++  if (crest::IsEnabled()) {
++    return;
++  }
++#endif
++
+   // Re-open with new params if necessary.
+   if (g_profile_picker_view && g_profile_picker_view->MaybeReopen(params)) {
+     return;
+--- a/chrome/app/chrome_main_delegate.cc
++++ b/chrome/app/chrome_main_delegate.cc
+@@ -132,6 +132,7 @@
+ #if BUILDFLAG(IS_MAC)
+ #include "base/apple/foundation_util.h"
+ #include "chrome/app/chrome_main_mac.h"
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+ #include "chrome/browser/chrome_browser_application_mac.h"
+ #include "chrome/browser/mac/code_sign_clone_manager.h"
+ #include "chrome/browser/mac/relauncher.h"
+@@ -1067,6 +1068,20 @@
+ }
+ 
+ std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
++#if BUILDFLAG(IS_MAC)
++  // A product bundle hosts Crest for launches that carry no switches at all,
++  // so the switch the browser-process Crest gates test is not on its command
++  // line. Declare it once, at the earliest browser-process callback, rather
++  // than teaching each gate about the bundle marker: several of them are in
++  // components that may not include //chrome headers.
++  if (!base::CommandLine::ForCurrentProcess()->HasSwitch(
++          switches::kProcessType) &&
++      crest::IsEnabled() &&
++      !base::CommandLine::ForCurrentProcess()->HasSwitch(
++          "crest-control-plane")) {
++    base::CommandLine::ForCurrentProcess()->AppendSwitch("crest-control-plane");
++  }
++#endif
+ #if BUILDFLAG(IS_CHROMEOS)
+   ash::BootTimesRecorder::Get()->SaveChromeMainStats();
+ #endif

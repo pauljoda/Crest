@@ -1809,6 +1809,14 @@
     "shared-core-tab-appearance-rules": {
       "category": "internal",
       "message": "Move tab icon precedence, automatic favicon identity, saved-location and folder-creation rules into the shared core."
+    },
+    "chromium-product-own-engine-directory": {
+      "category": "fixed",
+      "message": "Chromium-powered Crest keeps its engine data in its own Crest folder, never shows the Chromium profile picker, and no longer asks for your keychain password at launch."
+    },
+    "chromium-product-browser-gates": {
+      "category": "fixed",
+      "message": "iCloud Passwords helper discovery, extension updates and private windows work when Crest is launched normally from the Finder or Dock."
     }
   }
 }

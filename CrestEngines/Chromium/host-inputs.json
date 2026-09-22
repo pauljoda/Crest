@@ -21,15 +21,15 @@
   },
   "chrome/app/chrome_exe_main_mac.cc": {
     "before": "25f658e9ec691cac969f684f279410816632bd92fb55f2c4a0a8cbb19b90178c",
-    "after": "85d16c7ca78911bdaae18c3df793b5a9859766912cc96a0fef08b710fe7834a2"
+    "after": "0c6473b9eda495beaf10d013b7159498b0110157aef474538226bf52159880af"
   },
   "chrome/browser/ui/startup/startup_browser_creator.cc": {
     "before": "82bcf41052f6fd73d3bd079f5b72487edc83c7ac7d59f98c21f140f3b37fd2cb",
-    "after": "ec218f45d955aa0af0267ebf699b2b7818d2a0371b6378a96c249ced407e8d9d"
+    "after": "3d5cb31e98ffd0ca1827f9da5902d2fd6e417985300fd6667012450ab64dfe6a"
   },
   "components/os_crypt/common/keychain_password_mac.mm": {
     "before": "a41705c2fb8188800d01bdfeb9218ca75150cebdaedcb3df96831b03d7e9cef3",
-    "after": "9da11a2148d0bf3100a47fe57ce4c59248747bbee67cba66a677508d82216a19"
+    "after": "86db1f3fab449282b84f79670219c54528148173fe8681c2f5fe87d8b59674bf"
   },
   "chrome/browser/ui/views/permissions/permission_prompt_factory.cc": {
     "before": "e13f55d1a822e180a046d8bf330f2cc11ebafd1cdb799d9f5180c185bcb6cbc1",
@@ -174,5 +174,13 @@
   "chrome/browser/extensions/api/tabs/tabs_api.cc": {
     "before": "b28b95b94b93fa99227c989281a4948b8bb56ddbc2039cb0abe455d5d74995dc",
     "after": "8524a9b39b701464a62105221aa6314a3298e597023d913c26d21036d9f5b50b"
+  },
+  "chrome/browser/ui/views/profiles/profile_picker_view.cc": {
+    "before": "d498d242d90ff270272d5ceb09d0c84b41cf40284d1ef722b01b88deed7cb0de",
+    "after": "a6a5a7eb467b81181d7862cd11abcb6f37522385e49eaa3cd1ac9d8c38d01813"
+  },
+  "chrome/app/chrome_main_delegate.cc": {
+    "before": "a09f7410ef807db08f3cbcb0d06425c302862bcc3f0bb691fa2e4144a6f1c300",
+    "after": "f69c2d491ae6d041cb38c73e3155c055d583aeb2518256be580d0d3a018b1377"
   }
 }
