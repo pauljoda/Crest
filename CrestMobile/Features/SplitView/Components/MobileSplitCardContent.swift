@@ -116,7 +116,7 @@ struct MobileSplitCardContent: View {
     private func presentation(
         for page: MobileBrowserPage?
     ) -> BrowserPagePresentation {
-        BrowserPagePresentationPolicy.resolve(
+        BrowserCorePolicy.pagePresentation(
             BrowserPagePresentationInput(
                 selection: member.pagePresentationSelection,
                 hasActivePage: page != nil,

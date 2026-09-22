@@ -166,7 +166,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     /// is why both resolve it with the same policy rather than by asking whether
     /// a page happens to exist.
     func testAStartPageCardResolvesToAPresentationWithNoPicture() {
-        let presentation = BrowserPagePresentationPolicy.resolve(
+        let presentation = BrowserCorePolicy.pagePresentation(
             BrowserPagePresentationInput(
                 selection: .startPage,
                 // A page exists for it, which is exactly the trap: presence is

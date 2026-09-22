@@ -1,4 +1,4 @@
-struct BrowserPagePresentationInput: Equatable, Sendable {
+struct BrowserPagePresentationInput: Hashable, Sendable {
     let selection: BrowserPagePresentationSelection
     let hasActivePage: Bool
     let hasNavigationFailure: Bool

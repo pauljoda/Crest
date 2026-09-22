@@ -27,11 +27,20 @@ extension BrowserStore {
     /// own selection facade. Its native tab still belongs to the workspace.
     var profileSettingsBrowser: BrowserStore { family.temporarySettingsBrowser ?? self }
 
-    func temporaryProfileSettingsAuthority(in spaceID: SpaceID) -> BrowserStore? {
-        guard let assignment = temporarySourceAssignment, assignment.spaceID == spaceID,
-            let source = family.temporarySettingsBrowser, source.space(matching: assignment) != nil
-        else { return nil }
-        return source
+    /// The store that applies a Space command issued from this window. The
+    /// core's routing rule sends a borrowed workspace's profile settings to the
+    /// Space it borrows from and refuses Space organization there; nil when
+    /// nobody may apply the command, including when the core cannot answer.
+    func spaceCommandOwner(_ command: String, in spaceID: SpaceID? = nil) -> BrowserStore? {
+        switch BrowserCorePolicy.workspaceCommandRoute(command, borrowed: isTemporaryWorkspace) {
+        case .local: return self
+        case .source:
+            guard let assignment = temporarySourceAssignment, assignment.spaceID == spaceID,
+                let source = family.temporarySettingsBrowser, source.space(matching: assignment) != nil
+            else { return nil }
+            return source
+        case .rejected, nil: return nil
+        }
     }
 
     /// Refreshes borrowed identity and policy without importing any source tabs,

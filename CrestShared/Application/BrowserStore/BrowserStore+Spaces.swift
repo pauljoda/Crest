@@ -10,7 +10,7 @@ extension BrowserStore {
     }
 
     func addSpace() {
-        guard !isTemporaryWorkspace else { return }
+        guard spaceCommandOwner("space.create") === self else { return }
         guard createCoreSpace() else { return }
         persist(scope: .core)
     }
@@ -19,7 +19,7 @@ extension BrowserStore {
         _ id: SpaceID,
         dataDeleter: any BrowserSpaceDataDeleting
     ) async throws {
-        guard !isTemporaryWorkspace else {
+        guard spaceCommandOwner("space.deletion.begin", in: id) === self else {
             throw BrowserSpaceDeletionError.borrowedProfile
         }
         guard session.spaces.count > 1 else {
@@ -81,54 +81,43 @@ extension BrowserStore {
         symbol: String,
         accent: SpaceAccent
     ) {
-        if isTemporaryWorkspace {
-            temporaryProfileSettingsAuthority(in: spaceID)?.updateSpaceIdentity(
-                spaceID, name: name, symbol: symbol, accent: accent)
-            return
-        }
-        guard session.space(id: spaceID) != nil else { return }
-        guard family.executeSpace("space.identity", in: spaceID,
-            arguments: ["name": name, "symbol": symbol, "accent": accent.rawValue], from: self) else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let owner = spaceCommandOwner("space.identity", in: spaceID),
+            owner.session.space(id: spaceID) != nil else { return }
+        guard owner.family.executeSpace("space.identity", in: spaceID,
+            arguments: ["name": name, "symbol": symbol, "accent": accent.rawValue], from: owner) else { return }
+        owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
     func updateSpaceBranding(
         _ branding: BrowserSpaceBranding,
         in spaceID: SpaceID
     ) {
-        if isTemporaryWorkspace {
-            temporaryProfileSettingsAuthority(in: spaceID)?.updateSpaceBranding(branding, in: spaceID)
-            return
-        }
-        guard session.space(id: spaceID) != nil else { return }
-        guard setCoreSpaceValue("space.branding", branding.normalized(), in: spaceID) else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let owner = spaceCommandOwner("space.branding", in: spaceID),
+            owner.session.space(id: spaceID) != nil else { return }
+        // The command applies the core's branding rules to the stored record.
+        guard owner.setCoreSpaceValue("space.branding", branding, in: spaceID) else { return }
+        owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
     func setDefaultSpace(_ spaceID: SpaceID) {
-        if isTemporaryWorkspace {
-            temporaryProfileSettingsAuthority(in: spaceID)?.setDefaultSpace(spaceID)
-            return
-        }
-        guard session.space(id: spaceID) != nil else { return }
-        guard family.executeSpace("space.default", in: spaceID, arguments: [:], from: self) else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let owner = spaceCommandOwner("space.default", in: spaceID),
+            owner.session.space(id: spaceID) != nil else { return }
+        guard owner.family.executeSpace("space.default", in: spaceID, arguments: [:], from: owner) else { return }
+        owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
     func updateSpaceAccessPolicy(
         _ accessPolicy: BrowserSpaceAccessPolicy,
         in spaceID: SpaceID
     ) {
-        if isTemporaryWorkspace {
-            temporaryProfileSettingsAuthority(in: spaceID)?.updateSpaceAccessPolicy(accessPolicy, in: spaceID)
-            return
-        }
-        guard session.space(id: spaceID) != nil else { return }
-        guard setCoreSpaceValue("space.access", accessPolicy, in: spaceID) else { return }
-        persist(syncUrgency: .immediate, scope: .core)
+        guard let owner = spaceCommandOwner("space.access", in: spaceID),
+            owner.session.space(id: spaceID) != nil else { return }
+        guard owner.setCoreSpaceValue("space.access", accessPolicy, in: spaceID) else { return }
+        owner.persist(syncUrgency: .immediate, scope: .core)
     }
 
     func moveSpaces(from source: IndexSet, to destination: Int) {
+        guard spaceCommandOwner("space.reorder") === self else { return }
         guard family.executeSpace("space.reorder", arguments: ["offsets": Array(source), "destination": destination],
             from: self) else { return }
         persist(syncUrgency: .coalesced, scope: .core)
@@ -138,13 +127,10 @@ extension BrowserStore {
         _ preferences: BrowserSpaceBrowsingPreferences,
         in spaceID: SpaceID
     ) {
-        if isTemporaryWorkspace {
-            temporaryProfileSettingsAuthority(in: spaceID)?.updateBrowsingPreferences(preferences, in: spaceID)
-            return
-        }
-        guard session.space(id: spaceID) != nil else { return }
-        guard setCoreSpaceValue("space.browsing_preferences", preferences, in: spaceID) else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let owner = spaceCommandOwner("space.browsing_preferences", in: spaceID),
+            owner.session.space(id: spaceID) != nil else { return }
+        guard owner.setCoreSpaceValue("space.browsing_preferences", preferences, in: spaceID) else { return }
+        owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
     /// Saves a custom search engine through the core, which validates it,
@@ -155,32 +141,25 @@ extension BrowserStore {
         selects: Bool,
         in spaceID: SpaceID
     ) throws {
-        if isTemporaryWorkspace {
-            guard let source = temporaryProfileSettingsAuthority(in: spaceID) else { return }
-            try source.upsertCustomSearchProvider(provider, selects: selects, in: spaceID)
-            return
-        }
-        guard let space = session.space(id: spaceID) else { return }
+        guard let owner = spaceCommandOwner("space.search_provider.upsert", in: spaceID),
+            let space = owner.session.space(id: spaceID) else { return }
         let admitted = try BrowserCorePolicy.admittedCustomSearchProvider(
             provider, existing: space.browsingPreferences.customSearchProviders)
         // The command re-applies the same rule against the accepted record; an
         // unchanged save reports no change rather than an error.
-        guard family.executeSpace("space.search_provider.upsert", in: spaceID,
-            arguments: ["provider": admitted.coreRecord, "selects": selects], from: self)
+        guard owner.family.executeSpace("space.search_provider.upsert", in: spaceID,
+            arguments: ["provider": admitted.coreRecord, "selects": selects], from: owner)
         else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
     /// Removes a custom search engine; the core selects Google if it was chosen.
     func removeCustomSearchProvider(id: UUID, in spaceID: SpaceID) {
-        if isTemporaryWorkspace {
-            temporaryProfileSettingsAuthority(in: spaceID)?.removeCustomSearchProvider(id: id, in: spaceID)
-            return
-        }
-        guard session.space(id: spaceID) != nil else { return }
-        guard family.executeSpace("space.search_provider.remove", in: spaceID,
-            arguments: ["id": id.uuidString.lowercased()], from: self) else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let owner = spaceCommandOwner("space.search_provider.remove", in: spaceID),
+            owner.session.space(id: spaceID) != nil else { return }
+        guard owner.family.executeSpace("space.search_provider.remove", in: spaceID,
+            arguments: ["id": id.uuidString.lowercased()], from: owner) else { return }
+        owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
 }
@@ -193,11 +172,9 @@ extension BrowserStore {
         _ isExpanded: Bool,
         in spaceID: SpaceID
     ) -> Bool {
-        if isTemporaryWorkspace {
-            return temporaryProfileSettingsAuthority(in: spaceID)?.setSavedTabsExpanded(isExpanded, in: spaceID) ?? false
-        }
-        guard setCoreSpaceValue("space.saved_expansion", isExpanded, in: spaceID) else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let owner = spaceCommandOwner("space.saved_expansion", in: spaceID),
+            owner.setCoreSpaceValue("space.saved_expansion", isExpanded, in: spaceID) else { return false }
+        owner.persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
 

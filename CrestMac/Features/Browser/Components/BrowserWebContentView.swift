@@ -72,7 +72,7 @@ struct BrowserWebContentView: View {
     }
 
     private var pagePresentation: BrowserPagePresentation {
-        BrowserPagePresentationPolicy.resolve(
+        BrowserCorePolicy.pagePresentation(
             BrowserPagePresentationInput(
                 selection: .webPage,
                 hasActivePage: true,

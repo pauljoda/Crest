@@ -168,6 +168,8 @@ final class BrowserQuickWindowModel {
         else { return }
         activityClock.recordActivity(restartsTimerImmediately: true)
         let currentURL = currentSnapshot?.url ?? presentedRequest.initialURL
+        let retarget = BrowserCorePolicy.quickWindowRetarget(presentedRequest,
+            to: currentURL ?? presentedRequest.url, assignment: assignment, pageURL: currentURL)
         guard
             revisePresentedRequest(
                 url: currentURL ?? presentedRequest.url,
@@ -178,7 +180,7 @@ final class BrowserQuickWindowModel {
         pageLease = nil
         releasedPageSnapshot = nil
         selectedAssignment = assignment
-        if let currentURL {
+        if retarget.remembersSpace, let currentURL {
             preferences.rememberSpace(candidate.id, for: currentURL)
         }
     }
@@ -189,6 +191,8 @@ final class BrowserQuickWindowModel {
         guard isCurrentRequest, !wasPromoted, !wasArchived, let pages else { return false }
         let assignment = BrowserSpaceRuntimeAssignment(space: destination)
         let url = currentSnapshot?.url ?? presentedRequest.initialURL
+        let remembersSpace = BrowserCorePolicy.quickWindowRetarget(presentedRequest,
+            to: url ?? presentedRequest.url, assignment: assignment, pageURL: url).remembersSpace
         guard let outcome = BrowserTransientPagePromotion(requestID: presentedRequest.id,
             url: url, sourceAssignment: selectedAssignment, leaseAssignment: pageLease?.assignment,
             destinationAssignment: assignment, supportsLiveAdoption: supportsLivePagePromotion
@@ -196,7 +200,7 @@ final class BrowserQuickWindowModel {
             guard let pageLease else { return false }
             return pages.adoptTransientPage(pageLease, as: tabID, in: space)
         }) else { return false }
-        if let url, assignment != selectedAssignment {
+        if remembersSpace, let url {
             preferences.rememberSpace(assignment.spaceID, for: url)
         }
         wasPromoted = true
@@ -228,9 +232,10 @@ final class BrowserQuickWindowModel {
 
     @discardableResult
     func archivePageIfNeeded() -> Bool {
-        guard !wasArchived,
-            !wasPromoted,
-            let snapshot = currentSnapshot
+        let snapshot = currentSnapshot
+        guard BrowserCorePolicy.quickWindowArchivesOnDismissal(
+            wasArchived: wasArchived, wasPromoted: wasPromoted, hasPage: snapshot != nil),
+            let snapshot
         else { return false }
         guard
             browser.archiveTransientPage(
@@ -326,16 +331,15 @@ final class BrowserQuickWindowModel {
         assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         let expected = presentedRequest
+        guard BrowserCorePolicy.quickWindowRetarget(presentedRequest, to: url,
+            assignment: assignment, pageURL: nil).revises
+        else {
+            return isCurrentRequest
+        }
         let revised = presentedRequest.retargeted(
             to: url,
             assignment: assignment
         )
-        guard
-            revised.url != presentedRequest.url
-                || revised.assignment != presentedRequest.assignment
-        else {
-            return isCurrentRequest
-        }
         guard requestLifecycle.replace(expected, with: revised) else {
             releasePageRetainingSnapshot()
             return false

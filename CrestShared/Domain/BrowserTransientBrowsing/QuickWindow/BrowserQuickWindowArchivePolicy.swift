@@ -18,14 +18,4 @@ enum BrowserQuickWindowArchivePolicy: String, Codable, CaseIterable, Equatable, 
         case .never: "Never"
         }
     }
-
-    var lifetime: TimeInterval? {
-        switch self {
-        case .after1Hour: 60 * 60
-        case .after6Hours: 6 * 60 * 60
-        case .after12Hours: 12 * 60 * 60
-        case .after24Hours: 24 * 60 * 60
-        case .never: nil
-        }
-    }
 }

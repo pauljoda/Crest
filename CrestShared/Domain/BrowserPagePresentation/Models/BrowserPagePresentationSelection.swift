@@ -1,4 +1,4 @@
-enum BrowserPagePresentationSelection: Equatable, Sendable {
+enum BrowserPagePresentationSelection: String, Hashable, Sendable {
     case none
     case startPage
     case nativeContent

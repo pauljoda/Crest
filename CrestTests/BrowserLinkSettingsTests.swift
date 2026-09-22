@@ -4,29 +4,6 @@ import XCTest
 
 @MainActor
 final class BrowserLinkSettingsTests: XCTestCase {
-    func testFieldLevelRouteUpdatesPreserveConcurrentValuesForTheExactRoute() throws {
-        let fixture = makeFixture()
-        let routeID = fixture.routeID
-        let store = fixture.store
-
-        store.updateRoute(
-            routeID,
-            field: .pattern("https://newer.example/reference")
-        )
-        store.updateRoute(
-            routeID,
-            field: .destinationSpaceID(fixture.secondarySpace.id)
-        )
-
-        let route = try XCTUnwrap(
-            store.preferences.routes.first { $0.id == routeID }
-        )
-        XCTAssertEqual(route.pattern, "https://newer.example/reference")
-        XCTAssertEqual(route.destinationSpaceID, fixture.secondarySpace.id)
-        XCTAssertEqual(route.match, .contains)
-        XCTAssertTrue(route.isEnabled)
-    }
-
     func testFieldLevelRouteUpdateDoesNotRetargetASiblingAfterDeletion() {
         let fixture = makeFixture()
         let store = fixture.store

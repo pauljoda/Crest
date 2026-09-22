@@ -584,6 +584,30 @@ authentication handling, prompt labels and fixture trust are policy
 operations; an unanswered permission is Ask, an unanswered URL or document is
 refused and an unanswered scheme is blocked.
 
+External links follow the same split. `links.route` decides where a link opened
+from outside Crest goes (the first enabled route to an open Space, then the
+Quick Window, most-recent or chosen Space preference), and `links.site` names the
+site key a Quick Window remembers its Space under. Route creation, one-field
+edits, reordering and removal are `links.route_*` operations, and
+`links.space_removed` is the Space-deletion cascade: the deleted Space's routes,
+chosen-Space preference and remembered sites go with it. The preferences stay in
+their existing UserDefaults record, unchanged in format; the native store applies
+and persists what the core returns, and an edit the core refuses or cannot answer
+changes nothing. Routing that cannot answer opens a Quick Window in the selected
+Space. Quick Window archive lifetime, archive-on-dismissal and retargeting
+(whether a move revises the request and remembers the site's Space) are
+`quick_window.*` operations for the Mac window and the mobile overlay.
+
+A borrowed workspace's Space commands are routed by one core rule,
+`workspace.command_route`: identity, appearance, default Space, access,
+browsing, search and credential preferences go to the Space it borrows from;
+creating, removing, reordering Spaces and imports are refused there; everything
+else is local. The borrowed authority enforces the same rule, rejecting a
+source-owned command with `borrowed_profile_requires_owner`. The page surface
+for a selected tab (`page.presentation`), the Balanced content-blocking rule
+list (`content_blocking.rules`) and branding range rules (`branding.normalize`,
+also applied by the `space.branding` command) are core policy; the crest's
+heraldic vocabulary and its composition parameters stay native.
 The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.

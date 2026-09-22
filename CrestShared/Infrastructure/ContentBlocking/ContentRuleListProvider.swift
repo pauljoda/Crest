@@ -23,10 +23,13 @@ final class BrowserContentRuleListProvider: BrowserContentRuleListProviding {
     func balancedRuleLists() async throws -> [WKContentRuleList] {
         guard let ruleListStore else { return [] }
         if let cachedRuleLists { return cachedRuleLists }
+        // The core composes Crest's bundled rules. Without them there is
+        // nothing to compile, the same as a launch without a rule store.
+        guard let rules = BrowserCorePolicy.balancedContentBlockingRules() else { return [] }
 
         let ruleLists = try await compiler.compile(
-            identifiers: [BrowserContentBlockingRules.identifier],
-            sources: [BrowserContentBlockingRules.balancedSource],
+            identifiers: [rules.identifier],
+            sources: [rules.source],
             store: ruleListStore
         )
         cachedRuleLists = ruleLists

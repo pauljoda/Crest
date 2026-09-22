@@ -219,9 +219,27 @@ static void locked_space_boundary(void) {
     assert(crest_access_destroy(access) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_OK);
 }
+/* Link routing and borrowed-workspace command routing are core policy answers. */
+static void links_boundary(void) {
+    const char *route = "{\"version\":1,\"operation\":\"links.route\",\"url\":\"https://docs.example.org/crest\","
+        "\"routes\":[{\"id\":\"66666666-6666-4666-8666-666666666666\",\"isEnabled\":true,\"match\":\"contains\","
+        "\"pattern\":\"EXAMPLE.org\",\"destinationSpaceID\":\"77777777-7777-4777-8777-777777777777\"}],"
+        "\"destination\":\"quickWindow\",\"chosenSpaceID\":null,\"remembersSpaceBySite\":true,\"rememberedSpaceID\":null,"
+        "\"spaces\":[\"88888888-8888-4888-8888-888888888888\",\"77777777-7777-4777-8777-777777777777\"],"
+        "\"selectedSpaceID\":\"88888888-8888-4888-8888-888888888888\",\"unavailableSpaceIDs\":[]}";
+    uint8_t output[512]; size_t length = 0;
+    assert(crest_core_evaluate_policy((const uint8_t*)route, strlen(route), output, sizeof(output) - 1, &length) == CREST_OK);
+    output[length] = 0;
+    assert(strstr((const char*)output, "\"quickWindow\":false") && strstr((const char*)output, "77777777-7777-4777-8777-777777777777"));
+    const char *borrowed = "{\"version\":1,\"operation\":\"workspace.command_route\",\"command\":\"space.branding\",\"borrowed\":true}";
+    assert(crest_core_evaluate_policy((const uint8_t*)borrowed, strlen(borrowed), output, sizeof(output) - 1, &length) == CREST_OK);
+    output[length] = 0;
+    assert(strstr((const char*)output, "\"route\":\"source\""));
+}
 int main(void) {
     assert(crest_core_abi_version() == CREST_ABI_VERSION);
     policy_boundary();
+    links_boundary();
     access_boundary();
     downloads_boundary();
     permissions_boundary();

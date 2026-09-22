@@ -111,24 +111,23 @@ extension BrowserStore {
         _ preferences: BrowserCredentialPreferences,
         in spaceID: SpaceID
     ) {
-        if isTemporaryWorkspace {
-            temporaryProfileSettingsAuthority(in: spaceID)?.updateCredentialPreferences(preferences, in: spaceID)
-            return
-        }
-        guard session.space(id: spaceID) != nil else { return }
-        guard setCoreSpaceValue("space.credential_preferences", preferences, in: spaceID) else { return }
-        persist(scope: .core)
+        guard let owner = spaceCommandOwner("space.credential_preferences", in: spaceID),
+            owner.session.space(id: spaceID) != nil else { return }
+        guard owner.setCoreSpaceValue("space.credential_preferences", preferences, in: spaceID) else { return }
+        owner.persist(scope: .core)
     }
 
     func setCrestPasswordSynchronization(
         _ isSynchronizable: Bool,
         in spaceID: SpaceID
     ) async throws {
-        if isTemporaryWorkspace {
-            guard let source = temporaryProfileSettingsAuthority(in: spaceID) else {
-                throw CredentialVaultError.missingSpace
-            }
-            try await source.setCrestPasswordSynchronization(isSynchronizable, in: spaceID)
+        // The vault write and its preference belong to the store that owns
+        // the Space's credential settings, which may be a borrowed source.
+        guard let owner = spaceCommandOwner("space.credential_preferences", in: spaceID) else {
+            throw CredentialVaultError.missingSpace
+        }
+        guard owner === self else {
+            try await owner.setCrestPasswordSynchronization(isSynchronizable, in: spaceID)
             return
         }
         guard let space = session.space(id: spaceID) else {

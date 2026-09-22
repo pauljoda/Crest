@@ -2013,6 +2013,10 @@
     "core-site-permissions": {
       "category": "internal",
       "message": "Move site permission decisions, external link and scheme consent, blocked popup notices and sign-in challenge rules into the portable core."
+    },
+    "core-link-routing": {
+      "category": "internal",
+      "message": "Move link routing, Quick Window retargeting, page presentation, content-blocking rule selection, branding ranges and borrowed-workspace command routing into the portable core."
     }
   }
 }

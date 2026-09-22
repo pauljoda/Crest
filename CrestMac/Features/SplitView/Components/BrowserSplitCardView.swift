@@ -101,7 +101,7 @@ struct BrowserSplitCardView: View {
     private func pagePresentation(
         for page: BrowserPage?
     ) -> BrowserPagePresentation {
-        BrowserPagePresentationPolicy.resolve(
+        BrowserCorePolicy.pagePresentation(
             BrowserPagePresentationInput(
                 selection: tab.pagePresentationSelection,
                 hasActivePage: page != nil,

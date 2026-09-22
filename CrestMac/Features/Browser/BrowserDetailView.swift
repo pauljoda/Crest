@@ -31,7 +31,7 @@ struct BrowserDetailView: View {
         for page: BrowserPage?,
         tab: BrowserTab?
     ) -> BrowserPagePresentation {
-        BrowserPagePresentationPolicy.resolve(
+        BrowserCorePolicy.pagePresentation(
             BrowserPagePresentationInput(
                 selection: tab.map { $0.pagePresentationSelection }
                     ?? .none,

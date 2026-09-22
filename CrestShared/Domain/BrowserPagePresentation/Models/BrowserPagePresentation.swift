@@ -1,4 +1,4 @@
-enum BrowserPagePresentation: CaseIterable, Equatable, Sendable {
+enum BrowserPagePresentation: String, CaseIterable, Equatable, Sendable {
     case noSelection
     case startPage
     case nativeContent

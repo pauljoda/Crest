@@ -31,6 +31,10 @@ public static partial class NativePolicyEvaluator {
         if (EvaluateSitePermissions(operation, request) is { } sitePermission) return Encode(sitePermission);
         if (EvaluateOrigins(operation, request) is { } origin) return Encode(origin);
         if (EvaluateAuthentication(operation, request) is { } authentication) return Encode(authentication);
+        if (EvaluateLinks(operation, request) is { } links) return Encode(links);
+        if (EvaluateQuickWindow(operation, request) is { } quickWindow) return Encode(quickWindow);
+        if (EvaluatePresentation(operation, request) is { } presentation) return Encode(presentation);
+        if (EvaluateWorkspace(operation, request) is { } workspace) return Encode(workspace);
         if (operation is PolicyOperation.NavigationLink or PolicyOperation.NavigationModifiedLink) {
             bool peek, newTab;
             if (operation == PolicyOperation.NavigationModifiedLink) {

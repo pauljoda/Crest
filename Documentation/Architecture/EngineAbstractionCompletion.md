@@ -270,14 +270,18 @@ Swift keeps projections and adapters only.
 
 Stragglers to fold in: `BrowserSession.ensureSelection` and
 `repairRuntimeIntegrity` (already delegate to core repair; remove the Swift
-copies), the borrowed-workspace settings fan-out repeated at eight call sites
-in `BrowserStore+Spaces`, `+Credentials`, `+Workspaces` (one core routing rule
-via the borrowing authority), `BrowserSplitGroupNormalizer` and
+copies), `BrowserSplitGroupNormalizer` and
 `normalizeSplitGroupsAfterUserMutation` (core split policy already exists),
-`BrowserLinkPreferenceStore` route mutations and the Space-deletion cascade,
-Quick Window archive and retargeting policies, `BrowserPagePresentationPolicy`,
-`BrowserContentBlockingRules` composition, tear-off eligibility in
-`BrowserMacWindowCoordinator`, `BrowserSpaceBranding.normalized()`.
+tear-off eligibility in `BrowserMacWindowCoordinator`.
+
+Folded in: the borrowed-workspace settings fan-out is one core routing rule
+(`workspace.command_route`, enforced by the borrowed authority's Space commands);
+`BrowserLinkPreferenceStore` route edits, the Space-deletion cascade and
+`BrowserLinkRoutingPolicy` are `links.*` operations; Quick Window archive and
+retargeting are `quick_window.*` operations; `BrowserPagePresentationPolicy`,
+Balanced content-blocking composition and branding normalization are
+`page.presentation`, `content_blocking.rules` and `branding.normalize`, and the
+`space.branding` command applies the same branding rules.
 
 Stays in Swift by design: heraldry vocabulary and composition, favicon palette
 extraction, sidebar widgets, Peek motion and presentation phases, tear-off

@@ -256,10 +256,12 @@ final class MobileBrowserTransientOverlayModel {
             )
         else { return false }
 
-        if request.isQuickWindow,
-            destinationAssignment != request.spaceAssignment
-        {
-            preferences.rememberSpace(destinationAssignment.spaceID, for: page.url ?? request.url)
+        if case .quickWindow(let quickWindowRequest) = request {
+            let pageURL = page.url ?? quickWindowRequest.initialURL
+            if BrowserCorePolicy.quickWindowRetarget(quickWindowRequest, to: pageURL ?? quickWindowRequest.url,
+                assignment: destinationAssignment, pageURL: pageURL).remembersSpace, let pageURL {
+                preferences.rememberSpace(destinationAssignment.spaceID, for: pageURL)
+            }
         }
         wasPromoted = true
         if outcome == .openedNewPage {
@@ -348,10 +350,11 @@ final class MobileBrowserTransientOverlayModel {
     }
 
     private func archiveQuickWindowIfNeeded() {
+        let snapshot = currentSnapshot
         guard request.isQuickWindow,
-            !wasArchived,
-            !wasPromoted,
-            let snapshot = currentSnapshot,
+            BrowserCorePolicy.quickWindowArchivesOnDismissal(
+                wasArchived: wasArchived, wasPromoted: wasPromoted, hasPage: snapshot != nil),
+            let snapshot,
             browser.archiveTransientPage(
                 url: snapshot.url,
                 title: snapshot.title,
@@ -371,8 +374,14 @@ final class MobileBrowserTransientOverlayModel {
             let destination = browser.space(matching: destinationAssignment),
             !spaceAccess.isLocked(destination)
         else { return }
-        let currentURL = currentSnapshot?.url ?? quickWindowRequest.url
-        preferences.rememberSpace(destinationAssignment.spaceID, for: currentURL)
+        let pageURL = currentSnapshot?.url ?? quickWindowRequest.initialURL
+        let currentURL = pageURL ?? quickWindowRequest.url
+        let retarget = BrowserCorePolicy.quickWindowRetarget(quickWindowRequest, to: currentURL,
+            assignment: destinationAssignment, pageURL: pageURL)
+        guard retarget.revises else { return }
+        if retarget.remembersSpace, let pageURL {
+            preferences.rememberSpace(destinationAssignment.spaceID, for: pageURL)
+        }
         pageLease?.release()
         pageLease = nil
         resetNavigationRecording()

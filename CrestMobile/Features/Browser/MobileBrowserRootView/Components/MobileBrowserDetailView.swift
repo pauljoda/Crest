@@ -422,7 +422,7 @@ struct MobileBrowserDetailView: View {
     private func pagePresentation(
         for page: MobileBrowserPage?
     ) -> BrowserPagePresentation {
-        BrowserPagePresentationPolicy.resolve(
+        BrowserCorePolicy.pagePresentation(
             BrowserPagePresentationInput(
                 selection: selectionPresentation,
                 hasActivePage: page != nil,

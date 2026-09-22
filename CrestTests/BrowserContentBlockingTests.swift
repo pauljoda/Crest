@@ -17,10 +17,11 @@ final class BrowserContentBlockingTests: XCTestCase {
         )
 
         let ruleLists = try await provider.balancedRuleLists()
+        let rules = try XCTUnwrap(BrowserCorePolicy.balancedContentBlockingRules())
 
-        XCTAssertEqual(ruleLists.map(\.identifier), [BrowserContentBlockingRules.identifier])
-        XCTAssertEqual(compiler.identifiers, [BrowserContentBlockingRules.identifier])
-        XCTAssertEqual(compiler.sources, [BrowserContentBlockingRules.balancedSource])
+        XCTAssertEqual(ruleLists.map(\.identifier), [rules.identifier])
+        XCTAssertEqual(compiler.identifiers, [rules.identifier])
+        XCTAssertEqual(compiler.sources, [rules.source])
     }
 
     func testBalancedProtectionIsTheDefaultAndRepairsLegacyPreferences() throws {

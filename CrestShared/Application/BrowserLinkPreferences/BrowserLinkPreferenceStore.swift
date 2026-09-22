@@ -41,12 +41,14 @@ final class BrowserLinkPreferenceStore {
         persistence.remove()
     }
 
+    /// Where an external link opens. The core owns the routing rule; see
+    /// `BrowserCorePolicy.linkRoutingDecision` for its fail-safe answer.
     func routingDecision(
         for url: URL,
         in session: BrowserSession,
         unavailableSpaceIDs: Set<SpaceID> = []
     ) -> BrowserLinkRoutingDecision {
-        BrowserLinkRoutingPolicy.decision(
+        BrowserCorePolicy.linkRoutingDecision(
             for: url,
             preferences: preferences,
             session: session,
@@ -55,70 +57,46 @@ final class BrowserLinkPreferenceStore {
     }
 
     func rememberQuickWindowSpace(_ spaceID: SpaceID, for url: URL) {
-        guard preferences.remembersQuickWindowSpaceBySite,
-            let site = BrowserSavedSitePolicy.normalizedHost(url)
+        guard let site = BrowserCorePolicy.linkSite(
+            for: url, remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite)
         else { return }
         update { $0.rememberedQuickWindowSpacesBySite[site] = spaceID }
     }
 
+    // Route edits are core decisions applied to the stored preferences. An
+    // edit the core refuses or cannot answer leaves them unchanged.
+
     func addRoute(destinationSpaceID: SpaceID) {
-        update {
-            $0.routes.append(
-                BrowserLinkRoute(pattern: "", destinationSpaceID: destinationSpaceID)
-            )
-        }
+        guard let route = BrowserCorePolicy.createdLinkRoute(
+            existing: preferences.routes, destinationSpaceID: destinationSpaceID)
+        else { return }
+        update { $0.routes.append(route) }
     }
 
     func updateRoute(_ id: UUID, field: BrowserLinkRouteFieldUpdate) {
+        guard let route = preferences.routes.first(where: { $0.id == id }),
+            let updated = BrowserCorePolicy.updatedLinkRoute(route, field: field)
+        else { return }
         update { preferences in
-            guard let index = preferences.routes.firstIndex(where: { $0.id == id }) else {
-                return
-            }
-            field.apply(to: &preferences.routes[index])
+            guard let index = preferences.routes.firstIndex(where: { $0.id == id }) else { return }
+            preferences.routes[index] = updated
         }
     }
 
     func removeRoute(_ id: UUID) {
-        update { $0.routes.removeAll { $0.id == id } }
-    }
-
-    func removeReferences(to spaceID: SpaceID) {
-        update { preferences in
-            preferences.routes.removeAll { $0.destinationSpaceID == spaceID }
-            if preferences.externalLinkSpaceID == spaceID {
-                preferences.externalLinkSpaceID = nil
-            }
-            preferences.rememberedQuickWindowSpacesBySite = preferences
-                .rememberedQuickWindowSpacesBySite
-                .filter { $0.value != spaceID }
-        }
+        guard let routes = BrowserCorePolicy.removingLinkRoute(id, from: preferences.routes) else { return }
+        update { $0.routes = routes }
     }
 
     func moveRoute(_ id: UUID, by offset: Int) {
-        update { preferences in
-            guard let sourceIndex = preferences.routes.firstIndex(where: { $0.id == id }) else {
-                return
-            }
-            let destinationIndex = sourceIndex + offset
-            guard preferences.routes.indices.contains(destinationIndex) else { return }
-            let route = preferences.routes.remove(at: sourceIndex)
-            preferences.routes.insert(route, at: destinationIndex)
-        }
+        guard let routes = BrowserCorePolicy.movingLinkRoute(id, by: offset, in: preferences.routes) else { return }
+        update { $0.routes = routes }
     }
 
-    func moveRoutes(fromOffsets: IndexSet, toOffset: Int) {
-        update { preferences in
-            let validOffsets = fromOffsets.filter(preferences.routes.indices.contains)
-            let moving = validOffsets.map { preferences.routes[$0] }
-            for index in validOffsets.sorted(by: >) {
-                preferences.routes.remove(at: index)
-            }
-            let removedBeforeDestination = validOffsets.filter { $0 < toOffset }.count
-            let insertionIndex = min(
-                max(toOffset - removedBeforeDestination, 0),
-                preferences.routes.endIndex
-            )
-            preferences.routes.insert(contentsOf: moving, at: insertionIndex)
-        }
+    /// The Space-deletion cascade: routes, the chosen Space and remembered
+    /// Quick Window Spaces that point at a deleted Space.
+    func removeReferences(to spaceID: SpaceID) {
+        guard let revised = BrowserCorePolicy.linkPreferences(preferences, removingSpace: spaceID) else { return }
+        update { $0 = revised }
     }
 }

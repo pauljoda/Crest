@@ -158,22 +158,11 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         )
     }
 
+    /// The core's branding rules applied to this value; see
+    /// `BrowserCorePolicy.normalizedBranding`. Construction and decoding keep
+    /// their own range tolerance so stored branding loads unchanged.
     func normalized() -> BrowserSpaceBranding {
-        BrowserSpaceBranding(
-            colors: colors,
-            bannerPattern: bannerPattern,
-            bannerStrength: bannerStrength,
-            readabilityFade: readabilityFade,
-            themeMode: themeMode,
-            gradientAngle: gradientAngle,
-            showsTexture: showsTexture,
-            iconStyle: iconStyle,
-            symbolColor: symbolColor,
-            crest: crest,
-            folderColorIntensity: folderColorIntensity,
-            textColorMode: textColorMode,
-            hasCustomAppearance: hasCustomAppearance
-        )
+        BrowserCorePolicy.normalizedBranding(self)
     }
 
     func color(for role: BrowserSpaceBrandColorRole) -> BrowserSpaceBrandColor? {
@@ -290,7 +279,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         try container.encodeIfPresent(symbolColor, forKey: .symbolColor)
         try container.encode(crest, forKey: .crest)
         try container.encode(renderingVersion, forKey: .renderingVersion)
-        try container.encode(normalized().folderColorIntensity, forKey: .folderColorIntensity)
+        try container.encode(folderColorIntensity.isFinite ? min(max(folderColorIntensity, 0), 1) : 0, forKey: .folderColorIntensity)
         try container.encode(textColorMode, forKey: .textColorMode)
         try container.encodeIfPresent(hasCustomAppearance, forKey: .hasCustomAppearance)
     }

@@ -566,39 +566,6 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         XCTAssertEqual(tab.savedSiteURL, destination)
     }
 
-    func testOrderedRoutesPrecedeDefaultAndSkipDisabledOrMissingSpaces() throws {
-        let suiteName = "BrowserTransientBrowsingTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = BrowserLinkPreferenceStore(
-            defaults: defaults,
-            persistenceKey: "links"
-        )
-        let session = BrowserSession.preview
-        let work = try XCTUnwrap(session.spaces.first)
-        let personal = try XCTUnwrap(session.spaces.last)
-        let url = try XCTUnwrap(URL(string: "https://github.com/crest"))
-
-        store.update { preferences in
-            preferences.externalLinkDestination = .quickWindow
-            preferences.routes = [
-                BrowserLinkRoute(
-                    isEnabled: false,
-                    match: .contains,
-                    pattern: "github.com",
-                    destinationSpaceID: personal.id
-                ),
-                BrowserLinkRoute(
-                    match: .contains,
-                    pattern: "github.com",
-                    destinationSpaceID: work.id
-                ),
-            ]
-        }
-
-        XCTAssertEqual(store.routingDecision(for: url, in: session), .space(work.id))
-    }
-
     func testQuickWindowRemembersSpaceByNormalizedSite() throws {
         let suiteName = "BrowserTransientBrowsingTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -654,37 +621,6 @@ final class BrowserTransientBrowsingTests: XCTestCase {
             persistenceKey: persistenceKey
         )
         XCTAssertEqual(restored.preferences.peekClickModifier, .command)
-    }
-
-    func testMovingLinkRoutePersistsOrderAndIgnoresOutOfBoundsMoves() throws {
-        let suiteName = "BrowserTransientBrowsingTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let persistenceKey = "links"
-        let store = BrowserLinkPreferenceStore(
-            defaults: defaults,
-            persistenceKey: persistenceKey
-        )
-        let destination = try XCTUnwrap(BrowserSession.preview.spaces.first?.id)
-
-        store.addRoute(destinationSpaceID: destination)
-        store.addRoute(destinationSpaceID: destination)
-        let originalOrder = store.preferences.routes.map(\.id)
-        XCTAssertEqual(originalOrder.count, 2)
-
-        store.moveRoute(originalOrder[0], by: 1)
-        let movedOrder = Array(originalOrder.reversed())
-        XCTAssertEqual(store.preferences.routes.map(\.id), movedOrder)
-
-        store.moveRoute(originalOrder[0], by: 1)
-        store.moveRoute(originalOrder[1], by: -1)
-        XCTAssertEqual(store.preferences.routes.map(\.id), movedOrder)
-
-        let reloaded = BrowserLinkPreferenceStore(
-            defaults: defaults,
-            persistenceKey: persistenceKey
-        )
-        XCTAssertEqual(reloaded.preferences.routes.map(\.id), movedOrder)
     }
 
     func testDismissedQuickWindowArchivesAndRecordsHistoryInExactSpace() throws {

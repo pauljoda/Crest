@@ -27,8 +27,8 @@ public sealed partial class NativeSessionAuthority {
         => Deletions(metadata).FirstOrDefault(d => Id(d!["spaceID"]) == id);
 
     private NativeSessionCommand PrepareSpaceCommand(ulong expected, JsonObject request) {
-        SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
+        BorrowedCommandRouting.RequireLocal(operation, workspaceKind == BrowserWorkspaceKind.Temporary);
         var args = request["arguments"]!.AsObject();
         var window = request["window"]!;
         var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
@@ -121,9 +121,9 @@ public sealed partial class NativeSessionAuthority {
                     fields["accent"] = accent;
                     break;
                 case SessionOperation.SpaceBranding:
-                    // The native view supplies its rendering vocabulary. Store it
-                    // as metadata without reconstructing tabs, history or images.
-                    fields["branding"] = args["value"]!.AsObject().DeepClone();
+                    // The native view supplies its rendering vocabulary. The core
+                    // applies its range rules and stores the rest as metadata.
+                    fields["branding"] = BrandingDocument.Normalize(args["value"]!.AsObject());
                     break;
                 case SessionOperation.SpaceBrowsingPreferences:
                     fields["browsingPreferences"] = args["value"]!.AsObject().DeepClone();

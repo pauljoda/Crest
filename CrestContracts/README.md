@@ -80,6 +80,16 @@ and `authentication.fixture_trust` operations answer the origin, scheme,
 popup-notice and HTTP authentication rules. URLs arrive as the platform
 parser's facts; every caller refuses, blocks or asks when it gets no answer.
 
+The `links.*` operations carry link routes as `{"id","isEnabled","match",
+"pattern","destinationSpaceID"}` with lowercase UUID strings; route edits answer
+the edited route or `{"error":code}`, reorders and removals answer the route
+order, and `links.space_removed` answers what a deleted Space leaves behind.
+`quick_window.*` answer archive lifetime, archive-on-dismissal and retargeting;
+`page.presentation`, `content_blocking.rules` and `branding.normalize` answer
+page surfaces, the Balanced rule list and branding range rules.
+`workspace.command_route` answers `local`, `source` or `rejected` for a session
+command issued from an owned or borrowed workspace.
+
 This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 

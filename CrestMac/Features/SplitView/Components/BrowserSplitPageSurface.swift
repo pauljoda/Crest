@@ -321,7 +321,7 @@ struct BrowserSplitPageSurface: View {
         )
         guard
             BrowserSplitCardLiftPolicy.picturesPage(
-                BrowserPagePresentationPolicy.resolve(
+                BrowserCorePolicy.pagePresentation(
                     BrowserPagePresentationInput(
                         selection: member.pagePresentationSelection,
                         hasActivePage: page != nil,

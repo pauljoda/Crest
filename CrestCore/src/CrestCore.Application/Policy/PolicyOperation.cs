@@ -44,6 +44,21 @@ internal enum PolicyOperation {
     TranslationMatches,
     TranslationRule,
     TranslationSet,
+    // Links, Quick Windows, presentation, branding and workspace routing.
+    BrandingNormalize,
+    ContentBlockingRules,
+    LinksRoute,
+    LinksRouteCreate,
+    LinksRouteMove,
+    LinksRouteRemove,
+    LinksRouteUpdate,
+    LinksSite,
+    LinksSpaceRemoved,
+    PagePresentation,
+    QuickWindowArchiveLifetime,
+    QuickWindowDismissal,
+    QuickWindowRetarget,
+    WorkspaceCommandRoute,
 }
 
 internal static class PolicyOperationCodes {
@@ -92,6 +107,21 @@ internal static class PolicyOperationCodes {
         "translation.matches" => PolicyOperation.TranslationMatches,
         "translation.rule" => PolicyOperation.TranslationRule,
         "translation.set" => PolicyOperation.TranslationSet,
+        // Links, Quick Windows, presentation, branding and workspace routing.
+        "branding.normalize" => PolicyOperation.BrandingNormalize,
+        "content_blocking.rules" => PolicyOperation.ContentBlockingRules,
+        "links.route" => PolicyOperation.LinksRoute,
+        "links.route_create" => PolicyOperation.LinksRouteCreate,
+        "links.route_move" => PolicyOperation.LinksRouteMove,
+        "links.route_remove" => PolicyOperation.LinksRouteRemove,
+        "links.route_update" => PolicyOperation.LinksRouteUpdate,
+        "links.site" => PolicyOperation.LinksSite,
+        "links.space_removed" => PolicyOperation.LinksSpaceRemoved,
+        "page.presentation" => PolicyOperation.PagePresentation,
+        "quick_window.archive_lifetime" => PolicyOperation.QuickWindowArchiveLifetime,
+        "quick_window.dismissal" => PolicyOperation.QuickWindowDismissal,
+        "quick_window.retarget" => PolicyOperation.QuickWindowRetarget,
+        "workspace.command_route" => PolicyOperation.WorkspaceCommandRoute,
         _ => PolicyOperation.Unknown
     };
 
