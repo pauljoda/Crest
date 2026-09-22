@@ -4,18 +4,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserUtilityListTests: XCTestCase {
-    func testDownloadProgressPublishingCoalescesTinyChangesButKeepsCompletion() {
-        XCTAssertFalse(
-            BrowserDownloadProgressPolicy.shouldPublish(previous: 0.4, next: 0.405)
-        )
-        XCTAssertTrue(
-            BrowserDownloadProgressPolicy.shouldPublish(previous: 0.4, next: 0.42)
-        )
-        XCTAssertTrue(
-            BrowserDownloadProgressPolicy.shouldPublish(previous: 0.995, next: 1)
-        )
-    }
-
     func testDownloadProgressDoesNotRestartUtilitySectionPreparation() {
         let id = UUID()
         let profileID = UUID()
@@ -346,8 +334,9 @@ final class BrowserUtilityListTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testDownloadLedgerRetainsTheTimeUsedForListGrouping() {
-        var ledger = BrowserDownloadLedger()
+        let ledger = BrowserDownloadLedger()
         let createdAt = Date(timeIntervalSince1970: 1_786_084_200)
 
         _ = ledger.begin(

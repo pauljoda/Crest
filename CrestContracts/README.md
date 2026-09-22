@@ -32,6 +32,19 @@ indices. Retention uses a strict age cutoff; explicit history ranges include
 their start and exclude their end. Native callers apply the results only after
 validating every batch, preserving their existing persistence and sync behavior.
 
+`crest_downloads_*` owns one process-local download ledger per native download
+center: record states and their transitions, newest-first ordering, badge
+acknowledgement and retention expiry (the shortest retention among Spaces sharing
+a profile). It is never persisted or synced. Each v1 JSON `command` runs once and
+leaves a delta (`applied`, changed `items` with their indices, `removed`
+identities) for `crest_downloads_read`. Engines keep reporting download events
+and the native center forwards them; events that do not apply to a record's
+state are reported as not applied. The pure `downloads.progress`,
+`downloads.risk` and `downloads.automatic` policy operations answer transfer
+telemetry and ETA, risk reasons and confirmation, and the automatic-download
+throttle. The platform supplies only its file-system-safe filename and type
+registry facts for risk.
+
 This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 

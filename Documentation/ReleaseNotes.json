@@ -1973,6 +1973,10 @@
     "site-permissions-desktop": {
       "category": "improved",
       "message": "In the desktop browser, camera, microphone, location and notification requests use Crest's own prompt, are remembered per Space, and can be reviewed and revoked in Site Controls and Privacy."
+    },
+    "core-downloads-aggregate": {
+      "category": "internal",
+      "message": "Move the download ledger, progress estimation, automatic-download throttle and download risk rules into the portable core so both engines and platforms share them."
     }
   }
 }

@@ -29,7 +29,7 @@ struct BrowserDownloadStatusIcon: View {
             .accessibilityLabel("Download Progress")
             .accessibilityValue(
                 Text(
-                    BrowserDownloadProgressPolicy.normalized(item.progress),
+                    item.progress,
                     format: .percent.precision(.fractionLength(0))
                 )
             )

@@ -135,7 +135,7 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
-        var ledger = BrowserDownloadLedger()
+        let ledger = BrowserDownloadLedger()
         let downloadItemID = ledger.begin(
             profileID: source.profile.id,
             filename: "Crest.ipa",

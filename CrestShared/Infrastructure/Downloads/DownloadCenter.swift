@@ -44,7 +44,8 @@ final class BrowserDownloadCenter: NSObject {
             Bool
         ) async -> BrowserPlatformDownloadResolution
 
-    private(set) var ledger = BrowserDownloadLedger()
+    /// The core-owned ledger projection. Views observe its items directly.
+    let ledger: BrowserDownloadLedger
     private(set) var feedbackEvents: [BrowserDownloadFeedbackEvent] = []
 
     @ObservationIgnored private var downloads: [ObjectIdentifier: WKDownload] = [:]
@@ -61,8 +62,9 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var permissionRequests:
         [ObjectIdentifier: (controller: BrowserPagePermissionController, generation: UUID)] = [:]
     @ObservationIgnored private var sourceWebViewIDs: [ObjectIdentifier: ObjectIdentifier] = [:]
-    @ObservationIgnored private var automaticDownloadSequences:
-        [AutomaticDownloadScope: BrowserAutomaticDownloadSequence] = [:]
+    /// The core throttle state per page, origin and Space: whether the one
+    /// automatic download allowed without asking has been used.
+    @ObservationIgnored private var automaticDownloadAllowances: [AutomaticDownloadScope: Bool] = [:]
     @ObservationIgnored private var approvedRetryKeys: Set<ObjectIdentifier> = []
     @ObservationIgnored private var userInitiatedOverrideKeys: Set<ObjectIdentifier> = []
     @ObservationIgnored private var requestedFilenames: [ObjectIdentifier: String] = [:]
@@ -187,18 +189,10 @@ final class BrowserDownloadCenter: NSObject {
             return false
         }
         lastRetentionSweepAt = now
-        let retentionByProfileID = session.spaces.reduce(
-            into: [UUID: BrowserDataRetentionDuration]()
-        ) { policies, space in
-            let proposed = space.browsingPreferences.dataRetention.downloads
-            guard let existing = policies[space.profile.id] else {
-                policies[space.profile.id] = proposed
-                return
-            }
-            policies[space.profile.id] = Self.shorter(existing, proposed)
-        }
         let removedItemIDs = ledger.removeExpiredRecords(
-            retentionByProfileID: retentionByProfileID,
+            retention: session.spaces.map {
+                ($0.profile.id, $0.browsingPreferences.dataRetention.downloads.lifetime)
+            },
             now: now
         )
         for itemID in removedItemIDs {
@@ -269,14 +263,14 @@ final class BrowserDownloadCenter: NSObject {
             lease.assignment.profileID != profileID
                 || lease.assignment.spaceID != spaceID
         }
-        automaticDownloadSequences = automaticDownloadSequences.filter {
+        automaticDownloadAllowances = automaticDownloadAllowances.filter {
             $0.key.spaceID != spaceID
         }
     }
 
     func resetAutomaticDownloadSequence(in webView: WKWebView) {
         let webViewID = ObjectIdentifier(webView)
-        automaticDownloadSequences = automaticDownloadSequences.filter {
+        automaticDownloadAllowances = automaticDownloadAllowances.filter {
             $0.key.webViewID != webViewID
         }
     }
@@ -293,18 +287,20 @@ final class BrowserDownloadCenter: NSObject {
             transfer = existing
         } else {
             transfer = EngineTransfer(itemID: ledger.begin(profileID: assignment.profileID,
-                filename: BrowserDownloadDestination.safeFilename(from: update.filename), createdAt: update.createdAt),
+                filename: BrowserDownloadDestination.safeFilename(from: update.filename), createdAt: update.createdAt,
+                isAcknowledged: update.isRestored),
                 assignment: assignment, controller: controller)
             engineTransfers[update.id] = transfer
-            if update.isRestored { ledger.acknowledgeItem(transfer.itemID) }
         }
         if let destination = update.destination {
             ledger.setDestination(destination, for: transfer.itemID)
         }
-        ledger.setTransferUpdate(transfer.estimator.sample(
+        if let reading = transfer.estimator.sample(
             completedUnitCount: update.bytesReceived, totalUnitCount: update.totalBytes,
             fractionCompleted: update.totalBytes > 0 ? Double(update.bytesReceived) / Double(update.totalBytes) : 0,
-            isPaused: update.isPaused), for: transfer.itemID)
+            isPaused: update.isPaused) {
+            ledger.setTransferUpdate(reading, for: transfer.itemID)
+        }
         switch update.state {
         case .preparing, .downloading:
             transfer.warningToken = nil
@@ -366,19 +362,6 @@ final class BrowserDownloadCenter: NSObject {
             controller?.cancelDownload(id)
         }
         return nil
-    }
-
-    private static func shorter(
-        _ lhs: BrowserDataRetentionDuration,
-        _ rhs: BrowserDataRetentionDuration
-    ) -> BrowserDataRetentionDuration {
-        switch (lhs.lifetime, rhs.lifetime) {
-        case (nil, nil): lhs
-        case (nil, _): rhs
-        case (_, nil): lhs
-        case (let lhsLifetime?, let rhsLifetime?):
-            lhsLifetime <= rhsLifetime ? lhs : rhs
-        }
     }
 
     func start(
@@ -452,8 +435,9 @@ final class BrowserDownloadCenter: NSObject {
         spaceName: String,
         feedbackSource: BrowserDownloadFeedbackSource? = nil
     ) async -> UUID {
-        let assessment = BrowserDownloadRiskAssessment.assess(
-            suggestedFilename: suggestedFilename, mimeType: mimeType)
+        let verdict = BrowserDownloadRiskVerdict.assess(
+            suggestedFilename: suggestedFilename, mimeType: mimeType, isUserInitiated: true)
+        let assessment = verdict.assessment
         let itemID = ledger.begin(profileID: assignment.profileID, filename: assessment.sanitizedFilename)
         ledger.setRiskAssessment(assessment, for: itemID)
         dataSaveAssignments[itemID] = assignment
@@ -464,7 +448,7 @@ final class BrowserDownloadCenter: NSObject {
                     filename: assessment.sanitizedFilename, source: feedbackSource))
         }
         await finishSavingData(
-            data, itemID: itemID, assessment: assessment, originatingURL: originatingURL,
+            data, itemID: itemID, verdict: verdict, originatingURL: originatingURL,
             assignment: assignment, spaceName: spaceName)
         return itemID
     }
@@ -472,14 +456,15 @@ final class BrowserDownloadCenter: NSObject {
     private func finishSavingData(
         _ data: Data,
         itemID: UUID,
-        assessment: BrowserDownloadRiskAssessment,
+        verdict: BrowserDownloadRiskVerdict,
         originatingURL: URL,
         assignment: BrowserSpaceRuntimeAssignment,
         spaceName: String
     ) async {
         defer { dataSaveAssignments.removeValue(forKey: itemID) }
         guard dataSaveAssignments[itemID] == assignment else { return }
-        if assessment.requiresConfirmation(isUserInitiated: true) {
+        let assessment = verdict.assessment
+        if verdict.requiresConfirmation {
             let approved = await approveRiskyDownload(assessment, originatingURL, spaceName)
             guard dataSaveAssignments[itemID] == assignment else { return }
             guard approved else {
@@ -769,7 +754,7 @@ final class BrowserDownloadCenter: NSObject {
                     isPaused: isPaused
                 )
                 self.transferEstimators[key] = estimator
-                self.ledger.setTransferUpdate(update, for: itemID)
+                if let update { self.ledger.setTransferUpdate(update, for: itemID) }
             }
         }
     }
@@ -795,10 +780,15 @@ final class BrowserDownloadCenter: NSObject {
         let key = ObjectIdentifier(download)
         let effectiveSuggestedFilename =
             requestedFilenames[key] ?? suggestedFilename
-        let assessment = BrowserDownloadRiskAssessment.assess(
+        let isUserInitiated =
+            download.isUserInitiated
+            || userInitiatedOverrideKeys.contains(key)
+        let verdict = BrowserDownloadRiskVerdict.assess(
             suggestedFilename: effectiveSuggestedFilename,
-            mimeType: response.mimeType
+            mimeType: response.mimeType,
+            isUserInitiated: isUserInitiated
         )
+        let assessment = verdict.assessment
         update(download) { ledger, itemID in
             ledger.setRiskAssessment(assessment, for: itemID)
         }
@@ -812,35 +802,26 @@ final class BrowserDownloadCenter: NSObject {
         } else {
             savedDecision = .denyPersistently
         }
-        let automaticDownloadAction: BrowserAutomaticDownloadAction
-        let isUserInitiated =
-            download.isUserInitiated
-            || userInitiatedOverrideKeys.contains(key)
-        if let origin = sourceOrigins[key],
-            let webViewID = sourceWebViewIDs[key],
-            let spaceID = spaceIDs[key]
-        {
-            let scope = AutomaticDownloadScope(
-                webViewID: webViewID,
-                origin: origin,
-                spaceID: spaceID
-            )
-            var sequence =
-                automaticDownloadSequences[scope]
-                ?? BrowserAutomaticDownloadSequence()
-            automaticDownloadAction = sequence.action(
-                isUserInitiated: isUserInitiated,
-                savedDecision: savedDecision,
-                isUserApprovedRetry: approvedRetryKeys.contains(key)
-            )
-            automaticDownloadSequences[scope] = sequence
-        } else {
-            automaticDownloadAction = BrowserAutomaticDownloadPolicy.action(
-                isUserInitiated: isUserInitiated,
-                savedDecision: savedDecision,
-                isUserApprovedRetry: approvedRetryKeys.contains(key)
-            )
+        let scope: AutomaticDownloadScope? =
+            if let origin = sourceOrigins[key],
+                let webViewID = sourceWebViewIDs[key],
+                let spaceID = spaceIDs[key]
+            {
+                AutomaticDownloadScope(webViewID: webViewID, origin: origin, spaceID: spaceID)
+            } else {
+                nil
+            }
+        // Without a page and origin scope there is no throttle state to keep.
+        let automatic = BrowserCorePolicy.automaticDownload(
+            isUserInitiated: isUserInitiated,
+            isUserApprovedRetry: approvedRetryKeys.contains(key),
+            savedDecision: savedDecision,
+            hasAllowedAutomaticDownload: scope.flatMap { automaticDownloadAllowances[$0] } ?? false
+        )
+        if let scope {
+            automaticDownloadAllowances[scope] = automatic.hasAllowedAutomaticDownload
         }
+        let automaticDownloadAction = automatic.action
         switch automaticDownloadAction {
         case .allow:
             break
@@ -861,9 +842,7 @@ final class BrowserDownloadCenter: NSObject {
                 return nil
             }
         }
-        if assessment.requiresConfirmation(
-            isUserInitiated: isUserInitiated
-        ) {
+        if verdict.requiresConfirmation {
             let approved = await approveRiskyDownload(
                 assessment,
                 response.url ?? download.originalRequest?.url,
@@ -1031,11 +1010,11 @@ final class BrowserDownloadCenter: NSObject {
 
     private func update(
         _ download: WKDownload,
-        mutation: (inout BrowserDownloadLedger, UUID) -> Void
+        mutation: (BrowserDownloadLedger, UUID) -> Void
     ) {
         let key = ObjectIdentifier(download)
         guard let itemID = itemIDs[key] else { return }
-        mutation(&ledger, itemID)
+        mutation(ledger, itemID)
     }
 
     private func approveAutomaticDownloadIfNeeded(

@@ -1,5 +1,7 @@
 import Foundation
 
+/// Projection of one core download record. The core ledger owns every
+/// transition; this value only carries what presentation reads.
 struct BrowserDownloadItem: Identifiable, Equatable, Sendable {
 
     let id: UUID
@@ -11,13 +13,11 @@ struct BrowserDownloadItem: Identifiable, Equatable, Sendable {
     var telemetry = BrowserDownloadTransferTelemetry.empty
     var state: BrowserDownloadItemState
     var riskAssessment: BrowserDownloadRiskAssessment?
+    var isAcknowledged = false
 }
 
-/// Live transfer facts reported by WebKit's `Progress` object.
-///
-/// These values deliberately travel with the in-memory ledger item so every
-/// presentation sees one authoritative snapshot. They are not persisted as
-/// download history and are made inactive as soon as the transfer stops.
+/// Live transfer facts for one row, as the core publishes them. They are not
+/// persisted as download history and become inactive once the transfer stops.
 struct BrowserDownloadTransferTelemetry: Equatable, Sendable {
     var bytesReceived: Int64
     var totalBytes: Int64?
@@ -36,18 +36,11 @@ struct BrowserDownloadTransferTelemetry: Equatable, Sendable {
     var hasKnownTotal: Bool {
         totalBytes != nil
     }
+}
 
-    func stopped(
-        finalByteCount: Int64? = nil,
-        completed: Bool = false
-    ) -> BrowserDownloadTransferTelemetry {
-        let finalBytes = max(bytesReceived, finalByteCount ?? 0)
-        return BrowserDownloadTransferTelemetry(
-            bytesReceived: finalBytes,
-            totalBytes: completed ? finalBytes : totalBytes,
-            bytesPerSecond: nil,
-            estimatedTimeRemaining: nil,
-            isPaused: false
-        )
-    }
+/// One reading from the core progress policy: row telemetry and a progress
+/// in [0, 1].
+struct BrowserDownloadTransferUpdate: Equatable, Sendable {
+    let telemetry: BrowserDownloadTransferTelemetry
+    let progress: Double
 }

@@ -129,10 +129,7 @@ struct BrowserUtilityNotificationBadge: View {
                     Capsule()
                         .trim(
                             from: 0,
-                            to: max(
-                                BrowserDownloadProgressPolicy.normalized(progress),
-                                0.04
-                            )
+                            to: max(min(progress, 1), 0.04)
                         )
                         .stroke(
                             .primary.opacity(0.72),

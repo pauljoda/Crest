@@ -543,6 +543,12 @@ as core messages. The decisions behind them are core policy operations: which
 pages a memory squeeze may release, in what order and how many, what dismissing
 a tab means, and when a terminated renderer stops reloading. The adapter keeps
 the per-page veto for media playback, capture and Picture in Picture.
+Downloads follow the same split on both engines: the process-local core ledger
+behind `crest_downloads_*` owns record states, ordering, acknowledgement and
+retention expiry, and policy operations answer progress and ETA, risk reasons
+and the automatic-download throttle. `BrowserDownloadCenter` forwards engine
+download events, owns files, prompts and notices, and renders the ledger's
+projection. The ledger is not persisted.
 The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.

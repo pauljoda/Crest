@@ -180,41 +180,6 @@ final class BrowserDataRetentionTests: XCTestCase {
         XCTAssertEqual(record.tombstone?.reason, .retention)
     }
 
-    func testDownloadCleanupIsProfileScopedAndPreservesActiveTransfers() throws {
-        let now = Date(timeIntervalSinceReferenceDate: 40_000_000)
-        let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
-        let retainedProfileID = UUID()
-        let cleanedProfileID = UUID()
-        var ledger = BrowserDownloadLedger()
-        let expiredFinishedID = ledger.begin(
-            profileID: cleanedProfileID,
-            filename: "expired.pdf",
-            createdAt: oldDate
-        )
-        ledger.finish(expiredFinishedID)
-        let activeID = ledger.begin(
-            profileID: cleanedProfileID,
-            filename: "active.pdf",
-            createdAt: oldDate
-        )
-        ledger.setProgress(0.5, for: activeID)
-        let otherProfileID = ledger.begin(
-            profileID: retainedProfileID,
-            filename: "other.pdf",
-            createdAt: oldDate
-        )
-        ledger.finish(otherProfileID)
-
-        let removed = ledger.removeExpiredRecords(
-            retentionByProfileID: [cleanedProfileID: .thirtyDays],
-            now: now
-        )
-
-        XCTAssertEqual(removed, [expiredFinishedID])
-        XCTAssertEqual(ledger.items(for: cleanedProfileID).map(\.id), [activeID])
-        XCTAssertEqual(ledger.items(for: retainedProfileID).map(\.id), [otherProfileID])
-    }
-
     func testActiveSceneSweepAppliesHistoryAndArchiveRetention() throws {
         let now = Date(timeIntervalSinceReferenceDate: 50_000_000)
         let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
@@ -246,7 +211,7 @@ final class BrowserDataRetentionTests: XCTestCase {
         var session = BrowserSession.preview
         let cleanedProfileID = session.spaces[0].profile.id
         session.spaces[0].browsingPreferences.dataRetention.downloads = .thirtyDays
-        var ledger = BrowserDownloadLedger()
+        let ledger = BrowserDownloadLedger()
         let expiredID = ledger.begin(
             profileID: cleanedProfileID,
             filename: "expired.pdf",

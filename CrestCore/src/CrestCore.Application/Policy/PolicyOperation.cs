@@ -3,6 +3,9 @@ namespace CrestCore.Application;
 internal enum PolicyOperation {
     Unknown,
     AddressIntent,
+    DownloadsAutomatic,
+    DownloadsProgress,
+    DownloadsRisk,
     HistoryNormalize,
     HistoryRemoveRange,
     HistoryVisit,
@@ -20,6 +23,9 @@ internal static class PolicyOperationCodes {
 
     public static PolicyOperation Parse(string? value) => value switch {
         "address.intent" => PolicyOperation.AddressIntent,
+        "downloads.automatic" => PolicyOperation.DownloadsAutomatic,
+        "downloads.progress" => PolicyOperation.DownloadsProgress,
+        "downloads.risk" => PolicyOperation.DownloadsRisk,
         "history.normalize" => PolicyOperation.HistoryNormalize,
         "history.remove_range" => PolicyOperation.HistoryRemoveRange,
         "history.visit" => PolicyOperation.HistoryVisit,

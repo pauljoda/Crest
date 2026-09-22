@@ -22,6 +22,26 @@ static void access_boundary(void) {
     assert(crest_access_destroy(access) == CREST_OK);
     assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_INVALID_HANDLE && locked == 1);
 }
+static void downloads_boundary(void) {
+    const char *begin = "{\"version\":1,\"command\":\"begin\",\"id\":\"66666666-6666-6666-6666-666666666666\","
+        "\"profileID\":\"55555555-5555-5555-5555-555555555555\",\"filename\":\"a.pdf\",\"createdAt\":1,\"acknowledged\":false}";
+    uint64_t ledger = 0;
+    size_t length = 0, required = 0;
+    uint8_t output[1024]; memset(output, 0xa5, sizeof(output));
+    assert(crest_downloads_create(&ledger) == CREST_OK && ledger != 0);
+    assert(crest_downloads_read(ledger, output, sizeof(output), &length) == CREST_EMPTY && length == 0);
+    assert(crest_downloads_apply(ledger, (const uint8_t*)begin, strlen(begin), &required) == CREST_OK && required > 0);
+    assert(crest_downloads_read(ledger, NULL, 0, &length) == CREST_BUFFER_TOO_SMALL && length == required);
+    assert(crest_downloads_read(ledger, output, required - 1, &length) == CREST_BUFFER_TOO_SMALL && output[0] == 0xa5);
+    assert(crest_downloads_read(ledger, output, sizeof(output) - 1, &length) == CREST_OK && length == required);
+    assert(output[length] == 0xa5); output[length] = 0;
+    assert(strstr((const char*)output, "\"state\":\"preparing\""));
+    /* A repeated identity is rejected and leaves nothing to read. */
+    assert(crest_downloads_apply(ledger, (const uint8_t*)begin, strlen(begin), &length) == CREST_INVALID_MESSAGE && length == 0);
+    assert(crest_downloads_read(ledger, output, sizeof(output), &length) == CREST_EMPTY);
+    assert(crest_downloads_destroy(ledger) == CREST_OK);
+    assert(crest_downloads_apply(ledger, (const uint8_t*)begin, strlen(begin), &length) == CREST_INVALID_HANDLE);
+}
 static void policy_boundary(void) {
     const char *request = "{\"version\":1,\"operation\":\"address.intent\",\"input\":\"localhost:8767/profile\",\"searchTemplate\":\"https://duckduckgo.com/?q=%s\"}";
     size_t length = 0;
@@ -62,8 +82,9 @@ static void session_boundary(void) {
     char engine[2048];
     size = snprintf(engine, sizeof(engine),
         "{\"adapterId\":\"engine\",\"role\":\"engine\",\"implementationId\":\"fixture\","
-        "\"implementationVersion\":\"1\",\"protocolVersion\":%u,\"capabilities\":{\"pages\":%s,\"navigation\":%s}}",
-        CREST_PROTOCOL_VERSION, capability, capability);
+        "\"implementationVersion\":\"1\",\"protocolVersion\":%u,\"capabilities\":{\"pages\":%s,\"navigation\":%s,"
+        "\"workspace-profiles\":%s,\"profile-deletion\":%s}}",
+        CREST_PROTOCOL_VERSION, capability, capability, capability, capability);
     assert(size > 0 && (size_t)size < sizeof(engine));
     assert(crest_session_register_engine(session + 1000, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_HANDLE);
     assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_OK);
@@ -153,6 +174,7 @@ int main(void) {
     assert(crest_core_abi_version() == CREST_ABI_VERSION);
     policy_boundary();
     access_boundary();
+    downloads_boundary();
     session_boundary();
     locked_space_boundary();
     puts("Native ABI buffer ownership, size retry, handle, session and lock checks passed.");

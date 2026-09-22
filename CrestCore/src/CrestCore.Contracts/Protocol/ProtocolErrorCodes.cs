@@ -5,6 +5,7 @@ public static class ProtocolErrorCodes {
     #region Variables
 
     public const string CapabilityLimit = "capability_limit";
+    public const string DownloadInputLimit = "download_input_limit";
     public const string DuplicateMember = "duplicate_member";
     public const string InvalidAdapter = "invalid_adapter";
     public const string InvalidCounter = "invalid_counter";
@@ -13,10 +14,12 @@ public static class ProtocolErrorCodes {
     public const string InvalidInput = "invalid_input";
     public const string InvalidLimit = "invalid_limit";
     public const string InvalidPeekModifier = "invalid_peek_modifier";
+    public const string InvalidPermissionDecision = "invalid_permission_decision";
     public const string InvalidPlacement = "invalid_placement";
     public const string InvalidPressureLevel = "invalid_pressure_level";
     public const string InvalidPressurePlatform = "invalid_pressure_platform";
     public const string InvalidStatus = "invalid_status";
+    public const string InvalidRiskReason = "invalid_risk_reason";
     public const string InvalidString = "invalid_string";
     public const string InvalidUuid = "invalid_uuid";
     public const string InvalidVersion = "invalid_version";

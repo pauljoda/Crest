@@ -9,7 +9,7 @@ namespace CrestCore.Application;
 
 /// Bounded, deterministic domain calls for existing synchronous native APIs.
 /// This path owns no session, queue, engine, I/O, callback, or retained state.
-public static class NativePolicyEvaluator {
+public static partial class NativePolicyEvaluator {
     #region Variables
 
     public const int MaximumInputBytes = 16_384;
@@ -24,6 +24,7 @@ public static class NativePolicyEvaluator {
         var request = Protocol.Parse(utf8);
         if (request.GetProperty("version").GetInt32() != 1) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
         var operation = PolicyOperationCodes.Parse(Protocol.Text(request, "operation"));
+        if (EvaluateDownloads(operation, request) is { } download) return Encode(download);
         if (operation is PolicyOperation.NavigationLink or PolicyOperation.NavigationModifiedLink) {
             bool peek, newTab;
             if (operation == PolicyOperation.NavigationModifiedLink) {

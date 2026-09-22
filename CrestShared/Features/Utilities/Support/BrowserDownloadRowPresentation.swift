@@ -33,7 +33,7 @@ struct BrowserDownloadRowPresentation: Sendable {
         return BrowserDownloadRowPresentation(
             bytesReceived: telemetry.bytesReceived,
             totalBytes: telemetry.totalBytes,
-            progress: BrowserDownloadProgressPolicy.normalized(item.progress),
+            progress: item.progress,
             bytesPerSecond: isActivelyDownloading
                 ? telemetry.bytesPerSecond
                 : nil,

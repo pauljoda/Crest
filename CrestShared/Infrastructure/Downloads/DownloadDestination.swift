@@ -48,17 +48,6 @@ enum BrowserDownloadDestination {
         return truncateToFilesystemLimit(cleaned)
     }
 
-    static func containsDeceptiveUnicode(_ filename: String) -> Bool {
-        filename.unicodeScalars.contains { scalar in
-            let value = scalar.value
-            return value == 0x061C
-                || (0x200B...0x200F).contains(value)
-                || (0x202A...0x202E).contains(value)
-                || (0x2066...0x2069).contains(value)
-                || value == 0xFEFF
-        }
-    }
-
     private static func isDeceptiveOrControl(_ scalar: UnicodeScalar) -> Bool {
         let value = scalar.value
         return value < 0x20

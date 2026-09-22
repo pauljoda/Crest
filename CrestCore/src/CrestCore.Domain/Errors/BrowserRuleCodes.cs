@@ -14,6 +14,8 @@ public static class BrowserRuleCodes {
     public const string CannotDeleteLastSpace = "cannot_delete_last_space";
     public const string DeletionRequiresCommand = "deletion_requires_command";
     public const string DifferentProfileOwner = "different_profile_owner";
+    public const string DownloadLedgerLimit = "download_ledger_limit";
+    public const string DuplicateDownload = "duplicate_download";
     public const string DuplicateFolder = "duplicate_folder";
     public const string DuplicatePersistedIdentity = "duplicate_persisted_identity";
     public const string DuplicateResidencyCandidate = "duplicate_residency_candidate";
@@ -35,6 +37,11 @@ public static class BrowserRuleCodes {
     public const string InvalidDate = "invalid_date";
     public const string InvalidDeletionIntent = "invalid_deletion_intent";
     public const string InvalidDestination = "invalid_destination";
+    public const string InvalidDownloadDestination = "invalid_download_destination";
+    public const string InvalidDownloadFilename = "invalid_download_filename";
+    public const string InvalidDownloadMessage = "invalid_download_message";
+    public const string InvalidDownloadProgress = "invalid_download_progress";
+    public const string InvalidDownloadSample = "invalid_download_sample";
     public const string InvalidEngineRegistration = "invalid_engine_registration";
     public const string InvalidFocusedIndex = "invalid_focused_index";
     public const string InvalidFolderAnchor = "invalid_folder_anchor";
@@ -136,6 +143,7 @@ public static class BrowserRuleCodes {
     public const string UnknownArchive = "unknown_archive";
     public const string UnknownArchivedTab = "unknown_archived_tab";
     public const string UnknownCurrentTab = "unknown_current_tab";
+    public const string UnknownDownloadCommand = "unknown_download_command";
     public const string UnknownFolder = "unknown_folder";
     public const string UnknownHistoryCommand = "unknown_history_command";
     public const string UnknownRecordCommand = "unknown_record_command";

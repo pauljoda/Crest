@@ -167,6 +167,58 @@ enum BrowserCorePolicy {
         default: return .closeTab
         }
     }
+    /// Risk reasons and the confirmation rule for one download. An unavailable
+    /// core asks the person before saving rather than guessing the file is safe.
+    static func downloadRisk(suggestedFilename: String, sanitizedFilename: String, mimeType: String?,
+        extensionRunsCode: Bool, mimeTypeRunsCode: Bool, typesRelated: Bool?,
+        isUserInitiated: Bool) -> BrowserDownloadRiskVerdict {
+        let response = evaluate([
+            "version": 1, "operation": "downloads.risk",
+            "suggestedFilename": suggestedFilename, "sanitizedFilename": sanitizedFilename,
+            "mimeType": mimeType as Any? ?? NSNull(), "extensionRunsCode": extensionRunsCode,
+            "mimeTypeRunsCode": mimeTypeRunsCode, "typesRelated": typesRelated as Any? ?? NSNull(),
+            "userInitiated": isUserInitiated
+        ])
+        let reasons = (response?["reasons"] as? [String] ?? []).compactMap(BrowserDownloadRiskReason.init(rawValue:))
+        return BrowserDownloadRiskVerdict(
+            assessment: BrowserDownloadRiskAssessment(sanitizedFilename: sanitizedFilename, reasons: reasons),
+            requiresConfirmation: response?["requiresConfirmation"] as? Bool ?? true)
+    }
+    /// The automatic-download action and the page/origin throttle state to
+    /// keep. An unavailable core asks the person instead of deciding silently.
+    static func automaticDownload(isUserInitiated: Bool, isUserApprovedRetry: Bool,
+        savedDecision: BrowserSitePermissionDecision, hasAllowedAutomaticDownload: Bool)
+        -> (action: BrowserAutomaticDownloadAction, hasAllowedAutomaticDownload: Bool) {
+        guard let response = evaluate([
+            "version": 1, "operation": "downloads.automatic",
+            "userInitiated": isUserInitiated, "userApprovedRetry": isUserApprovedRetry,
+            "savedDecision": savedDecision.rawValue, "hasAllowedAutomaticDownload": hasAllowedAutomaticDownload
+        ]), let allowance = response["hasAllowedAutomaticDownload"] as? Bool else {
+            return (.requestPermission, hasAllowedAutomaticDownload)
+        }
+        let action: BrowserAutomaticDownloadAction = switch response["action"] as? String {
+        case "allow": .allow
+        case "deny": .deny
+        default: .requestPermission
+        }
+        return (action, allowance)
+    }
+    /// One progress reading. `estimator` is the core's opaque per-transfer
+    /// state; pass back what the previous reading returned.
+    static func downloadProgress(estimator: [String: Any]?, completedUnitCount: Int64, totalUnitCount: Int64,
+        fractionCompleted: Double, isPaused: Bool, uptime: TimeInterval)
+        -> (estimator: [String: Any], update: BrowserDownloadTransferUpdate)? {
+        guard let response = evaluate([
+            "version": 1, "operation": "downloads.progress",
+            "estimator": estimator as Any? ?? NSNull(), "completedUnitCount": completedUnitCount,
+            "totalUnitCount": totalUnitCount,
+            "fractionCompleted": fractionCompleted.isFinite ? fractionCompleted : 0,
+            "isPaused": isPaused, "uptime": uptime
+        ]), let next = response["estimator"] as? [String: Any],
+            let telemetry = (response["telemetry"] as? [String: Any]).flatMap(BrowserDownloadTransferTelemetry.init(coreValues:)),
+            let progress = (response["progress"] as? NSNumber)?.doubleValue else { return nil }
+        return (next, BrowserDownloadTransferUpdate(telemetry: telemetry, progress: progress))
+    }
     private static func evaluate(_ request: [String: Any]) -> [String: Any]? {
         guard let data = try? JSONSerialization.data(withJSONObject: request) else { return nil }
         var length = 0

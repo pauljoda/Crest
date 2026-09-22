@@ -156,7 +156,6 @@ final class MobileBrowserInteropTests: XCTestCase {
         }
         let request = try XCTUnwrap(pages.downloadRiskConfirmation.request)
         XCTAssertEqual(request.assessment.sanitizedFilename, filename)
-        XCTAssertTrue(request.assessment.requiresConfirmation(isUserInitiated: true))
         XCTAssertTrue(request.assessment.reasons.contains(.dangerousTypeMismatch))
         XCTAssertEqual(request.spaceName, "Private")
         XCTAssertEqual(request.sourceLabel, "localhost")

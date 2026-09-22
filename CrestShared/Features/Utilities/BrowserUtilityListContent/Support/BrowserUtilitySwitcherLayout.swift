@@ -47,6 +47,6 @@ enum BrowserDownloadNotificationPolicy {
         downloads
             .filter { $0.state.isInProgress }
             .max { $0.createdAt < $1.createdAt }
-            .map { BrowserDownloadProgressPolicy.normalized($0.progress) }
+            .map(\.progress)
     }
 }

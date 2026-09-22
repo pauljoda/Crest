@@ -77,7 +77,6 @@ final class BrowserDownloadDestinationTests: XCTestCase {
         let deceptive = "invoice.pdf\u{202E}ppa"
 
         XCTAssertEqual(BrowserDownloadDestination.safeFilename(from: deceptive), "invoice.pdfppa")
-        XCTAssertTrue(BrowserDownloadDestination.containsDeceptiveUnicode(deceptive))
     }
 
     @MainActor
