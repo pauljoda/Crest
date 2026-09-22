@@ -9,6 +9,10 @@ public sealed partial class NativeSessionAuthority {
 
     private SpaceAccessAuthority? access;
 
+    /// Sync materialization consults the same grants the command gate uses, so
+    /// an incoming record cannot remove protection this device never unlocked.
+    internal SpaceAccessAuthority? Access { get { lock (Gate) return access; } }
+
     /// Operations that must still work while a Space is locked. None of them
     /// returns tab, folder, history or archive contents to the caller: the
     /// deletion intents that sync and cleanup depend on, and retention or
@@ -77,6 +81,42 @@ public sealed partial class NativeSessionAuthority {
         }
         foreach (var review in args["reviews"] as JsonArray ?? [])
             if (OptionalSpace(review!["destinationID"]) is { } id) yield return id;
+    }
+
+    /// The command gate answers for semantic commands. A native value edit
+    /// proposes whole records instead, so it is gated on what it actually
+    /// touches: every Space whose metadata, tabs, folders, history, archive,
+    /// splits or selection this delta would change, plus one it would remove.
+    /// Sync materialization does not come through here — it commits as a
+    /// journal-bound replacement — so background convergence stays unaffected.
+    private void RequireAccessibleValueEdit(SessionDocument next, IEnumerable<Guid> proposed) {
+        if (access is null) return;
+        var retained = next.Spaces.Select(s => Id(s.Metadata["id"])).ToHashSet();
+        var candidates = new HashSet<Guid>(proposed);
+        // Dropping a Space's records is a change even when the delta never
+        // named it, so removal is derived rather than declared.
+        foreach (var space in document.Spaces)
+            if (!retained.Contains(Id(space.Metadata["id"]))) candidates.Add(Id(space.Metadata["id"]));
+        foreach (var id in candidates) {
+            if (document.Spaces.FirstOrDefault(s => Id(s.Metadata["id"]) == id) is not { } original) continue;
+            var updated = next.Spaces.FirstOrDefault(s => Id(s.Metadata["id"]) == id);
+            if (updated is not null && (Unchanged(original, updated) || OnlyRaisesProtection(original, updated))) continue;
+            RequireAccessible(id);
+        }
+    }
+
+    private static bool Unchanged(SpaceDocument original, SpaceDocument updated)
+        => JsonNode.DeepEquals(original.Metadata, updated.Metadata) && Sections.All(section =>
+            original.Sections[section].Count == updated.Sections[section].Count
+            && original.Sections[section].Zip(updated.Sections[section]).All(pair => JsonNode.DeepEquals(pair.First, pair.Second)));
+
+    /// Raising protection is always allowed, exactly as it is for the command
+    /// gate. Nothing else may ride along with it.
+    private static bool OnlyRaisesProtection(SpaceDocument original, SpaceDocument updated) {
+        if (updated.Metadata["accessPolicy"] is not JsonValue policy || !policy.TryGetValue<string>(out var value)
+            || value == SpaceAccessPolicyCodes.Open) return false;
+        return Unchanged(new(Fields(original.Metadata, ["accessPolicy"]), original.Sections),
+            new(Fields(updated.Metadata, ["accessPolicy"]), updated.Sections));
     }
 
     private void RequireAccessible(Guid spaceId) {

@@ -56,6 +56,7 @@ public static class NativeSessionEditor {
         Guid? copiedGroup = null;
         Guid? sourceGroup = null;
         var changed = true;
+        JsonObject? favicon = null;
         FolderId? Folder(string name) => args[name] is null ? null : new(Guid.Parse(args[name]!.GetValue<string>()));
         TabPlacement Placement(string name) => Enum.Parse<TabPlacement>(args[name]!.GetValue<string>(), true);
         switch (operation) {
@@ -105,6 +106,23 @@ public static class NativeSessionEditor {
                 changed = renamed.CustomTitle != (string.IsNullOrWhiteSpace(title) ? null : title.Trim());
                 if (changed) renamed.Rename(title, now);
                 break;
+            case "tab.observe":
+                changed = Observe(Target(args["tabId"] is null ? selected : Id("tabId")));
+                break;
+            case "tab.icon":
+                changed = SetIcon(Target(Id("tabId")));
+                break;
+            case "tab.favicon.cache":
+                changed = CacheFavicon(Target(Id("tabId")));
+                break;
+            case "tab.saved_location":
+                var located = Target(Id("tabId"));
+                changed = located is not null && args["action"]!.GetValue<string>() switch {
+                    "replace" => located.ReplaceSavedLocation(),
+                    "restore" => located.RestoreSavedLocation() is not null,
+                    _ => throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit)
+                };
+                break;
             case "tab.residency":
                 var resident = space.Tab(Id("tabId")); var keep = args["keep"]!.GetValue<bool>();
                 changed = resident.KeepsPageLoaded != keep; resident.SetResidency(keep);
@@ -153,9 +171,18 @@ public static class NativeSessionEditor {
                 break;
             case "folder.create":
                 var createdFolder = Folder("folderId")!.Value;
-                space.AddFolder(createdFolder, args["title"]!.GetValue<string>(), Placement("placement"), Folder("parentId"));
+                var createdTitle = args["title"]?.GetValue<string>();
+                var createdPlacement = Placement("placement");
+                space.AddFolder(createdFolder, string.IsNullOrWhiteSpace(createdTitle) ? "New Folder" : createdTitle,
+                    createdPlacement, Folder("parentId"));
                 if (args["color"] is { } color) document.SetFolderMetadata(createdFolder, "color", color.AsObject());
                 if (args["symbol"] is { } symbol) document.SetFolderMetadata(createdFolder, "symbol", FolderSymbol(symbol));
+                // Creating a folder around tabs is one transaction. Filing them
+                // separately would publish a folder nobody asked to see empty,
+                // and would leave it behind when the filing turned out invalid.
+                if (args["tabIds"] is JsonArray members && members.Count > 0)
+                    space.FileTabs(members.Select(n => new TabId(Guid.Parse(n!.GetValue<string>()))).ToArray(),
+                        createdPlacement, createdFolder, now, null, null, args["detach"]?.GetValue<bool>() == true);
                 break;
             case "folder.color":
             case "folder.symbol":
@@ -228,8 +255,77 @@ public static class NativeSessionEditor {
             ["tabId"] = result?.Value.ToString(),
             ["selectSpace"] = selectSpace,
             ["copies"] = copies,
-            ["changed"] = changed
+            ["changed"] = changed,
+            ["favicon"] = favicon
         }.ToJsonString());
+
+        BrowserTab? Target(TabId? id) => id is { } value ? space.Tabs.FirstOrDefault(t => t.Id == value) : null;
+
+        string Mode(BrowserTab tab) => TabIconPolicy.Mode(
+            document.TabMetadata(tab.Id, "storedIconMode")?.GetValue<string>(),
+            document.TabMetadata(tab.Id, "symbol")?.GetValue<string>());
+
+        // The image itself stays in the native cache. The core names the tab
+        // whose stored bytes the platform must now replace or drop.
+        void Assign(TabId tab, bool adopts)
+            => favicon = new JsonObject { ["tabId"] = tab.Value.ToString(), ["adopts"] = adopts };
+
+        void ClearIconAssets(BrowserTab tab) {
+            document.SetTabMetadata(tab.Id, "faviconURL", null);
+            document.SetTabMetadata(tab.Id, "iconAccent", null);
+            Assign(tab.Id, false);
+        }
+
+        // The page settled. A rename is not touched, a blank title is the page
+        // saying nothing rather than clearing the name, and an automatic icon
+        // follows the page while a chosen or pulled one does not.
+        bool Observe(BrowserTab? tab) {
+            if (tab is null) return false;
+            var url = args["url"]?.GetValue<string>() ?? tab.Url;
+            var title = args["title"]?.GetValue<string>();
+            var accent = args["iconAccent"];
+            var automatic = Mode(tab) == TabIconPolicy.Automatic;
+            var updatesIcon = automatic && (args["faviconChanged"]?.GetValue<bool>() == true
+                || !JsonNode.DeepEquals(document.TabMetadata(tab.Id, "iconAccent"), accent));
+            if (url == tab.Url && Blank(title) == Blank(tab.Title) && !updatesIcon) return false;
+            tab.ObserveAppearance(url, title);
+            if (automatic && args["hasFavicon"]?.GetValue<bool>() == true) {
+                document.SetTabMetadata(tab.Id, "faviconURL", url is null ? null : JsonValue.Create(url));
+                document.SetTabMetadata(tab.Id, "iconAccent", accent);
+                Assign(tab.Id, true);
+            }
+            return true;
+        }
+
+        // Someone chose this tab's icon by hand, or handed it back to the page.
+        bool SetIcon(BrowserTab? tab) {
+            if (tab is null) return false;
+            var mode = TabIconPolicy.RequireMode(args["mode"]?.GetValue<string>());
+            if (mode == TabIconPolicy.Pulled && args["hasFavicon"]?.GetValue<bool>() != true) return false;
+            document.SetTabMetadata(tab.Id, "symbol", mode == TabIconPolicy.Emoji
+                ? TabIconPolicy.Symbol(args["emoji"]?.GetValue<string>()) : TabIconPolicy.WebSymbol);
+            if (mode == TabIconPolicy.Pulled) {
+                document.SetTabMetadata(tab.Id, "faviconURL", tab.Url is null ? null : JsonValue.Create(tab.Url));
+                document.SetTabMetadata(tab.Id, "iconAccent", args["iconAccent"]);
+                Assign(tab.Id, true);
+            } else ClearIconAssets(tab);
+            document.SetTabMetadata(tab.Id, "storedIconMode", mode);
+            return true;
+        }
+
+        // A favicon that finished loading after the page moved on belongs to
+        // the address it was captured from, not to whatever the tab shows now.
+        bool CacheFavicon(BrowserTab? tab) {
+            if (tab is null || Mode(tab) != TabIconPolicy.Automatic
+                || args["hasFavicon"]?.GetValue<bool>() != true) return false;
+            var captured = args["url"]!.GetValue<string>();
+            if (!HistoryPolicy.SamePage(tab.Url, captured)) return false;
+            document.SetTabMetadata(tab.Id, "symbol", TabIconPolicy.WebSymbol);
+            document.SetTabMetadata(tab.Id, "faviconURL", captured);
+            document.SetTabMetadata(tab.Id, "iconAccent", args["iconAccent"]);
+            Assign(tab.Id, true);
+            return true;
+        }
 
         void CopyPage(TabId source, TabId copy) {
             document.CopyTabMetadata(source, copy);
@@ -241,6 +337,8 @@ public static class NativeSessionEditor {
             copies.Add((JsonNode)new JsonObject { ["source"] = source.Value.ToString(), ["copy"] = copy.Value.ToString() });
         }
     }
+
+    private static string? Blank(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     private static JsonNode FolderSymbol(JsonNode value) {
         string symbol = value.GetValue<string>();

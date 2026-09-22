@@ -109,7 +109,8 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Session revisions
 
-    private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null) {
+    private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null,
+        bool nativeValueEdit = false) {
         RequireWritable();
         if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
         var delta = Parse(bytes);
@@ -118,8 +119,10 @@ public sealed partial class NativeSessionAuthority {
         if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
             throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
         var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));
+        var proposed = new List<Guid>();
         foreach (var node in delta["spaces"]!.AsArray()) {
             var change = node!.AsObject(); var id = Id(change["id"]);
+            proposed.Add(id);
             byId.TryGetValue(id, out var original);
             var fields = change["metadata"] is JsonObject supplied ? Fields(supplied, Sections) : original?.Metadata;
             if (fields is null || Id(fields["id"]) != id) throw new BrowserRuleException(BrowserRuleCodes.WrongSpaceIdentity);
@@ -159,6 +162,7 @@ public sealed partial class NativeSessionAuthority {
         }
         Validate(next);
         ValidateBorrowedDocument(next);
+        if (nativeValueEdit) RequireAccessibleValueEdit(next, proposed);
         return next;
     }
 
@@ -171,9 +175,12 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    public ulong Commit(ulong expected, ReadOnlySpan<byte> delta) {
+    /// `nativeValueEdit` marks a proposal that originates in the native views
+    /// rather than in sync materialization, so it answers to the Space access
+    /// gate exactly as a semantic command does.
+    public ulong Commit(ulong expected, ReadOnlySpan<byte> delta, bool nativeValueEdit = false) {
         lock (Gate) {
-            var next = Prepare(expected, delta);
+            var next = Prepare(expected, delta, nativeValueEdit: nativeValueEdit);
             var revision = checked(Revision + 1);
             document = next; Revision = revision; return revision;
         }

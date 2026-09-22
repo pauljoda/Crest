@@ -32,7 +32,7 @@ public sealed class NativeSyncTransaction : IDisposable {
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         request["preferences"] = Journal.Preferences;
         if (request["operation"]!.GetValue<string>() is NativeSyncOperations.Merge or NativeSyncOperations.Replace) {
-            var result = NativeSyncSessionTransition.Prepare(Journal, Encoding.UTF8.GetBytes(request.ToJsonString()));
+            var result = NativeSyncSessionTransition.Prepare(Journal, Encoding.UTF8.GetBytes(request.ToJsonString()), Owner.Session?.Access);
             Journal = result.Journal;
             MaterializedSpaceDeletions = result.Materialization["session"]!["spaceDeletions"]?.DeepClone();
             Materialization = NativeSyncQuery.Success(result.Materialization);

@@ -576,35 +576,67 @@ extension BrowserSession {
 
 // MARK: - Appearance
 
+/// What a page observation actually changed. The store needs the tab whose
+/// stored image moved, so a title rewrite does not rewrite the favicon store.
+struct BrowserTabObservation: Equatable, Sendable {
+    var tabID: TabID
+    var changedFavicon: Bool
+}
+
 extension BrowserSession {
+    /// Records what a live page reports about itself.
+    ///
+    /// Which of these fields a tab accepts — whether a page may replace its
+    /// icon, which address an automatic icon belongs to, whether a blank title
+    /// clears the name — is one set of rules in the core. A Split View card
+    /// observes its own page whether or not it is the focused one, so the
+    /// unfocused path is the same call rather than a second set of rules.
+    @discardableResult
+    mutating func observePage(
+        url: URL?,
+        title: String?,
+        faviconData: Data? = nil,
+        iconAccent: BrowserTabIconAccent? = nil,
+        tabID: TabID,
+        in spaceID: SpaceID
+    ) -> BrowserTabObservation? {
+        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
+            let tab = spaces[spaceIndex].tabs.first(where: { $0.id == tabID })
+        else { return nil }
+        // Page observations are frequent, and a page that reports exactly what
+        // the tab already stores cannot change it. This is an identity check,
+        // not a rule: precedence and address normalization stay in the core,
+        // which still answers for every observation that differs at all.
+        guard (url ?? tab.url) != tab.url || title != tab.title
+            || faviconData != tab.faviconData || iconAccent != tab.iconAccent
+        else { return nil }
+        let result = applyCoreEdit("tab.observe", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString,
+            "url": url?.absoluteString as Any? ?? NSNull(),
+            "title": title as Any? ?? NSNull(),
+            "hasFavicon": !(faviconData?.isEmpty ?? true),
+            "faviconChanged": faviconData != tab.faviconData,
+            "iconAccent": BrowserCoreSessionEditing.value(iconAccent) ?? NSNull()
+        ], at: .now)
+        guard let result, result.changed else { return nil }
+        let assigned = applyCoreFavicon(result.favicon, bytes: faviconData, at: spaceIndex)
+        return BrowserTabObservation(tabID: assigned ?? tabID, changedFavicon: assigned != nil)
+    }
+
+    @discardableResult
     mutating func updateSelectedTab(
         url: URL?,
         title: String?,
         faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil
-    ) {
-        guard let indices = selectedTabIndices else { return }
-        spaces[indices.space].tabs[indices.tab].url = url
-        if spaces[indices.space].tabs[indices.tab].iconMode == .automatic {
-            if let faviconData, !faviconData.isEmpty {
-                spaces[indices.space].tabs[indices.tab].faviconData = faviconData
-                spaces[indices.space].tabs[indices.tab].faviconURL = url
-                spaces[indices.space].tabs[indices.tab].iconAccent = iconAccent
-            }
-        }
-        if let title, !title.isEmpty {
-            spaces[indices.space].tabs[indices.tab].title = title
-        }
+    ) -> BrowserTabObservation? {
+        guard let indices = selectedTabIndices else { return nil }
+        return observePage(
+            url: url, title: title, faviconData: faviconData, iconAccent: iconAccent,
+            tabID: spaces[indices.space].tabs[indices.tab].id, in: spaces[indices.space].id)
     }
 
     /// The named-tab twin of ``updateSelectedTab(url:title:faviconData:iconAccent:)``.
-    ///
-    /// A Split View card observes its own page whether or not it is the focused
-    /// one, so an unfocused card needs the same url/title/favicon write against a
-    /// tab that is not `selectedTabID`. The field rules are deliberately
-    /// identical — automatic icons only, non-empty favicon data, non-empty title
-    /// — because a tab must not record different metadata depending on which
-    /// card happened to have focus when its page settled.
     @discardableResult
     mutating func updateTab(
         url: URL?,
@@ -614,23 +646,9 @@ extension BrowserSession {
         tabID: TabID,
         in spaceID: SpaceID
     ) -> Bool {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: {
-                $0.id == tabID
-            })
-        else { return false }
-        spaces[spaceIndex].tabs[tabIndex].url = url
-        if spaces[spaceIndex].tabs[tabIndex].iconMode == .automatic {
-            if let faviconData, !faviconData.isEmpty {
-                spaces[spaceIndex].tabs[tabIndex].faviconData = faviconData
-                spaces[spaceIndex].tabs[tabIndex].faviconURL = url
-                spaces[spaceIndex].tabs[tabIndex].iconAccent = iconAccent
-            }
-        }
-        if let title, !title.isEmpty {
-            spaces[spaceIndex].tabs[tabIndex].title = title
-        }
-        return true
+        observePage(
+            url: url, title: title, faviconData: faviconData, iconAccent: iconAccent,
+            tabID: tabID, in: spaceID) != nil
     }
 
     /// Names a tab by hand. The observed page title keeps updating underneath,
@@ -642,44 +660,21 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.rename", in: spaceID, arguments: [
             "tabId": tabID.rawValue.uuidString, "title": title as Any? ?? NSNull()
         ], at: date)?.changed ?? false
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
-        else {
-            return false
-        }
-        let resolvedTitle = BrowserTab.resolvedCustomTitle(title)
-        guard spaces[spaceIndex].tabs[tabIndex].customTitle != resolvedTitle else {
-            return false
-        }
-        spaces[spaceIndex].tabs[tabIndex].customTitle = resolvedTitle
-        spaces[spaceIndex].tabs[tabIndex].markTitleModified(at: date)
-        return true
-            #endif
     }
 
+    /// Emoji normalization stays native because it is grapheme handling; the
+    /// core owns the stored vocabulary and what an icon choice clears.
     @discardableResult
     mutating func setTabEmojiIcon(
         _ emoji: String,
         tabID: TabID,
         in spaceID: SpaceID
     ) -> Bool {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            let normalizedEmoji = BrowserIconSymbol.normalizedEmoji(emoji)
-        else { return false }
-        spaces[spaceIndex].tabs[tabIndex].symbol = BrowserTab.symbol(
-            forEmoji: normalizedEmoji
-        )
-        spaces[spaceIndex].tabs[tabIndex].faviconData = nil
-        spaces[spaceIndex].tabs[tabIndex].faviconURL = nil
-        spaces[spaceIndex].tabs[tabIndex].iconAccent = nil
-        spaces[spaceIndex].tabs[tabIndex].iconMode = .emoji
-        return true
+        guard let normalized = BrowserIconSymbol.normalizedEmoji(emoji) else { return false }
+        return setTabIcon("emoji", emoji: normalized, tabID: tabID, in: spaceID)
     }
 
     @discardableResult
@@ -689,18 +684,39 @@ extension BrowserSession {
         tabID: TabID,
         in spaceID: SpaceID
     ) -> Bool {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            !faviconData.isEmpty
+        setTabIcon("pulled", faviconData: faviconData, iconAccent: iconAccent, tabID: tabID, in: spaceID)
+    }
+
+    @discardableResult
+    mutating func clearTabIcon(tabID: TabID, in spaceID: SpaceID) -> Bool {
+        setTabIcon("automatic", tabID: tabID, in: spaceID)
+    }
+
+    private mutating func setTabIcon(
+        _ mode: String,
+        emoji: String? = nil,
+        faviconData: Data? = nil,
+        iconAccent: BrowserTabIconAccent? = nil,
+        tabID: TabID,
+        in spaceID: SpaceID
+    ) -> Bool {
+        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }) else { return false }
+        var arguments: [String: Any] = [
+            "tabId": tabID.rawValue.uuidString,
+            "mode": mode,
+            "hasFavicon": !(faviconData?.isEmpty ?? true),
+            "iconAccent": BrowserCoreSessionEditing.value(iconAccent) ?? NSNull()
+        ]
+        if let emoji { arguments["emoji"] = emoji }
+        guard let result = applyCoreEdit("tab.icon", in: spaceID, arguments: arguments, at: .now),
+            result.changed
         else { return false }
-        spaces[spaceIndex].tabs[tabIndex].symbol = "globe"
-        spaces[spaceIndex].tabs[tabIndex].faviconData = faviconData
-        spaces[spaceIndex].tabs[tabIndex].faviconURL = spaces[spaceIndex].tabs[tabIndex].url
-        spaces[spaceIndex].tabs[tabIndex].iconAccent = iconAccent
-        spaces[spaceIndex].tabs[tabIndex].iconMode = .pulled
+        applyCoreFavicon(result.favicon, bytes: faviconData, at: spaceIndex)
         return true
     }
 
+    /// A favicon that finished loading after the page moved on belongs to the
+    /// address it was captured from, which is the core's comparison to make.
     @discardableResult
     mutating func cacheAutomaticTabFavicon(
         _ faviconData: Data,
@@ -710,33 +726,15 @@ extension BrowserSession {
         in spaceID: SpaceID
     ) -> Bool {
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            spaces[spaceIndex].tabs[tabIndex].iconMode == .automatic,
-            !faviconData.isEmpty
+            let result = applyCoreEdit("tab.favicon.cache", in: spaceID, arguments: [
+                "tabId": tabID.rawValue.uuidString,
+                "url": url.absoluteString,
+                "hasFavicon": !faviconData.isEmpty,
+                "iconAccent": BrowserCoreSessionEditing.value(iconAccent) ?? NSNull()
+            ], at: .now),
+            result.changed
         else { return false }
-        let currentURL = spaces[spaceIndex].tabs[tabIndex].url
-        let normalizedCurrent = currentURL.flatMap(BrowserHistoryURL.normalized) ?? currentURL
-        let normalizedCaptured = BrowserHistoryURL.normalized(url) ?? url
-        guard normalizedCurrent == normalizedCaptured else { return false }
-        spaces[spaceIndex].tabs[tabIndex].symbol = "globe"
-        spaces[spaceIndex].tabs[tabIndex].faviconData = faviconData
-        spaces[spaceIndex].tabs[tabIndex].faviconURL = url
-        spaces[spaceIndex].tabs[tabIndex].iconAccent = iconAccent
-        return true
-    }
-
-    @discardableResult
-    mutating func clearTabIcon(tabID: TabID, in spaceID: SpaceID) -> Bool {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
-        else {
-            return false
-        }
-        spaces[spaceIndex].tabs[tabIndex].symbol = "globe"
-        spaces[spaceIndex].tabs[tabIndex].faviconData = nil
-        spaces[spaceIndex].tabs[tabIndex].faviconURL = nil
-        spaces[spaceIndex].tabs[tabIndex].iconAccent = nil
-        spaces[spaceIndex].tabs[tabIndex].iconMode = .automatic
+        applyCoreFavicon(result.favicon, bytes: faviconData, at: spaceIndex)
         return true
     }
 
@@ -745,16 +743,9 @@ extension BrowserSession {
         tabID: TabID,
         in spaceID: SpaceID
     ) -> Bool {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            spaces[spaceIndex].tabs[tabIndex].supportsSavedLocationEditing,
-            spaces[spaceIndex].tabs[tabIndex].isAwayFromSavedLocation,
-            let currentURL = spaces[spaceIndex].tabs[tabIndex].url
-        else {
-            return false
-        }
-        spaces[spaceIndex].tabs[tabIndex].savedURL = currentURL
-        return true
+        applyCoreEdit("tab.saved_location", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString, "action": "replace"
+        ], at: .now)?.changed ?? false
     }
 
     @discardableResult
@@ -762,17 +753,13 @@ extension BrowserSession {
         tabID: TabID,
         in spaceID: SpaceID
     ) -> URL? {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            spaces[spaceIndex].tabs[tabIndex].supportsSavedLocationEditing,
-            let savedURL = spaces[spaceIndex].tabs[tabIndex].savedSiteURL
-        else {
-            return nil
-        }
-        spaces[spaceIndex].tabs[tabIndex].url = savedURL
-        return savedURL
+        guard let result = applyCoreEdit("tab.saved_location", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString, "action": "restore"
+        ], at: .now), result.changed,
+            let index = spaces.firstIndex(where: { $0.id == spaceID })
+        else { return nil }
+        return spaces[index].tabs.first { $0.id == tabID }?.url
     }
-
 }
 
 // MARK: - Split Groups

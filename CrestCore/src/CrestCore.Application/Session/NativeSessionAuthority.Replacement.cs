@@ -23,7 +23,7 @@ public sealed partial class NativeSessionAuthority {
     /// Other writes are rejected until commit or cancellation. No platform I/O
     /// occurs under the core lock, and cancellation leaves the authority intact.
     public NativeSessionReplacement ReserveReplacement(ulong expected, ReadOnlySpan<byte> delta,
-        ReadOnlySpan<byte> selection, NativeSyncTransaction? transaction = null) {
+        ReadOnlySpan<byte> selection, NativeSyncTransaction? transaction = null, bool nativeValueEdit = false) {
         lock (Gate) {
             System.Text.Json.Nodes.JsonNode? authorizedDeletions = null;
             if (transaction is not null) {
@@ -31,7 +31,7 @@ public sealed partial class NativeSessionAuthority {
                     throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
                 authorizedDeletions = transaction.MaterializedSpaceDeletions;
             }
-            var next = Prepare(expected, delta, authorizedDeletions);
+            var next = Prepare(expected, delta, authorizedDeletions, nativeValueEdit && transaction is null);
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(next, Parse(selection));
             // Validate the selection and serialization before granting the lease.

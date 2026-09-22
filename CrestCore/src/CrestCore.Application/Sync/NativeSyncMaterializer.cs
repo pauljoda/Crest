@@ -34,7 +34,28 @@ public static class NativeSyncMaterializer {
 
     private static NativeSyncDocumentException Error(string code, Guid id) => new(code, id.ToString("D"));
 
-    public static JsonObject Materialize(JsonObject session, JsonNode preferences, IReadOnlyList<JsonObject> records, double now) {
+    /// A Space's access policy rides whole-record last-writer-wins: there is no
+    /// modification stamp for it on the wire, and adding one would change the
+    /// record format. Raising protection therefore always applies, and lowering
+    /// it applies only where this device already holds the grant that removing
+    /// protection requires. A rejected remote value simply loses to the local
+    /// record on the next upload, so the two devices still converge.
+    private static JsonNode? AccessPolicy(JsonNode? local, JsonNode remote, SpaceAccessAuthority? access, Guid space, Guid profile) {
+        var incoming = remote["accessPolicy"]?.DeepClone();
+        if (local is null) return incoming;
+        bool Guarded(JsonNode? value) => Text(value) is { } policy && policy != SpaceAccessPolicyCodes.Open;
+        if (!Guarded(local["accessPolicy"]) || Guarded(remote["accessPolicy"])) return incoming;
+        var assignment = new SpaceAccessAssignment(space, profile);
+        bool granted = access is not null && !Locked(access, assignment);
+        return granted ? incoming : local["accessPolicy"]!.DeepClone();
+    }
+
+    private static bool Locked(SpaceAccessAuthority access, SpaceAccessAssignment assignment) {
+        lock (access) return access.IsLocked(assignment, true);
+    }
+
+    public static JsonObject Materialize(JsonObject session, JsonNode preferences, IReadOnlyList<JsonObject> records, double now,
+        SpaceAccessAuthority? access = null) {
         var policy = Preferences(preferences);
         var owners = records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Folder)
             .ToDictionary(r => new FolderId(Id(r["id"]!["value"])), r => new SpaceId(Id(r["spaceID"])));
@@ -69,6 +90,8 @@ public static class NativeSyncMaterializer {
             var value = Fields(remote, "id", "name", "symbol", "accent", "branding", "browsingPreferences", "accessPolicy",
                 "isSavedTabsExpanded", "savedTabsExpansionModifiedAt");
             value["profile"] = new JsonObject { ["id"] = remote["profileID"]!.DeepClone() };
+            if (AccessPolicy(local, remote, access, id, profile) is { } accessPolicy) value["accessPolicy"] = accessPolicy;
+            else value.Remove("accessPolicy");
             value["folders"] = Array(folders); value["tabs"] = Array(tabs); value["splitGroups"] = Array(groups);
             value["archivedTabs"] = Array(archive); value["history"] = Array(history);
             if (local?["credentialPreferences"] is { } credentials) value["credentialPreferences"] = credentials.DeepClone();

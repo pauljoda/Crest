@@ -79,6 +79,7 @@ public static class BrowserRuleCodes {
     public const string InvalidTabAnchor = "invalid_tab_anchor";
     public const string InvalidTabContent = "invalid_tab_content";
     public const string InvalidTabCount = "invalid_tab_count";
+    public const string InvalidTabIcon = "invalid_tab_icon";
     public const string InvalidTerminationCount = "invalid_termination_count";
     public const string InvalidTitle = "invalid_title";
     public const string InvalidTransferTransaction = "invalid_transfer_transaction";

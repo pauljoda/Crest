@@ -212,20 +212,30 @@ extension BrowserSession {
             #endif
     }
 
+    /// Creating a folder around tabs is one transaction: the core places the
+    /// folder and files its members together, so a rejected filing cannot
+    /// leave an empty folder behind. Title and palette defaults are the
+    /// core's and the platform's respective assets.
     @discardableResult
     mutating func createTabFolder(
         _ tabIDs: [TabID], in spaceID: SpaceID, location: BrowserFolderLocation = .current,
-        title: String = "New Folder", color: BrowserSpaceBrandColor = .folderDefault,
+        title: String? = nil, color: BrowserSpaceBrandColor = .folderDefault,
         detachesSplitMembers: Bool = false
     ) -> FolderID? {
-        var next = self
-        guard let space = space(id: spaceID), !tabIDs.isEmpty,
-            tabIDs.allSatisfy({ id in space.tabs.contains { $0.id == id } }),
-            let folderID = next.addFolder(title: title, color: color, location: location, in: spaceID),
-            next.fileTabs(
-                tabIDs, in: spaceID, into: folderID, location: location, detachesSplitMembers: detachesSplitMembers)
+        let folderID = FolderID()
+        guard !tabIDs.isEmpty, spaces.contains(where: { $0.id == spaceID }),
+            applyCoreEdit("folder.create", in: spaceID, arguments: [
+                "folderId": folderID.rawValue.uuidString,
+                "placement": location.rawValue,
+                "parentId": NSNull(),
+                "title": title as Any? ?? NSNull(),
+                "symbol": "folder",
+                "color": BrowserCoreSessionEditing.value(color) ?? NSNull(),
+                "tabIds": tabIDs.map { $0.rawValue.uuidString },
+                "detach": detachesSplitMembers
+            ], at: .now) != nil,
+            spaces.first(where: { $0.id == spaceID })?.folders.contains(where: { $0.id == folderID }) == true
         else { return nil }
-        self = next
         return folderID
     }
 }

@@ -120,7 +120,42 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
 
     #endregion
 
+    #region Actions - Saved location
+
+    /// The address a saved or pinned tab belongs to. A current tab has none:
+    /// it is wherever browsing took it, which is why it cannot be "away".
+    public string? SavedSiteUrl => SavedUrl ?? (Placement == TabPlacement.Current ? null : Url);
+
+    public bool SupportsSavedLocationEditing => Placement != TabPlacement.Current && SavedSiteUrl is not null;
+
+    public bool IsAwayFromSavedLocation
+        => SupportsSavedLocationEditing && Url is not null && !HistoryPolicy.SamePage(Url, SavedSiteUrl);
+
+    #endregion
+
     #region Mutators
+
+    /// A page reporting where it landed and what it is called. Unlike
+    /// <see cref="Observe"/> this carries no transport state, so a background
+    /// Split View card can record its own page without claiming the focused
+    /// tab's loading, history or failure state.
+    public void ObserveAppearance(string? url, string? title) {
+        if (url is not null) Url = url;
+        if (!string.IsNullOrEmpty(title)) Title = title;
+    }
+
+    /// Adopts the page the tab is actually showing as the one it belongs to.
+    public bool ReplaceSavedLocation() {
+        if (!IsAwayFromSavedLocation || Url is not { } url) return false;
+        SavedUrl = url; return true;
+    }
+
+    /// Returns the tab to the address it belongs to, and reports it so the
+    /// platform can navigate the live page to the same place.
+    public string? RestoreSavedLocation() {
+        if (!SupportsSavedLocationEditing || SavedSiteUrl is not { } saved) return null;
+        Url = saved; return saved;
+    }
 
     public void Rename(string? title, DateTimeOffset now) {
         title = title?.Trim();

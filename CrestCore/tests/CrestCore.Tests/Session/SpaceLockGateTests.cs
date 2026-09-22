@@ -100,6 +100,107 @@ public sealed partial class BrowserContractsTests {
             4, SpaceCommand(current, "records.cleanup", new()))).Code);
     }
 
+    private static byte[] SpaceTabDelta(JsonNode session, int index, string title) {
+        var space = session["spaces"]![index]!;
+        var tab = space["tabs"]![0]!.DeepClone(); tab["title"] = title;
+        return Bytes(new JsonObject {
+            ["version"] = 1,
+            ["spaces"] = new JsonArray(new JsonObject {
+                ["id"] = space["id"]!.DeepClone(),
+                ["tabs"] = new JsonObject { ["remove"] = new JsonArray(), ["upsert"] = new JsonArray(tab) }
+            })
+        });
+    }
+
+    private static byte[] AccessPolicyDelta(JsonNode session, string policy) {
+        var metadata = session["spaces"]![0]!.DeepClone(); metadata["accessPolicy"] = policy;
+        return Bytes(new JsonObject {
+            ["version"] = 1,
+            ["spaces"] = new JsonArray(new JsonObject {
+                ["id"] = session["spaces"]![0]!["id"]!.DeepClone(),
+                ["metadata"] = metadata
+            })
+        });
+    }
+
+    [Fact]
+    public void ALockedSpacesRecordsRejectANativeValueEditWhileOtherSpacesAndSyncKeepWriting() {
+        var session = GuardedSession(withOpenSecondSpace: true);
+        var access = new SpaceAccessAuthority();
+        var core = new NativeSessionAuthority(Bytes(session));
+        core.AttachAccess(access);
+        var identity = Identity(session);
+        var selection = Selection(session);
+        // A value edit proposes records instead of naming an operation, so the
+        // gate reads what the delta would actually change.
+        foreach (var attempt in new Func<object>[] {
+            () => core.Commit(1, SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true),
+            () => core.ReserveReplacement(1, SpaceTabDelta(session, 0, "Leaked"), selection, nativeValueEdit: true)
+        }) Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => attempt()).Code);
+        // Removing protection is the decision authentication guards, whether it
+        // arrives as a command or as a proposed record.
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
+            () => core.Commit(1, AccessPolicyDelta(session, "open"), nativeValueEdit: true)).Code);
+        Assert.Equal(1UL, core.Revision);
+
+        // The unlocked Space in the same session stays editable, and raising
+        // protection further on the locked one is allowed as it is for commands.
+        core.Commit(1, SpaceTabDelta(session, 1, "Second space tab"), nativeValueEdit: true);
+        core.Commit(2, AccessPolicyDelta(session, "futureStrongerPolicy"), nativeValueEdit: true);
+        Assert.Equal(3UL, core.Revision);
+
+        // Sync materialization commits as a journal-bound replacement rather
+        // than a value edit, so background convergence is still unaffected.
+        var current = JsonNode.Parse(core.Checkpoint(3, selection).Read("core"))!;
+        core.Commit(3, SpaceTabDelta(current, 0, "Merged from another device"));
+        Assert.Equal(4UL, core.Revision);
+
+        Grant(access, identity);
+        current = JsonNode.Parse(core.Checkpoint(4, selection).Read("core"))!;
+        core.Commit(4, SpaceTabDelta(current, 0, "Mine again"), nativeValueEdit: true);
+        Assert.Equal(5UL, core.Revision);
+    }
+
+    private static IReadOnlyList<JsonObject> SpaceRecords(JsonNode session) {
+        var space = Guid.Parse(session["spaces"]![0]!["id"]!["rawValue"]!.GetValue<string>());
+        return NativeSyncProjection.Project(session.DeepClone().AsObject(), SyncProjectionPreferences(), [])
+            .Select(payload => new JsonObject {
+                ["id"] = new JsonObject {
+                    ["kind"] = payload!["type"]!.DeepClone(),
+                    ["value"] = (payload["type"]!.GetValue<string>() == "archive"
+                        ? payload["value"]!["tab"]!["id"] : payload["value"]!["id"])!.DeepClone()
+                },
+                ["spaceID"] = SwiftId(space),
+                ["version"] = new JsonObject { ["logicalClock"] = 1, ["deviceID"] = Guid.NewGuid().ToString() },
+                ["payload"] = payload.DeepClone()
+            }).ToArray();
+    }
+
+    [Fact]
+    public void SyncCannotRemoveProtectionFromASpaceThisDeviceHasNotUnlocked() {
+        var local = GuardedSession();
+        var remote = local.DeepClone(); remote["spaces"]![0]!["accessPolicy"] = "open";
+        var access = new SpaceAccessAuthority();
+        var identity = Identity(local);
+        // The policy has no modification stamp of its own, so a stale remote
+        // copy would otherwise unlock the Space nobody authenticated for.
+        Assert.Equal("deviceOwnerAuthentication", Policy(local, remote, access));
+        Grant(access, identity);
+        Assert.Equal("open", Policy(local, remote, access));
+
+        // Raising protection never needs a grant, and neither does a device
+        // that has attached no authority at all being told to protect a Space.
+        var openLocal = local.DeepClone(); openLocal["spaces"]![0]!["accessPolicy"] = "open";
+        Assert.Equal("deviceOwnerAuthentication", Policy(openLocal, local, new SpaceAccessAuthority()));
+        Assert.Equal("deviceOwnerAuthentication", Policy(openLocal, local, null));
+        // With no authority to consult there is no grant, so protection stays.
+        Assert.Equal("deviceOwnerAuthentication", Policy(local, remote, null));
+
+        static string? Policy(JsonNode local, JsonNode remote, SpaceAccessAuthority? access)
+            => NativeSyncMaterializer.Materialize(local.DeepClone().AsObject(), SyncProjectionPreferences(),
+                SpaceRecords(remote), 800000010.0, access)["spaces"]![0]!["accessPolicy"]?.GetValue<string>();
+    }
+
     [Fact]
     public void ALockedSpaceCannotBeBorrowedOrTransferredIntoATemporaryWorkspace() {
         var session = GuardedSession();

@@ -90,7 +90,9 @@ public static unsafe partial class Exports {
         *revision = 0;
         if (!ValidSessionInput(bytes, count)) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
-        try { *revision = session.Commit(expected, new(bytes, (int)count)); return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
+        // Only native views reach this export; sync commits its materialization
+        // through the transaction-bound replacement instead.
+        try { *revision = session.Commit(expected, new(bytes, (int)count), nativeValueEdit: true); return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_pair", CallConvs = [typeof(CallConvCdecl)])]
@@ -221,7 +223,8 @@ public static unsafe partial class Exports {
         NativeSessionReplacement? value = null;
         ulong id = 0, snapshot = 0;
         try {
-            value = session.ReserveReplacement(expected, new(delta, (int)count), new(selection, (int)selectionCount));
+            value = session.ReserveReplacement(expected, new(delta, (int)count), new(selection, (int)selectionCount),
+                nativeValueEdit: true);
             id = checked((ulong)Interlocked.Increment(ref nextHandle));
             snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))

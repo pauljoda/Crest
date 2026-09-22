@@ -9,12 +9,16 @@ import os
 enum BrowserCoreSessionEditing {
     struct Result: Decodable {
         struct Copy: Decodable { var source: UUID; var copy: UUID }
+        /// The core decides which tab wears which image; the bytes never cross
+        /// the boundary, so it names the tab whose stored image must change.
+        struct FaviconAssignment: Decodable { var tabId: UUID; var adopts: Bool }
         var space: BrowserSpace
         var tabId: UUID?
         var selectSpace: Bool
         var copies: [Copy]
         var changed: Bool
         var adoptLivePage: Bool?
+        var favicon: FaviconAssignment?
     }
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "CoreSession")
     private static let maximumBytes = 4 * 1024 * 1024
@@ -72,6 +76,13 @@ enum BrowserCoreSessionEditing {
         return result
     }
 
+    /// Encodes a native presentation value as a command argument. Used for
+    /// palette colors and icon accents, which are assets rather than records.
+    static func value(_ source: (some Encodable)?) -> Any? {
+        guard let source else { return nil }
+        return try? JSONSerialization.jsonObject(with: JSONEncoder().encode(source), options: [.fragmentsAllowed])
+    }
+
     static func tabValue(_ source: BrowserTab) -> Any? {
         var tab = source; tab.faviconData = nil
         return try? JSONSerialization.jsonObject(with: JSONEncoder().encode(tab))
@@ -89,6 +100,19 @@ extension BrowserSession {
         else { return nil }
         applyCoreResult(result, at: index)
         return result
+    }
+
+    /// The core named the tab whose stored image must change. Applying those
+    /// bytes here is projection work: no image ever entered a semantic command.
+    @discardableResult
+    mutating func applyCoreFavicon(
+        _ assignment: BrowserCoreSessionEditing.Result.FaviconAssignment?, bytes: Data?, at spaceIndex: Int
+    ) -> TabID? {
+        guard let assignment,
+            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == assignment.tabId })
+        else { return nil }
+        spaces[spaceIndex].tabs[tabIndex].faviconData = assignment.adopts ? bytes : nil
+        return spaces[spaceIndex].tabs[tabIndex].id
     }
 
     mutating func applyCoreResult(_ result: BrowserCoreSessionEditing.Result, at index: Int) {

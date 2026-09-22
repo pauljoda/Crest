@@ -295,6 +295,19 @@ public sealed class LegacySessionDocument {
 
     #region Mutators
 
+    /// Appearance fields the domain does not model travel verbatim through the
+    /// tab record. Reading and writing them here keeps the rules that decide
+    /// them in one place without giving the domain an image cache.
+    internal JsonNode? TabMetadata(TabId id, string field)
+        => tabs.TryGetValue(id.Value, out var metadata) ? metadata[field] : null;
+
+    internal bool SetTabMetadata(TabId id, string field, JsonNode? value) {
+        if (!tabs.TryGetValue(id.Value, out var metadata)) tabs[id.Value] = metadata = new();
+        if (JsonNode.DeepEquals(metadata[field], value)) return false;
+        metadata[field] = value?.DeepClone();
+        return true;
+    }
+
     internal bool SetFolderMetadata(FolderId id, string field, JsonNode value) {
         if (!folders.TryGetValue(id.Value, out var metadata)) folders[id.Value] = metadata = new();
         if (JsonNode.DeepEquals(metadata[field], value)) return false;

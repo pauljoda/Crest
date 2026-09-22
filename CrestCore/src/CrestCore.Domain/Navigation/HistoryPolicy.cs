@@ -15,6 +15,15 @@ public static class HistoryPolicy {
         return url.Split('#', 2)[0];
     }
 
+    /// Two spellings of one address are one page. Everything that asks "is this
+    /// still the page I captured?" — an automatic favicon, a saved location —
+    /// asks it here, so a fragment or an unnormalizable scheme cannot make the
+    /// same page look like two.
+    public static bool SamePage(string? left, string? right) {
+        if (left is null || right is null) return left is null && right is null;
+        return (Normalize(left) ?? left) == (Normalize(right) ?? right);
+    }
+
     public static HistoryVisit Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryVisit? previous) {
         if (Normalize(normalizedUrl) != normalizedUrl || newId == Guid.Empty
             || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRuleCodes.InvalidHistoryVisit);

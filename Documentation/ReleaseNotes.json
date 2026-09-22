@@ -1801,6 +1801,14 @@
     "remove-dead-webkit-only-code": {
       "category": "internal",
       "message": "Remove unreachable pre-core sync coordinator, unused presentation types and dead engine branches."
+    },
+    "locked-space-gate-value-edits": {
+      "category": "fixed",
+      "message": "Locked Spaces reject every kind of edit until unlocked, and a device that has not unlocked a Space can no longer lower its protection through sync."
+    },
+    "shared-core-tab-appearance-rules": {
+      "category": "internal",
+      "message": "Move tab icon precedence, automatic favicon identity, saved-location and folder-creation rules into the shared core."
     }
   }
 }

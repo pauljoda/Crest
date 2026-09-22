@@ -11,7 +11,8 @@ namespace CrestCore.Application;
 public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, JsonObject Materialization) {
     #region Actions - Sync
 
-    public static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, ReadOnlySpan<byte> input) {
+    public static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, ReadOnlySpan<byte> input,
+        SpaceAccessAuthority? access = null) {
         if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
@@ -58,7 +59,7 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         var raw = replacing && incoming.Count == 0
             ? new JsonObject { ["spaces"] = new JsonArray() }
             : NativeSyncMaterializer.Materialize(local, preferences,
-                NativeSyncEvaluator.Reconcile(next.Records).Select(n => n!.AsObject()).ToArray(), now);
+                NativeSyncEvaluator.Reconcile(next.Records).Select(n => n!.AsObject()).ToArray(), now, access);
         var repaired = NativeSessionMaintenance.Repair(raw, now, request["emptySpace"] as JsonObject);
         var retained = NativeSessionMaintenance.Retain(repaired["session"]!.AsObject(), now);
         bool removed = retained["changed"]!.GetValue<bool>();

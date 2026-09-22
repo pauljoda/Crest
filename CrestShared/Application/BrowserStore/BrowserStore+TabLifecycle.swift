@@ -427,18 +427,11 @@ extension BrowserStore {
         iconAccent: BrowserTabIconAccent? = nil
     ) {
         guard
-            let change = pageMetadataChange(
-                url: observedURL, title: title, faviconData: faviconData,
-                iconAccent: iconAccent, for: selectedTab
+            let observation = session.updateSelectedTab(
+                url: observedURL, title: title, faviconData: faviconData, iconAccent: iconAccent
             )
         else { return }
-        session.updateSelectedTab(
-            url: change.url,
-            title: title,
-            faviconData: faviconData,
-            iconAccent: iconAccent
-        )
-        persist(syncUrgency: .coalesced, scope: change.scope)
+        persist(syncUrgency: .coalesced, scope: saveScope(for: observation))
     }
 
     /// The per-tab twin of ``updateSelectedTabFromPage(url:title:faviconData:iconAccent:)``.
@@ -469,21 +462,13 @@ extension BrowserStore {
         guard let space = space(matching: assignment) else { return false }
         var draft = session
         var scope: BrowserSessionSaveScope?
-        if let tab = space.tabs.first(where: { $0.id == tabID }),
-            let change = pageMetadataChange(
-                url: observedURL, title: title, faviconData: faviconData,
-                iconAccent: iconAccent, for: tab
-            ),
-            draft.updateTab(
-                url: change.url,
-                title: title,
-                faviconData: faviconData,
-                iconAccent: iconAccent,
-                tabID: tabID,
-                in: assignment.spaceID
+        if space.tabs.contains(where: { $0.id == tabID }),
+            let observation = draft.observePage(
+                url: observedURL, title: title, faviconData: faviconData, iconAccent: iconAccent,
+                tabID: tabID, in: assignment.spaceID
             )
         {
-            scope = change.scope
+            scope = saveScope(for: observation)
         }
         let changedMetadata = scope != nil
         if let url = completedNavigationURL {
@@ -505,29 +490,11 @@ extension BrowserStore {
         )
     }
 
-    private func pageMetadataChange(
-        url observedURL: URL?,
-        title: String?,
-        faviconData: Data?,
-        iconAccent: BrowserTabIconAccent?,
-        for tab: BrowserTab?
-    ) -> (url: URL?, scope: BrowserSessionSaveScope)? {
-        let resolvedURL = observedURL ?? tab?.url
-        let updatesAutomaticIcon =
-            tab?.iconMode == .automatic
-            && (faviconData != tab?.faviconData || iconAccent != tab?.iconAccent)
-        guard
-            resolvedURL != tab?.url
-                || title?.nilIfEmpty != tab?.title.nilIfEmpty
-                || updatesAutomaticIcon
-        else { return nil }
-        // A title rewrite touches only the core; automatic icon changes also
-        // reconcile that tab's favicon bytes.
-        let iconTabID = updatesAutomaticIcon ? tab?.id : nil
-        return (
-            resolvedURL,
-            iconTabID.map(BrowserSessionSaveScope.favicon(for:)) ?? .core
-        )
+    /// A title rewrite touches only the core; an icon the page replaced also
+    /// reconciles that tab's favicon bytes. Which of those happened is the
+    /// core's answer; turning it into a save scope is this adapter's work.
+    private func saveScope(for observation: BrowserTabObservation) -> BrowserSessionSaveScope {
+        observation.changedFavicon ? .favicon(for: observation.tabID) : .core
     }
 
 }
