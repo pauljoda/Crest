@@ -1357,6 +1357,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             }
             estimatedProgress = isLoading ? 0.5 : 1
             hasOnlySecureContent = values["secure"] as? Bool == true
+            themeColor = (values["themeColor"] as? UInt32).map { argb in
+                NSColor(
+                    srgbRed: CGFloat((argb >> 16) & 0xFF) / 255, green: CGFloat((argb >> 8) & 0xFF) / 255,
+                    blue: CGFloat(argb & 0xFF) / 255, alpha: CGFloat((argb >> 24) & 0xFF) / 255)
+            }
             canGoBack = values["canGoBack"] as? Bool ?? false
             canGoForward = values["canGoForward"] as? Bool ?? false
             // A failure is reported once, by the navigation that failed; the
@@ -1550,14 +1555,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func refreshFavicon() {
-        guard navigationContext?.iconMode == .automatic,
-            webKitView?.url != nil
-        else { return }
-        faviconSession?.refresh()
+        guard navigationContext?.iconMode == .automatic, url != nil else { return }
+        if let faviconSession {
+            faviconSession.refresh()
+        } else {
+            pageEngine.refreshFavicon()
+        }
     }
 
+    /// WebKit fetches the icon on demand; an engine that reports its own icon
+    /// has already published it.
     func pullFavicon() async -> Data? {
-        await faviconSession?.pull()
+        if let faviconSession { return await faviconSession.pull() }
+        return faviconData
     }
 
     var siteThemeIconAccent: BrowserTabIconAccent? {

@@ -39,4 +39,7 @@ protocol BrowserPageContentScripting: AnyObject {
         arguments: [String: Any],
         in frame: BrowserContentFrame
     ) async throws -> Any?
+    /// Runs `body` as an async function in Crest's world of the main frame's
+    /// current document, for reads that need no bridge of their own.
+    func callAsyncJavaScriptInMainFrame(_ body: String) async -> Any?
 }

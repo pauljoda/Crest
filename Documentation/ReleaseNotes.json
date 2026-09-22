@@ -1977,6 +1977,14 @@
     "core-downloads-aggregate": {
       "category": "internal",
       "message": "Move the download ledger, progress estimation, automatic-download throttle and download risk rules into the portable core so both engines and platforms share them."
+    },
+    "theme-accents-desktop": {
+      "category": "improved",
+      "message": "Tab icons in the desktop browser take on a site's theme colour, and refreshing a site's icon works there too."
+    },
+    "viewport-fit-desktop": {
+      "category": "improved",
+      "message": "Split cards and Peek in the desktop browser zoom pages with a fixed minimum width to fit, as they do on WebKit."
     }
   }
 }

@@ -40,6 +40,8 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// Opens the popups the engine's blocker held back, once the person has
     /// allowed them. False when the engine keeps no such list.
     func showBlockedPopups() -> Bool
+    /// Asks an engine that owns its favicon pipeline to fetch the icon again.
+    func refreshFavicon()
     /// Answers a bar the engine raised for the page; false when there is no
     /// such bar.
     func respondToInfoBar(_ id: Int, response: String) -> Bool
@@ -67,6 +69,7 @@ extension BrowserPageEngine {
     func applyAutomaticPopups(_ allowed: Bool) -> Bool { false }
     func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool { false }
     func showBlockedPopups() -> Bool { false }
+    func refreshFavicon() {}
     func respondToInfoBar(_ id: Int, response: String) -> Bool { false }
     var serverTrust: SecTrust? { nil }
     var mediaSessionTransport: (any BrowserMediaSessionTransport)? { nil }

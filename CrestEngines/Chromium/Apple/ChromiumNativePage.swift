@@ -272,6 +272,11 @@ final class ChromiumNativePage: BrowserPageEngine {
     /// prompt; the reply codes are the host's.
     var permissionHandler: ((BrowserSitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> Int)?
 
+    func refreshFavicon() {
+        guard created, !disposed else { return }
+        _ = host?.command("engine.favicon_refresh", page: id, url: nil)
+    }
+
     func showBlockedPopups() -> Bool {
         guard created, !disposed, let host else { return false }
         return host.command("engine.show_blocked_popups", page: id, url: nil)
@@ -634,6 +639,17 @@ extension ChromiumNativePage: BrowserPageContentScripting {
         contentReceivers[script.handlerName] = receive
         if created, let host { return host.addContentScript(script.source, page: id, mainFrameOnly: script.mainFrameOnly) }
         return true
+    }
+
+    func callAsyncJavaScriptInMainFrame(_ body: String) async -> Any? {
+        guard created, !disposed, let host else { return nil }
+        let result: String? = await withCheckedContinuation { continuation in
+            host.evaluateContentScript(body, page: id, frame: "main") { json in continuation.resume(returning: json) }
+        }
+        guard let data = result?.data(using: .utf8),
+            let value = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
+            !(value is NSNull) else { return nil }
+        return value
     }
 
     func callAsyncJavaScript(_ body: String, arguments: [String: Any], in frame: BrowserContentFrame) async throws -> Any? {

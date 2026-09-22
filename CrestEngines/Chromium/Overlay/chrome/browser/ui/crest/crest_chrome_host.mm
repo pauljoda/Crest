@@ -1548,7 +1548,12 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       @"canGoBack": @(controller.CanGoBack()), @"canGoForward": @(controller.CanGoForward()),
       @"backHistory": History(-1), @"forwardHistory": History(1),
       @"committed": @(committed), @"failure": failure ?: (id)NSNull.null, @"errorCode": @(error_code),
-      @"secure": @(IsSecure()) });
+      @"secure": @(IsSecure()), @"themeColor": ThemeColor() });
+  }
+  // The page's declared theme colour, as 0xAARRGGBB, for Crest's tab accents.
+  id ThemeColor() {
+    const auto color = web_contents()->GetThemeColor();
+    return color ? @(static_cast<uint32_t>(*color)) : (id)NSNull.null;
   }
   // The engine's own verdict: a secure transport with no mixed content and no
   // certificate problem. Anything less is not reported as secure.
@@ -1710,6 +1715,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   // Mixed content found after load, or a certificate decision, changes what
   // the address shows.
   void DidChangeVisibleSecurityState() override { Publish(); }
+  void DidChangeThemeColor() override { Publish(); }
   void BeforeUnloadDialogCancelled() override {
     if (!closing || State().disposing) return;
     closing = false;
@@ -2416,6 +2422,11 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     int id = 0;
     if (parts.size() != 2 || !base::StringToInt(parts[1], &id)) return NO;
     return page->RespondToInfoBar(id, parts[0]) ? YES : NO;
+  } else if ([command isEqualToString:@"engine.favicon_refresh"]) {
+    // Fetch the page's icon again rather than replay the cached one.
+    auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents);
+    if (!driver) return NO;
+    driver->FetchFavicon(contents->GetLastCommittedURL(), /*is_same_document=*/false);
   } else if ([command isEqualToString:@"engine.show_blocked_popups"]) {
     auto* blocker = blocked_content::PopupBlockerTabHelper::FromWebContents(contents);
     if (!blocker || !blocker->GetBlockedPopupsCount()) return NO;
@@ -2931,9 +2942,23 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
 - (void)evaluateContentScript:(NSString*)source page:(NSString*)pageID frame:(NSString*)frameID
                    completion:(void (^)(NSString* _Nullable))completion {
   CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  // "main" addresses the primary main frame's current document directly.
+  if ([frameID isEqualToString:@"main"]) {
+    auto* main = page && page->web_contents() ? page->web_contents()->GetPrimaryMainFrame() : nullptr;
+    if (!main || !main->IsRenderFrameLive()) { completion(nil); return; }
+    void (^reply)(NSString*) = [completion copy];
+    main->ExecuteJavaScriptInIsolatedWorld(
+        base::UTF8ToUTF16("(async () => {\n" + base::SysNSStringToUTF8(source) + "\n})()"),
+        mojo::WrapCallbackWithDefaultInvokeIfNotRun(
+            base::BindOnce([](void (^reply)(NSString*), base::Value value) {
+              auto json = base::WriteJson(value);
+              reply(json ? base::SysUTF8ToNSString(*json) : nil);
+            }, reply), base::Value()), crest::kContentWorldID);
+    return;
+  }
   auto parts = base::SplitString(base::SysNSStringToUTF8(frameID), ":", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
   int child = 0, routing = 0;
-  Page* page = FindPage(pageID);
   if (!page || !page->web_contents() || parts.size() != 3 || !base::StringToInt(parts[0], &child) ||
       !base::StringToInt(parts[1], &routing)) { completion(nil); return; }
   auto* frame = content::RenderFrameHost::FromID(content::GlobalRenderFrameHostId(child, routing));
