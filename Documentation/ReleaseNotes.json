@@ -1941,6 +1941,10 @@
     "certificate-errors-desktop": {
       "category": "fixed",
       "message": "Sites with certificate problems show the engine's warning page, with its option to proceed, instead of a dead-end error."
+    },
+    "experimental-update-channel": {
+      "category": "new",
+      "message": "Builds from the experimental branch update through their own Experimental channel, shown in Settings only on those builds."
     }
   }
 }

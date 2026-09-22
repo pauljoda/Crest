@@ -208,7 +208,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: "$(CREST_NATIVE_CORE_BUNDLE_IDENTIFIER)"
         PRODUCT_MODULE_NAME: Crest
         PRODUCT_NAME: CrestNativeCore
-        CREST_DEFAULT_UPDATE_CHANNEL: stable
+        # Experimental while the Chromium engine lives on its branch; set to
+        # development in the commit before merging to main.
+        CREST_DEFAULT_UPDATE_CHANNEL: experimental
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_CORE_BACKED CREST_REVIEW_BUILD"
         SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
         CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"
@@ -314,7 +316,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: "$(CREST_MAC_BUNDLE_IDENTIFIER)"
         PRODUCT_MODULE_NAME: Crest
         PRODUCT_NAME: Crest
-        CREST_DEFAULT_UPDATE_CHANNEL: stable
+        # Experimental while the Chromium engine lives on its branch; set to
+        # development in the commit before merging to main.
+        CREST_DEFAULT_UPDATE_CHANNEL: experimental
     scheme:
       testTargets:
         - CrestTests

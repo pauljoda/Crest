@@ -23601,123 +23601,123 @@
 			path = MobileBrowserSettingsView;
 			sourceTree = "<group>";
 		};
-		"TEMP_02F4F390-182B-4F3F-A808-12079EC86FDB" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_1D2CE5BA-92AE-4802-9B94-6A77425D9DE8" /* ExtensionSidebar */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = ExtensionSidebar;
-			sourceTree = "<group>";
-		};
-		"TEMP_28A5D8F8-B71F-4F9D-85AE-6FE9C85BD3F9" /* BrowserExtensions */ = {
+		"TEMP_0A8EA6B5-291D-4813-A14B-DE0AA06386E8" /* BrowserExtensions */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserExtensions;
 			sourceTree = "<group>";
 		};
-		"TEMP_458F153F-0D50-4535-9C51-C27124733575" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_4FAD5465-6DF2-4505-A680-66994EDAFC2D" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_55EC407E-66EF-465D-9758-2DA75E1605CF" /* BrowserExtensionServices */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserExtensionServices;
-			sourceTree = "<group>";
-		};
-		"TEMP_74EB3344-DC35-48F3-8904-7E345A058A38" /* Components */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Components;
-			sourceTree = "<group>";
-		};
-		"TEMP_7EF20A23-1A04-4F4D-90FD-9C2EF2CC5825" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_90576687-3638-4AA5-977C-E5A59769450E" /* BrowserPinnedExtensionStrip */ = {
+		"TEMP_15CC672D-566C-4958-A8C6-F6465BF52099" /* BrowserPinnedExtensionStrip */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserPinnedExtensionStrip;
 			sourceTree = "<group>";
 		};
-		"TEMP_A594A509-DD10-4B61-ADCF-40ACEB39BB23" /* BrowserMozillaAddonsInstallView */ = {
+		"TEMP_22E4240F-7987-4CA1-8535-27FD09564D6A" /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
 			);
-			path = BrowserMozillaAddonsInstallView;
+			path = Extensions;
 			sourceTree = "<group>";
 		};
-		"TEMP_B346CB1B-B3E6-4D8E-8501-9B664A923DA6" /* Crest */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Crest;
-			sourceTree = "<group>";
-		};
-		"TEMP_B7A931E9-9FDC-4005-A1B5-54F019121948" /* BrowserExtensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserExtensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_DCD129E0-9C8E-4B1B-AA91-6073C5F37C09" /* BrowserExtensionServices */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserExtensionServices;
-			sourceTree = "<group>";
-		};
-		"TEMP_E15DA9A3-6F6B-4CD7-9FDA-42A9C45F0EB0" /* BrowserChromeWebStoreInstallView */ = {
+		"TEMP_24A8CD30-0005-4D1C-91CC-83EFD1841C0F" /* BrowserChromeWebStoreInstallView */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserChromeWebStoreInstallView;
 			sourceTree = "<group>";
 		};
-		"TEMP_E823997A-DDF5-4D2F-930D-726833DD387F" /* BrowserExtensionsView */ = {
+		"TEMP_3646D6F3-AA76-4615-B4D1-35CE67B1E035" /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
 			);
-			path = BrowserExtensionsView;
+			path = Extensions;
 			sourceTree = "<group>";
 		};
-		"TEMP_E9C8A55B-42DF-4CB9-97BA-2981D78147B1" /* BrowserExtensionSettingsPane */ = {
+		"TEMP_4597840D-F648-4C30-99C4-51861B39FA45" /* ExtensionSidebar */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ExtensionSidebar;
+			sourceTree = "<group>";
+		};
+		"TEMP_48FFBEB9-91B1-4772-B7D7-AED9299C9A2B" /* Components */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		"TEMP_56ADCBDA-CD18-4086-BA13-DD3209381855" /* BrowserExtensionSettingsPane */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserExtensionSettingsPane;
 			sourceTree = "<group>";
 		};
-		"TEMP_FEB40081-88F6-4A1D-930C-AA19C59D2C1E" /* Extensions */ = {
+		"TEMP_66D513F2-7ADD-4796-954C-330F2655D7F9" /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = Extensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_688B3973-7F19-432F-A892-727BA01E9BE5" /* BrowserExtensionsView */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserExtensionsView;
+			sourceTree = "<group>";
+		};
+		"TEMP_7A687E76-B6A5-4874-A1E5-6D8657B0A277" /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_8523325E-864E-4AC9-B8AA-0D2A091C9AC4" /* BrowserMozillaAddonsInstallView */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserMozillaAddonsInstallView;
+			sourceTree = "<group>";
+		};
+		"TEMP_A5BE331F-2EA5-427F-88AC-FB9CDFD19447" /* BrowserExtensionServices */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserExtensionServices;
+			sourceTree = "<group>";
+		};
+		"TEMP_C0962960-43DF-49DF-86AA-250FD903ACDE" /* BrowserExtensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserExtensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_CD2542B9-385C-4338-A624-6ED304EED7C2" /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_D08DCEA8-3853-45C7-94ED-0B7578662214" /* BrowserExtensionServices */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserExtensionServices;
+			sourceTree = "<group>";
+		};
+		"TEMP_F038FF0F-D906-48FD-89A3-5D97E03C8224" /* Crest */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Crest;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -35748,7 +35748,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(CREST_NATIVE_CORE_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
 				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish";
-				CREST_DEFAULT_UPDATE_CHANNEL = stable;
+				CREST_DEFAULT_UPDATE_CHANNEL = experimental;
 				CREST_NATIVE_CORE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
 				CREST_NATIVE_CORE_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -36009,7 +36009,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(CREST_MAC_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
 				CREST_CORE_LIBRARY_DIR = "$(BUILT_PRODUCTS_DIR)/CrestCore";
-				CREST_DEFAULT_UPDATE_CHANNEL = stable;
+				CREST_DEFAULT_UPDATE_CHANNEL = experimental;
 				CREST_MAC_BUNDLE_IDENTIFIER = com.pauldavis.crest;
 				CREST_MAC_ENTITLEMENTS = CrestMac/Configuration/Crest.entitlements;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -36121,7 +36121,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(CREST_NATIVE_CORE_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
 				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish";
-				CREST_DEFAULT_UPDATE_CHANNEL = stable;
+				CREST_DEFAULT_UPDATE_CHANNEL = experimental;
 				CREST_NATIVE_CORE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
 				CREST_NATIVE_CORE_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -36166,7 +36166,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(CREST_MAC_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
 				CREST_CORE_LIBRARY_DIR = "$(BUILT_PRODUCTS_DIR)/CrestCore";
-				CREST_DEFAULT_UPDATE_CHANNEL = stable;
+				CREST_DEFAULT_UPDATE_CHANNEL = experimental;
 				CREST_MAC_BUNDLE_IDENTIFIER = com.pauldavis.crest;
 				CREST_MAC_ENTITLEMENTS = CrestMac/Configuration/Crest.entitlements;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;

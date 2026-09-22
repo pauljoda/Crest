@@ -34,9 +34,12 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
             Bundle.main.object(forInfoDictionaryKey: "SUAutomaticallyUpdate") as? Bool,
             true
         )
-        XCTAssertEqual(
-            Bundle.main.object(forInfoDictionaryKey: "CrestDefaultUpdateChannel") as? String,
-            "stable"
+        // The packaged default follows the branch (Experimental on a branch
+        // build, Development or Stable on main); it must always name a
+        // channel the app understands, or updates would fall back silently.
+        XCTAssertNotNil(
+            (Bundle.main.object(forInfoDictionaryKey: "CrestDefaultUpdateChannel") as? String)
+                .flatMap(BrowserSoftwareUpdateChannel.init(rawValue:))
         )
     }
 
@@ -55,6 +58,14 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(
             BrowserSoftwareUpdateChannel.development.customFeedURL?.absoluteString,
             "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml"
+        )
+        XCTAssertEqual(
+            BrowserSoftwareUpdateChannel.experimental.allowedSparkleChannels,
+            ["experimental"]
+        )
+        XCTAssertEqual(
+            BrowserSoftwareUpdateChannel.experimental.customFeedURL?.absoluteString,
+            "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental.xml"
         )
     }
 

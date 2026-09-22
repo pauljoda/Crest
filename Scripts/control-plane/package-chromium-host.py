@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
 """Assemble a separate, signed Chromium host from built products: an isolated experiment by default, or Crest's own product identity."""
 import argparse
+import os
+import re
 from pathlib import Path
 import plistlib
 import shutil
 import subprocess
 import tempfile
 from datetime import datetime, timezone
+
+
+def default_update_channel(repo):
+    override = os.environ.get("CREST_DEFAULT_UPDATE_CHANNEL", "").strip()
+    if override:
+        return override
+    channels = set(re.findall(r"^\s*CREST_DEFAULT_UPDATE_CHANNEL:\s*([a-z]+)\s*$",
+                              (repo / "project.yml").read_text(), re.MULTILINE))
+    if len(channels) != 1:
+        raise SystemExit(f"project.yml must name one default update channel; found {sorted(channels)}")
+    return channels.pop()
 
 
 def main():
@@ -184,8 +197,9 @@ def main():
             if key.startswith("SU") or key in ("CFBundleURLTypes", "CFBundleDocumentTypes"):
                 info[key] = value
         # Crest's Info.plist leaves the channel to its target's build setting;
-        # a packaged product follows the same released default.
-        info["CrestDefaultUpdateChannel"] = "stable"
+        # a packaged product follows that same default, read from project.yml
+        # unless CREST_DEFAULT_UPDATE_CHANNEL overrides it.
+        info["CrestDefaultUpdateChannel"] = default_update_channel(repo)
         if "SUFeedURL" not in info or "SUPublicEDKey" not in info:
             parser.error("Crest's Info.plist must supply the Sparkle feed and public key for a product package")
     else:
