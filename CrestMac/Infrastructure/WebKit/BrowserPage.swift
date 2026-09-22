@@ -1267,8 +1267,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         case "navigation_started":
             linkDrag?.beginNavigation()
             credentialState.didStartNavigation()
-            navigationFailure = nil
-            webContentFailureMessage = nil
         case "favicon":
             guard let rawURL = values["url"] as? String, let source = URL(string: rawURL),
                 let url, BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url) else { return }
@@ -1287,8 +1285,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             canGoBack = values["canGoBack"] as? Bool ?? false
             canGoForward = values["canGoForward"] as? Bool ?? false
             // A failure is reported once, by the navigation that failed; the
-            // state changes after it do not repeat it, so it stays until the
-            // next navigation starts or commits.
+            // state changes after it do not repeat it. It stays until a
+            // navigation commits: the engine retries a network error on its
+            // own, and a retry that fails again commits no new error page.
             switch values["failure"] as? String {
             case "process_terminated":
                 webContentFailureMessage = "process_terminated"
