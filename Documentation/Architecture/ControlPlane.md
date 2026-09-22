@@ -608,6 +608,21 @@ for a selected tab (`page.presentation`), the Balanced content-blocking rule
 list (`content_blocking.rules`) and branding range rules (`branding.normalize`,
 also applied by the `space.branding` command) are core policy; the crest's
 heraldic vocabulary and its composition parameters stay native.
+
+Window state follows the same split. Per-window selection and split column
+shares stay device-local records in their existing format; policy operations
+decide how a window reconciles with the session (which tab each Space shows,
+which Space the window keeps, which column shares survive), whether captured
+shares describe columns, whether a dragged tab may tear off, and the tab a
+Space selects when its selection is gone, the same rule checkpoint repair
+applies. The core never receives tab contents for these, only identities and
+presence facts; without an answer a window keeps its state. Manual setup and
+the import review keep their drafts native: the core admits draft edits
+against the import's Space and pinned limits, gives new draft Spaces their
+identity, reconciles drafts with Spaces changed elsewhere, suggests review
+destinations, duplicates and pinned overflow through the `workspace.review`
+query, and decides what finishing setup does. The workspace import rejects a
+source whose split runs its repair would rewrite.
 The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.

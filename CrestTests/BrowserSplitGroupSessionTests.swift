@@ -162,31 +162,6 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         )
     }
 
-    func testPinningAMemberClearsItsMembership() throws {
-        let group = SplitGroupID()
-        let head = makeTab("Head", group: group)
-        let tail = makeTab("Tail", group: group)
-        let space = makeSpace(tabs: [head, tail], selectedTabID: head.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertTrue(
-            session.setTabPinned(
-                true,
-                tabID: head.id,
-                in: space.id,
-                at: mutationDate
-            )
-        )
-
-        let repaired = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertNil(repaired.tabs.first { $0.id == head.id }?.splitGroupID)
-        XCTAssertEqual(
-            repaired.tabs.first { $0.id == tail.id }?.splitGroupID,
-            group,
-            "Repair keeps the survivor's ID; only a user mutation dissolves a singleton."
-        )
-    }
-
     func testMovingAMemberToAnotherSpaceClearsItsMembership() throws {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)
@@ -494,7 +469,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let space = makeSpace(tabs: [lone], selectedTabID: lone.id)
         var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
 
-        session.repairRuntimeIntegrity()
+        session = try BrowserCoreSync.repair(session)
 
         let repaired = try XCTUnwrap(session.spaces.first)
         XCTAssertEqual(repaired.tabs[0].splitGroupID, group)

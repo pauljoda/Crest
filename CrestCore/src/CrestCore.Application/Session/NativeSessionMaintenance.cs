@@ -130,8 +130,7 @@ public static class NativeSessionMaintenance {
             space["archivedTabs"] = new JsonArray(archive.ToArray());
             space["history"] = Array(Items(space, "history").Take(HistoryPolicy.MaximumEntries).Select(n => n!));
             space["splitGroups"] = NormalizeGroups(Items(space, "splitGroups"));
-            var fallback = tabs.FirstOrDefault(t => StoredPlacement(t!) == TabPlacement.Current)
-                ?? tabs.FirstOrDefault(t => StoredPlacement(t!) == TabPlacement.Pinned) ?? tabs[0];
+            var fallback = tabs[TabSelectionPolicy.Fallback(tabs.Select(t => StoredPlacement(t!)).ToArray()) ?? 0];
             space["selectedTabID"] = selected is { } chosen ? SwiftId(chosen) : fallback!["id"]!.DeepClone();
         }
         for (int index = 0; index < spaces.Count; index++)

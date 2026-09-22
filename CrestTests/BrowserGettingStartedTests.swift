@@ -112,14 +112,14 @@ final class BrowserGettingStartedTests: XCTestCase {
         let unknown = BrowserNativeTabContent(kind: "future-notes", resourceID: UUID())
         let id = try XCTUnwrap(browser.openNativeTab(unknown, title: "My notes", symbol: "note.text"))
         var session = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
-        session.repairRuntimeIntegrity()
+        session = try BrowserCoreSync.repair(session)
         XCTAssertEqual(session.selectedTab?.nativeContent, unknown)
         XCTAssertEqual(session.selectedTab?.title, "My notes")
         let copyID = try XCTUnwrap(session.duplicateTab(id, in: session.selectedSpaceID))
         XCTAssertEqual(session.selectedTab?.id, copyID)
         XCTAssertEqual(session.selectedTab?.nativeContent, unknown)
         session.closeTab(copyID)
-        session.repairRuntimeIntegrity()
+        session = try BrowserCoreSync.repair(session)
         XCTAssertEqual(session.selectedSpace?.archivedTabs.last?.tab.nativeContent, unknown)
     }
 

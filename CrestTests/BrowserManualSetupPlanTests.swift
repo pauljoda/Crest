@@ -9,7 +9,7 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         let firstID = existing.selectedSpaceID
         existing.addSpace()
         let secondID = existing.selectedSpaceID
-        existing.repairRuntimeIntegrity()
+        existing = try BrowserCoreSync.repair(existing)
         let selectedTabID = existing.space(id: secondID)?.selectedTabID
         var plan = BrowserManualSetupPlan(existing: existing)
 
@@ -134,21 +134,6 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         ) { error in
             XCTAssertEqual(error as? BrowserManualSetupError, .pinnedLimitReached)
         }
-    }
-
-    func testReconcileDropsRemovedSpacesAndIncludesNewExistingSpaces() throws {
-        var existing = makeSession()
-        var plan = BrowserManualSetupPlan(existing: existing)
-        let removedID = try XCTUnwrap(existing.spaces.first?.id)
-        existing.addSpace()
-        let addedID = existing.selectedSpaceID
-        existing.spaces.removeAll { $0.id == removedID }
-        existing.selectedSpaceID = addedID
-
-        plan.reconcile(with: existing)
-
-        XCTAssertFalse(plan.spaces.contains { $0.id == removedID })
-        XCTAssertTrue(plan.spaces.contains { $0.id == addedID && !$0.isNew })
     }
 
     func testResumeReconcilesExistingSpacesWithoutDiscardingNewDrafts() throws {

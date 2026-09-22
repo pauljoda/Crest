@@ -265,23 +265,22 @@ Swift keeps projections and adapters only.
 | Credentials and passkeys (done: `credentials.capture`, `.fill`, `.save_validity`, `.save_match`, `.save_plan`, `.most_recent`, `.password_recipe`, `.system_write_through`, `.system_write_through_offer` and `passkeys.access_status` ops; passwords never cross) | `BrowserCredentialCapturePolicy`, save plan and disposition, recency, `BrowserStrongPasswordGenerator`, passkey access and write-through policies | Capture and save decision op (form message in, disposition out); generator op; passkey write-through policy. Vault storage stays native | M |
 | Site permissions and origins (done: `crest_permissions_*` ledger with `load`, `decision`, `media_decision`, `records`, `set`, `reset_record`, `reset_space`, `reset_session`; `geolocation.origin`, `notifications.origin`, `notifications.permission_request`, `popups.automatic`, `popups.notice`, `external.url`, `external.local_document`, `external.scheme`, `external.consent`, `authentication.handling`, `authentication.source_label`, `authentication.fixture_trust` ops; saved document keeps its format and key, not synced) | `BrowserSitePermission*` policies, blocked-popup notice, geolocation origin policy, hosted notification policies, authentication policies, external scheme and URL policies, local-file policy | Per-Space permission records in the session with persistence and sync rules; origin and scheme policy ops. Adapters transport prompts | L |
 | Search and browsing preferences (done: `SearchProviderCatalog`; `search.url`, `search.custom_provider`, `search.custom_providers`, `translation.*` ops; `space.search_provider.*` commands) | `BrowserSearchProvider` catalog and URL templates, custom-provider upsert and removal, `BrowserAutomaticTranslationRules` | Provider catalog and query construction in the core (`SearchProvider` currently only an enum); custom-provider commands; translation rules op | M |
-| Window state and plans | `BrowserWindowState.repair`, `repairSplitLayout`, `ensureTabSelection`, `captureSplitLayout`; `BrowserManualSetupPlan`; `BrowserImportReviewPlan`; onboarding completion | Window-state repair op (core `WindowState` is a bare record today); setup and import-review plan operations extending `WorkspaceImportPolicy`; onboarding completion rule | L |
+| Window state and plans (done: `window.repair`, `window.split_layout`, `window.tear_off`, `tabs.selection_fallback`, `setup.space`, `setup.tab`, `setup.reconcile`, `onboarding.completion` and `onboarding.guide` ops; `workspace.review` query; split-run validation in the workspace import) | `BrowserWindowState.repair`, `repairSplitLayout`, `ensureTabSelection`, `captureSplitLayout`; `BrowserManualSetupPlan`; `BrowserImportReviewPlan`; onboarding completion | Window-state repair op (core `WindowState` is a bare record today); setup and import-review plan operations extending `WorkspaceImportPolicy`; onboarding completion rule | L |
 | Shortcuts, launch, media | Shortcut conflict and numbered selection policies; `BrowserLaunchIsolationPolicy`, startup behavior, tab insertion; `BrowserMediaSessionStore` arbitration | Conflict and selection ops; launch and startup policy op; media-session ownership and eviction op. Section and search grouping stay in Swift | M |
 
-Stragglers to fold in: `BrowserSession.ensureSelection` and
-`repairRuntimeIntegrity` (already delegate to core repair; remove the Swift
-copies), `BrowserSplitGroupNormalizer` and
-`normalizeSplitGroupsAfterUserMutation` (core split policy already exists),
-tear-off eligibility in `BrowserMacWindowCoordinator`.
-
-Folded in: the borrowed-workspace settings fan-out is one core routing rule
-(`workspace.command_route`, enforced by the borrowed authority's Space commands);
-`BrowserLinkPreferenceStore` route edits, the Space-deletion cascade and
-`BrowserLinkRoutingPolicy` are `links.*` operations; Quick Window archive and
-retargeting are `quick_window.*` operations; `BrowserPagePresentationPolicy`,
-Balanced content-blocking composition and branding normalization are
-`page.presentation`, `content_blocking.rules` and `branding.normalize`, and the
-`space.branding` command applies the same branding rules.
+Stragglers, all folded in. `BrowserSession.ensureSelection` and
+`repairRuntimeIntegrity`, `BrowserSplitGroupNormalizer`,
+`normalizeSplitGroupsAfterUserMutation` and tear-off eligibility in
+`BrowserMacWindowCoordinator` went with the window-state aggregate
+(`window.*`, `tabs.selection_fallback`). The borrowed-workspace settings
+fan-out is one core routing rule (`workspace.command_route`, enforced by the
+borrowed authority's Space commands); `BrowserLinkPreferenceStore` route edits,
+the Space-deletion cascade and `BrowserLinkRoutingPolicy` are `links.*`
+operations; Quick Window archive and retargeting are `quick_window.*`
+operations; `BrowserPagePresentationPolicy`, Balanced content-blocking
+composition and branding normalization are `page.presentation`,
+`content_blocking.rules` and `branding.normalize`, and the `space.branding`
+command applies the same branding rules.
 
 Stays in Swift by design: heraldry vocabulary and composition, favicon palette
 extraction, sidebar widgets, Peek motion and presentation phases, tear-off

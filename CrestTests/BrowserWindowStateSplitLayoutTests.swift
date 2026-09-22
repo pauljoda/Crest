@@ -4,9 +4,11 @@ import XCTest
 @testable import Crest
 
 /// Split View column widths live in window state: per window, per device, never
-/// synced. These cases pin the three things that make that safe: validation on
-/// capture, pruning on repair, and decoding a record written before the field
-/// existed — which is every record installed copies of Crest have on disk.
+/// synced. The core's window-state rules own validation on capture and pruning
+/// on repair (`WindowStatePolicyTests`); these cases pin the native record:
+/// storing through the adapter, decoding a record written before the field
+/// existed — which is every record installed copies of Crest have on disk — and
+/// the store's durable writes.
 final class BrowserWindowStateSplitLayoutTests: XCTestCase {
     func testCapturedFractionsComeBackForTheirOwnGroup() {
         let first = SplitGroupID()
@@ -19,82 +21,6 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
         XCTAssertEqual(state.splitColumnFractions(for: first), [0.6, 0.4])
         XCTAssertEqual(state.splitColumnFractions(for: second), [0.25, 0.5, 0.25])
         XCTAssertNil(state.splitColumnFractions(for: SplitGroupID()))
-    }
-
-    func testCaptureIgnoresFractionsThatCannotDescribeColumns() {
-        let group = SplitGroupID()
-        var state = makeState()
-
-        let rejected: [[Double]] = [
-            [],
-            [0.2, 0.2, 0.2, 0.2, 0.2],
-            [Double.nan, 0.5],
-            [.infinity, 0.5],
-            [0, 1],
-            [-0.5, 1.5],
-            [1.5, 0.5],
-        ]
-        for fractions in rejected {
-            state.captureSplitLayout(fractions: fractions, for: group)
-
-            XCTAssertNil(
-                state.splitColumnFractionsByGroup,
-                "\(fractions) is not a column layout and must not be stored."
-            )
-        }
-    }
-
-    func testRepairForgetsFractionsForAGroupNothingRendersAnymore() throws {
-        let group = SplitGroupID()
-        let session = makeSession(memberCount: 2, group: group)
-        var state = BrowserWindowState(restoring: session)
-        state.captureSplitLayout(fractions: [0.6, 0.4], for: group)
-        state.captureSplitLayout(fractions: [0.5, 0.5], for: SplitGroupID())
-
-        state.repair(using: session)
-
-        XCTAssertEqual(state.splitColumnFractions(for: group), [0.6, 0.4])
-        XCTAssertEqual(
-            try XCTUnwrap(state.splitColumnFractionsByGroup).count,
-            1,
-            "A group no Space renders is a group whose widths mean nothing."
-        )
-    }
-
-    func testRepairForgetsFractionsWhoseColumnCountNoLongerMatches() {
-        let group = SplitGroupID()
-        var state = BrowserWindowState(restoring: makeSession(memberCount: 3, group: group))
-        state.captureSplitLayout(fractions: [0.5, 0.3, 0.2], for: group)
-
-        state.repair(using: makeSession(memberCount: 2, group: group))
-
-        XCTAssertNil(
-            state.splitColumnFractionsByGroup,
-            "A group that gained or lost a member starts over at equal columns."
-        )
-    }
-
-    func testRepairReturnsTheWholeRecordToNilOnceItEmpties() {
-        let group = SplitGroupID()
-        var state = makeState()
-        state.captureSplitLayout(fractions: [0.6, 0.4], for: group)
-
-        state.repair(using: makeSession(memberCount: 0, group: group))
-
-        XCTAssertNil(state.splitColumnFractionsByGroup)
-    }
-
-    func testASubRenderableRunKeepsNoFractions() {
-        let group = SplitGroupID()
-        var state = makeState()
-        state.captureSplitLayout(fractions: [1], for: group)
-
-        state.repair(using: makeSession(memberCount: 1, group: group))
-
-        XCTAssertNil(
-            state.splitColumnFractionsByGroup,
-            "A lone member presents as a plain tab, so it owns no columns."
-        )
     }
 
     // MARK: - Coding

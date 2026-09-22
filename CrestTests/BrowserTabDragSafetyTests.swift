@@ -360,7 +360,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             tabs: []
         )
         var restored = BrowserSession(spaces: [decoy, capturedSource, destination], selectedSpaceID: destination.id)
-        restored.repairRuntimeIntegrity()
+        restored = try BrowserCoreSync.repair(restored)
         let browser = BrowserStore(session: restored, persistence: InMemoryBrowserSessionPersistence())
         let repairedID = try XCTUnwrap(restored.space(id: capturedSource.id)?.tabs.first?.id)
         XCTAssertNotEqual(repairedID, duplicateTabID)

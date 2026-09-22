@@ -38,7 +38,7 @@ final class BrowserSessionRecoveryTests: XCTestCase {
 
         // Exactly what launch does next when `load()` answers nothing.
         var seed = BrowserSession.freshInstallSeed
-        seed.repairRuntimeIntegrity()
+        seed = try BrowserCoreSync.repair(seed)
         harness.persistence.save(seed)
         await harness.persistence.flushPendingSaves()
 
@@ -72,7 +72,7 @@ final class BrowserSessionRecoveryTests: XCTestCase {
         XCTAssertNil(relaunched.persistence.load())
 
         var seed = BrowserSession.freshInstallSeed
-        seed.repairRuntimeIntegrity()
+        seed = try BrowserCoreSync.repair(seed)
         relaunched.persistence.save(seed)
         await relaunched.persistence.flushPendingSaves()
 
@@ -104,7 +104,7 @@ final class BrowserSessionRecoveryTests: XCTestCase {
         XCTAssertNil(relaunched.persistence.load())
 
         var seed = BrowserSession.freshInstallSeed
-        seed.repairRuntimeIntegrity()
+        seed = try BrowserCoreSync.repair(seed)
         let extra = BrowserTab(
             title: "Extra",
             url: URL(string: "https://extra.example/"),

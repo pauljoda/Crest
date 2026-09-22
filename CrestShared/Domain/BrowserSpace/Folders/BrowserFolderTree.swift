@@ -171,31 +171,6 @@ struct BrowserFolderTree: Equatable, Sendable {
         return result
     }
 
-    /// Keep an empty subtree at its original boundary when its anchor or last
-    /// member leaves. Stable tab IDs avoid storing a second ordered tab list.
-    func preservingOrder(removing removed: Set<TabID>, tabs: [BrowserTab], excluding: Set<FolderID> = [])
-        -> [BrowserFolder]
-    {
-        folders.map { folder in
-            guard !excluding.contains(folder.id) else { return folder }
-            let subtree = descendants(of: folder.id).union([folder.id])
-            let members = tabs.filter { $0.folderID.map(subtree.contains) == true }
-            guard members.allSatisfy({ removed.contains($0.id) }) else { return folder }
-            let oldAnchor = members.first?.id ?? folder.orderAnchorTabID
-            guard let oldAnchor, removed.contains(oldAnchor),
-                let start = tabs.firstIndex(where: { $0.id == oldAnchor })
-            else { return folder }
-            let parentSubtree = folder.parentID.map { descendants(of: $0).union([$0]) }
-            var updated = folder
-            updated.orderAnchorTabID =
-                tabs.dropFirst(start).first {
-                    !removed.contains($0.id) && $0.placement == folder.location.tabPlacement
-                        && (parentSubtree == nil || $0.folderID.map { parentSubtree!.contains($0) } == true)
-                }?.id
-            return updated
-        }
-    }
-
     private func append(
         _ folder: BrowserFolder,
         depth: Int,

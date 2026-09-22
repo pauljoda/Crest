@@ -73,6 +73,9 @@ public sealed class NativeWorkspaceImport {
             Track(space, 0, si);
         }
         var inputs = Items(arguments, "sources").Select((n, i) => { var value = n!.DeepClone().AsObject(); Track(value, i + 1, 0); return value; }).ToArray();
+        foreach (var input in inputs)
+            WorkspaceImportPolicy.RequireSplitMembership(Items(input, "tabs").Select(t => new SplitMember(OptionalId(t!["splitGroupID"]),
+                TabPlacementCodes.Parse(Placement(t)) ?? TabPlacement.Saved, OptionalId(t["folderID"]))).ToArray());
         JsonNode? affected = null;
         if (mode == WorkspaceImportMode.Portable) {
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Length);

@@ -1,12 +1,9 @@
 import Foundation
 
+/// The native draft of a manual setup. The core admits each edit (Space and
+/// pinned limits, new-Space identity, tab presentation) and reconciles the
+/// draft with Spaces changed elsewhere; the workspace import applies it.
 struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
-    private static let setupPlacementOrder: [TabPlacement] = [
-        .pinned,
-        .saved,
-        .current,
-    ]
-
     private(set) var spaces: [BrowserManualSetupSpaceDraft]
     // Optional so previously saved setup drafts continue to decode. An untouched
     // draft does not replace an order changed elsewhere while setup was open.
@@ -18,35 +15,34 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         }
     }
 
+    /// Follows Spaces changed elsewhere while setup was open. When the core
+    /// cannot answer, the draft is left as it was.
     mutating func reconcile(with existing: BrowserSession) {
-        let currentIDs = Set(existing.spaces.map(\.id))
-        spaces.removeAll { !$0.isNew && !currentIDs.contains($0.id) }
-        for space in existing.spaces {
-            if let index = spaces.firstIndex(where: { $0.id == space.id }) {
-                if !spaces[index].isNew {
-                    spaces[index].existingPinnedTabCount = space.pinnedTabs.count
-                }
-            } else {
-                spaces.append(BrowserManualSetupSpaceDraft(space: space, isNew: false))
+        guard let entries = BrowserCorePolicy.reconcileSetup(
+            drafts: spaces.map { ($0.id, $0.isNew) }, existing: existing.spaces.map(\.id))
+        else { return }
+        spaces = entries.map { entry in
+            guard let draftIndex = entry.draft else {
+                return BrowserManualSetupSpaceDraft(space: existing.spaces[entry.existing!], isNew: false)
             }
+            var draft = spaces[draftIndex]
+            if let existingIndex = entry.existing {
+                draft.existingPinnedTabCount = existing.spaces[existingIndex].pinnedTabs.count
+            }
+            return draft
         }
     }
 
     @discardableResult
     mutating func addSpace() throws -> SpaceID {
-        guard spaces.count < BrowserPortableArchive.maximumSpaceCount else {
-            throw BrowserManualSetupError.spaceLimitReached
-        }
-        let number = spaces.count + 1
-        let accent = SpaceAccent.allCases[(number - 1) % SpaceAccent.allCases.count]
-        let symbol = "square.grid.2x2.fill"
+        let admitted = try BrowserCorePolicy.setupSpace(draftCount: spaces.count)
         let space = BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
-            name: "Space \(number)",
-            symbol: symbol,
-            accent: accent,
-            branding: .initial(accent: accent, symbol: symbol),
+            name: admitted.name,
+            symbol: admitted.symbol,
+            accent: admitted.accent,
+            branding: .initial(accent: admitted.accent, symbol: admitted.symbol),
             folders: [],
             tabs: [],
             selectedTabID: nil
@@ -107,9 +103,9 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         guard let intent = AddressResolver.intent(input) else {
             throw BrowserManualSetupError.invalidAddress
         }
-        let title: String =
+        let title: String? =
             switch intent {
-            case .open(let url): Self.title(for: url)
+            case .open: nil
             case .search(let query, _, _): query
             }
         return try addTab(
@@ -123,7 +119,7 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
 
     @discardableResult
     mutating func addTab(
-        title: String,
+        title: String?,
         url: URL,
         placement: TabPlacement,
         to spaceID: SpaceID,
@@ -132,18 +128,17 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         guard let index = spaces.firstIndex(where: { $0.id == spaceID }) else {
             throw BrowserManualSetupError.missingSpace
         }
-        if placement == .pinned,
-            spaces[index].existingPinnedTabCount
-                + spaces[index].addedTabs.filter({ $0.placement == .pinned }).count
-                >= BrowserSpace.maximumPinnedTabs
-        {
-            throw BrowserManualSetupError.pinnedLimitReached
-        }
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let tab = BrowserTab(
-            title: trimmedTitle.isEmpty ? Self.title(for: url) : trimmedTitle,
+        let admitted = try BrowserCorePolicy.setupTab(
+            placement: placement,
+            existingPinnedCount: spaces[index].existingPinnedTabCount,
+            addedPinnedCount: spaces[index].addedTabs.filter({ $0.placement == .pinned }).count,
             url: url,
-            symbol: placement == .pinned ? "pin.fill" : "globe",
+            title: title
+        )
+        let tab = BrowserTab(
+            title: admitted.title,
+            url: url,
+            symbol: admitted.symbol,
             placement: placement,
             lastActivatedAt: date
         )
@@ -174,33 +169,25 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         else {
             throw BrowserManualSetupError.missingSpace
         }
-        if placement == .pinned,
-            spaces[spaceIndex].existingPinnedTabCount
-                + spaces[spaceIndex].addedTabs.filter({
-                    $0.placement == .pinned && $0.id != tabID
-                }).count >= BrowserSpace.maximumPinnedTabs
-        {
-            throw BrowserManualSetupError.pinnedLimitReached
-        }
+        let tab = spaces[spaceIndex].addedTabs[tabIndex]
+        guard let url = tab.url else { throw BrowserManualSetupError.invalidAddress }
+        let admitted = try BrowserCorePolicy.setupTab(
+            placement: placement,
+            existingPinnedCount: spaces[spaceIndex].existingPinnedTabCount,
+            addedPinnedCount: spaces[spaceIndex].addedTabs.filter({
+                $0.placement == .pinned && $0.id != tabID
+            }).count,
+            url: url,
+            title: tab.title
+        )
         spaces[spaceIndex].addedTabs[tabIndex].placement = placement
-        spaces[spaceIndex].addedTabs[tabIndex].savedURL =
-            placement == .current
-            ? nil
-            : spaces[spaceIndex].addedTabs[tabIndex].url
-        spaces[spaceIndex].addedTabs[tabIndex].symbol =
-            placement == .pinned
-            ? "pin.fill"
-            : "globe"
+        spaces[spaceIndex].addedTabs[tabIndex].savedURL = admitted.keepsSavedURL ? url : nil
+        spaces[spaceIndex].addedTabs[tabIndex].symbol = admitted.symbol
     }
 
     var coreSpaceOrderWasEdited: Bool { spaceOrderWasEdited == true }
 
     func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
         return try BrowserCoreWorkspaceImport.preview(BrowserCoreWorkspaceImport.manual(self), existing: existing)
-    }
-
-    private static func title(for url: URL) -> String {
-        let host = url.host(percentEncoded: false) ?? url.absoluteString
-        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 }

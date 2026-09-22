@@ -492,7 +492,7 @@ final class BrowserSessionTests: XCTestCase {
             ),
         ]
 
-        session.repairRuntimeIntegrity()
+        session = try BrowserCoreSync.repair(session)
 
         let archive = try XCTUnwrap(session.selectedSpace).archivedTabs
         XCTAssertEqual(archive.map(\.tab.title), ["Recoverable"])
@@ -767,7 +767,7 @@ final class BrowserSessionTests: XCTestCase {
             BrowserSession.self,
             from: try JSONEncoder().encode(session)
         )
-        decoded.repairRuntimeIntegrity()
+        decoded = try BrowserCoreSync.repair(decoded)
 
         let tab = try XCTUnwrap(
             decoded.space(id: spaceID)?.tabs.first(where: { $0.id == tabID })
@@ -1386,7 +1386,7 @@ final class BrowserSessionTests: XCTestCase {
         )
         var session = BrowserSession(spaces: [first, second], selectedSpaceID: second.id)
 
-        session.repairRuntimeIntegrity()
+        session = try BrowserCoreSync.repair(session)
 
         XCTAssertEqual(Set(session.spaces.map(\.profile.id)).count, 2)
         XCTAssertEqual(Set(session.tabIDs).count, 2)
@@ -1396,7 +1396,7 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertNotEqual(session.spaces[0].selectedTabID, session.spaces[1].selectedTabID)
     }
 
-    func testRuntimeRepairCreatesAUsableSelectionForEmptyOrDanglingState() {
+    func testRuntimeRepairCreatesAUsableSelectionForEmptyOrDanglingState() throws {
         let emptySpace = BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
@@ -1409,7 +1409,7 @@ final class BrowserSessionTests: XCTestCase {
         )
         var session = BrowserSession(spaces: [emptySpace], selectedSpaceID: SpaceID())
 
-        session.repairRuntimeIntegrity()
+        session = try BrowserCoreSync.repair(session)
 
         XCTAssertEqual(session.selectedSpaceID, emptySpace.id)
         XCTAssertEqual(session.selectedSpace?.tabs.count, 1)
@@ -1418,7 +1418,7 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(session.selectedTab?.placement, .current)
 
         var noSpaces = BrowserSession(spaces: [], selectedSpaceID: SpaceID())
-        noSpaces.repairRuntimeIntegrity()
+        noSpaces = try BrowserCoreSync.repair(noSpaces)
         XCTAssertEqual(noSpaces.spaces.count, 1)
         XCTAssertNotNil(noSpaces.selectedTab)
     }
@@ -1471,7 +1471,7 @@ final class BrowserSessionTests: XCTestCase {
         )
         var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
 
-        session.repairRuntimeIntegrity()
+        session = try BrowserCoreSync.repair(session)
 
         let repaired = try XCTUnwrap(session.selectedSpace)
         XCTAssertEqual(Set(repaired.folders.map(\.id)).count, 5)
@@ -1510,26 +1510,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(secondWindow.selectedSpaceID, personal.id)
         XCTAssertEqual(secondWindow.selectedTab(in: session)?.id, personalTabID)
         XCTAssertNotEqual(firstWindow.id, secondWindow.id)
-    }
-
-    func testRestoredBrowserWindowRepairsMissingSpaceAndTabSelections() throws {
-        let session = BrowserSession.preview
-        let selectedSpace = try XCTUnwrap(session.selectedSpace)
-        let missingSpaceID = SpaceID()
-        var window = BrowserWindowState(
-            id: BrowserWindowID(),
-            selectedSpaceID: missingSpaceID,
-            selectedTabIDsBySpace: [
-                missingSpaceID: TabID(),
-                selectedSpace.id: TabID(),
-            ]
-        )
-
-        window.repair(using: session)
-
-        XCTAssertEqual(window.selectedSpaceID, session.selectedSpaceID)
-        XCTAssertEqual(window.selectedTab(in: session)?.id, selectedSpace.selectedTabID)
-        XCTAssertNil(window.selectedTabIDsBySpace[missingSpaceID])
     }
 
     func testBrowserWindowSelectionRoundTripsForSceneRestoration() throws {

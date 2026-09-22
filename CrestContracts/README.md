@@ -90,6 +90,25 @@ page surfaces, the Balanced rule list and branding range rules.
 `workspace.command_route` answers `local`, `source` or `rejected` for a session
 command issued from an owned or borrowed workspace.
 
+Window state is device-local and never enters the session. `window.repair`
+takes the window's and the session's selected Space, whether the window records
+captured Spaces, one presence-fact entry per session Space (at most 64) and the
+window's stored split layouts with their live member counts (at most 64); it
+returns the selected Space, one `window`/`space`/`first`/`none` tab choice per
+Space, the layouts to keep and the captured Spaces. `window.split_layout`
+validates and normalizes captured column shares, `window.tear_off` decides
+whether a dragged tab may leave its window, and `tabs.selection_fallback`
+returns the tab a Space selects when its selection is gone, the same rule
+checkpoint repair applies. `setup.space`, `setup.tab` and `setup.reconcile`
+admit manual-setup draft edits against the import's Space and pinned limits
+and follow Spaces changed elsewhere; `onboarding.completion` and
+`onboarding.guide` decide what finishing setup does. The import review, which
+reads whole Spaces, is the `workspace.review` query on the
+`crest_sync_query_*` path beside `workspace.preview`: without `choices` it
+suggests each imported Space's destination, duplicates and default tabs; with
+them it reports duplicates, matched destination tabs and pinned overflow. The
+workspace import rejects a source whose split runs its repair would rewrite.
+
 This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 

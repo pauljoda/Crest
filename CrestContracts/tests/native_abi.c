@@ -107,6 +107,20 @@ static void policy_boundary(void) {
     const char *secret = "{\"version\":1,\"operation\":\"credentials.save_plan\",\"matchID\":null,"
         "\"stored\":null,\"password\":\"hunter2\"}";
     assert(crest_core_evaluate_policy((const uint8_t*)secret, strlen(secret), output, 256, &length) == CREST_INVALID_MESSAGE);
+    /* Window repair answers from presence facts; a captured empty Space stays empty. */
+    const char *window = "{\"version\":1,\"operation\":\"window.repair\",\"selectedSpaceID\":\"66666666-6666-6666-6666-666666666666\","
+        "\"sessionSelectedSpaceID\":\"44444444-4444-4444-4444-444444444444\",\"capturesSelection\":true,"
+        "\"spaces\":[{\"id\":\"44444444-4444-4444-4444-444444444444\",\"windowTab\":false,\"captured\":true,"
+        "\"spaceSelection\":true,\"hasTabs\":true}],\"splitLayouts\":[]}";
+    assert(crest_core_evaluate_policy((const uint8_t*)window, strlen(window), output, 256, &length) == CREST_OK);
+    output[length] = 0;
+    assert(strstr((const char*)output, "\"selectedSpaceID\":\"44444444-4444-4444-4444-444444444444\"")
+        && strstr((const char*)output, "\"selections\":[\"none\"]"));
+    const char *setup = "{\"version\":1,\"operation\":\"setup.tab\",\"placement\":\"pinned\",\"existingPinnedCount\":12,"
+        "\"addedPinnedCount\":0,\"url\":\"https://example.com/\",\"title\":null}";
+    assert(crest_core_evaluate_policy((const uint8_t*)setup, strlen(setup), output, 256, &length) == CREST_OK);
+    output[length] = 0;
+    assert(strstr((const char*)output, "\"error\":\"pinned_limit_reached\""));
 }
 static const char* space_id = "44444444-4444-4444-4444-444444444444";
 static const char* profile_id = "55555555-5555-5555-5555-555555555555";

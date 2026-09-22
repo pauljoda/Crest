@@ -15,7 +15,12 @@ enum BrowserOnboardingCompletion {
         willComplete: @MainActor (BrowserTabRuntimeAssignment?) -> Void = { _ in }
     ) async -> Result {
         guard !Task.isCancelled else { return .cancelled }
-        guard !browser.isPrivateBrowsing else { return .sourceChanged }
+        // The core decides whether finishing opens the guide; a private store
+        // never consumes the install's setup completion.
+        guard let outcome = BrowserCorePolicy.onboardingCompletion(
+            entryPoint: request.entryPoint, hasCompletedSetup: !progress.willOpenGettingStarted,
+            isPrivateBrowsing: browser.isPrivateBrowsing), outcome != .sourceChanged
+        else { return .sourceChanged }
         let originalSession = browser.session
         let proposedSession: BrowserSession
         do {
@@ -23,7 +28,7 @@ enum BrowserOnboardingCompletion {
         } catch {
             return .sourceChanged
         }
-        guard progress.willOpenGettingStarted(for: request.entryPoint) else {
+        guard outcome == .openGuide else {
             if let manualPlan {
                 do { try browser.commitManualSetup(manualPlan) } catch { return .sourceChanged }
             }
@@ -34,23 +39,22 @@ enum BrowserOnboardingCompletion {
         guard let firstSpace = proposedSession.spaces.first else { return .sourceChanged }
         let assignment = BrowserSpaceRuntimeAssignment(space: firstSpace)
         guard await spaceAccess.unlock(firstSpace), !Task.isCancelled else { return .cancelled }
+        let currentSession = browser.session
+        let guideSpace = manualPlan.map { plan in
+            (try? plan.preview(mergingInto: currentSession))?.spaces.first
+        } ?? currentSession.spaces.first
+        guard BrowserCorePolicy.confirmsOnboardingGuide(
+            target: assignment,
+            originalFirst: originalSession.spaces.first.map(BrowserSpaceRuntimeAssignment.init(space:)),
+            currentFirst: currentSession.spaces.first.map(BrowserSpaceRuntimeAssignment.init(space:)),
+            originalTarget: originalSession.space(id: assignment.spaceID).map(BrowserSpaceRuntimeAssignment.init(space:)),
+            currentTarget: currentSession.space(id: assignment.spaceID).map(BrowserSpaceRuntimeAssignment.init(space:)),
+            previewFirst: manualPlan == nil ? nil : guideSpace.map(BrowserSpaceRuntimeAssignment.init(space:)),
+            hasManualPlan: manualPlan != nil,
+            isLocked: guideSpace.map(spaceAccess.isLocked) ?? true)
+        else { return .sourceChanged }
         if let manualPlan {
-            guard
-                browser.session.spaces.first.map(BrowserSpaceRuntimeAssignment.init(space:))
-                    == originalSession.spaces.first.map(BrowserSpaceRuntimeAssignment.init(space:)),
-                browser.session.space(id: assignment.spaceID).map(BrowserSpaceRuntimeAssignment.init(space:))
-                    == originalSession.space(id: assignment.spaceID).map(BrowserSpaceRuntimeAssignment.init(space:)),
-                let updatedPreview = try? manualPlan.preview(mergingInto: browser.session),
-                let updatedFirst = updatedPreview.spaces.first,
-                BrowserSpaceRuntimeAssignment(space: updatedFirst) == assignment,
-                !spaceAccess.isLocked(updatedFirst)
-            else { return .sourceChanged }
             do { try browser.commitManualSetup(manualPlan) } catch { return .sourceChanged }
-        } else {
-            guard let currentSpace = browser.session.spaces.first,
-                BrowserSpaceRuntimeAssignment(space: currentSpace) == assignment,
-                !spaceAccess.isLocked(currentSpace)
-            else { return .sourceChanged }
         }
         guard let guide = browser.openGettingStartedAfterSetup(matching: assignment) else { return .sourceChanged }
         willComplete(guide)

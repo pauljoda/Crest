@@ -175,6 +175,7 @@ public static class BrowserRuleCodes {
     public const string UnsupportedAccessPolicy = "unsupported_access_policy";
     public const string UnsupportedUrl = "unsupported_url";
     public const string VersionMismatch = "version_mismatch";
+    public const string WindowStateLimit = "window_state_limit";
     public const string WrongDeletionOperation = "wrong_deletion_operation";
     public const string WrongProfile = "wrong_profile";
     public const string WrongProfileIdentity = "wrong_profile_identity";

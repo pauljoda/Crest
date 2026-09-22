@@ -30,6 +30,8 @@ internal enum PolicyOperation {
     NavigationModifiedLink,
     NotificationsOrigin,
     NotificationsPermissionRequest,
+    OnboardingCompletion,
+    OnboardingGuide,
     PasskeysAccessStatus,
     PopupsAutomatic,
     PopupsNotice,
@@ -40,7 +42,11 @@ internal enum PolicyOperation {
     SearchCustomProvider,
     SearchCustomProviders,
     SearchUrl,
+    SetupReconcile,
+    SetupSpace,
+    SetupTab,
     TabsDismissal,
+    TabsSelectionFallback,
     TranslationMatches,
     TranslationRule,
     TranslationSet,
@@ -59,6 +65,9 @@ internal enum PolicyOperation {
     QuickWindowDismissal,
     QuickWindowRetarget,
     WorkspaceCommandRoute,
+    WindowRepair,
+    WindowSplitLayout,
+    WindowTearOff,
 }
 
 internal static class PolicyOperationCodes {
@@ -93,6 +102,8 @@ internal static class PolicyOperationCodes {
         "navigation.modified_link" => PolicyOperation.NavigationModifiedLink,
         "notifications.origin" => PolicyOperation.NotificationsOrigin,
         "notifications.permission_request" => PolicyOperation.NotificationsPermissionRequest,
+        "onboarding.completion" => PolicyOperation.OnboardingCompletion,
+        "onboarding.guide" => PolicyOperation.OnboardingGuide,
         "passkeys.access_status" => PolicyOperation.PasskeysAccessStatus,
         "popups.automatic" => PolicyOperation.PopupsAutomatic,
         "popups.notice" => PolicyOperation.PopupsNotice,
@@ -103,7 +114,11 @@ internal static class PolicyOperationCodes {
         "search.custom_provider" => PolicyOperation.SearchCustomProvider,
         "search.custom_providers" => PolicyOperation.SearchCustomProviders,
         "search.url" => PolicyOperation.SearchUrl,
+        "setup.reconcile" => PolicyOperation.SetupReconcile,
+        "setup.space" => PolicyOperation.SetupSpace,
+        "setup.tab" => PolicyOperation.SetupTab,
         "tabs.dismissal" => PolicyOperation.TabsDismissal,
+        "tabs.selection_fallback" => PolicyOperation.TabsSelectionFallback,
         "translation.matches" => PolicyOperation.TranslationMatches,
         "translation.rule" => PolicyOperation.TranslationRule,
         "translation.set" => PolicyOperation.TranslationSet,
@@ -122,6 +137,9 @@ internal static class PolicyOperationCodes {
         "quick_window.dismissal" => PolicyOperation.QuickWindowDismissal,
         "quick_window.retarget" => PolicyOperation.QuickWindowRetarget,
         "workspace.command_route" => PolicyOperation.WorkspaceCommandRoute,
+        "window.repair" => PolicyOperation.WindowRepair,
+        "window.split_layout" => PolicyOperation.WindowSplitLayout,
+        "window.tear_off" => PolicyOperation.WindowTearOff,
         _ => PolicyOperation.Unknown
     };
 

@@ -178,7 +178,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                 case "close": session.closeTab(moving.id)
                 case "popupClose": XCTAssertTrue(session.closeTab(moving.id, in: space.id))
                 case "move": XCTAssertTrue(session.moveTab(moving.id, to: .current))
-                default: XCTAssertTrue(session.setTabPinned(true, tabID: moving.id, in: space.id))
+                default: XCTAssertTrue(session.moveTab(moving.id, to: .pinned))
                 }
                 let result = try XCTUnwrap(session.space(id: space.id))
                 XCTAssertEqual(
@@ -305,7 +305,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.tabs.filter { $0.folderID == child }.map(\.id), ids)
         XCTAssertEqual(browser.selectedSpace?.splitGroupMembers(of: split).map(\.id), ids)
         var restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
-        restored.repairRuntimeIntegrity()
+        restored = try BrowserCoreSync.repair(restored)
         XCTAssertEqual(restored.spaces[0].folders, browser.selectedSpace?.folders)
         XCTAssertEqual(restored.spaces[0].tabs.filter { $0.folderID == child }.map(\.id), ids)
         XCTAssertTrue(
@@ -368,7 +368,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         document["currentTabFolders"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([legacy]))
         var migrated = try JSONDecoder().decode(
             BrowserSession.self, from: JSONSerialization.data(withJSONObject: document))
-        migrated.repairRuntimeIntegrity()
+        migrated = try BrowserCoreSync.repair(migrated)
         XCTAssertEqual(migrated.spaces[0].folders.first?.id, id)
         XCTAssertEqual(migrated.spaces[0].folders.first?.location, .current)
         XCTAssertEqual(migrated.spaces[0].folders.first?.color, legacy.color.brandColor)

@@ -9,6 +9,7 @@ struct BrowserOnboardingReviewSpacePage: View {
     @Binding var selectedSourceSpaceID: SpaceID?
 
     var body: some View {
+        let analysis = plan.analysis(in: browserSession)
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 BrowserOnboardingPreviewCardLabel(
@@ -18,8 +19,8 @@ struct BrowserOnboardingReviewSpacePage: View {
                 BrowserSourceImportPreview(
                     application: application,
                     review: review,
-                    overflowTabIDs: plan.overflowTabIDs(in: browserSession),
-                    duplicateTabIDs: plan.duplicateTabIDs(in: browserSession),
+                    overflowTabIDs: analysis.overflowTabIDs,
+                    duplicateTabIDs: analysis.duplicateTabIDs,
                     duplicateDestinationName: flow.duplicateDestinationName(
                         for: review
                     ),
@@ -72,10 +73,7 @@ struct BrowserOnboardingReviewSpacePage: View {
                     space: flow.previewDestinationSpace(for: review),
                     sourceName: application?.name ?? "Browser",
                     isSpaceIncluded: review.isIncluded,
-                    matchedTabIDs: plan.matchedDestinationTabIDs(
-                        for: review.id,
-                        in: browserSession
-                    )
+                    matchedTabIDs: analysis.matchedTabIDs(for: review.id)
                 )
                 .frame(width: 340)
                 .frame(maxHeight: .infinity)

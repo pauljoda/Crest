@@ -24,7 +24,7 @@ extension BrowserStore {
         credentialVault: any CredentialVault
     ) -> BrowserStore {
         var session = persistence.load() ?? .freshInstallSeed
-        session.repairRuntimeIntegrity()
+        session = launchRepair(session)
         session.cleanupCurrentTabsUsingSpacePreferences()
         session.applyDataRetentionPolicies()
         session.selectDefaultSpaceForLaunch()
@@ -40,6 +40,14 @@ extension BrowserStore {
         )
         store.beginInitialSyncStaging(session: session)
         return store
+    }
+
+    /// The core's checkpoint repair, accepted before any page is created or the
+    /// session is saved. Launch cannot continue on an unaccepted repair;
+    /// operational sync errors use the throwing bridge before commit.
+    private static func launchRepair(_ session: BrowserSession) -> BrowserSession {
+        do { return try BrowserCoreSync.repair(session) }
+        catch { preconditionFailure("Core session repair failed before publication: \(error)") }
     }
 
     static func preview() -> BrowserStore {
@@ -64,7 +72,7 @@ extension BrowserStore {
         launchEnvironment: BrowserLaunchEnvironment
     ) -> BrowserStore {
         var session = isolatedFixtureSession(for: launchEnvironment)
-        session.repairRuntimeIntegrity()
+        session = launchRepair(session)
         session.cleanupCurrentTabsUsingSpacePreferences()
         session.applyDataRetentionPolicies()
         session.selectDefaultSpaceForLaunch()
@@ -98,7 +106,7 @@ extension BrowserStore {
         var session =
             persistence.load()
             ?? isolatedFixtureSession(for: launchEnvironment)
-        session.repairRuntimeIntegrity()
+        session = launchRepair(session)
         session.cleanupCurrentTabsUsingSpacePreferences()
         session.applyDataRetentionPolicies()
         session.selectDefaultSpaceForLaunch()

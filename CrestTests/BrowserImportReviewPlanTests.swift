@@ -528,7 +528,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
     }
 
     func testAnImportThatLandsContentClearsTheDisposableSeedMarker() throws {
-        let seeded = makeSeededSession()
+        let seeded = try makeSeededSession()
         XCTAssertTrue(seeded.hasDisposableSeedState)
         let importedSpace = makeResearchSpace()
         let plan = BrowserImportReviewPlan(
@@ -547,7 +547,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
     }
 
     func testAnImportEveryoneOptedOutOfCannotProduceASession() throws {
-        let seeded = makeSeededSession()
+        let seeded = try makeSeededSession()
         let importedSpace = makeResearchSpace()
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
@@ -579,10 +579,8 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         XCTAssertEqual(created.symbol, BrowserImportSpaceCustomization.fallbackSymbol)
     }
 
-    private func makeSeededSession() -> BrowserSession {
-        var seeded = BrowserSession.freshInstallSeed
-        seeded.repairRuntimeIntegrity()
-        return seeded
+    private func makeSeededSession() throws -> BrowserSession {
+        try BrowserCoreSync.repair(BrowserSession.freshInstallSeed)
     }
 
     private func makeResearchSpace() -> BrowserSpace {

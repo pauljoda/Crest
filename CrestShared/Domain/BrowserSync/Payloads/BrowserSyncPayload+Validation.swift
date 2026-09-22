@@ -89,7 +89,7 @@ extension BrowserSyncPayload {
             // an archived tab has left its split, exactly as it has left its
             // folder. Group size, contiguity, and uniformity are properties of
             // a run of sibling tabs that no single record can see, so
-            // `BrowserSplitGroupNormalizer` owns those during runtime repair.
+            // the core's split membership repair owns those during runtime repair.
             try BrowserSyncPayload.tab(archive.tab).validate()
             guard archive.tab.placement == .current, archive.tab.folderID == nil, archive.tab.splitGroupID == nil else {
                 throw BrowserSyncError.invalidField("archive.tab")

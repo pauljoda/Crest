@@ -31,6 +31,7 @@ public static class NativeSyncQuery {
                 NativeSyncOperation.Materialize => Materialize(request),
                 NativeSyncOperation.WorkspacePreview => NativeWorkspaceImport.Preview(request["session"]!.AsObject(), request["arguments"]!.AsObject(),
                     request["mode"]!.GetValue<string>(), request["now"]!.GetValue<double>()),
+                NativeSyncOperation.WorkspaceReview => NativeWorkspaceReview.Evaluate(request),
                 NativeSyncOperation.SessionRepair => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
                     request["emptySpace"] as JsonObject),
                 NativeSyncOperation.SessionRetain => NativeSessionMaintenance.Retain(request["session"]!.AsObject(), request["now"]!.GetValue<double>()),

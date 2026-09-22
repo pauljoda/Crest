@@ -116,58 +116,6 @@ extension BrowserSession {
 // MARK: - Placement
 
 extension BrowserSession {
-    @discardableResult
-    mutating func setTabPinned(
-        _ pinned: Bool,
-        tabID: TabID,
-        in spaceID: SpaceID,
-        at date: Date = .now
-    ) -> Bool {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let sourceIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
-        else {
-            return false
-        }
-        // Only the pinned strip counts as pinned. A saved tab is neither
-        // pinned nor current, so pinning it moves it into the strip the way
-        // Crest's own Pin Tab action does, and unpinning it is a no-op rather
-        // than a move out of the saved list.
-        let wasPinned = spaces[spaceIndex].tabs[sourceIndex].placement == .pinned
-        guard wasPinned != pinned else { return true }
-        if pinned,
-            spaces[spaceIndex].pinnedTabs.count >= BrowserSpace.maximumPinnedTabs
-        {
-            return false
-        }
-        preserveFolderOrder(in: spaceIndex, removing: [tabID])
-        var tab = spaces[spaceIndex].tabs.remove(at: sourceIndex)
-        tab.placement = pinned ? .pinned : .current
-        tab.folderID = nil
-        // A pinned tab never takes part in a split. The normalizer below would
-        // clear this anyway; doing it at the mutation keeps the outcome
-        // deterministic rather than dependent on repair order.
-        if pinned { tab.splitGroupID = nil }
-        tab.savedURL = pinned ? (tab.savedURL ?? tab.url) : nil
-        tab.markPositionModified(at: date)
-        let insertionIndex: Int
-        if pinned {
-            insertionIndex =
-                spaces[spaceIndex].tabs.firstIndex {
-                    $0.placement != .pinned
-                } ?? spaces[spaceIndex].tabs.endIndex
-        } else {
-            insertionIndex =
-                spaces[spaceIndex].tabs.firstIndex {
-                    $0.placement == .current
-                } ?? spaces[spaceIndex].tabs.endIndex
-        }
-        spaces[spaceIndex].tabs.insert(tab, at: insertionIndex)
-        spaces[spaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(
-            spaces[spaceIndex].tabs
-        )
-        return true
-    }
-
     mutating func moveSelectedTab(to placement: TabPlacement, folderID: FolderID? = nil) {
         guard let selectedTabID = selectedSpace?.selectedTabID else { return }
         moveTab(selectedTabID, to: placement, folderID: folderID)
@@ -580,40 +528,6 @@ extension BrowserSession {
         ], at: date)?.changed ?? false
     }
 
-    /// Runs `BrowserSplitGroupNormalizer` and then dissolves any run left with
-    /// a single member, refreshing `positionModifiedAt` on whatever it clears.
-    ///
-    /// Only explicit user mutations may call this. The normalizer itself keeps
-    /// lone members deliberately, because a device that materializes 1-of-3
-    /// synced members first must not strip and re-upload that membership; a
-    /// person closing a split down to one tab is the opposite situation, and
-    /// leaving a phantom one-card group behind would be the bug.
-    mutating func normalizeSplitGroupsAfterUserMutation(
-        in spaceID: SpaceID,
-        at date: Date = .now
-    ) {
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }) else { return }
-        var tabs = BrowserSplitGroupNormalizer.normalized(spaces[spaceIndex].tabs)
-        var memberCounts: [SplitGroupID: Int] = [:]
-        for tab in tabs {
-            guard let groupID = tab.splitGroupID else { continue }
-            memberCounts[groupID, default: 0] += 1
-        }
-        for index in tabs.indices {
-            guard let groupID = tabs[index].splitGroupID,
-                memberCounts[groupID, default: 0]
-                    < BrowserSplitGroupPolicy.minimumRenderableMembers
-            else { continue }
-            tabs[index].splitGroupID = nil
-            tabs[index].markPositionModified(at: date)
-        }
-        spaces[spaceIndex].tabs = tabs
-        let retainedGroupIDs = Set(tabs.compactMap(\.splitGroupID))
-        spaces[spaceIndex].splitGroups.removeAll {
-            !retainedGroupIDs.contains($0.id)
-        }
-    }
-
     @discardableResult
     mutating func setSplitGroupTitle(
         _ title: String?,
@@ -683,25 +597,6 @@ extension BrowserSession {
         return true
     }
 
-    /// The contiguous run of same-group tabs around `index`, or just that one
-    /// index when the tab carries no group.
-    private func splitRunRange(
-        containing index: Int,
-        in tabs: [BrowserTab]
-    ) -> Range<Int> {
-        guard let groupID = tabs[index].splitGroupID else {
-            return index..<tabs.index(after: index)
-        }
-        var start = index
-        while start > tabs.startIndex, tabs[start - 1].splitGroupID == groupID {
-            start -= 1
-        }
-        var end = tabs.index(after: index)
-        while end < tabs.endIndex, tabs[end].splitGroupID == groupID {
-            end += 1
-        }
-        return start..<end
-    }
 }
 
 // MARK: - Residency

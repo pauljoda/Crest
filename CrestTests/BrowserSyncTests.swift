@@ -78,7 +78,7 @@ final class BrowserSyncTests: XCTestCase {
         let start = BrowserTab.startPage(lastActivatedAt: fixedDate(100))
         local.spaces[0].tabs.insert(contentsOf: [settings, guide, start], at: 1)
         local.spaces[0].selectedTabID = settings.id
-        local.repairRuntimeIntegrity()
+        local = try BrowserCoreSync.repair(local)
         let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
         try coordinator.stage(session: local, at: fixedDate(100))
         let journal = coordinator.journal
@@ -113,7 +113,7 @@ final class BrowserSyncTests: XCTestCase {
         let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
         local.spaces[0].tabs.append(settings)
         local.spaces[0].selectedTabID = settings.id
-        local.repairRuntimeIntegrity()
+        local = try BrowserCoreSync.repair(local)
         var native = syncTab(settings, spaceID: local.spaces[0].id)
         native.nativeContent = .settings
         let legacy = BrowserSyncRecord.save(
@@ -138,7 +138,7 @@ final class BrowserSyncTests: XCTestCase {
         try coordinator.stage(session: local, at: fixedDate(100))
         let tabID = local.spaces[0].tabs[0].id
         local.spaces[0].tabs[0].url = URL(string: "chrome-extension://test/onboarding.html")
-        local.repairRuntimeIntegrity()
+        local = try BrowserCoreSync.repair(local)
         let tombstone = BrowserSyncRecord.delete(
             id: .init(kind: .tab, value: tabID.rawValue),
             spaceID: local.spaces[0].id, version: .init(logicalClock: 10_000, deviceID: fixedUUID(1_702)),
@@ -431,7 +431,7 @@ final class BrowserSyncTests: XCTestCase {
             applyingTo: session
         )
         var repairedSession = session
-        repairedSession.repairRuntimeIntegrity()
+        repairedSession = try BrowserCoreSync.repair(repairedSession)
         XCTAssertEqual(materialized, repairedSession)
     }
 

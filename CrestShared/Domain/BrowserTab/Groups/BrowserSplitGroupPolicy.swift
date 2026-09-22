@@ -4,7 +4,7 @@ import Foundation
 ///
 /// A group is never its own collection: it is the maximal contiguous run of
 /// tabs in a Space sharing a `splitGroupID`, in session-array order. These
-/// constants are what every query, normalizer, mutation, and presentation
+/// constants are what every query, mutation, and presentation
 /// surface agrees on, so a run that one layer considers renderable is
 /// renderable in all of them.
 ///
@@ -18,8 +18,8 @@ enum BrowserSplitGroupPolicy {
     static let maximumMembers = 4
 
     /// The smallest run that presents as a split rather than as plain tabs.
-    /// A shorter run keeps its membership in storage — see
-    /// `BrowserSplitGroupNormalizer.normalized(_:)` — and simply renders as an
+    /// A shorter run keeps its membership in storage — the core's split
+    /// membership repair never dissolves it — and simply renders as an
     /// ordinary tab until its siblings arrive.
     static let minimumRenderableMembers = 2
 

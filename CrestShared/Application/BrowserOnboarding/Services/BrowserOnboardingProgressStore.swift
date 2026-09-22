@@ -54,8 +54,11 @@ final class BrowserOnboardingProgressStore {
 
     var willOpenGettingStarted: Bool { !persistence.hasCompletedSetup }
 
+    /// Whether finishing setup from `entryPoint` opens the Getting Started
+    /// guide, as the core decides it. An unavailable core does not open it.
     func willOpenGettingStarted(for entryPoint: BrowserOnboardingEntryPoint) -> Bool {
-        entryPoint == .rerun || (entryPoint == .firstRun && willOpenGettingStarted)
+        BrowserCorePolicy.onboardingCompletion(
+            entryPoint: entryPoint, hasCompletedSetup: !willOpenGettingStarted, isPrivateBrowsing: false) == .openGuide
     }
 
     func markCompleted() {

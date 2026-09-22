@@ -98,13 +98,23 @@ extension BrowserSession {
         return (spaceIndex, tabIndex)
     }
 
+    /// Gives a Space whose selection is gone the core's fallback tab. The first
+    /// tab of each placement are the only candidates the rule can choose
+    /// between. When the core cannot answer, the selection is left as it was.
     mutating func ensureSelection(in spaceID: SpaceID) {
         guard let index = spaces.firstIndex(where: { $0.id == spaceID }) else { return }
         guard spaces[index].selectedTabID.map(spaces[index].contains) != true else { return }
-        spaces[index].selectedTabID =
-            spaces[index].currentTabs.first?.id
-            ?? spaces[index].pinnedTabs.first?.id
-            ?? spaces[index].savedTabs.first?.id
+        let tabs = spaces[index].tabs
+        let candidates = [TabPlacement.current, .pinned, .saved]
+            .compactMap { placement in tabs.firstIndex { $0.placement == placement } }
+            .sorted()
+        guard !candidates.isEmpty else {
+            spaces[index].selectedTabID = nil
+            return
+        }
+        guard let chosen = BrowserCorePolicy.selectionFallback(placements: candidates.map { tabs[$0].placement })
+        else { return }
+        spaces[index].selectedTabID = tabs[candidates[chosen]].id
     }
 
 }
@@ -151,21 +161,4 @@ extension BrowserSession {
     func spaceID(containing tabID: TabID) -> SpaceID? {
         spaces.first(where: { $0.contains(tabID) })?.id
     }
-}
-
-// MARK: - Integrity
-
-extension BrowserSession {
-    /// Repairs persisted or conflict-merged state before any WebKit page is created.
-    /// Tab IDs are process-wide page-pool keys and profile IDs are website-data-store
-    /// keys, so duplicates across Spaces are an isolation failure rather than a cosmetic
-    /// data issue. First occurrences retain their stable identity; later collisions are
-    /// reidentified without copying website data.
-    mutating func repairRuntimeIntegrity() {
-        // No page or startup save may use an unaccepted repair. Operational
-        // sync errors use the throwing bridge before the coordinator commits.
-        do { self = try BrowserCoreSync.repair(self) }
-        catch { preconditionFailure("Core session repair failed before publication: \(error)") }
-    }
-
 }

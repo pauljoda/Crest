@@ -12,6 +12,7 @@ public static class ProtocolErrorCodes {
     public const string InvalidCredentialEvent = "invalid_credential_event";
     public const string InvalidDate = "invalid_date";
     public const string InvalidEndpoint = "invalid_endpoint";
+    public const string InvalidEntryPoint = "invalid_entry_point";
     public const string InvalidFillSource = "invalid_fill_source";
     public const string InvalidInput = "invalid_input";
     public const string InvalidLimit = "invalid_limit";

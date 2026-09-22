@@ -1,12 +1,6 @@
 import Foundation
 
 extension BrowserSession {
-    mutating func preserveFolderOrder(in spaceIndex: Int, removing tabIDs: Set<TabID>) {
-        guard !tabIDs.isEmpty else { return }
-        let space = spaces[spaceIndex]
-        spaces[spaceIndex].folders = space.folderTree.preservingOrder(removing: tabIDs, tabs: space.tabs)
-    }
-
     /// Moves the existing subtree. Folder and tab identities never change when
     /// placement changes; callers publish this transaction once.
     @discardableResult

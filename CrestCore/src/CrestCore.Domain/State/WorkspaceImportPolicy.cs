@@ -21,6 +21,15 @@ public static class WorkspaceImportPolicy {
         if (count > MaximumPinnedTabs) throw new BrowserRuleException(BrowserRuleCodes.PinnedLimitReached);
     }
 
+    /// An imported Space must already hold well-formed split runs. Repair
+    /// would quietly rewrite a malformed archive; the import rejects it instead.
+    public static void RequireSplitMembership(IReadOnlyList<SplitMember> tabs) {
+        ArgumentNullException.ThrowIfNull(tabs);
+        var repaired = SplitMembershipPolicy.Repair(tabs);
+        for (int index = 0; index < tabs.Count; index++)
+            if (repaired[index] != tabs[index].Group) throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
+    }
+
     public static string FolderMatchKey(string title) => string.Concat(title.Normalize(NormalizationForm.FormKD)
         .Where(char.IsLetterOrDigit)).ToLowerInvariant();
 

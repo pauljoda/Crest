@@ -101,12 +101,8 @@ struct PortableSpace: Codable, Equatable, Sendable {
         if materializedTabs.isEmpty {
             materializedTabs = [BrowserTab.startPage()]
         }
-        guard
-            BrowserSplitGroupNormalizer.normalized(materializedTabs)
-                == materializedTabs
-        else {
-            throw BrowserPortableArchiveError.invalidContents
-        }
+        // Split runs are validated by the core's workspace import, which
+        // rejects any run its repair would rewrite.
 
         var seenSplitGroupMetadataIDs: Set<UUID> = []
         let materializedSplitGroups = try (splitGroups ?? []).map { metadata in

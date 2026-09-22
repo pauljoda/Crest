@@ -2017,6 +2017,10 @@
     "core-link-routing": {
       "category": "internal",
       "message": "Move link routing, Quick Window retargeting, page presentation, content-blocking rule selection, branding ranges and borrowed-workspace command routing into the portable core."
+    },
+    "core-window-state": {
+      "category": "internal",
+      "message": "Move window selection repair, split layout capture, tear-off eligibility, manual setup plans, onboarding completion and workspace import review into the portable core."
     }
   }
 }

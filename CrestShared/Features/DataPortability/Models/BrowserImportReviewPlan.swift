@@ -15,6 +15,9 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
     private(set) var spaces: [BrowserImportSpaceReview]
     private var destinationCustomizations: [SpaceID: BrowserImportSpaceCustomization]
 
+    /// The review a person starts from. The core matches each imported Space
+    /// to the existing Space with the same name and leaves out tabs it already
+    /// holds; when the core cannot answer, everything imports into new Spaces.
     init(imported: BrowserPortableImport, existing: BrowserSession) {
         let destinationSpaces =
             existing.hasDisposableSeedState
@@ -25,36 +28,18 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
                 ($0.id, BrowserImportSpaceCustomization(space: $0))
             }
         )
-        spaces = imported.spaces.map { sourceSpace in
-            let matchingSpace = Self.bestMatchingSpace(
-                for: sourceSpace.name,
-                in: destinationSpaces
-            )
-            let destination =
-                matchingSpace.map {
-                    BrowserImportDestination.existing($0.id)
-                } ?? .newSpace
-            let duplicateURLs = matchingSpace.map(Self.normalizedURLs(in:)) ?? []
-            let duplicateTabIDs: Set<TabID> = Set(
-                sourceSpace.tabs.compactMap { tab in
-                    guard let url = tab.url,
-                        duplicateURLs.contains(Self.normalizedURL(url))
-                    else { return nil }
-                    return tab.id
-                })
-            let includedTabIDs = Set(
-                sourceSpace.tabs.compactMap { tab in
-                    guard let url = tab.url else { return tab.id }
-                    return duplicateURLs.contains(Self.normalizedURL(url)) ? nil : tab.id
-                })
+        let suggestions = BrowserCoreWorkspaceImport.reviewSuggestions(sources: imported.spaces, existing: existing)
+        spaces = imported.spaces.enumerated().map { index, sourceSpace in
+            let suggestion = suggestions?[index]
+            let matchingSpace = suggestion?.destinationID.flatMap { existing.space(id: $0) }
             return BrowserImportSpaceReview(
                 sourceSpace: sourceSpace,
-                destination: destination,
+                destination: matchingSpace.map { .existing($0.id) } ?? .newSpace,
                 customization: BrowserImportSpaceCustomization(
                     space: matchingSpace ?? sourceSpace
                 ),
-                includedTabIDs: includedTabIDs,
-                duplicateTabIDs: duplicateTabIDs,
+                includedTabIDs: suggestion?.includedTabIDs ?? Set(sourceSpace.tabs.map(\.id)),
+                duplicateTabIDs: suggestion?.duplicateTabIDs ?? [],
                 placementOverrides: [:],
                 spaceInclusionOverride: nil,
                 passwordInclusionOverride: nil
@@ -183,112 +168,31 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
         spaces[index].customization.branding = branding.normalized()
     }
 
+    /// What the current choices mean against `existing`, answered by the core
+    /// in one pass. Empty when the core cannot answer; the import itself still
+    /// enforces the pinned limit.
+    func analysis(in existing: BrowserSession) -> BrowserImportReviewAnalysis {
+        BrowserCoreWorkspaceImport.reviewAnalysis(self, existing: existing) ?? BrowserImportReviewAnalysis()
+    }
+
     func overflowTabIDs(in existing: BrowserSession) -> Set<TabID> {
-        var pinnedCounts: [BrowserImportDestinationKey: Int] = [:]
-        for space in existing.spaces {
-            pinnedCounts[.existing(space.id)] = space.pinnedTabs.count
-        }
-        var overflow: Set<TabID> = []
-        for review in spaces where review.isIncluded {
-            let key: BrowserImportDestinationKey =
-                switch review.destination {
-                case .newSpace: .new(review.id)
-                case .existing(let id): .existing(id)
-                }
-            for tab in review.sourceSpace.tabs
-            where review.includedTabIDs.contains(tab.id)
-                && review.placement(for: tab) == .pinned
-            {
-                let count = pinnedCounts[key, default: 0]
-                if count >= BrowserSpace.maximumPinnedTabs {
-                    overflow.insert(tab.id)
-                } else {
-                    pinnedCounts[key] = count + 1
-                }
-            }
-        }
-        return overflow
-    }
-
-    func duplicateTabIDs(in existing: BrowserSession) -> Set<TabID> {
-        var duplicates: Set<TabID> = []
-        for review in spaces {
-            guard case .existing(let destinationID) = review.destination,
-                let destination = existing.space(id: destinationID)
-            else {
-                continue
-            }
-            let destinationURLs = Self.normalizedURLs(in: destination)
-            for tab in review.sourceSpace.tabs {
-                guard let url = tab.url,
-                    destinationURLs.contains(Self.normalizedURL(url))
-                else {
-                    continue
-                }
-                duplicates.insert(tab.id)
-            }
-        }
-        return duplicates
-    }
-
-    func matchedDestinationTabIDs(
-        for sourceSpaceID: SpaceID,
-        in existing: BrowserSession
-    ) -> Set<TabID> {
-        guard let review = spaces.first(where: { $0.id == sourceSpaceID }),
-            review.isIncluded,
-            case .existing(let destinationID) = review.destination,
-            let destination = existing.space(id: destinationID)
-        else {
-            return []
-        }
-        let destinationURLs = Self.normalizedURLs(in: destination)
-        let sourceURLs = Set(
-            review.sourceSpace.tabs.compactMap { tab -> String? in
-                guard let url = tab.url else { return nil }
-                let normalizedURL = Self.normalizedURL(url)
-                return destinationURLs.contains(normalizedURL) ? normalizedURL : nil
-            })
-        return Set(
-            destination.tabs.compactMap { tab in
-                guard let url = tab.url,
-                    sourceURLs.contains(Self.normalizedURL(url))
-                else { return nil }
-                return tab.id
-            })
+        analysis(in: existing).overflowTabIDs
     }
 
     func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
         return try BrowserCoreWorkspaceImport.preview(BrowserCoreWorkspaceImport.review(self), existing: existing)
     }
+}
 
-    private static func bestMatchingSpace(
-        for sourceName: String,
-        in existing: [BrowserSpace]
-    ) -> BrowserSpace? {
-        let sourceKey = normalizedSpaceName(sourceName)
-        guard !sourceKey.isEmpty else { return nil }
-        return existing.first {
-            normalizedSpaceName($0.name) == sourceKey
-        }
-    }
+/// The core's reading of an import review: tabs their destination already
+/// holds, destination tabs each imported Space matches, and pinned tabs past
+/// their destination's limit.
+struct BrowserImportReviewAnalysis: Equatable {
+    var duplicateTabIDs: Set<TabID> = []
+    var overflowTabIDs: Set<TabID> = []
+    var matchedTabIDsBySourceSpace: [SpaceID: Set<TabID>] = [:]
 
-    private static func normalizedSpaceName(_ value: String) -> String {
-        let folded = value.folding(
-            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
-            locale: .current
-        )
-        return folded.unicodeScalars
-            .filter { CharacterSet.alphanumerics.contains($0) }
-            .map(String.init)
-            .joined()
-    }
-
-    private static func normalizedURLs(in space: BrowserSpace) -> Set<String> {
-        Set(space.tabs.compactMap { $0.url }.map(normalizedURL))
-    }
-
-    private static func normalizedURL(_ url: URL) -> String {
-        (BrowserHistoryURL.normalized(url) ?? url).absoluteString
+    func matchedTabIDs(for sourceSpaceID: SpaceID) -> Set<TabID> {
+        matchedTabIDsBySourceSpace[sourceSpaceID] ?? []
     }
 }

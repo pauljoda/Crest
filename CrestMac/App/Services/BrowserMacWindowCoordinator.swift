@@ -150,9 +150,7 @@ final class BrowserMacWindowCoordinator {
         _ item: BrowserTabDragItem, from sourceID: BrowserWindowID,
         at point: CGPoint? = nil, grabFraction: CGPoint = CGPoint(x: 0.5, y: 0.5)
     ) -> BrowserMacWindowRequest? {
-        guard let source = windows[sourceID], isAvailable(item, in: source),
-            item.selection.map({ $0.ids == [item.tabID] }) ?? true
-        else { return nil }
+        guard let source = windows[sourceID], canTearOff(item, from: source) else { return nil }
         let request = BrowserMacWindowRequest.temporary(
             sourceWindowID: sourceID, assignment: item.spaceAssignment)
         guard let destination = model(for: request) else { return nil }
@@ -219,17 +217,21 @@ final class BrowserMacWindowCoordinator {
         windows[id]?.window?.frame.contains(screenPoint) == true
     }
 
-    private func isAvailable(_ item: BrowserTabDragItem, in model: BrowserMacWindowModel) -> Bool {
-        guard let space = model.browser.space(matching: item.spaceAssignment),
-            !spaceAccess.isLocked(space), space.tabs.contains(where: { $0.id == item.tabID })
-        else { return false }
-        return true
+    /// The core decides whether the dragged tab may leave its window: the
+    /// Space still matches and is unlocked, holds the tab, and the drag carries
+    /// that tab alone.
+    private func canTearOff(_ item: BrowserTabDragItem, from model: BrowserMacWindowModel) -> Bool {
+        let space = model.browser.space(matching: item.spaceAssignment)
+        return BrowserCorePolicy.allowsTearOff(
+            spaceMatches: space != nil, spaceLocked: space.map(spaceAccess.isLocked) ?? false,
+            containsTab: space?.tabs.contains(where: { $0.id == item.tabID }) == true,
+            selection: item.selection?.ids, tabID: item.tabID)
     }
 
     private func transfer(
         _ item: BrowserTabDragItem, from source: BrowserMacWindowModel, to destination: BrowserMacWindowModel
     ) -> Bool {
-        guard isAvailable(item, in: source), item.selection.map({ $0.ids == [item.tabID] }) ?? true,
+        guard canTearOff(item, from: source),
             let targetSpace = destination.browser.space(matching: item.spaceAssignment),
             !spaceAccess.isLocked(targetSpace),
             source.browser.canTransferTab(

@@ -17,6 +17,7 @@ internal enum NativeSyncOperation {
     BatchPreview,
     TransferPreview,
     WorkspacePreview,
+    WorkspaceReview,
     SessionRepair,
     SessionRetain,
 }
@@ -40,6 +41,7 @@ internal static class NativeSyncOperationCodes {
         "batch.preview" => NativeSyncOperation.BatchPreview,
         "transfer.preview" => NativeSyncOperation.TransferPreview,
         "workspace.preview" => NativeSyncOperation.WorkspacePreview,
+        "workspace.review" => NativeSyncOperation.WorkspaceReview,
         "session.repair" => NativeSyncOperation.SessionRepair,
         "session.retain" => NativeSyncOperation.SessionRetain,
         _ => NativeSyncOperation.Unknown
@@ -61,6 +63,7 @@ internal static class NativeSyncOperationCodes {
         NativeSyncOperation.BatchPreview => "batch.preview",
         NativeSyncOperation.TransferPreview => "transfer.preview",
         NativeSyncOperation.WorkspacePreview => "workspace.preview",
+        NativeSyncOperation.WorkspaceReview => "workspace.review",
         NativeSyncOperation.SessionRepair => "session.repair",
         NativeSyncOperation.SessionRetain => "session.retain",
         _ => throw new ArgumentOutOfRangeException(nameof(operation))
