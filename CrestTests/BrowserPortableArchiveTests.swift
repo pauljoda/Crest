@@ -395,16 +395,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
             lastVisitedAt: Date(timeIntervalSince1970: 1_700_000_000),
             visitCount: 4
         )
-        var browsingPreferences = BrowserSpaceBrowsingPreferences(
-            searchProvider: .brave,
-            currentTabCleanupPolicy: .after30Days,
-            dataRetention: BrowserSpaceDataRetentionPreferences(
-                history: .ninetyDays,
-                archive: .thirtyDays,
-                downloads: .oneWeek
-            )
-        )
-        let kagi = try BrowserCustomSearchProvider(
+        let kagi = BrowserCustomSearchProvider(
             id: UUID(
                 uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02, 0x64)
             ),
@@ -412,9 +403,17 @@ final class BrowserPortableArchiveTests: XCTestCase {
             searchURLTemplate: "https://kagi.com/search?q=%s",
             suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"
         )
-        try browsingPreferences.upsertCustomSearchProvider(kagi)
-        browsingPreferences.searchProvider = kagi.provider
-        browsingPreferences.searchSuggestionsEnabled = true
+        let browsingPreferences = BrowserSpaceBrowsingPreferences(
+            searchProvider: kagi.provider,
+            currentTabCleanupPolicy: .after30Days,
+            dataRetention: BrowserSpaceDataRetentionPreferences(
+                history: .ninetyDays,
+                archive: .thirtyDays,
+                downloads: .oneWeek
+            ),
+            customSearchProviders: [kagi],
+            searchSuggestionsEnabled: true
+        )
         let space = BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),

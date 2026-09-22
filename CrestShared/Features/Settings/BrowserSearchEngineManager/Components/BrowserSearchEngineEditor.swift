@@ -98,7 +98,7 @@ struct BrowserSearchEngineEditor: View {
 
     private func saveProvider() {
         do {
-            let custom = try BrowserCustomSearchProvider(
+            let custom = BrowserCustomSearchProvider(
                 id: request.id,
                 name: name,
                 searchURLTemplate: searchURLTemplate,

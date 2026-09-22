@@ -1,7 +1,8 @@
 import Foundation
 
-/// Explicit source-language choices. Missing, disabled, or invalid rules never
-/// fall back to translating every language into the device language.
+/// Explicit source-language choices, persisted as this value's JSON. The
+/// portable core decides which rule applies, which target it yields and how an
+/// edit replaces region aliases; an unavailable core never translates.
 struct BrowserAutomaticTranslationRules: Codable, Equatable, Sendable {
     struct Rule: Codable, Equatable, Sendable {
         var targetID: String
@@ -26,27 +27,27 @@ struct BrowserAutomaticTranslationRules: Codable, Equatable, Sendable {
     }
 
     func rule(for sourceID: String) -> Rule? {
-        if let exact = sources[sourceID] { return exact }
-        return sources.keys.sorted().first { Self.matches($0, sourceID) }.flatMap { sources[$0] }
+        BrowserCorePolicy.translationRule(in: self, sourceID: sourceID)?.rule
     }
 
     func target(for sourceID: String) -> String? {
-        guard let rule = rule(for: sourceID), rule.isEnabled,
-            !sourceID.isEmpty, !rule.targetID.isEmpty, !Self.matches(sourceID, rule.targetID)
-        else { return nil }
-        return rule.targetID
+        BrowserCorePolicy.translationRule(in: self, sourceID: sourceID)?.target
     }
 
     mutating func set(sourceID: String, targetID: String, isEnabled: Bool) {
-        guard !sourceID.isEmpty else { return }
-        // Region aliases share a choice; distinct scripts retain separate rules.
-        for key in sources.keys.filter({ Self.matches($0, sourceID) }) { sources.removeValue(forKey: key) }
-        sources[sourceID] = Rule(targetID: targetID, isEnabled: isEnabled)
+        guard let updated = BrowserCorePolicy.settingTranslationRule(
+            in: self, sourceID: sourceID, targetID: targetID, isEnabled: isEnabled)
+        else { return }
+        sources = updated
     }
 
     static func matches(_ lhs: String, _ rhs: String) -> Bool {
-        let left = Locale.Language(identifier: lhs)
-        let right = Locale.Language(identifier: rhs)
-        return left.languageCode != nil && left.languageCode == right.languageCode && left.script == right.script
+        BrowserCorePolicy.languageMatches(lhs, candidates: [rhs])?.first ?? false
+    }
+
+    /// `matches(language, candidate)` for each candidate, in one core call.
+    static func matches(_ language: String, in candidates: [String]) -> [Bool] {
+        BrowserCorePolicy.languageMatches(language, candidates: candidates)
+            ?? Array(repeating: false, count: candidates.count)
     }
 }

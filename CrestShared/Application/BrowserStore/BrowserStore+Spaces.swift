@@ -147,6 +147,42 @@ extension BrowserStore {
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
+    /// Saves a custom search engine through the core, which validates it,
+    /// rejects duplicate names and the Space's engine limit, and optionally
+    /// selects it. Throws the rule the engine breaks.
+    func upsertCustomSearchProvider(
+        _ provider: BrowserCustomSearchProvider,
+        selects: Bool,
+        in spaceID: SpaceID
+    ) throws {
+        if isTemporaryWorkspace {
+            guard let source = temporaryProfileSettingsAuthority(in: spaceID) else { return }
+            try source.upsertCustomSearchProvider(provider, selects: selects, in: spaceID)
+            return
+        }
+        guard let space = session.space(id: spaceID) else { return }
+        let admitted = try BrowserCorePolicy.admittedCustomSearchProvider(
+            provider, existing: space.browsingPreferences.customSearchProviders)
+        // The command re-applies the same rule against the accepted record; an
+        // unchanged save reports no change rather than an error.
+        guard family.executeSpace("space.search_provider.upsert", in: spaceID,
+            arguments: ["provider": admitted.coreRecord, "selects": selects], from: self)
+        else { return }
+        persist(syncUrgency: .coalesced, scope: .core)
+    }
+
+    /// Removes a custom search engine; the core selects Google if it was chosen.
+    func removeCustomSearchProvider(id: UUID, in spaceID: SpaceID) {
+        if isTemporaryWorkspace {
+            temporaryProfileSettingsAuthority(in: spaceID)?.removeCustomSearchProvider(id: id, in: spaceID)
+            return
+        }
+        guard session.space(id: spaceID) != nil else { return }
+        guard family.executeSpace("space.search_provider.remove", in: spaceID,
+            arguments: ["id": id.uuidString.lowercased()], from: self) else { return }
+        persist(syncUrgency: .coalesced, scope: .core)
+    }
+
 }
 
 // MARK: - Folders

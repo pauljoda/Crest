@@ -128,6 +128,9 @@ public sealed partial class NativeSessionAuthority {
                 case SessionOperation.SpaceBrowsingPreferences:
                     fields["browsingPreferences"] = args["value"]!.AsObject().DeepClone();
                     break;
+                case SessionOperation.SpaceSearchProviderUpsert or SessionOperation.SpaceSearchProviderRemove:
+                    EditSearchProviders(operation, fields, args);
+                    break;
                 case SessionOperation.SpaceCredentialPreferences:
                     fields["credentialPreferences"] = args["value"]!.AsObject().DeepClone();
                     break;

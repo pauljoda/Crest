@@ -31,6 +31,15 @@ numeric timestamps in a consistent caller-chosen epoch and return zero-based
 indices. Retention uses a strict age cutoff; explicit history ranges include
 their start and exclude their end. Native callers apply the results only after
 validating every batch, preserving their existing persistence and sync behavior.
+`address.intent` and `search.url` name the engine as `{"id":"google"}` for a
+built-in or a `custom:<uuid>` identity with its stored templates; the core owns the
+built-in catalog, template validation and query encoding, and a stored custom
+engine that no longer validates resolves to Google. `search.custom_provider`
+reports the rule a custom engine breaks, and `search.custom_providers` applies the
+restore rule to stored engines. `translation.rule`, `translation.set` and
+`translation.matches` answer automatic page-translation choices in their
+persisted native shape. Custom-engine saves and removals are the
+`space.search_provider.upsert` and `space.search_provider.remove` session commands.
 
 `crest_downloads_*` owns one process-local download ledger per native download
 center: record states and their transitions, newest-first ordering, badge
@@ -44,6 +53,14 @@ state are reported as not applied. The pure `downloads.progress`,
 telemetry and ETA, risk reasons and confirmation, and the automatic-download
 throttle. The platform supplies only its file-system-safe filename and type
 registry facts for risk.
+
+The `credentials.*` and `passkeys.access_status` policy operations carry no
+credential values. Form observations arrive as event, origins and presence
+flags; recency and account matching take record identities, dates and, for
+matching, usernames; the save plan takes the platform's yes-or-no comparison
+against the stored secret. `credentials.password_recipe` returns a length and
+character groups, and the platform generates the password itself. Record
+batches hold at most 64 entries; callers reduce longer lists batch by batch.
 
 This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.

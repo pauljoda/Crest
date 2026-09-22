@@ -122,7 +122,7 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
 
     nonisolated private static func passkeyStatus() -> BrowserPasskeyAccessStatus {
         guard BrowserPasskeyAccessSystem.hasManagedCapability() else { return .managedCapabilityRequired }
-        return BrowserPasskeyAccessPolicy.status(
+        return BrowserCorePolicy.passkeyAccessStatus(
             hasManagedCapability: true,
             deviceConfiguration: BrowserPasskeyAccessSystem.deviceConfiguration(),
             authorizationState: BrowserPasskeyAccessSystem.authorizationState()

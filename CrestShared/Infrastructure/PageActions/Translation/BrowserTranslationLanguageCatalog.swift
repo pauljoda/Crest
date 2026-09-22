@@ -42,8 +42,9 @@ final class BrowserTranslationLanguageCatalog {
         let languages = supported.isEmpty ? await LanguageAvailability().supportedLanguages : supported
         let ids = languages.map(\.minimalIdentifier)
         let candidates = ids.flatMap { source in
-            ids.filter { !BrowserAutomaticTranslationRules.matches(source, $0) }
-                .map { Pair(source: source, target: $0) }
+            zip(ids, BrowserAutomaticTranslationRules.matches(source, in: ids))
+                .filter { !$0.1 }
+                .map { Pair(source: source, target: $0.0) }
         }
         return await check(candidates)
     }

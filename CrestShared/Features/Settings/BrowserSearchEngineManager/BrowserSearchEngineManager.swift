@@ -162,18 +162,11 @@ struct BrowserSearchEngineManager: View {
         _ custom: BrowserCustomSearchProvider,
         selectsProvider: Bool
     ) throws {
-        var updated = preferences
-        try updated.upsertCustomSearchProvider(custom)
-        if selectsProvider {
-            updated.searchProvider = custom.provider
-        }
-        browser.updateBrowsingPreferences(updated, in: space.id)
+        try browser.upsertCustomSearchProvider(custom, selects: selectsProvider, in: space.id)
     }
 
     private func remove(_ custom: BrowserCustomSearchProvider) {
-        var updated = preferences
-        updated.removeCustomSearchProvider(id: custom.id)
-        browser.updateBrowsingPreferences(updated, in: space.id)
+        browser.removeCustomSearchProvider(id: custom.id, in: space.id)
         pendingDeletion = nil
     }
 }

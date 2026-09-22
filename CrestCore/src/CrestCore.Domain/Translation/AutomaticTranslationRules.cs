@@ -1,0 +1,74 @@
+namespace CrestCore.Domain;
+
+/// Explicit source-language choices for automatic page translation. Missing,
+/// disabled, empty or same-language rules never translate, so no language is
+/// translated into the device language by default.
+public sealed class AutomaticTranslationRules {
+    #region Variables
+
+    public const int MaximumSources = 128;
+    public const int MaximumLanguageLength = 64;
+
+    public static AutomaticTranslationRules Empty { get; } = new(new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, TranslationRule> Sources => sources;
+    private readonly SortedDictionary<string, TranslationRule> sources;
+
+    #endregion
+
+    #region Constructors
+
+    private AutomaticTranslationRules(SortedDictionary<string, TranslationRule> sources) { this.sources = sources; }
+
+    #endregion
+
+    #region Actions - Rules
+
+    public static AutomaticTranslationRules Restore(IEnumerable<KeyValuePair<string, TranslationRule>> stored) {
+        ArgumentNullException.ThrowIfNull(stored);
+        var values = new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal);
+        foreach (var (source, rule) in stored) {
+            RequireLanguageLength(source, rule.TargetId);
+            values[source] = rule;
+            if (values.Count > MaximumSources) throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
+        }
+        return new(values);
+    }
+
+    /// The exact rule, else the first region or script alias in ordinal order.
+    public TranslationRule? Rule(string source) {
+        ArgumentNullException.ThrowIfNull(source);
+        if (sources.TryGetValue(source, out var exact)) return exact;
+        foreach (var (key, rule) in sources) if (LanguageTag.Matches(key, source)) return rule;
+        return null;
+    }
+
+    /// The destination to translate a page in `source` into, or null.
+    public string? Target(string source) =>
+        Rule(source) is { IsEnabled: true } rule && source.Length > 0 && rule.TargetId.Length > 0
+            && !LanguageTag.Matches(source, rule.TargetId) ? rule.TargetId : null;
+
+    private static void RequireLanguageLength(string source, string target) {
+        if (source.Length > MaximumLanguageLength || target.Length > MaximumLanguageLength)
+            throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
+    }
+
+    #endregion
+
+    #region Mutators
+
+    /// Records a choice for `source`. Region aliases share one choice, so an
+    /// alias cannot bypass disabling; distinct scripts keep separate rules.
+    public AutomaticTranslationRules Set(string source, string target, bool isEnabled) {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+        if (source.Length == 0) return this;
+        RequireLanguageLength(source, target);
+        var values = new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal);
+        foreach (var (key, rule) in sources) if (!LanguageTag.Matches(key, source)) values[key] = rule;
+        values[source] = new(target, isEnabled);
+        if (values.Count > MaximumSources) throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
+        return new(values);
+    }
+
+    #endregion
+}

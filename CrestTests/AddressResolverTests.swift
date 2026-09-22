@@ -87,59 +87,28 @@ final class AddressResolverTests: XCTestCase {
         XCTAssertFalse(decoded.searchSuggestionsEnabled)
     }
 
-    func testKagiTemplatesProduceOneStableCustomProviderAndEncodeTheQueryExactlyOnce() throws {
-        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000264")!
-        let kagi = try BrowserCustomSearchProvider(
-            id: id,
-            name: "Kagi",
-            searchURLTemplate: "https://kagi.com/search?q=%s",
-            suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"
-        )
-        var preferences = BrowserSpaceBrowsingPreferences.default
-
-        try preferences.upsertCustomSearchProvider(kagi)
-        preferences.searchProvider = kagi.provider
-
-        XCTAssertEqual(preferences.searchProvider.id, .custom(id))
-        XCTAssertEqual(preferences.searchProvider.title, "Kagi")
-        XCTAssertEqual(
-            preferences.searchProvider.searchURL(for: "Café + Swift/URL & WebKit")?.absoluteString,
-            "https://kagi.com/search?q=Caf%C3%A9%20%2B%20Swift%2FURL%20%26%20WebKit"
-        )
-        XCTAssertEqual(
-            preferences.searchProvider.suggestionURL(for: "crest browser")?.absoluteString,
-            "https://kagi.com/api/autosuggest?q=crest%20browser"
-        )
-        XCTAssertEqual(preferences.searchProvider.iconPageURL?.absoluteString, "https://kagi.com/")
-    }
-
-    func testCustomProviderIdentitySurvivesEditingAndPreferenceRoundTrips() throws {
+    func testCustomSelectionPersistsWithABuiltInFallbackForOlderBuilds() throws {
         let id = UUID(uuidString: "00000000-0000-0000-0000-000000000253")!
-        var preferences = BrowserSpaceBrowsingPreferences.default
-        let original = try BrowserCustomSearchProvider(
-            id: id,
-            name: "Example",
-            searchURLTemplate: "https://search.example.com/?q=%s"
-        )
-        try preferences.upsertCustomSearchProvider(original)
-        preferences.searchProvider = original.provider
-        let edited = try BrowserCustomSearchProvider(
+        let custom = BrowserCustomSearchProvider(
             id: id,
             name: "Example Search",
             searchURLTemplate: "https://search.example.com/results?q={searchTerms}",
             suggestionURLTemplate: "https://search.example.com/suggest?q={searchTerms}"
         )
+        let preferences = BrowserSpaceBrowsingPreferences(
+            searchProvider: custom.provider,
+            currentTabCleanupPolicy: .after12Hours,
+            customSearchProviders: [custom]
+        )
 
-        try preferences.upsertCustomSearchProvider(edited)
         let encoded = try JSONEncoder().encode(preferences)
         let decoded = try JSONDecoder().decode(
             BrowserSpaceBrowsingPreferences.self,
             from: encoded
         )
 
+        XCTAssertEqual(decoded, preferences)
         XCTAssertEqual(decoded.searchProvider.id, .custom(id))
-        XCTAssertEqual(decoded.searchProvider.title, "Example Search")
-        XCTAssertEqual(decoded.customSearchProviders.map(\.id), [id])
         let object = try XCTUnwrap(
             JSONSerialization.jsonObject(with: encoded) as? [String: Any]
         )
@@ -148,93 +117,6 @@ final class AddressResolverTests: XCTestCase {
             "google",
             "An older Crest build must decode a safe built-in fallback when the new selection is custom."
         )
-    }
-
-    func testRemovingTheSelectedCustomProviderFallsBackToGoogle() throws {
-        let custom = try BrowserCustomSearchProvider(
-            name: "Kagi",
-            searchURLTemplate: "https://kagi.com/search?q=%s"
-        )
-        var preferences = BrowserSpaceBrowsingPreferences.default
-        try preferences.upsertCustomSearchProvider(custom)
-        preferences.searchProvider = custom.provider
-
-        preferences.removeCustomSearchProvider(id: custom.id)
-
-        XCTAssertEqual(preferences.searchProvider, .google)
-        XCTAssertFalse(
-            preferences.availableSearchProviders.contains { $0.id == .custom(custom.id) }
-        )
-    }
-
-    func testSearchTemplatesAcceptBothBrowserConventionsAndRejectAmbiguousOrUnsafeValues() throws {
-        let percent = try BrowserCustomSearchProvider(
-            name: "Percent",
-            searchURLTemplate: "https://example.com/search/%s?source=crest"
-        )
-        let openSearch = try BrowserCustomSearchProvider(
-            name: "OpenSearch",
-            searchURLTemplate: "https://example.com/search?q={searchTerms}"
-        )
-
-        XCTAssertEqual(
-            percent.provider.searchURL(for: "swift/ios")?.absoluteString,
-            "https://example.com/search/swift%2Fios?source=crest"
-        )
-        XCTAssertEqual(
-            openSearch.provider.searchURL(for: "swift+ios")?.absoluteString,
-            "https://example.com/search?q=swift%2Bios"
-        )
-
-        for template in [
-            "https://example.com/search",
-            "https://example.com/?q=%s&again=%s",
-            "https://example.com/?q=%s&again={searchTerms}",
-            "http://example.com/?q=%s",
-            "https://user:password@example.com/?q=%s",
-            "https://%s.example.com/search",
-            "https://example.com/search#q=%s",
-            "https://localhost/search?q=%s",
-            "https://example.com/search?token=secret&q=%s",
-        ] {
-            XCTAssertThrowsError(
-                try BrowserCustomSearchProvider(
-                    name: "Unsafe",
-                    searchURLTemplate: template
-                ),
-                "Accepted unsafe or ambiguous template: \(template)"
-            )
-        }
-        XCTAssertThrowsError(
-            try BrowserCustomSearchProvider(
-                name: "   ",
-                searchURLTemplate: "https://example.com/?q=%s"
-            )
-        )
-    }
-
-    func testMalformedDecodedCustomProviderNeverBecomesExecutable() throws {
-        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000999")!
-        let data = try JSONSerialization.data(withJSONObject: [
-            "searchProvider": "google",
-            "selectedSearchProviderID": "custom:\(id.uuidString.lowercased())",
-            "customSearchProviders": [
-                [
-                    "id": id.uuidString,
-                    "name": "Unsafe",
-                    "searchURLTemplate": "http://127.0.0.1/search?q=%s",
-                ]
-            ],
-            "currentTabCleanupPolicy": "after12Hours",
-        ])
-
-        let decoded = try JSONDecoder().decode(
-            BrowserSpaceBrowsingPreferences.self,
-            from: data
-        )
-
-        XCTAssertEqual(decoded.searchProvider, .google)
-        XCTAssertEqual(decoded.availableSearchProviders, BrowserSearchProvider.allCases)
     }
 
     func testWhitespaceDoesNotNavigate() {

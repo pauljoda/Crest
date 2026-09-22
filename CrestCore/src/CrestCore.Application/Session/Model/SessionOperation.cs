@@ -32,6 +32,8 @@ internal enum SessionOperation {
     SpaceReorder,
     SpaceResetPrivate,
     SpaceSavedExpansion,
+    SpaceSearchProviderRemove,
+    SpaceSearchProviderUpsert,
     SplitDissolve,
     SplitIcon,
     SplitJoin,
@@ -98,6 +100,8 @@ internal static class SessionOperationCodes {
         "space.reorder" => SessionOperation.SpaceReorder,
         "space.reset_private" => SessionOperation.SpaceResetPrivate,
         "space.saved_expansion" => SessionOperation.SpaceSavedExpansion,
+        "space.search_provider.remove" => SessionOperation.SpaceSearchProviderRemove,
+        "space.search_provider.upsert" => SessionOperation.SpaceSearchProviderUpsert,
         "split.dissolve" => SessionOperation.SplitDissolve,
         "split.icon" => SessionOperation.SplitIcon,
         "split.join" => SessionOperation.SplitJoin,
@@ -166,6 +170,8 @@ internal static class SessionOperationCodes {
         SessionOperation.SpaceReorder => "space.reorder",
         SessionOperation.SpaceResetPrivate => "space.reset_private",
         SessionOperation.SpaceSavedExpansion => "space.saved_expansion",
+        SessionOperation.SpaceSearchProviderRemove => "space.search_provider.remove",
+        SessionOperation.SpaceSearchProviderUpsert => "space.search_provider.upsert",
         SessionOperation.SplitDissolve => "split.dissolve",
         SessionOperation.SplitIcon => "split.icon",
         SessionOperation.SplitJoin => "split.join",
@@ -247,7 +253,9 @@ internal static class SessionOperationCodes {
         or SessionOperation.SpaceRemove
         or SessionOperation.SpaceReorder
         or SessionOperation.SpaceResetPrivate
-        or SessionOperation.SpaceSavedExpansion;
+        or SessionOperation.SpaceSavedExpansion
+        or SessionOperation.SpaceSearchProviderRemove
+        or SessionOperation.SpaceSearchProviderUpsert;
 
     #endregion
 }

@@ -13,10 +13,7 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
             if let builtIn = BrowserSearchProvider.provider(with: selectedSearchProviderID) {
                 return builtIn
             }
-            return
-                customSearchProviders
-                .compactMap(\.validatedProvider)
-                .first { $0.id == selectedSearchProviderID } ?? .google
+            return customSearchProviders.first { .custom($0.id) == selectedSearchProviderID }?.provider ?? .google
         }
         set {
             guard availableSearchProviders.contains(where: { $0.id == newValue.id }) else {
@@ -28,7 +25,7 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
     }
 
     var availableSearchProviders: [BrowserSearchProvider] {
-        BrowserSearchProvider.allCases + customSearchProviders.compactMap(\.validatedProvider)
+        BrowserSearchProvider.allCases + customSearchProviders.map(\.provider)
     }
 
     init(
@@ -55,44 +52,6 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
         currentTabCleanupPolicy: .after12Hours,
         contentBlockingPolicy: .balanced
     )
-
-    mutating func upsertCustomSearchProvider(
-        _ provider: BrowserCustomSearchProvider
-    ) throws {
-        guard provider.validatedProvider != nil else {
-            throw BrowserCustomSearchProviderError.invalidURL
-        }
-        let comparableName = provider.name.folding(
-            options: [.caseInsensitive, .diacriticInsensitive],
-            locale: .current
-        )
-        guard
-            !customSearchProviders.contains(where: {
-                $0.id != provider.id
-                    && $0.name.folding(
-                        options: [.caseInsensitive, .diacriticInsensitive],
-                        locale: .current
-                    ) == comparableName
-            })
-        else {
-            throw BrowserCustomSearchProviderError.duplicateName
-        }
-        if let index = customSearchProviders.firstIndex(where: { $0.id == provider.id }) {
-            customSearchProviders[index] = provider
-        } else {
-            guard customSearchProviders.count < 32 else {
-                throw BrowserCustomSearchProviderError.tooManyProviders
-            }
-            customSearchProviders.append(provider)
-        }
-    }
-
-    mutating func removeCustomSearchProvider(id: UUID) {
-        customSearchProviders.removeAll { $0.id == id }
-        if selectedSearchProviderID == .custom(id) {
-            selectedSearchProviderID = .google
-        }
-    }
 
     private enum CodingKeys: String, CodingKey {
         case searchProvider
@@ -137,7 +96,15 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
                 BrowserSpaceDataRetentionPreferences.self,
                 forKey: .dataRetention
             ) ?? .default
-        if !availableSearchProviders.contains(where: { $0.id == selectedSearchProviderID }) {
+        // Stored engines that no longer validate, including ones synced from
+        // elsewhere, are dropped by the core's restore rule and never offered.
+        if !customSearchProviders.isEmpty,
+            let restored = BrowserCorePolicy.restoredCustomSearchProviders(
+                customSearchProviders, selectedID: selectedSearchProviderID)
+        {
+            customSearchProviders = restored.providers
+            selectedSearchProviderID = restored.selectedID
+        } else if !availableSearchProviders.contains(where: { $0.id == selectedSearchProviderID }) {
             selectedSearchProviderID = .google
         }
     }
@@ -150,10 +117,7 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
             : selectedSearchProviderID.rawValue
         try container.encode(legacyFallback, forKey: .searchProvider)
         try container.encode(selectedSearchProviderID, forKey: .selectedSearchProviderID)
-        try container.encode(
-            customSearchProviders.filter { $0.validatedProvider != nil },
-            forKey: .customSearchProviders
-        )
+        try container.encode(customSearchProviders, forKey: .customSearchProviders)
         try container.encode(searchSuggestionsEnabled, forKey: .searchSuggestionsEnabled)
         try container.encode(currentTabCleanupPolicy, forKey: .currentTabCleanupPolicy)
         try container.encode(contentBlockingPolicy, forKey: .contentBlockingPolicy)

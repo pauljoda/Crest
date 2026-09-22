@@ -25,6 +25,9 @@ public static partial class NativePolicyEvaluator {
         if (request.GetProperty("version").GetInt32() != 1) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
         var operation = PolicyOperationCodes.Parse(Protocol.Text(request, "operation"));
         if (EvaluateDownloads(operation, request) is { } download) return Encode(download);
+        if (EvaluateCredentials(operation, request) is { } credential) return Encode(credential);
+        if (EvaluateSearch(operation, request) is { } search) return Encode(search);
+        if (EvaluateTranslation(operation, request) is { } translation) return Encode(translation);
         if (operation is PolicyOperation.NavigationLink or PolicyOperation.NavigationModifiedLink) {
             bool peek, newTab;
             if (operation == PolicyOperation.NavigationModifiedLink) {
@@ -146,18 +149,7 @@ public static partial class NativePolicyEvaluator {
                 }
             });
         }
-        Protocol.Members(request, "version", "operation", "input", "searchTemplate", "allowsInternalPages");
-        if (operation != PolicyOperation.AddressIntent) throw new ProtocolException(ProtocolErrorCodes.UnknownPolicy);
-        // An empty address is a successful no-navigation decision.
-        var input = request.GetProperty("input").GetString() ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-        var template = Protocol.Text(request, "searchTemplate", 2048);
-        var provider = SearchProvider.Custom(Guid.Parse("00000000-0000-0000-0000-000000000001"), "Native provider", template, null);
-        bool allowsInternalPages = request.TryGetProperty("allowsInternalPages", out var internalPages) && internalPages.GetBoolean();
-        var intent = AddressResolution.Resolve(input, provider, allowsInternalPages);
-        return Encode(new JsonObject {
-            ["url"] = intent?.Url,
-            ["searchQuery"] = intent?.SearchQuery
-        });
+        throw new ProtocolException(ProtocolErrorCodes.UnknownPolicy);
     }
 
     private static byte[] Encode(JsonObject value) => Encoding.UTF8.GetBytes(value.ToJsonString());

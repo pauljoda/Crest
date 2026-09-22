@@ -59,6 +59,9 @@ enum BrowserSearchProviderID: Codable, Equatable, Hashable, Sendable {
     }
 }
 
+/// A search engine as the UI shows it. The portable core owns the built-in
+/// catalog, template validation and query construction; this projection keeps
+/// the title and icon source, plus a custom engine's stored templates.
 struct BrowserSearchProvider: Equatable, Hashable, Identifiable, Sendable {
     enum BuiltIn: String, CaseIterable, Sendable {
         case google
@@ -71,51 +74,28 @@ struct BrowserSearchProvider: Equatable, Hashable, Identifiable, Sendable {
     let id: BrowserSearchProviderID
     let title: String
     let builtIn: BuiltIn?
-    private let searchURLTemplate: String
-    private let suggestionURLTemplate: String?
-    var coreSearchURLTemplate: String { searchURLTemplate }
+    /// A custom engine's stored templates; nil for built-ins, whose templates
+    /// live in the core catalog.
+    let customSearchURLTemplate: String?
+    let customSuggestionURLTemplate: String?
 
-    static let google = builtIn(
-        .google,
-        title: "Google",
-        search: "https://www.google.com/search?q=%s",
-        suggestions: "https://www.google.com/complete/search?client=chrome&q=%s"
-    )
-    static let duckDuckGo = builtIn(
-        .duckDuckGo,
-        title: "DuckDuckGo",
-        search: "https://duckduckgo.com/?q=%s",
-        suggestions: "https://duckduckgo.com/ac/?q=%s&type=list"
-    )
-    static let bing = builtIn(
-        .bing,
-        title: "Bing",
-        search: "https://www.bing.com/search?q=%s",
-        suggestions: "https://www.bing.com/osjson.aspx?query=%s"
-    )
-    static let ecosia = builtIn(
-        .ecosia,
-        title: "Ecosia",
-        search: "https://www.ecosia.org/search?q=%s",
-        suggestions: "https://ac.ecosia.org/autocomplete?q=%s&type=list"
-    )
-    static let brave = builtIn(
-        .brave,
-        title: "Brave Search",
-        search: "https://search.brave.com/search?q=%s",
-        suggestions: "https://search.brave.com/api/suggest?q=%s"
-    )
+    static let google = BrowserSearchProvider(builtIn: .google, title: "Google")
+    static let duckDuckGo = BrowserSearchProvider(builtIn: .duckDuckGo, title: "DuckDuckGo")
+    static let bing = BrowserSearchProvider(builtIn: .bing, title: "Bing")
+    static let ecosia = BrowserSearchProvider(builtIn: .ecosia, title: "Ecosia")
+    static let brave = BrowserSearchProvider(builtIn: .brave, title: "Brave Search")
 
     static let allCases: [BrowserSearchProvider] = [
         .google, .duckDuckGo, .bing, .ecosia, .brave,
     ]
 
+    /// The website a custom engine's favicon is loaded from.
     var iconPageURL: URL? {
-        guard builtIn == nil else { return nil }
+        guard builtIn == nil, let template = customSearchURLTemplate else { return nil }
         guard
             let components = URLComponents(
                 string:
-                    searchURLTemplate
+                    template
                     .replacingOccurrences(of: "{searchTerms}", with: "crest")
                     .replacingOccurrences(of: "%s", with: "crest")
             )
@@ -129,88 +109,36 @@ struct BrowserSearchProvider: Equatable, Hashable, Identifiable, Sendable {
     }
 
     func searchURL(for query: String) -> URL? {
-        Self.render(searchURLTemplate, query: query)
+        BrowserCorePolicy.searchURL(provider: self, query: query, purpose: .search)
     }
 
     func suggestionURL(for query: String) -> URL? {
-        suggestionURLTemplate.flatMap { Self.render($0, query: query) }
+        BrowserCorePolicy.searchURL(provider: self, query: query, purpose: .suggestions)
     }
 
     static func provider(with id: BrowserSearchProviderID) -> BrowserSearchProvider? {
         allCases.first { $0.id == id }
     }
 
-    private init(
-        id: BrowserSearchProviderID,
-        title: String,
-        builtIn: BuiltIn?,
-        searchURLTemplate: String,
-        suggestionURLTemplate: String?
-    ) {
-        self.id = id
+    fileprivate init(custom: BrowserCustomSearchProvider) {
+        id = .custom(custom.id)
+        title = custom.name
+        builtIn = nil
+        customSearchURLTemplate = custom.searchURLTemplate
+        customSuggestionURLTemplate = custom.suggestionURLTemplate
+    }
+
+    private init(builtIn: BuiltIn, title: String) {
+        id = BrowserSearchProviderID(rawValue: builtIn.rawValue) ?? .google
         self.title = title
         self.builtIn = builtIn
-        self.searchURLTemplate = searchURLTemplate
-        self.suggestionURLTemplate = suggestionURLTemplate
-    }
-
-    fileprivate init?(custom: BrowserCustomSearchProvider) {
-        guard
-            let name = try? BrowserSearchProviderTemplateValidator.validatedName(custom.name),
-            let search = try? BrowserSearchProviderTemplateValidator.validatedTemplate(
-                custom.searchURLTemplate
-            )
-        else { return nil }
-
-        let suggestions: String?
-        if let raw = custom.suggestionURLTemplate {
-            guard
-                let validated = try? BrowserSearchProviderTemplateValidator.validatedTemplate(raw)
-            else { return nil }
-            suggestions = validated
-        } else {
-            suggestions = nil
-        }
-
-        id = .custom(custom.id)
-        title = name
-        builtIn = nil
-        searchURLTemplate = search
-        suggestionURLTemplate = suggestions
-    }
-
-    private static func builtIn(
-        _ builtIn: BuiltIn,
-        title: String,
-        search: String,
-        suggestions: String
-    ) -> BrowserSearchProvider {
-        let id = BrowserSearchProviderID(rawValue: builtIn.rawValue) ?? .google
-        return BrowserSearchProvider(
-            id: id,
-            title: title,
-            builtIn: builtIn,
-            searchURLTemplate: search,
-            suggestionURLTemplate: suggestions
-        )
-    }
-
-    private static func render(_ template: String, query: String) -> URL? {
-        let encoded = query.addingPercentEncoding(
-            withAllowedCharacters: CharacterSet(
-                charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
-            )
-        )
-        guard let encoded else { return nil }
-        return URL(
-            string:
-                template
-                .replacingOccurrences(of: "{searchTerms}", with: encoded)
-                .replacingOccurrences(of: "%s", with: encoded)
-        )
+        customSearchURLTemplate = nil
+        customSuggestionURLTemplate = nil
     }
 }
 
+/// A Space's custom search engine as persisted and synced. The core validates
+/// it when it is saved and again before any of its templates is used.
 struct BrowserCustomSearchProvider: Codable, Equatable, Identifiable, Sendable {
     let id: UUID
     let name: String
@@ -222,44 +150,32 @@ struct BrowserCustomSearchProvider: Codable, Equatable, Identifiable, Sendable {
         name: String,
         searchURLTemplate: String,
         suggestionURLTemplate: String? = nil
-    ) throws {
+    ) {
         self.id = id
-        self.name = try BrowserSearchProviderTemplateValidator.validatedName(name)
-        self.searchURLTemplate = try BrowserSearchProviderTemplateValidator.validatedTemplate(
-            searchURLTemplate
-        )
-        let suggestions = suggestionURLTemplate?.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        self.suggestionURLTemplate = try suggestions.flatMap {
-            $0.isEmpty ? nil : try BrowserSearchProviderTemplateValidator.validatedTemplate($0)
-        }
+        self.name = name
+        self.searchURLTemplate = searchURLTemplate
+        self.suggestionURLTemplate = suggestionURLTemplate
     }
 
-    var provider: BrowserSearchProvider {
-        BrowserSearchProvider(custom: self) ?? .google
-    }
-
-    var validatedProvider: BrowserSearchProvider? {
-        BrowserSearchProvider(custom: self)
-    }
+    var provider: BrowserSearchProvider { BrowserSearchProvider(custom: self) }
 }
 
-enum BrowserCustomSearchProviderError: LocalizedError, Equatable {
-    case emptyName
-    case nameTooLong
-    case templateTooLong
-    case missingPlaceholder
-    case ambiguousPlaceholder
-    case invalidURL
-    case requiresHTTPS
-    case unsafeHost
-    case unsupportedPort
-    case credentialsNotAllowed
-    case fragmentPlaceholderNotAllowed
-    case secretNotAllowed
-    case duplicateName
-    case tooManyProviders
+/// The core's custom-engine rule codes, with the explanation the editor shows.
+enum BrowserCustomSearchProviderError: String, LocalizedError, Equatable {
+    case emptyName = "invalid_search_name"
+    case nameTooLong = "search_name_too_long"
+    case templateTooLong = "search_template_too_long"
+    case missingPlaceholder = "search_placeholder_missing"
+    case ambiguousPlaceholder = "invalid_search_placeholder"
+    case invalidURL = "invalid_search_template"
+    case requiresHTTPS = "search_template_requires_https"
+    case unsafeHost = "unsafe_search_template"
+    case unsupportedPort = "search_template_port"
+    case credentialsNotAllowed = "search_template_credentials"
+    case fragmentPlaceholderNotAllowed = "search_placeholder_in_fragment"
+    case secretNotAllowed = "search_template_contains_secret"
+    case duplicateName = "duplicate_search_name"
+    case tooManyProviders = "search_provider_limit"
 
     var errorDescription: String? {
         switch self {
@@ -304,113 +220,6 @@ enum BrowserCustomSearchProviderError: LocalizedError, Equatable {
             String(localized: "A custom search engine already uses this name.")
         case .tooManyProviders:
             String(localized: "A Space can contain up to 32 custom search engines.")
-        }
-    }
-}
-
-private enum BrowserSearchProviderTemplateValidator {
-    static func validatedName(_ value: String) throws -> String {
-        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { throw BrowserCustomSearchProviderError.emptyName }
-        guard value.count <= 64 else { throw BrowserCustomSearchProviderError.nameTooLong }
-        return value
-    }
-
-    static func validatedTemplate(_ rawValue: String) throws -> String {
-        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard value.count <= 2_048 else {
-            throw BrowserCustomSearchProviderError.templateTooLong
-        }
-
-        let percentCount = value.components(separatedBy: "%s").count - 1
-        let openSearchCount = value.components(separatedBy: "{searchTerms}").count - 1
-        let placeholderCount = percentCount + openSearchCount
-        guard placeholderCount > 0 else {
-            throw BrowserCustomSearchProviderError.missingPlaceholder
-        }
-        guard placeholderCount == 1 else {
-            throw BrowserCustomSearchProviderError.ambiguousPlaceholder
-        }
-        try validatePercentEscapes(in: value)
-
-        let probe =
-            value
-            .replacingOccurrences(of: "%s", with: "crest-template-probe")
-            .replacingOccurrences(of: "{searchTerms}", with: "crest-template-probe")
-        guard let components = URLComponents(string: probe), components.url != nil else {
-            throw BrowserCustomSearchProviderError.invalidURL
-        }
-        guard components.scheme?.lowercased() == "https" else {
-            throw BrowserCustomSearchProviderError.requiresHTTPS
-        }
-        guard components.user == nil, components.password == nil else {
-            throw BrowserCustomSearchProviderError.credentialsNotAllowed
-        }
-        guard components.port == nil || components.port == 443 else {
-            throw BrowserCustomSearchProviderError.unsupportedPort
-        }
-        guard
-            let host = components.host?.lowercased(),
-            !host.contains("crest-template-probe"),
-            isPublicHost(host)
-        else {
-            throw BrowserCustomSearchProviderError.unsafeHost
-        }
-
-        if let fragment = value.split(separator: "#", maxSplits: 1).dropFirst().first,
-            fragment.contains("%s") || fragment.contains("{searchTerms}")
-        {
-            throw BrowserCustomSearchProviderError.fragmentPlaceholderNotAllowed
-        }
-
-        let secretNames: Set<String> = [
-            "token", "key", "apikey", "api_key", "access_token", "password",
-            "credential", "credentials", "auth", "authorization",
-        ]
-        if components.queryItems?.contains(where: {
-            secretNames.contains($0.name.lowercased())
-        }) == true {
-            throw BrowserCustomSearchProviderError.secretNotAllowed
-        }
-        return value
-    }
-
-    private static func isPublicHost(_ host: String) -> Bool {
-        guard host.contains("."), !host.hasSuffix(".local") else { return false }
-        guard host != "localhost", !host.hasSuffix(".localhost") else { return false }
-        guard !host.contains(":") else { return false }
-        let pieces = host.split(separator: ".")
-        if pieces.count == 4, pieces.allSatisfy({ Int($0) != nil }) { return false }
-        return true
-    }
-
-    private static func validatePercentEscapes(in value: String) throws {
-        let scalars = Array(value.unicodeScalars)
-        var index = 0
-        while index < scalars.count {
-            guard scalars[index] == "%" else {
-                index += 1
-                continue
-            }
-            if index + 1 < scalars.count, scalars[index + 1] == "s" {
-                index += 2
-                continue
-            }
-            guard
-                index + 2 < scalars.count,
-                isHexadecimal(scalars[index + 1]),
-                isHexadecimal(scalars[index + 2])
-            else {
-                throw BrowserCustomSearchProviderError.invalidURL
-            }
-            index += 3
-        }
-    }
-
-    private static func isHexadecimal(_ scalar: Unicode.Scalar) -> Bool {
-        switch scalar.value {
-        case 48...57, 65...70, 97...102: true
-        default: false
         }
     }
 }

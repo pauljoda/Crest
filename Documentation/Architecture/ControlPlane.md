@@ -531,7 +531,7 @@ and `BrowserWindow` aggregates have been removed. Their former rules now belong 
 | Session, window, Space, tab, folder and split editing | `NativeSessionAuthority` commands and `BrowserTabCollection` |
 | Value-only Space edits | `NativeSessionEditor` behind `crest_core_edit_session` |
 | History, archive and retention sweeps | `NativeSessionMaintenance`, `NativeSessionAuthority.Records` and `crest_core_evaluate_policy` |
-| Address, search and link decisions | `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
+| Address, search and link decisions | `SearchProviderCatalog`, `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
 | Space locking and device authentication | `SpaceAccessAuthority` behind `crest_access_*` |
 | Cross-workspace transfer and borrowed workspaces | `NativeTabTransfer` and `NativeSessionAuthority.Borrowing`/`Transfer` |
 | Sync projection, ordering, conflict and deletion | `NativeSyncAuthority` and the `crest_sync_*` entry points |
@@ -549,6 +549,24 @@ retention expiry, and policy operations answer progress and ETA, risk reasons
 and the automatic-download throttle. `BrowserDownloadCenter` forwards engine
 download events, owns files, prompts and notices, and renders the ledger's
 projection. The ledger is not persisted.
+Credentials follow the same split. Policy operations decide what a form
+observation means (fill offer, save candidate, save prompt, username hint), which
+fill a field accepts, whether a candidate is still valid, which saved record is
+the most recent for an account, and whether a save creates, updates or leaves a
+record unchanged, as well as passkey access and system-password write-through.
+They receive origins, dates, record identities and presence flags; passwords
+never cross the boundary. The platform compares a candidate with the matched
+record's stored secret and passes only the answer. The strong-password
+operation returns a recipe, and the native layer draws the password from the
+system's secure random source. Keychain storage, secrets and prompts stay
+native; without a core answer nothing is captured, saved or filled.
+
+Search follows the same split: the core's `SearchProviderCatalog` holds the
+built-in engines and their templates, `SearchProvider` validates custom templates
+and builds every results and suggestion URL, and custom-engine saves and removals
+are Space commands that rewrite only the search fields of the stored preferences.
+Swift keeps engine titles, icons and the editor's explanations. Automatic
+translation rules are policy operations over the persisted rule set.
 The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.

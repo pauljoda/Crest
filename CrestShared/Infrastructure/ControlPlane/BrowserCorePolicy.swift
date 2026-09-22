@@ -45,7 +45,7 @@ enum BrowserCorePolicy {
         guard let response = evaluate([
             "version": 1, "operation": "address.intent", "input": input,
             "allowsInternalPages": allowsInternalPages,
-            "searchTemplate": provider.coreSearchURLTemplate
+            "searchProvider": provider.coreDescriptor
         ]), let text = response["url"] as? String, let url = URL(string: text) else { return nil }
         if let query = response["searchQuery"] as? String { return .search(query: query, provider: provider, url: url) }
         return .open(url)
@@ -219,7 +219,9 @@ enum BrowserCorePolicy {
             let progress = (response["progress"] as? NSNumber)?.doubleValue else { return nil }
         return (next, BrowserDownloadTransferUpdate(telemetry: telemetry, progress: progress))
     }
-    private static func evaluate(_ request: [String: Any]) -> [String: Any]? {
+    /// One bounded policy call. Nil when the core rejects the request or cannot
+    /// answer; every caller maps that to its own fail-safe outcome.
+    static func evaluate(_ request: [String: Any]) -> [String: Any]? {
         guard let data = try? JSONSerialization.data(withJSONObject: request) else { return nil }
         var length = 0
         let measured = data.withUnsafeBytes {

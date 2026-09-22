@@ -43,7 +43,7 @@ static void downloads_boundary(void) {
     assert(crest_downloads_apply(ledger, (const uint8_t*)begin, strlen(begin), &length) == CREST_INVALID_HANDLE);
 }
 static void policy_boundary(void) {
-    const char *request = "{\"version\":1,\"operation\":\"address.intent\",\"input\":\"localhost:8767/profile\",\"searchTemplate\":\"https://duckduckgo.com/?q=%s\"}";
+    const char *request = "{\"version\":1,\"operation\":\"address.intent\",\"input\":\"localhost:8767/profile\",\"searchProvider\":{\"id\":\"duckDuckGo\"}}";
     size_t length = 0;
     assert(crest_core_evaluate_policy(NULL, 0, NULL, 0, &length) == CREST_INVALID_ARGUMENT);
     assert(crest_core_evaluate_policy((const uint8_t*)request, strlen(request), NULL, 0, &length) == CREST_BUFFER_TOO_SMALL);
@@ -55,9 +55,29 @@ static void policy_boundary(void) {
     assert(crest_core_evaluate_policy((const uint8_t*)request, strlen(request), output, 256, &length) == CREST_OK);
     assert(output[length] == 0xa5); output[length] = 0;
     assert(strstr((const char*)output, "http://localhost:8767/profile"));
+    /* Search URLs are built by the core catalog, identical for every engine. */
+    const char *search = "{\"version\":1,\"operation\":\"search.url\",\"searchProvider\":{\"id\":\"google\"},"
+        "\"query\":\"a+b & c#d\",\"purpose\":\"search\"}";
+    assert(crest_core_evaluate_policy((const uint8_t*)search, strlen(search), output, 256, &length) == CREST_OK);
+    output[length] = 0;
+    assert(strstr((const char*)output, "https://www.google.com/search?q=a%2Bb%20%26%20c%23d"));
+    const char *translation = "{\"version\":1,\"operation\":\"translation.rule\",\"sourceID\":\"zh-TW\","
+        "\"rules\":{\"sources\":{\"zh-Hant\":{\"targetID\":\"en\",\"isEnabled\":true}}}}";
+    assert(crest_core_evaluate_policy((const uint8_t*)translation, strlen(translation), output, 256, &length) == CREST_OK);
+    output[length] = 0;
+    assert(strstr((const char*)output, "\"target\":\"en\""));
     const uint8_t invalid[] = { 0xff };
     assert(crest_core_evaluate_policy(invalid, sizeof(invalid), output, 256, &length) == CREST_INVALID_MESSAGE);
     assert(length == 0);
+    /* Credential decisions answer from metadata; a request carrying a secret is rejected. */
+    const char *plan = "{\"version\":1,\"operation\":\"credentials.save_plan\",\"matchID\":\"55555555-5555-5555-5555-555555555555\","
+        "\"stored\":{\"id\":\"55555555-5555-5555-5555-555555555555\",\"passwordMatches\":true}}";
+    assert(crest_core_evaluate_policy((const uint8_t*)plan, strlen(plan), output, 256, &length) == CREST_OK);
+    output[length] = 0;
+    assert(strstr((const char*)output, "\"plan\":\"alreadyStored\"") && strstr((const char*)output, "\"requiresConfirmation\":false"));
+    const char *secret = "{\"version\":1,\"operation\":\"credentials.save_plan\",\"matchID\":null,"
+        "\"stored\":null,\"password\":\"hunter2\"}";
+    assert(crest_core_evaluate_policy((const uint8_t*)secret, strlen(secret), output, 256, &length) == CREST_INVALID_MESSAGE);
 }
 static const char* space_id = "44444444-4444-4444-4444-444444444444";
 static const char* profile_id = "55555555-5555-5555-5555-555555555555";

@@ -11,4 +11,6 @@ enum CredentialVaultError: Error, Equatable, Sendable {
     case malformedStoredCredential
     case atomicReplacementRestoreFailed
     case preferenceUpdateFailed
+    /// The portable core could not answer a save decision. Nothing is saved.
+    case saveDecisionUnavailable
 }

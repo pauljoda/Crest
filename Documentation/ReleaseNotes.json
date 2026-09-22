@@ -1997,6 +1997,14 @@
     "extension-side-panel-api-open": {
       "category": "fixed",
       "message": "Extensions that open their side panel themselves, such as ChatGPT, now open it on the first click in the desktop browser."
+    },
+    "core-credentials-aggregate": {
+      "category": "internal",
+      "message": "Move credential capture, fill, save-plan and recency rules and passkey policies into the portable core, keeping passwords out of it."
+    },
+    "core-search-aggregate": {
+      "category": "internal",
+      "message": "Move the search engine catalog, search URL construction, custom search engine edits and automatic translation rules into the portable core."
     }
   }
 }

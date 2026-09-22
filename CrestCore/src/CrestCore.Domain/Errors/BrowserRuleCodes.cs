@@ -12,9 +12,11 @@ public static class BrowserRuleCodes {
     public const string BorrowedProfileRequiresOwner = "borrowed_profile_requires_owner";
     public const string BorrowedSourceRequired = "borrowed_source_required";
     public const string CannotDeleteLastSpace = "cannot_delete_last_space";
+    public const string CredentialRecordLimit = "credential_record_limit";
     public const string DeletionRequiresCommand = "deletion_requires_command";
     public const string DifferentProfileOwner = "different_profile_owner";
     public const string DownloadLedgerLimit = "download_ledger_limit";
+    public const string DuplicateCredential = "duplicate_credential";
     public const string DuplicateDownload = "duplicate_download";
     public const string DuplicateFolder = "duplicate_folder";
     public const string DuplicatePersistedIdentity = "duplicate_persisted_identity";
@@ -34,6 +36,9 @@ public static class BrowserRuleCodes {
     public const string InvalidAccessPolicy = "invalid_access_policy";
     public const string InvalidAddress = "invalid_address";
     public const string InvalidContentBlockingPolicy = "invalid_content_blocking_policy";
+    public const string InvalidCredentialDate = "invalid_credential_date";
+    public const string InvalidCredentialOrigin = "invalid_credential_origin";
+    public const string InvalidCredentialRecord = "invalid_credential_record";
     public const string InvalidDate = "invalid_date";
     public const string InvalidDeletionIntent = "invalid_deletion_intent";
     public const string InvalidDestination = "invalid_destination";
@@ -55,6 +60,7 @@ public static class BrowserRuleCodes {
     public const string InvalidNativeKind = "invalid_native_kind";
     public const string InvalidNewSpace = "invalid_new_space";
     public const string InvalidPageCount = "invalid_page_count";
+    public const string InvalidPasswordLength = "invalid_password_length";
     public const string InvalidPlacement = "invalid_placement";
     public const string InvalidPresentedCandidate = "invalid_presented_candidate";
     public const string InvalidRecordDate = "invalid_record_date";
@@ -113,8 +119,15 @@ public static class BrowserRuleCodes {
     public const string SameCollectionTransfer = "same_collection_transfer";
     public const string SameSessionTransfer = "same_session_transfer";
     public const string SameSpaceTransfer = "same_space_transfer";
+    public const string SearchNameTooLong = "search_name_too_long";
+    public const string SearchPlaceholderInFragment = "search_placeholder_in_fragment";
+    public const string SearchPlaceholderMissing = "search_placeholder_missing";
     public const string SearchProviderLimit = "search_provider_limit";
     public const string SearchTemplateContainsSecret = "search_template_contains_secret";
+    public const string SearchTemplateCredentials = "search_template_credentials";
+    public const string SearchTemplatePort = "search_template_port";
+    public const string SearchTemplateRequiresHttps = "search_template_requires_https";
+    public const string SearchTemplateTooLong = "search_template_too_long";
     public const string SessionEditLimit = "session_edit_limit";
     public const string SessionReleased = "session_released";
     public const string SessionSizeLimit = "session_size_limit";
@@ -127,6 +140,7 @@ public static class BrowserRuleCodes {
     public const string SplitLimit = "split_limit";
     public const string StaleAuthentication = "stale_authentication";
     public const string StaleBorrowedSource = "stale_borrowed_source";
+    public const string StaleCredentialComparison = "stale_credential_comparison";
     public const string StaleSelection = "stale_selection";
     public const string StaleSessionRevision = "stale_session_revision";
     public const string SyncClockExhausted = "sync_clock_exhausted";
@@ -140,6 +154,7 @@ public static class BrowserRuleCodes {
     public const string TransientAlreadyCompleted = "transient_already_completed";
     public const string TransientRequiresCommand = "transient_requires_command";
     public const string TransientSpaceLocked = "transient_space_locked";
+    public const string TranslationRuleLimit = "translation_rule_limit";
     public const string UnknownArchive = "unknown_archive";
     public const string UnknownArchivedTab = "unknown_archived_tab";
     public const string UnknownCurrentTab = "unknown_current_tab";

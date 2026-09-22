@@ -13,7 +13,7 @@ enum BrowserSystemPasswordWriteThroughSystem {
     static func availability(
         for launchEnvironment: BrowserLaunchEnvironment
     ) -> BrowserSystemPasswordWriteThroughAvailability {
-        BrowserSystemPasswordWriteThroughPolicy.availability(
+        BrowserCorePolicy.systemPasswordWriteThroughAvailability(
             isMobilePlatform: true,
             supportsSystemAPI: supportsSystemAPI,
             hasManagedBrowserCapability: hasManagedBrowserCapability,

@@ -467,19 +467,18 @@ final class BrowserSyncTests: XCTestCase {
 
     func testSpaceBrowsingPreferencesProjectAndMaterializeWithTheSpaceRecord() throws {
         var session = oneSpaceSession()
-        var preferences = BrowserSpaceBrowsingPreferences(
-            searchProvider: .brave,
-            currentTabCleanupPolicy: .after7Days
-        )
-        let custom = try BrowserCustomSearchProvider(
+        let custom = BrowserCustomSearchProvider(
             id: fixedUUID(211),
             name: "Kagi",
             searchURLTemplate: "https://kagi.com/search?q=%s",
             suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"
         )
-        try preferences.upsertCustomSearchProvider(custom)
-        preferences.searchProvider = custom.provider
-        preferences.searchSuggestionsEnabled = true
+        let preferences = BrowserSpaceBrowsingPreferences(
+            searchProvider: custom.provider,
+            currentTabCleanupPolicy: .after7Days,
+            customSearchProviders: [custom],
+            searchSuggestionsEnabled: true
+        )
         session.spaces[0].browsingPreferences = preferences
         var journal = BrowserSyncJournal(deviceID: fixedUUID(210))
 

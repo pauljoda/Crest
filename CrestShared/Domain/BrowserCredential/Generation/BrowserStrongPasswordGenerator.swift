@@ -2,36 +2,28 @@ import Foundation
 
 /// Produces a high-entropy ASCII password without storing or logging it.
 ///
-/// The four explicit groups guarantee common website requirements. Characters
-/// that are frequently confused in proportional fonts are intentionally absent.
+/// The portable core owns the recipe: the length and the character groups.
+/// The password is drawn here from the system's secure random source, so the
+/// secret never leaves the native layer that saves and fills it. One character
+/// comes from every group, the rest from all groups, then the order is shuffled.
 enum BrowserStrongPasswordGenerator {
-    static let defaultLength = 20
-    static let supportedLengths = 16...64
-
-    private static let lowercase = Array("abcdefghijkmnopqrstuvwxyz")
-    private static let uppercase = Array("ABCDEFGHJKLMNPQRSTUVWXYZ")
-    private static let digits = Array("23456789")
-    private static let symbols = Array("-_.!@#$%^&*+=")
-    private static let groups = [lowercase, uppercase, digits, symbols]
-    private static let allCharacters = groups.flatMap { $0 }
-
-    static func generate(length: Int = defaultLength) throws -> String {
+    static func generate(length: Int? = nil) throws -> String {
         var generator = SystemRandomNumberGenerator()
         return try generate(length: length, using: &generator)
     }
 
     static func generate<Generator: RandomNumberGenerator>(
-        length: Int = defaultLength,
+        length: Int? = nil,
         using generator: inout Generator
     ) throws -> String {
-        guard supportedLengths.contains(length) else {
-            throw BrowserStrongPasswordGenerationError.invalidLength
+        guard let recipe = BrowserCorePolicy.strongPasswordRecipe(length: length) else {
+            throw BrowserStrongPasswordGenerationError.unavailable
         }
-
-        var password = groups.map { characters in
+        let allCharacters = recipe.groups.flatMap { $0 }
+        var password = recipe.groups.map { characters in
             characters[Int.random(in: characters.indices, using: &generator)]
         }
-        while password.count < length {
+        while password.count < recipe.length {
             password.append(
                 allCharacters[Int.random(in: allCharacters.indices, using: &generator)]
             )

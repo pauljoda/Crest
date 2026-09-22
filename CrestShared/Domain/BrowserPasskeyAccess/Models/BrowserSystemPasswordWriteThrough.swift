@@ -1,4 +1,4 @@
-enum BrowserSystemPasswordWriteThroughAvailability: Equatable, Sendable {
+enum BrowserSystemPasswordWriteThroughAvailability: String, Equatable, Sendable {
     case available
     case unsupportedPlatform
     case isolatedLaunch

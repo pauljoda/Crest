@@ -1,5 +1,6 @@
 import Foundation
 
 enum BrowserStrongPasswordGenerationError: Error, Equatable, Sendable {
-    case invalidLength
+    /// The core rejected the requested length or could not supply a recipe.
+    case unavailable
 }

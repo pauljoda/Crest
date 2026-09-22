@@ -565,7 +565,7 @@ struct BrowserCredentialImportPlan:
             for record in sortedRecords where !candidates.contains(where: { $0.password == record.password }) {
                 candidates.append(record)
             }
-            let existing = existingByID[id]?.max(by: Self.isLessRecent)
+            let existing = existingByID[id].flatMap(Self.mostRecent)
             let onlyCandidateMatchesExisting =
                 candidates.count == 1
                 && candidates.first?.password == existing?.password
@@ -720,13 +720,13 @@ struct BrowserCredentialImportPlan:
         )
     }
 
-    private static func isLessRecent(
-        _ lhs: BrowserCredential,
-        _ rhs: BrowserCredential
-    ) -> Bool {
-        BrowserCredentialRecencyPolicy.isLessRecent(
-            lhs.descriptor,
-            rhs.descriptor
-        )
+    /// The core names the most recent stored credential for the account. If it
+    /// cannot answer, any stored credential still counts as existing, so the
+    /// import never treats a stored account as new.
+    private static func mostRecent(_ credentials: [BrowserCredential]) -> BrowserCredential? {
+        guard let descriptor = try? BrowserCorePolicy.mostRecentCredential(credentials.map(\.descriptor)) else {
+            return credentials.first
+        }
+        return credentials.first { $0.descriptor.id == descriptor.id }
     }
 }

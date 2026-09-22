@@ -96,11 +96,8 @@ extension BrowserStore {
             matching: protectionSpace,
             in: spaceID
         )
-        guard
-            let descriptor = descriptors.max(
-                by: BrowserCredentialRecencyPolicy.isLessRecent
-            )
-        else {
+        // Without a recency answer from the core, nothing is filled.
+        guard let descriptor = try? BrowserCorePolicy.mostRecentCredential(descriptors) else {
             return nil
         }
         return try await credentialVault.credential(id: descriptor.id, in: spaceID)
@@ -161,6 +158,9 @@ extension BrowserStore {
 // MARK: - Saving
 
 extension BrowserStore {
+    /// The core matches the account and plans the save from descriptors
+    /// alone. The stored password is compared here and only the answer is
+    /// passed on. A core that cannot answer fails the plan: nothing is saved.
     func credentialSavePlan(
         for candidate: BrowserCredentialSaveCandidate,
         in spaceID: SpaceID,
@@ -172,28 +172,29 @@ extension BrowserStore {
             in: spaceID
         )
         try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
-        let matchingDescriptors = descriptors.filter {
-            $0.username.caseInsensitiveCompare(candidate.username) == .orderedSame
-        }
-        guard
-            let descriptor = matchingDescriptors.max(
-                by: BrowserCredentialRecencyPolicy.isLessRecent
-            )
-        else {
-            return .create
-        }
-        guard
+        let descriptor = try BrowserCorePolicy.credentialSaveMatch(
+            username: candidate.username,
+            in: descriptors
+        )
+        var storedPasswordMatches: Bool?
+        if let descriptor {
             let credential = try await credentialVault.credential(
                 id: descriptor.id,
                 in: spaceID
             )
-        else {
-            return .create
+            try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
+            storedPasswordMatches = credential.map { $0.password == candidate.password }
         }
-        try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
-        return credential.password == candidate.password
-            ? .alreadyStored(descriptor)
-            : .update(descriptor)
+        let plan = try BrowserCorePolicy.credentialSavePlan(
+            match: descriptor?.id,
+            storedPasswordMatches: storedPasswordMatches
+        )
+        switch (plan, descriptor) {
+        case (.create, _): return .create
+        case (.update, let descriptor?): return .update(descriptor)
+        case (.alreadyStored, let descriptor?): return .alreadyStored(descriptor)
+        default: throw CredentialVaultError.saveDecisionUnavailable
+        }
     }
 
     func commitCredentialSave(
@@ -486,16 +487,11 @@ extension BrowserStore {
         guard space.credentialPreferences.isEnabled else {
             throw CredentialVaultError.credentialManagerDisabled
         }
-        guard
-            BrowserCredentialCapturePolicy.accepts(
-                frameOrigin: candidate.origin,
-                topLevelOrigin: candidate.topLevelOrigin
-            )
-        else {
-            throw CredentialVaultError.insecureOrigin
-        }
-        guard BrowserCredentialCapturePolicy.isCurrent(candidate, now: now) else {
-            throw CredentialVaultError.staleSaveCandidate
+        switch BrowserCorePolicy.credentialSaveValidity(for: candidate, now: now) {
+        case .accepted: return
+        case .insecureOrigin: throw CredentialVaultError.insecureOrigin
+        case .stale: throw CredentialVaultError.staleSaveCandidate
+        case nil: throw CredentialVaultError.saveDecisionUnavailable
         }
     }
 }

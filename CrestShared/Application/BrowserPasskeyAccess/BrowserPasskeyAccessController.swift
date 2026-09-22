@@ -76,7 +76,7 @@ final class BrowserPasskeyAccessController {
             return .managedCapabilityRequired
         }
 
-        return BrowserPasskeyAccessPolicy.status(
+        return BrowserCorePolicy.passkeyAccessStatus(
             hasManagedCapability: true,
             deviceConfiguration: deviceConfigurationCheck(),
             authorizationState: authorizationState ?? authorizationCheck()

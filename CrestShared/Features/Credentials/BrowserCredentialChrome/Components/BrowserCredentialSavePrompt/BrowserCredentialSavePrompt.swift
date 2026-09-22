@@ -53,7 +53,7 @@ struct BrowserCredentialSavePrompt: View {
     /// closure out of the port is the whole of that shell's answer.
     private var shouldOfferSystemPasswords: Bool {
         port.offerToSystemPasswords != nil
-            && BrowserSystemPasswordWriteThroughPolicy.shouldOffer(
+            && BrowserCorePolicy.offersSystemPasswordWriteThrough(
                 preferences: preferences,
                 availability:
                     BrowserSystemPasswordWriteThroughSystem.launchAvailability,

@@ -16,7 +16,7 @@ struct BrowserTranslationSettingsSection: View {
     private var sourceIDs: [String] {
         let installed = catalog.installedIDs
         let saved = rules.sources.keys.filter { saved in
-            !installed.contains { BrowserAutomaticTranslationRules.matches($0, saved) }
+            !BrowserAutomaticTranslationRules.matches(saved, in: installed).contains(true)
         }
         return (installed + saved).sorted {
             BrowserTranslationLanguageCatalog.name($0).localizedStandardCompare(
@@ -101,7 +101,9 @@ struct BrowserTranslationSettingsSection: View {
         let targets = catalog.targets(for: source)
         let saved = rules.rule(for: source)
         let preferred = Locale.preferredLanguages.first ?? "en"
-        let target = saved?.targetID ?? targets.first { BrowserAutomaticTranslationRules.matches($0, preferred) } ?? ""
+        let target =
+            saved?.targetID
+            ?? zip(targets, BrowserAutomaticTranslationRules.matches(preferred, in: targets)).first { $0.1 }?.0 ?? ""
         let enabled = saved?.isEnabled ?? false
         let available = targets.contains(target)
         return ViewThatFits(in: .horizontal) {

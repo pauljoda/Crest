@@ -10,6 +10,12 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed class NativePolicyTests {
+    private static JsonObject Kagi() => new() {
+        ["id"] = "custom:00000000-0000-0000-0000-000000000264",
+        ["name"] = "Kagi",
+        ["searchURLTemplate"] = "https://kagi.com/search?q=%s",
+        ["suggestionURLTemplate"] = null
+    };
     [Theory]
     [InlineData("apple.com", "https://apple.com", null)]
     [InlineData("localhost:3000", "http://localhost:3000", null)]
@@ -17,7 +23,7 @@ public sealed class NativePolicyTests {
     [InlineData("  Café + Swift/URL & WebKit  ", "https://kagi.com/search?q=Caf%C3%A9%20%2B%20Swift%2FURL%20%26%20WebKit", "Café + Swift/URL & WebKit")]
     [InlineData("   ", null, null)]
     public void ExistingAddressCallSitesKeepTheirIntentAndURLSpelling(string input, string? url, string? query) {
-        var bytes = Encoding.UTF8.GetBytes(new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = input, ["searchTemplate"] = "https://kagi.com/search?q=%s" }.ToJsonString());
+        var bytes = Encoding.UTF8.GetBytes(new JsonObject { ["version"] = 1, ["operation"] = "address.intent", ["input"] = input, ["searchProvider"] = Kagi() }.ToJsonString());
         var result = NativePolicyEvaluator.Evaluate(bytes);
         Assert.Equal(result, NativePolicyEvaluator.Evaluate(bytes));
         var values = JsonNode.Parse(result)!;
@@ -34,7 +40,7 @@ public sealed class NativePolicyTests {
             ["version"] = 1,
             ["operation"] = "address.intent",
             ["input"] = address,
-            ["searchTemplate"] = "https://kagi.com/search?q=%s"
+            ["searchProvider"] = Kagi()
         };
         var disabled = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         Assert.Equal(address, disabled["searchQuery"]!.GetValue<string>());
@@ -54,7 +60,7 @@ public sealed class NativePolicyTests {
             ["version"] = 1,
             ["operation"] = "address.intent",
             ["input"] = input,
-            ["searchTemplate"] = "https://kagi.com/search?q=%s"
+            ["searchProvider"] = Kagi()
         };
         var values = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         if (url is null) {
@@ -73,7 +79,7 @@ public sealed class NativePolicyTests {
             ["version"] = 1,
             ["operation"] = "address.intent",
             ["input"] = "~/Saved.webarchive",
-            ["searchTemplate"] = "https://kagi.com/search?q=%s"
+            ["searchProvider"] = Kagi()
         };
         var values = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
         var resolved = values["url"]!.GetValue<string>();

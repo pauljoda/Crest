@@ -193,7 +193,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
     }
 
     func testRemoteSuggestionsAreLimitedDeduplicatedAndUseTheOrdinaryProviderURLBuilder() throws {
-        let provider = try BrowserCustomSearchProvider(
+        let provider = BrowserCustomSearchProvider(
             name: "Kagi",
             searchURLTemplate: "https://kagi.com/search?q=%s",
             suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"

@@ -117,16 +117,7 @@ public sealed class LegacySessionDocument {
             }
             var selected = OptionalId(s["selectedTabID"]);
             var preferences = s["browsingPreferences"] as JsonObject;
-            var customProviders = new List<SearchProvider>();
-            foreach (var item in Array(preferences?["customSearchProviders"])) {
-                try {
-                    var custom = Object(item);
-                    customProviders.Add(SearchProvider.Custom(Id(custom["id"]), Text(custom["name"]) ?? "",
-                        Text(custom["searchURLTemplate"]) ?? "", Text(custom["suggestionURLTemplate"])));
-                } catch (BrowserRuleException) { /* Invalid legacy custom providers are excluded just as in Swift. */ }
-            }
-            var search = SearchPreferences.Restore(Text(preferences?["selectedSearchProviderID"]) ?? Text(preferences?["searchProvider"]),
-                customProviders, preferences?["searchSuggestionsEnabled"]?.GetValue<bool>() ?? false);
+            var search = SearchPreferencesDocument.Read(preferences);
             searchPreferences.Add(id, search);
             var retention = new RetentionPreferences(
                 ReadEnum(preferences?["currentTabCleanupPolicy"], CurrentTabCleanup.After12Hours, CurrentTabCleanup.Never),
@@ -218,16 +209,8 @@ public sealed class LegacySessionDocument {
             if (space.Search is { } search && searchPreferences.GetValueOrDefault(space.Id) != search) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
-                preferences["selectedSearchProviderID"] = search.SelectedId;
-                preferences["searchProvider"] = search.SelectedId.StartsWith("custom:", StringComparison.Ordinal) ? "google" : search.SelectedId;
-                preferences["searchSuggestionsEnabled"] = search.SuggestionsEnabled;
                 preferences["currentTabCleanupPolicy"] ??= "after12Hours";
-                preferences["customSearchProviders"] = new JsonArray(search.CustomProviders.Select(p => (JsonNode)new JsonObject {
-                    ["id"] = Guid.Parse(p.Id[7..]).ToString().ToUpperInvariant(),
-                    ["name"] = p.Name,
-                    ["searchURLTemplate"] = p.SearchTemplate,
-                    ["suggestionURLTemplate"] = p.SuggestionTemplate
-                }).ToArray());
+                SearchPreferencesDocument.Write(preferences, search);
             }
             if (space.Retention is { } retention && retentionPreferences.GetValueOrDefault(space.Id) != retention) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();

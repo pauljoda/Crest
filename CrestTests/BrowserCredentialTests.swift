@@ -5,14 +5,14 @@ import XCTest
 
 @MainActor
 final class BrowserCredentialTests: XCTestCase {
-    func testStrongPasswordGeneratorGuaranteesCompatibleCharacterClassesAndBounds() throws {
+    func testStrongPasswordGeneratorDrawsEveryCharacterClassFromTheCoreRecipe() throws {
         let passwords = try (0..<64).map { _ in
             try BrowserStrongPasswordGenerator.generate()
         }
 
         XCTAssertEqual(Set(passwords).count, passwords.count)
         for password in passwords {
-            XCTAssertEqual(password.count, BrowserStrongPasswordGenerator.defaultLength)
+            XCTAssertEqual(password.count, 20)
             XCTAssertTrue(password.allSatisfy(\.isASCII))
             XCTAssertTrue(password.contains(where: \.isLowercase))
             XCTAssertTrue(password.contains(where: \.isUppercase))
@@ -20,9 +20,6 @@ final class BrowserCredentialTests: XCTestCase {
             XCTAssertTrue(password.contains { "-_.!@#$%^&*+=".contains($0) })
             XCTAssertFalse(password.contains(where: \.isWhitespace))
         }
-
-        XCTAssertThrowsError(try BrowserStrongPasswordGenerator.generate(length: 15))
-        XCTAssertThrowsError(try BrowserStrongPasswordGenerator.generate(length: 65))
     }
 
     func testCredentialOriginRejectsOpaqueWebKitOriginsBeforeURLConstruction() throws {
@@ -837,9 +834,8 @@ final class BrowserCredentialTests: XCTestCase {
         for (candidate, now) in [
             (
                 stale,
-                submittedAt.addingTimeInterval(
-                    BrowserCredentialCapturePolicy.candidateLifetime + 1
-                )
+                // The core keeps a candidate for 45 seconds.
+                submittedAt.addingTimeInterval(46)
             ),
             (future, submittedAt),
         ] {
