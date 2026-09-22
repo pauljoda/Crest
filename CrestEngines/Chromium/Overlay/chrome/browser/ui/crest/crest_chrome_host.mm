@@ -2103,9 +2103,12 @@ Page* FindPage(NSString* identifier) {
   auto found = State().pages.find(base::SysNSStringToUTF8(identifier));
   return found == State().pages.end() ? nullptr : found->second.get();
 }
-// The extension, only if it has a side panel entry for this page's own tab.
+// The extension, only if a side panel is available for this page's own tab.
 // Crest resolves the panel itself: `SidePanelService::OpenSidePanelForTab`
-// drives Chrome's Views side-panel UI, which this build never creates.
+// drives Chrome's Views side-panel UI, which this build never creates. An
+// explicit `chrome.sidePanel.open()` needs only an enabled panel for the tab,
+// not the open-on-action-click behaviour; whether an action click toggles a
+// panel is decided by the engine before the request reaches Crest.
 const extensions::Extension* SidePanelExtension(NSString* extension_id, Page* page) {
   if (!page || !page->web_contents()) return nullptr;
   Profile* profile = page->browser->GetProfile();
@@ -2115,7 +2118,7 @@ const extensions::Extension* SidePanelExtension(NSString* extension_id, Page* pa
   auto* service = extensions::SidePanelService::Get(profile);
   if (!service) return nullptr;
   const int tab = sessions::SessionTabHelper::IdForTab(page->web_contents()).id();
-  return service->HasSidePanelActionForTab(*extension, tab) ? extension : nullptr;
+  return service->HasSidePanelContextMenuActionForTab(*extension, tab) ? extension : nullptr;
 }
 // chrome.commands. Crest owns the key-equivalent path, so an event the core
 // did not claim is matched against the extension keybindings itself rather

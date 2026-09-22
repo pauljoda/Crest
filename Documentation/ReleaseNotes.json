@@ -1993,6 +1993,10 @@
     "side-panel-quick-window-notice": {
       "category": "improved",
       "message": "An extension side panel requested from a Quick Window now explains that side panels open in the main window."
+    },
+    "extension-side-panel-api-open": {
+      "category": "fixed",
+      "message": "Extensions that open their side panel themselves, such as ChatGPT, now open it on the first click in the desktop browser."
     }
   }
 }

@@ -84,17 +84,32 @@ extension BrowserExtensionSidePanelHost {
         }
     }
 
+    /// How long to keep asking while the extension finishes enabling its panel.
+    private static let enablementRetryDelays: [Duration] = [.milliseconds(100), .milliseconds(250), .milliseconds(600)]
+
     private static func present(
         _ extensionID: String,
         title: String,
         icon: NSImage?,
         page: ChromiumNativePage,
-        host: BrowserExtensionSidePanelHost
+        host: BrowserExtensionSidePanelHost,
+        attempt: Int = 0
     ) {
         let view = page.openSidePanel(extensionID) { [weak host] in
             MainActor.assumeIsolated { host?.dismiss(extensionID) }
         }
         guard let view else {
+            // An extension may enable its panel for the tab in the same turn it
+            // asks to open it, and the engine can receive the open first.
+            if attempt < enablementRetryDelays.count {
+                let delay = enablementRetryDelays[attempt]
+                Task { @MainActor [weak page, weak host] in
+                    try? await Task.sleep(for: delay)
+                    guard let page, let host, host.panel?.id != extensionID else { return }
+                    present(extensionID, title: title, icon: icon, page: page, host: host, attempt: attempt + 1)
+                }
+                return
+            }
             CrestChromiumRoot.showNativeNotice(
                 "This extension's side panel is unavailable on this page.",
                 icon: "sidebar.right")
