@@ -1,35 +1,38 @@
 import SwiftUI
 
-struct BrowserPageZoomFeedbackView: View {
-    let label: String
+struct BrowserNoticeView: View {
+    let notice: BrowserNotice
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        Label(label, systemImage: "textformat.size")
+        Label(notice.message, systemImage: notice.systemImage)
             .font(.callout.weight(.semibold))
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
             .padding(
                 .horizontal,
-                BrowserRootMetrics.urlCopyFeedbackHorizontalPadding
+                BrowserRootMetrics.noticeHorizontalPadding
             )
-            .frame(height: BrowserRootMetrics.urlCopyFeedbackHeight)
-            .glassEffect(.regular, in: .capsule)
+            .frame(minHeight: BrowserRootMetrics.noticeHeight)
+            .frame(maxWidth: BrowserRootMetrics.noticeMaximumWidth)
+            .fixedSize(horizontal: false, vertical: true)
+            .glassEffect(.regular, in: .rect(cornerRadius: BrowserRootMetrics.noticeHeight / 2))
             .shadow(
                 color: .black.opacity(
                     reduceTransparency ? 0 : CrestOpacity.controlShadow
                 ),
-                radius: BrowserRootMetrics.urlCopyFeedbackShadowRadius,
-                y: BrowserRootMetrics.urlCopyFeedbackShadowYOffset
+                radius: BrowserRootMetrics.noticeShadowRadius,
+                y: BrowserRootMetrics.noticeShadowYOffset
             )
             .frame(
                 maxWidth: .infinity,
                 maxHeight: .infinity,
                 alignment: .top
             )
-            .padding(.top, BrowserRootMetrics.urlCopyFeedbackTopInset)
+            .padding(.top, BrowserRootMetrics.noticeTopInset)
             .allowsHitTesting(false)
-            .accessibilityLabel("Page zoom (label)")
             .accessibilityAddTraits(.isStaticText)
             .transition(
                 reduceMotion
@@ -42,6 +45,6 @@ struct BrowserPageZoomFeedbackView: View {
 
 #if DEBUG
     #Preview("Component") {
-        BrowserPageZoomFeedbackView(label: "125%").padding().frame(width: 320, height: 150)
+        BrowserNoticeView(notice: .urlCopied).padding().frame(width: 320, height: 150)
     }
 #endif

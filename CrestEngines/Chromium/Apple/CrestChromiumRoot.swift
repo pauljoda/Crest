@@ -872,11 +872,12 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
     }
 
+    /// Engine messages that ask nothing of the person — a toast, an action
+    /// that could not run — are browser notices, never alerts.
     @objc static func showNativeNotice(_ message: String, icon: String) {
-        guard let window = NSApp.keyWindow else { return }
-        let alert = NSAlert()
-        alert.messageText = message
-        alert.beginSheetModal(for: window)
+        BrowserNoticeCenter.shared.post(BrowserNotice(
+            message: message, systemImage: NSImage(systemSymbolName: icon, accessibilityDescription: nil) == nil
+                ? "info.circle" : icon))
     }
     @objc static func focusOmnibox() { instance?.actions?.openLocation() }
     @objc static func toggleBookmark(forURL url: String, title: String) { instance?.actions?.toggleSelectedTabPinned() }

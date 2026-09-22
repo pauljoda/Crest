@@ -1,10 +1,14 @@
+import Foundation
 import Observation
-import WebKit
 
+/// A page's credential capture and fill, on either engine. Messages arrive
+/// from the credential content bridge; fills are evaluated back into the
+/// document that asked.
 @Observable
 @MainActor
-final class BrowserWebKitCredentialSession {
-    typealias FillTarget = (formID: String, frame: WKFrameInfo)
+final class BrowserCredentialSession {
+    typealias FillTarget = (formID: String, frame: BrowserContentFrame)
+    typealias Evaluate = @MainActor (String, [String: Any], BrowserContentFrame) async throws -> Any?
 
     let state: BrowserCredentialPageState<FillTarget>
     private(set) var isEnabled: Bool
@@ -33,13 +37,15 @@ final class BrowserWebKitCredentialSession {
         }
     }
 
-    func receive(_ scriptMessage: WKScriptMessage, in webView: WKWebView) {
+    func receive(_ body: Any, from frame: BrowserContentFrame, topLevelURL: URL?) {
         guard isEnabled,
-            scriptMessage.webView === webView,
-            scriptMessage.name == BrowserCredentialContentBridge.messageHandlerName,
-            let message = BrowserCredentialFormMessage(body: scriptMessage.body),
-            let frameOrigin = origin(for: scriptMessage.frameInfo.securityOrigin),
-            let topLevelURL = webView.url,
+            let message = BrowserCredentialFormMessage(body: body),
+            let frameOrigin = CredentialOrigin(
+                securityProtocol: frame.securityProtocol,
+                host: frame.host,
+                port: frame.port
+            ),
+            let topLevelURL,
             let topLevelOrigin = CredentialOrigin(url: topLevelURL)
         else { return }
 
@@ -47,25 +53,24 @@ final class BrowserWebKitCredentialSession {
             message,
             frameOrigin: frameOrigin,
             topLevelOrigin: topLevelOrigin,
-            isMainFrame: scriptMessage.frameInfo.isMainFrame,
-            fillTarget: message.formID.map { ($0, scriptMessage.frameInfo) }
+            isMainFrame: frame.isMainFrame,
+            fillTarget: message.formID.map { ($0, frame) }
         )
     }
 
-    func fill(_ credential: BrowserCredential, for requestID: UUID, in webView: WKWebView) async throws {
+    func fill(_ credential: BrowserCredential, for requestID: UUID, evaluate: Evaluate) async throws {
         guard isEnabled else {
             throw BrowserCredentialFillError.staleOrMismatchedRequest
         }
         let context = try state.fillContext(for: requestID, credential: credential)
-        let result = try await webView.callAsyncJavaScript(
+        let result = try await evaluate(
             "return globalThis.__crestCredentialBridge?.fill(formID, username, password) === true;",
-            arguments: [
+            [
                 "formID": context.target.formID,
                 "username": credential.descriptor.username,
                 "password": credential.password,
             ],
-            in: context.target.frame,
-            contentWorld: BrowserCredentialContentBridge.contentWorld
+            context.target.frame
         )
         guard result as? Bool == true else {
             throw BrowserCredentialFillError.formChanged
@@ -73,31 +78,22 @@ final class BrowserWebKitCredentialSession {
         state.completeFill(username: credential.descriptor.username, requestID: requestID)
     }
 
-    func fillGeneratedPassword(_ password: String, for requestID: UUID, in webView: WKWebView) async throws {
+    func fillGeneratedPassword(_ password: String, for requestID: UUID, evaluate: Evaluate) async throws {
         guard isEnabled else {
             throw BrowserCredentialFillError.staleOrMismatchedRequest
         }
         let context = try state.generatedPasswordFillContext(for: requestID)
-        let result = try await webView.callAsyncJavaScript(
+        let result = try await evaluate(
             "return globalThis.__crestCredentialBridge?.fillGenerated(formID, password) === true;",
-            arguments: [
+            [
                 "formID": context.target.formID,
                 "password": password,
             ],
-            in: context.target.frame,
-            contentWorld: BrowserCredentialContentBridge.contentWorld
+            context.target.frame
         )
         guard result as? Bool == true else {
             throw BrowserCredentialFillError.formChanged
         }
         state.completeGeneratedPasswordFill(requestID: requestID)
-    }
-
-    private func origin(for securityOrigin: WKSecurityOrigin) -> CredentialOrigin? {
-        CredentialOrigin(
-            securityProtocol: securityOrigin.protocol,
-            host: securityOrigin.host,
-            port: securityOrigin.port
-        )
     }
 }

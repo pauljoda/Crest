@@ -115,6 +115,14 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
                 completion:(void (^)(BOOL allowed))completion NS_SWIFT_NAME(prepareToClose(pages:windows:completion:));
 - (void)prepareToQuit:(void (^)(BOOL allowed))completion NS_SWIFT_NAME(prepareToQuit(_:));
 - (void)cancelQuitPreparation;
+// Content bridges. A source runs in Crest's own isolated world of every
+// document the page loads, or of its main frame only; its `postMessage`
+// calls arrive as `content_message` observations naming the frame. An
+// evaluation runs in that frame's current document only and answers the JSON
+// of its result, or nil when the document is gone.
+- (BOOL)addContentScript:(NSString *)source page:(NSString *)pageID mainFrameOnly:(BOOL)mainFrameOnly;
+- (void)evaluateContentScript:(NSString *)source page:(NSString *)pageID frame:(NSString *)frameID
+                   completion:(void (^)(NSString * _Nullable json))completion;
 // Declines a system sign-in the core could not place, so the requesting app
 // learns at once rather than waiting on a window that will never open.
 - (void)cancelAuthenticationSessionForWindow:(NSString *)windowID NS_SWIFT_NAME(cancelAuthenticationSession(window:));

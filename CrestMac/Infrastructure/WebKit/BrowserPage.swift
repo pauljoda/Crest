@@ -170,8 +170,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored var hostedNotificationIdentifiers: Set<String> = []
     @ObservationIgnored var hostedNotificationDocumentIdentifier = UUID().uuidString
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
-    @ObservationIgnored private let credentialSession: BrowserWebKitCredentialSession
-    var credentialState: BrowserCredentialPageState<BrowserWebKitCredentialSession.FillTarget> {
+    @ObservationIgnored private let credentialSession: BrowserCredentialSession
+    var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
@@ -276,7 +276,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
-        credentialSession = BrowserWebKitCredentialSession(
+        credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
             supportsAccess: allowsCredentialAccess,
             isEnabled: isCredentialAccessEnabled,
@@ -328,6 +328,20 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         Self.lifecycleSignposter.endInterval("Initialize WKWebView", webViewInterval)
         #endif
         super.init()
+        // An engine that runs Crest's content bridges itself receives them here;
+        // WebKit installs its own through the user content controller below.
+        if allowsCredentialAccess, let scripting = pageEngine.contentScripting {
+            _ = scripting.install(
+                BrowserContentScript(
+                    source: BrowserCredentialContentBridge.source,
+                    handlerName: BrowserCredentialContentBridge.messageHandlerName,
+                    mainFrameOnly: false
+                )
+            ) { [weak self] message in
+                guard let self else { return }
+                self.credentialSession.receive(message.body, from: message.frame, topLevelURL: self.url)
+            }
+        }
         #if CREST_CHROMIUM_HOST
         chromiumPage?.observer = { [weak self] event, values in
             self?.receiveChromiumEvent(event, values: values)
@@ -926,11 +940,23 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
+        if let scripting = pageEngine.contentScripting {
+            try await credentialSession.fill(credential, for: requestID) { body, arguments, frame in
+                try await scripting.callAsyncJavaScript(body, arguments: arguments, in: frame)
+            }
+            return
+        }
         guard let webView = webKitView else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fill(credential, for: requestID, in: webView)
     }
 
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
+        if let scripting = pageEngine.contentScripting {
+            try await credentialSession.fillGeneratedPassword(password, for: requestID) { body, arguments, frame in
+                try await scripting.callAsyncJavaScript(body, arguments: arguments, in: frame)
+            }
+            return
+        }
         guard let webView = webKitView else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fillGeneratedPassword(password, for: requestID, in: webView)
     }
@@ -1080,12 +1106,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                     didRun: #selector(printOperationDidRun(_:success:contextInfo:)), contextInfo: nil)
             } catch {
                 guard window.isVisible else { return }
-                let alert = NSAlert()
-                alert.alertStyle = .warning
-                alert.messageText = "The page couldn’t be printed."
-                alert.informativeText = error.localizedDescription
-                alert.addButton(withTitle: "OK")
-                await alert.beginSheetModal(for: window)
+                Self.postFailureNotice("The page couldn’t be printed.", error: error)
             }
         }
     }
@@ -1245,6 +1266,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         switch event {
         case "navigation_started":
             linkDrag?.beginNavigation()
+            credentialState.didStartNavigation()
+            navigationFailure = nil
+            webContentFailureMessage = nil
         case "favicon":
             guard let rawURL = values["url"] as? String, let source = URL(string: rawURL),
                 let url, BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url) else { return }
@@ -1262,9 +1286,23 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             hasOnlySecureContent = destination?.scheme == "https"
             canGoBack = values["canGoBack"] as? Bool ?? false
             canGoForward = values["canGoForward"] as? Bool ?? false
-            webContentFailureMessage = values["failure"] as? String
+            // A failure is reported once, by the navigation that failed; the
+            // state changes after it do not repeat it, so it stays until the
+            // next navigation starts or commits.
+            switch values["failure"] as? String {
+            case "process_terminated":
+                webContentFailureMessage = "process_terminated"
+                credentialState.webContentProcessDidTerminate()
+            case "navigation_failed":
+                pendingNavigationURL = nil
+                navigationFailure = BrowserNavigationFailure(
+                    chromiumNetError: values["errorCode"] as? Int ?? 0, failingURL: destination)
+            default: break
+            }
             if values["committed"] as? Bool == true {
                 pendingNavigationURL = nil
+                navigationFailure = nil
+                webContentFailureMessage = nil
                 committedNavigationCount += 1
             }
             if wasLoading, !isLoading, committedNavigationCount > 0 { completedNavigationCount += 1 }
@@ -1307,21 +1345,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     private func presentPDFExportError(_ error: Error, in window: NSWindow) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "The page couldn’t be exported."
-        alert.informativeText = error.localizedDescription
-        alert.addButton(withTitle: "OK")
-        alert.beginSheetModal(for: window)
+        Self.postFailureNotice("The page couldn’t be exported.", error: error)
     }
 
     private func presentWebArchiveExportError(_ error: Error, in window: NSWindow) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "The page couldn’t be saved as a web archive."
-        alert.informativeText = error.localizedDescription
-        alert.addButton(withTitle: "OK")
-        alert.beginSheetModal(for: window)
+        Self.postFailureNotice("The page couldn’t be saved as a web archive.", error: error)
+    }
+
+    /// A failed export or print needs nothing from the person, so it is a
+    /// notice rather than an alert.
+    private static func postFailureNotice(_ summary: String, error: Error) {
+        BrowserNoticeCenter.shared.post(BrowserNotice(
+            message: "\(summary) \(error.localizedDescription)",
+            systemImage: "exclamationmark.triangle"))
     }
 
     private func observeWebViewState() {

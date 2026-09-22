@@ -1869,6 +1869,22 @@
     "remove-pre-core-session-branches": {
       "category": "internal",
       "message": "Remove the session code paths that predate the native core now that every target is core-backed."
+    },
+    "chromium-password-autofill": {
+      "category": "new",
+      "message": "Password autofill, save and update prompts, and suggested strong passwords now work in the desktop browser."
+    },
+    "notices-replace-alerts": {
+      "category": "improved",
+      "message": "Confirmations such as a copied link, and actions that couldn't finish, now appear briefly at the top of the window instead of in a dialog."
+    },
+    "unreachable-pages-explain-why": {
+      "category": "fixed",
+      "message": "A page that can't be reached now says why instead of showing its loading status forever."
+    },
+    "sign-ins-survive-quitting": {
+      "category": "fixed",
+      "message": "Quitting Crest during an app sign-in no longer holds up later sign-ins."
     }
   }
 }

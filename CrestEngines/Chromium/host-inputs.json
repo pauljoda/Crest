@@ -202,5 +202,9 @@
   "chrome/browser/ui/sad_tab_controller.cc": {
     "before": "f27895f484d5d13cd84d624622d2813c3e0d122893fe0863515a367d80ec950d",
     "after": "bd13851d3e47e2d69e3c39578ffdb8cb51bdb02660150a13d89ce6fcaef74acf"
+  },
+  "third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc": {
+    "before": "782da0d9b1eb408f29f978a2cc2aa5dd14395d59c9e7cbe675658302f2802c8a",
+    "after": "161427b4a539776afd49b46d337b5734788dd87914f4898cf8d739e64bf841b3"
   }
 }

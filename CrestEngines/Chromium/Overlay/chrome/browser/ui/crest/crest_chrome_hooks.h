@@ -14,6 +14,10 @@ class Profile;
 namespace content { class WebContents; class NavigationThrottleRegistry; struct DropData; struct OpenURLParams; }
 
 namespace crest {
+// The isolated world Crest's content bridges run in. It sits at the top of
+// the embedder range, far from the worlds extensions allocate upward, and the
+// patched evaluator awaits promises in this world only.
+inline constexpr int kContentWorldID = (1 << 29) - 1;
 // Enabled only by the explicitly selected Crest host command-line switch.
 bool IsEnabled();
 void OnBrowserWindowCreated(Browser* browser);

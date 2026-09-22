@@ -278,16 +278,9 @@ final class ChromiumExtensionStore {
         }
     }
     private func reportFailure() {
-        let alert = NSAlert()
-        alert.messageText = String(localized: "Couldn’t Complete Extension Action")
-        alert.informativeText = String(localized:
-            "Chromium could not complete this action. Check the extension’s details for policy or permission requirements.")
-        alert.addButton(withTitle: String(localized: "OK"))
-        if let window = CrestChromiumRoot.activeNativeWindow {
-            alert.beginSheetModal(for: window, completionHandler: nil)
-        } else {
-            alert.runModal()
-        }
+        BrowserNoticeCenter.shared.post(BrowserNotice(
+            message: String(localized: "Couldn’t complete that extension action. Check its details for policy or permission requirements."),
+            systemImage: "exclamationmark.triangle"))
     }
     func install(_ id: String, in space: BrowserSpace, anchor: NSView?, copies: Set<SpaceID> = [],
                  completion: (@MainActor () -> Void)? = nil) {

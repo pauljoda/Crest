@@ -26,6 +26,9 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     var interactionState: Data? { get }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool
     func mediaActivity() async -> BrowserPageMediaActivity?
+    /// Content bridges run by the engine itself, or nil when the page installs
+    /// them through the engine's own API.
+    var contentScripting: (any BrowserPageContentScripting)? { get }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { get }
     func showInspector() -> Bool
@@ -40,6 +43,7 @@ protocol BrowserPageEngine: BrowserFindExecuting {
 extension BrowserPageEngine {
     func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool { false }
     var interactionState: Data? { nil }
+    var contentScripting: (any BrowserPageContentScripting)? { nil }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool { false }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { nil }

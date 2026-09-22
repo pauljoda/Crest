@@ -1561,3 +1561,17 @@
  
    for (auto* contents_view : browser_view->GetAllVisibleContentsWebViews()) {
      if (contents_view->web_contents() == web_contents) {
+--- a/third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc
++++ b/third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc
+@@ -979,7 +979,10 @@
+       wants_result
+           ? mojom::blink::WantResultOption::kWantResultDateAndRegExpAllowed
+           : mojom::blink::WantResultOption::kNoResult,
+-      mojom::blink::PromiseResultOption::kDoNotWait);
++      // Crest's content-bridge world, crest::kContentWorldID, delivers its
++      // messages by resolving a promise the browser is waiting on.
++      world_id == (1 << 29) - 1 ? mojom::blink::PromiseResultOption::kAwait
++                                : mojom::blink::PromiseResultOption::kDoNotWait);
+ }
+ 
+ void LocalFrameMojoHandler::InvokeScriptToolForInspector(

@@ -119,6 +119,7 @@
 #include "base/command_line.h"
 #include "base/no_destructor.h"
 #include "base/uuid.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/sys_string_conversions.h"
@@ -139,6 +140,9 @@
 #include "content/public/browser/web_contents_observer.h"
 #include "content/public/common/drop_data.h"
 #include "net/base/apple/url_conversions.h"
+#include "components/password_manager/core/common/password_manager_pref_names.h"
+#include "content/public/browser/global_routing_id.h"
+#include "mojo/public/cpp/bindings/callback_helpers.h"
 #include "ui/base/page_transition_types.h"
 
 @interface CrestRoot : NSObject
@@ -584,6 +588,23 @@ void EndAuthenticationSession(const std::string& window, NSURL* callback, bool c
   }
   if (close_window)
     [NSClassFromString(@"CrestRoot") closeAuthenticationSession:base::SysUTF8ToNSString(window)];
+}
+
+// The system's sign-in broker hands out one request at a time and waits for
+// the browser to finish it; a request left open when Crest quits would hold
+// every later sign-in until the broker restarts.
+void CancelAllAuthenticationSessions() {
+  auto& state = State();
+  std::vector<ASWebAuthenticationSessionRequest*> requests =
+      std::move(state.pending_authentication_sessions);
+  state.pending_authentication_sessions.clear();
+  for (const auto& [window, request] : state.authentication_sessions) requests.push_back(request);
+  state.authentication_sessions.clear();
+  for (ASWebAuthenticationSessionRequest* request : requests) {
+    [request cancelWithError:[NSError errorWithDomain:ASWebAuthenticationSessionErrorDomain
+                                                 code:ASWebAuthenticationSessionErrorCodeCanceledLogin
+                                             userInfo:nil]];
+  }
 }
 
 void StartAuthenticationSession(ASWebAuthenticationSessionRequest* request) {
@@ -1179,6 +1200,58 @@ const char* CrestStoreScript() {
 })();)JS";
 }
 
+// Crest's content bridges run in one isolated world of their own, as they do in
+// WebKit's named content worlds: the page cannot see or call them. The bridges
+// are written against WebKit's `webkit.messageHandlers.<name>.postMessage`, so
+// the world defines that object itself and the bridge scripts run unchanged.
+//
+// A message leaves the world through a long poll. The host keeps one
+// `__crestBridge.next()` evaluation outstanding per document; the engine
+// resolves it when a bridge posts (the patched evaluator awaits promises in
+// this world only) and the host at once asks for the next batch. Every batch and
+// every evaluation names the document by a nonce the world minted, so nothing
+// from a previous document is attributed to, or runs in, the next one.
+constexpr char kContentBridgeShim[] = R"JS(
+(() => {
+  if (globalThis.__crestBridge) return null;
+  const doc = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const queue = [];
+  let waiter = null;
+  const flush = () => {
+    if (!waiter || !queue.length) return;
+    const resolve = waiter;
+    waiter = null;
+    resolve({ doc, messages: queue.splice(0) });
+  };
+  const handlers = new Map();
+  const handler = (name) => {
+    if (!handlers.has(name)) {
+      handlers.set(name, Object.freeze({
+        postMessage(body) {
+          queue.push({ handler: name, body: JSON.parse(JSON.stringify(body ?? null)) });
+          flush();
+        },
+      }));
+    }
+    return handlers.get(name);
+  };
+  globalThis.webkit = Object.freeze({
+    messageHandlers: new Proxy({}, { get: (_, name) => typeof name === "string" ? handler(name) : undefined }),
+  });
+  globalThis.__crestBridge = Object.freeze({
+    doc,
+    next() { return new Promise((resolve) => { waiter = resolve; flush(); }); },
+  });
+  return doc;
+})();
+)JS";
+
+std::string ContentFrameIdentifier(content::RenderFrameHost* frame, const std::string& doc) {
+  const auto id = frame->GetGlobalId();
+  return base::NumberToString(id.child_id.GetUnsafeValue()) + ":" +
+         base::NumberToString(id.frame_routing_id) + ":" + doc;
+}
+
 struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
                     favicon::FaviconDriverObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
@@ -1243,7 +1316,70 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   // rather than mount it again.
   base::WeakPtr<content::WebContents> undocked_devtools;
   std::unique_ptr<PageDocumentService> document_service;
-  void Publish(bool committed = false, NSString* failure = nil) {
+  // Content bridge sources, in install order, and whether each is limited to
+  // the main frame.
+  std::vector<std::pair<std::string, bool>> content_scripts;
+  void InjectContentScripts(content::RenderFrameHost* frame) {
+    if (content_scripts.empty() || State().disposing || !frame || !frame->IsRenderFrameLive()) return;
+    const bool main = frame->IsInPrimaryMainFrame();
+    if (!main && frame->GetMainFrame() != web_contents()->GetPrimaryMainFrame()) return;
+    std::string script = kContentBridgeShim;
+    script = "(() => { const doc = " + script + " if (doc === null) return null;\n";
+    for (const auto& [source, main_frame_only] : content_scripts) {
+      if (main_frame_only && !main) continue;
+      script += "try {\n" + source + "\n} catch (_) {}\n";
+    }
+    script += "return doc; })()";
+    const auto id = frame->GetGlobalId();
+    auto weak = web_contents()->GetWeakPtr();
+    frame->ExecuteJavaScriptInIsolatedWorld(base::UTF8ToUTF16(script),
+        base::BindOnce([](base::WeakPtr<content::WebContents> contents, content::GlobalRenderFrameHostId id,
+                          base::Value value) {
+          if (!contents || !value.is_string()) return;
+          PollContentMessages(contents.get(), id, value.GetString());
+        }, weak, id), crest::kContentWorldID);
+  }
+  static void PollContentMessages(content::WebContents* contents, content::GlobalRenderFrameHostId id,
+                                  const std::string& doc) {
+    auto* frame = content::RenderFrameHost::FromID(id);
+    if (!frame || !frame->IsRenderFrameLive() || State().disposing ||
+        content::WebContents::FromRenderFrameHost(frame) != contents) return;
+    auto weak = contents->GetWeakPtr();
+    frame->ExecuteJavaScriptInIsolatedWorld(u"globalThis.__crestBridge?.next()",
+        base::BindOnce([](base::WeakPtr<content::WebContents> contents, content::GlobalRenderFrameHostId id,
+                          std::string doc, base::Value value) {
+          // An empty answer means the document went away or its world was
+          // torn down; the next document arms a poll of its own.
+          if (!contents || State().disposing || !value.is_dict()) return;
+          const auto* batch_doc = value.GetDict().FindString("doc");
+          const auto* messages = value.GetDict().FindList("messages");
+          if (!batch_doc || *batch_doc != doc || !messages) return;
+          auto* frame = content::RenderFrameHost::FromID(id);
+          Page* page = nullptr;
+          for (auto& [key, candidate] : State().pages)
+            if (candidate->web_contents() == contents.get()) { page = candidate.get(); break; }
+          if (!frame || !page) return;
+          const url::Origin origin = frame->GetLastCommittedOrigin();
+          const std::string identifier = ContentFrameIdentifier(frame, doc);
+          for (const auto& message : *messages) {
+            if (!message.is_dict()) continue;
+            const auto* handler = message.GetDict().FindString("handler");
+            const auto* body = message.GetDict().Find("body");
+            auto json = body ? base::WriteJson(*body) : std::nullopt;
+            if (!handler || !json) continue;
+            page->observation(@"content_message", @{
+              @"handler": base::SysUTF8ToNSString(*handler),
+              @"body": base::SysUTF8ToNSString(*json),
+              @"frame": base::SysUTF8ToNSString(identifier),
+              @"isMainFrame": @(frame->IsInPrimaryMainFrame()),
+              @"protocol": base::SysUTF8ToNSString(origin.scheme()),
+              @"host": base::SysUTF8ToNSString(origin.host()),
+              @"port": @(origin.port()) });
+          }
+          PollContentMessages(contents.get(), id, doc);
+        }, weak, id, doc), crest::kContentWorldID);
+  }
+  void Publish(bool committed = false, NSString* failure = nil, int error_code = 0) {
     if (!web_contents() || State().disposing) return;
     auto& controller = web_contents()->GetController();
     observation(@"changed", @{
@@ -1252,7 +1388,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       @"isLoading": @(web_contents()->IsLoading()),
       @"canGoBack": @(controller.CanGoBack()), @"canGoForward": @(controller.CanGoForward()),
       @"backHistory": History(-1), @"forwardHistory": History(1),
-      @"committed": @(committed), @"failure": failure ?: (id)NSNull.null });
+      @"committed": @(committed), @"failure": failure ?: (id)NSNull.null, @"errorCode": @(error_code) });
   }
   // Chrome Web Store support. Regular profiles only: a private window must
   // not change a Space's persistent extension state, so its store pages keep
@@ -1348,7 +1484,16 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       observation(@"navigation_started", @{});
     }
   }
-  void PrimaryMainDocumentElementAvailable() override { InjectStoreScript(); }
+  void PrimaryMainDocumentElementAvailable() override {
+    InjectStoreScript();
+    if (web_contents()) InjectContentScripts(web_contents()->GetPrimaryMainFrame());
+  }
+  // The main frame is injected as soon as its document element exists; frames
+  // below it once their document is parsed. The world guards itself against a
+  // second installation in the same document.
+  void DOMContentLoaded(content::RenderFrameHost* frame) override {
+    if (frame && !frame->IsInPrimaryMainFrame()) InjectContentScripts(frame);
+  }
   void DidFinishNavigation(content::NavigationHandle* navigation) override {
     // A store listing's own fragment carries the install request the injected
     // script made. It is Crest's message, not a page the core should publish.
@@ -1367,7 +1512,8 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     }
     if (navigation->IsInPrimaryMainFrame())
       Publish(navigation->HasCommitted() && !navigation->IsErrorPage(),
-              navigation->IsErrorPage() ? @"navigation_failed" : nil);
+              navigation->IsErrorPage() ? @"navigation_failed" : nil,
+              navigation->IsErrorPage() ? navigation->GetNetErrorCode() : 0);
   }
   void PrimaryMainFrameRenderProcessGone(base::TerminationStatus) override {
     Publish(false, @"process_terminated");
@@ -2521,6 +2667,43 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     page->document_service = std::make_unique<PageDocumentService>(page->web_contents());
   page->document_service->Export(format, width, completion);
 }
+- (BOOL)addContentScript:(NSString*)source page:(NSString*)pageID mainFrameOnly:(BOOL)mainFrameOnly {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents() || !source.length) return NO;
+  page->content_scripts.emplace_back(base::SysNSStringToUTF8(source), mainFrameOnly);
+  // A bridge that can see credentials replaces the engine's own password
+  // manager, which would otherwise save into the engine profile and offer
+  // fills Crest's vault never sees.
+  if (auto* profile = Profile::FromBrowserContext(page->web_contents()->GetBrowserContext()))
+    profile->GetPrefs()->SetBoolean(password_manager::prefs::kCredentialsEnableService, false);
+  return YES;
+}
+- (void)evaluateContentScript:(NSString*)source page:(NSString*)pageID frame:(NSString*)frameID
+                   completion:(void (^)(NSString* _Nullable))completion {
+  CHECK(NSThread.isMainThread);
+  auto parts = base::SplitString(base::SysNSStringToUTF8(frameID), ":", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+  int child = 0, routing = 0;
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents() || parts.size() != 3 || !base::StringToInt(parts[0], &child) ||
+      !base::StringToInt(parts[1], &routing)) { completion(nil); return; }
+  auto* frame = content::RenderFrameHost::FromID(content::GlobalRenderFrameHostId(child, routing));
+  if (!frame || !frame->IsRenderFrameLive() ||
+      content::WebContents::FromRenderFrameHost(frame) != page->web_contents()) { completion(nil); return; }
+  auto doc = base::WriteJson(base::Value(parts[2]));
+  // The source runs only in the document it was addressed to.
+  const std::string script = "(async () => { if (globalThis.__crestBridge?.doc !== " + *doc +
+      ") return null;\n" + base::SysNSStringToUTF8(source) + "\n})()";
+  void (^reply)(NSString*) = [completion copy];
+  // A document torn down mid-evaluation drops its reply; the caller still
+  // gets an answer.
+  frame->ExecuteJavaScriptInIsolatedWorld(base::UTF8ToUTF16(script),
+      mojo::WrapCallbackWithDefaultInvokeIfNotRun(
+          base::BindOnce([](void (^reply)(NSString*), base::Value value) {
+            auto json = base::WriteJson(value);
+            reply(json ? base::SysUTF8ToNSString(*json) : nil);
+          }, reply), base::Value()), crest::kContentWorldID);
+}
 - (BOOL)findInPage:(NSString*)pageID query:(NSString*)query backwards:(BOOL)backwards
      caseSensitive:(BOOL)caseSensitive completion:(void (^)(BOOL))completion {
   CHECK(NSThread.isMainThread);
@@ -2645,6 +2828,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   CHECK(NSThread.isMainThread);
   auto& state = State();
   state.disposing = true;
+  CancelAllAuthenticationSessions();
   state.browser_observation = nil;
   state.space_extension_popup.reset();
   state.adoptions.clear();

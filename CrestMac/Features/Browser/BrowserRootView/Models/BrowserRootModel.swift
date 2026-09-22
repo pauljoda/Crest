@@ -38,8 +38,7 @@ final class BrowserRootModel {
     )
     var isPrepared = false
     @ObservationIgnored private var isPreparingBrowser = false
-    var isURLCopiedFeedbackVisible = false
-    var visiblePageZoomFeedbackLabel: String?
+    var visibleNotice: BrowserNotice?
     var isFloatingSidebarPresented = false
     private(set) var isSidebarMorphing = false
     /// True while the page row is making the sidebar's dock available, before
@@ -87,6 +86,11 @@ final class BrowserRootModel {
         )
         _ = addressBinding
         _ = isAddressEditingBinding
+        registerForNotices()
+    }
+
+    private func registerForNotices() {
+        BrowserNoticeCenter.shared.register(chrome) { [weak self] in self?.isWindowFocused == true }
     }
 }
 
@@ -163,6 +167,7 @@ extension BrowserRootModel {
             set: { isFocused in
                 guard self.isWindowFocused != isFocused else { return }
                 self.isWindowFocused = isFocused
+                if isFocused { self.registerForNotices() }
             }
         )
     }
@@ -666,44 +671,22 @@ extension BrowserRootModel {
 // MARK: - Feedback
 
 extension BrowserRootModel {
-    func presentURLCopyFeedback(revision: Int, reduceMotion: Bool) {
-        guard revision > 0 else { return }
+    func presentNotice(revision: Int, reduceMotion: Bool) {
+        guard revision > 0, let notice = chrome.notice else { return }
         withAnimation(
             accessibleAnimation(CrestMotion.feedbackPresentation, reduceMotion)
         ) {
-            visiblePageZoomFeedbackLabel = nil
-            isURLCopiedFeedbackVisible = true
+            visibleNotice = notice
         }
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserRootMetrics.urlCopyFeedbackDuration)
+            try? await Task.sleep(for: notice.duration)
             guard let self,
-                self.chrome.urlCopyFeedbackRevision == revision
+                self.chrome.noticeRevision == revision
             else { return }
             withAnimation(
                 self.accessibleAnimation(CrestMotion.dismissal, reduceMotion)
             ) {
-                self.isURLCopiedFeedbackVisible = false
-            }
-        }
-    }
-
-    func presentPageZoomFeedback(revision: Int, reduceMotion: Bool) {
-        guard revision > 0 else { return }
-        withAnimation(
-            accessibleAnimation(CrestMotion.feedbackPresentation, reduceMotion)
-        ) {
-            isURLCopiedFeedbackVisible = false
-            visiblePageZoomFeedbackLabel = chrome.pageZoomFeedbackLabel
-        }
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserRootMetrics.urlCopyFeedbackDuration)
-            guard let self,
-                self.chrome.pageZoomFeedbackRevision == revision
-            else { return }
-            withAnimation(
-                self.accessibleAnimation(CrestMotion.dismissal, reduceMotion)
-            ) {
-                self.visiblePageZoomFeedbackLabel = nil
+                self.visibleNotice = nil
             }
         }
     }

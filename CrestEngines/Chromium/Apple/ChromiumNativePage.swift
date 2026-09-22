@@ -188,6 +188,26 @@ final class ChromiumNativePage: BrowserPageEngine {
                 }) else { completion(false); return }
     }
 
+    // MARK: Content bridges
+
+    private var contentScripts: [BrowserContentScript] = []
+    private var contentReceivers: [String: @MainActor (BrowserContentMessage) -> Void] = [:]
+    var contentScripting: (any BrowserPageContentScripting)? { self }
+
+    private func receiveContentMessage(_ values: [String: Any]) {
+        guard let handler = values["handler"] as? String, let receive = contentReceivers[handler],
+            let body = (values["body"] as? String)?.data(using: .utf8)
+                .flatMap({ try? JSONSerialization.jsonObject(with: $0, options: .fragmentsAllowed) }),
+            let frame = values["frame"] as? String, let securityProtocol = values["protocol"] as? String,
+            let host = values["host"] as? String
+        else { return }
+        receive(BrowserContentMessage(
+            handlerName: handler, body: body,
+            frame: BrowserContentFrame(
+                isMainFrame: values["isMainFrame"] as? Bool == true, securityProtocol: securityProtocol,
+                host: host, port: values["port"] as? Int ?? 0, handle: frame as NSString)))
+    }
+
     struct SitePermission: Identifiable {
         let id: String
         let label: String
@@ -362,6 +382,10 @@ final class ChromiumNativePage: BrowserPageEngine {
 
     private func receive(_ event: String, values: [String: Any]) {
         guard !disposed else { return }
+        if event == "content_message" {
+            receiveContentMessage(values)
+            return
+        }
         if event == "changed" {
             backHistory = history(values["backHistory"])
             forwardHistory = history(values["forwardHistory"])
@@ -370,6 +394,9 @@ final class ChromiumNativePage: BrowserPageEngine {
         if event == "created" {
             created = true
             creating = false
+            for script in contentScripts {
+                _ = host?.addContentScript(script.source, page: id, mainFrameOnly: script.mainFrameOnly)
+            }
             host?.setLinkHandler(page: id) { [weak self] action, address, label in
                 MainActor.assumeIsolated {
                     guard let self, !self.disposed, let url = URL(string: address) else { return false }
@@ -534,5 +561,36 @@ final class ChromiumNativePageView: NSView, BrowserNativePageSurfaceLifecycle {
     func didAttach(to host: BrowserWebHostView) { page?.attachIfPossible() }
     func willDetach(from host: BrowserWebHostView) { page?.detach() }
     func presentationGeometryDidChange() { layoutEngineView() }
+}
+extension ChromiumNativePage: BrowserPageContentScripting {
+    func install(_ script: BrowserContentScript, receive: @escaping @MainActor (BrowserContentMessage) -> Void) -> Bool {
+        guard !disposed else { return false }
+        contentScripts.append(script)
+        contentReceivers[script.handlerName] = receive
+        if created, let host { return host.addContentScript(script.source, page: id, mainFrameOnly: script.mainFrameOnly) }
+        return true
+    }
+
+    func callAsyncJavaScript(_ body: String, arguments: [String: Any], in frame: BrowserContentFrame) async throws -> Any? {
+        guard created, !disposed, let host, let frameID = frame.handle as? String else { return nil }
+        // The arguments arrive as constants named for their keys, as WebKit's
+        // callAsyncJavaScript binds them.
+        var source = ""
+        if !arguments.isEmpty {
+            let json = String(decoding: try JSONSerialization.data(withJSONObject: arguments), as: UTF8.self)
+            source = "const __crestArguments = \(json);\n"
+            for key in arguments.keys.sorted() { source += "const \(key) = __crestArguments[\"\(key)\"];\n" }
+        }
+        source += body
+        let result: String? = await withCheckedContinuation { continuation in
+            host.evaluateContentScript(source, page: id, frame: frameID) { json in
+                continuation.resume(returning: json)
+            }
+        }
+        guard let data = result?.data(using: .utf8),
+            let value = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
+            !(value is NSNull) else { return nil }
+        return value
+    }
 }
 #endif

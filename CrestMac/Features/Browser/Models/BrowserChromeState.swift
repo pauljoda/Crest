@@ -9,9 +9,8 @@ final class BrowserChromeState {
     let utilityPresentation: BrowserUtilityPresentationState
     private(set) var addressFocusRequest = 0
     private(set) var startPageFocusRequest = 0
-    private(set) var urlCopyFeedbackRevision = 0
-    private(set) var pageZoomFeedbackLabel = "100%"
-    private(set) var pageZoomFeedbackRevision = 0
+    private(set) var notice: BrowserNotice?
+    private(set) var noticeRevision = 0
 
     var isCommandPalettePresented: Bool {
         commandPaletteMode != nil
@@ -55,13 +54,19 @@ final class BrowserChromeState {
         commandPaletteMode = nil
     }
 
+    /// Shows `notice` at the top of this window, replacing any notice already
+    /// there.
+    func showNotice(_ notice: BrowserNotice) {
+        self.notice = notice
+        noticeRevision &+= 1
+    }
+
     func showURLCopiedFeedback() {
-        urlCopyFeedbackRevision &+= 1
+        showNotice(.urlCopied)
     }
 
     func showPageZoomFeedback(_ label: String) {
-        pageZoomFeedbackLabel = label
-        pageZoomFeedbackRevision &+= 1
+        showNotice(.pageZoom(label))
     }
 
     func presentHistory() {

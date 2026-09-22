@@ -109,12 +109,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
 
-            if model.isURLCopiedFeedbackVisible {
-                BrowserURLCopyFeedbackView()
-            }
-
-            if let label = model.visiblePageZoomFeedbackLabel {
-                BrowserPageZoomFeedbackView(label: label)
+            if let notice = model.visibleNotice {
+                BrowserNoticeView(notice: notice)
+                    .id(notice)
             }
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in

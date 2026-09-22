@@ -101,14 +101,8 @@ struct BrowserRootLifecycleModifier: ViewModifier {
                 model.restoreSidebarWidth(CGFloat(width))
                 persistSidebarWidth(width)
             }
-            .onChange(of: model.chrome.urlCopyFeedbackRevision) { _, revision in
-                model.presentURLCopyFeedback(
-                    revision: revision,
-                    reduceMotion: reduceMotion
-                )
-            }
-            .onChange(of: model.chrome.pageZoomFeedbackRevision) { _, revision in
-                model.presentPageZoomFeedback(
+            .onChange(of: model.chrome.noticeRevision) { _, revision in
+                model.presentNotice(
                     revision: revision,
                     reduceMotion: reduceMotion
                 )

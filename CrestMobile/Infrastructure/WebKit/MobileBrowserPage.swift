@@ -105,8 +105,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         policy: .immediate,
         receive: { [weak self] in self?.faviconData = $0 }
     )
-    @ObservationIgnored private let credentialSession: BrowserWebKitCredentialSession
-    var credentialState: BrowserCredentialPageState<BrowserWebKitCredentialSession.FillTarget> {
+    @ObservationIgnored private let credentialSession: BrowserCredentialSession
+    var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
     @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
@@ -230,7 +230,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
-        credentialSession = BrowserWebKitCredentialSession(
+        credentialSession = BrowserCredentialSession(
             spaceID: space.id,
             supportsAccess: allowsCredentialAccess,
             isEnabled: isCredentialAccessEnabled,
