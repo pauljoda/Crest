@@ -1841,6 +1841,10 @@
     "pinned-extensions-on-cold-start": {
       "category": "fixed",
       "message": "Pinned extensions appear in the toolbar on the first Start Page after launch, before any page is opened."
+    },
+    "engine-abstraction-completion-plan": {
+      "category": "internal",
+      "message": "Document the engine abstraction completion plan: remaining page-port gaps, security and credential hooks, capability hygiene, WebKit symmetry and core extraction aggregates."
     }
   }
 }

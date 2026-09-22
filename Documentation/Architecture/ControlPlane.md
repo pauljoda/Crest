@@ -554,7 +554,9 @@ than the only check. Value deltas committed outside the command API, including
 sync replacement, remain ungated by design.
 
 Follow the migration completion contract above for the outstanding ownership,
-engine-service, sync-convergence and distribution work. Capability declarations
+engine-service, sync-convergence and distribution work; the remaining packages
+are itemized in [Engine abstraction completion](EngineAbstractionCompletion.md).
+Capability declarations
 must describe the actual native adapter rather than the removed prototype or
 features available in stock Chrome.
 
