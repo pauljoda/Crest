@@ -158,6 +158,7 @@
 + (void)routeDevTools:(NSString*)pageID;
 + (void)closeDevToolsPanel:(NSString*)pageID;
 + (void)showNativeNotice:(NSString*)message icon:(NSString*)icon;
++ (void)translateText:(NSString*)text;
 + (BOOL)openAuthenticationSession:(NSURL*)url window:(NSString*)windowID;
 + (void)closeAuthenticationSession:(NSString*)windowID;
 @end
@@ -3486,6 +3487,10 @@ bool CancelAuthenticationSession(ASWebAuthenticationSessionRequest* request) {
     break;
   }
   return true;
+}
+void TranslateSelection(const std::u16string& text) {
+  if (!IsEnabled() || !State().started || State().disposing || text.empty()) return;
+  [NSClassFromString(@"CrestRoot") translateText:base::SysUTF16ToNSString(text)];
 }
 void ShowEngineNotice(const std::u16string& message, const std::string& symbol) {
   if (!IsEnabled() || !State().started || State().disposing || message.empty()) return;

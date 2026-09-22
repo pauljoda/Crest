@@ -701,22 +701,6 @@ std::vector<StatusBubble*> CrestBrowserWindow::GetStatusBubbles() {
 
 void CrestBrowserWindow::UpdateTitleBar() {}
 
-void CrestBrowserWindow::BookmarkBarStateChanged( BookmarkBar::AnimateChangeType change_type) {}
-
-void CrestBrowserWindow::TemporarilyShowBookmarkBar(base::TimeDelta duration) {}
-
-void CrestBrowserWindow::UpdateDevTools(content::WebContents* inspected_web_contents) {
-  crest::UpdateDockedDevTools(inspected_web_contents);
-}
-
-bool CrestBrowserWindow::CanDockDevTools() const {
-  // A docked inspector is mounted inside the page card it inspects, so every
-  // Crest window can host one. The gate DevTools actually consults is
-  // `crest::CanDockDevTools`, which answers per inspected WebContents because
-  // only a Crest page has a card to dock into.
-  return true;
-}
-
 void CrestBrowserWindow::UpdateLoadingAnimations(bool is_visible) {}
 
 
@@ -725,22 +709,6 @@ void CrestBrowserWindow::UpdateLoadingAnimations(bool is_visible) {}
 void CrestBrowserWindow::OnActiveTabChanged(content::WebContents* old_contents, content::WebContents* new_contents, int index, int reason) {}
 
 void CrestBrowserWindow::OnTabDetached(content::WebContents* contents, bool was_active) {}
-
-void CrestBrowserWindow::ZoomChangedForActiveTab(bool can_show_bubble) {}
-
-bool CrestBrowserWindow::ShouldHideUIForFullscreen() const {
-  return false;
-}
-
-bool CrestBrowserWindow::IsFullscreenBubbleVisible() const {
-  return false;
-}
-
-bool CrestBrowserWindow::IsForceFullscreen() const {
-  return false;
-}
-
-void CrestBrowserWindow::SetForceFullscreen(bool force_fullscreen) {}
 
 gfx::Size CrestBrowserWindow::GetContentsSize() const {
   return {};
@@ -778,7 +746,6 @@ void CrestBrowserWindow::UpdateCustomTabBarVisibility(bool visible, bool animate
 // Chrome dims its contents view while a DevTools-owned modal dialog is up. The
 // dialog is presented as a sheet on the Crest window, which draws its own
 // dimming, so there is no separate scrim to show or hide.
-void CrestBrowserWindow::SetDevToolsScrimVisibility(bool visible) {}
 
 void CrestBrowserWindow::ResetToolbarTabState(content::WebContents* contents) {}
 
@@ -791,27 +758,6 @@ void CrestBrowserWindow::TabDraggingStatusChanged(bool is_dragging) {}
 void CrestBrowserWindow::LinkOpeningFromGesture(WindowOpenDisposition disposition) {}
 
 void CrestBrowserWindow::FocusAppMenu() {}
-
-void CrestBrowserWindow::FocusBookmarksToolbar() {}
-
-void CrestBrowserWindow::FocusInactivePopupForAccessibility() {}
-
-void CrestBrowserWindow::RotatePaneFocus(bool forwards) {}
-
-void CrestBrowserWindow::FocusWebContentsPane() {
-  if (content::WebContents* contents =
-          browser_->tab_strip_model()->GetActiveWebContents()) {
-    contents->Focus();
-  }
-}
-
-bool CrestBrowserWindow::IsBookmarkBarVisible() const {
-  return false;
-}
-
-bool CrestBrowserWindow::IsBookmarkBarAnimating() const {
-  return false;
-}
 
 bool CrestBrowserWindow::IsTabStripEditable() const {
   return true;
@@ -829,16 +775,6 @@ bool CrestBrowserWindow::IsToolbarShowing() const {
 
 bool CrestBrowserWindow::IsLocationBarVisible() const {
   return false;
-}
-
-SharingDialog* CrestBrowserWindow::ShowSharingDialog(content::WebContents* contents, SharingDialogData data) {
-  content::WebContents* target =
-      contents ? contents : browser_->tab_strip_model()->GetActiveWebContents();
-  if (target) {
-    [NSClassFromString(@"CrestRoot") shareURL:base::SysUTF8ToNSString(target->GetVisibleURL().spec())
-                 title:base::SysUTF16ToNSString(target->GetTitle())];
-  }
-  return nullptr;
 }
 
 void CrestBrowserWindow::ShowUpdateChromeDialog() {}
@@ -884,52 +820,11 @@ void CrestBrowserWindow::ShowBookmarkBubble(const GURL& url, bool already_bookma
   [NSClassFromString(@"CrestRoot") toggleBookmarkForURL:base::SysUTF8ToNSString(spec) title:title];
 }
 
-sharing_hub::ScreenshotCapturedBubble* CrestBrowserWindow::ShowScreenshotCapturedBubble( content::WebContents* contents, const gfx::Image& image) {
-  [NSClassFromString(@"CrestRoot") showNativeNotice:@"Screenshot captured."
-                        icon:@"camera.viewfinder"];
-  return nullptr;
-}
-
-qrcode_generator::QRCodeGeneratorBubbleView* CrestBrowserWindow::ShowQRCodeGeneratorBubble(content::WebContents* contents, const GURL& url, bool show_back_button) {
-  NSString* title = contents ? base::SysUTF16ToNSString(contents->GetTitle()) : @"";
-  const std::string spec = url.is_valid()
-                               ? url.spec()
-                               : (contents ? contents->GetVisibleURL().spec()
-                                           : std::string());
-  [NSClassFromString(@"CrestRoot") showQRCodeForURL:base::SysUTF8ToNSString(spec) title:title];
-  return nullptr;
-}
-
-send_tab_to_self::SendTabToSelfBubbleView* CrestBrowserWindow::ShowSendTabToSelfDevicePickerBubble(content::WebContents* contents) {
-  [NSClassFromString(@"CrestRoot") showNativeNotice:@"Send to device is not exposed in Crest yet."
-                        icon:@"paperplane"];
-  return nullptr;
-}
-
-send_tab_to_self::SendTabToSelfBubbleView* CrestBrowserWindow::ShowSendTabToSelfPromoBubble(content::WebContents* contents, bool show_signin_button) {
-  [NSClassFromString(@"CrestRoot") showNativeNotice:@"Send to device is not exposed in Crest yet."
-                        icon:@"paperplane"];
-  return nullptr;
-}
-
-sharing_hub::SharingHubBubbleView* CrestBrowserWindow::ShowSharingHubBubble( share::ShareAttempt attempt) {
-  if (content::WebContents* contents =
-          browser_->tab_strip_model()->GetActiveWebContents()) {
-    [NSClassFromString(@"CrestRoot") shareURL:base::SysUTF8ToNSString(contents->GetVisibleURL().spec())
-                 title:base::SysUTF16ToNSString(contents->GetTitle())];
-  }
-  return nullptr;
-}
-
 ShowTranslateBubbleResult CrestBrowserWindow::ShowTranslateBubble( content::WebContents* contents, translate::TranslateStep step, const std::string& source_language, const std::string& target_language, translate::TranslateErrors error_type, bool is_user_gesture) {
   if (contents) {
     [NSClassFromString(@"CrestRoot") translateURL:base::SysUTF8ToNSString(contents->GetVisibleURL().spec())];
   }
   return {};
-}
-
-void CrestBrowserWindow::StartPartialTranslate(const std::string& source_language, const std::string& target_language, const std::u16string& text_selection) {
-  [NSClassFromString(@"CrestRoot") translateText:base::SysUTF16ToNSString(text_selection)];
 }
 
 DownloadBubbleUIController* CrestBrowserWindow::GetDownloadBubbleUIController() {

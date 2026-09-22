@@ -49,6 +49,9 @@ void AddNavigationThrottle(content::NavigationThrottleRegistry& registry);
 // that this build never creates. Their message is shown as a Crest notice
 // named by an SF Symbol instead.
 void ShowEngineNotice(const std::u16string& message, const std::string& symbol);
+// A selection the person asked to translate. Crest shows the system's
+// translation panel rather than Chromium's partial-translate bubble.
+void TranslateSelection(const std::u16string& text);
 // Extension side panels are cards in Crest's own page row, so this build never
 // creates Chrome's Views side-panel UI. `chrome.sidePanel.open()`, `close()`
 // and an action click that toggles a panel are routed to the card that belongs

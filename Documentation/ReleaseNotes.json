@@ -1897,6 +1897,18 @@
     "engine-capabilities-gate-ui": {
       "category": "improved",
       "message": "Commands, menus and settings for features the current engine doesn't offer, such as Reader or feature flags on the desktop browser, no longer appear."
+    },
+    "device-choosers-no-crash": {
+      "category": "fixed",
+      "message": "Sites that ask to connect to a USB, HID or serial device no longer quit Crest."
+    },
+    "context-menu-only-working-items": {
+      "category": "fixed",
+      "message": "Page menus no longer offer items that couldn't work here, such as QR codes, reading mode and a search with no search engine."
+    },
+    "translate-selection-desktop": {
+      "category": "fixed",
+      "message": "Translating selected text works in the desktop browser, and foreign-language pages no longer show a translation notice on their own."
     }
   }
 }

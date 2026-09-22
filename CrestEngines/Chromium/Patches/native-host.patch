@@ -614,15 +614,15 @@
  #import "components/remote_cocoa/app_shim/menu_controller_cocoa_delegate_impl.h"
  #include "content/public/browser/web_contents.h"
  #include "ui/base/cocoa/menu_utils.h"
-@@ -78,16 +80,36 @@
+@@ -78,17 +80,53 @@
    views::Widget* widget = views::Widget::GetTopLevelWidgetForNativeView(
        source_web_contents_->GetNativeView());
-
+ 
 -  if (!widget || headless::IsHeadlessMode()) {
 +  if (headless::IsHeadlessMode() || (!widget && (!crest::IsEnabled() || !parent_view_.window))) {
      return;
    }
-
+ 
 -  menu_controller_delegate_ = [[MenuControllerCocoaDelegateImpl alloc]
 -      initWithParams:MenuControllerParamsForWidget(widget)];
 +  if (crest::IsEnabled()) {
@@ -635,9 +635,25 @@
 +        case IDC_CONTENT_CONTEXT_OPENLINKINPROFILE:
 +        case IDC_CONTENT_CONTEXT_OPENLINKBOOKMARKAPP:
 +        case IDC_CONTENT_CONTEXT_OPENLINKSPLITVIEW:
++        // These open Views surfaces this build never creates, or depend on a
++        // default search engine and sync the product does not have.
++        case IDC_CONTENT_CONTEXT_GENERATE_QR_CODE:
++        case IDC_CONTENT_CONTEXT_OPEN_IN_READING_MODE:
++        case IDC_CONTENT_CONTEXT_LISTEN_TO_THIS_PAGE:
++        case IDC_CONTENT_CONTEXT_SEARCHWEBFOR:
++        case IDC_SEND_TAB_TO_SELF:
 +          menu_model_.RemoveItemAt(i - 1);
 +          break;
 +      }
++    }
++    // Removing items can leave separators doubled or at either end.
++    for (size_t i = menu_model_.GetItemCount(); i > 0; --i) {
++      const size_t index = i - 1;
++      if (menu_model_.GetTypeAt(index) != ui::MenuModel::TYPE_SEPARATOR) continue;
++      const bool at_edge = index == 0 || index + 1 == menu_model_.GetItemCount();
++      const bool doubled = index + 1 < menu_model_.GetItemCount() &&
++          menu_model_.GetTypeAt(index + 1) == ui::MenuModel::TYPE_SEPARATOR;
++      if (at_edge || doubled) menu_model_.RemoveItemAt(index);
 +    }
 +  }
 +
@@ -649,20 +665,21 @@
        [[MenuControllerCocoa alloc] initWithModel:&menu_model_
                                     isContextMenu:YES
                                          delegate:menu_controller_delegate_];
-+
+ 
 +  crest::AppendLinkMenuItem(menu_controller_.menu, source_web_contents_, params_.link_url);
-
++
    NSPoint position =
        NSMakePoint(params_.x, NSHeight(parent_view_.bounds) - params_.y);
-@@ -97,7 +119,8 @@
-
+   position = [parent_view_ convertPoint:position toView:nil];
+@@ -97,7 +135,8 @@
+ 
    ui::ShowContextMenu(menu_controller_.menu, clickEvent, parent_view_,
                        /*allow_nested_tasks=*/true,
 -                      views::ElementTrackerViews::GetContextForWidget(widget));
 +                      widget ? views::ElementTrackerViews::GetContextForWidget(widget)
 +                             : ui::ElementContext());
  }
-
+ 
  void RenderViewContextMenuMacCocoa::CancelToolkitMenu() {
 --- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h
 +++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h
@@ -1586,3 +1603,84 @@
  }
  
  void LocalFrameMojoHandler::InvokeScriptToolForInspector(
+--- a/chrome/browser/ui/views/bubble_anchor_util_views.cc
++++ b/chrome/browser/ui/views/bubble_anchor_util_views.cc
+@@ -73,6 +73,12 @@
+     }
+   }
+ 
++  // A browser hosted in a native window has no Views frame to anchor to; the
++  // bubble falls back to GetPageInfoAnchorRect().
++  if (!browser_view) {
++    return {};
++  }
++
+   if (anchor == Anchor::kLocationBar &&
+       browser_view->GetIsPictureInPictureType()) {
+     auto* frame_view = static_cast<PictureInPictureBrowserFrameView*>(
+@@ -162,6 +168,13 @@
+   DCHECK(GetPageInfoAnchorConfiguration(browser).anchor.IsNull());
+ 
+   BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
++  if (!browser_view) {
++    // A native window: place the bubble just inside its top-leading corner.
++    const gfx::Rect bounds = BrowserWindow::FromBrowser(browser)->GetBounds();
++    return gfx::Rect(bounds.origin() +
++                         gfx::Vector2d(bubble_anchor_util::kNoToolbarLeftOffset, 0),
++                     gfx::Size());
++  }
+   // Get position in view (taking RTL UI into account).
+   int x_within_browser_view = browser_view->GetMirroredXInView(
+       bubble_anchor_util::kNoToolbarLeftOffset);
+--- a/chrome/browser/ui/browser_commands.cc
++++ b/chrome/browser/ui/browser_commands.cc
+@@ -1384,7 +1384,10 @@
+   const bool single_pinned_tab_selected =
+       active_tab->IsPinned() &&
+       browser->GetTabStripModel()->selection_model().size() == 1;
++  // A browser hosted in a native window has no Views accelerators to name in
++  // the pinned-tab toast; the tab closes directly.
+   if (single_pinned_tab_selected &&
++      BrowserView::GetBrowserViewForBrowser(browser) &&
+       toast_controller->GetCurrentToastId() != ToastId::kClosePinnedTab) {
+     BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
+     CHECK(browser_view);
+--- a/chrome/browser/ui/extensions/extension_install_ui_desktop.cc
++++ b/chrome/browser/ui/extensions/extension_install_ui_desktop.cc
+@@ -151,7 +151,7 @@
+                   browser_interface->GetBrowserForMigrationOnly();
+               BrowserView* browser_view =
+                   BrowserView::GetBrowserViewForBrowser(browser);
+-              if (!browser_view->toolbar()) {
++              if (!browser_view || !browser_view->toolbar()) {
+                 return;
+               }
+               ExtensionsToolbarDesktop* extensions_toolbar =
+--- a/chrome/browser/ui/views/translate/translate_bubble_controller.cc
++++ b/chrome/browser/ui/views/translate/translate_bubble_controller.cc
+@@ -4,6 +4,11 @@
+ 
+ #include "chrome/browser/ui/views/translate/translate_bubble_controller.h"
+ 
++#include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
++
+ #include <memory>
+ 
+ #include "base/functional/bind.h"
+@@ -147,6 +152,13 @@
+     const std::string& source_language,
+     const std::string& target_language,
+     const std::u16string& text_selection) {
++#if BUILDFLAG(IS_MAC)
++  // Crest translates a selection with the system's own translation panel.
++  if (crest::IsEnabled()) {
++    crest::TranslateSelection(text_selection);
++    return;
++  }
++#endif
+   tabs::TabInterface* active_tab = browser_window_->GetActiveTabInterface();
+   if (!active_tab) {
+     return;
