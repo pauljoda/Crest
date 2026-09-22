@@ -118,8 +118,13 @@ extension BrowserPage: WKNavigationDelegate {
             isShiftModified: isShiftModified,
             focusesNewTabs: opensModifiedLinksInForeground
                 || BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks)
+        // A modified click keeps its initiator's referrer through a staged
+        // request; a saved-site Peek starts afresh, as it does on Chromium.
+        let engineNavigation = decision == .peekModifier
+            ? BrowserWebKitPageEngine.stageLink(navigationAction.request, from: webView) : nil
         if let request = decision.peekRequest(destinationURL: navigationAction.request.url,
-            context: navigationContext, sourcePresentation: sourcePresentation) {
+            context: navigationContext, sourcePresentation: sourcePresentation,
+            engineNavigation: engineNavigation) {
             openPeek(request)
             decisionHandler(.cancel)
             return

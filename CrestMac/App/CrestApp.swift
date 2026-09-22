@@ -4,7 +4,9 @@ import SwiftUI
 @main
 #endif
 struct CrestApp: App {
-    @State private var launch = BrowserApplicationLaunch { try BrowserMacApplication() }
+    @State private var launch = BrowserApplicationLaunch {
+        try BrowserMacApplication(pageClosePreparation: BrowserWebKitPageClosePreparer())
+    }
 
     var body: some Scene {
         WindowGroup(

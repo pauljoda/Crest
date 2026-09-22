@@ -3,6 +3,8 @@ import WebKit
 
 extension BrowserPlatformPage {
     var webKitView: WKWebView? { webView }
+    /// The WebKit port behind this page, or nil when another engine hosts it.
+    var webKitEngine: BrowserWebKitPageEngine? { (pageEngine as any BrowserPageEngine) as? BrowserWebKitPageEngine }
 
     func goBack() {
         refreshNavigationState()

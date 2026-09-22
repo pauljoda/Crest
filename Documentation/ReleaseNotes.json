@@ -1945,6 +1945,18 @@
     "experimental-update-channel": {
       "category": "new",
       "message": "Builds from the experimental branch update through their own Experimental channel, shown in Settings only on those builds."
+    },
+    "webkit-before-unload": {
+      "category": "improved",
+      "message": "On the WebKit browser, a page with unsaved changes asks before its tab closes."
+    },
+    "webkit-peek-keeps-referrer": {
+      "category": "improved",
+      "message": "Peek opened from a modified link on the WebKit browser keeps the link's referrer."
+    },
+    "webkit-pip-residency": {
+      "category": "internal",
+      "message": "Report WebKit picture-in-picture state to page residency so a page in picture-in-picture is never unloaded."
     }
   }
 }

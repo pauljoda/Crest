@@ -25,6 +25,21 @@ final class BrowserDialogPresenter {
         present(alert) { completion($0 == .alertFirstButtonReturn) }
     }
 
+    /// Pages no longer choose the wording of a beforeunload prompt, so the
+    /// message names the site rather than repeating page-supplied text.
+    func presentBeforeUnload(
+        request: URLRequest,
+        completion: @escaping @MainActor @Sendable (Bool) -> Void
+    ) {
+        let alert = NSAlert()
+        alert.messageText = "Leave this page?"
+        alert.informativeText = "Changes you made on \(Self.sourceLabel(for: request)) may not be saved."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Leave Page")
+        alert.addButton(withTitle: "Stay on Page")
+        present(alert) { completion($0 == .alertFirstButtonReturn) }
+    }
+
     func presentPrompt(
         message: String,
         defaultText: String?,

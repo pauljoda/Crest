@@ -819,6 +819,36 @@ final class BrowserDownloadNavigationLifecycleTests: XCTestCase {
 }
 
 @MainActor
+final class BrowserWebKitStagedNavigationTests: XCTestCase {
+    /// A staged Peek request is spent by the first page that asks for it, never
+    /// reaches a page in another website data store, and never replays a body.
+    func testStagedLinkIsOneShotAndStaysInItsDataStore() throws {
+        let url = try XCTUnwrap(URL(string: "https://example.com/next"))
+        var request = URLRequest(url: url)
+        request.setValue("https://example.com/source", forHTTPHeaderField: "Referer")
+        let store = WKWebsiteDataStore.nonPersistent()
+        func page(_ store: WKWebsiteDataStore) -> BrowserWebKitPageEngine {
+            let configuration = WKWebViewConfiguration()
+            configuration.websiteDataStore = store
+            return BrowserWebKitPageEngine(webView: WKWebView(frame: .zero, configuration: configuration))
+        }
+        let source = page(store)
+
+        let crossStore = try XCTUnwrap(BrowserWebKitPageEngine.stageLink(request, from: source.webView))
+        XCTAssertFalse(page(.nonPersistent()).stageNavigation(crossStore, expecting: url))
+        XCTAssertFalse(page(store).stageNavigation(crossStore, expecting: url), "A refused token is spent.")
+
+        let navigation = try XCTUnwrap(BrowserWebKitPageEngine.stageLink(request, from: source.webView))
+        XCTAssertTrue(page(store).stageNavigation(navigation, expecting: url))
+        XCTAssertFalse(page(store).stageNavigation(navigation, expecting: url))
+
+        var post = request
+        post.httpMethod = "POST"
+        XCTAssertNil(BrowserWebKitPageEngine.stageLink(post, from: source.webView))
+    }
+}
+
+@MainActor
 final class BrowserPopupSchemeRoutingTests: XCTestCase {
 
     func testAPopupMayNotReachAScriptOrFileURLThroughAnyRoute() throws {

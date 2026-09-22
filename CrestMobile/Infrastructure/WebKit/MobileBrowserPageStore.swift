@@ -684,6 +684,7 @@ final class MobileBrowserPageStore:
         peekPageLeases.removeValue(forKey: request.id)?.lease.release()
         let lease = makeTransientPageLease(
             url: request.url, in: space, opensModifiedLinksInForeground: true,
+            engineNavigation: request.engineNavigation,
             onDownloadOnlyNavigation: onDownloadOnlyNavigation)
         if let lease { peekPageLeases[request.id] = (request, lease) }
         return lease
@@ -699,6 +700,7 @@ final class MobileBrowserPageStore:
         url: URL,
         in space: BrowserSpace,
         opensModifiedLinksInForeground: Bool = false,
+        engineNavigation: BrowserEngineNavigation? = nil,
         onUserActivity: @escaping () -> Void = {},
         onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> MobileBrowserTransientPageLease? {
@@ -713,6 +715,13 @@ final class MobileBrowserPageStore:
             tab: transientTab,
             in: space
         )
+        // Only the first page replays the staged request; a rebuilt page
+        // after memory pressure reloads its last URL like any other.
+        if let engineNavigation,
+            !initialPage.pageEngine.stageNavigation(engineNavigation, expecting: url) {
+            initialPage.prepareForSpaceDeletion()
+            return nil
+        }
         initialPage.opensModifiedLinksInForeground = opensModifiedLinksInForeground
         let rebuild: () -> MobileBrowserPage? = { [weak self] in
             guard let self,

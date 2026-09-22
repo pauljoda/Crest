@@ -35,6 +35,25 @@ extension BrowserPage: WKUIDelegate {
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
     func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isActive: Bool) {
         pictureInPicture?.nativePresentationDidChange(isActive: isActive)
+        webKitEngine?.hasVideoInPictureInPicture = isActive
+    }
+
+    /// WebKit offers beforeunload confirmation only through this desktop SPI;
+    /// without it every dirty page would leave silently. It covers ordinary
+    /// navigations as well as a close the page's engine asked to prepare.
+    @objc(_webView:runBeforeUnloadConfirmPanelWithMessage:initiatedByFrame:completionHandler:)
+    func webView(
+        _ webView: WKWebView,
+        runBeforeUnloadConfirmPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo,
+        completionHandler: @escaping @MainActor @Sendable (Bool) -> Void
+    ) {
+        let engine = webKitEngine
+        engine?.beforeUnloadPanelWillAppear()
+        dialogPresenter.presentBeforeUnload(request: frame.request) { leaving in
+            completionHandler(leaving)
+            engine?.beforeUnloadPanelDidFinish(leaving: leaving)
+        }
     }
 
     /// Native PiP's Restore action asks the embedder to reveal its document.
@@ -86,6 +105,8 @@ extension BrowserPage: WKUIDelegate {
     /// place: `window.close()` from a page the user navigated to would otherwise
     /// let any site discard the user's own tab.
     func webViewDidClose(_ webView: WKWebView) {
+        // A close Crest prepared reports its approval here, not a script close.
+        if webKitEngine?.webViewDidClose() == true { return }
         guard wasOpenedAsPopup else { return }
         host?.closeWebContentInitiatedPage(self)
     }

@@ -71,12 +71,24 @@ enum BrowserEngineRegistration {
                     "content-blocking", "downloads", "permissions", "reader", "translation",
                     "selection-translation", "local-files"] + desktopWebKit,
         unavailable: ["extensions"],
+        limitations: [
+            "A staged Peek navigation replays only a GET link's URL and referrer; WebKit has no public way to carry the initiating frame's origin, user activation or sandbox into another page.",
+        ] + desktopWebKitLimitations,
         archiveFormat: .webKit,
         evidence: "Existing native WebKit services and retained page, popup, profile and navigation contracts")
 
     private static var desktopWebKit: [String] {
         #if os(macOS)
-        ["viewport-capture", "full-page-capture", "pdf", "web-archive", "print", "inspector", "feature-flags"]
+        ["viewport-capture", "full-page-capture", "pdf", "web-archive", "print", "inspector", "feature-flags",
+         "before-unload"]
+        #else
+        []
+        #endif
+    }
+
+    private static var desktopWebKitLimitations: [String] {
+        #if os(macOS)
+        ["Before-unload uses WebKit's desktop close and prompt SPI; a WebKit without it closes pages without asking."]
         #else
         []
         #endif

@@ -10,8 +10,63 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     let webView: WKWebView
     var history = BrowserPageNavigationHistory()
     var nativeView: BrowserEngineView { webView }
+    /// WebKit reports its native video presentation only to the UI delegate,
+    /// which covers PiP entered from its own controls and cross-origin frames.
+    /// The page that owns the delegate forwards the callback here.
+    @ObservationIgnored var hasVideoInPictureInPicture = false
+    @ObservationIgnored private var stagedRequest: URLRequest?
+    #if os(macOS)
+    @ObservationIgnored private var closeCompletion: (@MainActor (Bool) -> Void)?
+    @ObservationIgnored private var closeTimeout: Task<Void, Never>?
+    #endif
 
     init(webView: WKWebView) { self.webView = webView }
+
+    private struct StagedLink {
+        let request: URLRequest
+        weak var dataStore: WKWebsiteDataStore?
+        let stagedAt: Date
+    }
+    private static var stagedLinks: [String: StagedLink] = [:]
+
+    /// Holds a modified link's request under a one-shot token, so the page Crest
+    /// opens for it replays the initiator's referrer instead of a bare URL.
+    /// Only a plain GET is staged: WebKit has no public way to hand another view
+    /// a form body, the initiating origin, user activation or sandbox flags.
+    static func stageLink(_ request: URLRequest, from webView: WKWebView) -> BrowserEngineNavigation? {
+        guard let url = request.url, ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+            (request.httpMethod ?? "GET").uppercased() == "GET",
+            request.httpBody == nil, request.httpBodyStream == nil else { return nil }
+        let now = Date()
+        stagedLinks = stagedLinks.filter {
+            $0.value.dataStore != nil && now.timeIntervalSince($0.value.stagedAt) < 300
+        }
+        if stagedLinks.count >= 16,
+            let oldest = stagedLinks.min(by: { $0.value.stagedAt < $1.value.stagedAt })?.key {
+            stagedLinks[oldest] = nil
+        }
+        var replay = URLRequest(url: url, cachePolicy: request.cachePolicy)
+        if let referrer = request.value(forHTTPHeaderField: "Referer") {
+            replay.setValue(referrer, forHTTPHeaderField: "Referer")
+        }
+        let token = UUID().uuidString
+        stagedLinks[token] = StagedLink(request: replay,
+            dataStore: webView.configuration.websiteDataStore, stagedAt: now)
+        return BrowserEngineNavigation(implementation: BrowserEngineRegistration.webKit.implementationId,
+            token: token)
+    }
+
+    /// Consumes the token even when it is refused, and only for a page that has
+    /// not loaded yet in the same website data store as the link's source.
+    func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool {
+        guard navigation.implementation == registration.implementationId,
+            let staged = Self.stagedLinks.removeValue(forKey: navigation.token),
+            stagedRequest == nil, webView.url == nil,
+            staged.request.url == url,
+            staged.dataStore === webView.configuration.websiteDataStore else { return false }
+        stagedRequest = staged.request
+        return true
+    }
 
     var interactionState: Data? {
         guard webView.backForwardList.currentItem != nil,
@@ -34,6 +89,13 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         history.forwardItems.enumerated().map { Self.item($0.element, depth: $0.offset + 1) }
     }
     func load(_ request: URLRequest) {
+        if let staged = stagedRequest {
+            stagedRequest = nil
+            if staged.url == request.url {
+                webView.load(staged)
+                return
+            }
+        }
         // A local document needs an explicit read-access root before WebKit will
         // give the document its own file origin; an ordinary request would load
         // the page without its stylesheets, scripts or images. The folder holding
@@ -73,9 +135,64 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         }
         return BrowserPageMediaActivity(isPlaying: state == .playing,
             isCapturing: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
-            hasPictureInPicture: false)
+            hasPictureInPicture: hasVideoInPictureInPicture)
     }
     #if os(macOS)
+    /// Asks the page's beforeunload handlers whether it may close. WebKit runs
+    /// them for an embedder close only through `_tryClose`, which answers
+    /// immediately when no document in the process needs the event, and
+    /// otherwise ends in `webViewDidClose` or a beforeunload panel the person
+    /// can decline. Approval leaves the page alive; the caller releases it.
+    func prepareToClose(completion: @escaping @MainActor (Bool) -> Void) {
+        let selector = NSSelectorFromString("_tryClose")
+        guard closeCompletion == nil else { completion(false); return }
+        guard webView.responds(to: selector) else { completion(true); return }
+        typealias TryClose = @convention(c) (AnyObject, Selector) -> Bool
+        let tryClose = unsafeBitCast(webView.method(for: selector), to: TryClose.self)
+        if tryClose(webView, selector) { completion(true); return }
+        closeCompletion = completion
+        scheduleCloseTimeout()
+    }
+
+    /// True when a close this port requested owns the panel being shown.
+    var isPreparingToClose: Bool { closeCompletion != nil }
+
+    /// The person is deciding; a prompt has no time limit.
+    func beforeUnloadPanelWillAppear() { closeTimeout?.cancel() }
+
+    /// Staying ends the close here: WebKit sends nothing more. Leaving still
+    /// waits for WebKit's close callback.
+    func beforeUnloadPanelDidFinish(leaving: Bool) {
+        guard closeCompletion != nil else { return }
+        if leaving { scheduleCloseTimeout() } else { finishClose(false) }
+    }
+
+    /// Returns true when the callback answers this port's own close request,
+    /// so it must not be treated as the page calling `window.close()`.
+    func webViewDidClose() -> Bool {
+        guard closeCompletion != nil else { return false }
+        finishClose(true)
+        return true
+    }
+
+    // WebKit already closes after its own short timeout when the web process
+    // does not answer; this only guards against a callback that never comes.
+    private func scheduleCloseTimeout() {
+        closeTimeout?.cancel()
+        closeTimeout = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            self?.finishClose(true)
+        }
+    }
+
+    private func finishClose(_ allowed: Bool) {
+        closeTimeout?.cancel()
+        closeTimeout = nil
+        let completion = closeCompletion
+        closeCompletion = nil
+        completion?(allowed)
+    }
+
     func showInspector() -> Bool {
         BrowserWebInspectorAccess.show(inspectorOwner: webView, isInspectable: webView.isInspectable)
     }

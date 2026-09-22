@@ -124,6 +124,13 @@ extension MobileBrowserPage: WKUIDelegate {
         }
     }
 
+    /// WebKit reports native picture-in-picture only to the UI delegate. The
+    /// page's residency reads it back through its engine.
+    @objc(_webView:hasVideoInPictureInPictureDidChange:)
+    func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isActive: Bool) {
+        webKitEngine?.hasVideoInPictureInPicture = isActive
+    }
+
     /// Closes only tabs that web content opened. A hand-opened tab keeps its
     /// place: `window.close()` from a page the user navigated to would otherwise
     /// let any site discard the user's own tab.
