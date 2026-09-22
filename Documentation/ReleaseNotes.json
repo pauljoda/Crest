@@ -1777,6 +1777,30 @@
     "web-store-page-fits-card": {
       "category": "fixed",
       "message": "Chrome Web Store pages fit the page card instead of running past its edge, and the install review appears under the toolbar rather than off screen."
+    },
+    "locked-space-no-network-favicons": {
+      "category": "fixed",
+      "message": "Locked Spaces no longer fetch site icons or list history, archive and downloads until they are unlocked."
+    },
+    "locked-space-external-links-no-prompt": {
+      "category": "fixed",
+      "message": "Links sent from other apps never trigger an unlock prompt for a locked Space; they open in a Quick Window for an unlocked Space instead."
+    },
+    "engine-capabilities-truthful": {
+      "category": "improved",
+      "message": "Site controls, settings and menus follow what the current browsing engine actually supports, including selection translation, extensions and popup blocking."
+    },
+    "sidebar-mouse-navigation-all-engines": {
+      "category": "fixed",
+      "message": "Mouse back and forward buttons over the sidebar navigate the page in Chromium-powered windows too."
+    },
+    "updater-ignores-older-updates": {
+      "category": "fixed",
+      "message": "Crest no longer offers to install an update older than the running version."
+    },
+    "remove-dead-webkit-only-code": {
+      "category": "internal",
+      "message": "Remove unreachable pre-core sync coordinator, unused presentation types and dead engine branches."
     }
   }
 }

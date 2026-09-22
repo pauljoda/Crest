@@ -8,7 +8,7 @@ struct BrowserSiteControlContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             BrowserSiteControlHeader(page: configuration.page)
-            if let notice = configuration.page.blockedPopupState.notice {
+            if let notice = configuration.page.blockedPopupNotice {
                 BrowserBlockedPopupSiteControlNotice(
                     notice: notice,
                     allow: {
@@ -21,11 +21,12 @@ struct BrowserSiteControlContent: View {
                 page: configuration.page,
                 dismiss: dismiss
             )
-            #if CREST_CHROMIUM_HOST
-            if let native = configuration.page.chromiumPage {
-                ChromiumExtensionControls(page: native, space: configuration.space, url: configuration.page.url, dismiss: dismiss)
-            }
-            #endif
+            BrowserEngineSiteControlsSection(
+                page: configuration.page,
+                space: configuration.space,
+                url: configuration.page.url,
+                dismiss: dismiss
+            )
             Divider()
             BrowserSiteSettingsContent(
                 page: configuration.page,

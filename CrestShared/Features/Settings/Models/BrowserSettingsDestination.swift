@@ -22,9 +22,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     case sync
     case privacy
     case passwords
-    #if CREST_CHROMIUM_HOST
     case extensions
-    #endif
     case featureFlags
     case advanced
     case about
@@ -39,6 +37,20 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     /// one platform can host stays out of the other's list.
     static var platformCases: [BrowserSettingsDestination] {
         BrowserPlatformSettingsDestinationCatalog.cases
+            .filter(\.isProvidedByCurrentEngine)
+    }
+
+    /// Whether the running engine provides the destination's subject at all.
+    ///
+    /// The case set is fixed: accessibility identifiers derive from it and the
+    /// automation suites pin it, so a destination never disappears from the
+    /// enum because of which engine this process composed. Only its
+    /// availability follows the engine's declared capabilities.
+    var isProvidedByCurrentEngine: Bool {
+        switch self {
+        case .extensions: BrowserEngineRegistration.current.supports("extensions")
+        default: true
+        }
     }
 
     /// Whether this platform can present the destination at all.
@@ -46,7 +58,8 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     /// Keyboard shortcuts are a desktop concern: iOS has no rebindable command
     /// table to edit, so `.shortcuts` is absent there.
     var isAvailableOnCurrentPlatform: Bool {
-        BrowserPlatformSettingsDestinationCatalog.isAvailable(self)
+        isProvidedByCurrentEngine
+            && BrowserPlatformSettingsDestinationCatalog.isAvailable(self)
     }
 
     // MARK: - Identity
@@ -60,9 +73,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .spaces: "square.grid.2x2"
         case .sync: "arrow.triangle.2.circlepath.icloud"
         case .privacy: "hand.raised"
-        #if CREST_CHROMIUM_HOST
         case .extensions: "puzzlepiece.extension"
-        #endif
         case .passwords: "key.fill"
         case .featureFlags: "flag.2.crossed"
         case .advanced: "switch.2"
@@ -83,9 +94,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .spaces: CrestBrandPalette.coral
         case .sync: CrestBrandPalette.sage
         case .privacy: CrestBrandPalette.inkSoft
-        #if CREST_CHROMIUM_HOST
         case .extensions: CrestBrandPalette.sage
-        #endif
         case .passwords: CrestBrandPalette.butter
         case .featureFlags: CrestBrandPalette.coral
         case .advanced: CrestBrandPalette.sage

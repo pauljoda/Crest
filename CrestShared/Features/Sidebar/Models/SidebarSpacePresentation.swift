@@ -39,4 +39,8 @@ extension EnvironmentValues {
     @Entry var sidebarSpacePresentation: SidebarSpacePresentation? = nil
     /// Read by interaction and editor-cleanup leaves, not row configurations.
     @Entry var sidebarSpaceIsSelected: Bool? = nil
+    /// Set by every shell surface that draws a Space's rows. Leaves that would
+    /// otherwise reach the network for a row's content (favicons) must not do so
+    /// while the Space is locked: the request itself discloses the hostnames.
+    @Entry var browserSpaceContentIsLocked: Bool = false
 }

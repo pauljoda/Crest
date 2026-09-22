@@ -16,6 +16,10 @@ struct MobileBrowserSidebarSpaceSurface: View {
             isSelected: isSelected
         )
         .environment(\.colorScheme, spaceColorScheme)
+        // Blur and redaction are drawing effects; rows still run their tasks.
+        // This stops the ones that would otherwise disclose a locked Space's
+        // hostnames to the network.
+        .environment(\.browserSpaceContentIsLocked, isLocked)
         .blur(radius: isLocked ? BrowserSidebarMetrics.lockedSpaceBlurRadius : 0)
         .redacted(reason: isLocked ? .placeholder : [])
         .allowsHitTesting(!isLocked)

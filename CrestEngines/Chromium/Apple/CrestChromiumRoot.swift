@@ -454,10 +454,18 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         let browser = model.browser
         let decision = BrowserLinkPreferenceStore.shared.routingDecision(
             for: url, in: browser.session, unavailableSpaceIDs: browser.deletingSpaceIDs)
-        guard let space = browser.session.space(id: decision.spaceID) else { return }
+        // A link that arrived from another process never raises the biometric
+        // prompt for a locked Space; it opens in a Quick Window on an unlocked one.
+        guard let destination = BrowserExternalLinkLockPolicy.destination(
+            routedTo: decision.spaceID, selectedSpaceID: browser.selectedSpace?.id,
+            spaces: browser.session.spaces, unavailableSpaceIDs: browser.deletingSpaceIDs,
+            isLocked: application.spaceAccess.isLocked) else { return }
+        let space = destination.space
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard await application.spaceAccess.unlock(space), browser.space(matching: assignment) != nil else { return }
-        switch decision {
+        let effective: BrowserLinkRoutingDecision =
+            destination.substitutesForLockedSpace ? .quickWindow(spaceID: space.id) : decision
+        switch effective {
         case .quickWindow:
             openQuickWindow(BrowserQuickWindowRequest(url: url, spaceAssignment: assignment, targetWindowID: model.id))
         case .space:

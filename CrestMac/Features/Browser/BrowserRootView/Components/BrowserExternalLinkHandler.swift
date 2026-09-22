@@ -40,12 +40,24 @@ struct BrowserExternalLinkHandler: ViewModifier {
             in: browser.session,
             unavailableSpaceIDs: browser.deletingSpaceIDs
         )
+        // A locked routed Space never raises a prompt for a link that arrived
+        // from another process; the link lands in a Quick Window instead.
         guard
+            let destination = BrowserExternalLinkLockPolicy.destination(
+                routedTo: decision.spaceID,
+                selectedSpaceID: browser.selectedSpace?.id,
+                spaces: browser.session.spaces,
+                unavailableSpaceIDs: browser.deletingSpaceIDs,
+                isLocked: spaceAccess.isLocked
+            ),
             let assignment = await accessibleAssignment(
-                for: decision.spaceID
+                for: destination.space.id
             )
         else { return }
-        switch decision {
+        let effective: BrowserLinkRoutingDecision =
+            destination.substitutesForLockedSpace
+            ? .quickWindow(spaceID: destination.space.id) : decision
+        switch effective {
         case .quickWindow:
             openWindow(
                 id: BrowserSceneID.quickWindow.rawValue,

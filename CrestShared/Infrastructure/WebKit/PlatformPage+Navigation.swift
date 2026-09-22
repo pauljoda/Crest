@@ -37,10 +37,9 @@ extension BrowserPlatformPage {
     /// Retire their pending destination once WebKit publishes that URL, and
     /// publish history from the same observation path as the address bar.
     func synchronizeNavigationHistory() {
+        // A page without a WebKit view has no back-forward list to read; the
+        // Chromium port publishes its own history through the engine port.
         guard let webView = webKitView else { return }
-        #if CREST_CHROMIUM_HOST
-        if chromiumPage != nil { return }
-        #endif
         if let pendingNavigationURL, webView.url == pendingNavigationURL,
             webView.backForwardList.currentItem?.url == pendingNavigationURL
         {

@@ -1,6 +1,5 @@
 import CryptoKit
 import Foundation
-import WebKit
 
 /// Identifies the obsolete cookie-copying store for site-data and profile
 /// deletion. New extension documents never load this store.

@@ -8,7 +8,7 @@ struct BrowserSiteControlButton: View {
     var body: some View {
         BrowserSiteControlTrigger(
             isPresented: presentationBinding,
-            blockedPopupNotice: configuration.page.blockedPopupState.notice
+            blockedPopupNotice: configuration.page.blockedPopupNotice
         )
         .popover(isPresented: presentationBinding, arrowEdge: .top) {
             Group {

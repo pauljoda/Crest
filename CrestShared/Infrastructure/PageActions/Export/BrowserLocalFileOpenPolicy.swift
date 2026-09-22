@@ -20,12 +20,9 @@ enum BrowserLocalFileOpenPolicy {
 extension BrowserPageArchiveFormat {
     /// The format of the engine this process registered, for the moments before a
     /// page exists to ask. The command route still prefers the active page's own
-    /// engine when there is one.
+    /// engine when there is one. The value comes from the engine's own
+    /// registration rather than a compile-time condition repeated here.
     static var registered: BrowserPageArchiveFormat {
-        #if CREST_CHROMIUM_HOST
-        .mhtml
-        #else
-        .webKit
-        #endif
+        BrowserEngineRegistration.current.archiveFormat
     }
 }

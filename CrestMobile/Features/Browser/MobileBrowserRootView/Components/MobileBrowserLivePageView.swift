@@ -55,7 +55,7 @@ struct MobileBrowserLivePageView: View {
         )
         .modifier(
             BrowserTranslationHost(
-                translation: page.translation, webView: page.webView,
+                translation: page.translation, page: page,
                 isActive: isActive, isLoading: page.isLoading,
                 isReaderActive: page.readerModeState.isActive
             )

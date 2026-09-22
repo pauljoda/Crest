@@ -16,11 +16,22 @@ struct BrowserAdapterRegistration: Encodable, Sendable {
     let implementationVersion = "1"
     let protocolVersion = 1
     let capabilities: [String: Capability]
+    /// The page archive this engine writes and reads. It follows the engine, not
+    /// the platform, so callers that have no page yet can still name the format
+    /// without asking a compile-time condition. Not part of the encoded
+    /// descriptor: the core session contract is the capability map.
+    let archiveFormat: BrowserPageArchiveFormat
+
+    private enum CodingKeys: String, CodingKey {
+        case adapterId, role, implementationId, implementationVersion
+        case protocolVersion, capabilities
+    }
 
     init(id: String, role: String, implementation: String, scope: String,
          supported: [String], unverified: [String] = [], unavailable: [String] = [],
-         limitations: [String] = [], evidence: String) {
+         limitations: [String] = [], archiveFormat: BrowserPageArchiveFormat, evidence: String) {
         adapterId = id; self.role = role; implementationId = implementation
+        self.archiveFormat = archiveFormat
         var values: [String: Capability] = [:]
         for (status, names) in [("supported", supported), ("unverified", unverified), ("unavailable", unavailable)] {
             for name in names {
@@ -58,8 +69,9 @@ enum BrowserEngineRegistration {
         supported: ["pages", "navigation", "find", "zoom", "interaction-state", "page-residency",
                     "popups", "workspace-profiles", "workspace-transfer", "profile-deletion",
                     "content-blocking", "downloads", "permissions", "reader", "translation",
-                    "local-files"] + desktopWebKit,
+                    "selection-translation", "local-files"] + desktopWebKit,
         unavailable: ["extensions"],
+        archiveFormat: .webKit,
         evidence: "Existing native WebKit services and retained page, popup, profile and navigation contracts")
 
     private static var desktopWebKit: [String] {
@@ -74,11 +86,22 @@ enum BrowserEngineRegistration {
         id: "engine", role: "engine", implementation: "crest.chromium.macos",
         scope: "Native macOS Chromium host with Crest page and profile ports",
         supported: ["pages", "navigation", "find", "zoom", "interaction-state", "page-residency",
-                    "popups", "workspace-profiles", "workspace-transfer", "profile-deletion",
+                    "workspace-profiles", "workspace-transfer", "profile-deletion",
                     "before-unload", "downloads", "permissions", "viewport-capture", "inspector", "internal-pages",
-                    "full-page-capture", "pdf", "web-archive", "print", "local-files"],
-        unverified: ["extensions"],
+                    "full-page-capture", "pdf", "web-archive", "print", "local-files",
+                    "extensions", "selection-translation"],
+        // The engine blocks automatic popups itself, but nothing relays its
+        // blocker's observations back, so Crest's blocked-popup notice and its
+        // per-site allow action have nothing to show. Declared honestly rather
+        // than left advertising a control that cannot appear.
+        unverified: ["popups"],
         unavailable: ["reader", "translation", "content-blocking"],
-        limitations: ["Extension actions and installation are wired; full API parity and Apple password-helper pairing remain incomplete."],
+        limitations: [
+            "Blocked-popup notices are not relayed from the engine's popup blocker; the per-site allow action is unavailable.",
+            "Find does not honour a non-wrapping search: the host command takes no wrap argument and the engine always wraps.",
+            "Extensions cover actions, installation, side panels and per-Space permissions; full API parity and Apple password-helper pairing remain incomplete.",
+            "Translation is limited to the selection service; whole-page translation is unavailable.",
+        ],
+        archiveFormat: .mhtml,
         evidence: "Native host page, lifecycle, download, permission and compositor ports; isolated app validation")
 }

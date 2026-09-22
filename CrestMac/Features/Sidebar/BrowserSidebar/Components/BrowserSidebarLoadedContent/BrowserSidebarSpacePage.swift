@@ -94,6 +94,10 @@ struct BrowserSidebarSpacePage: View {
             SidebarSpacePresentation(space: space, isUnlocked: !isLocked)
         )
         .environment(\.sidebarSpaceIsSelected, isSelected)
+        // Blur and redaction are drawing effects; rows still run their tasks.
+        // This stops the ones that would otherwise disclose a locked Space's
+        // hostnames to the network.
+        .environment(\.browserSpaceContentIsLocked, isLocked)
         .onChange(of: isLocked) { _, locked in
             if locked, isSelected { browser.tabMultiSelection.clear() }
         }

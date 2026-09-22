@@ -14,11 +14,6 @@ final class BrowserSpaceAccessController {
     var coreAccess: BrowserCoreSpaceAccess { core }
     @ObservationIgnored private var activeRequest: UInt64?
     private var accessRevision: UInt = 0
-    /// Invoked after the unlocked set changes so a service holding live access
-    /// to a Space's pages — the extension debugger — can withdraw at once
-    /// instead of at its next request.
-    @ObservationIgnored var accessDidChange: (() -> Void)?
-
     init(
         authenticator: any BrowserDeviceAuthenticating = SystemBrowserDeviceAuthenticator()
     ) {
@@ -85,8 +80,9 @@ final class BrowserSpaceAccessController {
                 failure = .authenticationDenied
                 return false
             }
+            // `accessRevision` is observed: both shells relock their page pools
+            // from `lockedSpaceIDs`, so the withdrawal happens without a hook.
             accessRevision &+= 1
-            accessDidChange?()
             return true
         } catch {
             guard core.complete(request, assignment: assignment, succeeded: false) else { return false }
@@ -102,7 +98,6 @@ final class BrowserSpaceAccessController {
             activeRequest = nil
             authenticatingAssignment = nil
         }
-        accessDidChange?()
     }
 
     func lockAllForInactiveScene() {
@@ -119,6 +114,5 @@ final class BrowserSpaceAccessController {
         accessRevision &+= 1
         activeRequest = nil
         authenticatingAssignment = nil
-        accessDidChange?()
     }
 }

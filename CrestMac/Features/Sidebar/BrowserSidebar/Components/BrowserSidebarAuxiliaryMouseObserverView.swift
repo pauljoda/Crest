@@ -1,15 +1,21 @@
 import AppKit
-import WebKit
 
 @MainActor
 final class BrowserSidebarAuxiliaryMouseObserverView: NSView {
     var perform: @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void
+    /// The window's live pages, asked for at event time so a page created or
+    /// released since the last SwiftUI update is never consulted.
+    var navigationTargets:
+        @MainActor @Sendable () -> [any BrowserSidebarMouseNavigationTarget]
     private var eventMonitor: Any?
 
     init(
-        perform: @escaping @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void
+        perform: @escaping @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void,
+        navigationTargets: @escaping @MainActor @Sendable ()
+            -> [any BrowserSidebarMouseNavigationTarget]
     ) {
         self.perform = perform
+        self.navigationTargets = navigationTargets
         super.init(frame: .zero)
     }
 
@@ -52,24 +58,24 @@ final class BrowserSidebarAuxiliaryMouseObserverView: NSView {
             )
         else { return event }
 
-        let webView = webViewUnderPointer(for: event)
+        let page = pageUnderPointer(for: event)
         guard
             let disposition = BrowserSidebarMouseButtonPolicy.disposition(
                 for: action,
-                pointerScope: pointerScope(for: event, webView: webView),
-                canNavigatePage: canNavigate(action, in: webView)
+                pointerScope: pointerScope(for: event, page: page),
+                canNavigatePage: canNavigate(action, in: page)
             )
         else { return event }
 
-        execute(disposition, in: webView)
+        execute(disposition, in: page)
         return nil
     }
 
     private func pointerScope(
         for event: NSEvent,
-        webView: WKWebView?
+        page: (any BrowserSidebarMouseNavigationTarget)?
     ) -> BrowserSidebarMousePointerScope {
-        if webView != nil { return .webpage }
+        if page != nil { return .webpage }
         guard !isHidden else { return .unowned }
         let location = convert(event.locationInWindow, from: nil)
         return bounds.contains(location) ? .sidebar : .unowned
@@ -77,24 +83,24 @@ final class BrowserSidebarAuxiliaryMouseObserverView: NSView {
 
     private func canNavigate(
         _ action: BrowserSidebarMouseButtonAction,
-        in webView: WKWebView?
+        in page: (any BrowserSidebarMouseNavigationTarget)?
     ) -> Bool {
-        guard let webView else { return false }
+        guard let page else { return false }
         return switch action {
         case .previousSpace:
-            webView.canGoBack
+            page.canGoBack
         case .nextSpace:
-            webView.canGoForward
+            page.canGoForward
         }
     }
 
     private func execute(
         _ disposition: BrowserSidebarMouseButtonDisposition,
-        in webView: WKWebView?
+        in page: (any BrowserSidebarMouseNavigationTarget)?
     ) {
         switch disposition {
         case .navigatePage(let action):
-            navigate(action, in: webView)
+            navigate(action, in: page)
         case .switchSpace(let action):
             perform(action)
         case .consume:
@@ -104,24 +110,30 @@ final class BrowserSidebarAuxiliaryMouseObserverView: NSView {
 
     private func navigate(
         _ action: BrowserSidebarMouseButtonAction,
-        in webView: WKWebView?
+        in page: (any BrowserSidebarMouseNavigationTarget)?
     ) {
-        guard let webView else { return }
+        guard let page else { return }
         switch action {
         case .previousSpace:
-            webView.goBack()
+            page.goBack()
         case .nextSpace:
-            webView.goForward()
+            page.goForward()
         }
     }
 
-    private func webViewUnderPointer(for event: NSEvent) -> WKWebView? {
+    /// Matches the hit view against the pages this window owns rather than a
+    /// view class, so every engine's page content answers the same way.
+    private func pageUnderPointer(
+        for event: NSEvent
+    ) -> (any BrowserSidebarMouseNavigationTarget)? {
         guard let contentView = window?.contentView else { return nil }
+        let targets = navigationTargets()
+        guard !targets.isEmpty else { return nil }
         let location = contentView.convert(event.locationInWindow, from: nil)
         var candidate = contentView.hitTest(location)
         while let view = candidate {
-            if let webView = view as? WKWebView {
-                return webView
+            if let match = targets.first(where: { $0.nativeView === view }) {
+                return match
             }
             candidate = view.superview
         }

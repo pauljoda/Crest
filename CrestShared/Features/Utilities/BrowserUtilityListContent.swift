@@ -12,6 +12,7 @@ struct BrowserUtilityListContent: View {
     var preparationClock: BrowserUtilityListClock = .live
     var preparationCalendar: Calendar = .autoupdatingCurrent
 
+    @Environment(\.browserSpaceContentIsLocked) private var isLocked
     @State private var preparedRequest: BrowserUtilityListRequest?
     @State private var sections: [BrowserUtilityListSection] = []
 
@@ -22,7 +23,7 @@ struct BrowserUtilityListContent: View {
             filter: filter,
             presentationRequest: preparedPresentationRequest,
             sections: sections,
-            downloads: downloads,
+            downloads: isLocked ? [] : downloads,
             actions: actions,
             dismissOnBlankSpace: dismissOnBlankSpace
         )
@@ -38,7 +39,8 @@ struct BrowserUtilityListContent: View {
             space: space,
             downloads: downloads,
             searchText: searchText,
-            filter: filter
+            filter: filter,
+            isUnlocked: !isLocked
         )
     }
 

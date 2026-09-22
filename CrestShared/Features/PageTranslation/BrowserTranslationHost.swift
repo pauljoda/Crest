@@ -4,7 +4,12 @@ import WebKit
 
 struct BrowserTranslationHost: ViewModifier {
     @Bindable var translation: BrowserPageTranslation
-    let webView: WKWebView?
+    /// The page, not one engine's view. Whole-page translation rewrites a live
+    /// DOM through Apple's Translation session, which only the WebKit port
+    /// exposes; an engine that does not declare `translation` supplies no
+    /// target and the modifier stays inert rather than the shells having to
+    /// know which engine they composed.
+    let page: BrowserPlatformPage
     let isActive: Bool
     let isLoading: Bool
     let isReaderActive: Bool
@@ -19,6 +24,11 @@ struct BrowserTranslationHost: ViewModifier {
     @AppStorage(BrowserTranslationPreference.rulesKey, store: BrowserTranslationPreference.defaults)
     private var languageRulesRawValue = ""
 
+    private var translationTarget: WKWebView? {
+        guard page.pageEngine.registration.supports("translation") else { return nil }
+        return page.webKitView
+    }
+
     private var detectionID: String {
         "\(translation.documentRevision)-\(isActive)-\(isLoading)-\(isReaderActive)-\(scenePhase == .background)-\(automaticallyTranslates)-\(languageRulesRawValue)"
     }
@@ -28,7 +38,7 @@ struct BrowserTranslationHost: ViewModifier {
         return
             content
             .task(id: detectionID) {
-                guard !Task.isCancelled, let webView else { return }
+                guard !Task.isCancelled, let webView = translationTarget else { return }
                 translation.updatePreferences(
                     automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
                     languageRules: .init(rawValue: languageRulesRawValue))
@@ -51,7 +61,9 @@ struct BrowserTranslationHost: ViewModifier {
                     languageRules: .init(rawValue: languageRulesRawValue))
             }
             .onDisappear {
-                if let webView { translation.setActive(false, in: webView, hostID: hostID) }
+                if let webView = translationTarget {
+                    translation.setActive(false, in: webView, hostID: hostID)
+                }
             }
             .sheet(isPresented: $translation.showsInformation) {
                 BrowserTranslationInformation(translation: translation)

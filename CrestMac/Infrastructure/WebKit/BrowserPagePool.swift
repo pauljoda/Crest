@@ -533,6 +533,15 @@ final class BrowserPagePool:
         return transientLeases.values.compactMap(\.value).filter { $0.page != nil }.count
     }
 
+    /// Every page this window currently owns, including split companions and
+    /// retained transient leases. Used to answer "what is under the pointer"
+    /// without recognising one engine's view class.
+    var livePages: [BrowserPage] {
+        _ = residencyRevision
+        return tabRuntimes.values.flatMap(\.allPages)
+            + transientLeases.values.compactMap { $0.value?.page }
+    }
+
     var activePage: BrowserPage? {
         _ = residencyRevision
         guard let activeTabID else { return nil }

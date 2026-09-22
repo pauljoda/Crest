@@ -25,14 +25,9 @@ struct SpaceSidebarContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            #if CREST_CHROMIUM_HOST
             if utilitySurface == nil {
-                BrowserPinnedExtensionStrip(
-                    page: space.selectedTabID.flatMap { id in
-                        pages.activePage(matching: BrowserTabRuntimeAssignment(tabID: id, spaceID: space.id, profileID: space.profile.id))?.chromiumPage
-                    }, space: space)
+                BrowserEngineSidebarAccessory(space: space, pages: pages)
             }
-            #endif
             Group {
                 if let utilitySurface {
                     SpaceSidebarUtilityContent(

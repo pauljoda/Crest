@@ -69,7 +69,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                         isSidebarVisible:
                             model.sidebarPresentation.showsSidebar
                             && !model.chrome.isCommandPalettePresented,
-                        perform: model.handleAuxiliaryMouseAction
+                        perform: model.handleAuxiliaryMouseAction,
+                        navigationTargets: { [pages = model.pages] in pages.livePages }
                     )
                 }
             } controls: {

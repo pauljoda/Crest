@@ -6,12 +6,14 @@ struct TabFaviconView: View {
     var size: CGFloat = TabFaviconMetrics.defaultSize
 
     @State private var renderState = BrowserFaviconRenderState()
+    @Environment(\.browserSpaceContentIsLocked) private var isLocked
 
     var body: some View {
         let request = BrowserFaviconTaskIdentityPolicy.renderRequest(
             for: tab,
             profileID: profileID,
-            maximumPixelSize: TabFaviconMetrics.maximumDecodedPixelSize(for: size)
+            maximumPixelSize: TabFaviconMetrics.maximumDecodedPixelSize(for: size),
+            isUnlocked: !isLocked
         )
         TabFaviconContent(
             tab: tab,

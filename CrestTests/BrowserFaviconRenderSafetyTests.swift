@@ -42,6 +42,32 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
         XCTAssertEqual(requestCount, 0)
     }
 
+    func testLockedSpaceRequestCarriesNoNetworkFallback() async {
+        let fallback = RecordingFallback()
+        let tab = makeTab(
+            id: tabID(tail: 0x41),
+            url: URL(string: "https://private.invalid/page"),
+            data: nil,
+            iconMode: .automatic
+        )
+        let request = BrowserFaviconTaskIdentityPolicy.renderRequest(
+            for: tab,
+            profileID: fixedUUID(tail: 0x91),
+            maximumPixelSize: 64,
+            isUnlocked: false
+        )
+        XCTAssertNil(request.fallbackPageURL)
+        XCTAssertNil(request.fallbackProfileID)
+
+        let result = await BrowserFaviconRenderLoader.decode(
+            request,
+            fallbackData: fallback.data
+        )
+        XCTAssertNil(result)
+        let requestCount = await fallback.requestCount
+        XCTAssertEqual(requestCount, 0)
+    }
+
     func testCancelledOlderRequestStartingLateCannotClearOrReplaceNewerImage() {
         let tab = makeTab(
             id: tabID(tail: 0x31),

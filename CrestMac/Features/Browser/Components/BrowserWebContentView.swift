@@ -46,7 +46,7 @@ struct BrowserWebContentView: View {
         )
         .modifier(
             BrowserTranslationHost(
-                translation: page.translation, webView: page.webView,
+                translation: page.translation, page: page,
                 isActive: pages.activePage === page && isSelectedSpace,
                 isLoading: page.isLoading,
                 isReaderActive: page.readerModeState.isActive

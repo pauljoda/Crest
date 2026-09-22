@@ -192,7 +192,8 @@ inspector by any route — its own close button, an undocked window close, the
 page closing — clears the card's panel selection. Local documents now open on both engines: File ▸ Open File… offers the
 document kinds the registered engine reads, including its own archive format, and
 the address route resolves `file://` URLs, absolute paths and home-relative paths
-to the same URL in the core and in the Swift fallback. Local-file tabs have no
+to the same URL. The core owns that resolution for every composition; the Swift
+fallback it replaced has been removed. Local-file tabs have no
 host, so the sync projection's scheme filter already keeps them on the device that
 opened them.
 Chromium's page context menu now offers Open Link in Split View through the same
@@ -218,8 +219,16 @@ before any preparation runs. Raising a Space's protection, its deletion intents,
 and retention or cleanup sweeps still apply while it is locked, because none of
 them returns its tabs, folders, history or archive; removing protection is the
 decision authentication guards, so it needs the grant like any other command.
-Sync staging, merging and materialization commit as session replacements rather
-than commands, so background convergence on a locked Space is unaffected.
+The same rule covers the native value-edit path: a proposed session delta or
+durable replacement that would change a locked Space's metadata, tabs, folders,
+history, archive, splits or selection — or remove it — is rejected with
+`space_locked` before the revision is accepted, on the same allowlist. Sync
+staging, merging and materialization commit as journal-bound replacements rather
+than commands or value edits, so background convergence on a locked Space is
+unaffected. Because the access policy has no modification stamp of its own on
+the wire, materialization applies it monotonically toward protection: an
+incoming record may raise protection, but may only remove it where this device
+already holds the grant, and the local record wins on the next upload otherwise.
 
 ## Existing UI migration
 
@@ -618,7 +627,7 @@ Its BrowserWindow implementation loads `CrestChromiumUI` after browser startup.
 The framework compiles the original `CrestShared` and `CrestMac` views and services,
 then mounts `BrowserMacApplication.browserWindowContent` in native windows. It has
 no `@main` and does not replace Chromium's application delegate. The temporary
-`ControlPlaneWindow` is no longer the Chromium product interface.
+control-plane window it replaced has been removed.
 
 `CREST_CORE_BACKED` uses the same .NET session authority and domain commands as
 `CrestNativeCore`. `ChromiumNativePage` creates a WebContents for the existing

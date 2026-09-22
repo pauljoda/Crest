@@ -18,7 +18,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     let spaceID: SpaceID
     let profileID: UUID
     let webView: WKWebView
-    @ObservationIgnored lazy var pageEngine: any BrowserPageEngine = BrowserWebKitPageEngine(webView: webView)
+    // iOS composes one engine. Naming its type here keeps the page port in
+    // play everywhere it is used while removing the force-cast the history
+    // accessor needed to reach a WebKit-only service.
+    @ObservationIgnored lazy var pageEngine = BrowserWebKitPageEngine(webView: webView)
 
     /// The store that owns this page. Weak because the store owns the page.
     weak var host: (any MobileBrowserPageHosting)?
@@ -47,8 +50,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
     var navigationHistory: BrowserPageNavigationHistory {
-        get { (pageEngine as! BrowserWebKitPageEngine).history }
-        set { (pageEngine as! BrowserWebKitPageEngine).history = newValue }
+        get { pageEngine.history }
+        set { pageEngine.history = newValue }
     }
     private(set) var showsProcessFailure = false
     var isFindPresented: Bool { findSession.isPresented }

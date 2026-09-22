@@ -101,7 +101,7 @@ struct MobileSelectedPageActionPort: MobilePageActions {
     }
 
     var blockedPopupNotice: BrowserBlockedPopupNotice? {
-        activePage?.blockedPopupState.notice
+        activePage?.blockedPopupNotice
     }
 
     func goBack() {

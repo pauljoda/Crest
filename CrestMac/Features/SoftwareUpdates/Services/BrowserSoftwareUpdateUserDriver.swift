@@ -109,15 +109,20 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
     var updateWasFound: (() -> Void)?
     private let feedURLOverride: URL?
     private let automaticUpdatePresenter: BrowserAutomaticSoftwareUpdatePresenter
+    /// The running marketing version, kept so a cached update left behind by an
+    /// older installed copy can be recognised and refused.
+    private let runningVersion: String?
 
     init(
         model: BrowserSoftwareUpdateModel,
         channel: BrowserSoftwareUpdateChannel,
-        feedURLOverride: URL? = nil
+        feedURLOverride: URL? = nil,
+        runningVersion: String? = BrowserSoftwareUpdateVersionPolicy.runningVersion
     ) {
         self.model = model
         self.channel = channel
         self.feedURLOverride = feedURLOverride
+        self.runningVersion = runningVersion
         self.automaticUpdatePresenter = BrowserAutomaticSoftwareUpdatePresenter(
             model: model
         )
@@ -147,6 +152,11 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         state: SPUUserUpdateState,
         reply: @escaping @Sendable (SPUUserUpdateChoice) -> Void
     ) {
+        guard isNewerThanRunning(appcastItem) else {
+            reply(.dismiss)
+            updateCycleDidFinish?()
+            return
+        }
         model.presentUpdate(
             title: appcastItem.title
                 ?? "Crest \(appcastItem.displayVersionString)",
@@ -300,6 +310,10 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         willInstallUpdateOnQuit item: SUAppcastItem,
         immediateInstallationBlock immediateInstallHandler: @escaping () -> Void
     ) -> Bool {
+        // A prepared update older than this build is a leftover of the copy that
+        // downloaded it. Refusing it here also stops Sparkle installing it on the
+        // next normal quit.
+        guard isNewerThanRunning(item) else { return false }
         automaticUpdatePresenter.installationDidBecomeReady(
             BrowserSoftwareUpdateMetadata(appcastItem: item),
             installAndRelaunch: immediateInstallHandler
@@ -311,6 +325,33 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
 
     func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
         automaticUpdatePresenter.updateDidFail(error)
+    }
+
+    /// Refusing here aborts the cycle and discards the resumed download, which
+    /// is how a stale prepared install gets cleared without reaching into
+    /// Sparkle's cache.
+    func updater(
+        _ updater: SPUUpdater,
+        shouldProceedWithUpdate updateItem: SUAppcastItem,
+        updateCheck: SPUUpdateCheck
+    ) throws {
+        guard isNewerThanRunning(updateItem) else {
+            throw NSError(
+                domain: "com.pauldavis.crest.software-update",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Crest \(updateItem.displayVersionString) is older than the running \(runningVersion ?? "build") and was discarded."
+                ]
+            )
+        }
+    }
+
+    private func isNewerThanRunning(_ item: SUAppcastItem) -> Bool {
+        BrowserSoftwareUpdateVersionPolicy.isNewer(
+            item.displayVersionString,
+            thanRunning: runningVersion
+        )
     }
 
     func allowedChannels(for updater: SPUUpdater) -> Set<String> {

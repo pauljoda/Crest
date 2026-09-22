@@ -176,6 +176,9 @@ final class ChromiumNativePage: BrowserPageEngine {
         return accepted
     }
 
+    /// `configuration.wraps` is dropped: the host's find command takes no wrap
+    /// argument and the engine's find always wraps. The registration declares
+    /// that limitation rather than letting the caller assume otherwise.
     func performFind(_ query: String, configuration: BrowserFindConfiguration,
                      completion: @escaping @MainActor (Bool) -> Void) {
         guard created, !disposed, let host,

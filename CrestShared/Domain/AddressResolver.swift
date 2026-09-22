@@ -8,42 +8,13 @@ enum AddressResolver {
         intent(input, searchProvider: searchProvider)?.url
     }
 
+    /// The portable core owns address resolution for every composition; the
+    /// Swift fallback it replaced is gone, along with the private matchers only
+    /// that branch called.
     static func intent(
         _ input: String,
         searchProvider: BrowserSearchProvider = .google
     ) -> BrowserAddressIntent? {
-        #if CREST_CORE_BACKED
-        return BrowserCorePolicy.addressIntent(input, provider: searchProvider)
-        #else
-        let value = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { return nil }
-        if let explicitURL = explicitURL(from: value) { return .open(explicitURL) }
-        if let fileURL = BrowserLocalFilePolicy.fileURL(from: value) { return .open(fileURL) }
-        if let localhostURL = localhostURL(from: value) { return .open(localhostURL) }
-        if let domainURL = domainURL(from: value) { return .open(domainURL) }
-        guard let url = searchProvider.searchURL(for: value) else { return nil }
-        return .search(query: value, provider: searchProvider, url: url)
-        #endif
-    }
-
-    private static func explicitURL(from value: String) -> URL? {
-        guard let components = URLComponents(string: value) else { return nil }
-        guard ["http", "https"].contains(components.scheme?.lowercased()) else { return nil }
-        guard components.host != nil else { return nil }
-        return components.url
-    }
-
-    private static func localhostURL(from value: String) -> URL? {
-        guard !value.contains(where: \.isWhitespace) else { return nil }
-        guard let components = URLComponents(string: "http://\(value)") else { return nil }
-        guard components.host?.lowercased() == "localhost" else { return nil }
-        return components.url
-    }
-
-    private static func domainURL(from value: String) -> URL? {
-        guard !value.contains(where: \.isWhitespace), value.contains(".") else { return nil }
-        guard let components = URLComponents(string: "https://\(value)") else { return nil }
-        guard components.host != nil else { return nil }
-        return components.url
+        BrowserCorePolicy.addressIntent(input, provider: searchProvider)
     }
 }

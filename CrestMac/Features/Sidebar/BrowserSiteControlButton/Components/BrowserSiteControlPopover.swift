@@ -29,7 +29,7 @@ struct BrowserSiteControlPopover: View {
         .accessibilityLabel("Site Controls")
         .accessibilityIdentifier("browser-site-controls-popover")
         .onAppear {
-            if configuration.page.blockedPopupState.notice != nil {
+            if configuration.page.blockedPopupNotice != nil {
                 isPermissionsExpanded = true
             }
         }
