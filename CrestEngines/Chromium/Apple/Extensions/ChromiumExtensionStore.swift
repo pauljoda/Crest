@@ -71,6 +71,68 @@ final class ChromiumExtensionStore {
                 icon: $0.icon, isPinned: $0.pinned)
         }
     }
+    /// The pinned actions of a Space's own toolbar row.
+    ///
+    /// The row belongs to the Space, so the pinned list comes from the Space's
+    /// profile and is present whether or not a page is open. Where a page is
+    /// open its per-tab state — badge, dynamic icon, whether a page action has
+    /// anything to act on — is overlaid on top of it.
+    func pinnedActions(for space: BrowserSpace, page: ChromiumNativePage?) -> [BrowserExtensionActionPresentation] {
+        _ = revision
+        guard let host = CrestChromiumRoot.engineHost else { return [] }
+        let live = Dictionary(page?.extensions.map { ($0.id, $0) } ?? [],
+                              uniquingKeysWith: { first, _ in first })
+        return host.pinnedExtensions(profile: space.profile.id.uuidString)
+            .compactMap { item -> BrowserExtensionActionPresentation? in
+                guard let id = item["id"] as? String, let name = item["name"] as? String else { return nil }
+                if let tab = live[id] {
+                    return BrowserExtensionActionPresentation(id: id, displayName: tab.name,
+                        badgeText: tab.badge, icon: tab.icon, isPinned: true)
+                }
+                return BrowserExtensionActionPresentation(id: id, displayName: name,
+                    badgeText: item["badge"] as? String ?? "", icon: item["icon"] as? NSImage,
+                    isEnabled: item["enabled"] as? Bool ?? true, isPinned: true)
+            }
+            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+    /// Runs a pinned action from a Space with no page open. Only an action with
+    /// its own popup can run without one, so anything else states itself as
+    /// unavailable rather than doing nothing.
+    func runPinned(_ action: BrowserExtensionActionPresentation, space: BrowserSpace,
+                   anchor: BrowserExtensionPopupAnchor?) {
+        let fallback = CrestChromiumRoot.activeNativeWindow
+        let anchor = anchor ?? BrowserExtensionPopupAnchor(screenPoint: NSEvent.mouseLocation,
+                                                          sourceWindow: fallback)
+        guard let host = CrestChromiumRoot.engineHost,
+              let source = anchor.presentationSource(fallbackWindow: fallback),
+              let windowID = source.view.window?.identifier?.rawValue,
+              host.runExtension(action.id, profile: space.profile.id.uuidString, window: windowID,
+                                anchorView: source.view, anchorRect: source.rect) else {
+            CrestChromiumRoot.showNativeNotice(
+                String(localized: "This extension action needs an open page."),
+                icon: "puzzlepiece.extension")
+            return
+        }
+    }
+    /// Makes sure the Space's engine profile is loaded so its pinned list can be
+    /// read before anything has been opened in it. A Space the core does not own
+    /// — a private window's — is left alone; its profile exists only while a
+    /// private page does.
+    func prepare(_ space: BrowserSpace) async {
+        guard installed[space.profile.id] == nil else { return }
+        // A Start Page can be on screen before the core has published the Space
+        // list this row's ownership check reads, and the engine profile is not
+        // loaded at all until something asks for it. Wait briefly for the Space
+        // to be claimable rather than leaving the row empty until the first
+        // page opens.
+        for _ in 0..<24 {
+            if authorized(space) {
+                await load(space)
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+    }
     @discardableResult
     func command(_ command: String, extensionID: String = "", space: BrowserSpace, window: NSWindow? = nil) -> Bool {
         guard authorized(space), let host = CrestChromiumRoot.engineHost,

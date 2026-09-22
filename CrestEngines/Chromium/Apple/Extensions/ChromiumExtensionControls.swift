@@ -8,16 +8,19 @@ struct BrowserPinnedExtensionStrip: View {
     @Environment(BrowserExtensionSidePanelHost.self) private var sidePanel: BrowserExtensionSidePanelHost?
 
     var body: some View {
-        let actions = page.map { store.actions(for: $0).filter(\.isPinned) } ?? []
+        // The row is the Space's, not the page's: a Space showing its Start Page
+        // still has the extensions the user pinned to it.
+        let actions = store.pinnedActions(for: space, page: page)
         Group {
-            if !actions.isEmpty, let page {
+            if !actions.isEmpty {
                 BrowserPinnedExtensionStripContent(actions: actions,
-                    perform: { action, anchor in page.runExtension(action.id, anchor: anchor) },
+                    perform: run,
                     presentMenu: { action, anchor in
                         store.presentMenu(action, space: space, anchor: anchor,
-                            isPrivate: page.isPrivateBrowsing,
-                            openSidePanel: BrowserExtensionSidePanelHost.opener(
-                                action, page: page, host: sidePanel))
+                            isPrivate: page?.isPrivateBrowsing ?? false,
+                            openSidePanel: page.flatMap {
+                                BrowserExtensionSidePanelHost.opener(action, page: $0, host: sidePanel)
+                            })
                     })
                     .padding(.top, BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
                         + (space.tabSections.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset))
@@ -25,6 +28,25 @@ struct BrowserPinnedExtensionStrip: View {
             }
         }
         .animation(reduceMotion ? nil : SpacePagerSettlement.standardAnimation, value: actions.map(\.id))
+        .task(id: PreparationKey(profile: space.profile.id, spaces: store.spaces.count)) {
+            await store.prepare(space)
+        }
+    }
+
+    /// Re-runs the Space's engine-profile preparation when the core publishes
+    /// its Space list, which can arrive after the first Start Page is drawn.
+    private struct PreparationKey: Equatable {
+        let profile: UUID
+        let spaces: Int
+    }
+
+    private func run(_ action: BrowserExtensionActionPresentation,
+                     anchor: BrowserExtensionPopupAnchor?) {
+        guard let page else {
+            store.runPinned(action, space: space, anchor: anchor)
+            return
+        }
+        page.runExtension(action.id, anchor: anchor)
     }
 }
 

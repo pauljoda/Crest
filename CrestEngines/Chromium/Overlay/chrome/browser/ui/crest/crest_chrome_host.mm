@@ -89,6 +89,8 @@
 #include "chrome/browser/media/webrtc/media_capture_devices_dispatcher.h"
 #include "chrome/browser/media/webrtc/media_stream_capture_indicator.h"
 #include "ui/gfx/image/image.h"
+#include "extensions/browser/pref_names.h"
+#include "components/prefs/pref_service.h"
 #include "components/viz/common/frame_sinks/copy_output_result.h"
 #include "base/time/time.h"
 #include "components/find_in_page/find_tab_helper.h"
@@ -179,6 +181,19 @@ class ExtensionPopup final : public extensions::ExtensionView,
     NSViewController* controller = [[NSViewController alloc] init];
     controller.view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 320)];
     NSView* view = host_->host_contents()->GetNativeView().GetNativeNSView();
+    // The popup is hosted directly, with no view of Crest's own between the
+    // popover and the extension's document.
+    //
+    // NSPopover composites a translucent system material with its content on
+    // macOS 27: a popup painting an opaque #181A1B measures #68555B on screen,
+    // which reads as a white haze over the extension's own rendering. Neither
+    // an opaque page base (`SetPageBaseBackgroundColor`) nor an opaque browser
+    // surface (`RenderWidgetHostView::SetBackgroundColor`) changes that
+    // measurement, and an opaque view placed behind the web contents occludes
+    // the remote layer the renderer draws into, leaving the popup blank. The
+    // remaining approach is to stop using NSPopover and host the popup in a
+    // borderless child window with its own rounded corners and arrow; that is
+    // not done here.
     view.frame = controller.view.bounds;
     view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [controller.view addSubview:view];
@@ -417,6 +432,10 @@ struct HostState {
   std::map<std::string, std::unique_ptr<NativeProfileDeletion>> profile_deletions;
   std::map<std::string, std::unique_ptr<BrowserOwner>> browsers;
   std::map<std::string, std::unique_ptr<Page>> pages;
+  // The action popup opened from a Space that has no page. A page's own popup
+  // lives on the page; this one has no page to live on and only one can be
+  // open at a time, because the popover is transient.
+  std::unique_ptr<ExtensionPopup> space_extension_popup;
   std::map<std::string, NativeAdoption> adoptions;
   std::map<std::string, PendingLinkNavigation> pending_link_navigations;
   void (^browser_observation)(NSDictionary<NSString*, id>*);
@@ -554,6 +573,41 @@ class ExtensionStateObserver
     return nil;
   }
 
+  // Whether an extension still has the files it was installed from.
+  //
+  // A tracked-preference enforcement reset clears `extensions.settings` and
+  // garbage-collects the install directories, but an extension can also be
+  // loaded from a directory the user has since moved or deleted. Chromium keeps
+  // such an extension enabled in the registry and only discovers the loss when
+  // a resource is requested, which for an action means the popup navigating to
+  // its own ERR_FILE_NOT_FOUND page inside Crest's popover. Crest offers no
+  // action for one: it is missing, not broken.
+  //
+  // One stat per extension per registry change. `RebuildIcons` runs on every
+  // registry change and drops the cache with the icons.
+  bool IsAvailable(const extensions::Extension& extension,
+                   extensions::ExtensionAction* action) {
+    auto cached = availability_.find(extension.id());
+    if (cached != availability_.end()) {
+      return cached->second;
+    }
+    bool available =
+        !extension.path().empty() && base::PathExists(extension.path());
+    if (available && action) {
+      // A default popup is the resource the action's own click needs. A popup
+      // set at runtime cannot be checked here and does not need to be: the
+      // directory it would be read from is the one just checked.
+      const GURL popup =
+          action->GetPopupUrl(extensions::ExtensionAction::kDefaultTabId);
+      if (!popup.is_empty() &&
+          extension.GetResource(popup.path()).GetFilePath().empty()) {
+        available = false;
+      }
+    }
+    availability_[extension.id()] = available;
+    return available;
+  }
+
   // extensions::ExtensionRegistryObserver:
   void OnExtensionLoaded(content::BrowserContext* browser_context,
                          const extensions::Extension* extension) override {
@@ -654,6 +708,7 @@ class ExtensionStateObserver
   // self-invalidates when its extension unloads, so the map is rebuilt on
   // every registry change.
   void RebuildIcons() {
+    availability_.clear();
     auto* registry = extensions::ExtensionRegistry::Get(profile_);
     std::map<std::string, std::unique_ptr<extensions::IconImage>> next;
     for (const extensions::ExtensionSet* set :
@@ -681,6 +736,7 @@ class ExtensionStateObserver
   bool dispatcher_observed_ = false;
   bool side_panel_observed_ = false;
   std::map<std::string, std::unique_ptr<extensions::IconImage>> icons_;
+  std::map<std::string, bool> availability_;
 };
 
 
@@ -1931,14 +1987,17 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   auto* actions = extensions::ExtensionActionManager::Get(profile);
   if (!registry || !actions) return @[];
   const int tab = sessions::SessionTabHelper::IdForTab(page->web_contents()).id();
+  auto* observer = ExtensionStateObserver::Ensure(profile, page->profile);
   NSMutableArray* result = [NSMutableArray array];
   for (const auto& extension : registry->enabled_extensions()) {
     if (!extension->is_extension() || extensions::Manifest::IsComponentLocation(extension->location()) ||
         (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(extension->id(), profile))) continue;
     auto* action = actions->GetExtensionAction(*extension);
     if (!action) continue;
+    // An extension whose files are gone has no action to offer.
+    if (!observer->IsAvailable(*extension, action)) continue;
     auto* model = ToolbarActionsModel::Get(profile);
-    NSImage* icon = ExtensionStateObserver::Ensure(profile, page->profile)->IconFor(*extension, action, tab);
+    NSImage* icon = observer->IconFor(*extension, action, tab);
     [result addObject:@{ @"id": base::SysUTF8ToNSString(extension->id()),
         @"name": base::SysUTF8ToNSString(extension->name()), @"icon": icon ?: (id)NSNull.null,
         @"pinned": @(model && model->IsActionPinned(extension->id())),
@@ -1956,6 +2015,11 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   const auto id = base::SysNSStringToUTF8(extensionID);
   const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(id);
   if (!extension || (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, profile))) return NO;
+  // Declined rather than navigated: an extension whose files are gone would
+  // otherwise show Chromium's own ERR_FILE_NOT_FOUND page inside Crest's
+  // popover. The core states this as an unavailable action instead.
+  if (!ExtensionStateObserver::Ensure(profile, page->profile)->IsAvailable(*extension,
+          extensions::ExtensionActionManager::Get(profile)->GetExtensionAction(*extension))) return NO;
   auto* contents = page->web_contents();
   const int index = page->browser->tab_strip_model()->GetIndexOfWebContents(contents);
   if (index < 0) return NO;
@@ -1979,6 +2043,84 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
       action->GetPopupUrl(sessions::SessionTabHelper::IdForTab(contents).id()), page->browser);
   if (!popup) return NO;
   page->extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), anchorView, anchorRect);
+  return YES;
+}
+- (NSArray<NSDictionary<NSString*, id>*>*)pinnedExtensionsForProfile:(NSString*)profileID {
+  CHECK(NSThread.isMainThread);
+  // The pinned strip belongs to the Space, not to whatever page happens to be
+  // open in it: a Space showing its Start Page still has the extensions the
+  // user pinned to it. The per-page list stays the source of per-tab state
+  // (badge, dynamic icon, page-action enablement) and is overlaid on this.
+  const auto profile_id = base::SysNSStringToUTF8(profileID);
+  auto found = State().profiles.find(profile_id);
+  if (found == State().profiles.end()) return @[];
+  Profile* profile = found->second;
+  // A private window reads the same Space's pinned list and narrows it to the
+  // extensions that are allowed in incognito. The registry, the action manager
+  // and the toolbar model all belong to the regular profile that owns it.
+  const bool private_mode = profile->IsOffTheRecord();
+  Profile* owner = profile->GetOriginalProfile();
+  auto* registry = extensions::ExtensionRegistry::Get(owner);
+  auto* actions = extensions::ExtensionActionManager::Get(owner);
+  if (!registry || !actions) return @[];
+  // The pinned list is read from the preference `ToolbarActionsModel` persists
+  // rather than from the model itself. A Space whose engine profile was only
+  // just loaded — which is every Space on a Start Page, before anything has
+  // been opened in it — has no initialized model yet, and the row would stay
+  // empty until something else happened to rebuild it.
+  std::set<std::string> pinned;
+  for (const base::Value& entry :
+       owner->GetPrefs()->GetList(extensions::pref_names::kPinnedExtensions)) {
+    if (const std::string* id = entry.GetIfString()) pinned.insert(*id);
+  }
+  if (pinned.empty()) return @[];
+  auto* observer = ExtensionStateObserver::Ensure(profile, profile_id);
+  const int tab = extensions::ExtensionAction::kDefaultTabId;
+  NSMutableArray* result = [NSMutableArray array];
+  for (const auto& extension : registry->enabled_extensions()) {
+    if (!extension->is_extension() || extensions::Manifest::IsComponentLocation(extension->location())) continue;
+    if (private_mode && !extensions::util::IsIncognitoEnabled(extension->id(), owner)) continue;
+    if (!pinned.contains(extension->id())) continue;
+    auto* action = actions->GetExtensionAction(*extension);
+    if (!action || !observer->IsAvailable(*extension, action)) continue;
+    // Page actions exist only in relation to a page. With none open the tile
+    // is still shown — the user pinned it — but it has nothing to act on.
+    const bool enabled = action->action_type() != extensions::ActionInfo::Type::kPage;
+    NSImage* icon = observer->IconFor(*extension, action, tab);
+    [result addObject:@{ @"id": base::SysUTF8ToNSString(extension->id()),
+        @"name": base::SysUTF8ToNSString(extension->name()), @"icon": icon ?: (id)NSNull.null,
+        @"pinned": @YES, @"enabled": @(enabled),
+        @"badge": base::SysUTF8ToNSString(action->GetExplicitlySetBadgeText(tab)) }];
+  }
+  return result;
+}
+- (BOOL)runExtension:(NSString*)extensionID profile:(NSString*)profileID window:(NSString*)windowID
+          anchorView:(NSView*)anchorView anchorRect:(NSRect)anchorRect {
+  CHECK(NSThread.isMainThread);
+  // The page-less click. There is no tab to activate, no host permission to
+  // grant and nothing to inject, so only an action that carries its own popup
+  // document can run: it is opened against the Space's Browser directly rather
+  // than through the WebContents-scoped action runner.
+  if (!anchorView.window) return NO;
+  const auto profile_id = base::SysNSStringToUTF8(profileID);
+  auto found = State().profiles.find(profile_id);
+  if (found == State().profiles.end()) return NO;
+  Profile* profile = found->second;
+  Profile* owner = profile->GetOriginalProfile();
+  const auto id = base::SysNSStringToUTF8(extensionID);
+  const auto* extension = extensions::ExtensionRegistry::Get(owner)->enabled_extensions().GetByID(id);
+  if (!extension) return NO;
+  if (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, owner)) return NO;
+  auto* action = extensions::ExtensionActionManager::Get(owner)->GetExtensionAction(*extension);
+  if (!action || !ExtensionStateObserver::Ensure(profile, profile_id)->IsAvailable(*extension, action)) return NO;
+  if (action->action_type() == extensions::ActionInfo::Type::kPage) return NO;
+  const GURL popup_url = action->GetPopupUrl(extensions::ExtensionAction::kDefaultTabId);
+  if (!popup_url.is_valid()) return NO;
+  Browser* browser = BrowserFor(profile_id, base::SysNSStringToUTF8(windowID));
+  if (!browser || anchorView.window != crest::WindowForBrowser(browser)) return NO;
+  auto popup = extensions::ExtensionViewHostFactory::CreatePopupHost(*extension, popup_url, browser);
+  if (!popup) return NO;
+  State().space_extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), anchorView, anchorRect);
   return YES;
 }
 - (BOOL)hasSidePanel:(NSString*)extensionID page:(NSString*)pageID {
@@ -2097,6 +2239,9 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   for (const auto& extension : registry->GenerateInstalledExtensionsSet()) {
     if (!extension->is_extension() || extensions::Manifest::IsComponentLocation(extension->location())) continue;
     auto* action = extensions::ExtensionActionManager::Get(profile)->GetExtensionAction(*extension);
+    // An extension that still has a registry entry but no files on disk is
+    // reported as absent, not as a row the user could act on.
+    if (!observer->IsAvailable(*extension, action)) continue;
     NSMutableArray* warnings = [NSMutableArray array];
     for (const auto& permission : extension->permissions_data()->GetPermissionMessages())
       [warnings addObject:base::SysUTF16ToNSString(permission.message())];
@@ -2239,6 +2384,9 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     releaseProfiles:(NSArray<NSString*>*)profileIDs {
   CHECK(NSThread.isMainThread);
   auto& state = State();
+  // A Space-scoped popup is anchored in one of the windows or profiles being
+  // released, and nothing else would close it.
+  if (windowIDs.count || profileIDs.count) state.space_extension_popup.reset();
   for (NSString* identifier in pageIDs) {
     state.creating_pages.erase(base::SysNSStringToUTF8(identifier));
     auto found = state.pages.find(base::SysNSStringToUTF8(identifier));
@@ -2340,6 +2488,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   auto& state = State();
   state.disposing = true;
   state.browser_observation = nil;
+  state.space_extension_popup.reset();
   state.adoptions.clear();
   state.pending_link_navigations.clear();
   state.pages.clear();

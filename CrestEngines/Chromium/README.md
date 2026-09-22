@@ -162,12 +162,38 @@ Chromium framework is loaded and therefore before any profile is read, and
 passes it as `--user-data-dir`; an explicit `--user-data-dir` on the command line
 still wins. The first launch after that move adopts the `Crest-*` engine profile
 directories the previous default directory still holds, and only those:
-`Default`, `Local State` and everything else there belongs to whichever Chromium
-created that directory and is left alone. Each adopted directory is named on
-standard error. `Local State` is not copied, so Chromium rebuilds its profile
-list; Crest's core restores its Spaces by path and does not read that list. If
-the new directory cannot be created, or a profile cannot be moved, the adoption
-is undone and the launch falls back to the previous directory and says so.
+`Default` and everything else there belongs to whichever Chromium created that
+directory and is left alone. Each adopted directory is named on standard error.
+If the new directory cannot be created, or a profile cannot be moved, the
+adoption is undone and the launch falls back to the previous directory and says
+so.
+
+Moving the directories is all that step can do: it runs before the framework is
+loaded and has no JSON reader. It records what it moved, and the browser process
+finishes the adoption in `ChromeMainDelegate::PreSandboxStartup`, immediately
+after the user data directory is resolved and before the local-state
+`PrefService` exists, let alone `ProfileManager`. Two things happen there.
+
+First, the entries that name an adopted directory are carried out of the
+previous `Local State` into the new one — its `profile.info_cache` record, its
+place in `profiles_order` and `last_active_profiles`, and `last_used` when it
+names one. Nothing else is copied. Without this an adopted profile is
+unregistered: Crest's core restores its Spaces by path and does not read that
+list, but Chromium's own profile machinery does.
+
+Second, each adopted profile's encrypted tracked-preference validators are
+retired — every `protection.macs.*_encrypted_hash` entry and
+`protection.super_encrypted_hash`, in `Secure Preferences` and in `Preferences`.
+Those hashes are encrypted with the OSCrypt key derived from the bundle's
+keychain item, and Chromium treats a stale encrypted hash as a changed
+preference without consulting the legacy HMAC stored beside it: enforced tracked
+preferences, `extensions.settings` among them, are reset on first launch. That
+is what emptied the adopted profiles in 0.6.96, leaving pinned tiles pointing at
+extensions whose directories had been collected. Removing the encrypted
+validators leaves the legacy HMACs, which validate on their own and which
+Chromium re-encrypts on its next write. This protects the adoption only.
+Renaming a shipped Safe Storage keychain item has no such repair and must not
+happen; `CrestKeychainName` carries that as a comment.
 
 Crest mode never shows Chrome's profile picker. Startup resolves to a browser
 window on the `Default` profile, and `ProfilePicker::Show` returns without
@@ -203,6 +229,33 @@ shared and macOS UI, and `CrestChromiumRoot` mounts `BrowserMacApplication` in
 native windows. `ChromiumNativePage` supplies the WebContents view inside the
 existing page card. Complete capability validation and distributable packaging
 remain part of the integration work.
+
+The pinned toolbar row belongs to the Space rather than to a page. Its actions
+come from the Space's own profile, so a Space showing its Start Page still shows
+the extensions pinned to it; the open page's per-tab state — badge, dynamic icon
+— is overlaid when there is one. Clicking a pinned action without a page open
+opens that action's popup against the Space's browser directly: there is no tab
+to activate, grant host access for or inject into, so an action that has no
+popup of its own, including any page action, reports itself unavailable instead.
+A private window reads the same pinned list narrowed to the extensions enabled
+in incognito.
+
+An extension that is still enabled in the registry but whose directory is gone
+is treated as unavailable rather than broken: it contributes no tile and no
+settings row, and its action declines to run, so a click states Crest's own
+unavailable notice instead of navigating the popover to Chromium's
+ERR_FILE_NOT_FOUND page. The check is one stat per extension per registry
+change.
+
+Action popups are hosted directly in an `NSPopover`, with no Crest view between
+the popover and the extension's document. On macOS 27 the popover composites a
+translucent system material with that document: a popup painting an opaque
+`#181A1B` measures `#68555B` on screen, which reads as a white haze over the
+extension's own rendering. An opaque page base, an opaque browser surface and an
+opaque view behind the web contents were each measured and none of them removes
+it — the last one occludes the renderer's layer and leaves the popup blank. The
+remaining approach is to host the popup in a borderless child window instead of
+an `NSPopover`; that is not done yet.
 
 Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
 Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`

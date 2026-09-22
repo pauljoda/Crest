@@ -64,6 +64,39 @@ inline std::vector<std::string> CrestProfileDirectories(
   return names;
 }
 
+// The name of the record a directory adoption leaves in the new engine profile
+// root for the browser process to finish. Moving the directories is all this
+// step can do: registering an adopted profile in `Local State` and retiring its
+// encrypted tracked-preference validators are JSON edits, and no JSON reader
+// exists this early. `crest::CompleteProfileAdoption` consumes the record.
+inline const char* AdoptionRecordName() {
+  return "Crest Adoption";
+}
+
+// Records which engine profiles moved and where they came from. Line one is the
+// previous root; every later line is one adopted directory name. A directory
+// name cannot contain a newline, so no quoting is needed.
+inline void WriteAdoptionRecord(const std::string& preferred,
+                                const std::string& previous,
+                                const std::vector<std::string>& adopted) {
+  if (adopted.empty()) {
+    return;
+  }
+  const std::string path = preferred + "/" + AdoptionRecordName();
+  FILE* file = fopen(path.c_str(), "w");
+  if (!file) {
+    fprintf(stderr, "Crest: cannot record adoption in %s (%s); the adopted "
+                    "engine profiles stay unregistered.\n",
+            path.c_str(), strerror(errno));
+    return;
+  }
+  fprintf(file, "%s\n", previous.c_str());
+  for (const std::string& name : adopted) {
+    fprintf(file, "%s\n", name.c_str());
+  }
+  fclose(file);
+}
+
 // Returns the user data directory a product bundle should open.
 //
 // Crest keeps its engine state under its own application support directory
@@ -109,6 +142,7 @@ inline std::string AdoptProductUserDataDirectory(const std::string& home) {
     fprintf(stderr, "Crest: adopted engine profile %s into %s.\n", name.c_str(),
             preferred.c_str());
   }
+  WriteAdoptionRecord(preferred, previous, adopted);
   return preferred;
 }
 

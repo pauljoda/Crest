@@ -1821,6 +1821,18 @@
     "chromium-passkeys-system-sheet": {
       "category": "new",
       "message": "Passkeys in Chromium-powered windows use the macOS passkey sheet with Touch ID and iCloud Keychain first, with phone and security key options as fallbacks."
+    },
+    "pinned-extensions-follow-space": {
+      "category": "improved",
+      "message": "Pinned extensions belong to the Space and stay in the toolbar with working popups even before a page is open."
+    },
+    "extension-missing-files-hidden": {
+      "category": "fixed",
+      "message": "An extension whose files are missing no longer shows a broken popup; its button is hidden until it is reinstalled."
+    },
+    "engine-profile-adoption-registry": {
+      "category": "internal",
+      "message": "Adopted engine profiles keep their registry entries and preference validators so a safe-storage key change cannot reset them."
     }
   }
 }

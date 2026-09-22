@@ -53,6 +53,20 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForPage:(NSString *)pageID;
 - (BOOL)runExtension:(NSString *)extensionID page:(NSString *)pageID
          anchorView:(NSView *)anchorView anchorRect:(NSRect)anchorRect;
+// The pinned extension actions of a Space, independent of any page. A Space
+// showing its Start Page still has the extensions the user pinned to it, so the
+// toolbar row is driven from the Space's own profile and the per-page list is
+// overlaid on it when a page exists. A private window passes the profile its
+// pages were opened with and is narrowed to incognito-enabled extensions.
+// Entries carry `enabled: NO` when the action needs a page and there is none.
+- (NSArray<NSDictionary<NSString *, id> *> *)pinnedExtensionsForProfile:(NSString *)profileID
+    NS_SWIFT_NAME(pinnedExtensions(profile:));
+// Runs a pinned action with no page open. Only an action carrying its own
+// popup document can run: there is no tab to activate, grant host access for or
+// inject into. Returns NO for anything else, including a page action.
+- (BOOL)runExtension:(NSString *)extensionID profile:(NSString *)profileID window:(NSString *)windowID
+          anchorView:(NSView *)anchorView anchorRect:(NSRect)anchorRect
+    NS_SWIFT_NAME(runExtension(_:profile:window:anchorView:anchorRect:));
 // Extension side panels. A panel is hosted as a Crest split-row card beside
 // the page it belongs to: it is not a tab, is never persisted and never syncs.
 // `closed` runs when the panel document or its extension host goes away.

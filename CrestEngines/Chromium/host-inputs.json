@@ -29,7 +29,7 @@
   },
   "components/os_crypt/common/keychain_password_mac.mm": {
     "before": "a41705c2fb8188800d01bdfeb9218ca75150cebdaedcb3df96831b03d7e9cef3",
-    "after": "86db1f3fab449282b84f79670219c54528148173fe8681c2f5fe87d8b59674bf"
+    "after": "4aad63ab2134f3ae69f93c86e03d0a5ee13c44b2894486b477528055ed081c57"
   },
   "chrome/browser/ui/views/permissions/permission_prompt_factory.cc": {
     "before": "e13f55d1a822e180a046d8bf330f2cc11ebafd1cdb799d9f5180c185bcb6cbc1",
@@ -180,8 +180,8 @@
     "after": "a6a5a7eb467b81181d7862cd11abcb6f37522385e49eaa3cd1ac9d8c38d01813"
   },
   "chrome/app/chrome_main_delegate.cc": {
-    "before": "a09f7410ef807db08f3cbcb0d06425c302862bcc3f0bb691fa2e4144a6f1c300",
-    "after": "f69c2d491ae6d041cb38c73e3155c055d583aeb2518256be580d0d3a018b1377"
+    "before": "f69c2d491ae6d041cb38c73e3155c055d583aeb2518256be580d0d3a018b1377",
+    "after": "646ba861b2ba303003402fc8a3ab0fb4e61d17cacbe0669203615cd518e7169d"
   },
   "chrome/browser/webauthn/chrome_authenticator_request_delegate.cc": {
     "before": "d1bb395b48108fdec01a4b061af6221a564e5f0a63f90ac773cc09f9363b7250",

@@ -300,7 +300,7 @@
  #include "base/apple/scoped_cftyperef.h"
  #include "base/base64.h"
  #include "base/containers/span.h"
-@@ -42,6 +45,34 @@
+@@ -42,6 +45,48 @@
  const char kDefaultAccountName[] = "Chromium";
  #endif
  
@@ -310,6 +310,20 @@
 +// sharing Chromium's item is what makes macOS ask for the login password when a
 +// differently signed Crest build opens it. A Crest bundle never falls through
 +// to the shared Chromium name. Normal Chromium builds keep their upstream ones.
++//
++// These names are frozen. OSCrypt's key is derived from this keychain item, and
++// every profile's tracked-preference validators — `protection.macs.*_encrypted_hash`
++// and `protection.super_encrypted_hash` in `Secure Preferences` — are encrypted
++// with it. Renaming an item rotates the key, every encrypted validator then
++// fails to decrypt, and `PrefHashStoreImpl` treats a stale encrypted hash as
++// CHANGED_ENCRYPTED without ever consulting the legacy HMAC beside it: the
++// enforced tracked preferences are reset on first launch. `extensions.settings`
++// is one of them, so a rename silently uninstalls every extension in every
++// Space while leaving the pinned tiles behind. This happened once, in 0.6.96.
++//
++// Adoption retires the encrypted validators of the profiles it moves, which
++// makes that one migration safe, but nothing repairs a rename outside adoption.
++// Add a new bundle ID rather than renaming a shipped one.
 +std::string CrestKeychainName(bool service) {
 +  const std::string bundle(base::apple::BaseBundleID());
 +  constexpr std::string_view kCrest = "com.pauldavis.crest";
@@ -335,7 +349,7 @@
  // These values are persisted to logs. Entries should not be renumbered and
  // numeric values should never be reused.
  enum class FindGenericPasswordResult {
-@@ -110,13 +141,13 @@
+@@ -110,13 +155,13 @@
  
  // static
  KeychainPassword::KeychainNameType& KeychainPassword::GetServiceName() {
@@ -1437,3 +1451,34 @@
    // enclave_enabled_status_ determines whether Google Password Manager entries
    // should be offered both for `makeCredential` or `getAssertion`. If reauth
    // needed, instead of offering the actual passkeys or creating a passkey,
+--- a/chrome/app/chrome_main_delegate.cc
++++ b/chrome/app/chrome_main_delegate.cc
+@@ -133,6 +133,7 @@
+ #include "base/apple/foundation_util.h"
+ #include "chrome/app/chrome_main_mac.h"
+ #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#include "chrome/app/crest_profile_adoption.h"
+ #include "chrome/browser/chrome_browser_application_mac.h"
+ #include "chrome/browser/mac/code_sign_clone_manager.h"
+ #include "chrome/browser/mac/relauncher.h"
+@@ -1391,6 +1392,20 @@
+     InitializeUserDataDir(base::CommandLine::ForCurrentProcess());
+   }
+ 
++#if BUILDFLAG(IS_MAC)
++  // Finish the engine profile adoption the executable's `main` recorded, if it
++  // recorded one. Moving the directories is all that step could do without the
++  // framework; registering an adopted profile in `Local State` and retiring its
++  // encrypted tracked-preference validators are JSON edits and belong here.
++  // This is the first point at which the user data directory is settled and
++  // `base` is usable, and it is still before the local-state `PrefService` is
++  // built, let alone `ProfileManager`.
++  if (process_type.empty()) {
++    crest::CompleteProfileAdoption(
++        base::PathService::CheckedGet(chrome::DIR_USER_DATA));
++  }
++#endif
++
+   // Register component_updater PathProvider after DIR_USER_DATA overridden by
+   // command line flags. Maybe move the chrome PathProvider down here also?
+   component_updater::RegisterPathProvider(chrome::DIR_COMPONENTS,
