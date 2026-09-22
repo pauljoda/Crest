@@ -886,13 +886,20 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         NSSharingServicePicker(items: [item]).show(relativeTo: view.bounds, of: view, preferredEdge: .maxY)
     }
     @objc static func showQRCode(forURL url: String, title: String) { showNativeNotice("QR sharing is not yet connected in this host.", icon: "qrcode") }
+    /// Chromium's own translate bubble asks for whole-page translation, which
+    /// this adapter declares unavailable; the notice points at what is offered.
     @objc static func translateURL(_ url: String) {
         showNativeNotice(
-            "Whole-page translation is not available in this engine. Select text on the page, then translate the selection.",
+            BrowserEngineRegistration.chromium.supports("selection-translation")
+                ? "Whole-page translation is not available in this engine. Select text on the page, then translate the selection."
+                : "Translation is not available in this engine.",
             icon: "globe"
         )
     }
-    @objc static func translateText(_ text: String) { ChromiumSelectionTranslation.present(text) }
+    @objc static func translateText(_ text: String) {
+        guard BrowserEngineRegistration.chromium.supports("selection-translation") else { return }
+        ChromiumSelectionTranslation.present(text)
+    }
     @objc static func showTabSearch() { instance?.activeContext?.chrome.presentCommandPalette() }
 }
 #endif

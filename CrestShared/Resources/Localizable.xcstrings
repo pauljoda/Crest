@@ -3443,6 +3443,9 @@
         }
       }
     },
+    "Blocking ads and trackers comes from the extensions you install." : {
+
+    },
     "Blocks tracking scripts and analytics requests." : {
       "extractionState" : "stale",
       "localizations" : {

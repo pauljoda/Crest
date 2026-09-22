@@ -76,7 +76,7 @@ enum BrowserEngineRegistration {
 
     private static var desktopWebKit: [String] {
         #if os(macOS)
-        ["viewport-capture", "full-page-capture", "pdf", "web-archive", "print", "inspector"]
+        ["viewport-capture", "full-page-capture", "pdf", "web-archive", "print", "inspector", "feature-flags"]
         #else
         []
         #endif
@@ -95,7 +95,7 @@ enum BrowserEngineRegistration {
         // per-site allow action have nothing to show. Declared honestly rather
         // than left advertising a control that cannot appear.
         unverified: ["popups"],
-        unavailable: ["reader", "translation", "content-blocking"],
+        unavailable: ["reader", "translation", "content-blocking", "feature-flags"],
         limitations: [
             "Blocked-popup notices are not relayed from the engine's popup blocker; the per-site allow action is unavailable.",
             "Find does not honour a non-wrapping search: the host command takes no wrap argument and the engine always wraps.",

@@ -82,7 +82,7 @@ struct BrowserCommandActions {
         shortcuts: BrowserShortcutStore?
     ) -> BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
-            commands: Self.paletteCommands,
+            commands: Self.paletteCommands.filter(\.isOfferedByCurrentEngine),
             shortcut: { shortcuts?.shortcut(for: $0) },
             perform: perform
         )
@@ -164,6 +164,7 @@ struct BrowserCommandActions {
         switch command {
         case .newBlankWindow: return !browser.isPrivateBrowsing && browser.selectedSpace != nil
         case .newQuickWindow, .showArchive: return browser.selectedSpace != nil
+        case .showDownloads: return supportsEngineCapability("downloads")
         case .toggleContentBlocking:
             return browser.selectedSpace != nil && supportsEngineCapability("content-blocking")
         case .openFile:
@@ -178,12 +179,14 @@ struct BrowserCommandActions {
         case .archiveTab: return canArchiveSelectedTab
         case .toggleReaderMode: return supportsPageCapability("reader") && pages.readerModeState.canToggle
         case .toggleTranslationToolbar: return supportsPageCapability("translation") && !pages.readerModeState.isActive
-        case .zoomIn, .zoomOut, .actualSize: return pages.hasActivePage && pages.activePage?.developerViewport == nil
+        case .zoomIn, .zoomOut, .actualSize:
+            return supportsPageCapability("zoom") && pages.activePage?.developerViewport == nil
         case .exportPDF: return supportsPageCapability("pdf")
         case .saveWebArchive: return supportsPageCapability("web-archive")
         case .printPage: return supportsPageCapability("print")
         case .showWebInspector: return supportsPageCapability("inspector")
-        case .findInPage, .copyPageLink, .copyPageLinkAsMarkdown, .sharePage, .toggleDeveloperToolbar:
+        case .findInPage: return supportsPageCapability("find")
+        case .copyPageLink, .copyPageLinkAsMarkdown, .sharePage, .toggleDeveloperToolbar:
             return pages.hasActivePage
         case .splitWithNextTab: return canSplitWithNextTab
         case .focusNextSplitCard, .focusPreviousSplitCard, .removeTabFromSplit, .separateSplitTabs:

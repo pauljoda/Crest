@@ -42,13 +42,20 @@ struct BrowserPrivacySettingsPane: View {
                         policy: contentBlockingPolicyBinding,
                         errorDescription: contentBlockingErrorDescription
                     )
+                } else {
+                    Section("Content blocking", systemImage: "hand.raised.slash") {
+                        Text("Blocking ads and trackers comes from the extensions you install.")
+                            .crestFormFootnote()
+                    }
                 }
 
-                BrowserSavedSitePermissionSection(
-                    records: records,
-                    permissionCenter: permissionCenter,
-                    resetAll: { confirmsReset = true }
-                )
+                if BrowserEngineRegistration.current.supports("permissions") {
+                    BrowserSavedSitePermissionSection(
+                        records: records,
+                        permissionCenter: permissionCenter,
+                        resetAll: { confirmsReset = true }
+                    )
+                }
 
                 Section {
                     BrowserPlatformPrivacyScopeFootnote()
@@ -100,8 +107,8 @@ struct BrowserPrivacySettingsPane: View {
 
     /// Crest's own blocking is a WebKit content-rule list. The engine running this
     /// process either applies it or it does not, and a preference that cannot reach
-    /// the engine is worse than an absent one: in Chromium blocking comes from an
-    /// extension instead, so the section is not shown at all.
+    /// the engine is worse than an absent one: where blocking comes from an
+    /// extension instead, the section only says so.
     private var supportsContentBlocking: Bool {
         BrowserEngineRegistration.current.supports("content-blocking")
     }

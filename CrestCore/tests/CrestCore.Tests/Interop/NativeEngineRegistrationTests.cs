@@ -17,6 +17,8 @@ public sealed partial class BrowserContractsTests {
         ["capabilities"] = new JsonObject {
             ["pages"] = EngineCapability(),
             ["navigation"] = EngineCapability(),
+            ["workspace-profiles"] = EngineCapability(),
+            ["profile-deletion"] = EngineCapability(),
             ["pdf"] = EngineCapability("unavailable"),
             ["extensions"] = EngineCapability("unverified")
         }
@@ -59,6 +61,9 @@ public sealed partial class BrowserContractsTests {
         Assert.Throws<BrowserRuleException>(() => authority.RegisterEngine(Bytes(descriptor)));
         descriptor["capabilities"]!["navigation"]!["contractVersion"] = 1;
         descriptor["capabilities"]!["navigation"]!["status"] = "unverified";
+        Assert.Throws<BrowserRuleException>(() => authority.RegisterEngine(Bytes(descriptor)));
+        descriptor = EngineDescriptor();
+        descriptor["capabilities"]!.AsObject().Remove("workspace-profiles");
         Assert.Throws<BrowserRuleException>(() => authority.RegisterEngine(Bytes(descriptor)));
         Assert.Null(authority.Engine);
         authority.RegisterEngine(Bytes(EngineDescriptor()));

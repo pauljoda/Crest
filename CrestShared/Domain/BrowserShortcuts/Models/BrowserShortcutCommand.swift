@@ -79,10 +79,36 @@ enum BrowserShortcutCommand:
 
     var id: Self { self }
 
-    static let userFacingCases = allCases
+    /// The commands this process offers anywhere a person can find one: the
+    /// menu bar, the launcher and the shortcut settings list. A command whose
+    /// whole feature the running engine declares absent is left out rather
+    /// than shown permanently dimmed, and it cannot claim a chord either.
+    static let userFacingCases = allCases.filter { $0.isOffered(by: BrowserEngineRegistration.current) }
 }
 
 extension BrowserShortcutCommand {
+    /// The engine capability a command's entire feature depends on.
+    ///
+    /// Only features an engine may lack outright belong here. Document actions
+    /// such as printing or export stay listed and are dimmed through the
+    /// page's own capability when the active page cannot perform them.
+    var requiredEngineCapability: String? {
+        switch self {
+        case .toggleReaderMode: "reader"
+        case .toggleContentBlocking: "content-blocking"
+        case .toggleTranslationToolbar: "translation"
+        default: nil
+        }
+    }
+
+    func isOffered(by registration: BrowserAdapterRegistration) -> Bool {
+        requiredEngineCapability.map(registration.supports) ?? true
+    }
+
+    var isOfferedByCurrentEngine: Bool {
+        isOffered(by: BrowserEngineRegistration.current)
+    }
+
     var defaultShortcut: BrowserShortcut? {
         BrowserShortcutDefaultPolicy.shortcut(for: self)
     }

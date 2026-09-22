@@ -112,7 +112,9 @@ extension BrowserPagePoolRegistry: BrowserPageDismissalAuthorizing {
         }
         guard isAvailable() else { return false }
         let pages = ownedPages()
-        guard !pages.isEmpty, let closePreparation else { return operation() }
+        guard let closePreparation,
+            pages.contains(where: { $0.pageEngine.registration.supports("before-unload") })
+        else { return operation() }
         let identities = Set(pages.map { ObjectIdentifier($0) })
         var committed = false
         closePreparation.prepareToClose(pages.map { $0.pageEngine }) { [weak self, weak browser] allowed in

@@ -1141,7 +1141,11 @@ final class BrowserPagePool:
         else { return false }
         // Move the renderer before Quick Window dismissal destroys its old
         // host. SwiftUI attaches the retained native view on a later update.
-        guard page.pageEngine.transferOwnership(to: windowID) else { return false }
+        // An engine that cannot move a live page between windows leaves the
+        // caller to load the tab afresh instead.
+        guard page.pageEngine.registration.supports("workspace-transfer"),
+            page.pageEngine.transferOwnership(to: windowID)
+        else { return false }
         guard lease.relinquishPage() === page else { return false }
         page.opensModifiedLinksInForeground = false
         transientLeases.removeValue(forKey: lease.id)
@@ -1897,8 +1901,11 @@ final class BrowserPagePool:
         // The core owns candidate eligibility and order; this store contributes
         // the residency facts and the engine's own veto.
         let candidatePages = inactiveSinceByTabID.reduce(into: [TabID: BrowserPage]()) { pages, entry in
+            // Automatic unload is only offered to engines that declare they can
+            // release and later restore a page.
             guard !runtimeStore.presentedTabIDs.contains(entry.key),
-                let page = tabRuntimes[entry.key]?.page
+                let page = tabRuntimes[entry.key]?.page,
+                page.pageEngine.registration.supports("page-residency")
             else { return }
             pages[entry.key] = page
         }

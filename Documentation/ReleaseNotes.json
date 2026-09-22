@@ -1893,6 +1893,10 @@
     "failed-page-view-survives-engine-retry": {
       "category": "fixed",
       "message": "The explanation for an unreachable page now stays on screen instead of disappearing into a blank page a moment later."
+    },
+    "engine-capabilities-gate-ui": {
+      "category": "improved",
+      "message": "Commands, menus and settings for features the current engine doesn't offer, such as Reader or feature flags on the desktop browser, no longer appear."
     }
   }
 }

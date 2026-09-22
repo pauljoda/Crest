@@ -41,11 +41,7 @@ enum BrowserCorePolicy {
         return decision
     }
     static func addressIntent(_ input: String, provider: BrowserSearchProvider) -> BrowserAddressIntent? {
-        #if CREST_CHROMIUM_HOST
-        let allowsInternalPages = true
-        #else
-        let allowsInternalPages = false
-        #endif
+        let allowsInternalPages = BrowserEngineRegistration.current.supports("internal-pages")
         guard let response = evaluate([
             "version": 1, "operation": "address.intent", "input": input,
             "allowsInternalPages": allowsInternalPages,

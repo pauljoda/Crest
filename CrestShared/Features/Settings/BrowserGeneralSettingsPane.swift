@@ -64,7 +64,11 @@ struct BrowserGeneralSettingsPane: View {
                 }
             #endif
 
-            BrowserTranslationSettingsSection()
+            // Whole-page translation preferences; an engine without page
+            // translation has nothing for them to reach.
+            if BrowserEngineRegistration.current.supports("translation") {
+                BrowserTranslationSettingsSection()
+            }
 
             #if os(macOS)
                 BrowserSystemPermissionSettingsSection(browser: browser, spaceAccess: spaceAccess)

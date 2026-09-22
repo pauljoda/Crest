@@ -62,7 +62,7 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
         standard("Select All", "selectAll:", key: "a", in: edit)
 
         let view = submenu("View", in: bar)
-        commands([.toggleSidebar, nil, .showHistory, .showArchive, .showDownloads], in: view)
+        commands([.toggleSidebar, .toggleTranslationToolbar, nil, .showHistory, .showArchive, .showDownloads], in: view)
         view.addItem(.separator())
         standard("Enter Full Screen", "toggleFullScreen:", key: "f", modifiers: [.command, .control], in: view)
         commands([.openLocation, nil, .back, .forward, .reloadPage, .stopLoading, .reloadFromOrigin],
@@ -76,11 +76,11 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
         let spaces = submenu("Spaces", in: bar)
         commands([.previousSpace, .nextSpace, nil], in: spaces)
         commands((1...9).compactMap(BrowserShortcutCommand.spaceSelection).map(Optional.some), in: spaces)
-        // Reader, whole-page Apple translation and Crest's own content blocking have
-        // no Chromium adapter. Their items are absent rather than permanently dimmed;
-        // selection translation stays on Chromium's own page context menu, and broader
-        // blocking comes from an extension.
-        commands([.findInPage, nil, .zoomIn, .zoomOut, .actualSize, nil, .copyPageLink,
+        // The menus list the same commands as every other shell; `commands(_:in:)`
+        // leaves out what this engine declares absent (Reader, whole-page
+        // translation, Crest's own content blocking). Selection translation stays
+        // on Chromium's own page context menu, and blocking comes from an extension.
+        commands([.toggleReaderMode, .toggleContentBlocking, nil, .findInPage, nil, .zoomIn, .zoomOut, .actualSize, nil, .copyPageLink,
                   .copyPageLinkAsMarkdown, .sharePage, .exportPDF, .saveWebArchive],
                  in: submenu("Page", in: bar))
         commands([.toggleDeveloperToolbar, nil, .showWebInspector], in: submenu("Develop", in: bar))
@@ -143,7 +143,13 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
 
     private func commands(_ commands: [BrowserShortcutCommand?], in menu: NSMenu) {
         for command in commands {
-            guard let command else { menu.addItem(.separator()); continue }
+            guard let command else {
+                // A separator never leads a menu or doubles up when the
+                // commands around it are not offered on this engine.
+                if let last = menu.items.last, !last.isSeparatorItem { menu.addItem(.separator()) }
+                continue
+            }
+            guard command.isOfferedByCurrentEngine else { continue }
             let title: String
             switch command {
             case .toggleSelectedTabPinned: title = String(localized: "Pin or Unpin Tab")

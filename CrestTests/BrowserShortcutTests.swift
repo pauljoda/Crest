@@ -45,6 +45,18 @@ final class BrowserShortcutTests: XCTestCase {
         XCTAssertTrue(duplicateAssignments.isEmpty)
     }
 
+    func testCommandsForAnEngineFeatureAreOfferedOnlyWhereTheEngineDeclaresIt() {
+        let engineFeatures: Set<BrowserShortcutCommand> = [
+            .toggleReaderMode, .toggleContentBlocking, .toggleTranslationToolbar,
+        ]
+        for command in BrowserShortcutCommand.allCases {
+            XCTAssertTrue(command.isOffered(by: BrowserEngineRegistration.webKit), "\(command)")
+            XCTAssertEqual(
+                command.isOffered(by: BrowserEngineRegistration.chromium),
+                !engineFeatures.contains(command), "\(command)")
+        }
+    }
+
     func testShortcutRequiresAtLeastOneSupportedModifier() {
         XCTAssertFalse(shortcut("t", []).isValid)
         XCTAssertTrue(shortcut("t", [.command]).isValid)

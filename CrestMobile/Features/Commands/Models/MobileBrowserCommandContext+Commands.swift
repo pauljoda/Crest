@@ -69,7 +69,8 @@ extension MobileBrowserCommandContext {
     var paletteRegistry: BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
             commands: Self.paletteCommands.filter {
-                $0 != .toggleTranslationToolbar || canToggleTranslationToolbar
+                $0.isOfferedByCurrentEngine
+                    && ($0 != .toggleTranslationToolbar || canToggleTranslationToolbar)
             },
             perform: performFromPalette
         )

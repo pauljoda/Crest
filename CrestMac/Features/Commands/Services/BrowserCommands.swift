@@ -274,24 +274,32 @@ struct BrowserCommands: Commands {
         }
 
         CommandMenu("Page") {
-            Button("Translate Page", systemImage: "translate") {
-                commandPages.activePage?.translation.present()
+            // Features the running engine declares absent are left out of the
+            // menu rather than shown permanently dimmed.
+            if BrowserShortcutCommand.toggleTranslationToolbar.isOfferedByCurrentEngine {
+                Button("Translate Page", systemImage: "translate") {
+                    commandPages.activePage?.translation.present()
+                }
+                .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
             }
-            .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
-            Button(
-                commandPages.readerModeActionTitle,
-                systemImage: BrowserShortcutCommand.toggleReaderMode.paletteSymbol,
-                action: commandPages.toggleReaderMode
-            )
-            .keyboardShortcut(shortcut(.toggleReaderMode))
-            .disabled(!commandPages.readerModeState.canToggle)
-            Button(
-                actions.contentBlockingActionTitle,
-                systemImage: BrowserShortcutCommand.toggleContentBlocking.paletteSymbol,
-                action: actions.toggleContentBlocking
-            )
-            .keyboardShortcut(shortcut(.toggleContentBlocking))
-            .disabled(commandBrowser.selectedSpace == nil)
+            if BrowserShortcutCommand.toggleReaderMode.isOfferedByCurrentEngine {
+                Button(
+                    commandPages.readerModeActionTitle,
+                    systemImage: BrowserShortcutCommand.toggleReaderMode.paletteSymbol,
+                    action: commandPages.toggleReaderMode
+                )
+                .keyboardShortcut(shortcut(.toggleReaderMode))
+                .disabled(!commandPages.readerModeState.canToggle)
+            }
+            if BrowserShortcutCommand.toggleContentBlocking.isOfferedByCurrentEngine {
+                Button(
+                    actions.contentBlockingActionTitle,
+                    systemImage: BrowserShortcutCommand.toggleContentBlocking.paletteSymbol,
+                    action: actions.toggleContentBlocking
+                )
+                .keyboardShortcut(shortcut(.toggleContentBlocking))
+                .disabled(commandBrowser.selectedSpace == nil)
+            }
             Divider()
             Button(
                 "Find in Page",
@@ -384,18 +392,20 @@ struct BrowserCommands: Commands {
         }
 
         CommandGroup(after: .sidebar) {
-            Toggle(
-                isOn: Binding(
-                    get: { commandPages.activePage?.translation.showsToolbar == true },
-                    set: { commandPages.activePage?.translation.setToolbarVisible($0) }
-                )
-            ) {
-                Label(
-                    "Show Translation Toolbar",
-                    systemImage: BrowserShortcutCommand.toggleTranslationToolbar.paletteSymbol)
+            if BrowserShortcutCommand.toggleTranslationToolbar.isOfferedByCurrentEngine {
+                Toggle(
+                    isOn: Binding(
+                        get: { commandPages.activePage?.translation.showsToolbar == true },
+                        set: { commandPages.activePage?.translation.setToolbarVisible($0) }
+                    )
+                ) {
+                    Label(
+                        "Show Translation Toolbar",
+                        systemImage: BrowserShortcutCommand.toggleTranslationToolbar.paletteSymbol)
+                }
+                .keyboardShortcut(shortcut(.toggleTranslationToolbar))
+                .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
             }
-            .keyboardShortcut(shortcut(.toggleTranslationToolbar))
-            .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
             developerToolbarToggle
             Button(
                 "Toggle Sidebar",
