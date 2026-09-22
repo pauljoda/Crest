@@ -254,6 +254,21 @@ matching provisioning profile. Crest's production App ID has that capability;
 the separate experimental bundle needs its own Apple approval. Merely adding the
 entitlement to an experimental signature does not make it authorized.
 
+Passkeys use the macOS system sheet, as they do in the WebKit engine. Chromium's
+iCloud Keychain authenticator is only discovered when the browser holds
+`com.apple.developer.web-browser.public-key-credential` and the request carries
+the NSWindow the sheet is presented from. Chromium finds that window through a
+`views::Widget`, which Crest windows do not have, so in Crest mode the window the
+page contents actually live in is used instead. With the authenticator available,
+Crest skips Chromium's own mechanism sheet and sends both `get()` and `create()`
+straight to the system, which performs Touch ID or iCloud Keychain and offers its
+own nearby-device, QR and security-key fallbacks. Cancelling the system sheet
+returns to Chromium's mechanism list once, so the engine's phone, USB and
+security-key flows stay reachable. Creation defaults to iCloud Keychain rather
+than a browser-owned store, and Chromium's staged rollout features for that
+choice do not apply. A build without the entitlement — the review package — keeps
+Chromium's own sheet, so passkeys there are not a test of Crest's behaviour.
+
 Private windows use separate off-the-record profiles, and extension actions are
 filtered by Chromium's incognito authorization.
 

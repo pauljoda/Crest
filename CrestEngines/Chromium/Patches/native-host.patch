@@ -1346,3 +1346,94 @@
  #if BUILDFLAG(IS_CHROMEOS)
    ash::BootTimesRecorder::Get()->SaveChromeMainStats();
  #endif
+--- a/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
++++ b/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
+@@ -16,6 +16,7 @@
+ 
+ #include "base/check.h"
+ #include "base/check_op.h"
++#include "base/command_line.h"
+ #include "base/compiler_specific.h"
+ #include "base/containers/span.h"
+ #include "base/feature_list.h"
+@@ -1158,6 +1159,12 @@
+   }
+   if (preference.has_value()) {
+     return *preference;
++  }
++  // Crest creates passkeys in the system's iCloud Keychain, like Safari, rather
++  // than in a browser-owned store. Chromium's staged rollout features do not
++  // apply.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    return true;
+   }
+   const base::Feature* feature;
+   if (request_is_for_google_com) {
+@@ -1202,6 +1209,19 @@
+       web_contents->GetNativeView());
+   if (widget) {
+     const gfx::NativeWindow window = widget->GetNativeWindow();
++    if (window) {
++      discovery_factory->set_nswindow(window);
++      return;
++    }
++  }
++
++  // Crest hosts page contents directly in its own AppKit window, so there is
++  // no views::Widget to walk up to. Without an NSWindow the FidoDiscoveryFactory
++  // silently drops the iCloud Keychain discovery and the request falls through
++  // to the hybrid/QR flow. Take the window the contents actually live in, which
++  // is the window the system passkey sheet must be presented from.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    const gfx::NativeWindow window = web_contents->GetTopLevelNativeWindow();
+     if (window) {
+       discovery_factory->set_nswindow(window);
+     }
+--- a/chrome/browser/webauthn/authenticator_request_dialog_controller.cc
++++ b/chrome/browser/webauthn/authenticator_request_dialog_controller.cc
+@@ -20,6 +20,7 @@
+ 
+ #include "base/check.h"
+ #include "base/check_op.h"
++#include "base/command_line.h"
+ #include "base/feature_list.h"
+ #include "base/functional/bind.h"
+ #include "base/functional/callback.h"
+@@ -809,6 +810,21 @@
+   if (pending_step_) {
+     SetCurrentStep(*pending_step_);
+     pending_step_.reset();
++#if BUILDFLAG(IS_MAC)
++  } else if (base::CommandLine::ForCurrentProcess()->HasSwitch(
++                 "crest-control-plane") &&
++             !crest_dispatched_icloud_keychain_ && allow_icloud_keychain_ &&
++             transport_availability_.has_icloud_keychain) {
++    // Crest sends passkeys to the system sheet the way Safari does: the macOS
++    // sheet performs Touch ID/iCloud Keychain and offers its own nearby-device,
++    // QR and security-key fallbacks, so Chromium's mechanism sheet is not a
++    // useful first step. This runs once per request; if the user cancels the
++    // system sheet, `OnUserConsentDenied` calls `StartOver`, which lands on
++    // Chromium's mechanism selection with this branch already spent.
++    crest_dispatched_icloud_keychain_ = true;
++    ephemeral_state_.did_invoke_platform_despite_no_priority_mechanism_ = true;
++    StartICloudKeychain();
++#endif
+   } else if (model_->mechanisms.empty()) {
+     if (transport_availability_.request_type ==
+             device::FidoRequestType::kMakeCredential &&
+--- a/chrome/browser/webauthn/authenticator_request_dialog_controller.h
++++ b/chrome/browser/webauthn/authenticator_request_dialog_controller.h
+@@ -503,6 +503,13 @@
+   // profile authenticator.
+   bool should_create_in_icloud_keychain_ = false;
+ 
++#if BUILDFLAG(IS_MAC)
++  // Set once Crest has sent this request straight to the macOS system passkey
++  // sheet, so that cancelling it returns to Chromium's own mechanism list
++  // instead of reopening the system sheet.
++  bool crest_dispatched_icloud_keychain_ = false;
++#endif
++
+   // enclave_enabled_status_ determines whether Google Password Manager entries
+   // should be offered both for `makeCredential` or `getAssertion`. If reauth
+   // needed, instead of offering the actual passkeys or creating a passkey,

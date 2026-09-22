@@ -1817,6 +1817,10 @@
     "chromium-product-browser-gates": {
       "category": "fixed",
       "message": "iCloud Passwords helper discovery, extension updates and private windows work when Crest is launched normally from the Finder or Dock."
+    },
+    "chromium-passkeys-system-sheet": {
+      "category": "new",
+      "message": "Passkeys in Chromium-powered windows use the macOS passkey sheet with Touch ID and iCloud Keychain first, with phone and security key options as fallbacks."
     }
   }
 }

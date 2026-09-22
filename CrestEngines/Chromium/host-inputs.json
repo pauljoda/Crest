@@ -182,5 +182,17 @@
   "chrome/app/chrome_main_delegate.cc": {
     "before": "a09f7410ef807db08f3cbcb0d06425c302862bcc3f0bb691fa2e4144a6f1c300",
     "after": "f69c2d491ae6d041cb38c73e3155c055d583aeb2518256be580d0d3a018b1377"
+  },
+  "chrome/browser/webauthn/chrome_authenticator_request_delegate.cc": {
+    "before": "d1bb395b48108fdec01a4b061af6221a564e5f0a63f90ac773cc09f9363b7250",
+    "after": "ef6f815089169d9e81684b386a0ba1f2d825c810ab2a93d95b62c4f45f463b7e"
+  },
+  "chrome/browser/webauthn/authenticator_request_dialog_controller.cc": {
+    "before": "322754cfba68ccd592f25f16f4f788ef5e517cda329e3650602a249630ed426c",
+    "after": "52f98d8fefb099a6cae4e3a593e4069cc383a3f0ce4e57c18e379fe1989d0f4b"
+  },
+  "chrome/browser/webauthn/authenticator_request_dialog_controller.h": {
+    "before": "7c683c5683093b44bc3777b32340ed640c2c222f463570123c1867be61dea9a5",
+    "after": "4db19d8f4e86fea15d243d80b9a1cd2f4c8f6991234909b8e3c3602319621468"
   }
 }
