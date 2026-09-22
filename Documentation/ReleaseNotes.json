@@ -2005,6 +2005,10 @@
     "core-search-aggregate": {
       "category": "internal",
       "message": "Move the search engine catalog, search URL construction, custom search engine edits and automatic translation rules into the portable core."
+    },
+    "companion-apps-connect": {
+      "category": "fixed",
+      "message": "Extensions that work with a companion app, such as ChatGPT, 1Password and Claude, now connect to it in the desktop browser even when the app was only set up for Chrome."
     }
   }
 }

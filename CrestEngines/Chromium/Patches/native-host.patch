@@ -454,23 +454,35 @@
    // contents. See crbug.com/40059470.
 --- a/chrome/browser/extensions/api/messaging/launch_context_posix.cc
 +++ b/chrome/browser/extensions/api/messaging/launch_context_posix.cc
-@@ -47,6 +47,16 @@
-   if (result.empty()) {
+@@ -48,6 +48,28 @@
      result = FindManifestInDir(chrome::DIR_NATIVE_MESSAGING, host_name);
    }
-+
+ 
 +#if BUILDFLAG(IS_MAC)
-+  // Apple supplies this system host in Chrome's global directory. Discover only
-+  // that host; Chromium still validates its manifest and allowed extension IDs.
-+  if (result.empty() && host_name == "com.apple.passwordmanager" &&
++  // Companion apps — Apple's Passwords helper, ChatGPT, 1Password, Claude —
++  // register their hosts for Chrome and do not know Crest's directories. Fall
++  // back to Chrome's per-user registrations, then its global ones. Chromium
++  // still validates the manifest and the extension origins it allows, so a
++  // host answers only the extensions its app registered.
++  if (result.empty() &&
 +      base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
-+    base::FilePath apple_manifest("/Library/Google/Chrome/NativeMessagingHosts/com.apple.passwordmanager.json");
-+    if (base::PathExists(apple_manifest)) result = apple_manifest;
++    const std::string file = host_name + ".json";
++    const base::FilePath candidates[] = {
++        base::GetHomeDir().Append("Library/Application Support/Google/Chrome/NativeMessagingHosts").Append(file),
++        base::FilePath("/Library/Google/Chrome/NativeMessagingHosts").Append(file),
++    };
++    for (const auto& candidate : candidates) {
++      if (base::PathExists(candidate)) {
++        result = candidate;
++        break;
++      }
++    }
 +  }
 +#endif
-
++
    if (result.empty()) {
      error_message = "Can't find native messaging host " + host_name;
+   }
 --- a/extensions/browser/updater/extension_downloader.cc
 +++ b/extensions/browser/updater/extension_downloader.cc
 @@ -347,6 +347,16 @@
