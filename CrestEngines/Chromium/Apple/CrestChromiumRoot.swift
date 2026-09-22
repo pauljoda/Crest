@@ -188,6 +188,22 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             !instance.application.browser.deletingSpaceIDs.contains($0.id) && !instance.application.spaceAccess.isLocked($0)
         }
     }
+    /// Whether this store is one of the persistent Spaces' own stores.
+    ///
+    /// Engine extension profiles belong to the application's persistent store
+    /// family — every normal window's store shares it. A private window and a
+    /// borrowed settings workspace each have a family of their own and no
+    /// persistent engine profile, so neither may prepare or read one.
+    static func ownsExtensionProfiles(_ browser: BrowserStore) -> Bool {
+        guard let instance else { return false }
+        return browser.family === instance.application.browser.family
+            && !browser.isPrivateBrowsing && !browser.isTemporaryWorkspace
+    }
+    static func isSpaceLocked(_ space: BrowserSpace) -> Bool {
+        guard let instance else { return true }
+        return instance.application.browser.deletingSpaceIDs.contains(space.id)
+            || instance.application.spaceAccess.isLocked(space)
+    }
     static var activeNativeWindow: NSWindow? {
         guard let instance else { return nil }
         if let window = NSApp.keyWindow, instance.windows.values.contains(where: { $0 === window }) { return window }

@@ -161,6 +161,29 @@
 - (void)invoke:(id)sender { if (self.run) self.run(); }
 @end
 
+// The window an extension action's popup is shown in.
+//
+// Crest does not use `NSPopover` for these. On macOS 27 the popover composites
+// a translucent system material with whatever it hosts, so an extension
+// painting an opaque `#181A1B` measured `#68555B` on screen — a white haze over
+// the extension's own rendering. Neither an opaque page base nor an opaque
+// browser surface changes that, and an opaque view behind the web contents
+// occludes the renderer's remote layer and leaves the popup blank. This is a
+// plain borderless window instead: nothing of Crest's is composited with the
+// extension's document, so what the renderer paints is what reaches the screen.
+//
+// It becomes key so the popup's own fields can be typed into, and is added as a
+// child of the Crest window it was anchored in, so it travels and orders with
+// it. There is no arrow: the arrow of a system popover is filled with the
+// popover's own background colour, and Crest does not know the colour an
+// extension's document paints.
+@interface CrestExtensionPopupWindow : NSWindow
+@end
+@implementation CrestExtensionPopupWindow
+- (BOOL)canBecomeKeyWindow { return YES; }
+- (BOOL)canBecomeMainWindow { return NO; }
+@end
+
 namespace {
 using Observation = void (^)(NSString*, NSDictionary<NSString*, id>*);
 // AppKit hosting follows Mori's native ExtensionView bridge (MIT; see
@@ -176,59 +199,71 @@ class ExtensionPopup final : public extensions::ExtensionView,
     host_->SetCloseHandler(base::BindOnce([](base::WeakPtr<ExtensionPopup> popup, extensions::ExtensionHost*) {
       dispatch_async(dispatch_get_main_queue(), ^{ if (popup) popup->Close(); });
     }, weak));
-    popover_ = [[NSPopover alloc] init];
-    popover_.behavior = NSPopoverBehaviorTransient;
-    NSViewController* controller = [[NSViewController alloc] init];
-    controller.view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 320)];
+    window_ = [[CrestExtensionPopupWindow alloc]
+        initWithContentRect:NSMakeRect(0, 0, kDefaultWidth, kDefaultHeight)
+                  styleMask:NSWindowStyleMaskBorderless
+                    backing:NSBackingStoreBuffered
+                      defer:NO];
+    window_.releasedWhenClosed = NO;
+    window_.opaque = NO;
+    window_.backgroundColor = NSColor.clearColor;
+    window_.hasShadow = YES;
+    window_.movable = NO;
+    window_.animationBehavior = NSWindowAnimationBehaviorNone;
+    window_.collectionBehavior =
+        NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle;
+    // A plain layer-backed container, not a vibrancy view: it contributes only
+    // the rounded corners Crest's own controls use. The renderer's view is its
+    // one subview, with nothing opaque between them, so the remote layer the
+    // renderer draws into is never occluded.
+    NSView* container = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, kDefaultWidth, kDefaultHeight)];
+    container.wantsLayer = YES;
+    container.layer.backgroundColor = NSColor.clearColor.CGColor;
+    container.layer.cornerRadius = kCornerRadius;
+    container.layer.cornerCurve = kCACornerCurveContinuous;
+    container.layer.masksToBounds = YES;
+    container.autoresizesSubviews = YES;
     NSView* view = host_->host_contents()->GetNativeView().GetNativeNSView();
-    // The popup is hosted directly, with no view of Crest's own between the
-    // popover and the extension's document.
-    //
-    // NSPopover composites a translucent system material with its content on
-    // macOS 27: a popup painting an opaque #181A1B measures #68555B on screen,
-    // which reads as a white haze over the extension's own rendering. Neither
-    // an opaque page base (`SetPageBaseBackgroundColor`) nor an opaque browser
-    // surface (`RenderWidgetHostView::SetBackgroundColor`) changes that
-    // measurement, and an opaque view placed behind the web contents occludes
-    // the remote layer the renderer draws into, leaving the popup blank. The
-    // remaining approach is to stop using NSPopover and host the popup in a
-    // borderless child window with its own rounded corners and arrow; that is
-    // not done here.
-    view.frame = controller.view.bounds;
+    view.frame = container.bounds;
     view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [controller.view addSubview:view];
-    popover_.contentViewController = controller;
-    popover_.contentSize = controller.view.bounds.size;
-    close_observer_ = [[NSNotificationCenter defaultCenter]
-        addObserverForName:NSPopoverDidCloseNotification object:popover_ queue:NSOperationQueue.mainQueue
-        usingBlock:^(NSNotification*) {
-          dispatch_async(dispatch_get_main_queue(), ^{ if (weak) weak->Close(); });
-        }];
+    [container addSubview:view];
+    window_.contentView = container;
     host_->CreateRendererSoon();
   }
   ~ExtensionPopup() override { Close(); }
   void Close() {
     weak_factory_.InvalidateWeakPtrs();
-    if (close_observer_) [[NSNotificationCenter defaultCenter] removeObserver:close_observer_];
-    close_observer_ = nil;
-    [popover_ close];
-    popover_ = nil;
+    for (id monitor in monitors_) [NSEvent removeMonitor:monitor];
+    monitors_ = nil;
+    for (id observation in observations_) [[NSNotificationCenter defaultCenter] removeObserver:observation];
+    observations_ = nil;
+    if (window_) {
+      if (NSWindow* parent = window_.parentWindow) [parent removeChildWindow:window_];
+      [window_ orderOut:nil];
+      window_.contentView = [[NSView alloc] initWithFrame:NSZeroRect];
+      [window_ close];
+      window_ = nil;
+    }
     if (host_) { host_->RemoveObserver(this); host_.reset(); }
   }
   gfx::NativeView GetNativeView() override { return host_ ? host_->host_contents()->GetNativeView() : gfx::NativeView(); }
   void ResizeDueToAutoResize(content::WebContents*, const gfx::Size& size) override {
-    // AppKit keeps the arrow attached and fits the resized content to the screen.
-    popover_.contentSize = NSMakeSize(std::clamp(size.width(), 25, 800), std::clamp(size.height(), 25, 600));
+    if (!window_) return;
+    content_size_ = NSMakeSize(std::clamp(size.width(), 25, 800), std::clamp(size.height(), 25, 600));
+    Position();
   }
   void RenderFrameCreated(content::RenderFrameHost* frame) override {
     if (auto* view = frame->GetView()) view->EnableAutoResize(gfx::Size(25, 25), gfx::Size(800, 600));
   }
   bool HandleKeyboardEvent(content::WebContents*, const input::NativeWebKeyboardEvent&) override { return false; }
   void OnLoaded() override {
-    if (!anchor_view_.window) { Close(); return; }
-    [popover_ showRelativeToRect:anchor_rect_ ofView:anchor_view_
-                  preferredEdge:anchor_view_.isFlipped ? NSMaxYEdge : NSMinYEdge];
-    [popover_.contentViewController.view.window makeKeyWindow];
+    NSWindow* parent = anchor_view_.window;
+    if (!parent || !window_ || presented_) { if (!parent) Close(); return; }
+    presented_ = true;
+    Position();
+    [parent addChildWindow:window_ ordered:NSWindowAbove];
+    [window_ makeKeyAndOrderFront:nil];
+    Observe(parent);
     if (host_) host_->host_contents()->Focus();
   }
   void OnExtensionHostDestroyed(extensions::ExtensionHost* host) override {
@@ -236,13 +271,84 @@ class ExtensionPopup final : public extensions::ExtensionView,
     Close();
   }
  private:
+  static constexpr CGFloat kDefaultWidth = 360;
+  static constexpr CGFloat kDefaultHeight = 320;
+  // The radius Crest's own controls use.
+  static constexpr CGFloat kCornerRadius = 12;
+  static constexpr CGFloat kAnchorGap = 6;
+  static constexpr CGFloat kScreenMargin = 8;
+  static constexpr unsigned short kEscapeKeyCode = 53;
+
+  // Places the popup under the control it was opened from, flipping above it
+  // and sliding along the screen when there is not room below or beside it.
+  void Position() {
+    NSWindow* parent = anchor_view_.window;
+    if (!window_ || !parent) return;
+    const NSRect anchor = [parent convertRectToScreen:[anchor_view_ convertRect:anchor_rect_ toView:nil]];
+    NSRect visible = (parent.screen ?: NSScreen.mainScreen).visibleFrame;
+    NSRect frame = NSMakeRect(NSMidX(anchor) - content_size_.width / 2,
+                              NSMinY(anchor) - kAnchorGap - content_size_.height,
+                              content_size_.width, content_size_.height);
+    if (NSMinY(frame) < NSMinY(visible) + kScreenMargin) {
+      const CGFloat above = NSMaxY(anchor) + kAnchorGap;
+      if (above + content_size_.height <= NSMaxY(visible) - kScreenMargin) frame.origin.y = above;
+      else frame.origin.y = NSMinY(visible) + kScreenMargin;
+    }
+    frame.origin.x = std::clamp(frame.origin.x, NSMinX(visible) + kScreenMargin,
+                                std::max(NSMinX(visible) + kScreenMargin,
+                                         NSMaxX(visible) - kScreenMargin - content_size_.width));
+    [window_ setFrame:frame display:YES];
+  }
+
+  // Transient like the popover it replaces: a click outside it, Escape, the
+  // window it belongs to moving, resizing or minimising, and Crest going to the
+  // background all dismiss it. The extension closing its own popup, the host
+  // being destroyed and the extension unloading come through the host.
+  void Observe(NSWindow* parent) {
+    auto weak = weak_factory_.GetWeakPtr();
+    NSWindow* popup = window_;
+    const NSEventMask clicks = NSEventMaskLeftMouseDown | NSEventMaskRightMouseDown | NSEventMaskOtherMouseDown;
+    monitors_ = @[
+      [NSEvent addLocalMonitorForEventsMatchingMask:clicks | NSEventMaskKeyDown
+                                            handler:^NSEvent*(NSEvent* event) {
+        if (!weak) return event;
+        if (event.type == NSEventTypeKeyDown) {
+          if (event.keyCode != kEscapeKeyCode) return event;
+          weak->Close();
+          return nil;
+        }
+        if (event.window != popup) weak->Close();
+        return event;
+      }],
+      [NSEvent addGlobalMonitorForEventsMatchingMask:clicks handler:^(NSEvent*) {
+        if (weak) weak->Close();
+      }],
+    ];
+    NSMutableArray* observations = [NSMutableArray array];
+    auto dismiss = ^(NSNotification*) {
+      dispatch_async(dispatch_get_main_queue(), ^{ if (weak) weak->Close(); });
+    };
+    for (NSNotificationName name in @[NSWindowDidResizeNotification, NSWindowDidMoveNotification,
+                                      NSWindowDidMiniaturizeNotification, NSWindowWillCloseNotification])
+      [observations addObject:[[NSNotificationCenter defaultCenter] addObserverForName:name object:parent
+          queue:NSOperationQueue.mainQueue usingBlock:dismiss]];
+    [observations addObject:[[NSNotificationCenter defaultCenter]
+        addObserverForName:NSApplicationDidResignActiveNotification object:NSApp
+                     queue:NSOperationQueue.mainQueue usingBlock:dismiss]];
+    observations_ = observations;
+  }
+
   std::unique_ptr<extensions::ExtensionViewHost> host_;
   NSView* __weak anchor_view_;
   NSRect anchor_rect_;
-  NSPopover* __strong popover_ = nil;
-  id __strong close_observer_ = nil;
+  CrestExtensionPopupWindow* __strong window_ = nil;
+  NSArray* __strong monitors_ = nil;
+  NSArray* __strong observations_ = nil;
+  NSSize content_size_ = NSMakeSize(kDefaultWidth, kDefaultHeight);
+  bool presented_ = false;
   base::WeakPtrFactory<ExtensionPopup> weak_factory_{this};
 };
+
 // An extension side panel is a Crest split-row card, not a Views
 // SidePanelEntry: Crest never instantiates Chrome's SidePanelCoordinator. Only
 // the extension host and its view belong to Chromium; placement, sizing and
@@ -434,7 +540,7 @@ struct HostState {
   std::map<std::string, std::unique_ptr<Page>> pages;
   // The action popup opened from a Space that has no page. A page's own popup
   // lives on the page; this one has no page to live on and only one can be
-  // open at a time, because the popover is transient.
+  // open at a time, because an action popup is transient.
   std::unique_ptr<ExtensionPopup> space_extension_popup;
   std::map<std::string, NativeAdoption> adoptions;
   std::map<std::string, PendingLinkNavigation> pending_link_navigations;
@@ -580,7 +686,7 @@ class ExtensionStateObserver
   // loaded from a directory the user has since moved or deleted. Chromium keeps
   // such an extension enabled in the registry and only discovers the loss when
   // a resource is requested, which for an action means the popup navigating to
-  // its own ERR_FILE_NOT_FOUND page inside Crest's popover. Crest offers no
+  // its own ERR_FILE_NOT_FOUND page inside Crest's popup window. Crest offers no
   // action for one: it is missing, not broken.
   //
   // One stat per extension per registry change. `RebuildIcons` runs on every
@@ -2017,7 +2123,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   if (!extension || (profile->IsOffTheRecord() && !extensions::util::IsIncognitoEnabled(id, profile))) return NO;
   // Declined rather than navigated: an extension whose files are gone would
   // otherwise show Chromium's own ERR_FILE_NOT_FOUND page inside Crest's
-  // popover. The core states this as an unavailable action instead.
+  // popup window. The core states this as an unavailable action instead.
   if (!ExtensionStateObserver::Ensure(profile, page->profile)->IsAvailable(*extension,
           extensions::ExtensionActionManager::Get(profile)->GetExtensionAction(*extension))) return NO;
   auto* contents = page->web_contents();

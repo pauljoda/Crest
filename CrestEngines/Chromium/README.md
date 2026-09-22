@@ -240,22 +240,42 @@ popup of its own, including any page action, reports itself unavailable instead.
 A private window reads the same pinned list narrowed to the extensions enabled
 in incognito.
 
+The row prepares the Space's engine profile itself, so the tiles are there on
+the first Start Page of a launch rather than only once something has been opened
+in the Space. Which Spaces it may prepare is decided by `(spaceID, profileID)`
+against the store family that owns the window it is drawn in, not by identity
+against one application-wide list: a window publishes its own Spaces first, and
+the list would still be empty at that point. A Space belonging to another family
+— a borrowed settings workspace, a private window, which has no persistent
+engine profile of its own — and a locked Space are refused. The preparation is
+idempotent, so it can be asked on every appearance and every Space change.
+
 An extension that is still enabled in the registry but whose directory is gone
 is treated as unavailable rather than broken: it contributes no tile and no
 settings row, and its action declines to run, so a click states Crest's own
-unavailable notice instead of navigating the popover to Chromium's
+unavailable notice instead of navigating the popup to Chromium's
 ERR_FILE_NOT_FOUND page. The check is one stat per extension per registry
 change.
 
-Action popups are hosted directly in an `NSPopover`, with no Crest view between
-the popover and the extension's document. On macOS 27 the popover composites a
-translucent system material with that document: a popup painting an opaque
-`#181A1B` measures `#68555B` on screen, which reads as a white haze over the
-extension's own rendering. An opaque page base, an opaque browser surface and an
-opaque view behind the web contents were each measured and none of them removes
-it — the last one occludes the renderer's layer and leaves the popup blank. The
-remaining approach is to host the popup in a borderless child window instead of
-an `NSPopover`; that is not done yet.
+Action popups are hosted in a borderless Crest window, not in an `NSPopover`.
+On macOS 27 the popover composites a translucent system material with whatever
+it hosts: a popup painting an opaque `#181A1B` measured `#68555B` on screen,
+which read as a white haze over the extension's own rendering. An opaque page
+base, an opaque browser surface and an opaque view behind the web contents were
+each measured and none removed it — the last occluded the renderer's layer and
+left the popup blank. The popup window is borderless, becomes key so the
+extension's own fields can be typed into, and is a child of the Crest window it
+was opened from. Its content view is a plain layer-backed container — no
+vibrancy, nothing opaque between it and the renderer — carrying the same 12pt
+rounded corners as Crest's controls, with the extension's view as its only
+subview. It has no arrow: a popover's arrow is filled with the popover's own
+background colour, and Crest does not know the colour an extension's document
+paints. The existing anchor logic places it below the control it was opened
+from, flipping above and sliding along the screen at an edge, and Chromium's
+auto-resize keeps following the document. It dismisses on a click outside, on
+Escape, when its window moves, resizes or minimises, when Crest goes to the
+background, and when the extension closes its popup, is unloaded or has its host
+destroyed. An extension painting `#181A1B` now measures `#181A1B` on screen.
 
 Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
 Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`

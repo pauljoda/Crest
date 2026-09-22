@@ -26,7 +26,8 @@ struct SpaceSidebarContent: View {
     var body: some View {
         VStack(spacing: 0) {
             if utilitySurface == nil {
-                BrowserEngineSidebarAccessory(space: space, pages: pages)
+                BrowserEngineSidebarAccessory(
+                    space: space, browser: browser, pages: pages)
             }
             Group {
                 if let utilitySurface {

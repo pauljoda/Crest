@@ -43,8 +43,22 @@ final class ChromiumExtensionStore {
     @ObservationIgnored private var installCompletion: (@MainActor () -> Void)?
 
     var spaces: [BrowserSpace] { CrestChromiumRoot.extensionSpaces }
-    func authorized(_ space: BrowserSpace) -> Bool {
-        spaces.contains { $0.id == space.id && $0.profile.id == space.profile.id }
+    /// Whether this Space's engine profile may be read and prepared here.
+    ///
+    /// Ownership is decided by `(spaceID, profileID)` against the store family
+    /// that owns the window asking, not by identity against one global list: a
+    /// window's own store publishes its Spaces before the application-wide list
+    /// a start-up read would see. A Space from an unrelated family — another
+    /// family's window, a borrowed settings workspace, a private window, which
+    /// has no persistent engine profile of its own — and a locked Space are all
+    /// refused. Callers with no window fall back to the application list.
+    func authorized(_ space: BrowserSpace, in browser: BrowserStore? = nil) -> Bool {
+        guard !CrestChromiumRoot.isSpaceLocked(space) else { return false }
+        guard let browser else {
+            return spaces.contains { $0.id == space.id && $0.profile.id == space.profile.id }
+        }
+        guard CrestChromiumRoot.ownsExtensionProfiles(browser) else { return false }
+        return browser.space(matching: BrowserSpaceRuntimeAssignment(space: space)) != nil
     }
     func refresh() {
         revision &+= 1
@@ -55,12 +69,12 @@ final class ChromiumExtensionStore {
             installed[space.profile.id] = host.extensions(forProfile: space.profile.id.uuidString).map(Installed.init)
         }
     }
-    func load(_ space: BrowserSpace) async {
-        guard authorized(space), let host = CrestChromiumRoot.engineHost else { return }
+    func load(_ space: BrowserSpace, in browser: BrowserStore? = nil) async {
+        guard authorized(space, in: browser), let host = CrestChromiumRoot.engineHost else { return }
         let ready = await withCheckedContinuation { continuation in
             host.prepareExtensionProfile(space.profile.id.uuidString) { ready in continuation.resume(returning: ready) }
         }
-        guard ready, authorized(space) else { return }
+        guard ready, authorized(space, in: browser) else { return }
         installed[space.profile.id] = host.extensions(forProfile: space.profile.id.uuidString).map(Installed.init)
         revision &+= 1
     }
@@ -115,23 +129,15 @@ final class ChromiumExtensionStore {
         }
     }
     /// Makes sure the Space's engine profile is loaded so its pinned list can be
-    /// read before anything has been opened in it. A Space the core does not own
-    /// — a private window's — is left alone; its profile exists only while a
-    /// private page does.
-    func prepare(_ space: BrowserSpace) async {
-        guard installed[space.profile.id] == nil else { return }
-        // A Start Page can be on screen before the core has published the Space
-        // list this row's ownership check reads, and the engine profile is not
-        // loaded at all until something asks for it. Wait briefly for the Space
-        // to be claimable rather than leaving the row empty until the first
-        // page opens.
-        for _ in 0..<24 {
-            if authorized(space) {
-                await load(space)
-                return
-            }
-            try? await Task.sleep(for: .milliseconds(250))
-        }
+    /// read before anything has been opened in it.
+    ///
+    /// Idempotent: the Space keeps whatever the engine reported, so the row can
+    /// ask on every appearance and every Space change. A Space the window's own
+    /// store does not own — a private window's, a borrowed workspace's — is left
+    /// alone; its profile exists only while a page of its own does.
+    func prepare(_ space: BrowserSpace, in browser: BrowserStore? = nil) async {
+        guard installed[space.profile.id] == nil, authorized(space, in: browser) else { return }
+        await load(space, in: browser)
     }
     @discardableResult
     func command(_ command: String, extensionID: String = "", space: BrowserSpace, window: NSWindow? = nil) -> Bool {
@@ -385,7 +391,7 @@ final class ChromiumExtensionInstallation {
     init(id: String, space: BrowserSpace, window: NSWindow, store: ChromiumExtensionStore) {
         self.id = id; self.space = space; self.window = window; self.store = store
     }
-    var isAuthorized: Bool { store.authorized(space) && (targetSpace.map(store.authorized) ?? true) }
+    var isAuthorized: Bool { store.authorized(space) && (targetSpace.map { store.authorized($0) } ?? true) }
     var destinations: [BrowserSpace] {
         store.spaces.filter { $0.id != space.id && !(store.installed[$0.profile.id] ?? []).contains { $0.id == id } }
     }

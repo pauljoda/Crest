@@ -54,6 +54,7 @@ struct BrowserEngineSiteControlsSection: View {
 /// No pinned extension actions without extensions.
 struct BrowserEngineSidebarAccessory: View {
     let space: BrowserSpace
+    let browser: BrowserStore
     let pages: BrowserPagePool
 
     var body: some View { EmptyView() }

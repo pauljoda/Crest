@@ -64,10 +64,14 @@ struct BrowserEngineSiteControlsSection: View {
 /// The pinned extension actions that sit above a Space's tab list.
 struct BrowserEngineSidebarAccessory: View {
     let space: BrowserSpace
+    /// The window's own store. Extension ownership is decided against the store
+    /// family that owns this window rather than against one global Space list.
+    let browser: BrowserStore
     let pages: BrowserPagePool
 
     var body: some View {
-        BrowserPinnedExtensionStrip(page: pinnedActionPage, space: space)
+        BrowserPinnedExtensionStrip(
+            page: pinnedActionPage, space: space, browser: browser)
     }
 
     private var pinnedActionPage: ChromiumNativePage? {
