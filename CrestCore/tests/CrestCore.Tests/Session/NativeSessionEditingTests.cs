@@ -66,10 +66,10 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(2, space["tabs"]!.AsArray().Count);
         Assert.True(JsonNode.DeepEquals(original["tabs"]![0]!["futureTabProperty"], space["tabs"]![0]!["futureTabProperty"]));
         Assert.True(JsonNode.DeepEquals(original["branding"], space["branding"]));
-        var closed = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.close", new() { ["tabId"] = newId.ToString(), ["fallbackTabId"] = f.Tab.Value.ToString() })))!["space"]!;
+        var closed = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.close", new() { ["tabId"] = newId.ToString(), ["fallbackTabId"] = f.Tab.ToString() })))!["space"]!;
         Assert.Single(closed["tabs"]!.AsArray());
         Assert.Single(closed["archivedTabs"]!.AsArray());
-        Assert.True(JsonNode.DeepEquals(SwiftId(f.Tab.Value), closed["selectedTabID"]));
+        Assert.True(JsonNode.DeepEquals(SwiftId(f.Tab), closed["selectedTabID"]));
         Assert.Equal("closed", closed["archivedTabs"]![0]!["reason"]!.GetValue<string>());
     }
 
@@ -77,7 +77,7 @@ public sealed partial class BrowserContractsTests {
     public void NativeCloseCannotRemoveASavedTabAndClearSkipsStartPageArchive() {
         var f = SavedSession(); var original = f.Document["session"]!["spaces"]![0]!;
         Assert.Throws<BrowserRuleException>(() => NativeSessionEditor.Evaluate(EditRequest(original, "tab.close",
-            new() { ["tabId"] = f.Tab.Value.ToString() })));
+            new() { ["tabId"] = f.Tab.ToString() })));
         var tab = original["tabs"]![0]!.AsObject();
         tab["placement"] = "current"; tab["url"] = null; tab["folderID"] = null;
         var cleared = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(original, "tab.clear_current", new())))!["space"]!;

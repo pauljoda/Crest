@@ -8,7 +8,7 @@ public static class SplitMembershipPolicy {
     public static IReadOnlyList<Guid?> Repair(IReadOnlyList<SplitMember> tabs) {
         var result = new Guid?[tabs.Count];
         HashSet<Guid> retired = [];
-        Guid? run = null; TabPlacement placement = default; FolderId? folder = null; int length = 0;
+        Guid? run = null; TabPlacement placement = default; Guid? folder = null; int length = 0;
         for (int index = 0; index < tabs.Count; index++) {
             var tab = tabs[index];
             if (tab.Group is not { } group || tab.Placement == TabPlacement.Pinned) {

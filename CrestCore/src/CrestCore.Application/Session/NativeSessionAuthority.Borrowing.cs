@@ -57,9 +57,9 @@ public sealed partial class NativeSessionAuthority {
     private SpaceDocument RequireBorrowedSource() {
         var source = borrowedSource ?? throw new BrowserRuleException(BrowserRuleCodes.NotBorrowedWorkspace);
         var original = source.document.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == borrowedSpace);
-        BorrowedProfilePolicy.RequireSource(new(borrowedSpace), new(borrowedProfile),
-            new(original is null ? Guid.Empty : Id(original.Metadata["id"])),
-            new(original is null ? Guid.Empty : Id(original.Metadata["profile"]!["id"])),
+        BorrowedProfilePolicy.RequireSource(borrowedSpace, borrowedProfile,
+            original is null ? Guid.Empty : Id(original.Metadata["id"]),
+            original is null ? Guid.Empty : Id(original.Metadata["profile"]!["id"]),
             !source.released && PendingDeletion(source.document.Metadata, borrowedSpace) is null);
         return original!;
     }

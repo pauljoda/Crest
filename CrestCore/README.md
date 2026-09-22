@@ -5,7 +5,7 @@ responsibilities:
 
 | Project | Responsibility |
 | --- | --- |
-| `CrestCore.Domain` | Browser identities, tab and Space behavior, durable state, navigation, and sync policy. No JSON or native dependencies. |
+| `CrestCore.Domain` | Tab and Space behavior, durable state, navigation, and sync policy. No JSON or native dependencies. |
 | `CrestCore.Contracts` | Validation and descriptors for the versioned adapter protocol. |
 | `CrestCore.Application` | Session commands, checkpoints, imports, and sync transitions. It owns the JSON-backed native and persistence formats and calls typed domain rules. |
 | `CrestCore.Native` | C exports that adapt native callers to the application layer. |
@@ -15,7 +15,8 @@ Source folders follow the browser concepts they own. In the domain, `Tabs`
 contains tab state and its batch, lifecycle, and organization rules; `Spaces`
 contains Space ownership and preferences; `State` contains durable snapshots;
 `Sync` contains portable record policy; `Navigation` contains URL, link, and
-history rules; and `Identity` contains typed IDs and shared time and ID sources.
+history rules; and `Identity` contains shared time and ID sources. Domain
+objects use named `Guid` properties for identities without adding one-field wrappers.
 The application groups session operations, sync operations, policy evaluation,
 and status separately. Public types have their own files, while partial classes
 keep related operations together under the owning type's name.

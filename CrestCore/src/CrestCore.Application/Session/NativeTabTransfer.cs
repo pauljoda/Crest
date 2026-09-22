@@ -23,17 +23,17 @@ public static class NativeTabTransfer {
         var sourceState = sourceDocument.Read(new SystemIdSource()); var destinationState = destinationDocument.Read(new SystemIdSource());
         var a = BrowserTabCollection.Restore(sourceState.Spaces.Single());
         var b = BrowserTabCollection.Restore(destinationState.Spaces.Single());
-        var tab = new TabId(NativeSessionAuthority.Id(arguments["tabId"]));
-        TabId? Optional(string key) => arguments[key] is { } value ? new(NativeSessionAuthority.Id(value)) : null;
+        var tab = NativeSessionAuthority.Id(arguments["tabId"]);
+        Guid? Optional(string key) => arguments[key] is { } value ? NativeSessionAuthority.Id(value) : null;
         var selected = a.TransferTo(b, tab, sourceState.Spaces[0].SelectedTabId, Optional("fallbackTabId"),
             arguments["placement"] is { } p ? Enum.Parse<TabPlacement>(p.GetValue<string>(), true) : null,
-            arguments["folderId"] is { } f ? new(NativeSessionAuthority.Id(f)) : null,
+            arguments["folderId"] is { } f ? NativeSessionAuthority.Id(f) : null,
             Optional("before"), arguments["afterSelection"]?.GetValue<bool>() == true,
             destinationState.Spaces[0].SelectedTabId, Epoch.AddSeconds(now));
         sourceDocument.TransferTabMetadata(tab, destinationDocument);
         var targetSelection = destinationState.Spaces[0].SelectedTabId;
         if (arguments["select"]?.GetValue<bool>() == true) { b.Tab(tab).Activate(Epoch.AddSeconds(now)); targetSelection = tab; }
-        JsonNode Write(LegacySessionDocument document, WorkspaceState state, BrowserTabCollection collection, TabId? selection) {
+        JsonNode Write(LegacySessionDocument document, WorkspaceState state, BrowserTabCollection collection, Guid? selection) {
             var result = document.Write(state with { Spaces = [collection.Capture(state.Spaces[0], selection)] })["session"]!["spaces"]![0]!.DeepClone();
             if (result["splitGroups"] is JsonArray groups) {
                 var retained = collection.Tabs.Where(t => t.SplitGroupId is not null).Select(t => t.SplitGroupId!.Value).ToHashSet();

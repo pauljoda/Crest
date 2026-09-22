@@ -25,6 +25,30 @@ public sealed partial class BrowserContractsTests {
             })
         });
     }
+
+    [Theory]
+    [InlineData("space.future", BrowserRuleCodes.UnknownSpaceCommand)]
+    [InlineData("history.future", BrowserRuleCodes.UnknownHistoryCommand)]
+    [InlineData("records.future", BrowserRuleCodes.UnknownRecordCommand)]
+    [InlineData("transient.future", BrowserRuleCodes.UnknownTransientCommand)]
+    public void UnknownOperationFamiliesKeepTheirSpecificErrors(string operation, string expectedCode) {
+        var fixture = SavedSession();
+        var session = fixture.Document["session"]!;
+        var space = session["spaces"]![0]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = operation,
+            ["spaceId"] = fixture.Space.ToString(),
+            ["profileId"] = space["profile"]!["id"]!.DeepClone(),
+            ["window"] = JsonNode.Parse(Selection(session)),
+            ["arguments"] = new JsonObject { ["requestId"] = Guid.NewGuid().ToString() },
+            ["now"] = 800000001.0
+        };
+
+        var error = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(1, Bytes(request)));
+        Assert.Equal(expectedCode, error.Code);
+    }
     [Fact]
     public void DurableReplacementReservesPublicationAndCancellationKeepsTheAcceptedRevision() {
         var session = SavedSession().Document["session"]!;
@@ -87,12 +111,12 @@ public sealed partial class BrowserContractsTests {
         window["selectedTabs"]![0]!["tabID"] = null;
         byte[] Request(string title) => Bytes(new JsonObject {
             ["version"] = 1,
-            ["spaceId"] = fixture.Space.Value.ToString(),
+            ["spaceId"] = fixture.Space.ToString(),
             ["profileId"] = space["profile"]!["id"]!.DeepClone(),
             ["window"] = window.DeepClone(),
             ["operation"] = "tab.rename",
             ["now"] = 800000001.0,
-            ["arguments"] = new JsonObject { ["tabId"] = fixture.Tab.Value.ToString(), ["title"] = title },
+            ["arguments"] = new JsonObject { ["tabId"] = fixture.Tab.ToString(), ["title"] = title },
         });
         var before = authority.Checkpoint(1, Selection(session)).Read("core");
         var first = authority.PrepareCommand(1, Request("Accepted"));
@@ -106,7 +130,7 @@ public sealed partial class BrowserContractsTests {
         var saved = JsonNode.Parse(checkpoint.Read("core"))!["spaces"]![0]!;
         Assert.Equal("Accepted", saved["tabs"]![0]!["customTitle"]!.GetValue<string>());
         Assert.Null(saved["selectedTabID"]);
-        Assert.True(JsonNode.DeepEquals(space["history"], JsonNode.Parse(checkpoint.Read(fixture.Space.Value.ToString()))));
+        Assert.True(JsonNode.DeepEquals(space["history"], JsonNode.Parse(checkpoint.Read(fixture.Space.ToString()))));
         Assert.True(JsonNode.DeepEquals(space["branding"], saved["branding"]));
     }
 
@@ -128,23 +152,23 @@ public sealed partial class BrowserContractsTests {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         var core = new NativeSessionAuthority(Bytes(session));
         JsonObject Arguments(Guid id) => new() {
-            ["tabId"] = fixture.Tab.Value.ToString(),
+            ["tabId"] = fixture.Tab.ToString(),
             ["ids"] = new JsonArray(id.ToString()),
             ["copyObservations"] = new JsonArray(new JsonObject {
-                ["tabId"] = fixture.Tab.Value.ToString(),
+                ["tabId"] = fixture.Tab.ToString(),
                 ["url"] = "https://example.com/live-child",
                 ["title"] = "Live title"
             })
         };
         var rejected = core.PrepareCommand(1, SpaceCommand(session, "tab.copy", Arguments(Guid.NewGuid())));
-        core.PrepareCommand(1, SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.Value.ToString(), ["title"] = "Latest name" })).Commit();
+        core.PrepareCommand(1, SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest name" })).Commit();
         Assert.Throws<BrowserRuleException>(() => rejected.Commit());
         var id = Guid.NewGuid();
         var accepted = core.PrepareCommand(2, SpaceCommand(session, "tab.copy", Arguments(id)));
         accepted.Commit();
         var space = JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read("core"))!["spaces"]![0]!;
         var copy = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == id)!;
-        var original = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == fixture.Tab.Value)!;
+        var original = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == fixture.Tab)!;
         Assert.Equal("Latest name", copy["customTitle"]!.GetValue<string>());
         Assert.Equal("Live title", copy["title"]!.GetValue<string>());
         Assert.Equal("https://example.com/live-child", copy["url"]!.GetValue<string>());
@@ -169,7 +193,7 @@ public sealed partial class BrowserContractsTests {
         });
         var core = new NativeSessionAuthority(Bytes(session));
         JsonObject LinkArgs(Guid id) => new() {
-            ["targetId"] = fixture.Tab.Value.ToString(),
+            ["targetId"] = fixture.Tab.ToString(),
             ["ids"] = new JsonArray(Enumerable.Range(0, 6).Select(_ => (JsonNode)JsonValue.Create(Guid.NewGuid().ToString())!).ToArray()),
             ["tab"] = new JsonObject {
                 ["id"] = SwiftId(id),
@@ -215,7 +239,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("Research", saved["spaces"]![0]!["name"]!.GetValue<string>());
         Assert.Equal("square.grid.2x2", saved["spaces"]![0]!["symbol"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(JsonNode.Parse(original.Read("core"))!["spaces"]![0]!["tabs"], saved["spaces"]![0]!["tabs"]));
-        Assert.Equal(original.Read(fixture.Space.Value.ToString()), authority.Checkpoint(2, Selection(session)).Read(fixture.Space.Value.ToString()));
+        Assert.Equal(original.Read(fixture.Space.ToString()), authority.Checkpoint(2, Selection(session)).Read(fixture.Space.ToString()));
         var invalid = JsonNode.Parse(SpaceCommand(session, "space.access", new() { ["value"] = "open" }))!;
         invalid["profileId"] = Guid.NewGuid().ToString();
         Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2, Bytes(invalid)));

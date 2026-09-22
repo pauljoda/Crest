@@ -71,13 +71,13 @@ public static class NativeSyncProjection {
 
             if (policy.CurrentTabs || policy.SavedStructure) {
                 var folders = Items(space, "folders").Where(f => policy.Includes(Placement(f!, "location"))).Select(f => f!).ToArray();
-                var tree = new FolderTree(folders.Select(f => new BrowserFolder(new(Id(f["id"])), Text(f["title"])!,
-                    Placement(f, "location"), f["parentID"] is { } parent ? new FolderId(Id(parent)) : null)).ToArray());
+                var tree = new FolderTree(folders.Select(f => new BrowserFolder(Id(f["id"]), Text(f["title"])!,
+                    Placement(f, "location"), f["parentID"] is { } parent ? Id(parent) : null)).ToArray());
                 IReadOnlyList<BrowserFolder> display;
                 try { display = tree.DisplayOrder(); } catch (BrowserRuleException) { throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.InvalidFolderHierarchy, Id(space["id"]).ToString("D")); }
-                var byId = folders.ToDictionary(f => new FolderId(Id(f["id"])));
-                var folderTokens = new Dictionary<FolderId, string>();
-                foreach (var parent in new FolderId?[] { null }.Concat(display.Select(f => (FolderId?)f.Id))) {
+                var byId = folders.ToDictionary(f => Id(f["id"]));
+                var folderTokens = new Dictionary<Guid, string>();
+                foreach (var parent in new Guid?[] { null }.Concat(display.Select(f => (Guid?)f.Id))) {
                     var children = tree.Children(parent).ToArray();
                     var tokens = Tokens(SyncRecordKinds.Folder, children.Select(f => byId[f.Id]).ToArray());
                     for (int j = 0; j < children.Length; j++) folderTokens[children[j].Id] = tokens[j];

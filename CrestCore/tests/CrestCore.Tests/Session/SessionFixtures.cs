@@ -8,11 +8,11 @@ namespace CrestCore.Tests;
 /// maintenance suites. It intentionally carries unknown additive fields.
 public sealed partial class BrowserContractsTests {
     private static JsonObject SwiftId(Guid value) => new() { ["rawValue"] = value.ToString().ToUpperInvariant() };
-    private static (JsonObject Document, SpaceId Space, TabId Tab, WindowId Window) SavedSession(bool empty = false) {
-        var space = new SpaceId(Guid.NewGuid()); var tab = new TabId(Guid.NewGuid()); var window = new WindowId(Guid.NewGuid());
+    private static (JsonObject Document, Guid Space, Guid Tab, Guid Window) SavedSession(bool empty = false) {
+        var space = Guid.NewGuid(); var tab = Guid.NewGuid(); var window = Guid.NewGuid();
         var folder = Guid.NewGuid();
         JsonObject savedTab = new() {
-            ["id"] = SwiftId(tab.Value),
+            ["id"] = SwiftId(tab),
             ["title"] = "Observed page",
             ["url"] = "https://example.com/article#one",
             ["placement"] = "saved",
@@ -30,7 +30,7 @@ public sealed partial class BrowserContractsTests {
             ["futureTabProperty"] = new JsonArray(1, 2, 3)
         };
         JsonObject savedSpace = new() {
-            ["id"] = SwiftId(space.Value),
+            ["id"] = SwiftId(space),
             ["profile"] = new JsonObject { ["id"] = Guid.NewGuid().ToString().ToUpperInvariant() },
             ["name"] = "Reading",
             ["symbol"] = "book",
@@ -40,7 +40,7 @@ public sealed partial class BrowserContractsTests {
             ["browsingPreferences"] = new JsonObject { ["searchProvider"] = "duckDuckGo", ["futureFlag"] = true },
             ["credentialPreferences"] = new JsonObject { ["isEnabled"] = false },
             ["tabs"] = new JsonArray(savedTab),
-            ["selectedTabID"] = SwiftId(tab.Value),
+            ["selectedTabID"] = SwiftId(tab),
             ["folders"] = new JsonArray(new JsonObject {
                 ["id"] = SwiftId(folder),
                 ["title"] = "Articles",
@@ -61,20 +61,20 @@ public sealed partial class BrowserContractsTests {
             })
         };
         JsonObject savedWindow = new() {
-            ["id"] = SwiftId(window.Value),
-            ["selectedSpaceID"] = SwiftId(space.Value),
-            ["selectedTabIDsBySpace"] = empty ? new JsonArray() : new JsonArray(SwiftId(space.Value), SwiftId(tab.Value)),
-            ["capturedSpaceIDs"] = new JsonArray(SwiftId(space.Value)),
+            ["id"] = SwiftId(window),
+            ["selectedSpaceID"] = SwiftId(space),
+            ["selectedTabIDsBySpace"] = empty ? new JsonArray() : new JsonArray(SwiftId(space), SwiftId(tab)),
+            ["capturedSpaceIDs"] = new JsonArray(SwiftId(space)),
             ["sidebarWidth"] = 271.5,
-            ["extensionSidebarBySpace"] = new JsonArray(SwiftId(space.Value), new JsonObject { ["width"] = 300 })
+            ["extensionSidebarBySpace"] = new JsonArray(SwiftId(space), new JsonObject { ["width"] = 300 })
         };
         return (new JsonObject {
             ["workspaceId"] = Guid.NewGuid().ToString(),
             ["formatVersion"] = 1,
             ["session"] = new JsonObject {
                 ["spaces"] = new JsonArray(savedSpace),
-                ["selectedSpaceID"] = SwiftId(space.Value),
-                ["defaultSpaceID"] = SwiftId(space.Value),
+                ["selectedSpaceID"] = SwiftId(space),
+                ["defaultSpaceID"] = SwiftId(space),
                 ["disposableSeedMarker"] = Guid.NewGuid().ToString(),
                 ["futureSessionProperty"] = "survives"
             },

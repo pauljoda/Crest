@@ -28,9 +28,9 @@ public static class NativeSessionMaintenance {
     private static TabPlacement StoredPlacement(JsonNode tab)
         => TabPlacementCodes.Parse(Text(tab["placement"])) ?? TabPlacement.Saved;
 
-    private static BrowserFolder Folder(JsonNode f) => new(new(Id(f["id"])), Text(f["title"])!,
+    private static BrowserFolder Folder(JsonNode f) => new(Id(f["id"]), Text(f["title"])!,
         Text(f["location"]) == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
-        OptionalId(f["parentID"]) is { } p ? new(p) : null);
+        OptionalId(f["parentID"]));
 
     private static string? Trim(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
@@ -87,11 +87,11 @@ public static class NativeSessionMaintenance {
             var folderMetadata = uniqueFolders.ToDictionary(f => Id(f["id"]));
             var folders = FolderTree.RepairPreorder(uniqueFolders.Select(Folder).ToArray());
             space["folders"] = new JsonArray(folders.Select(f => {
-                var value = folderMetadata[f.Id.Value]; value["parentID"] = f.ParentId is { } p ? SwiftId(p.Value) : null;
+                var value = folderMetadata[f.Id]; value["parentID"] = f.ParentId is { } p ? SwiftId(p) : null;
                 value["location"] = f.Location == TabPlacement.Current ? TabPlacementCodes.Current : TabPlacementCodes.Saved;
                 return (JsonNode)value;
             }).ToArray());
-            var folderLocations = folders.ToDictionary(f => f.Id.Value, f => f.Location);
+            var folderLocations = folders.ToDictionary(f => f.Id, f => f.Location);
             var tabs = Items(space, "tabs"); Guid? selected = null;
             var previousSelection = OptionalId(space["selectedTabID"]); int pinned = 0;
             for (int ti = 0; ti < tabs.Count; ti++) {
@@ -119,7 +119,7 @@ public static class NativeSessionMaintenance {
                 if (space["tabs"] is null) space["tabs"] = tabs;
             }
             var groups = SplitMembershipPolicy.Repair(tabs.Select(t => new SplitMember(OptionalId(t!["splitGroupID"]), StoredPlacement(t),
-                OptionalId(t["folderID"]) is { } f ? new FolderId(f) : null)).ToArray());
+                OptionalId(t["folderID"]))).ToArray());
             for (int ti = 0; ti < tabs.Count; ti++) tabs[ti]!["splitGroupID"] = groups[ti] is { } group ? SwiftId(group) : null;
             var archive = Items(space, "archivedTabs").Where(a => !StartPage(a!["tab"]!)).Select(a => {
                 var value = a!.DeepClone().AsObject(); var tab = value["tab"]!.AsObject();

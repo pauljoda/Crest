@@ -15,13 +15,13 @@ public sealed partial class BrowserContractsTests {
         var core = new NativeSessionAuthority(Bytes(session));
         byte[] Visit(string url, string title) => SpaceCommand(session, "history.visit", new() { ["url"] = url, ["title"] = title });
         var first = core.PrepareCommand(1, Visit("https://example.org/page#one", "First"));
-        Assert.Empty(JsonNode.Parse(core.Checkpoint(1, Selection(session)).Read(f.Space.Value.ToString()))!.AsArray());
+        Assert.Empty(JsonNode.Parse(core.Checkpoint(1, Selection(session)).Read(f.Space.ToString()))!.AsArray());
         first.Commit();
-        var original = JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read(f.Space.Value.ToString()))![0]!;
+        var original = JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read(f.Space.ToString()))![0]!;
         var stale = core.PrepareCommand(2, Visit("https://example.org/page#two", "Stale"));
         core.PrepareCommand(2, Visit("https://example.org/page#three", "Latest")).Commit();
         Assert.Throws<BrowserRuleException>(() => stale.Commit());
-        var entry = JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read(f.Space.Value.ToString()))![0]!;
+        var entry = JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read(f.Space.ToString()))![0]!;
         Assert.Equal(original["id"]!.GetValue<string>(), entry["id"]!.GetValue<string>());
         Assert.Equal("https://example.org/page", entry["url"]!.GetValue<string>());
         Assert.Equal("Latest", entry["title"]!.GetValue<string>());
@@ -45,15 +45,15 @@ public sealed partial class BrowserContractsTests {
             ["visitCount"] = 2
         }).ToArray());
         var core = new NativeSessionAuthority(Bytes(session));
-        var before = core.Checkpoint(1, Selection(session)).Read(f.Space.Value.ToString());
+        var before = core.Checkpoint(1, Selection(session)).Read(f.Space.ToString());
         var clear = core.PrepareCommand(1, SpaceCommand(session, "history.clear", new()));
         using (clear.Reserve(Selection(session))) { }
-        Assert.Equal(before, core.Checkpoint(1, Selection(session)).Read(f.Space.Value.ToString()));
+        Assert.Equal(before, core.Checkpoint(1, Selection(session)).Read(f.Space.ToString()));
         core.PrepareCommand(1, SpaceCommand(session, "history.remove_range", new() { ["start"] = 10.0, ["end"] = 30.0 })).Commit();
-        var retained = JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read(f.Space.Value.ToString()))!.AsArray();
+        var retained = JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read(f.Space.ToString()))!.AsArray();
         Assert.Single(retained); Assert.Equal(30.0, retained[0]!["lastVisitedAt"]!.GetValue<double>());
         core.PrepareCommand(2, SpaceCommand(session, "history.remove_url", new() { ["url"] = "https://example.org/30#ignored" })).Commit();
-        Assert.Empty(JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read(f.Space.Value.ToString()))!.AsArray());
+        Assert.Empty(JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read(f.Space.ToString()))!.AsArray());
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed partial class BrowserContractsTests {
         Assert.True(JsonNode.DeepEquals(space["selectedTabID"], saved["selectedTabID"]));
         Assert.Single(saved["archivedTabs"]!.AsArray());
         Assert.Equal(currentId, Guid.Parse(saved["archivedTabs"]![0]!["tab"]!["id"]!["rawValue"]!.GetValue<string>()));
-        Assert.Empty(JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read(f.Space.Value.ToString()))!.AsArray());
+        Assert.Empty(JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read(f.Space.ToString()))!.AsArray());
         Assert.Empty(JsonNode.Parse(core.PrepareCommand(2, SpaceCommand(session, "records.sweep", new())).Output)!["changes"]!.AsArray());
     }
 

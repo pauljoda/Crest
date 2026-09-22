@@ -16,20 +16,18 @@ public sealed partial class NativeSessionAuthority {
             var request = Parse(bytes);
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
             RequireAccessibleCommand(request);
-            if (request["operation"]!.GetValue<string>() == "workspace.import") return PrepareWorkspaceCommand(expected, request);
+            var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
+            if (operation == SessionOperation.WorkspaceImport) return PrepareWorkspaceCommand(expected, request);
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
-            var operation = request["operation"]!.GetValue<string>();
-            if (operation == "tabs.batch") return PrepareTabBatch(expected, request);
-            if (operation.StartsWith("history.", StringComparison.Ordinal)
-                || operation.StartsWith("records.", StringComparison.Ordinal)
-                || operation is "archive.restore" or "split.title" or "split.icon" or "split.tint")
+            if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(expected, request);
+            if (SessionOperationCodes.IsRecord(operation))
                 return PrepareRecordCommand(expected, request);
-            if (request["operation"]!.GetValue<string>().StartsWith("transient.", StringComparison.Ordinal))
+            if (SessionOperationCodes.IsTransient(operation))
                 return PrepareTransientCommand(expected, request);
-            if (request["operation"]!.GetValue<string>() == "tab.transfer") return PrepareTabTransfer(expected, request);
-            if (request["operation"]!.GetValue<string>().StartsWith("space.", StringComparison.Ordinal))
+            if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(expected, request);
+            if (SessionOperationCodes.IsSpace(operation))
                 return PrepareSpaceCommand(expected, request);
-            if (request["operation"]!.GetValue<string>() is "tab.promote_transient" or "tab.archive_transient")
+            if (operation is SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient)
                 throw new BrowserRuleException(BrowserRuleCodes.TransientRequiresCommand);
             return PrepareTabCommand(expected, request);
         }

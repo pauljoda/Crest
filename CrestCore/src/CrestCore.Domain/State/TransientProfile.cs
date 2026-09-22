@@ -1,3 +1,3 @@
 namespace CrestCore.Domain;
 
-public readonly record struct TransientProfile(SpaceId Space, ProfileId Profile);
+public readonly record struct TransientProfile(Guid Space, Guid Profile);

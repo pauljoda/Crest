@@ -1,17 +1,17 @@
 namespace CrestCore.Domain;
 
-public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId? pageId) {
+public sealed class BrowserTab(Guid id, TabContent content, string? url, Guid? pageId) {
     #region Variables
 
-    public TabId Id { get; } = id;
+    public Guid Id { get; } = id;
     public TabContent Content { get; private set; } = ValidContent(content, url, pageId);
-    public PageId? PageId { get; private set; } = pageId;
+    public Guid? PageId { get; private set; } = pageId;
     public ulong Generation { get; private set; } = pageId is null ? 0UL : 1UL;
     public string? Url { get; private set; } = url;
     public string Title { get; private set; } = content.Title(url);
     public TabPhase Phase { get; private set; } = !content.IsWebPage ? TabPhase.Ready : pageId is null ? TabPhase.Dormant : TabPhase.Creating;
     public TabPlacement Placement { get; private set; }
-    public FolderId? FolderId { get; private set; }
+    public Guid? FolderId { get; private set; }
     public bool IsLoading { get; private set; }
     public bool CanGoBack { get; private set; }
     public bool CanGoForward { get; private set; }
@@ -30,7 +30,7 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
 
     #region Actions - Validation
 
-    private static TabContent ValidContent(TabContent content, string? url, PageId? pageId) {
+    private static TabContent ValidContent(TabContent content, string? url, Guid? pageId) {
         if (content is null || content.IsWebPage != (url is not null) || !content.IsWebPage && pageId is not null)
             throw new BrowserRuleException(BrowserRuleCodes.InvalidTabContent);
         return content;
@@ -65,14 +65,14 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
 
     public void Activate(DateTimeOffset now) => LastActivatedAt = now;
 
-    public void CreatePage(PageId page, bool allowsInternalPages = false) {
+    public void CreatePage(Guid? page, bool allowsInternalPages = false) {
         if (!Content.IsWebPage || Phase is not (TabPhase.Dormant or TabPhase.Failed))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidTransition);
         BrowserSpace.ValidateUrl(Url, allowsInternalPages);
         PageId = page; Generation++; Phase = TabPhase.Creating; Failure = null;
     }
 
-    public void NavigateStartPage(string url, PageId page, bool allowsInternalPages = false) {
+    public void NavigateStartPage(string url, Guid? page, bool allowsInternalPages = false) {
         if (!Content.IsStartPage || Placement != TabPlacement.Current)
             throw new BrowserRuleException(BrowserRuleCodes.NotStartPageDraft);
         BrowserSpace.ValidateUrl(url, allowsInternalPages);
@@ -169,7 +169,7 @@ public sealed class BrowserTab(TabId id, TabContent content, string? url, PageId
 
     internal void MarkPosition(DateTimeOffset now) => PositionModifiedAt = BrowserEditTimestamp.Normalize(now);
 
-    public void Place(TabPlacement placement, FolderId? folder, DateTimeOffset? now = null, bool preservesSplit = false) {
+    public void Place(TabPlacement placement, Guid? folder, DateTimeOffset? now = null, bool preservesSplit = false) {
         if (Placement == placement && FolderId == folder) return;
         if (placement != TabPlacement.Current) SavedUrl ??= Url;
         if (placement == TabPlacement.Current) SavedUrl = null;

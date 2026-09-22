@@ -5,21 +5,21 @@ public sealed partial class BrowserTabCollection {
 
     /// Moves ownership without closing, archiving, or creating a replacement tab.
     /// All destination checks precede mutation of either collection.
-    public TabId? TransferTo(BrowserTabCollection destination, TabId id, TabId? selected, TabId? fallback,
-        TabPlacement? requestedPlacement, FolderId? requestedFolder, TabId? before,
-        bool afterSelection, TabId? destinationSelection, DateTimeOffset now) {
+    public Guid? TransferTo(BrowserTabCollection destination, Guid id, Guid? selected, Guid? fallback,
+        TabPlacement? requestedPlacement, Guid? requestedFolder, Guid? before,
+        bool afterSelection, Guid? destinationSelection, DateTimeOffset now) {
         if (ReferenceEquals(this, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameCollectionTransfer);
         var tab = Tab(id);
         if (destination.tabs.Any(t => t.Id == id) || destination.archive.Any(t => t.Id == id))
             throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         if (destination.tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         var placement = requestedPlacement ?? tab.Placement;
-        FolderId? folder = placement != TabPlacement.Pinned && destination.folders.Any(f => f.Id == requestedFolder && f.Location == placement)
+        Guid? folder = placement != TabPlacement.Pinned && destination.folders.Any(f => f.Id == requestedFolder && f.Location == placement)
             ? requestedFolder : null;
         if (placement == TabPlacement.Pinned && destination.tabs.Count(t => t.Placement == placement) >= 12)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         if (before == id) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
-        bool Matches(BrowserTab t) => t.Placement == placement && t.FolderId == folder;
+        bool Matches(BrowserTab tab) => tab.Placement == placement && tab.FolderId == folder;
         int insertion = before is { } anchor ? destination.tabs.FindIndex(t => t.Id == anchor && Matches(t)) : -1;
         if (insertion < 0) {
             int last = destination.tabs.FindLastIndex(Matches);

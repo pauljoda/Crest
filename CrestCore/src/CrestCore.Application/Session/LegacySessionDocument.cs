@@ -31,12 +31,12 @@ public sealed class LegacySessionDocument {
 
     #region Actions - Session records
 
-    public void CopyTabMetadata(TabId source, TabId destination) {
-        if (tabs.TryGetValue(source.Value, out var value)) tabs[destination.Value] = (JsonObject)value.DeepClone();
+    public void CopyTabMetadata(Guid source, Guid destination) {
+        if (tabs.TryGetValue(source, out var value)) tabs[destination] = (JsonObject)value.DeepClone();
     }
 
-    internal void TransferTabMetadata(TabId tab, LegacySessionDocument destination) {
-        if (tabs.TryGetValue(tab.Value, out var value)) destination.tabs[tab.Value] = (JsonObject)value.DeepClone();
+    internal void TransferTabMetadata(Guid tab, LegacySessionDocument destination) {
+        if (tabs.TryGetValue(tab, out var value)) destination.tabs[tab] = (JsonObject)value.DeepClone();
     }
 
     private static JsonObject Copy(Dictionary<Guid, JsonObject> originals, Guid id)
@@ -75,18 +75,18 @@ public sealed class LegacySessionDocument {
     private static TabPlacement Placement(JsonNode? node)
         => TabPlacementCodes.Parse(Text(node)) ?? TabPlacement.Saved;
 
-    private TabState ReadTab(JsonObject t) {
-        var id = Id(t["id"]); Remember(tabs, id, t);
-        var nativeKind = t["nativeContent"] is JsonObject native ? Text(native["kind"]) : null;
-        var url = nativeKind is null ? Text(t["url"]) : null;
-        var storedTitle = Text(t["title"]);
+    private TabState ReadTab(JsonObject tab) {
+        var id = Id(tab["id"]); Remember(tabs, id, tab);
+        var nativeKind = tab["nativeContent"] is JsonObject native ? Text(native["kind"]) : null;
+        var url = nativeKind is null ? Text(tab["url"]) : null;
+        var storedTitle = Text(tab["title"]);
         var content = TabContent.FromStored(nativeKind, url, storedTitle ?? "");
         var title = storedTitle ?? content.Title(url);
-        var folder = OptionalId(t["folderID"]);
-        return new(new(id), content, url, title, Placement(t["placement"]),
-            folder is { } f ? new FolderId(f) : null, Text(t["savedURL"]), Text(t["customTitle"]),
-            Date(t["lastActivatedAt"]), OptionalDate(t["positionModifiedAt"]), OptionalDate(t["titleModifiedAt"]),
-            t["keepsPageLoaded"]?.GetValue<bool>() ?? false, OptionalId(t["splitGroupID"]));
+        var folder = OptionalId(tab["folderID"]);
+        return new(id, content, url, title, Placement(tab["placement"]),
+            folder, Text(tab["savedURL"]), Text(tab["customTitle"]),
+            Date(tab["lastActivatedAt"]), OptionalDate(tab["positionModifiedAt"]), OptionalDate(tab["titleModifiedAt"]),
+            tab["keepsPageLoaded"]?.GetValue<bool>() ?? false, OptionalId(tab["splitGroupID"]));
     }
 
     internal TabState ReadNewTab(JsonObject value) => ReadTab(value);
@@ -101,13 +101,13 @@ public sealed class LegacySessionDocument {
             foreach (var fv in Array(s["folders"])) {
                 var f = Object(fv); var fid = Id(f["id"]); Remember(folders, fid, f);
                 var parent = OptionalId(f["parentID"]);
-                folderStates.Add(new(new(fid), Text(f["title"]) ?? "Folder", Text(f["location"]) == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
-                    parent is { } p ? new FolderId(p) : null, f["isCollapsed"]?.GetValue<bool>() ?? false,
-                    OptionalDate(f["collapseModifiedAt"]), OptionalId(f["orderAnchorTabID"]) is { } anchor ? new TabId(anchor) : null));
+                folderStates.Add(new(fid, Text(f["title"]) ?? "Folder", Text(f["location"]) == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
+                    parent, f["isCollapsed"]?.GetValue<bool>() ?? false,
+                    OptionalDate(f["collapseModifiedAt"]), OptionalId(f["orderAnchorTabID"])));
             }
             var archived = new List<ArchiveState>();
             foreach (var av in Array(s["archivedTabs"])) {
-                var a = Object(av); var tab = ReadTab(Object(a["tab"])); Remember(archives, tab.Id.Value, a);
+                var a = Object(av); var tab = ReadTab(Object(a["tab"])); Remember(archives, tab.Id, a);
                 archived.Add(new(tab, Date(a["archivedAt"]), Text(a["reason"]) ?? ArchiveReasons.Closed));
             }
             var visits = new List<HistoryVisit>();
@@ -136,37 +136,37 @@ public sealed class LegacySessionDocument {
                 ReadEnum(preferences?["dataRetention"]?["downloads"], DataRetention.Forever, DataRetention.Forever));
             retentionPreferences.Add(id, retention);
             contentBlockingPolicies.Add(id, ReadEnum(preferences?["contentBlockingPolicy"], ContentBlockingPolicy.Balanced, ContentBlockingPolicy.Balanced));
-            states.Add(new(new(id), new(Id(Object(s["profile"])["id"])), Text(s["name"]) ?? "Space",
+            states.Add(new(id, Id(Object(s["profile"])["id"]), Text(s["name"]) ?? "Space",
                 Text(s["accessPolicy"]) is { } policy && policy != SpaceAccessPolicyCodes.Open,
                 Array(s["tabs"]).Select(t => ReadTab(Object(t))).ToArray(), folderStates, archived, visits,
-                selected is { } tabId ? new TabId(tabId) : null, search,
+                selected, search,
                 Text(s["accessPolicy"]) is null or SpaceAccessPolicyCodes.Open or SpaceAccessPolicyCodes.DeviceOwnerAuthentication, retention,
                 ReadEnum(preferences?["contentBlockingPolicy"], ContentBlockingPolicy.Balanced, ContentBlockingPolicy.Balanced)));
         }
         var windowStates = new List<WindowState>();
         foreach (var value in Array(original["windows"])) {
             var w = Object(value); var id = Id(w["id"]); Remember(windows, id, w);
-            var selections = new Dictionary<SpaceId, TabId?>();
+            var selections = new Dictionary<Guid, Guid?>();
             // Codable dictionaries with struct keys use an alternating key/value array.
             var pairs = Array(w["selectedTabIDsBySpace"]);
             if (pairs.Count % 2 != 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedSelection);
             for (int index = 0; index < pairs.Count; index += 2)
-                selections.Add(new(Id(pairs[index])), new TabId(Id(pairs[index + 1])));
+                selections.Add(Id(pairs[index]), Id(pairs[index + 1]));
             if (w["capturedSpaceIDs"] is not null)
-                foreach (var captured in Array(w["capturedSpaceIDs"])) selections.TryAdd(new(Id(captured)), null);
+                foreach (var captured in Array(w["capturedSpaceIDs"])) selections.TryAdd(Id(captured), null);
             else
                 foreach (var space in states) selections.TryAdd(space.Id, space.SelectedTabId);
-            windowStates.Add(new(new(id), new(Id(w["selectedSpaceID"])), selections, Text(w["platformSceneId"])));
+            windowStates.Add(new(id, Id(w["selectedSpaceID"]), selections, Text(w["platformSceneId"])));
         }
         var defaultId = OptionalId(session["defaultSpaceID"]);
         var selectedId = OptionalId(session["selectedSpaceID"]);
         var deletions = Array(original["spaceDeletions"]).Select(value => {
             var deletion = Object(value);
-            return new SpaceDeletionState(new(Id(deletion["spaceId"])), new(Id(deletion["profileId"])),
+            return new SpaceDeletionState(Id(deletion["spaceId"]), Id(deletion["profileId"]),
                 Date(deletion["requestedAt"]), deletion["completed"]?.GetValue<bool>() ?? false);
         }).ToArray();
-        return new(new(OptionalId(original["workspaceId"]) ?? ids.Next()), defaultId is { } d ? new SpaceId(d) : null,
-            selectedId is { } selectedSpace ? new SpaceId(selectedSpace) : null, states, windowStates, deletions);
+        return new(OptionalId(original["workspaceId"]) ?? ids.Next(), defaultId,
+            selectedId, states, windowStates, deletions);
     }
 
     private static T ReadEnum<T>(JsonNode? value, T missing, T unknown) where T : struct, Enum
@@ -191,17 +191,17 @@ public sealed class LegacySessionDocument {
 
     internal static string EnumName<T>(T value) where T : struct, Enum { var text = value.ToString(); return char.ToLowerInvariant(text[0]) + text[1..]; }
 
-    private JsonObject WriteTab(TabState t) {
-        var value = Copy(tabs, t.Id.Value);
-        value["id"] = SwiftId(t.Id.Value); value["title"] = t.Title; value["url"] = t.Url;
-        value["placement"] = TabPlacementCodes.Name(t.Placement); value["folderID"] = SwiftId(t.FolderId?.Value);
-        value["savedURL"] = t.SavedUrl; value["customTitle"] = t.CustomTitle;
-        WriteDate(value, "lastActivatedAt", t.LastActivatedAt);
-        WriteDate(value, "positionModifiedAt", t.PositionModifiedAt, editTimestamp: true);
-        WriteDate(value, "titleModifiedAt", t.TitleModifiedAt, editTimestamp: true);
-        value["keepsPageLoaded"] = t.KeepsPageLoaded; value["splitGroupID"] = SwiftId(t.SplitGroupId);
-        value["symbol"] ??= t.Content.Symbol;
-        if (t.Content.NativeKind is { } nativeKind) {
+    private JsonObject WriteTab(TabState tab) {
+        var value = Copy(tabs, tab.Id);
+        value["id"] = SwiftId(tab.Id); value["title"] = tab.Title; value["url"] = tab.Url;
+        value["placement"] = TabPlacementCodes.Name(tab.Placement); value["folderID"] = SwiftId(tab.FolderId);
+        value["savedURL"] = tab.SavedUrl; value["customTitle"] = tab.CustomTitle;
+        WriteDate(value, "lastActivatedAt", tab.LastActivatedAt);
+        WriteDate(value, "positionModifiedAt", tab.PositionModifiedAt, editTimestamp: true);
+        WriteDate(value, "titleModifiedAt", tab.TitleModifiedAt, editTimestamp: true);
+        value["keepsPageLoaded"] = tab.KeepsPageLoaded; value["splitGroupID"] = SwiftId(tab.SplitGroupId);
+        value["symbol"] ??= tab.Content.Symbol;
+        if (tab.Content.NativeKind is { } nativeKind) {
             var native = value["nativeContent"] as JsonObject ?? new(); native["kind"] = nativeKind;
             if (native.Parent is null) value["nativeContent"] = native;
         } else value.Remove("nativeContent");
@@ -212,28 +212,28 @@ public sealed class LegacySessionDocument {
         var document = (JsonObject)original.DeepClone();
         var session = document["session"] as JsonObject ?? new();
         if (session.Parent is null) document["session"] = session;
-        document["workspaceId"] = state.Id.Value.ToString(); document["formatVersion"] = 1;
+        document["workspaceId"] = state.Id.ToString(); document["formatVersion"] = 1;
         document["spaceDeletions"] = new JsonArray((state.SpaceDeletions ?? []).Select(d => (JsonNode)new JsonObject {
-            ["spaceId"] = d.Space.Value.ToString(),
-            ["profileId"] = d.Profile.Value.ToString(),
+            ["spaceId"] = d.Space.ToString(),
+            ["profileId"] = d.Profile.ToString(),
             ["requestedAt"] = Seconds(d.RequestedAt),
             ["completed"] = d.Completed
         }).ToArray());
-        session["selectedSpaceID"] = SwiftId(state.SelectedSpaceId?.Value);
-        session["defaultSpaceID"] = SwiftId(state.DefaultSpaceId?.Value);
+        session["selectedSpaceID"] = SwiftId(state.SelectedSpaceId);
+        session["defaultSpaceID"] = SwiftId(state.DefaultSpaceId);
         var spaceValues = new JsonArray(); session["spaces"] = spaceValues;
         foreach (var space in state.Spaces) {
-            var s = Copy(spaces, space.Id.Value); spaceValues.Add((JsonNode)s);
-            s["id"] = SwiftId(space.Id.Value);
+            var s = Copy(spaces, space.Id); spaceValues.Add((JsonNode)s);
+            s["id"] = SwiftId(space.Id);
             var profile = s["profile"] as JsonObject ?? new();
-            profile["id"] = space.ProfileId.Value.ToString().ToUpperInvariant();
+            profile["id"] = space.ProfileId.ToString().ToUpperInvariant();
             if (profile.Parent is null) s["profile"] = profile;
             bool originallyProtected = Text(s["accessPolicy"]) is { } policy && policy != SpaceAccessPolicyCodes.Open;
             if (originallyProtected != space.RequiresAuthentication)
                 s["accessPolicy"] = space.RequiresAuthentication ? SpaceAccessPolicyCodes.DeviceOwnerAuthentication : SpaceAccessPolicyCodes.Open;
             s["name"] = space.Name; s["symbol"] ??= "square.grid.2x2.fill"; s["accent"] ??= SpaceAccentCodes.Indigo;
-            s["selectedTabID"] = SwiftId(space.SelectedTabId?.Value);
-            if (space.Search is { } search && searchPreferences.GetValueOrDefault(space.Id.Value) != search) {
+            s["selectedTabID"] = SwiftId(space.SelectedTabId);
+            if (space.Search is { } search && searchPreferences.GetValueOrDefault(space.Id) != search) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
                 preferences["selectedSearchProviderID"] = search.SelectedId;
@@ -247,7 +247,7 @@ public sealed class LegacySessionDocument {
                     ["suggestionURLTemplate"] = p.SuggestionTemplate
                 }).ToArray());
             }
-            if (space.Retention is { } retention && retentionPreferences.GetValueOrDefault(space.Id.Value) != retention) {
+            if (space.Retention is { } retention && retentionPreferences.GetValueOrDefault(space.Id) != retention) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
                 preferences["currentTabCleanupPolicy"] = EnumName(retention.CurrentTabs);
@@ -256,20 +256,20 @@ public sealed class LegacySessionDocument {
                 durations["history"] = EnumName(retention.History); durations["archive"] = EnumName(retention.Archive);
                 durations["downloads"] = EnumName(retention.Downloads);
             }
-            if (!contentBlockingPolicies.TryGetValue(space.Id.Value, out var originalBlocking) || originalBlocking != space.ContentBlocking) {
+            if (!contentBlockingPolicies.TryGetValue(space.Id, out var originalBlocking) || originalBlocking != space.ContentBlocking) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
                 preferences["contentBlockingPolicy"] = EnumName(space.ContentBlocking);
             }
             s["tabs"] = new JsonArray(space.Tabs.Select(t => (JsonNode)WriteTab(t)).ToArray());
             s["folders"] = new JsonArray(space.Folders.Select(f => {
-                var value = Copy(folders, f.Id.Value); value["id"] = SwiftId(f.Id.Value); value["title"] = f.Name;
-                value["location"] = TabPlacementCodes.Name(f.Location); value["parentID"] = SwiftId(f.ParentId?.Value);
+                var value = Copy(folders, f.Id); value["id"] = SwiftId(f.Id); value["title"] = f.Name;
+                value["location"] = TabPlacementCodes.Name(f.Location); value["parentID"] = SwiftId(f.ParentId);
                 value["isCollapsed"] = f.IsCollapsed; WriteDate(value, "collapseModifiedAt", f.CollapseModifiedAt);
-                value["orderAnchorTabID"] = SwiftId(f.OrderAnchorTabId?.Value); return (JsonNode)value;
+                value["orderAnchorTabID"] = SwiftId(f.OrderAnchorTabId); return (JsonNode)value;
             }).ToArray());
             s["archivedTabs"] = new JsonArray(space.Archive.Select(a => {
-                var value = Copy(archives, a.Tab.Id.Value); value["tab"] = WriteTab(a.Tab);
+                var value = Copy(archives, a.Tab.Id); value["tab"] = WriteTab(a.Tab);
                 WriteDate(value, "archivedAt", a.ClosedAt); value["reason"] = a.Reason; return (JsonNode)value;
             }).ToArray());
             s["history"] = new JsonArray(space.History.Select(h => {
@@ -279,12 +279,12 @@ public sealed class LegacySessionDocument {
             }).ToArray());
         }
         document["windows"] = new JsonArray(state.Windows.Select(w => {
-            var value = Copy(windows, w.Id.Value); value["id"] = SwiftId(w.Id.Value); value["selectedSpaceID"] = SwiftId(w.SpaceId.Value);
+            var value = Copy(windows, w.Id); value["id"] = SwiftId(w.Id); value["selectedSpaceID"] = SwiftId(w.SpaceId);
             if (w.PlatformSceneId is { } scene) value["platformSceneId"] = scene; else value.Remove("platformSceneId");
             var pairs = new JsonArray(); var captured = new JsonArray();
             foreach (var selection in w.Selections) {
-                captured.Add((JsonNode)SwiftId(selection.Key.Value));
-                if (selection.Value is { } tab) { pairs.Add((JsonNode)SwiftId(selection.Key.Value)); pairs.Add((JsonNode)SwiftId(tab.Value)); }
+                captured.Add((JsonNode)SwiftId(selection.Key));
+                if (selection.Value is { } tab) { pairs.Add((JsonNode)SwiftId(selection.Key)); pairs.Add((JsonNode)SwiftId(tab)); }
             }
             value["selectedTabIDsBySpace"] = pairs; value["capturedSpaceIDs"] = captured; return (JsonNode)value;
         }).ToArray());
@@ -298,18 +298,18 @@ public sealed class LegacySessionDocument {
     /// Appearance fields the domain does not model travel verbatim through the
     /// tab record. Reading and writing them here keeps the rules that decide
     /// them in one place without giving the domain an image cache.
-    internal JsonNode? TabMetadata(TabId id, string field)
-        => tabs.TryGetValue(id.Value, out var metadata) ? metadata[field] : null;
+    internal JsonNode? TabMetadata(Guid id, string field)
+        => tabs.TryGetValue(id, out var metadata) ? metadata[field] : null;
 
-    internal bool SetTabMetadata(TabId id, string field, JsonNode? value) {
-        if (!tabs.TryGetValue(id.Value, out var metadata)) tabs[id.Value] = metadata = new();
+    internal bool SetTabMetadata(Guid id, string field, JsonNode? value) {
+        if (!tabs.TryGetValue(id, out var metadata)) tabs[id] = metadata = new();
         if (JsonNode.DeepEquals(metadata[field], value)) return false;
         metadata[field] = value?.DeepClone();
         return true;
     }
 
-    internal bool SetFolderMetadata(FolderId id, string field, JsonNode value) {
-        if (!folders.TryGetValue(id.Value, out var metadata)) folders[id.Value] = metadata = new();
+    internal bool SetFolderMetadata(Guid id, string field, JsonNode value) {
+        if (!folders.TryGetValue(id, out var metadata)) folders[id] = metadata = new();
         if (JsonNode.DeepEquals(metadata[field], value)) return false;
         metadata[field] = value.DeepClone();
         return true;

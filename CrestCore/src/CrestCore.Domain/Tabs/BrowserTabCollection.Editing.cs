@@ -5,16 +5,16 @@ namespace CrestCore.Domain;
 public sealed partial class BrowserTabCollection {
     #region Actions - Editing
 
-    public bool MoveTab(TabId id, TabPlacement placement, FolderId? requestedFolder, TabId? before,
+    public bool MoveTab(Guid id, TabPlacement placement, Guid? requestedFolder, Guid? before,
         bool detachSplit, DateTimeOffset now) {
         var tab = Tab(id);
         if (before == id) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
-        FolderId? folder = placement != TabPlacement.Pinned && folders.Any(f => f.Id == requestedFolder && f.Location == placement)
+        Guid? folder = placement != TabPlacement.Pinned && folders.Any(f => f.Id == requestedFolder && f.Location == placement)
             ? requestedFolder : null;
         var remaining = tabs.Where(t => t.Id != id).ToList();
         if (placement == TabPlacement.Pinned && remaining.Count(t => t.Placement == TabPlacement.Pinned) >= 12)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
-        bool Matches(BrowserTab t) => t.Placement == placement && t.FolderId == folder;
+        bool Matches(BrowserTab tab) => tab.Placement == placement && tab.FolderId == folder;
         int insertion = before is { } target ? remaining.FindIndex(t => t.Id == target && Matches(t)) : -1;
         if (insertion < 0) {
             int last = remaining.FindLastIndex(t => Matches(t));
@@ -37,7 +37,7 @@ public sealed partial class BrowserTabCollection {
         return true;
     }
 
-    public bool JoinSplitInPlace(TabId id, TabId targetId, int? memberIndex, Guid newGroup, DateTimeOffset now) {
+    public bool JoinSplitInPlace(Guid id, Guid targetId, int? memberIndex, Guid newGroup, DateTimeOffset now) {
         if (id == targetId) throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
         var tab = Tab(id); var target = Tab(targetId);
         if (target.Placement == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
@@ -45,7 +45,7 @@ public sealed partial class BrowserTabCollection {
         var members = run.Where(t => t.Id != id).ToArray();
         if (members.Length >= MaximumSplitMembers) throw new BrowserRuleException(BrowserRuleCodes.SplitLimit);
         int slot = Math.Clamp(memberIndex ?? members.Length, 0, members.Length);
-        TabId? anchor = slot < members.Length ? members[slot].Id
+        Guid? anchor = slot < members.Length ? members[slot].Id
             : tabs.Skip(tabs.IndexOf(run[^1]) + 1).FirstOrDefault(t => t.Id != id)?.Id;
         var group = target.SplitGroupId ?? newGroup;
         MoveTab(id, target.Placement, target.FolderId, anchor,
@@ -55,7 +55,7 @@ public sealed partial class BrowserTabCollection {
         return true;
     }
 
-    public bool MoveSplitMember(TabId id, int memberIndex, DateTimeOffset now) {
+    public bool MoveSplitMember(Guid id, int memberIndex, DateTimeOffset now) {
         var tab = Tab(id); var run = SplitMembers(id);
         if (run.Count < 2) return false;
         int first = tabs.IndexOf(run[0]); int insertion = first + Math.Clamp(memberIndex, 0, run.Count - 1);
@@ -88,7 +88,7 @@ public sealed partial class BrowserTabCollection {
         tabs.Insert(insertion, tab);
     }
 
-    public TabId? DismissTabs(IReadOnlyCollection<TabId> requested, TabId? selected, TabId? fallback,
+    public Guid? DismissTabs(IReadOnlyCollection<Guid> requested, Guid? selected, Guid? fallback,
         DateTimeOffset now, bool deleting, bool ensureSelection, bool resetArchivePlacement) {
         var removing = requested.ToHashSet();
         var removed = tabs.Where(t => removing.Contains(t.Id)).ToArray();

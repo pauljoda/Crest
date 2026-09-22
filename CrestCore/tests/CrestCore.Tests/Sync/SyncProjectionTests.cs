@@ -54,7 +54,7 @@ public sealed partial class BrowserContractsTests {
     public void ProjectionRetainsPositionsAndClearsArchivedMembershipWithoutChangingLocalAuditReason() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject(); var space = session["spaces"]![0]!;
         var tab = space["tabs"]![0]!; tab.AsObject().Remove("savedURL");
-        var record = SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 10, Guid.NewGuid());
+        var record = SyncTabRecord(fixture.Tab, fixture.Space, 10, Guid.NewGuid());
         record["payload"]!["value"]!["orderToken"] = "3fffffffffffffff";
         space["archivedTabs"] = new JsonArray(new JsonObject { ["tab"] = tab.DeepClone(), ["archivedAt"] = 800000010.0, ["reason"] = "synced", ["deletionOrigin"] = "remote" });
         var result = NativeSyncProjection.Project(session, SyncProjectionPreferences(), [record]);
@@ -84,7 +84,7 @@ public sealed partial class BrowserContractsTests {
                 ["reason"] = reason
             });
         }
-        var initial = JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()));
+        var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         initial["records"] = new JsonArray(); initial["pendingRecordIDs"] = new JsonArray();
         byte[] Stage(JsonNode session) => JournalCommand(initial, "stage", new() { ["session"] = session.DeepClone(), ["deletionReason"] = "superseded", ["now"] = 800000100.0 });
         var sender = new NativeSyncJournal(Bytes(initial)).Apply(Stage(source));
@@ -132,7 +132,7 @@ public sealed partial class BrowserContractsTests {
         var input = Bytes(request);
         var result = JsonNode.Parse(NativeSyncQuery.Prepare(input))!;
         Assert.Equal("invalidFolderHierarchy", result["error"]!["code"]!.GetValue<string>());
-        Assert.Equal(fixture.Space.Value.ToString("D"), result["error"]!["value"]!.GetValue<string>());
+        Assert.Equal(fixture.Space.ToString("D"), result["error"]!["value"]!.GetValue<string>());
         Assert.Equal(input, Bytes(request));
     }
 
@@ -145,7 +145,7 @@ public sealed partial class BrowserContractsTests {
         source.AsObject().Remove("disposableSeedMarker");
         source["spaces"]![0]!["history"] = new JsonArray();
         source["spaces"]![0]!["archivedTabs"] = new JsonArray();
-        var initial = JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()));
+        var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         initial["records"] = new JsonArray(); initial["pendingRecordIDs"] = new JsonArray();
         byte[] Stage(JsonNode session) => JournalCommand(initial, "stage", new() { ["session"] = session.DeepClone(), ["deletionReason"] = "superseded", ["now"] = now });
         var sender = new NativeSyncJournal(Bytes(initial)).Apply(Stage(source));
@@ -160,7 +160,7 @@ public sealed partial class BrowserContractsTests {
             }));
         var receiver = Receive(new NativeSyncJournal(Bytes(initial)), source, "replace", sender);
         var authority = new NativeSessionAuthority(Bytes(source));
-        var arguments = new JsonObject { ["tabId"] = fixture.Tab.Value.ToString() };
+        var arguments = new JsonObject { ["tabId"] = fixture.Tab.ToString() };
         if (operation == "tab.rename") arguments["title"] = "Renamed on the other device";
         else { arguments["placement"] = "current"; arguments["detach"] = true; }
         var request = JsonNode.Parse(SpaceCommand(source, operation, arguments))!;

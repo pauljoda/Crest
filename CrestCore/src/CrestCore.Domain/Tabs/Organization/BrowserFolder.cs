@@ -1,4 +1,4 @@
 namespace CrestCore.Domain;
 
-public sealed record BrowserFolder(FolderId Id, string Name, TabPlacement Location = TabPlacement.Saved,
-    FolderId? ParentId = null, bool IsCollapsed = false, DateTimeOffset? CollapseModifiedAt = null, TabId? OrderAnchorTabId = null);
+public sealed record BrowserFolder(Guid Id, string Name, TabPlacement Location = TabPlacement.Saved,
+    Guid? ParentId = null, bool IsCollapsed = false, DateTimeOffset? CollapseModifiedAt = null, Guid? OrderAnchorTabId = null);

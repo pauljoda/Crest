@@ -6,17 +6,17 @@ namespace CrestCore.Tests;
 
 public sealed class OrganizationContractsTests {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-09-19T12:00:00Z");
-    private static FolderId FolderId() => new(Guid.NewGuid());
-    private static BrowserSpace Space() => new(new(Guid.NewGuid()), new(Guid.NewGuid()), "Organization");
+    private static Guid NewFolderId() => Guid.NewGuid();
+    private static BrowserSpace Space() => new(Guid.NewGuid(), Guid.NewGuid(), "Organization");
     private static BrowserTab Tab(BrowserSpace space, string name, Guid? split = null) {
-        var state = new TabState(new(Guid.NewGuid()), TabContent.Web, $"https://example.com/{name}", name,
+        var state = new TabState(Guid.NewGuid(), TabContent.Web, $"https://example.com/{name}", name,
             TabPlacement.Current, null, null, null, Now, null, null, false, split);
         var tab = BrowserTab.Restore(state); space.Add(tab, null); return tab;
     }
     [Fact]
     public void FilingMovesWholeSplitsAndFolderSubtreesKeepTheirIdentities() {
         var space = Space(); var split = Guid.NewGuid(); var first = Tab(space, "first", split); var second = Tab(space, "second", split);
-        var root = FolderId(); var child = FolderId(); var destination = FolderId();
+        var root = NewFolderId(); var child = NewFolderId(); var destination = NewFolderId();
         space.AddFolder(root, "Root", TabPlacement.Current); space.AddFolder(child, "Child", parent: root);
         space.AddFolder(destination, "Saved", TabPlacement.Saved);
         space.FileTabs([first.Id], TabPlacement.Current, child, Now);
@@ -30,7 +30,7 @@ public sealed class OrganizationContractsTests {
     }
     [Fact]
     public void RemovingFolderPromotesContentsAndPreservesCollapseClock() {
-        var space = Space(); var tab = Tab(space, "page"); var root = FolderId(); var folder = FolderId(); var child = FolderId();
+        var space = Space(); var tab = Tab(space, "page"); var root = NewFolderId(); var folder = NewFolderId(); var child = NewFolderId();
         space.AddFolder(root, "Root"); space.AddFolder(folder, "Folder", parent: root); space.AddFolder(child, "Child", parent: folder);
         space.FileTabs([tab.Id], TabPlacement.Saved, folder, Now); space.CollapseFolder(child, true, Now);
         space.DeleteFolder(folder, Now.AddMinutes(1));
@@ -42,21 +42,21 @@ public sealed class OrganizationContractsTests {
     }
     [Fact]
     public void InvalidFolderMovesLeaveTopologyAndMembershipUntouched() {
-        var space = Space(); var tab = Tab(space, "page"); var root = FolderId(); var child = FolderId();
+        var space = Space(); var tab = Tab(space, "page"); var root = NewFolderId(); var child = NewFolderId();
         space.AddFolder(root, "Root"); space.AddFolder(child, "Child", parent: root);
         space.FileTabs([tab.Id], TabPlacement.Saved, child, Now);
         var original = space.Folders.ToArray(); var tabState = tab.Capture();
         Assert.Equal("folder_cycle", Assert.Throws<BrowserRuleException>(() => space.MoveFolder(root, null, child, Now)).Code);
         Assert.Equal(original, space.Folders); Assert.Equal(tabState, tab.Capture());
         var deepest = child;
-        for (int depth = 2; depth < FolderTree.MaximumDepth; depth++) { var next = FolderId(); space.AddFolder(next, depth.ToString(), parent: deepest); deepest = next; }
-        Assert.Equal("folder_depth_limit", Assert.Throws<BrowserRuleException>(() => space.AddFolder(FolderId(), "Too deep", parent: deepest)).Code);
+        for (int depth = 2; depth < FolderTree.MaximumDepth; depth++) { var next = NewFolderId(); space.AddFolder(next, depth.ToString(), parent: deepest); deepest = next; }
+        Assert.Equal("folder_depth_limit", Assert.Throws<BrowserRuleException>(() => space.AddFolder(NewFolderId(), "Too deep", parent: deepest)).Code);
         Assert.Equal(FolderTree.MaximumDepth, space.Folders.Count);
     }
     [Fact]
     public void InsertionCannotSplitAnExistingPairAndExplicitDetachRepairsTheSurvivor() {
         var space = Space(); var split = Guid.NewGuid(); var first = Tab(space, "first", split); var second = Tab(space, "second", split);
-        var third = Tab(space, "third"); var folder = FolderId(); space.AddFolder(folder, "Destination", TabPlacement.Current);
+        var third = Tab(space, "third"); var folder = NewFolderId(); space.AddFolder(folder, "Destination", TabPlacement.Current);
         Assert.Equal("split_boundary", Assert.Throws<BrowserRuleException>(() =>
             space.FileTabs([third.Id], TabPlacement.Current, null, Now, before: second.Id)).Code);
         Assert.Equal(new[] { first.Id, second.Id, third.Id }, space.Tabs.Select(t => t.Id));
@@ -65,7 +65,7 @@ public sealed class OrganizationContractsTests {
     }
     [Fact]
     public void EmptyFolderBoundarySurvivesClosingItsLastTab() {
-        var space = Space(); var first = Tab(space, "first"); var last = Tab(space, "last"); var folder = FolderId();
+        var space = Space(); var first = Tab(space, "first"); var last = Tab(space, "last"); var folder = NewFolderId();
         space.AddFolder(folder, "Current", TabPlacement.Current); space.FileTabs([first.Id], TabPlacement.Current, folder, Now);
         space.Remove(first, Now, true);
         Assert.Equal(last.Id, Assert.Single(space.Folders).OrderAnchorTabId);

@@ -29,7 +29,7 @@ public sealed partial class BrowserContractsTests {
         var core = new NativeSessionAuthority(Bytes(session));
         var args = BatchArguments(space, "Duplicate");
         var stale = core.PrepareCommand(1, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject()));
-        core.PrepareCommand(1, SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.Value.ToString(), ["title"] = "Latest shared name" })).Commit();
+        core.PrepareCommand(1, SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest shared name" })).Commit();
         Assert.Throws<BrowserRuleException>(() => stale.Commit());
         var command = core.PrepareCommand(2, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject()));
         var output = JsonNode.Parse(command.Output)!;
@@ -65,7 +65,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("pinned_capacity", JsonNode.Parse(rejected.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => rejected.Commit());
         Assert.Equal(before, core.Checkpoint(1, Selection(session)).Read("core"));
-        core.PrepareCommand(1, SpaceCommand(session, "tab.move", new() { ["tabId"] = fixture.Tab.Value.ToString(), ["placement"] = "current", ["detach"] = false })).Commit();
+        core.PrepareCommand(1, SpaceCommand(session, "tab.move", new() { ["tabId"] = fixture.Tab.ToString(), ["placement"] = "current", ["detach"] = false })).Commit();
         var staleSelection = core.PrepareCommand(2, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject()));
         Assert.Equal("stale_selection", JsonNode.Parse(staleSelection.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => staleSelection.Commit());

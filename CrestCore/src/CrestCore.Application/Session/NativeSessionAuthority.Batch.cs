@@ -15,15 +15,15 @@ public sealed partial class NativeSessionAuthority {
             var source = TransferSpace(sourceId, Id(request["profileId"]));
             var args = request["arguments"]!.AsObject();
             var selection = args["selection"]!;
-            TabId? Tab(JsonNode? value) => value is null ? null : new(Id(value));
-            FolderId? Folder(JsonNode? value) => value is null ? null : new(Id(value));
+            Guid? Tab(JsonNode? value) => value is null ? null : Id(value);
+            Guid? Folder(JsonNode? value) => value is null ? null : Id(value);
             TabPlacement Placement(JsonNode? value) => value is null ? TabPlacement.Current
                 : Enum.Parse<TabPlacement>(value.GetValue<string>(), true);
             var captured = new TabBatchSelection(
                 selection["roots"]!.AsArray().Select(r => new BatchItem(Id(r!["id"]), r["folder"]!.GetValue<bool>())).ToArray(),
-                selection["tabs"]!.AsArray().Select(t => new BatchTab(new(Id(t!["id"])), Placement(t["placement"]),
+                selection["tabs"]!.AsArray().Select(t => new BatchTab(Id(t!["id"]), Placement(t["placement"]),
                     Folder(t["folderId"]), t["splitGroupId"] is { } group ? Id(group) : null)).ToArray(),
-                selection["folders"]!.AsArray().Select(f => new BatchFolder(new(Id(f!["id"])), Folder(f["parentId"]),
+                selection["folders"]!.AsArray().Select(f => new BatchFolder(Id(f!["id"]), Folder(f["parentId"]),
                     Placement(f["location"]))).ToArray());
             var action = new TabBatchAction(Enum.Parse<TabBatchKind>(args["kind"]!.GetValue<string>()),
                 Placement(args["placement"]), Folder(args["folderId"]), Tab(args["before"]), Folder(args["beforeFolderId"]),
@@ -48,7 +48,7 @@ public sealed partial class NativeSessionAuthority {
                 b, destination is null ? null : state.Spaces[1].SelectedTabId, new SystemIdSource(), now);
             foreach (var pair in result.Copies) {
                 legacy.CopyTabMetadata(pair.Source, pair.Copy);
-                var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o => Id(o!["tabId"]) == pair.Source.Value);
+                var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o => Id(o!["tabId"]) == pair.Source);
                 if (a.Tab(pair.Copy).Content.IsWebPage && observation is not null)
                     a.Tab(pair.Copy).Observe(observation["url"]?.GetValue<string>(), observation["title"]!.GetValue<string>(),
                         false, false, false, null);
@@ -78,7 +78,7 @@ public sealed partial class NativeSessionAuthority {
                     ["tabId"] = null,
                     ["selectSpace"] = false,
                     ["changed"] = true,
-                    ["copies"] = new JsonArray(result.Copies.Select(p => (JsonNode)new JsonObject { ["source"] = p.Source.Value.ToString(), ["copy"] = p.Copy.Value.ToString() }).ToArray())
+                    ["copies"] = new JsonArray(result.Copies.Select(p => (JsonNode)new JsonObject { ["source"] = p.Source.ToString(), ["copy"] = p.Copy.ToString() }).ToArray())
                 });
             }
             var selectedWindow = window.DeepClone();

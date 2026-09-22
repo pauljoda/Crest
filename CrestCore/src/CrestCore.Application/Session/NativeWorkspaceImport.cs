@@ -27,7 +27,7 @@ public sealed class NativeWorkspaceImport {
     private static Guid? OptionalId(JsonNode? n) => n is null ? null : Id(n);
 
     public static JsonObject Preview(JsonObject session, JsonObject arguments, string mode, double now) {
-        try { return new NativeWorkspaceImport().Apply(session, arguments, mode, now); } catch (BrowserRuleException error) { return new() { ["error"] = error.Code }; }
+        try { return new NativeWorkspaceImport().Apply(session, arguments, WorkspaceImportModeCodes.Parse(mode), now); } catch (BrowserRuleException error) { return new() { ["error"] = error.Code }; }
     }
 
     private void Track(JsonNode space, int source, int index) {
@@ -61,7 +61,7 @@ public sealed class NativeWorkspaceImport {
         if (chosen is not null) space["selectedTabID"] = chosen["id"]!.DeepClone();
     }
 
-    public JsonObject Apply(JsonObject source, JsonObject arguments, string mode, double now) {
+    private JsonObject Apply(JsonObject source, JsonObject arguments, WorkspaceImportMode mode, double now) {
         var session = source.DeepClone().AsObject(); var spaces = Items(session, "spaces");
         var originalSpaces = new HashSet<JsonNode>(spaces.Select(s => s!), ReferenceEqualityComparer.Instance);
         Dictionary<JsonNode, HashSet<Guid>> originalFolderIds = new(ReferenceEqualityComparer.Instance);
@@ -74,11 +74,11 @@ public sealed class NativeWorkspaceImport {
         }
         var inputs = Items(arguments, "sources").Select((n, i) => { var value = n!.DeepClone().AsObject(); Track(value, i + 1, 0); return value; }).ToArray();
         JsonNode? affected = null;
-        if (mode == "portable") {
+        if (mode == WorkspaceImportMode.Portable) {
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Length);
             foreach (var input in inputs) spaces.Add((JsonNode)input);
             affected = inputs.FirstOrDefault();
-        } else if (mode == "manual") {
+        } else if (mode == WorkspaceImportMode.Manual) {
             var drafts = Items(arguments, "drafts");
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, drafts.Count(d => d!["isNew"]!.GetValue<bool>()));
             foreach (var draft in drafts) {
@@ -120,7 +120,7 @@ public sealed class NativeWorkspaceImport {
                 spaces.Clear(); foreach (var space in sorted) spaces.Add(space);
             }
             session.Remove("disposableSeedMarker");
-        } else if (mode == "review") {
+        } else if (mode == WorkspaceImportMode.Review) {
             var reviews = Items(arguments, "reviews").Where(r => r!["included"]!.GetValue<bool>()).ToArray();
             if (reviews.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.NoIncludedSpaces);
             bool replaceSeed = session["disposableSeedMarker"] is not null;
@@ -148,24 +148,24 @@ public sealed class NativeWorkspaceImport {
                 var pending = new Stack<Guid>(required);
                 while (pending.TryPop(out var id))
                     if (byId.TryGetValue(id, out var f) && OptionalId(f["parentID"]) is { } parent && required.Add(parent)) pending.Push(parent);
-                var tree = FolderTree.RepairPreorder(sourceFolders.Select(f => new BrowserFolder(new(Id(f!["id"])),
+                var tree = FolderTree.RepairPreorder(sourceFolders.Select(f => new BrowserFolder(Id(f!["id"]),
                     f["title"]!.GetValue<string>(), f["location"]?.GetValue<string>() == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
-                    OptionalId(f["parentID"]) is { } parent ? new FolderId(parent) : null)).ToArray());
+                    OptionalId(f["parentID"]))).ToArray());
                 Dictionary<Guid, Guid> mapping = [];
-                foreach (var folder in tree.Where(f => required.Contains(f.Id.Value))) {
-                    var original = byId[folder.Id.Value];
-                    Guid? parent = folder.ParentId is { } p && mapping.TryGetValue(p.Value, out var mapped) ? mapped : null;
+                foreach (var folder in tree.Where(f => required.Contains(f.Id))) {
+                    var original = byId[folder.Id];
+                    Guid? parent = folder.ParentId is { } p && mapping.TryGetValue(p, out var mapped) ? mapped : null;
                     var match = folders.FirstOrDefault(f => OptionalId(f!["parentID"]) == parent
                         && (f["location"]?.GetValue<string>() ?? TabPlacementCodes.Saved) == (original["location"]?.GetValue<string>() ?? TabPlacementCodes.Saved)
                         && WorkspaceImportPolicy.FolderMatchKey(f["title"]!.GetValue<string>()) == WorkspaceImportPolicy.FolderMatchKey(original["title"]!.GetValue<string>()));
-                    if (match is not null) { mapping[folder.Id.Value] = Id(match["id"]); continue; }
+                    if (match is not null) { mapping[folder.Id] = Id(match["id"]); continue; }
                     if (folders.Count >= WorkspaceImportPolicy.MaximumFolders) continue;
-                    var copied = original.DeepClone().AsObject(); var identity = folder.Id.Value;
+                    var copied = original.DeepClone().AsObject(); var identity = folder.Id;
                     copied.Remove("collapseModifiedAt"); copied.Remove("orderAnchorTabID");
                     while (folders.Any(f => Id(f!["id"]) == identity)) identity = Guid.NewGuid();
                     copied["id"] = SwiftId(identity); copied["parentID"] = parent is { } value ? SwiftId(value) : null;
                     copied["isCollapsed"] = false;
-                    folders.Add((JsonNode)copied); mapping[folder.Id.Value] = identity;
+                    folders.Add((JsonNode)copied); mapping[folder.Id] = identity;
                 }
                 int pinned = destinationId is null ? 0 : Items(destination, "tabs").Count(t => Placement(t!) == TabPlacementCodes.Pinned);
                 var overflowFolder = folders.FirstOrDefault(f => string.Equals(f!["title"]!.GetValue<string>(), "Imported Pinned Tabs", StringComparison.OrdinalIgnoreCase));

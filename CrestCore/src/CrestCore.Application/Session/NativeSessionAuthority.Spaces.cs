@@ -28,7 +28,7 @@ public sealed partial class NativeSessionAuthority {
 
     private NativeSessionCommand PrepareSpaceCommand(ulong expected, JsonObject request) {
         SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
-        var operation = request["operation"]!.GetValue<string>();
+        var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var args = request["arguments"]!.AsObject();
         var window = request["window"]!;
         var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
@@ -40,8 +40,8 @@ public sealed partial class NativeSessionAuthority {
             return new SpaceDocument(fields, s.Sections);
         }).ToList();
         Guid? created = null;
-        if (operation is "space.create" or "space.reset_private") {
-            if (operation == "space.reset_private") {
+        if (operation is SessionOperation.SpaceCreate or SessionOperation.SpaceResetPrivate) {
+            if (operation == SessionOperation.SpaceResetPrivate) {
                 if (workspaceKind != BrowserWorkspaceKind.Private) throw new BrowserRuleException(BrowserRuleCodes.NotPrivateWorkspace);
                 var fresh = args["template"]!;
                 if (spaces.Any(s => Id(s.Metadata["id"]) == Id(fresh["id"])
@@ -56,7 +56,7 @@ public sealed partial class NativeSessionAuthority {
             if (spaces.Any(s => Id(s.Metadata["id"]) == id || Id(s.Metadata["profile"]!["id"]) == profile))
                 throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
             var fields = Fields(supplied, Sections);
-            fields["name"] = operation == "space.reset_private" ? "Private" :
+            fields["name"] = operation == SessionOperation.SpaceResetPrivate ? "Private" :
                 (workspaceKind == BrowserWorkspaceKind.Private ? "Private " : "Space ") + (spaces.Count + 1);
             var sections = Sections.ToDictionary(section => section,
                 section => (IReadOnlyList<JsonNode>)supplied[section]!.AsArray().Select(n => n!.DeepClone()).ToArray());
@@ -79,7 +79,7 @@ public sealed partial class NativeSessionAuthority {
             spaces.Add(new(fields, sections));
             metadata["selectedSpaceID"] = supplied["id"]!.DeepClone();
             created = id;
-        } else if (operation == "space.reorder") {
+        } else if (operation == SessionOperation.SpaceReorder) {
             spaces = SpaceOrganizationPolicy.Move(spaces,
                 args["offsets"]!.AsArray().Select(n => n!.GetValue<int>()), args["destination"]!.GetValue<int>()).ToList();
         } else {
@@ -91,10 +91,10 @@ public sealed partial class NativeSessionAuthority {
                 throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
             var fields = space.Metadata;
             var pending = PendingDeletion(metadata, id);
-            if (pending is not null && operation is not ("space.deletion.begin" or "space.remove"))
+            if (pending is not null && operation is not (SessionOperation.SpaceDeletionBegin or SessionOperation.SpaceRemove))
                 throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
             switch (operation) {
-                case "space.deletion.begin":
+                case SessionOperation.SpaceDeletionBegin:
                     var operationId = Id(args["operationID"]);
                     if (pending is not null) {
                         if (Id(pending["operationID"]) != operationId)
@@ -113,41 +113,41 @@ public sealed partial class NativeSessionAuthority {
                         metadata["selectedSpaceID"] = spaces.First(s => PendingDeletion(metadata, Id(s.Metadata["id"])) is null)
                             .Metadata["id"]!.DeepClone();
                     break;
-                case "space.identity":
+                case SessionOperation.SpaceIdentity:
                     fields["name"] = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>());
                     fields["symbol"] = SpaceOrganizationPolicy.Symbol(args["symbol"]!.GetValue<string>());
                     var accent = args["accent"]!.GetValue<string>();
                     if (!SpaceAccentCodes.Includes(accent)) throw new BrowserRuleException(BrowserRuleCodes.InvalidAccent);
                     fields["accent"] = accent;
                     break;
-                case "space.branding":
+                case SessionOperation.SpaceBranding:
                     // The native view supplies its rendering vocabulary. Store it
                     // as metadata without reconstructing tabs, history or images.
                     fields["branding"] = args["value"]!.AsObject().DeepClone();
                     break;
-                case "space.browsing_preferences":
+                case SessionOperation.SpaceBrowsingPreferences:
                     fields["browsingPreferences"] = args["value"]!.AsObject().DeepClone();
                     break;
-                case "space.credential_preferences":
+                case SessionOperation.SpaceCredentialPreferences:
                     fields["credentialPreferences"] = args["value"]!.AsObject().DeepClone();
                     break;
-                case "space.access":
+                case SessionOperation.SpaceAccess:
                     var access = args["value"]!.GetValue<string>();
                     if (access is not (SpaceAccessPolicyCodes.Open or SpaceAccessPolicyCodes.DeviceOwnerAuthentication))
                         throw new BrowserRuleException(BrowserRuleCodes.InvalidAccessPolicy);
                     fields["accessPolicy"] = access;
                     break;
-                case "space.default":
+                case SessionOperation.SpaceDefault:
                     metadata["defaultSpaceID"] = fields["id"]!.DeepClone();
                     break;
-                case "space.saved_expansion":
+                case SessionOperation.SpaceSavedExpansion:
                     var expanded = args["value"]!.GetValue<bool>();
                     if (fields["isSavedTabsExpanded"]?.GetValue<bool>() != expanded) {
                         fields["isSavedTabsExpanded"] = expanded;
                         fields["savedTabsExpansionModifiedAt"] = request["now"]!.DeepClone();
                     }
                     break;
-                case "space.remove":
+                case SessionOperation.SpaceRemove:
                     if (pending is null || Id(pending["operationID"]) != Id(args["operationID"]))
                         throw new BrowserRuleException(BrowserRuleCodes.WrongDeletionOperation);
                     SpaceOrganizationPolicy.RequireRemovable(spaces.Count);

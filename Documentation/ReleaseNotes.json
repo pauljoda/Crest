@@ -1845,6 +1845,10 @@
     "engine-abstraction-completion-plan": {
       "category": "internal",
       "message": "Document the engine abstraction completion plan: remaining page-port gaps, security and credential hooks, capability hygiene, WebKit symmetry and core extraction aggregates."
+    },
+    "native-core-guid-identities-and-typed-operations": {
+      "category": "internal",
+      "message": "Simplify native core identities and use typed operations throughout session, sync and policy handling."
     }
   }
 }

@@ -85,9 +85,9 @@ public sealed class NativeSyncJournal {
         var next = new Dictionary<string, JsonObject>(records, StringComparer.Ordinal);
         var queued = new HashSet<string>(pending, StringComparer.Ordinal);
         ulong clock = fields["logicalClock"]!.GetValue<ulong>();
-        var operation = request["operation"]!.GetValue<string>();
+        var operation = NativeSyncOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var args = request["arguments"]!.AsObject();
-        if (operation == NativeSyncOperations.Recover) {
+        if (operation == NativeSyncOperation.Recover) {
             var identity = Id(args["deviceID"]);
             if (identity == Id(fields["deviceID"])) throw new BrowserRuleException(BrowserRuleCodes.InvalidRecoveryIdentity);
             fields["deviceID"] = identity.ToString("D").ToUpperInvariant();
@@ -114,11 +114,11 @@ public sealed class NativeSyncJournal {
                 ["tombstone"] = new JsonObject { ["reason"] = reason, ["deletedAt"] = now }
             };
         }
-        if (operation is NativeSyncOperations.Merge or NativeSyncOperations.Replace or NativeSyncOperations.Overwrite) {
+        if (operation is NativeSyncOperation.Merge or NativeSyncOperation.Replace or NativeSyncOperation.Overwrite) {
             var incoming = RecordMap(args["records"]!.AsArray());
             foreach (var record in incoming.Values) clock = Math.Max(clock, Clock(record));
-            if (operation == NativeSyncOperations.Replace) { next = incoming; queued.Clear(); } else foreach (var (id, remote) in incoming) {
-                if (operation == NativeSyncOperations.Overwrite || !next.TryGetValue(id, out var local)) { next[id] = remote; continue; }
+            if (operation == NativeSyncOperation.Replace) { next = incoming; queued.Clear(); } else foreach (var (id, remote) in incoming) {
+                if (operation == NativeSyncOperation.Overwrite || !next.TryGetValue(id, out var local)) { next[id] = remote; continue; }
                 var resolved = NativeSyncEvaluator.Resolve(local, remote);
                 next[id] = resolved;
                 // An acknowledged local winner does not become pending merely
@@ -126,7 +126,7 @@ public sealed class NativeSyncJournal {
                 if (!NativeSyncEvaluator.Equivalent(resolved, local) && !NativeSyncEvaluator.Equivalent(resolved, remote)) queued.Add(id);
             }
         }
-        if (operation is NativeSyncOperations.Stage or NativeSyncOperations.Overwrite) {
+        if (operation is NativeSyncOperation.Stage or NativeSyncOperation.Overwrite) {
             var desired = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
             var session = args["session"] as JsonObject;
             var cleaning = (session?["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
@@ -157,7 +157,7 @@ public sealed class NativeSyncJournal {
                 if (!desired.TryAdd(Name(PayloadId(payload)), payload)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSyncRecord);
             }
             if (desired.Count > MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.SyncRecordLimit);
-            if (operation == NativeSyncOperations.Overwrite) {
+            if (operation == NativeSyncOperation.Overwrite) {
                 queued.Clear();
                 foreach (string id in next.Keys.Union(desired.Keys).Order(StringComparer.Ordinal).ToArray()) {
                     if (next.TryGetValue(id, out var cleaningRecord) && cleaning.Contains(Id(cleaningRecord["spaceID"]))) continue;
@@ -196,13 +196,13 @@ public sealed class NativeSyncJournal {
                     next[id] = Delete(record, reason); queued.Add(id);
                 }
             }
-        } else if (operation == NativeSyncOperations.Acknowledge) {
+        } else if (operation == NativeSyncOperation.Acknowledge) {
             foreach (var item in args["acknowledgements"]!.AsArray()) {
                 string id = Name(item!["id"]!);
                 if (item["version"] is null || next.TryGetValue(id, out var record) && NativeSyncEvaluator.Equivalent(item["version"], record["version"]))
                     queued.Remove(id);
             }
-        } else if (operation is not (NativeSyncOperations.Merge or NativeSyncOperations.Replace or NativeSyncOperations.Preferences))
+        } else if (operation is not (NativeSyncOperation.Merge or NativeSyncOperation.Replace or NativeSyncOperation.Preferences))
             throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation);
         if (next.Count > MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.SyncRecordLimit);
         fields["logicalClock"] = clock;

@@ -1,3 +1,3 @@
 namespace CrestCore.Domain;
 
-public sealed record SplitJoin(TabId SelectedTab, IReadOnlyList<(TabId Source, TabId Copy)> Copies);
+public sealed record SplitJoin(Guid SelectedTab, IReadOnlyList<(Guid Source, Guid Copy)> Copies);

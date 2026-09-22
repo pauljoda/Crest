@@ -23,10 +23,10 @@ public static class NativePolicyEvaluator {
         if (utf8.Length > MaximumInputBytes) throw new ProtocolException(ProtocolErrorCodes.PolicyInputLimit);
         var request = Protocol.Parse(utf8);
         if (request.GetProperty("version").GetInt32() != 1) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
-        var operation = Protocol.Text(request, "operation");
-        if (operation is "navigation.link" or "navigation.modified_link") {
+        var operation = PolicyOperationCodes.Parse(Protocol.Text(request, "operation"));
+        if (operation is PolicyOperation.NavigationLink or PolicyOperation.NavigationModifiedLink) {
             bool peek, newTab;
-            if (operation == "navigation.modified_link") {
+            if (operation == PolicyOperation.NavigationModifiedLink) {
                 Protocol.Members(request, "version", "operation", "url", "userActivatedLink", "topLevel",
                     "commandModified", "optionModified", "middleClick", "peekModifier", "shiftModified", "focusesNewTabs",
                     "hasContext", "placement", "savedUrl", "automaticallyOpensPeek");
@@ -60,22 +60,22 @@ public static class NativePolicyEvaluator {
                 }
             });
         }
-        if (operation is "records.expired" or "history.remove_range") {
-            Protocol.Members(request, operation == "records.expired"
+        if (operation is PolicyOperation.RecordsExpired or PolicyOperation.HistoryRemoveRange) {
+            Protocol.Members(request, operation == PolicyOperation.RecordsExpired
                 ? ["version", "operation", "timestamps", "now", "lifetime"]
                 : ["version", "operation", "timestamps", "start", "end"]);
             var timestamps = request.GetProperty("timestamps").EnumerateArray().Select(value => value.GetDouble()).ToArray();
             if (timestamps.Length > 512) throw new ProtocolException(ProtocolErrorCodes.RecordBatchLimit);
-            var indices = operation == "records.expired"
+            var indices = operation == PolicyOperation.RecordsExpired
                 ? RecordRemovalPolicy.Expired(timestamps, request.GetProperty("now").GetDouble(), request.GetProperty("lifetime").GetDouble())
                 : RecordRemovalPolicy.WithinRange(timestamps, request.GetProperty("start").GetDouble(), request.GetProperty("end").GetDouble());
             return Encode(new() { ["indices"] = new JsonArray(indices.Select(index => (JsonNode?)JsonValue.Create(index)).ToArray()) });
         }
-        if (operation == "history.normalize") {
+        if (operation == PolicyOperation.HistoryNormalize) {
             Protocol.Members(request, "version", "operation", "url");
             return Encode(new() { ["url"] = HistoryPolicy.Normalize(Protocol.Text(request, "url")) });
         }
-        if (operation == "history.visit") {
+        if (operation == PolicyOperation.HistoryVisit) {
             Protocol.Members(request, "version", "operation", "url", "title", "now", "newId", "previous");
             HistoryVisit? previous = null;
             if (request.TryGetProperty("previous", out var old) && old.ValueKind != JsonValueKind.Null) {
@@ -98,14 +98,14 @@ public static class NativePolicyEvaluator {
                 ["maximumEntries"] = HistoryPolicy.MaximumEntries
             });
         }
-        if (operation == "residency.release_limit") {
+        if (operation == PolicyOperation.ResidencyReleaseLimit) {
             Protocol.Members(request, "version", "operation", "level", "platform", "eligiblePageCount");
             return Encode(new() {
                 ["limit"] = PageResidencyPolicy.ReleaseLimit(Level(request),
                 request.GetProperty("eligiblePageCount").GetInt32(), Platform(request))
             });
         }
-        if (operation == "residency.release_plan") {
+        if (operation == PolicyOperation.ResidencyReleasePlan) {
             Protocol.Members(request, "version", "operation", "level", "platform", "focusedIndex", "candidates");
             var candidates = new List<ResidencyCandidate>();
             foreach (var value in request.GetProperty("candidates").EnumerateArray()) {
@@ -122,7 +122,7 @@ public static class NativePolicyEvaluator {
                 Optional(request, "focusedIndex") is { } focus ? focus.GetInt32() : null);
             return Encode(new() { ["tabIDs"] = Identifiers(plan.OffScreen), ["fallbackTabIDs"] = Identifiers(plan.PresentedFallback) });
         }
-        if (operation == "residency.process_recovery") {
+        if (operation == PolicyOperation.ResidencyProcessRecovery) {
             Protocol.Members(request, "version", "operation", "consecutiveTerminations");
             var action = PageProcessRecoveryPolicy.Decide(request.GetProperty("consecutiveTerminations").GetInt32());
             return Encode(new() {
@@ -130,7 +130,7 @@ public static class NativePolicyEvaluator {
                 ["maximumAutomaticReloads"] = PageProcessRecoveryPolicy.MaximumAutomaticReloads
             });
         }
-        if (operation == "tabs.dismissal") {
+        if (operation == PolicyOperation.TabsDismissal) {
             Protocol.Members(request, "version", "operation", "placement", "isStartPage", "tabCount");
             var placement = Optional(request, "placement") is null ? (TabPlacement?)null
                 : (TabPlacementCodes.Parse(Protocol.Text(request, "placement")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement));
@@ -146,7 +146,7 @@ public static class NativePolicyEvaluator {
             });
         }
         Protocol.Members(request, "version", "operation", "input", "searchTemplate", "allowsInternalPages");
-        if (Protocol.Text(request, "operation") != "address.intent") throw new ProtocolException(ProtocolErrorCodes.UnknownPolicy);
+        if (operation != PolicyOperation.AddressIntent) throw new ProtocolException(ProtocolErrorCodes.UnknownPolicy);
         // An empty address is a successful no-navigation decision.
         var input = request.GetProperty("input").GetString() ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
         var template = Protocol.Text(request, "searchTemplate", 2048);

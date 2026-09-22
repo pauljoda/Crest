@@ -183,7 +183,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void SessionAndSyncPublishTogetherAndCannotAttachToAnotherOrPrivateWorkspace() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var record = SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 9, Guid.NewGuid());
+        var record = SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid());
         var document = JournalDocument(record);
         var initial = new NativeSyncJournal(Bytes(document));
         var sync = new NativeSyncAuthority(initial);

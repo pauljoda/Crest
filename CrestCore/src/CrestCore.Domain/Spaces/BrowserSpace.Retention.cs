@@ -9,7 +9,7 @@ public sealed partial class BrowserSpace {
 
     #region Actions - Retention
 
-    public IReadOnlyList<BrowserTab> ExpiredTabs(DateTimeOffset now, IReadOnlySet<TabId> protectedTabs) {
+    public IReadOnlyList<BrowserTab> ExpiredTabs(DateTimeOffset now, IReadOnlySet<Guid> protectedTabs) {
         if (IsLocked || Retention.TabLifetime is not { } lifetime) return [];
         return tabs.Where(t => t.Placement == TabPlacement.Current && !t.Content.IsStartPage
             && t.Phase is not (TabPhase.Creating or TabPhase.Closing or TabPhase.Unloading) && !protectedTabs.Contains(t.Id)

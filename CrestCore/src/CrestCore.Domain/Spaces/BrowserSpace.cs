@@ -24,11 +24,11 @@ public sealed partial class BrowserSpace {
     public IReadOnlyList<HistoryVisit> History => history.AsReadOnly();
 
     // Identity and selection
-    public SpaceId Id { get; }
+    public Guid Id { get; }
 
-    public ProfileId ProfileId { get; }
+    public Guid ProfileId { get; }
 
-    public TabId? RestoredSelection { get; private set; }
+    public Guid? RestoredSelection { get; private set; }
 
     // Preferences and display
     public SearchPreferences Search { get; private set; } = SearchPreferences.Default;
@@ -55,7 +55,7 @@ public sealed partial class BrowserSpace {
 
     #region Constructors
 
-    public BrowserSpace(SpaceId id, ProfileId profileId, string name) {
+    public BrowserSpace(Guid id, Guid profileId, string name) {
         Id = id;
         ProfileId = profileId;
         Name = name;
@@ -69,7 +69,7 @@ public sealed partial class BrowserSpace {
 
     public void Lock() { unlocked = false; AccessGeneration++; }
 
-    public void Unlock(ProfileId profile, ulong generation) {
+    public void Unlock(Guid profile, ulong generation) {
         if (!SupportsDeviceAuthentication) throw new BrowserRuleException(BrowserRuleCodes.UnsupportedAccessPolicy);
         if (ProfileId != profile || AccessGeneration != generation) throw new BrowserRuleException(BrowserRuleCodes.StaleAuthentication);
         unlocked = true;
@@ -92,14 +92,14 @@ public sealed partial class BrowserSpace {
 
     #region Actions - Tabs
 
-    public void Add(BrowserTab tab, TabId? after) {
+    public void Add(BrowserTab tab, Guid? after) {
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         if (tabs.Any(t => t.Id == tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         int index = after is null ? -1 : tabs.FindIndex(t => t.Id == after);
         tabs.Insert(index < 0 ? tabs.Count : index + 1, tab);
     }
 
-    public void ValidateTransferFrom(BrowserSpace source, TabId id) {
+    public void ValidateTransferFrom(BrowserSpace source, Guid id) {
         EnsureAccessible(); source.EnsureAccessible();
         if (source == this || source.Id != Id || source.ProfileId != ProfileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfile);
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
@@ -107,7 +107,7 @@ public sealed partial class BrowserSpace {
         if (source.Tab(id).Phase is TabPhase.Creating or TabPhase.Closing or TabPhase.Unloading) throw new BrowserRuleException(BrowserRuleCodes.PageBusy);
     }
 
-    public void AddOpenedTab(BrowserTab tab, TabId? after) {
+    public void AddOpenedTab(BrowserTab tab, Guid? after) {
         int lower = tabs.FindIndex(t => t.Placement == TabPlacement.Current);
         if (lower < 0) lower = tabs.Count;
         int insertion = lower;
@@ -128,7 +128,7 @@ public sealed partial class BrowserSpace {
         }
     }
 
-    public void Place(TabId id, TabPlacement placement, FolderId? folder, DateTimeOffset? now = null) {
+    public void Place(Guid id, TabPlacement placement, Guid? folder, DateTimeOffset? now = null) {
         EnsureAccessible();
         var tab = Tab(id);
         if (folder is not null && !folders.Any(f => f.Id == folder && f.Location == placement))
@@ -138,7 +138,7 @@ public sealed partial class BrowserSpace {
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         var nextFolders = new FolderTree(folders).PreserveOrder([tab.Id], tabs);
         var remaining = tabs.Where(t => t.Id != id).ToList();
-        int last = remaining.FindLastIndex(t => t.Placement == placement && t.FolderId == folder);
+        int last = remaining.FindLastIndex(tab => tab.Placement == placement && tab.FolderId == folder);
         int insertion = last >= 0 ? last + 1 : placement switch {
             TabPlacement.Pinned => remaining.FindIndex(t => t.Placement != TabPlacement.Pinned),
             TabPlacement.Saved => remaining.FindIndex(t => t.Placement == TabPlacement.Current),
@@ -166,7 +166,7 @@ public sealed partial class BrowserSpace {
             history.RemoveRange(HistoryPolicy.MaximumEntries, history.Count - HistoryPolicy.MaximumEntries);
     }
 
-    public BrowserTab RestoreArchived(TabId id, DateTimeOffset now) {
+    public BrowserTab RestoreArchived(Guid id, DateTimeOffset now) {
         var archived = archive.Find(a => a.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownArchive);
         var tab = BrowserTab.Restore(archived.Tab with {
             Placement = TabPlacement.Current,
@@ -196,7 +196,7 @@ public sealed partial class BrowserSpace {
         return space;
     }
 
-    public SpaceState Capture(TabId? selected) => new(Id, ProfileId, Name, RequiresAuthentication,
+    public SpaceState Capture(Guid? selected) => new(Id, ProfileId, Name, RequiresAuthentication,
         tabs.Select(t => t.Capture()).ToArray(), folders.Select(f => new FolderState(f.Id, f.Name, f.Location, f.ParentId,
             f.IsCollapsed, f.CollapseModifiedAt, f.OrderAnchorTabId)).ToArray(),
         archive.Select(a => new ArchiveState(a.Tab, a.ClosedAt, a.Reason)).ToArray(), history.ToArray(), selected, Search, SupportsDeviceAuthentication, Retention, ContentBlocking);
@@ -254,13 +254,13 @@ public sealed partial class BrowserSpace {
 
     #region Restored selection
 
-    internal void RemovedSelection(TabId tab) { if (RestoredSelection == tab) RestoredSelection = null; }
+    internal void RemovedSelection(Guid tab) { if (RestoredSelection == tab) RestoredSelection = null; }
 
     #endregion
 
     #region Collection views
 
-    public BrowserTab Tab(TabId id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
+    public BrowserTab Tab(Guid id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
 
     #endregion
 

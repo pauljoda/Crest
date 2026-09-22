@@ -26,10 +26,10 @@ public static class NativeSyncMaterializer {
         => records.Where(r => Text(r["payload"]?["type"]) == kind && (space is null || Id(r["spaceID"]) == space))
             .Select(r => r["payload"]!["value"]!);
 
-    private static BrowserFolder Folder(JsonNode node) => new(new(Id(node["id"])), Text(node["title"])!, Placement(node, "location"),
-        OptionalId(node["parentID"]) is { } parent ? new(parent) : null);
+    private static BrowserFolder Folder(JsonNode node) => new(Id(node["id"]), Text(node["title"])!, Placement(node, "location"),
+        OptionalId(node["parentID"]));
 
-    private static Dictionary<FolderId, BrowserFolder> LocalFolders(JsonNode? space)
+    private static Dictionary<Guid, BrowserFolder> LocalFolders(JsonNode? space)
         => Local(space, "folders").Select(Folder).ToDictionary(f => f.Id);
 
     private static NativeSyncDocumentException Error(string code, Guid id) => new(code, id.ToString("D"));
@@ -58,9 +58,9 @@ public static class NativeSyncMaterializer {
         SpaceAccessAuthority? access = null) {
         var policy = Preferences(preferences);
         var owners = records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Folder)
-            .ToDictionary(r => new FolderId(Id(r["id"]!["value"])), r => new SpaceId(Id(r["spaceID"])));
+            .ToDictionary(r => Id(r["id"]!["value"]), r => Id(r["spaceID"]));
         var deleted = records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Folder && r["tombstone"] is not null)
-            .Select(r => new FolderId(Id(r["id"]!["value"]))).ToHashSet();
+            .Select(r => Id(r["id"]!["value"])).ToHashSet();
         var localSpaces = Items(session, "spaces").ToDictionary(n => Id(n!["id"]), n => n!);
         var pending = (session["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
         var spaces = new JsonArray();
@@ -114,17 +114,17 @@ public static class NativeSyncMaterializer {
     }
 
     private static List<JsonNode> Folders(Guid space, IReadOnlyList<JsonObject> records, SyncPreferences policy, JsonNode? local,
-        IReadOnlyDictionary<FolderId, SpaceId> owners, HashSet<FolderId> deleted) {
+        IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted) {
         var synced = Ordered(Payloads(records, SyncRecordKinds.Folder, space).Where(f => policy.Includes(Placement(f, "location")))).ToArray();
         IReadOnlyList<BrowserFolder> resolved;
-        try { resolved = SyncFolderMaterialization.Resolve(new(space), synced.Select(Folder).ToArray(), owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(NativeSyncDocumentErrorCodes.InvalidFolderHierarchy, space); }
+        try { resolved = SyncFolderMaterialization.Resolve(space, synced.Select(Folder).ToArray(), owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(NativeSyncDocumentErrorCodes.InvalidFolderHierarchy, space); }
         var byId = synced.ToDictionary(f => Id(f["id"]));
         var result = resolved.Select(folder => {
-            var value = Fields(byId[folder.Id.Value], "id", "title", "location", "symbol", "color", "isCollapsed", "collapseModifiedAt", "orderAnchorTabID");
-            if (folder.ParentId is { } parent) value["parentID"] = SwiftId(parent.Value);
+            var value = Fields(byId[folder.Id], "id", "title", "location", "symbol", "color", "isCollapsed", "collapseModifiedAt", "orderAnchorTabID");
+            if (folder.ParentId is { } parent) value["parentID"] = SwiftId(parent);
             return (JsonNode)value;
         }).ToList();
-        var included = resolved.Select(f => f.Id.Value).ToHashSet();
+        var included = resolved.Select(f => f.Id).ToHashSet();
         result.AddRange(Local(local, "folders").Where(f => !included.Contains(Id(f["id"])) && !policy.Includes(Placement(f, "location"))));
         return result;
     }
@@ -144,7 +144,7 @@ public static class NativeSyncMaterializer {
     }
 
     private static List<JsonNode> Tabs(Guid space, IReadOnlyList<JsonObject> records, SyncPreferences policy, JsonNode? local,
-        IReadOnlyList<JsonNode> folders, IReadOnlyDictionary<FolderId, SpaceId> owners, HashSet<FolderId> deleted) {
+        IReadOnlyList<JsonNode> folders, IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted) {
         var locals = Local(local, "tabs").ToArray();
         var localOnly = locals.Select((tab, index) => (tab, index)).Where(t => !PortableTab(t.tab)).ToArray();
         var localOnlyIds = localOnly.Select(t => Id(t.tab["id"]))
@@ -155,16 +155,16 @@ public static class NativeSyncMaterializer {
         var syncedIds = synced.Select(t => Id(t["id"])).ToHashSet();
         var result = locals.Where(t => PortableTab(t) && !policy.Includes(Placement(t)) && !syncedIds.Contains(Id(t["id"]))).ToList();
         var byId = locals.ToDictionary(t => Id(t["id"]));
-        var folderIds = folders.Select(f => new FolderId(Id(f["id"]))).ToHashSet();
+        var folderIds = folders.Select(f => Id(f["id"])).ToHashSet();
         var localFolders = LocalFolders(local);
         foreach (var tab in synced) {
-            FolderId? folder = OptionalId(tab["folderID"]) is { } fid ? new(fid) : null;
+            Guid? folder = OptionalId(tab["folderID"]);
             if (Placement(tab) != TabPlacement.Pinned && folder is { } missing && !folderIds.Contains(missing)) {
-                if (owners.TryGetValue(missing, out var owner) && owner.Value != space) throw Error(NativeSyncDocumentErrorCodes.DanglingFolder, Id(tab["id"]));
+                if (owners.TryGetValue(missing, out var owner) && owner != space) throw Error(NativeSyncDocumentErrorCodes.DanglingFolder, Id(tab["id"]));
                 if (!SyncFolderMaterialization.TryPromote(missing, folderIds, localFolders, deleted, out folder)) continue;
             }
             var value = Tab(tab, byId.GetValueOrDefault(Id(tab["id"])));
-            if (Placement(tab) != TabPlacement.Pinned && folder is { } resolved) value["folderID"] = SwiftId(resolved.Value);
+            if (Placement(tab) != TabPlacement.Pinned && folder is { } resolved) value["folderID"] = SwiftId(resolved);
             result.Add(value);
         }
         if (result.Count(t => Placement(t) == TabPlacement.Pinned) > 12) throw Error(NativeSyncDocumentErrorCodes.TooManyPinnedTabs, space);

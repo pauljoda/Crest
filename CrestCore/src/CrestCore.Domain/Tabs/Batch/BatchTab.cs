@@ -1,3 +1,3 @@
 namespace CrestCore.Domain;
 
-public sealed record BatchTab(TabId Id, TabPlacement Placement, FolderId? FolderId, Guid? SplitGroupId);
+public sealed record BatchTab(Guid Id, TabPlacement Placement, Guid? FolderId, Guid? SplitGroupId);

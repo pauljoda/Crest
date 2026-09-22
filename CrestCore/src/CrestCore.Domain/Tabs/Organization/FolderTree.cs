@@ -13,7 +13,7 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
 
     public static IReadOnlyList<BrowserFolder> RepairPreorder(IReadOnlyList<BrowserFolder> source) {
         List<BrowserFolder> accepted = [];
-        Dictionary<FolderId, (int Depth, TabPlacement Location)> parents = [];
+        Dictionary<Guid, (int Depth, TabPlacement Location)> parents = [];
         foreach (var folder in source.Take(MaximumCount)) {
             var parent = folder.ParentId;
             if (parent is not { } requested || requested == folder.Id || !parents.TryGetValue(requested, out var found)
@@ -37,40 +37,40 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
 
     public IReadOnlyList<BrowserFolder> DisplayOrder() {
         Validate(); List<BrowserFolder> result = [];
-        void Append(FolderId? parent) {
+        void Append(Guid? parent) {
             foreach (var folder in Children(parent)) { result.Add(folder); Append(folder.Id); }
         }
         Append(null); return result;
     }
 
-    public HashSet<FolderId> EmptyPredecessors(FolderId? before, TabId? anchor, FolderId? parent,
+    public HashSet<Guid> EmptyPredecessors(Guid? before, Guid? anchor, Guid? parent,
         TabPlacement placement, IReadOnlyList<BrowserTab> tabs) {
-        HashSet<FolderId> result = [];
+        HashSet<Guid> result = [];
         var target = before is { } id ? Subtree(id) : [];
-        bool targetEmpty = !tabs.Any(t => t.FolderId is { } f && target.Contains(f));
+        bool targetEmpty = !tabs.Any(tab => tab.FolderId is { } folderId && target.Contains(folderId));
         foreach (var folder in Children(parent).Where(f => f.Location == placement)) {
             if (folder.Id == before && targetEmpty) break;
             var subtree = Subtree(folder.Id);
-            if (!tabs.Any(t => t.FolderId is { } f && subtree.Contains(f)) && TabAnchor(folder.Id, tabs) == anchor)
+            if (!tabs.Any(tab => tab.FolderId is { } folderId && subtree.Contains(folderId)) && TabAnchor(folder.Id, tabs) == anchor)
                 result.Add(folder.Id);
         }
         return result;
     }
 
-    public List<BrowserFolder> PreserveOrder(HashSet<TabId> removed, IReadOnlyList<BrowserTab> tabs,
-        HashSet<FolderId>? excluding = null) => folders.Select(folder => {
+    public List<BrowserFolder> PreserveOrder(HashSet<Guid> removed, IReadOnlyList<BrowserTab> tabs,
+        HashSet<Guid>? excluding = null) => folders.Select(folder => {
             if (excluding?.Contains(folder.Id) == true) return folder;
             var subtree = Subtree(folder.Id);
-            var members = tabs.Where(t => t.FolderId is { } f && subtree.Contains(f)).ToArray();
-            if (members.Any(t => !removed.Contains(t.Id))) return folder;
+            var members = tabs.Where(tab => tab.FolderId is { } folderId && subtree.Contains(folderId)).ToArray();
+            if (members.Any(tab => !removed.Contains(tab.Id))) return folder;
             var old = members.FirstOrDefault()?.Id ?? folder.OrderAnchorTabId;
             if (old is not { } anchor || !removed.Contains(anchor)) return folder;
-            int start = tabs.ToList().FindIndex(t => t.Id == anchor);
+            int start = tabs.ToList().FindIndex(tab => tab.Id == anchor);
             if (start < 0) return folder;
             var parent = folder.ParentId is { } p ? Subtree(p) : null;
             return folder with {
-                OrderAnchorTabId = tabs.Skip(start).FirstOrDefault(t => !removed.Contains(t.Id)
-                && t.Placement == folder.Location && (parent is null || t.FolderId is { } f && parent.Contains(f)))?.Id
+                OrderAnchorTabId = tabs.Skip(start).FirstOrDefault(tab => !removed.Contains(tab.Id)
+                && tab.Placement == folder.Location && (parent is null || tab.FolderId is { } folderId && parent.Contains(folderId)))?.Id
             };
         }).ToList();
 
@@ -78,21 +78,21 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
 
     #region Mutators
 
-    public BrowserFolder Folder(FolderId id) => folders.FirstOrDefault(f => f.Id == id)
+    public BrowserFolder Folder(Guid id) => folders.FirstOrDefault(f => f.Id == id)
         ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownFolder);
 
-    public IEnumerable<BrowserFolder> Children(FolderId? id) => folders.Where(f => f.ParentId == id);
+    public IEnumerable<BrowserFolder> Children(Guid? id) => folders.Where(f => f.ParentId == id);
 
-    public HashSet<FolderId> Subtree(FolderId id) {
+    public HashSet<Guid> Subtree(Guid id) {
         _ = Folder(id);
-        HashSet<FolderId> result = []; Stack<FolderId> pending = new([id]);
+        HashSet<Guid> result = []; Stack<Guid> pending = new([id]);
         while (pending.TryPop(out var next))
             if (result.Add(next)) foreach (var child in Children(next)) pending.Push(child.Id);
         return result;
     }
 
-    public int Depth(FolderId id) {
-        var folder = Folder(id); var depth = 0; HashSet<FolderId> seen = [id];
+    public int Depth(Guid id) {
+        var folder = Folder(id); var depth = 0; HashSet<Guid> seen = [id];
         while (folder.ParentId is { } parent) {
             if (!seen.Add(parent) || ++depth >= MaximumDepth) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
             folder = Folder(parent);
@@ -100,10 +100,10 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
         return depth;
     }
 
-    public TabId? TabAnchor(FolderId id, IReadOnlyList<BrowserTab> tabs) {
+    public Guid? TabAnchor(Guid id, IReadOnlyList<BrowserTab> tabs) {
         var subtree = Subtree(id);
-        return tabs.FirstOrDefault(t => t.FolderId is { } f && subtree.Contains(f))?.Id
-            ?? (Folder(id).OrderAnchorTabId is { } anchor && tabs.Any(t => t.Id == anchor) ? anchor : null);
+        return tabs.FirstOrDefault(tab => tab.FolderId is { } folderId && subtree.Contains(folderId))?.Id
+            ?? (Folder(id).OrderAnchorTabId is { } anchor && tabs.Any(tab => tab.Id == anchor) ? anchor : null);
     }
 
     #endregion

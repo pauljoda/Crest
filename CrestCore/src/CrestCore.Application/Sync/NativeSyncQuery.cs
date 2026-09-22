@@ -22,18 +22,18 @@ public static class NativeSyncQuery {
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         JsonObject result;
         try {
-            JsonNode value = request["operation"]!.GetValue<string>() switch {
-                "batch.preview" => PreviewBatch(request),
-                "transfer.preview" => NativeTabTransfer.Evaluate(request["source"]!.AsObject(), request["destination"]!.AsObject(),
+            JsonNode value = NativeSyncOperationCodes.Parse(request["operation"]!.GetValue<string>()) switch {
+                NativeSyncOperation.BatchPreview => PreviewBatch(request),
+                NativeSyncOperation.TransferPreview => NativeTabTransfer.Evaluate(request["source"]!.AsObject(), request["destination"]!.AsObject(),
                     request["arguments"]!.AsObject(), request["now"]!.GetValue<double>()),
-                NativeSyncOperations.Project => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
+                NativeSyncOperation.Project => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
                     request["records"]!.AsArray().Select(n => n!.AsObject())),
-                NativeSyncOperations.Materialize => Materialize(request),
-                "workspace.preview" => NativeWorkspaceImport.Preview(request["session"]!.AsObject(), request["arguments"]!.AsObject(),
+                NativeSyncOperation.Materialize => Materialize(request),
+                NativeSyncOperation.WorkspacePreview => NativeWorkspaceImport.Preview(request["session"]!.AsObject(), request["arguments"]!.AsObject(),
                     request["mode"]!.GetValue<string>(), request["now"]!.GetValue<double>()),
-                "session.repair" => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
+                NativeSyncOperation.SessionRepair => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
                     request["emptySpace"] as JsonObject),
-                "session.retain" => NativeSessionMaintenance.Retain(request["session"]!.AsObject(), request["now"]!.GetValue<double>()),
+                NativeSyncOperation.SessionRetain => NativeSessionMaintenance.Retain(request["session"]!.AsObject(), request["now"]!.GetValue<double>()),
                 _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)
             };
             result = new() { ["value"] = value };

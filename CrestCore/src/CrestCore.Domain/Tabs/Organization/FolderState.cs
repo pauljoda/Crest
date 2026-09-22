@@ -1,4 +1,4 @@
 namespace CrestCore.Domain;
 
-public sealed record FolderState(FolderId Id, string Name, TabPlacement Location,
-    FolderId? ParentId, bool IsCollapsed, DateTimeOffset? CollapseModifiedAt = null, TabId? OrderAnchorTabId = null);
+public sealed record FolderState(Guid Id, string Name, TabPlacement Location,
+    Guid? ParentId, bool IsCollapsed, DateTimeOffset? CollapseModifiedAt = null, Guid? OrderAnchorTabId = null);

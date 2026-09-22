@@ -17,8 +17,8 @@ public sealed partial class NativeSessionAuthority {
     /// returns tab, folder, history or archive contents to the caller: the
     /// deletion intents that sync and cleanup depend on, and retention or
     /// current-tab maintenance sweeps.
-    private static readonly string[] UnlockedOperations =
-        ["space.deletion.begin", "space.remove", "records.sweep", "records.cleanup"];
+    private static readonly SessionOperation[] UnlockedOperations =
+        [SessionOperation.SpaceDeletionBegin, SessionOperation.SpaceRemove, SessionOperation.RecordsSweep, SessionOperation.RecordsCleanup];
 
     #endregion
 
@@ -55,22 +55,22 @@ public sealed partial class NativeSessionAuthority {
     /// answers for the records and cannot be skipped by a view.
     private void RequireAccessibleCommand(JsonObject request) {
         if (access is null) return;
-        var operation = request["operation"]!.GetValue<string>();
+        var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         if (UnlockedOperations.Contains(operation)) return;
         // Raising protection on a Space is always allowed. Taking it away is the
         // decision authentication exists to guard, so it needs the grant.
-        if (operation == "space.access" && (request["arguments"] as JsonObject)?["value"] is JsonValue policy
+        if (operation == SessionOperation.SpaceAccess && (request["arguments"] as JsonObject)?["value"] is JsonValue policy
             && policy.TryGetValue<string>(out var value) && value != SpaceAccessPolicyCodes.Open) return;
         foreach (var space in CommandSpaces(request, operation)) RequireAccessible(space);
     }
 
-    private static IEnumerable<Guid> CommandSpaces(JsonObject request, string operation) {
+    private static IEnumerable<Guid> CommandSpaces(JsonObject request, SessionOperation operation) {
         foreach (var field in new[] { "spaceId", "destinationSpaceId" })
             if (OptionalSpace(request[field]) is { } id) yield return id;
         if (request["arguments"] is not JsonObject args) yield break;
         foreach (var field in new[] { "sourceSpaceId", "destinationSpaceId", "leaseSpaceId" })
             if (OptionalSpace(args[field]) is { } id) yield return id;
-        if (operation != "workspace.import") yield break;
+        if (operation != SessionOperation.WorkspaceImport) yield break;
         // Importing into an existing Space writes its tabs and folders. A new
         // Space names no destination and cannot be locked yet.
         var sources = args["sources"] as JsonArray ?? [];

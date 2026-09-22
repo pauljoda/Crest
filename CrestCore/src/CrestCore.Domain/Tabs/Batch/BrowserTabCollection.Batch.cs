@@ -5,19 +5,19 @@ public sealed partial class BrowserTabCollection {
 
     /// Operates on a detached command candidate. The authority publishes it only
     /// after the complete batch, native projection and storage have succeeded.
-    public TabBatchResult ApplyBatch(TabBatchSelection request, TabBatchAction action, TabId? selected,
-        TabId? fallback, BrowserTabCollection? destination, TabId? destinationSelection, IIdSource ids, DateTimeOffset now) {
+    public TabBatchResult ApplyBatch(TabBatchSelection request, TabBatchAction action, Guid? selected,
+        Guid? fallback, BrowserTabCollection? destination, Guid? destinationSelection, IIdSource ids, DateTimeOffset now) {
         request.Validate(this);
         var requested = request.Tabs.Select(t => t.Id).ToArray();
         var selectedIds = requested.ToHashSet();
         var members = requested.Select(Tab).ToArray();
         var groups = members.Where(t => t.SplitGroupId is not null).Select(t => t.SplitGroupId!.Value).ToHashSet();
-        List<(TabId Source, TabId Copy)> copies = [];
+        List<(Guid Source, Guid Copy)> copies = [];
         List<(Guid Source, Guid Copy)> groupCopies = [];
-        FolderId? createdFolder = null;
+        Guid? createdFolder = null;
         void Require(bool valid, string code = BrowserRuleCodes.InvalidDestination) { if (!valid) throw new BrowserRuleException(code); }
-        FolderId CreateFolder(TabPlacement placement) {
-            var folder = new FolderId(ids.Next()); AddFolder(folder, "New Folder", placement); createdFolder = folder; return folder;
+        Guid CreateFolder(TabPlacement placement) {
+            var folder = ids.Next(); AddFolder(folder, "New Folder", placement); createdFolder = folder; return folder;
         }
         if (request.Folders.Count > 0) {
             switch (action.Kind) {
@@ -121,7 +121,7 @@ public sealed partial class BrowserTabCollection {
         return new(selected, destinationSelection, copies, groupCopies, createdFolder);
     }
 
-    private void OrderBatchMembers(IReadOnlyList<TabId> requested) {
+    private void OrderBatchMembers(IReadOnlyList<Guid> requested) {
         var members = requested.Select(Tab).ToArray(); var ids = requested.ToHashSet();
         int insertion = tabs.FindIndex(t => ids.Contains(t.Id));
         tabs.RemoveAll(t => ids.Contains(t.Id)); tabs.InsertRange(insertion, members);
@@ -141,18 +141,18 @@ public sealed partial class BrowserTabCollection {
             || action.BeforeFolder is null && action.Before is { } anchor && (Tab(anchor).FolderId != action.Folder
                 || Tab(anchor).Placement != action.Placement || SplitMembers(anchor)[0].Id != anchor))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
-        List<(BatchItem Item, TabId[] Tabs)> blocks = []; HashSet<TabId> included = [];
+        List<(BatchItem Item, Guid[] Tabs)> blocks = []; HashSet<Guid> included = [];
         foreach (var root in request.Roots) {
             if (root.IsFolder) blocks.Add((root, []));
-            else if (!included.Contains(new(root.Id))) {
-                var members = SplitMembers(new(root.Id)).Select(t => t.Id).ToArray();
+            else if (!included.Contains(root.Id)) {
+                var members = SplitMembers(root.Id).Select(t => t.Id).ToArray();
                 included.UnionWith(members); blocks.Add((root, members));
             }
         }
         var tabAnchor = action.Before; var folderAnchor = action.BeforeFolder;
         foreach (var block in blocks.AsEnumerable().Reverse()) {
             if (block.Item.IsFolder) {
-                var folder = new FolderId(block.Item.Id);
+                var folder = block.Item.Id;
                 MoveFolder(folder, action.Placement, action.Folder, now, folderAnchor, tabAnchor);
                 folderAnchor = folder; tabAnchor = null;
             } else {

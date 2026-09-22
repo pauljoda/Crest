@@ -31,7 +31,7 @@ public sealed partial class BrowserTabCollection {
         return collection;
     }
 
-    public SpaceState Capture(SpaceState original, TabId? selected) => original with {
+    public SpaceState Capture(SpaceState original, Guid? selected) => original with {
         Tabs = tabs.Select(t => t.Capture()).ToArray(),
         Folders = folders.Select(f => new FolderState(f.Id, f.Name, f.Location, f.ParentId,
             f.IsCollapsed, f.CollapseModifiedAt, f.OrderAnchorTabId)).ToArray(),
@@ -43,7 +43,7 @@ public sealed partial class BrowserTabCollection {
 
     #region Mutators
 
-    public BrowserTab Tab(TabId id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
+    public BrowserTab Tab(Guid id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
 
     #endregion
 }

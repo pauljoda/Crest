@@ -20,10 +20,10 @@ public static class NativeSyncEvaluator {
         if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
-        JsonNode result = request["operation"]!.GetValue<string>() switch {
-            NativeSyncOperations.Resolve => Resolve(request["first"]!.AsObject(), request["second"]!.AsObject()),
-            NativeSyncOperations.Reconcile => Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject())),
-            NativeSyncOperations.OrderAllocate => new JsonArray(SyncOrderTokens.Allocate(
+        JsonNode result = NativeSyncOperationCodes.Parse(request["operation"]!.GetValue<string>()) switch {
+            NativeSyncOperation.Resolve => Resolve(request["first"]!.AsObject(), request["second"]!.AsObject()),
+            NativeSyncOperation.Reconcile => Reconcile(request["records"]!.AsArray().Select(n => n!.AsObject())),
+            NativeSyncOperation.OrderAllocate => new JsonArray(SyncOrderTokens.Allocate(
                 request["tokens"]!.AsArray().Select(n => n?.GetValue<string>()).ToArray())
                 .Select(t => (JsonNode)JsonValue.Create(t)!).ToArray()),
             _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)

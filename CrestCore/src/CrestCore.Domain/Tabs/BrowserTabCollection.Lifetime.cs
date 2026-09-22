@@ -3,7 +3,7 @@ namespace CrestCore.Domain;
 public sealed partial class BrowserTabCollection {
     #region Actions - Lifetime
 
-    public BrowserTab PromoteTransient(TabState source, TabId? selected, DateTimeOffset now) {
+    public BrowserTab PromoteTransient(TabState source, Guid? selected, DateTimeOffset now) {
         var tab = BrowserTab.Restore(TransientState(source, now));
         int? insertion = null;
         if (selected is { } id && tabs.FindIndex(t => t.Id == id) is var index && index >= 0) {
@@ -46,7 +46,7 @@ public sealed partial class BrowserTabCollection {
         return tab;
     }
 
-    public TabId? CloseDurable(TabId id, TabId? selected, TabId? fallback, bool returnToSavedUrl) {
+    public Guid? CloseDurable(Guid id, Guid? selected, Guid? fallback, bool returnToSavedUrl) {
         var tab = Tab(id);
         if (tab.Placement == TabPlacement.Current) throw new BrowserRuleException(BrowserRuleCodes.NotDurableTab);
         tab.Unload(returnToSavedUrl);
@@ -54,7 +54,7 @@ public sealed partial class BrowserTabCollection {
             ? other : null : selected;
     }
 
-    public TabId? CleanupCurrentTabs(TabId? selected, TimeSpan lifetime, DateTimeOffset now) {
+    public Guid? CleanupCurrentTabs(Guid? selected, TimeSpan lifetime, DateTimeOffset now) {
         var expired = tabs.Where(t => t.Placement == TabPlacement.Current && !t.Content.IsStartPage
             && t.Id != selected && now - t.LastActivatedAt > lifetime).ToArray();
         var ids = expired.Select(t => t.Id).ToHashSet();

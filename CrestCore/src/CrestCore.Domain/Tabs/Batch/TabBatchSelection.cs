@@ -9,7 +9,7 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
         Require(Roots.Count > 0 && Roots.Distinct().Count() == Roots.Count
             && Tabs.Select(t => t.Id).Distinct().Count() == Tabs.Count);
         var tree = new FolderTree(source.Folders);
-        var folders = Roots.Where(r => r.IsFolder).Select(r => new FolderId(r.Id)).ToHashSet();
+        var folders = Roots.Where(r => r.IsFolder).Select(r => r.Id).ToHashSet();
         var covered = folders.SelectMany(f => tree.Subtree(f).Where(id => id != f)).ToHashSet();
         Require(!folders.Overlaps(covered));
         var allFolders = folders.Union(covered).ToHashSet();
@@ -18,10 +18,10 @@ public sealed record TabBatchSelection(IReadOnlyList<BatchItem> Roots, IReadOnly
         List<BatchTab> members = [];
         foreach (var root in Roots) {
             if (root.IsFolder) {
-                var subtree = tree.Subtree(new(root.Id));
+                var subtree = tree.Subtree(root.Id);
                 members.AddRange(source.Tabs.Where(t => t.FolderId is { } f && subtree.Contains(f)).Select(Member));
             } else {
-                var tab = source.Tab(new(root.Id));
+                var tab = source.Tab(root.Id);
                 Require(tab.FolderId is not { } f || !allFolders.Contains(f));
                 members.Add(Member(tab));
             }

@@ -19,7 +19,7 @@ public sealed partial class BrowserContractsTests {
     public void AChosenIconSurvivesPageObservationsAndHandingItBackRestoresTheAutomaticOne() {
         var fixture = SavedSession();
         var space = fixture.Document["session"]!["spaces"]![0]!;
-        var tabId = fixture.Tab.Value.ToString();
+        var tabId = fixture.Tab.ToString();
         // The fixture tab wears an emoji and stores no mode, so its mode comes
         // from its own symbol: an observed favicon must not displace it.
         var observed = Edited(space, "tab.observe", new JsonObject {
@@ -95,7 +95,7 @@ public sealed partial class BrowserContractsTests {
     public void AnAutomaticFaviconIsAdoptedOnlyForThePageTheTabIsStillShowing() {
         var fixture = SavedSession();
         var space = fixture.Document["session"]!["spaces"]![0]!;
-        var tabId = fixture.Tab.Value.ToString();
+        var tabId = fixture.Tab.ToString();
         var automatic = Edited(space, "tab.icon", new JsonObject { ["tabId"] = tabId, ["mode"] = "automatic" })["space"]!;
 
         // The tab shows ".../article#one". A fragment is not another page, so a
@@ -136,7 +136,7 @@ public sealed partial class BrowserContractsTests {
     public void ASavedTabCanAdoptThePageItIsShowingOrReturnToTheOneItBelongsTo() {
         var fixture = SavedSession();
         var space = fixture.Document["session"]!["spaces"]![0]!;
-        var tabId = fixture.Tab.Value.ToString();
+        var tabId = fixture.Tab.ToString();
 
         var restored = Edited(space, "tab.saved_location", new JsonObject { ["tabId"] = tabId, ["action"] = "restore" });
         Assert.True(restored["changed"]!.GetValue<bool>());
@@ -168,7 +168,7 @@ public sealed partial class BrowserContractsTests {
         var result = Edited(space, "folder.create", new JsonObject {
             ["folderId"] = folderId.ToString(),
             ["placement"] = "saved",
-            ["tabIds"] = new JsonArray(fixture.Tab.Value.ToString()),
+            ["tabIds"] = new JsonArray(fixture.Tab.ToString()),
             ["detach"] = false
         });
         var created = result["space"]!["folders"]!.AsArray().Single(f => Guid.Parse(f!["id"]!["rawValue"]!.GetValue<string>()) == folderId);

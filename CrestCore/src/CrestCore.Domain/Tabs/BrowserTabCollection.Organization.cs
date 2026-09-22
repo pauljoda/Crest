@@ -3,7 +3,7 @@ namespace CrestCore.Domain;
 public sealed partial class BrowserTabCollection {
     #region Actions - Organization
 
-    public void AddFolder(FolderId id, string name, TabPlacement location = TabPlacement.Saved, FolderId? parent = null) {
+    public void AddFolder(Guid id, string name, TabPlacement location = TabPlacement.Saved, Guid? parent = null) {
         var tree = new FolderTree(folders);
         if (folders.Count >= FolderTree.MaximumCount) throw new BrowserRuleException(BrowserRuleCodes.FolderLimit);
         if (folders.Any(f => f.Id == id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateFolder);
@@ -17,18 +17,18 @@ public sealed partial class BrowserTabCollection {
         folders.Insert(insertion, new(id, FolderName(name), location, parent));
     }
 
-    public void RenameFolder(FolderId id, string name) {
+    public void RenameFolder(Guid id, string name) {
         var folder = new FolderTree(folders).Folder(id);
         folders[folders.IndexOf(folder)] = folder with { Name = FolderName(name) };
     }
 
-    public void CollapseFolder(FolderId id, bool collapsed, DateTimeOffset now) {
+    public void CollapseFolder(Guid id, bool collapsed, DateTimeOffset now) {
         var folder = new FolderTree(folders).Folder(id);
         if (folder.IsCollapsed == collapsed) return;
         folders[folders.IndexOf(folder)] = folder with { IsCollapsed = collapsed, CollapseModifiedAt = now };
     }
 
-    public void DeleteFolder(FolderId id, DateTimeOffset now) {
+    public void DeleteFolder(Guid id, DateTimeOffset now) {
         var folder = new FolderTree(folders).Folder(id);
         var next = folders.Where(f => f.Id != id).Select(f => f.ParentId == id ? f with { ParentId = folder.ParentId } : f).ToArray();
         var ordered = new FolderTree(next).DisplayOrder();
@@ -55,8 +55,8 @@ public sealed partial class BrowserTabCollection {
             if (group.Count() < 2) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
     }
 
-    public void FileTabs(IReadOnlyCollection<TabId> requested, TabPlacement location, FolderId? folder,
-        DateTimeOffset now, TabId? before = null, FolderId? beforeFolder = null, bool detachSplitMembers = false) {
+    public void FileTabs(IReadOnlyCollection<Guid> requested, TabPlacement location, Guid? folder,
+        DateTimeOffset now, Guid? before = null, Guid? beforeFolder = null, bool detachSplitMembers = false) {
         if (requested.Count == 0 || location == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         foreach (var id in requested) _ = Tab(id);
         var tree = new FolderTree(folders);
@@ -95,8 +95,8 @@ public sealed partial class BrowserTabCollection {
         if (detachSplitMembers) NormalizeSplits(now);
     }
 
-    public void MoveFolder(FolderId id, TabPlacement? location, FolderId? parent, DateTimeOffset now,
-        FolderId? beforeFolder = null, TabId? beforeTab = null) {
+    public void MoveFolder(Guid id, TabPlacement? location, Guid? parent, DateTimeOffset now,
+        Guid? beforeFolder = null, Guid? beforeTab = null) {
         var tree = new FolderTree(folders); var source = tree.Folder(id);
         var movingIds = tree.Subtree(id);
         if (parent is { } p && movingIds.Contains(p)) throw new BrowserRuleException(BrowserRuleCodes.FolderCycle);

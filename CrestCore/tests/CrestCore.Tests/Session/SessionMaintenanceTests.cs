@@ -48,14 +48,14 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void PreparedSyncFailureCannotAdvanceTheJournalAfterLocalStaging() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
-        var initial = JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()));
+        var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         var journal = new NativeSyncJournal(Bytes(initial)); var before = journal.Read().ToArray();
         var space = NativeSyncProjection.Project(session, SyncProjectionPreferences(), [])
             .Single(n => n!["type"]!.GetValue<string>() == "space")!;
         space["value"]!["profileID"] = Guid.NewGuid().ToString("D");
         var incoming = new JsonObject {
-            ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.Value.ToString("D") },
-            ["spaceID"] = SwiftId(fixture.Space.Value),
+            ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.ToString("D") },
+            ["spaceID"] = SwiftId(fixture.Space),
             ["payload"] = space.DeepClone(),
             ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") }
         };
@@ -75,7 +75,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ReplacingASeedWithCloudProducesAMatchedNonDisposableSessionAndJournal() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
-        var initial = JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()));
+        var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         var journal = new NativeSyncJournal(Bytes(initial));
         var staged = journal.Apply(JournalCommand(initial, "stage", new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = "superseded", ["now"] = 800000000.0 }));
         var records = JsonNode.Parse(staged.Read())!["records"]!.DeepClone();
@@ -106,7 +106,7 @@ public sealed partial class BrowserContractsTests {
             ["profileID"] = session["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
             ["operationID"] = Guid.NewGuid().ToString("D")
         });
-        var initial = JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()));
+        var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         var journal = new NativeSyncJournal(Bytes(initial));
         var transition = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject {
             ["version"] = 1,
@@ -125,8 +125,8 @@ public sealed partial class BrowserContractsTests {
         var repaired = NativeSessionMaintenance.Repair(result.AsObject(), 800000000.0)["session"]!;
         Assert.True(JsonNode.DeepEquals(result["spaceDeletions"], repaired["spaceDeletions"]));
         var tombstone = new JsonObject {
-            ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.Value.ToString("D") },
-            ["spaceID"] = SwiftId(fixture.Space.Value),
+            ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.ToString("D") },
+            ["spaceID"] = SwiftId(fixture.Space),
             ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
             ["tombstone"] = new JsonObject { ["reason"] = "explicitDelete", ["deletedAt"] = 800000000.0 }
         };
@@ -139,7 +139,7 @@ public sealed partial class BrowserContractsTests {
             ["now"] = 800000000.0
         }));
         var record = JsonNode.Parse(merged.Journal.Read())!["records"]!.AsArray().Single(r =>
-            r!["id"]!["kind"]!.GetValue<string>() == "space" && Guid.Parse(r["id"]!["value"]!.GetValue<string>()) == fixture.Space.Value)!;
+            r!["id"]!["kind"]!.GetValue<string>() == "space" && Guid.Parse(r["id"]!["value"]!.GetValue<string>()) == fixture.Space)!;
         Assert.Equal("explicitDelete", record["tombstone"]!["reason"]!.GetValue<string>());
         Assert.Single(merged.Materialization["session"]!["spaceDeletions"]!.AsArray());
     }
@@ -153,11 +153,11 @@ public sealed partial class BrowserContractsTests {
     public void OnlyAcceptedExplicitSpaceDeletionAuthorizesLocalCleanup(string operation, string kind, string reason, bool expected) {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         var before = Bytes(session);
-        var journal = new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid()))));
+        var journal = new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()))));
         var incoming = new JsonArray();
         if (kind != "absent") incoming.Add((JsonNode)new JsonObject {
-            ["id"] = new JsonObject { ["kind"] = kind, ["value"] = (kind == "space" ? fixture.Space.Value : fixture.Tab.Value).ToString("D") },
-            ["spaceID"] = SwiftId(fixture.Space.Value),
+            ["id"] = new JsonObject { ["kind"] = kind, ["value"] = (kind == "space" ? fixture.Space : fixture.Tab).ToString("D") },
+            ["spaceID"] = SwiftId(fixture.Space),
             ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
             ["tombstone"] = new JsonObject { ["reason"] = reason, ["deletedAt"] = 800000000.0 }
         });
@@ -180,7 +180,7 @@ public sealed partial class BrowserContractsTests {
         Assert.True(JsonNode.DeepEquals(session["spaces"]![0], frozen));
         Assert.False(JsonNode.DeepEquals(result["selectedSpaceID"], intent["spaceID"]));
         var tombstone = JsonNode.Parse(transition.Journal.Read())!["records"]!.AsArray().Single(r =>
-            r!["id"]!["kind"]!.GetValue<string>() == "space" && Guid.Parse(r["id"]!["value"]!.GetValue<string>()) == fixture.Space.Value)!;
+            r!["id"]!["kind"]!.GetValue<string>() == "space" && Guid.Parse(r["id"]!["value"]!.GetValue<string>()) == fixture.Space)!;
         Assert.Equal("explicitDelete", tombstone["tombstone"]!["reason"]!.GetValue<string>());
     }
 
@@ -188,7 +188,7 @@ public sealed partial class BrowserContractsTests {
     public void RemoteCleanupRequiresTheSealedOwningSyncTransactionAndPublishesAtomically() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session));
-        var sync = new NativeSyncAuthority(new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab.Value, fixture.Space.Value, 1, Guid.NewGuid())))));
+        var sync = new NativeSyncAuthority(new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid())))));
         owner.AttachSync(sync);
         using var transaction = sync.Prepare(1, Bytes(new JsonObject {
             ["version"] = 1,
@@ -196,8 +196,8 @@ public sealed partial class BrowserContractsTests {
             ["session"] = session.DeepClone(),
             ["now"] = 800000000.0,
             ["records"] = new JsonArray(new JsonObject {
-                ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.Value.ToString("D") },
-                ["spaceID"] = SwiftId(fixture.Space.Value),
+                ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.ToString("D") },
+                ["spaceID"] = SwiftId(fixture.Space),
                 ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
                 ["tombstone"] = new JsonObject { ["reason"] = "explicitDelete", ["deletedAt"] = 800000000.0 }
             })

@@ -26,19 +26,19 @@ public sealed partial class NativeSessionAuthority {
         RequirePendingTransient(completion);
         var spaceId = Id(request["spaceId"]); var profileId = Id(request["profileId"]);
         _ = TransferSpace(spaceId, profileId);
-        var operation = request["operation"]!.GetValue<string>();
+        var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         bool adopt = false;
-        if (operation == "transient.promote") {
+        if (operation == SessionOperation.TransientPromote) {
             var sourceSpace = Id(args["sourceSpaceId"]); var sourceProfile = Id(args["sourceProfileId"]);
             _ = TransferSpace(sourceSpace, sourceProfile);
             TransientProfile? lease = args["leaseSpaceId"] is null ? null
-                : new(new(Id(args["leaseSpaceId"])), new(Id(args["leaseProfileId"])));
-            adopt = TransientPagePolicy.CanAdopt(new(new(sourceSpace), new(sourceProfile)), lease,
-                new(new(spaceId), new(profileId)), args["sourceAccessible"]!.GetValue<bool>(),
+                : new(Id(args["leaseSpaceId"]), Id(args["leaseProfileId"]));
+            adopt = TransientPagePolicy.CanAdopt(new(sourceSpace, sourceProfile), lease,
+                new(spaceId, profileId), args["sourceAccessible"]!.GetValue<bool>(),
                 args["destinationAccessible"]!.GetValue<bool>(), args["supportsLiveAdoption"]!.GetValue<bool>());
-        } else if (operation != "transient.archive") throw new BrowserRuleException(BrowserRuleCodes.UnknownTransientCommand);
+        } else if (operation != SessionOperation.TransientArchive) throw new BrowserRuleException(BrowserRuleCodes.UnknownTransientCommand);
         var edit = request.DeepClone().AsObject();
-        edit["operation"] = operation == "transient.promote" ? "tab.promote_transient" : "tab.archive_transient";
+        edit["operation"] = SessionOperationCodes.Name(operation == SessionOperation.TransientPromote ? SessionOperation.TabPromoteTransient : SessionOperation.TabArchiveTransient);
         var prepared = PrepareTabCommand(expected, edit);
         var output = JsonNode.Parse(prepared.Output)!.AsObject();
         output["adoptLivePage"] = adopt && args["tab"] is not null;
