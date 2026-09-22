@@ -13,12 +13,11 @@ public static class NativeSessionEditor {
     #region Variables
 
     public const int MaximumBytes = 4 * 1024 * 1024;
-    private static readonly DateTimeOffset SwiftEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
-    private sealed class SuppliedIds(JsonArray values) : IIdSource {
+    private sealed class SuppliedIds(IReadOnlyList<Guid> values) : IIdSource {
         #region Variables
 
-        private readonly Queue<Guid> values = new(values.Select(n => Guid.Parse(n!.GetValue<string>())));
+        private readonly Queue<Guid> values = new(values);
 
         #endregion
 
@@ -34,115 +33,106 @@ public static class NativeSessionEditor {
     #region Actions - Session editing
 
     public static byte[] Evaluate(ReadOnlySpan<byte> input) {
-        if (input.Length > MaximumBytes) throw new ProtocolException(ProtocolErrorCodes.SessionEditLimit);
-        var parsed = Protocol.Parse(input);
-        if (parsed.GetProperty("version").GetInt32() != 1) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
-        var request = JsonNode.Parse(input)!.AsObject();
-        var operation = SessionOperationCodes.Parse(Protocol.Text(parsed, "operation"));
-        var original = request["space"]!.AsObject();
-        var session = new JsonObject { ["spaces"] = new JsonArray(original.DeepClone()), ["selectedSpaceID"] = original["id"]!.DeepClone() };
-        var document = new LegacySessionDocument(new() { ["session"] = session });
-        var state = document.Read(new SystemIdSource());
+        var command = SessionEditRequest.Decode(input);
+        var operation = command.Operation;
+        var original = command.Space;
+        var (document, state) = command.RestoreSpace();
         var space = BrowserTabCollection.Restore(state.Spaces.Single());
         var selected = state.Spaces[0].SelectedTabId;
-        var now = SwiftEpoch.AddSeconds(parsed.GetProperty("now").GetDouble());
-        var args = request["arguments"]!.AsObject();
-        Guid Id(string name) => Guid.Parse(args[name]!.GetValue<string>());
-        Guid? OptionalId(string name) => args[name] is null ? null : Id(name);
-        int? index = args["index"]?.GetValue<int>();
+        var now = command.Now;
+        var args = command.Arguments;
+        int? index = args.Index;
         Guid? result = null;
         var selectSpace = false;
-        var copies = new JsonArray();
+        var copies = new List<SessionTabCopy>();
         Guid? copiedGroup = null;
         Guid? sourceGroup = null;
         var changed = true;
-        JsonObject? favicon = null;
-        Guid? OptionalFolderId(string name) => args[name] is null ? null : Guid.Parse(args[name]!.GetValue<string>());
-        TabPlacement Placement(string name) => Enum.Parse<TabPlacement>(args[name]!.GetValue<string>(), true);
+        SessionFaviconUpdate? favicon = null;
         switch (operation) {
             case SessionOperation.TabPromoteTransient:
-                if (args["tab"] is JsonObject transient) {
+                if (args.Tab is { } transient) {
                     result = space.PromoteTransient(document.ReadNewTab(transient), selected, now).Id;
                     selected = result;
                 }
                 selectSpace = true;
                 break;
             case SessionOperation.TabArchiveTransient:
-                space.ArchiveTransient(document.ReadNewTab(args["tab"]!.AsObject()), now);
+                space.ArchiveTransient(document.ReadNewTab(args.RequiredTab), now);
                 break;
             case SessionOperation.TabRestoreArchive:
-                result = space.RestoreArchived(document.ReadNewTab(args["tab"]!.AsObject()), now).Id;
+                result = space.RestoreArchived(document.ReadNewTab(args.RequiredTab), now).Id;
                 selected = result;
                 break;
             case SessionOperation.TabCloseDurable:
-                selected = space.CloseDurable(Id("tabId"), selected, OptionalId("fallbackTabId"),
-                    args["returnToSavedURL"]!.GetValue<bool>());
+                selected = space.CloseDurable(args.RequiredTabId, selected, args.FallbackTabId,
+                    args.ReturnToSavedUrl == true);
                 break;
             case SessionOperation.TabCleanup:
-                selected = space.CleanupCurrentTabs(selected, TimeSpan.FromSeconds(args["lifetime"]!.GetValue<double>()), now);
+                selected = space.CleanupCurrentTabs(selected, TimeSpan.FromSeconds(args.Lifetime ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)), now);
                 break;
             case SessionOperation.TabOpen: {
-                    var supplied = args["tab"]!.AsObject();
+                    var supplied = args.RequiredTab;
                     var tab = BrowserTab.Restore(document.ReadNewTab(supplied));
                     space.InsertTab(tab, index);
                     result = tab.Id;
-                    if (args["select"]!.GetValue<bool>()) { selected = tab.Id; selectSpace = true; }
+                    if (args.Select == true) { selected = tab.Id; selectSpace = true; }
                     break;
                 }
             case SessionOperation.TabActivate:
-                var activatedTabId = Id("tabId");
+                var activatedTabId = args.RequiredTabId;
                 space.Tab(activatedTabId).Activate(now); result = activatedTabId; selected = activatedTabId; selectSpace = true;
                 break;
             case SessionOperation.TabCopy: {
-                    var source = Id("tabId");
-                    var copy = space.DuplicateTab(source, new SuppliedIds(args["ids"]!.AsArray()), now,
-                        args["placement"] is null ? TabPlacement.Current : Placement("placement"), index);
+                    var source = args.RequiredTabId;
+                    var copy = space.DuplicateTab(source, new SuppliedIds(args.RequiredIds), now,
+                        args.Placement ?? TabPlacement.Current, index);
                     result = copy.Id;
-                    if (args["select"]?.GetValue<bool>() != false) { selected = copy.Id; selectSpace = true; }
+                    if (args.Select != false) { selected = copy.Id; selectSpace = true; }
                     CopyPage(source, copy.Id);
                     break;
                 }
             case SessionOperation.TabRename:
-                var renamed = space.Tab(Id("tabId")); var title = args["title"]?.GetValue<string>();
+                var renamed = space.Tab(args.RequiredTabId); var title = args.Title;
                 changed = renamed.CustomTitle != (string.IsNullOrWhiteSpace(title) ? null : title.Trim());
                 if (changed) renamed.Rename(title, now);
                 break;
             case SessionOperation.TabObserve:
-                changed = Observe(Target(args["tabId"] is null ? selected : Id("tabId")));
+                changed = Observe(Target(args.TabId ?? selected));
                 break;
             case SessionOperation.TabIcon:
-                changed = SetIcon(Target(Id("tabId")));
+                changed = SetIcon(Target(args.RequiredTabId));
                 break;
             case SessionOperation.TabFaviconCache:
-                changed = CacheFavicon(Target(Id("tabId")));
+                changed = CacheFavicon(Target(args.RequiredTabId));
                 break;
             case SessionOperation.TabSavedLocation:
-                var located = Target(Id("tabId"));
-                changed = located is not null && SavedLocationActionCodes.Parse(args["action"]!.GetValue<string>()) switch {
+                var located = Target(args.RequiredTabId);
+                changed = located is not null && args.Action switch {
                     SavedLocationAction.Replace => located.ReplaceSavedLocation(),
                     SavedLocationAction.Restore => located.RestoreSavedLocation() is not null,
                     _ => throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit)
                 };
                 break;
             case SessionOperation.TabResidency:
-                var resident = space.Tab(Id("tabId")); var keep = args["keep"]!.GetValue<bool>();
+                var resident = space.Tab(args.RequiredTabId); var keep = args.Keep ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
                 changed = resident.KeepsPageLoaded != keep; resident.SetResidency(keep);
                 break;
             case SessionOperation.TabMove:
-                changed = space.MoveTab(Id("tabId"), Placement("placement"), OptionalFolderId("folderId"), OptionalId("before"),
-                    args["detach"]!.GetValue<bool>(), now);
+                changed = space.MoveTab(args.RequiredTabId, args.RequiredPlacement, args.FolderId, args.Before,
+                    args.Detach == true, now);
                 break;
             case SessionOperation.SplitOpenLink:
             case SessionOperation.SplitJoin: {
                     if (operation == SessionOperation.SplitOpenLink) {
-                        var tab = BrowserTab.Restore(document.ReadNewTab(args["tab"]!.AsObject()));
+                        var tab = BrowserTab.Restore(document.ReadNewTab(args.RequiredTab));
                         space.InsertTab(tab, null);
-                        args["tabId"] = tab.Id.ToString(); result = tab.Id;
+                        args = args with { TabId = tab.Id }; result = tab.Id;
                     }
-                    var target = space.Tab(Id("targetId"));
+                    var target = space.Tab(args.RequiredTargetId);
                     if (target.Placement != TabPlacement.Current) sourceGroup = target.SplitGroupId;
-                    var joined = space.JoinSplit(Id("tabId"), Id("targetId"), index,
-                        new SuppliedIds(args["ids"]!.AsArray()), now);
+                    var joined = space.JoinSplit(args.RequiredTabId, args.RequiredTargetId, index,
+                        new SuppliedIds(args.RequiredIds), now);
                     selected = joined.SelectedTab; selectSpace = true;
                     copiedGroup = sourceGroup is not null && joined.Copies.Any(p => p.Source == target.Id)
                         ? space.Tab(joined.SelectedTab).SplitGroupId : null;
@@ -151,81 +141,83 @@ public static class NativeSessionEditor {
                     break;
                 }
             case SessionOperation.SplitJoinInPlace:
-                changed = space.JoinSplitInPlace(Id("tabId"), Id("targetId"), index, Guid.Parse(args["groupId"]!.GetValue<string>()), now);
-                selected = Id("tabId");
+                changed = space.JoinSplitInPlace(args.RequiredTabId, args.RequiredTargetId, index, args.RequiredGroupId, now);
+                selected = args.RequiredTabId;
                 break;
             case SessionOperation.SplitLeave:
-                changed = space.Tab(Id("tabId")).SplitGroupId is not null;
-                space.LeaveSplit(Id("tabId"), now);
+                changed = space.Tab(args.RequiredTabId).SplitGroupId is not null;
+                space.LeaveSplit(args.RequiredTabId, now);
                 break;
             case SessionOperation.SplitReorder:
-                changed = args["offset"] is { } offset
-                    ? space.StepSplitMember(Id("tabId"), offset.GetValue<int>(), now)
-                    : space.MoveSplitMember(Id("tabId"), index!.Value, now);
+                changed = args.Offset is { } offset
+                    ? space.StepSplitMember(args.RequiredTabId, offset, now)
+                    : space.MoveSplitMember(args.RequiredTabId, index!.Value, now);
                 break;
             case SessionOperation.SplitDissolve:
-                changed = space.DissolveSplit(Guid.Parse(args["groupId"]!.GetValue<string>()), now);
+                changed = space.DissolveSplit(args.RequiredGroupId, now);
                 break;
             case SessionOperation.SplitMove:
-                space.MoveSplitGroup(Guid.Parse(args["groupId"]!.GetValue<string>()), Placement("placement"),
-                    OptionalFolderId("folderId"), OptionalId("before"), now);
+                space.MoveSplitGroup(args.RequiredGroupId, args.RequiredPlacement,
+                    args.FolderId, args.Before, now);
                 break;
             case SessionOperation.FolderCreate:
-                var createdFolder = Id("folderId");
-                var createdTitle = args["title"]?.GetValue<string>();
-                var createdPlacement = Placement("placement");
+                var createdFolder = args.RequiredFolderId;
+                var createdTitle = args.Title;
+                var createdPlacement = args.RequiredPlacement;
                 space.AddFolder(createdFolder, string.IsNullOrWhiteSpace(createdTitle) ? "New Folder" : createdTitle,
-                    createdPlacement, OptionalFolderId("parentId"));
-                if (args["color"] is { } color) document.SetFolderMetadata(createdFolder, "color", color.AsObject());
-                if (args["symbol"] is { } symbol) document.SetFolderMetadata(createdFolder, "symbol", FolderSymbol(symbol));
+                    createdPlacement, args.ParentId);
+                if (args.Color is { } color) document.SetFolderMetadata(createdFolder, "color", color);
+                if (args.Symbol is { } symbol) document.SetFolderMetadata(createdFolder, "symbol", FolderSymbol(symbol));
                 // Creating a folder around tabs is one transaction. Filing them
                 // separately would publish a folder nobody asked to see empty,
                 // and would leave it behind when the filing turned out invalid.
-                if (args["tabIds"] is JsonArray members && members.Count > 0)
-                    space.FileTabs(members.Select(n => Guid.Parse(n!.GetValue<string>())).ToArray(),
-                        createdPlacement, createdFolder, now, null, null, args["detach"]?.GetValue<bool>() == true);
+                if (args.TabIds is { Count: > 0 } members)
+                    space.FileTabs(members,
+                        createdPlacement, createdFolder, now, null, null, args.Detach == true);
                 break;
             case SessionOperation.FolderColor:
             case SessionOperation.FolderSymbol:
-                var styledFolder = Id("folderId");
+                var styledFolder = args.RequiredFolderId;
                 if (!space.Folders.Any(f => f.Id == styledFolder)) throw new BrowserRuleException(BrowserRuleCodes.UnknownFolder);
                 var isColor = operation == SessionOperation.FolderColor;
                 var field = isColor ? "color" : "symbol";
                 changed = document.SetFolderMetadata(styledFolder, field,
-                    isColor ? args["value"]!.AsObject() : FolderSymbol(args["value"]!));
+                    isColor ? args.FolderColorValue ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)
+                        : FolderSymbol(args.FolderSymbolValue ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)));
                 break;
             case SessionOperation.FolderRename:
-                var folderId = Id("folderId"); var folderTitle = args["title"]!.GetValue<string>().Trim();
+                var folderId = args.RequiredFolderId;
+                var folderTitle = (args.Title ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)).Trim();
                 if (folderTitle.Length == 0) folderTitle = "Untitled Folder";
                 changed = space.Folders.Single(f => f.Id == folderId).Name != folderTitle;
                 if (changed) space.RenameFolder(folderId, folderTitle);
                 break;
             case SessionOperation.FolderCollapse:
-                var collapsedId = Id("folderId"); var collapsed = args["collapsed"]!.GetValue<bool>();
+                var collapsedId = args.RequiredFolderId; var collapsed = args.Collapsed ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
                 changed = space.Folders.Single(f => f.Id == collapsedId).IsCollapsed != collapsed;
                 if (changed) space.CollapseFolder(collapsedId, collapsed, now);
                 break;
             case SessionOperation.FolderDelete:
-                space.DeleteFolder(Id("folderId"), now);
+                space.DeleteFolder(args.RequiredFolderId, now);
                 break;
             case SessionOperation.FolderMove:
-                space.MoveFolder(Id("folderId"), args["placement"] is null ? null : Placement("placement"), OptionalFolderId("parentId"), now,
-                    OptionalFolderId("beforeFolderId"), OptionalId("before"));
+                space.MoveFolder(args.RequiredFolderId, args.Placement, args.ParentId, now,
+                    args.BeforeFolderId, args.Before);
                 break;
             case SessionOperation.TabsFile:
-                space.FileTabs(args["tabIds"]!.AsArray().Select(n => Guid.Parse(n!.GetValue<string>())).ToArray(),
-                    Placement("placement"), OptionalFolderId("folderId"), now, OptionalId("before"), OptionalFolderId("beforeFolderId"),
-                    args["detach"]!.GetValue<bool>());
+                space.FileTabs(args.RequiredTabIds,
+                    args.RequiredPlacement, args.FolderId, now, args.Before, args.BeforeFolderId,
+                    args.Detach == true);
                 break;
             case SessionOperation.TabClose:
             case SessionOperation.TabDelete:
             case SessionOperation.TabClearCurrent: {
                     var deleting = operation == SessionOperation.TabDelete;
                     var clear = operation == SessionOperation.TabClearCurrent;
-                    var ids = clear ? space.Tabs.Where(t => t.Placement == TabPlacement.Current).Select(t => t.Id).ToArray() : [Id("tabId")];
+                    var ids = clear ? space.Tabs.Where(t => t.Placement == TabPlacement.Current).Select(t => t.Id).ToArray() : [args.RequiredTabId];
                     if (ids.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.NoCurrentTabs);
-                    selected = space.DismissTabs(ids, selected, OptionalId("fallbackTabId"), now, deleting,
-                        ensureSelection: deleting || clear, resetArchivePlacement: deleting || args["resetArchivePlacement"]?.GetValue<bool>() == true);
+                    selected = space.DismissTabs(ids, selected, args.FallbackTabId, now, deleting,
+                        ensureSelection: deleting || clear, resetArchivePlacement: deleting || args.ResetArchivePlacement == true);
                     break;
                 }
             default: throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit);
@@ -244,22 +236,15 @@ public static class NativeSessionEditor {
         }
         bool prunesGroups = operation is SessionOperation.TabClose or SessionOperation.TabDelete or SessionOperation.TabClearCurrent or SessionOperation.SplitJoin or SessionOperation.SplitOpenLink
             or SessionOperation.SplitJoinInPlace or SessionOperation.SplitLeave or SessionOperation.SplitDissolve
-            || operation is SessionOperation.TabMove or SessionOperation.TabsFile && args["detach"]?.GetValue<bool>() == true;
+            || operation is SessionOperation.TabMove or SessionOperation.TabsFile && args.Detach == true;
         if (prunesGroups && output["splitGroups"] is JsonArray groups) {
             var retained = space.Tabs.Where(t => t.SplitGroupId is not null).Select(t => t.SplitGroupId!.Value).ToHashSet();
             for (int i = groups.Count - 1; i >= 0; i--)
-                if (!retained.Contains(Guid.Parse(groups[i]!["id"]!["rawValue"]!.GetValue<string>()))) groups.RemoveAt(i);
+                if (!retained.Contains(LegacySessionDocument.Id(groups[i]!["id"]))) groups.RemoveAt(i);
         }
         // Archives are new records only; their images remain in the native cache.
         foreach (var archived in output["archivedTabs"]!.AsArray()) archived!["tab"]!.AsObject().Remove("faviconData");
-        return Encoding.UTF8.GetBytes(new JsonObject {
-            ["space"] = output,
-            ["tabId"] = result?.ToString(),
-            ["selectSpace"] = selectSpace,
-            ["copies"] = copies,
-            ["changed"] = changed,
-            ["favicon"] = favicon
-        }.ToJsonString());
+        return new SessionEditResult(output, result, selectSpace, copies, changed, favicon).Encode();
 
         BrowserTab? Target(Guid? id) => id is { } value ? space.Tabs.FirstOrDefault(t => t.Id == value) : null;
 
@@ -269,8 +254,7 @@ public static class NativeSessionEditor {
 
         // The image itself stays in the native cache. The core names the tab
         // whose stored bytes the platform must now replace or drop.
-        void Assign(Guid tab, bool adopts)
-            => favicon = new JsonObject { ["tabId"] = tab.ToString(), ["adopts"] = adopts };
+        void Assign(Guid tab, bool adopts) => favicon = new SessionFaviconUpdate(tab, adopts);
 
         void ClearIconAssets(BrowserTab tab) {
             document.SetTabMetadata(tab.Id, "faviconURL", null);
@@ -283,15 +267,15 @@ public static class NativeSessionEditor {
         // follows the page while a chosen or pulled one does not.
         bool Observe(BrowserTab? tab) {
             if (tab is null) return false;
-            var url = args["url"]?.GetValue<string>() ?? tab.Url;
-            var title = args["title"]?.GetValue<string>();
-            var accent = args["iconAccent"];
+            var url = args.Url ?? tab.Url;
+            var title = args.Title;
+            var accent = args.IconAccent;
             var automatic = Mode(tab) == TabIconPolicy.Automatic;
-            var updatesIcon = automatic && (args["faviconChanged"]?.GetValue<bool>() == true
+            var updatesIcon = automatic && (args.FaviconChanged == true
                 || !JsonNode.DeepEquals(document.TabMetadata(tab.Id, "iconAccent"), accent));
             if (url == tab.Url && Blank(title) == Blank(tab.Title) && !updatesIcon) return false;
             tab.ObserveAppearance(url, title);
-            if (automatic && args["hasFavicon"]?.GetValue<bool>() == true) {
+            if (automatic && args.HasFavicon == true) {
                 document.SetTabMetadata(tab.Id, "faviconURL", url is null ? null : JsonValue.Create(url));
                 document.SetTabMetadata(tab.Id, "iconAccent", accent);
                 Assign(tab.Id, true);
@@ -302,13 +286,13 @@ public static class NativeSessionEditor {
         // Someone chose this tab's icon by hand, or handed it back to the page.
         bool SetIcon(BrowserTab? tab) {
             if (tab is null) return false;
-            var mode = TabIconPolicy.RequireMode(args["mode"]?.GetValue<string>());
-            if (mode == TabIconPolicy.Pulled && args["hasFavicon"]?.GetValue<bool>() != true) return false;
+            var mode = TabIconPolicy.RequireMode(args.Mode);
+            if (mode == TabIconPolicy.Pulled && args.HasFavicon != true) return false;
             document.SetTabMetadata(tab.Id, "symbol", mode == TabIconPolicy.Emoji
-                ? TabIconPolicy.Symbol(args["emoji"]?.GetValue<string>()) : TabIconPolicy.WebSymbol);
+                ? TabIconPolicy.Symbol(args.Emoji) : TabIconPolicy.WebSymbol);
             if (mode == TabIconPolicy.Pulled) {
                 document.SetTabMetadata(tab.Id, "faviconURL", tab.Url is null ? null : JsonValue.Create(tab.Url));
-                document.SetTabMetadata(tab.Id, "iconAccent", args["iconAccent"]);
+                document.SetTabMetadata(tab.Id, "iconAccent", args.IconAccent);
                 Assign(tab.Id, true);
             } else ClearIconAssets(tab);
             document.SetTabMetadata(tab.Id, "storedIconMode", mode);
@@ -319,31 +303,29 @@ public static class NativeSessionEditor {
         // the address it was captured from, not to whatever the tab shows now.
         bool CacheFavicon(BrowserTab? tab) {
             if (tab is null || Mode(tab) != TabIconPolicy.Automatic
-                || args["hasFavicon"]?.GetValue<bool>() != true) return false;
-            var captured = args["url"]!.GetValue<string>();
+                || args.HasFavicon != true) return false;
+            var captured = args.Url ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
             if (!HistoryPolicy.SamePage(tab.Url, captured)) return false;
             document.SetTabMetadata(tab.Id, "symbol", TabIconPolicy.WebSymbol);
             document.SetTabMetadata(tab.Id, "faviconURL", captured);
-            document.SetTabMetadata(tab.Id, "iconAccent", args["iconAccent"]);
+            document.SetTabMetadata(tab.Id, "iconAccent", args.IconAccent);
             Assign(tab.Id, true);
             return true;
         }
 
         void CopyPage(Guid source, Guid copy) {
             document.CopyTabMetadata(source, copy);
-            var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o =>
-                NativeSessionAuthority.Id(o!["tabId"]) == source);
+            var observation = args.CopyObservations?.FirstOrDefault(item => item.TabId == source);
             var tab = space.Tab(copy);
             if (tab.Content.IsWebPage && observation is not null)
-                tab.Observe(observation["url"]?.GetValue<string>(), observation["title"]!.GetValue<string>(), false, false, false, null);
-            copies.Add((JsonNode)new JsonObject { ["source"] = source.ToString(), ["copy"] = copy.ToString() });
+                tab.Observe(observation.Url, observation.Title ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput), false, false, false, null);
+            copies.Add(new SessionTabCopy(source, copy));
         }
     }
 
     private static string? Blank(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
-    private static JsonNode FolderSymbol(JsonNode value) {
-        string symbol = value.GetValue<string>();
+    private static JsonNode FolderSymbol(string symbol) {
         if (symbol.Length == 0 || Encoding.UTF8.GetByteCount(symbol) > 128) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderSymbol);
         return JsonValue.Create(symbol)!;
     }

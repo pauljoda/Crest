@@ -1849,6 +1849,10 @@
     "native-core-guid-identities-and-typed-operations": {
       "category": "internal",
       "message": "Simplify native core identities and use typed operations throughout session, sync and policy handling."
+    },
+    "native-core-typed-session-record-codecs": {
+      "category": "internal",
+      "message": "Keep native session command and tab serialization in reusable typed models."
     }
   }
 }

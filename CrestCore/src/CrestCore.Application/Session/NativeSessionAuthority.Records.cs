@@ -43,13 +43,13 @@ public sealed partial class NativeSessionAuthority {
             else if (SessionOperationCodes.IsSplitMetadata(operation))
                 EditSplitMetadata(operation, args, now, fields, sections, change);
             else {
-                JsonObject? editArguments = null;
+                SessionEditArguments? editArguments = null;
                 if (operation == SessionOperation.ArchiveRestore) {
                     var tabId = Id(args["tabId"]);
                     var archiveIndex = Array.FindIndex(sections["archivedTabs"].ToArray(), a => Id(a["tab"]!["id"]) == tabId);
                     if (archiveIndex < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownArchivedTab);
                     var archived = sections["archivedTabs"][archiveIndex];
-                    editArguments = new() { ["tab"] = archived["tab"]!.DeepClone() };
+                    editArguments = new() { Tab = new SessionTabRecord(archived["tab"]!.AsObject()) };
                     sections["archivedTabs"] = sections["archivedTabs"].Where((_, index) => index != archiveIndex).ToArray();
                     change["removedArchiveIndices"] = new JsonArray(JsonValue.Create(archiveIndex));
                 } else if (operation is SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup) {
@@ -57,20 +57,17 @@ public sealed partial class NativeSessionAuthority {
                     var policy = Enum.TryParse<CurrentTabCleanup>(term, true, out var parsed) && Enum.IsDefined(parsed)
                         ? parsed : CurrentTabCleanup.After12Hours;
                     if ((RetentionPreferences.Default with { CurrentTabs = policy }).TabLifetime is { } lifetime)
-                        editArguments = new() { ["lifetime"] = lifetime.TotalSeconds };
+                        editArguments = new() { Lifetime = lifetime.TotalSeconds };
                 } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
                     var compact = fields.DeepClone().AsObject();
                     foreach (var section in Sections)
                         compact[section] = new JsonArray(section is "history" or "archivedTabs" ? []
                             : sections[section].Select(n => n.DeepClone()).ToArray());
-                    var edit = JsonNode.Parse(NativeSessionEditor.Evaluate(TransferOutput(new JsonObject {
-                        ["version"] = 1,
-                        ["operation"] = SessionOperationCodes.Name(operation == SessionOperation.ArchiveRestore ? SessionOperation.TabRestoreArchive : SessionOperation.TabCleanup),
-                        ["space"] = compact,
-                        ["arguments"] = editArguments,
-                        ["now"] = now
-                    })))!.AsObject();
+                    var editRequest = SessionEditRequest.Create(
+                        operation == SessionOperation.ArchiveRestore ? SessionOperation.TabRestoreArchive : SessionOperation.TabCleanup,
+                        compact, editArguments, now);
+                    var edit = JsonNode.Parse(NativeSessionEditor.Evaluate(editRequest.Encode()))!.AsObject();
                     var result = edit["space"]!;
                     if (operation == SessionOperation.ArchiveRestore || !JsonNode.DeepEquals(compact["tabs"], result["tabs"])) {
                         foreach (var section in new[] { "tabs", "folders" })

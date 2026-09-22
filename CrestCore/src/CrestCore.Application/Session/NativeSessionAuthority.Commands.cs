@@ -47,17 +47,13 @@ public sealed partial class NativeSessionAuthority {
         foreach (var section in Sections)
             compact[section] = new JsonArray(section is "history" or "archivedTabs" ? [] :
                 original.Sections[section].Select(n => n.DeepClone()).ToArray());
-        var editorRequest = new JsonObject {
-            ["version"] = 1,
-            ["operation"] = request["operation"]!.DeepClone(),
-            ["arguments"] = request["arguments"]!.DeepClone(),
-            ["now"] = request["now"]!.DeepClone(),
-            ["space"] = compact,
-        };
-        var output = NativeSessionEditor.Evaluate(System.Text.Encoding.UTF8.GetBytes(editorRequest.ToJsonString()));
+        var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
+        var editorRequest = SessionEditRequest.Create(operation, compact,
+            SessionEditArguments.Decode(request["arguments"]!.AsObject(), operation), request["now"]!.GetValue<double>());
+        var output = NativeSessionEditor.Evaluate(editorRequest.Encode());
         if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
-        var result = JsonNode.Parse(output)!;
-        var edited = result["space"]!;
+        var result = SessionEditResult.Decode(output);
+        var edited = result.Space;
         var nextSpaces = document.Spaces.Select(space => {
             var fields = space.Metadata.DeepClone().AsObject();
             fields["selectedTabID"] = selection.GetValueOrDefault(Id(fields["id"]))?.DeepClone();
@@ -74,7 +70,7 @@ public sealed partial class NativeSessionAuthority {
             return new SpaceDocument(fields, sections);
         }).ToArray();
         var metadata = document.Metadata.DeepClone().AsObject();
-        metadata["selectedSpaceID"] = (result["selectSpace"]!.GetValue<bool>()
+        metadata["selectedSpaceID"] = (result.SelectSpace
             ? original.Metadata["id"] : window["selectedSpaceID"])!.DeepClone();
         var next = new SessionDocument(metadata, nextSpaces);
         Validate(next);

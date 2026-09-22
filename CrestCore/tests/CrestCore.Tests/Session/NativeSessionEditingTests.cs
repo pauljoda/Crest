@@ -74,6 +74,22 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void SessionEditIgnoresFieldsUnrelatedToTheSelectedOperation() {
+        var fixture = SavedSession();
+        var space = fixture.Document["session"]!["spaces"]![0]!;
+        var output = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.rename", new() {
+            ["tabId"] = fixture.Tab.ToString("D"),
+            ["title"] = "Readable name",
+            ["ids"] = "unrelated invalid list",
+            ["placement"] = new JsonObject { ["unexpected"] = true }
+        })))!;
+
+        Assert.Equal("Readable name", output["space"]!["tabs"]![0]!["customTitle"]!.GetValue<string>());
+        Assert.True(JsonNode.DeepEquals(space["tabs"]![0]!["futureTabProperty"],
+            output["space"]!["tabs"]![0]!["futureTabProperty"]));
+    }
+
+    [Fact]
     public void NativeCloseCannotRemoveASavedTabAndClearSkipsStartPageArchive() {
         var f = SavedSession(); var original = f.Document["session"]!["spaces"]![0]!;
         Assert.Throws<BrowserRuleException>(() => NativeSessionEditor.Evaluate(EditRequest(original, "tab.close",
