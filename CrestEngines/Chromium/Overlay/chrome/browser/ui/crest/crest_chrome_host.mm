@@ -3305,17 +3305,22 @@ bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data
   return false;
 }
 
-void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url) {
-  if (!IsEnabled() || State().disposing || !url.SchemeIsHTTPOrHTTPS()) return;
+void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url,
+                        const std::u16string& selection) {
+  if (!IsEnabled() || State().disposing) return;
+  const bool has_link = url.SchemeIsHTTPOrHTTPS();
+  NSString* const selected = base::SysUTF16ToNSString(
+      std::u16string(base::TrimWhitespace(selection, base::TRIM_ALL)));
+  if (!has_link && !selected.length) return;
   for (auto& [id, page] : State().pages) {
     if (page->web_contents() != contents || !page->link_handler) continue;
-    NSString* address = base::SysUTF8ToNSString(url.spec());
+    NSString* address = has_link ? base::SysUTF8ToNSString(url.spec()) : @"about:blank";
     auto weak = contents->GetWeakPtr();
     const uint64_t revision = page->navigation_revision;
     // Each row is bound to the source page and its navigation revision: the
     // engine answers availability now, and the action re-resolves the same page
     // after menu tracking ends rather than holding a raw page pointer.
-    auto append = [&](NSString* title, NSString* invocation) {
+    auto append = [&](NSString* title, NSString* invocation, NSString* label) {
       // A block written inside this lambda cannot read the enclosing function's
       // locals through the lambda's own by-reference captures: the lambda is
       // gone long before a menu action runs, so those references dangle and the
@@ -3323,6 +3328,7 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
       // where the block captures each value itself.
       const base::WeakPtr<content::WebContents> source = weak;
       NSString* const destination = address;
+      NSString* const detail = label;
       const uint64_t expected_revision = revision;
       CrestLinkMenuAction* action = [[CrestLinkMenuAction alloc] init];
       action.run = ^{
@@ -3333,7 +3339,7 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
           for (auto& [current_id, current] : State().pages) {
             if (current->web_contents() == source.get() &&
                 current->navigation_revision == expected_revision && current->link_handler) {
-              current->link_handler(invocation, destination, @"");
+              current->link_handler(invocation, destination, detail);
               return;
             }
           }
@@ -3346,12 +3352,19 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
       // actions so asynchronous engine updates still address their original rows.
       [menu addItem:item];
     };
-    const bool can_peek = page->link_handler(@"can_peek", address, @"");
-    const bool can_split = page->link_handler(@"can_split", address, @"");
-    if (!can_peek && !can_split) return;
+    // The selection is searched with the Space's own provider; the engine's
+    // default search engine is not Crest's.
+    const bool can_search = selected.length && page->link_handler(@"can_search", address, selected);
+    const bool can_peek = has_link && page->link_handler(@"can_peek", address, @"");
+    const bool can_split = has_link && page->link_handler(@"can_split", address, @"");
+    if (!can_search && !can_peek && !can_split) return;
     [menu addItem:NSMenuItem.separatorItem];
-    if (can_peek) append(@"Open Link in Peek", @"peek");
-    if (can_split) append(@"Open Link in Split View", @"split");
+    if (can_search) {
+      NSString* shown = selected.length > 32 ? [[selected substringToIndex:31] stringByAppendingString:@"…"] : selected;
+      append([NSString stringWithFormat:@"Search for “%@”", shown], @"search", selected);
+    }
+    if (can_peek) append(@"Open Link in Peek", @"peek", @"");
+    if (can_split) append(@"Open Link in Split View", @"split", @"");
     return;
   }
 }

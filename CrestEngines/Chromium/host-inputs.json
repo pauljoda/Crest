@@ -69,7 +69,7 @@
   },
   "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm": {
     "before": "903582053e2ac7de59513ee8f5c4dc06b7e5359bc4873f11b3efaf6634124000",
-    "after": "51de4c187aafb3a44c1becc60d0f97ae4b88e3e06e0cd4548c46e8f3a289245a"
+    "after": "b85a7d33d8802e819ff6043c404469970be396cf0f3b5c61fca97e57389f4884"
   },
   "chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h": {
     "before": "3a2ca97d02c1e182d2b38dad867bda37fe9e43000f0104484342fcb7fc578d9f",

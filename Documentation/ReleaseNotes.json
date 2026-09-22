@@ -1965,6 +1965,10 @@
     "now-playing-desktop": {
       "category": "new",
       "message": "Now Playing in the desktop browser shows what a tab is playing and can play, pause, skip and mute it."
+    },
+    "selection-search-desktop": {
+      "category": "new",
+      "message": "Right-click selected text in the desktop browser to search for it with your Space's search engine."
     }
   }
 }

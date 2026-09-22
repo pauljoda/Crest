@@ -92,7 +92,9 @@ bool OpenExternalURLs(NSArray<NSURL*>* urls);
 bool BeginAuthenticationSession(ASWebAuthenticationSessionRequest* request);
 bool CancelAuthenticationSession(ASWebAuthenticationSessionRequest* request);
 NSWindow* WindowForBrowser(Browser* browser);
-void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url);
+// Crest's own rows for the link or selection a context menu was opened on.
+void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url,
+                        const std::u16string& selection);
 #endif
 }  // namespace crest
 

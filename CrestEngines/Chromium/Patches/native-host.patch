@@ -614,7 +614,7 @@
  #import "components/remote_cocoa/app_shim/menu_controller_cocoa_delegate_impl.h"
  #include "content/public/browser/web_contents.h"
  #include "ui/base/cocoa/menu_utils.h"
-@@ -78,17 +80,53 @@
+@@ -78,17 +80,54 @@
    views::Widget* widget = views::Widget::GetTopLevelWidgetForNativeView(
        source_web_contents_->GetNativeView());
  
@@ -666,12 +666,13 @@
                                     isContextMenu:YES
                                          delegate:menu_controller_delegate_];
  
-+  crest::AppendLinkMenuItem(menu_controller_.menu, source_web_contents_, params_.link_url);
++  crest::AppendLinkMenuItem(menu_controller_.menu, source_web_contents_, params_.link_url,
++                            params_.selection_text);
 +
    NSPoint position =
        NSMakePoint(params_.x, NSHeight(parent_view_.bounds) - params_.y);
    position = [parent_view_ convertPoint:position toView:nil];
-@@ -97,7 +135,8 @@
+@@ -97,7 +136,8 @@
  
    ui::ShowContextMenu(menu_controller_.menu, clickEvent, parent_view_,
                        /*allow_nested_tasks=*/true,

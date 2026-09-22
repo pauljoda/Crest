@@ -371,8 +371,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             self?.receiveChromiumEvent(event, values: values)
         }
         chromiumPage?.linkHandler = { [weak self] action, destination, label in
-            guard let self, let context = self.navigationContext,
-                BrowserExternalURLPolicy.accepts(destination) else { return false }
+            guard let self, let context = self.navigationContext else { return false }
+            // A selection search carries its text as the label; it goes where the
+            // WebKit menu's does, with the Space's own search provider.
+            if action == "can_search" || action == "search" {
+                let source = BrowserTabRuntimeAssignment(
+                    tabID: context.tabID, spaceID: context.spaceID, profileID: context.assignment.profileID)
+                guard let search = self.linkDestinationHost.selectionSearch(for: label, from: source) else { return false }
+                guard action == "search" else { return true }
+                return self.linkDestinationHost.openLink(
+                    search.url, from: search.source,
+                    in: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID))
+            }
+            guard BrowserExternalURLPolicy.accepts(destination) else { return false }
             switch action {
             case "can_peek": return true
             case "peek":
