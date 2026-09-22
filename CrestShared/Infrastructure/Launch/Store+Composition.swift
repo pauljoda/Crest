@@ -1,7 +1,5 @@
 import Foundation
-#if CREST_CORE_BACKED
 import CryptoKit
-#endif
 
 extension BrowserStore {
     static func production(
@@ -14,18 +12,10 @@ extension BrowserStore {
         if BrowserLaunchIsolationPolicy.requiresIsolation(launchEnvironment) {
             return try isolatedLaunch(launchEnvironment: launchEnvironment)
         }
-        #if CREST_CORE_BACKED
         let storage = try transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence(),
             journal: UserDefaultsBrowserSyncJournalPersistence(), isolationID: nil, environment: launchEnvironment)
         return production(persistence: storage, syncPersistence: storage.journalPersistence,
             credentialVault: KeychainCredentialVault())
-        #else
-        return production(
-            persistence: UserDefaultsBrowserSessionPersistence(),
-            syncPersistence: UserDefaultsBrowserSyncJournalPersistence(),
-            credentialVault: KeychainCredentialVault()
-        )
-        #endif
     }
 
     static func production(
@@ -103,12 +93,8 @@ extension BrowserStore {
             defaults: defaults,
             faviconStore: InMemoryBrowserFaviconStore()
         )
-        #if CREST_CORE_BACKED
         let persistence = try transactionalStorage(legacy: legacy,
             journal: InMemoryBrowserSyncJournalPersistence(), isolationID: isolationID, environment: launchEnvironment)
-        #else
-        let persistence = legacy
-        #endif
         var session =
             persistence.load()
             ?? isolatedFixtureSession(for: launchEnvironment)
@@ -117,11 +103,7 @@ extension BrowserStore {
         session.applyDataRetentionPolicies()
         session.selectDefaultSpaceForLaunch()
         persistence.save(session)
-        #if CREST_CORE_BACKED
         let syncCoordinator = BrowserSyncCoordinator(persistence: persistence.journalPersistence)
-        #else
-        let syncCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
-        #endif
         let store = BrowserStore(
             session: session,
             persistence: persistence,
@@ -132,7 +114,6 @@ extension BrowserStore {
         return store
     }
 
-    #if CREST_CORE_BACKED
     private static func transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence,
         journal: any BrowserSyncJournalPersisting, isolationID: String?,
         environment: BrowserLaunchEnvironment) throws -> BrowserTransactionalSessionPersistence {
@@ -202,7 +183,6 @@ extension BrowserStore {
         }
         return session
     }
-    #endif
 
     private static func isolatedFixtureSession(
         for launchEnvironment: BrowserLaunchEnvironment

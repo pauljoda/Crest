@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import Foundation
 import XCTest
 @testable import Crest
@@ -275,4 +274,3 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         func reset() throws { state = BrowserCloudSyncState() }
     }
 }
-#endif

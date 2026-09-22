@@ -3,19 +3,13 @@ import Foundation
 extension BrowserStore {
     func moveSessionTab(_ id: TabID, in spaceID: SpaceID, to placement: TabPlacement,
         folderID: FolderID? = nil, before anchor: TabID? = nil, detachesFromSplit: Bool = false) -> Bool {
-        #if CREST_CORE_BACKED
         return family.execute("tab.move", in: spaceID, arguments: [
             "tabId": id.rawValue.uuidString, "placement": placement.rawValue,
             "folderId": folderID?.rawValue.uuidString as Any? ?? NSNull(),
             "before": anchor?.rawValue.uuidString as Any? ?? NSNull(), "detach": detachesFromSplit
         ], from: self, at: .now)?.changed ?? false
-        #else
-        return session.moveTab(id, to: placement, folderID: folderID, before: anchor,
-            detachesFromSplit: detachesFromSplit)
-        #endif
     }
 
-    #if CREST_CORE_BACKED
     func copyObservations(for ids: Set<TabID>, in space: BrowserSpace) -> [[String: Any]] {
         space.tabs.filter { ids.contains($0.id) }.map { source in
             let observed = tabCopying?.sourceForTabCopy(source, in: space) ?? source
@@ -48,5 +42,4 @@ extension BrowserStore {
         persist(syncUrgency: .coalesced, scope: BrowserSessionSaveScope(writesCore: true,
             history: .nothing, favicons: .only(Set(result.copies.map { TabID(rawValue: $0.copy) }))))
     }
-    #endif
 }

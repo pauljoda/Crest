@@ -398,7 +398,6 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         XCTAssertEqual(currentDestination.tabs.first?.placement, .pinned)
     }
 
-    #if CREST_CORE_BACKED
     func testDuplicateTabProposalCannotChangeTheLiveFamily() {
         let source = Self.makeSpace(id: Self.spaceID(38), profileID: Self.uuid(39), name: "Source",
             tabs: [Self.makeTab(id: Self.tabID(37), title: "Source", placement: .current)])
@@ -411,7 +410,6 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         XCTAssertEqual(observer.session.tabIDs, original.tabIDs)
         XCTAssertNotNil(browser.localSyncErrorDescription)
     }
-    #endif
 
     func testStaleMenuCloseAndDeleteActionsRejectChangedPlacement() throws {
         let closeContext = makeContext(sourcePlacement: .current)

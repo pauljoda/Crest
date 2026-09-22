@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import Foundation
 
 /// Native draft/asset codec. Preview and commit delegate the same import intent
@@ -113,4 +112,3 @@ enum BrowserCoreWorkspaceImport {
         }
     }
 }
-#endif

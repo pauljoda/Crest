@@ -9,15 +9,11 @@ final class BrowserStoreFamily {
     }
 
     private var stores: [WeakStore] = []
-    #if CREST_CORE_BACKED
     private let core: BrowserCoreSessionAuthority
     private struct WeakFamily { weak var value: BrowserStoreFamily? }
     private var borrowedFamilies: [WeakFamily] = []
     private var borrowedSourceIsAvailable = true
     var authoritativeSession: BrowserSession { core.projection }
-    #else
-    private(set) var authoritativeSession: BrowserSession
-    #endif
     let temporarySourceAssignment: BrowserSpaceRuntimeAssignment?
     let temporarySettingsBrowser: BrowserStore?
     private(set) var syncRevision: BrowserStoreSyncRevision = .initial
@@ -36,19 +32,14 @@ final class BrowserStoreFamily {
         temporarySourceAssignment: BrowserSpaceRuntimeAssignment? = nil,
         temporarySettingsBrowser: BrowserStore? = nil
     ) {
-        #if CREST_CORE_BACKED
         precondition(temporarySourceAssignment == nil, "Borrowed workspaces must be created by their core owner")
         core = BrowserCoreSessionAuthority(session: session,
             workspaceKind: browsingMode.isPrivate ? "private" : "persistent",
             privateBrowsing: browsingMode.isPrivate)
-        #else
-        authoritativeSession = session
-        #endif
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
     }
 
-    #if CREST_CORE_BACKED
     private init(core: BrowserCoreSessionAuthority, assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) {
         self.core = core; temporarySourceAssignment = assignment; temporarySettingsBrowser = settingsBrowser
     }
@@ -74,7 +65,6 @@ final class BrowserStoreFamily {
             return false
         }
     }
-    #endif
 
     /// Composition supplies the engine adapter once. Sync schedules it only
     /// after the core intent and accepted journal have committed together.
@@ -85,14 +75,12 @@ final class BrowserStoreFamily {
     }
 
     private func scheduleSpaceDataCleanup() {
-        #if CREST_CORE_BACKED
         guard spaceCleanupTask == nil, !(authoritativeSession.spaceDeletions ?? []).isEmpty,
             let dataDeleter = spaceDataDeleter, let store = spaceCleanupStore else { return }
         spaceCleanupTask = Task { [weak self] in
             await store.resumePendingSpaceDeletions(dataDeleter: dataDeleter)
             self?.spaceCleanupTask = nil
         }
-        #endif
     }
 
     /// Temporary tabs retain their own organization, but profile identity and
@@ -102,47 +90,29 @@ final class BrowserStoreFamily {
             return authoritativeSession
         }
         var current = authoritativeSession
-        #if CREST_CORE_BACKED
         guard borrowedSourceIsAvailable, source.space(matching: assignment) != nil else {
             current.spaces = []
             return current
         }
         return current
-        #else
-        guard let borrowed = source.space(matching: assignment),
-            let local = current.space(id: assignment.spaceID)
-        else {
-            current.spaces = []
-            return current
-        }
-        current.spaces = [BrowserTemporaryWorkspacePolicy.borrowing(borrowed, keeping: local)]
-        return current
-        #endif
     }
 
     func register(_ store: BrowserStore) {
-        #if CREST_CORE_BACKED
         if let sync = store.syncCoordinator {
             do { try core.attachSync(sync.core) }
             catch { preconditionFailure("Cannot attach sync to the core session: \(error)") }
         }
-        #endif
         stores.removeAll { $0.value == nil }
         stores.append(WeakStore(value: store))
     }
 
     func replaceSession(_ session: BrowserSession, from source: BrowserStore, adoptingSelection: Bool = true) {
         let previous = authoritativeSession
-        #if CREST_CORE_BACKED
         do { try core.replace(with: session) }
         catch { source.localSyncErrorDescription = "Core session update failed: \(error)"; return }
-        #else
-        authoritativeSession = session
-        #endif
         reconcileStores(after: previous, from: adoptingSelection ? source : nil)
     }
 
-    #if CREST_CORE_BACKED
     func installSyncedSession(_ session: BrowserSession, journal: BrowserSyncJournal,
         journalPersistence: any BrowserSyncJournalPersisting, transaction: BrowserCoreSyncTransaction, from source: BrowserStore) throws {
         let previous = authoritativeSession
@@ -255,9 +225,7 @@ final class BrowserStoreFamily {
             return false
         }
     }
-    #endif
 
-    #if CREST_CORE_BACKED
     func moveTab(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment, destination: BrowserSpaceRuntimeAssignment,
         arguments: [String: Any], from store: BrowserStore, at date: Date) throws {
         let previous = authoritativeSession
@@ -311,35 +279,11 @@ final class BrowserStoreFamily {
         destination.family.reconcileStores(after: previousDestination, from: destination)
         durable.cloudSyncChangeHandler?()
     }
-    #else
-    /// Installs both prepared graphs before any window reconciles its selection.
-    /// This is synchronous on the main actor, so a transfer has no partial
-    /// source/destination state across an actor suspension.
-    @discardableResult
-    static func replaceSessions(
-        source: BrowserStore, sourceSession: BrowserSession,
-        destination: BrowserStore, destinationSession: BrowserSession
-    ) -> Bool {
-        precondition(source.family !== destination.family)
-        let previousSource = source.family.authoritativeSession
-        let previousDestination = destination.family.authoritativeSession
-        source.family.authoritativeSession = sourceSession
-        destination.family.authoritativeSession = destinationSession
-        source.family.reconcileStores(after: previousSource, from: source)
-        destination.family.reconcileStores(after: previousDestination, from: destination)
-        return true
-    }
-
-    #endif
 
     func save(_ session: BrowserSession, to persistence: any BrowserSessionPersisting,
         scope: BrowserSessionSaveScope = .everything) throws {
-        #if CREST_CORE_BACKED
         let snapshot = try core.checkpoint(for: session)
         persistence.save(session, scope: scope, checkpoint: snapshot)
-        #else
-        persistence.save(session, scope: scope)
-        #endif
     }
 
     private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?) {
@@ -349,10 +293,8 @@ final class BrowserStoreFamily {
                 from: previous, to: authoritativeSession, adoptingSelection: store === source
             )
         }
-        #if CREST_CORE_BACKED
         borrowedFamilies.removeAll { $0.value == nil }
         for child in borrowedFamilies.compactMap(\.value) { _ = child.refreshBorrowed() }
-        #endif
     }
 
     @discardableResult
@@ -402,10 +344,8 @@ final class BrowserStoreFamily {
     /// but after this the core's own records reject any command that would read
     /// or write a Space this process holds no access grant for.
     func attachSpaceAccess(_ controller: BrowserSpaceAccessController) {
-        #if CREST_CORE_BACKED
         do { try core.attachAccess(controller.coreAccess) }
         catch { preconditionFailure("Cannot attach Space access to the core session: \(error)") }
-        #endif
     }
 
     func beginDeletingSpace(_ id: SpaceID) -> Bool {

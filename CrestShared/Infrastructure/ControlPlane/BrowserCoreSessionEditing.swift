@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import CrestCoreABI
 import Foundation
 import os
@@ -126,4 +125,3 @@ extension BrowserSession {
         if result.selectSpace { selectedSpaceID = spaces[index].id }
     }
 }
-#endif

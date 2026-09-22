@@ -49,15 +49,16 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let before = session
         let ids = session.spaces[0].tabs.suffix(3).map(\.id)
         XCTAssertThrowsError(
-            try session.applyTabBatch(BrowserTabBatchRequest(ids: ids, in: session.spaces[0]), action: .file(.pinned))
+            try applyBatch(
+                BrowserTabBatchRequest(ids: ids, in: session.spaces[0]), action: .file(.pinned), to: &session)
         ) {
             XCTAssertEqual($0 as? BrowserTabBatchError, .pinnedCapacity)
         }
         XCTAssertEqual(session, before)
         let pins = session.spaces[0].pinnedTabs
-        _ = try session.applyTabBatch(
+        _ = try applyBatch(
             BrowserTabBatchRequest(ids: [pins[2].id, pins[0].id], in: session.spaces[0]),
-            action: .file(.pinned, before: pins[5].id))
+            action: .file(.pinned, before: pins[5].id), to: &session)
         XCTAssertEqual(session.spaces[0].pinnedTabs.count, 11)
         let index = try XCTUnwrap(session.spaces[0].tabs.firstIndex { $0.id == pins[5].id })
         XCTAssertEqual(session.spaces[0].tabs[(index - 2)..<index].map(\.id), [pins[2].id, pins[0].id])
@@ -71,16 +72,16 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         session.spaces[0].folders.append(folder)
         let before = session
         XCTAssertThrowsError(
-            try session.applyTabBatch(
+            try applyBatch(
                 BrowserTabBatchRequest(ids: [ids[1]], in: session.spaces[0]),
-                action: .file(.current, folder: folder.id)))
+                action: .file(.current, folder: folder.id), to: &session))
         XCTAssertEqual(session, before)
         let request = BrowserTabBatchRequest(ids: [ids[4], ids[1], ids[2]], in: session.spaces[0])
-        _ = try session.applyTabBatch(request, action: .file(.current, folder: folder.id))
+        _ = try applyBatch(request, action: .file(.current, folder: folder.id), to: &session)
         XCTAssertEqual(session.spaces[0].tabs.filter { $0.folderID == folder.id }.map(\.id), request.ids)
         XCTAssertNotNil(session.spaces[0].splitGroup(containing: ids[1]))
         let filed = session
-        XCTAssertThrowsError(try session.applyTabBatch(request, action: .file(.pinned)))
+        XCTAssertThrowsError(try applyBatch(request, action: .file(.pinned), to: &session))
         XCTAssertEqual(session, filed)
     }
 
@@ -90,10 +91,11 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let source = session.spaces[0]
         let ids = source.tabs.map(\.id)
         let before = session
-        XCTAssertThrowsError(try session.applyTabBatch(BrowserTabBatchRequest(ids: ids, in: source), action: .split()))
+        XCTAssertThrowsError(
+            try applyBatch(BrowserTabBatchRequest(ids: ids, in: source), action: .split(), to: &session))
         XCTAssertEqual(session, before)
-        let result = try session.applyTabBatch(
-            BrowserTabBatchRequest(ids: Array(ids.prefix(3)), in: source), action: .split())
+        let result = try applyBatch(
+            BrowserTabBatchRequest(ids: Array(ids.prefix(3)), in: source), action: .split(), to: &session)
         XCTAssertEqual(result.copies.count, 3)
         XCTAssertEqual(session.spaces[0].savedTabs, source.savedTabs)
         XCTAssertEqual(session.spaces[0].currentTabs.count, 3)
@@ -106,9 +108,9 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         session.spaces.append(other)
         let source = session.spaces[0]
         let request = BrowserTabBatchRequest(ids: [source.tabs[2].id, source.tabs[0].id], in: source)
-        _ = try session.applyTabBatch(
+        _ = try applyBatch(
             request, action: .moveToSpace(BrowserSpaceRuntimeAssignment(space: other)),
-            fallbackTabID: source.tabs[1].id)
+            fallbackTabID: source.tabs[1].id, to: &session)
         XCTAssertEqual(session.selectedSpaceID, source.id)
         XCTAssertEqual(session.spaces[1].tabs.suffix(2).map(\.id), request.ids)
         XCTAssertEqual(session.spaces[1].selectedTabID, other.selectedTabID)
@@ -120,11 +122,11 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         session.spaces[0].tabs[1].placement = .saved
         let request = BrowserTabBatchRequest(ids: session.spaces[0].tabs.map(\.id), in: session.spaces[0])
         let before = session
-        XCTAssertThrowsError(try session.applyTabBatch(request, action: .close))
+        XCTAssertThrowsError(try applyBatch(request, action: .close, to: &session))
         XCTAssertEqual(session, before)
         session.spaces[0].tabs.removeLast()
         let changed = session
-        XCTAssertThrowsError(try session.applyTabBatch(request, action: .delete))
+        XCTAssertThrowsError(try applyBatch(request, action: .delete, to: &session))
         XCTAssertEqual(session, changed)
     }
 
@@ -132,12 +134,12 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         var session = makeSession(count: 4)
         let source = session.spaces[0]
         let ids = [source.tabs[2].id, source.tabs[0].id]
-        let result = try session.applyTabBatch(BrowserTabBatchRequest(ids: ids, in: source), action: .duplicate)
+        let result = try applyBatch(BrowserTabBatchRequest(ids: ids, in: source), action: .duplicate, to: &session)
         XCTAssertEqual(session.spaces[0].tabs.suffix(2).map(\.id), result.copies.map(\.copy))
         XCTAssertEqual(session.spaces[0].selectedTabID, source.selectedTabID)
-        _ = try session.applyTabBatch(
+        _ = try applyBatch(
             BrowserTabBatchRequest(ids: ids, in: session.spaces[0]), action: .close,
-            fallbackTabID: source.tabs[1].id)
+            fallbackTabID: source.tabs[1].id, to: &session)
         XCTAssertEqual(session.spaces[0].archivedTabs.count, 2)
         XCTAssertEqual(session.spaces[0].selectedTabID, source.tabs[1].id)
     }
@@ -209,8 +211,8 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let ids = session.spaces[0].tabs.map(\.id)
         XCTAssertTrue(session.addTabToSplit(ids[2], joining: ids[1], at: nil, in: session.selectedSpaceID))
         session.spaces[0].selectedTabID = ids[0]
-        let result = try session.applyTabBatch(
-            BrowserTabBatchRequest(ids: [ids[1], ids[2]], in: session.spaces[0]), action: .duplicate)
+        let result = try applyBatch(
+            BrowserTabBatchRequest(ids: [ids[1], ids[2]], in: session.spaces[0]), action: .duplicate, to: &session)
         XCTAssertEqual(session.spaces[0].selectedTabID, ids[0])
         let group = try XCTUnwrap(session.spaces[0].splitGroup(containing: result.copies[0].copy))
         XCTAssertEqual(session.spaces[0].splitGroupMembers(of: group).map(\.id), result.copies.map(\.copy))
@@ -251,7 +253,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         var session = makeSession(count: 2)
         let before = session
         let request = BrowserTabBatchRequest(ids: [session.spaces[0].tabs[0].id, TabID()], in: session.spaces[0])
-        XCTAssertThrowsError(try session.applyTabBatch(request, action: .delete))
+        XCTAssertThrowsError(try applyBatch(request, action: .delete, to: &session))
         XCTAssertEqual(session, before)
     }
 
@@ -377,7 +379,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertTrue(session.fileTabs([ids[0]], in: spaceID, into: child, location: .saved))
         XCTAssertTrue(session.fileTabs([ids[1]], in: spaceID, into: grandchild, location: .saved))
         let request = BrowserTabBatchRequest(items: [.folder(child), .tab(ids[2])], in: session.spaces[0])
-        _ = try session.applyTabBatch(request, action: .file(.current, before: ids[3]))
+        _ = try applyBatch(request, action: .file(.current, before: ids[3]), to: &session)
         let moved = session.spaces[0]
         XCTAssertNil(moved.folders.first { $0.id == child }?.parentID)
         XCTAssertEqual(moved.folders.first { $0.id == grandchild }?.parentID, child)
@@ -397,7 +399,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let request = BrowserTabBatchRequest(items: [.folder(parent), .folder(child)], in: session.spaces[0])
         XCTAssertEqual(request.rootItems, [.folder(parent)])
         XCTAssertTrue(request.ids.isEmpty)
-        _ = try session.applyTabBatch(request, action: .file(.current))
+        _ = try applyBatch(request, action: .file(.current), to: &session)
         XCTAssertEqual(session.spaces[0].folders.first { $0.id == child }?.parentID, parent)
         XCTAssertTrue(session.spaces[0].folders.allSatisfy { $0.location == .current })
     }
@@ -410,11 +412,11 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let request = BrowserTabBatchRequest(
             items: [.tab(session.spaces[0].tabs[0].id), .folder(parent)], in: session.spaces[0])
         let before = session
-        XCTAssertThrowsError(try session.applyTabBatch(request, action: .file(.saved, folder: child)))
+        XCTAssertThrowsError(try applyBatch(request, action: .file(.saved, folder: child), to: &session))
         XCTAssertEqual(session, before)
         _ = session.addFolder(title: "New descendant", parentID: child, in: spaceID)
         let changed = session
-        XCTAssertThrowsError(try session.applyTabBatch(request, action: .file(.current)))
+        XCTAssertThrowsError(try applyBatch(request, action: .file(.current), to: &session))
         XCTAssertEqual(session, changed)
     }
 
@@ -432,7 +434,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let request = selection.prepareForDrag(captured, in: session.spaces[0])
         XCTAssertFalse(request.ids.contains(ids[3]))
         XCTAssertTrue(selection.contains(.folder(folder)))
-        _ = try session.applyTabBatch(request, action: .newFolder(.saved))
+        _ = try applyBatch(request, action: .newFolder(.saved), to: &session)
         let result = session.spaces[0]
         let wrapper = try XCTUnwrap(result.folders.first { $0.id == folder }?.parentID)
         XCTAssertEqual(result.tabs.first { $0.id == ids[0] }?.folderID, wrapper)
@@ -585,6 +587,28 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let access = BrowserSpaceAccessController()
         interaction.sidebarSpaceAccess = access
         XCTAssertEqual(BrowserSidebarSelection.itemUnits(in: browser, reorder: interaction.sidebarReorderState), [])
+    }
+
+    /// Prepares the batch through the store's command path and adopts the
+    /// prepared session only when the whole batch is accepted.
+    @discardableResult
+    private func applyBatch(
+        _ request: BrowserTabBatchRequest, action: BrowserTabBatchAction, fallbackTabID: TabID? = nil,
+        to session: inout BrowserSession
+    ) throws -> BrowserTabBatchResult {
+        let preferences = BrowserLinkPreferenceStore(persistence: InMemoryBrowserLinkPreferencesPersistence())
+        preferences.followsTabsMovedToAnotherSpace = false
+        let browser = BrowserStore(
+            session: session, persistence: InMemoryBrowserSessionPersistence(), linkPreferences: preferences)
+        if let fallbackTabID, let index = session.spaces.firstIndex(where: { $0.id == request.assignment.spaceID }) {
+            var previous = session
+            previous.spaces[index].selectedTabID = fallbackTabID
+            browser.tabSelectionHistory = BrowserTabSelectionHistory(session: previous)
+            browser.tabSelectionHistory.reconcile(session: session)
+        }
+        let prepared = try browser.prepareTabBatch(request, action: action)
+        session = prepared.session
+        return prepared.result
     }
 
     private func makeSession(count: Int) -> BrowserSession {

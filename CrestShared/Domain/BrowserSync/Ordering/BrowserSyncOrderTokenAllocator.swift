@@ -8,7 +8,6 @@ enum BrowserSyncOrderTokenAllocator {
         ids: [ID],
         existingTokens: [ID: String]
     ) throws -> [ID: String] {
-        #if CREST_CORE_BACKED
         let tokens: [String] = try BrowserCoreSync.evaluate([
             "version": 1, "operation": "order.allocate",
             "tokens": ids.map { existingTokens[$0] as Any? ?? NSNull() }
@@ -17,54 +16,6 @@ enum BrowserSyncOrderTokenAllocator {
         // Projection validates record identities and reports the offending ID.
         // Avoid trapping here before that validation can reject a duplicate.
         return Dictionary(zip(ids, tokens), uniquingKeysWith: { _, last in last })
-        #else
-        guard !ids.isEmpty else { return [:] }
-
-        let candidates: [(desiredIndex: Int, id: ID, value: UInt64)] =
-            ids.enumerated().compactMap { element in
-                let (index, id) = element
-                guard let token = existingTokens[id],
-                      let value = canonicalValue(token) else { return nil }
-                return (desiredIndex: index, id: id, value: value)
-            }
-        let anchors = longestIncreasingAnchorValues(candidates)
-        guard !anchors.isEmpty else {
-            return compact(ids)
-        }
-
-        var result: [ID: String] = [:]
-        var previousIndex = -1
-        var lowerValue: UInt64?
-
-        for anchorIndex in anchors.keys.sorted() {
-            guard let upperValue = anchors[anchorIndex],
-                  let allocated = distributedValues(
-                    count: anchorIndex - previousIndex - 1,
-                    lower: lowerValue,
-                    upper: upperValue
-                  ) else {
-                return compact(ids)
-            }
-            for (offset, value) in allocated.enumerated() {
-                result[ids[previousIndex + 1 + offset]] = encode(value)
-            }
-            result[ids[anchorIndex]] = encode(upperValue)
-            previousIndex = anchorIndex
-            lowerValue = upperValue
-        }
-
-        guard let trailing = distributedValues(
-            count: ids.count - previousIndex - 1,
-            lower: lowerValue,
-            upper: nil
-        ) else {
-            return compact(ids)
-        }
-        for (offset, value) in trailing.enumerated() {
-            result[ids[previousIndex + 1 + offset]] = encode(value)
-        }
-        return result
-        #endif
     }
 
     static func isValidEncodedToken(_ token: String) -> Bool {

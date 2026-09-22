@@ -5,7 +5,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserCloudRecordCodecTests: XCTestCase {
-    #if CREST_CORE_BACKED
     func testAdditiveCloudPayloadSurvivesCoreEditAndJournalRestart() throws {
         let session = BrowserSession.preview
         var journal = BrowserSyncJournal()
@@ -46,7 +45,6 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         XCTAssertNotNil(result["futureEnvelope"])
         XCTAssertEqual(try codec.decode(uploaded), saved)
     }
-    #endif
 
     func testEveryAllowlistedRecordRoundTripsThroughCloudKit() throws {
         var session = BrowserSession.preview

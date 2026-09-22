@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import Foundation
 import XCTest
 @testable import Crest
@@ -421,4 +420,3 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(core.projection, next)
     }
 }
-#endif

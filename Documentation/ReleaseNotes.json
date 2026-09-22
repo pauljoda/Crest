@@ -1865,6 +1865,10 @@
     "page-crash-keeps-browser-running": {
       "category": "fixed",
       "message": "When a page's content process crashes, only that page is affected; Crest keeps running."
+    },
+    "remove-pre-core-session-branches": {
+      "category": "internal",
+      "message": "Remove the session code paths that predate the native core now that every target is core-backed."
     }
   }
 }

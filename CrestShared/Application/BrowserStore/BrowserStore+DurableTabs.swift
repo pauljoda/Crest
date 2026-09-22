@@ -24,20 +24,11 @@ extension BrowserStore {
         let fallbackID = tabSelectionHistory.fallbackTabID(
             afterDismissing: tab.id, in: space.id, availableTabIDs: availableIDs
         )
-        #if CREST_CORE_BACKED
         guard family.execute("tab.close_durable", in: space.id, arguments: [
             "tabId": tab.id.rawValue.uuidString,
             "fallbackTabId": fallbackID?.rawValue.uuidString as Any? ?? NSNull(),
             "returnToSavedURL": returningToSavedURL
         ], from: self, at: .now) != nil else { return false }
-        #else
-        guard
-            session.closeDurableTab(
-                tab.id, in: space.id, fallbackTabID: fallbackID,
-                returningToSavedURL: returningToSavedURL
-            )
-        else { return false }
-        #endif
         persist(scope: .core)
         return true
     }

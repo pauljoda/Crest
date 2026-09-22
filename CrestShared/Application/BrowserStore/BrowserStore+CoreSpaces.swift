@@ -1,7 +1,6 @@
 import Foundation
 
 extension BrowserStore {
-    #if CREST_CORE_BACKED
     @discardableResult
     func setCoreSpaceValue<Value: Encodable>(_ operation: String, _ value: Value, in spaceID: SpaceID) -> Bool {
         do {
@@ -26,5 +25,4 @@ extension BrowserStore {
             return false
         }
     }
-    #endif
 }

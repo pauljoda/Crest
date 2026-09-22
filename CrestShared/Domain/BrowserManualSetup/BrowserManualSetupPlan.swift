@@ -193,116 +193,11 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
             : "globe"
     }
 
-    #if CREST_CORE_BACKED
     var coreSpaceOrderWasEdited: Bool { spaceOrderWasEdited == true }
-    #endif
 
     func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
-        #if CREST_CORE_BACKED
         return try BrowserCoreWorkspaceImport.preview(BrowserCoreWorkspaceImport.manual(self), existing: existing)
-        #else
-        let newSpaces = spaces.filter(\.isNew)
-        guard
-            existing.spaces.count + newSpaces.count
-                <= BrowserPortableArchive.maximumSpaceCount
-        else {
-            throw BrowserManualSetupError.spaceLimitReached
-        }
-
-        var result = existing
-        var firstAffectedSpaceID: SpaceID?
-        for draft in spaces {
-            if draft.isNew {
-                var created = BrowserSpace(
-                    id: draft.id,
-                    profile: draft.profile,
-                    // A new Space earns the same blank-field handling an edited one
-                    // gets; `apply(to:)` cannot run before the Space exists.
-                    name: draft.customization.resolvedName,
-                    symbol: draft.customization.resolvedSymbol,
-                    accent: draft.customization.accent,
-                    branding: draft.customization.branding.normalized(),
-                    folders: [],
-                    tabs: ordered(draft.addedTabs),
-                    selectedTabID: selectedTabID(in: draft.addedTabs)
-                )
-                if created.tabs.isEmpty {
-                    let startPage = BrowserTab.startPage()
-                    created.tabs = [startPage]
-                    created.selectedTabID = startPage.id
-                }
-                result.spaces.append(created)
-                firstAffectedSpaceID = firstAffectedSpaceID ?? created.id
-                continue
-            }
-
-            guard
-                let destinationIndex = result.spaces.firstIndex(where: {
-                    $0.id == draft.id
-                })
-            else { continue }
-            var destination = result.spaces[destinationIndex]
-            draft.customization.apply(to: &destination)
-            try append(draft.addedTabs, to: &destination)
-            result.spaces[destinationIndex] = destination
-            if !draft.addedTabs.isEmpty {
-                firstAffectedSpaceID = firstAffectedSpaceID ?? destination.id
-            }
-        }
-        if spaceOrderWasEdited == true {
-            let orderedIDs = spaces.map(\.id)
-            let byID = Dictionary(uniqueKeysWithValues: result.spaces.map { ($0.id, $0) })
-            let draftIDs = Set(orderedIDs)
-            result.spaces =
-                orderedIDs.compactMap { byID[$0] }
-                + result.spaces.filter { !draftIDs.contains($0.id) }
-        }
-        if let firstAffectedSpaceID {
-            result.selectedSpaceID = firstAffectedSpaceID
-        }
-        result.disposableSeedMarker = nil
-        result.repairRuntimeIntegrity()
-        return result
-        #endif
     }
-
-    #if !CREST_CORE_BACKED
-    private func append(_ tabs: [BrowserTab], to space: inout BrowserSpace) throws {
-        let pinnedTotal = space.pinnedTabs.count + tabs.filter { $0.placement == .pinned }.count
-        guard pinnedTotal <= BrowserSpace.maximumPinnedTabs else {
-            throw BrowserManualSetupError.pinnedLimitReached
-        }
-        let additions = ordered(tabs)
-        let existingCurrentIndex =
-            space.tabs.firstIndex { $0.placement == .current }
-            ?? space.tabs.endIndex
-        let pinned = additions.filter { $0.placement == .pinned }
-        space.tabs.insert(
-            contentsOf: pinned,
-            at: space.tabs.firstIndex {
-                $0.placement != .pinned
-            } ?? space.tabs.endIndex)
-        let saved = additions.filter { $0.placement == .saved }
-        space.tabs.insert(contentsOf: saved, at: existingCurrentIndex + pinned.count)
-        let current = additions.filter { $0.placement == .current }
-        space.tabs.append(contentsOf: current)
-        if let selected = selectedTabID(in: additions) {
-            space.selectedTabID = selected
-        }
-    }
-
-    private func ordered(_ tabs: [BrowserTab]) -> [BrowserTab] {
-        Self.setupPlacementOrder.flatMap { placement in
-            tabs.filter { $0.placement == placement }
-        }
-    }
-
-    private func selectedTabID(in tabs: [BrowserTab]) -> TabID? {
-        tabs.last(where: { $0.placement == .current })?.id
-            ?? tabs.first?.id
-    }
-
-    #endif
 
     private static func title(for url: URL) -> String {
         let host = url.host(percentEncoded: false) ?? url.absoluteString

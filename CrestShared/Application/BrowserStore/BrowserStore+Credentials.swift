@@ -119,11 +119,7 @@ extension BrowserStore {
             return
         }
         guard session.space(id: spaceID) != nil else { return }
-        #if CREST_CORE_BACKED
         guard setCoreSpaceValue("space.credential_preferences", preferences, in: spaceID) else { return }
-        #else
-        session.updateCredentialPreferences(preferences, in: spaceID)
-        #endif
         persist(scope: .core)
     }
 
@@ -151,16 +147,12 @@ extension BrowserStore {
         }
         var preferences = current.credentialPreferences
         preferences.syncsCrestPasswordsWithICloud = isSynchronizable
-        #if CREST_CORE_BACKED
         // The native credential operation completed for this profile. Persist
         // its corresponding policy through the same session authority.
         if !setCoreSpaceValue("space.credential_preferences", preferences, in: spaceID),
             session.space(id: spaceID)?.credentialPreferences != preferences {
             throw CredentialVaultError.preferenceUpdateFailed
         }
-        #else
-        session.updateCredentialPreferences(preferences, in: spaceID)
-        #endif
         persist(scope: .core)
     }
 

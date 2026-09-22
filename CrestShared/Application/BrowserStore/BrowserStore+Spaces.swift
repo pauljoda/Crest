@@ -11,38 +11,7 @@ extension BrowserStore {
 
     func addSpace() {
         guard !isTemporaryWorkspace else { return }
-        #if CREST_CORE_BACKED
         guard createCoreSpace() else { return }
-        #else
-        session.addSpace()
-        if isPrivateBrowsing, let spaceID = session.selectedSpace?.id {
-            session.updateSpaceIdentity(
-                spaceID,
-                name: "Private \(session.spaces.count)",
-                symbol: BrowserPrivateBrowsingAppearance.symbol,
-                accent: .indigo
-            )
-            session.updateSpaceBranding(
-                BrowserPrivateBrowsingAppearance.branding,
-                in: spaceID
-            )
-            session.updateBrowsingPreferences(
-                BrowserSpaceBrowsingPreferences(
-                    searchProvider: .duckDuckGo,
-                    currentTabCleanupPolicy: .never
-                ),
-                in: spaceID
-            )
-            session.updateCredentialPreferences(
-                BrowserCredentialPreferences(
-                    isEnabled: false,
-                    syncsCrestPasswordsWithICloud: false,
-                    alsoOffersSaveToSystemPasswords: false
-                ),
-                in: spaceID
-            )
-        }
-        #endif
         persist(scope: .core)
     }
 
@@ -64,24 +33,9 @@ extension BrowserStore {
         }
         defer { family.finishDeletingSpace(id) }
 
-        #if CREST_CORE_BACKED
         let operationID = session.spaceDeletions?.first(where: { $0.spaceID == id })?.operationID ?? UUID()
         try family.executeSpaceDurably("space.deletion.begin", in: id,
             arguments: ["operationID": operationID.uuidString], from: self)
-        #else
-        if session.selectedSpaceID == id,
-            let index = session.spaces.firstIndex(where: { $0.id == id })
-        {
-            let replacementIndex =
-                index == session.spaces.index(before: session.spaces.endIndex)
-                ? session.spaces.index(before: index)
-                : session.spaces.index(after: index)
-            session.selectSpace(session.spaces[replacementIndex].id)
-            let revision = family.publish(session, from: self)
-            syncCoordinator?.advanceStoreRevision(to: revision)
-            try family.save(session, to: persistence, scope: .core)
-        }
-        #endif
 
         try await dataDeleter.deleteData(for: space)
         try await credentialVault.deleteAll(in: id)
@@ -92,22 +46,12 @@ extension BrowserStore {
         guard currentSpace.profile.id == space.profile.id else {
             throw BrowserSpaceDeletionError.spaceChangedDuringDeletion
         }
-        #if CREST_CORE_BACKED
         try family.executeSpaceDurably("space.remove", in: id,
             arguments: ["operationID": operationID.uuidString], deletionReason: .explicitDelete, from: self)
-        #else
-        guard session.removeSpace(id) != nil else {
-            throw BrowserSpaceDeletionError.cannotDeleteLastSpace
-        }
-        #endif
         BrowserLinkPreferenceStore.shared.removeReferences(to: id)
-        #if !CREST_CORE_BACKED
-        persist(deletionReason: .explicitDelete, scope: .core)
-        #endif
     }
 
     func resumePendingSpaceDeletions(dataDeleter: any BrowserSpaceDataDeleting) async {
-        #if CREST_CORE_BACKED
         var attempted: Set<SpaceID> = []
         while let intent = (session.spaceDeletions ?? []).first(where: {
             !attempted.contains($0.spaceID) && !family.isActivelyDeletingSpace($0.spaceID)
@@ -116,47 +60,19 @@ extension BrowserStore {
             do { try await deleteSpace(intent.spaceID, dataDeleter: dataDeleter) }
             catch { localSyncErrorDescription = "Space cleanup needs another attempt: \(error.localizedDescription)" }
         }
-        #endif
     }
 
     func importPortableArchive(_ imported: BrowserPortableImport) throws {
         guard !imported.spaces.isEmpty else { return }
-        #if CREST_CORE_BACKED
         try family.importWorkspace(BrowserCoreWorkspaceImport.portable(imported.spaces), from: self)
-        #else
-        guard
-            session.spaces.count + imported.spaces.count
-                <= BrowserPortableArchive.maximumSpaceCount
-        else {
-            throw BrowserPortableArchiveError.spaceLimitExceeded(
-                BrowserPortableArchive.maximumSpaceCount
-            )
-        }
-        session.spaces.append(contentsOf: imported.spaces)
-        session.selectedSpaceID = imported.spaces[0].id
-        session.repairRuntimeIntegrity()
-        // An import lands whole Spaces, with their history and their icons, so
-        // this is one of the few mutations that really does rewrite everything.
-        persist()
-        #endif
     }
 
     func commitReviewedImport(_ plan: BrowserImportReviewPlan) throws {
-        #if CREST_CORE_BACKED
         try family.importWorkspace(BrowserCoreWorkspaceImport.review(plan), from: self)
-        #else
-        session = try plan.preview(mergingInto: session)
-        persist()
-        #endif
     }
 
     func commitManualSetup(_ plan: BrowserManualSetupPlan) throws {
-        #if CREST_CORE_BACKED
         try family.importWorkspace(BrowserCoreWorkspaceImport.manual(plan), from: self)
-        #else
-        session = try plan.preview(mergingInto: session)
-        persist()
-        #endif
     }
 
     func updateSpaceIdentity(
@@ -171,17 +87,8 @@ extension BrowserStore {
             return
         }
         guard session.space(id: spaceID) != nil else { return }
-        #if CREST_CORE_BACKED
         guard family.executeSpace("space.identity", in: spaceID,
             arguments: ["name": name, "symbol": symbol, "accent": accent.rawValue], from: self) else { return }
-        #else
-        session.updateSpaceIdentity(
-            spaceID,
-            name: name,
-            symbol: symbol,
-            accent: accent
-        )
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -194,11 +101,7 @@ extension BrowserStore {
             return
         }
         guard session.space(id: spaceID) != nil else { return }
-        #if CREST_CORE_BACKED
         guard setCoreSpaceValue("space.branding", branding.normalized(), in: spaceID) else { return }
-        #else
-        session.updateSpaceBranding(branding, in: spaceID)
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -208,11 +111,7 @@ extension BrowserStore {
             return
         }
         guard session.space(id: spaceID) != nil else { return }
-        #if CREST_CORE_BACKED
         guard family.executeSpace("space.default", in: spaceID, arguments: [:], from: self) else { return }
-        #else
-        session.setDefaultSpace(spaceID)
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -225,21 +124,13 @@ extension BrowserStore {
             return
         }
         guard session.space(id: spaceID) != nil else { return }
-        #if CREST_CORE_BACKED
         guard setCoreSpaceValue("space.access", accessPolicy, in: spaceID) else { return }
-        #else
-        session.updateSpaceAccessPolicy(accessPolicy, in: spaceID)
-        #endif
         persist(syncUrgency: .immediate, scope: .core)
     }
 
     func moveSpaces(from source: IndexSet, to destination: Int) {
-        #if CREST_CORE_BACKED
         guard family.executeSpace("space.reorder", arguments: ["offsets": Array(source), "destination": destination],
             from: self) else { return }
-        #else
-        session.moveSpaces(from: source, to: destination)
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -252,11 +143,7 @@ extension BrowserStore {
             return
         }
         guard session.space(id: spaceID) != nil else { return }
-        #if CREST_CORE_BACKED
         guard setCoreSpaceValue("space.browsing_preferences", preferences, in: spaceID) else { return }
-        #else
-        session.updateBrowsingPreferences(preferences, in: spaceID)
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -270,16 +157,10 @@ extension BrowserStore {
         _ isExpanded: Bool,
         in spaceID: SpaceID
     ) -> Bool {
-        #if CREST_CORE_BACKED
         if isTemporaryWorkspace {
             return temporaryProfileSettingsAuthority(in: spaceID)?.setSavedTabsExpanded(isExpanded, in: spaceID) ?? false
         }
         guard setCoreSpaceValue("space.saved_expansion", isExpanded, in: spaceID) else { return false }
-        #else
-        guard session.setSavedTabsExpanded(isExpanded, in: spaceID) else {
-            return false
-        }
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -300,7 +181,6 @@ extension BrowserStore {
         parentID: FolderID? = nil,
         in spaceID: SpaceID
     ) -> FolderID? {
-        #if CREST_CORE_BACKED
         let folderID = FolderID()
         do {
             guard family.execute("folder.create", in: spaceID, arguments: [
@@ -312,16 +192,6 @@ extension BrowserStore {
             localSyncErrorDescription = "New folder could not be encoded: \(error)"
             return nil
         }
-        #else
-        guard
-            let folderID = session.addFolder(
-                title: title,
-                color: color,
-                parentID: parentID,
-                in: spaceID
-            )
-        else { return nil }
-        #endif
         persist(scope: .core)
         return folderID
     }
@@ -367,7 +237,6 @@ extension BrowserStore {
         in spaceID: SpaceID,
         color: BrowserSpaceBrandColor
     ) -> Bool {
-        #if CREST_CORE_BACKED
         do {
             guard family.execute("folder.color", in: spaceID, arguments: [
                 "folderId": folderID.rawValue.uuidString, "value": try JSONSerialization.jsonObject(with: JSONEncoder().encode(color))
@@ -376,11 +245,6 @@ extension BrowserStore {
             localSyncErrorDescription = "Folder color could not be encoded: \(error)"
             return false
         }
-        #else
-        guard session.setFolderColor(folderID, in: spaceID, color: color) else {
-            return false
-        }
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -407,15 +271,9 @@ extension BrowserStore {
         in spaceID: SpaceID,
         symbol: String
     ) -> Bool {
-        #if CREST_CORE_BACKED
         guard family.execute("folder.symbol", in: spaceID, arguments: [
             "folderId": folderID.rawValue.uuidString, "value": symbol
         ], from: self, at: .now)?.changed == true else { return false }
-        #else
-        guard session.setFolderSymbol(folderID, in: spaceID, symbol: symbol) else {
-            return false
-        }
-        #endif
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }

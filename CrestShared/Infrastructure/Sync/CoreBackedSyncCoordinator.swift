@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import Foundation
 
 /// Schedules platform work for the core session's sync component. This adapter
@@ -128,4 +127,3 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
             symbol: "square.grid.2x2.fill", accent: .indigo, folders: [], tabs: [tab], selectedTabID: tab.id)
     }
 }
-#endif

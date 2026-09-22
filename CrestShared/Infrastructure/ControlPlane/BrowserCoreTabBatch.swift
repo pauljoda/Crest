@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import Foundation
 
 enum BrowserCoreTabBatch {
@@ -79,26 +78,6 @@ enum BrowserCoreTabBatch {
         return (next, BrowserTabBatchResult(copies: copies))
     }
 
-    static func preview(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction, session: BrowserSession,
-        fallback: TabID?, at date: Date) throws -> (session: BrowserSession, result: BrowserTabBatchResult) {
-        var compact = BrowserCoreSessionAuthority.compact(session)
-        compact.spaces = compact.spaces.map { space in
-            var value = space; value.history = []; value.archivedTabs = []; return value
-        }
-        let response: Response = try BrowserCoreSync.query([
-            "version": 1, "operation": "batch.preview", "session": try BrowserCoreSync.value(compact),
-            "command": ["version": 1, "operation": "tabs.batch", "spaceId": request.assignment.spaceID.rawValue.uuidString,
-                "profileId": request.assignment.profileID.uuidString,
-                "arguments": try arguments(request, action: action, fallback: fallback, follow: false),
-                "window": ["selectedSpaceID": try BrowserCoreSync.value(session.selectedSpaceID),
-                    "selectedTabs": try session.spaces.map { space -> [String: Any] in
-                        ["spaceID": try BrowserCoreSync.value(space.id),
-                         "tabID": try space.selectedTabID.map(BrowserCoreSync.value) ?? NSNull()]
-                    }], "now": date.timeIntervalSinceReferenceDate]
-        ])
-        return try applying(response, to: session)
-    }
-
     private static func batchError(_ code: String) -> BrowserTabBatchError {
         switch code {
         case "stale_selection", "unknown_tab", "unknown_folder", "unknown_space", "wrong_profile_identity", "space_deletion_in_progress": .staleSelection
@@ -114,4 +93,3 @@ enum BrowserCoreTabBatch {
         }
     }
 }
-#endif

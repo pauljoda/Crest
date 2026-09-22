@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import CrestCoreABI
 import Foundation
 import os
@@ -197,4 +196,3 @@ enum BrowserCorePolicy {
         return try? JSONSerialization.jsonObject(with: output) as? [String: Any]
     }
 }
-#endif

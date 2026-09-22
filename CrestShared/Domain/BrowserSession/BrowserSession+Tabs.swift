@@ -36,7 +36,6 @@ extension BrowserSession {
         shouldSelect: Bool = true,
         at date: Date = .now
     ) -> TabID? {
-        #if CREST_CORE_BACKED
         let tab = BrowserTab(title: title, url: url, nativeContent: nativeContent, symbol: symbol,
             placement: placement, lastActivatedAt: date)
         guard let value = BrowserCoreSessionEditing.tabValue(tab),
@@ -44,76 +43,12 @@ extension BrowserSession {
                 "tab": value, "index": requestedIndex as Any? ?? NSNull(), "select": shouldSelect
             ], at: date), let id = result.tabId else { return nil }
         return TabID(rawValue: id)
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }) else {
-            return nil
-        }
-        if placement == .pinned,
-            spaces[spaceIndex].pinnedTabs.count >= BrowserSpace.maximumPinnedTabs
-        {
-            return nil
-        }
-        let tab = BrowserTab(
-            title: title,
-            url: url,
-            nativeContent: nativeContent,
-            symbol: symbol,
-            placement: placement,
-            lastActivatedAt: date
-        )
-        let tabs = spaces[spaceIndex].tabs
-        let placementRange: Range<Int> =
-            switch placement {
-            case .pinned:
-                0..<(tabs.firstIndex { $0.placement != .pinned } ?? tabs.endIndex)
-            case .saved:
-                (tabs.firstIndex { $0.placement == .saved }
-                    ?? tabs.firstIndex { $0.placement == .current }
-                    ?? tabs.endIndex)..<(tabs.firstIndex { $0.placement == .current }
-                    ?? tabs.endIndex)
-            case .current:
-                (tabs.firstIndex { $0.placement == .current } ?? tabs.endIndex)..<tabs.endIndex
-            }
-        let insertionIndex: Int
-        if let requestedIndex {
-            insertionIndex = min(
-                max(requestedIndex, placementRange.lowerBound),
-                placementRange.upperBound
-            )
-        } else {
-            insertionIndex =
-                switch placement {
-                case .pinned, .saved:
-                    placementRange.upperBound
-                case .current:
-                    placementRange.lowerBound
-                }
-        }
-        spaces[spaceIndex].tabs.insert(tab, at: insertionIndex)
-        if shouldSelect {
-            selectedSpaceID = spaceID
-            spaces[spaceIndex].selectedTabID = tab.id
-        }
-        return tab.id
-            #endif
     }
 
     @discardableResult
     mutating func activateTab(_ tabID: TabID, in spaceID: SpaceID, at date: Date = .now) -> Bool {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.activate", in: spaceID,
             arguments: ["tabId": tabID.rawValue.uuidString], at: date) != nil
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
-        else {
-            return false
-        }
-        selectedSpaceID = spaceID
-        spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = date
-        spaces[spaceIndex].selectedTabID = tabID
-        return true
-            #endif
     }
 
     @discardableResult
@@ -123,41 +58,11 @@ extension BrowserSession {
         fallbackTabID: TabID? = nil,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.close", in: spaceID, arguments: [
             "tabId": tabID.rawValue.uuidString,
             "fallbackTabId": fallbackTabID?.rawValue.uuidString as Any? ?? NSNull(),
             "resetArchivePlacement": true
         ], at: date) != nil
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: {
-                $0.id == tabID && $0.placement == .current
-            })
-        else {
-            return false
-        }
-        let wasSelected = spaces[spaceIndex].selectedTabID == tabID
-        preserveFolderOrder(in: spaceIndex, removing: [tabID])
-        var tab = spaces[spaceIndex].tabs.remove(at: tabIndex)
-        tab.placement = .current
-        tab.folderID = nil
-        tab.splitGroupID = nil
-        tab.savedURL = nil
-        tab.faviconData = nil
-        if !tab.isStartPage {
-            spaces[spaceIndex].archivedTabs.append(
-                ArchivedTab(tab: tab, archivedAt: date, reason: .closed)
-            )
-        }
-        if wasSelected {
-            spaces[spaceIndex].selectedTabID = fallbackTabID.flatMap { candidate in
-                spaces[spaceIndex].contains(candidate) ? candidate : nil
-            }
-        }
-        normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
-        return true
-            #endif
     }
 
     mutating func closeTab(
@@ -165,37 +70,10 @@ extension BrowserSession {
         fallbackTabID: TabID? = nil,
         at date: Date = .now
     ) {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.close", in: selectedSpaceID, arguments: [
             "tabId": tabID.rawValue.uuidString,
             "fallbackTabId": fallbackTabID?.rawValue.uuidString as Any? ?? NSNull()
         ], at: date)
-        #else
-        guard let spaceIndex = selectedSpaceIndex else { return }
-        guard
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: {
-                $0.id == tabID && $0.placement == .current
-            })
-        else { return }
-        let wasSelected = spaces[spaceIndex].selectedTabID == tabID
-        preserveFolderOrder(in: spaceIndex, removing: [tabID])
-        var tab = spaces[spaceIndex].tabs.remove(at: tabIndex)
-        tab.faviconData = nil
-        tab.splitGroupID = nil
-        if !tab.isStartPage {
-            spaces[spaceIndex].archivedTabs.append(
-                ArchivedTab(tab: tab, archivedAt: date, reason: .closed)
-            )
-        }
-        if wasSelected {
-            spaces[spaceIndex].selectedTabID = fallbackTabID.flatMap { candidate in
-                spaces[spaceIndex].contains(candidate) ? candidate : nil
-            }
-        }
-        // Closing a card is how a split shrinks. A group left with one member
-        // dissolves here, at the explicit user mutation, and nowhere else.
-        normalizeSplitGroupsAfterUserMutation(in: spaces[spaceIndex].id, at: date)
-            #endif
     }
 
     @discardableResult
@@ -203,37 +81,7 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.clear_current", in: spaceID, arguments: [:], at: date) != nil
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID })
-        else { return false }
-
-        let currentTabs = spaces[spaceIndex].tabs.filter {
-            $0.placement == .current
-        }
-        guard !currentTabs.isEmpty else { return false }
-
-        spaces[spaceIndex].archivedTabs.append(
-            contentsOf: currentTabs.compactMap { source in
-                guard !source.isStartPage else { return nil }
-                var tab = source
-                tab.faviconData = nil
-                tab.splitGroupID = nil
-                return ArchivedTab(
-                    tab: tab,
-                    archivedAt: date,
-                    reason: .closed
-                )
-            }
-        )
-        let currentTabIDs = Set(currentTabs.map(\.id))
-        preserveFolderOrder(in: spaceIndex, removing: currentTabIDs)
-        spaces[spaceIndex].tabs.removeAll { currentTabIDs.contains($0.id) }
-        ensureSelection(in: spaceID)
-        normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
-        return true
-            #endif
     }
 
     @discardableResult
@@ -242,35 +90,8 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.delete", in: spaceID,
             arguments: ["tabId": tabID.rawValue.uuidString], at: date) != nil
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
-        else {
-            return false
-        }
-        let wasSelected = spaces[spaceIndex].selectedTabID == tabID
-        preserveFolderOrder(in: spaceIndex, removing: [tabID])
-        var tab = spaces[spaceIndex].tabs.remove(at: tabIndex)
-        tab.placement = .current
-        tab.folderID = nil
-        tab.splitGroupID = nil
-        tab.savedURL = nil
-        tab.faviconData = nil
-        if !tab.isStartPage {
-            spaces[spaceIndex].archivedTabs.append(
-                ArchivedTab(tab: tab, archivedAt: date, reason: .deleted)
-            )
-        }
-        if wasSelected {
-            spaces[spaceIndex].selectedTabID = nil
-        }
-        ensureSelection(in: spaceID)
-        normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
-        return true
-            #endif
     }
 
     @discardableResult
@@ -282,73 +103,12 @@ extension BrowserSession {
         shouldSelect: Bool = true,
         at date: Date = .now
     ) -> TabID? {
-        #if CREST_CORE_BACKED
         guard let result = applyCoreEdit("tab.copy", in: spaceID, arguments: [
                 "tabId": tabID.rawValue.uuidString, "ids": [UUID().uuidString], "placement": placement.rawValue,
                 "index": requestedIndex as Any? ?? NSNull(), "select": shouldSelect
             ], at: date), let id = result.tabId
         else { return nil }
         return TabID(rawValue: id)
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let source = spaces[spaceIndex].tabs.first(where: { $0.id == tabID })
-        else {
-            return nil
-        }
-        if placement == .pinned,
-            spaces[spaceIndex].pinnedTabs.count >= BrowserSpace.maximumPinnedTabs
-        {
-            return nil
-        }
-        let duplicate = BrowserTab(
-            title: source.title,
-            url: source.url,
-            nativeContent: source.nativeContent,
-            symbol: source.symbol,
-            faviconData: source.faviconData,
-            faviconURL: source.faviconURL,
-            iconAccent: source.iconAccent,
-            iconMode: source.iconMode,
-            placement: placement,
-            lastActivatedAt: date,
-            customTitle: source.customTitle,
-            titleModifiedAt: source.customTitle == nil ? nil : date
-        )
-        let tabs = spaces[spaceIndex].tabs
-        let placementLowerBound: Int =
-            switch placement {
-            case .pinned:
-                0
-            case .saved:
-                tabs.firstIndex { $0.placement == .saved }
-                    ?? tabs.firstIndex { $0.placement == .current }
-                    ?? tabs.endIndex
-            case .current:
-                tabs.firstIndex { $0.placement == .current }
-                    ?? tabs.endIndex
-            }
-        let placementUpperBound: Int =
-            switch placement {
-            case .pinned:
-                tabs.firstIndex { $0.placement != .pinned }
-                    ?? tabs.endIndex
-            case .saved:
-                tabs.firstIndex { $0.placement == .current }
-                    ?? tabs.endIndex
-            case .current:
-                tabs.endIndex
-            }
-        let insertionIndex =
-            requestedIndex.map {
-                min(max($0, placementLowerBound), placementUpperBound)
-            } ?? placementLowerBound
-        spaces[spaceIndex].tabs.insert(duplicate, at: insertionIndex)
-        if shouldSelect {
-            spaces[spaceIndex].selectedTabID = duplicate.id
-            selectedSpaceID = spaceID
-        }
-        return duplicate.id
-            #endif
     }
 
 }
@@ -422,53 +182,12 @@ extension BrowserSession {
         detachesFromSplit: Bool = false,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.move", in: selectedSpaceID, arguments: [
             "tabId": tabID.rawValue.uuidString, "placement": placement.rawValue,
             "folderId": requestedFolderID?.rawValue.uuidString as Any? ?? NSNull(),
             "before": destinationTabID?.rawValue.uuidString as Any? ?? NSNull(),
             "detach": detachesFromSplit
         ], at: date)?.changed ?? false
-        #else
-        guard let spaceIndex = selectedSpaceIndex,
-            let sourceIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
-        else {
-            return false
-        }
-        let originalTabs = spaces[spaceIndex].tabs
-        var destinationTabs = originalTabs
-        var source = destinationTabs.remove(at: sourceIndex)
-        if detachesFromSplit { source.splitGroupID = nil }
-        guard
-            let plan = BrowserTabPlacementPlan(
-                moving: source,
-                to: placement,
-                folderID: requestedFolderID,
-                before: destinationTabID,
-                in: spaces[spaceIndex],
-                among: destinationTabs
-            )
-        else {
-            return false
-        }
-
-        let movedTab = plan.placing(source)
-        destinationTabs.insert(movedTab, at: plan.insertionIndex)
-        guard destinationTabs != originalTabs else { return false }
-        guard
-            let movedIndex = destinationTabs.firstIndex(where: {
-                $0.id == tabID
-            })
-        else { return false }
-        destinationTabs[movedIndex].markPositionModified(at: date)
-        // A move can land a tab in the middle of a split run, or carry a member
-        // out of one. Repair the affected Space before anyone reads it; the
-        // plain normalizer only clears membership, never reorders.
-        preserveFolderOrder(in: spaceIndex, removing: [tabID])
-        spaces[spaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(destinationTabs)
-        if detachesFromSplit { normalizeSplitGroupsAfterUserMutation(in: spaces[spaceIndex].id, at: date) }
-        return true
-            #endif
     }
 
     func canMoveTab(
@@ -484,17 +203,8 @@ extension BrowserSession {
         else {
             return false
         }
-        #if CREST_CORE_BACKED
         return (try? BrowserCoreTabTransfer.preview(source: source, destination: destination,
             arguments: BrowserCoreTabTransfer.arguments(tabID: tab.id, placement: requestedPlacement), at: .now)) != nil
-        #else
-        return BrowserTabPlacementPlan(
-            moving: tab,
-            to: requestedPlacement,
-            in: destination,
-            among: destination.tabs
-        ) != nil
-        #endif
     }
 
     /// Moves durable tab metadata across profile boundaries. The live engine page is
@@ -521,7 +231,6 @@ extension BrowserSession {
             return false
         }
 
-        #if CREST_CORE_BACKED
         let moved = spaces[sourceSpaceIndex].tabs[sourceTabIndex]
         do {
             let result = try BrowserCoreTabTransfer.preview(source: spaces[sourceSpaceIndex], destination: spaces[destinationSpaceIndex],
@@ -531,46 +240,6 @@ extension BrowserSession {
             self = try BrowserCoreTabTransfer.applying(result.destination, to: intermediate, moved: moved)
             return true
         } catch { return false }
-        #else
-        let sourceTab = spaces[sourceSpaceIndex].tabs[sourceTabIndex]
-        let destinationSpace = spaces[destinationSpaceIndex]
-        guard
-            let plan = BrowserTabPlacementPlan(
-                moving: sourceTab,
-                to: requestedPlacement,
-                folderID: requestedFolderID,
-                before: destinationTabID,
-                in: destinationSpace,
-                among: destinationSpace.tabs
-            )
-        else {
-            return false
-        }
-
-        let sourceWasSelected = spaces[sourceSpaceIndex].selectedTabID == tabID
-        preserveFolderOrder(in: sourceSpaceIndex, removing: [tabID])
-        spaces[sourceSpaceIndex].tabs.remove(at: sourceTabIndex)
-        var movedTab = plan.placing(sourceTab)
-        // Split groups never span Spaces, so a tab leaving one leaves its group
-        // behind rather than dragging the membership into the destination.
-        movedTab.splitGroupID = nil
-        movedTab.markPositionModified(at: date)
-        spaces[destinationSpaceIndex].tabs.insert(movedTab, at: plan.insertionIndex)
-        spaces[sourceSpaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(
-            spaces[sourceSpaceIndex].tabs
-        )
-        spaces[destinationSpaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(
-            spaces[destinationSpaceIndex].tabs
-        )
-        if sourceWasSelected {
-            spaces[sourceSpaceIndex].selectedTabID = sourceFallbackTabID.flatMap {
-                spaces[sourceSpaceIndex].contains($0) ? $0 : nil
-            }
-        }
-        // Organization does not activate the tab in its new profile or replace
-        // the destination's remembered page. Drag navigation owns Space changes.
-        return true
-        #endif
     }
 }
 
@@ -788,68 +457,11 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         guard spaceID == selectedSpaceID else { return false }
         return applyCoreEdit("split.join_in_place", in: spaceID, arguments: [
             "tabId": tabID.rawValue.uuidString, "targetId": targetTabID.rawValue.uuidString,
             "index": memberIndex as Any? ?? NSNull(), "groupId": UUID().uuidString
         ], at: date)?.changed ?? false
-        #else
-        guard tabID != targetTabID,
-            spaceID == selectedSpaceID,
-            let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            spaces[spaceIndex].contains(tabID),
-            let targetIndex = spaces[spaceIndex].tabs.firstIndex(where: {
-                $0.id == targetTabID
-            })
-        else { return false }
-
-        let tabs = spaces[spaceIndex].tabs
-        let target = tabs[targetIndex]
-        guard BrowserSplitGroupPolicy.allowsMembership(placement: target.placement) else {
-            return false
-        }
-
-        let runRange = splitRunRange(containing: targetIndex, in: tabs)
-        let members = runRange.map { tabs[$0] }.filter { $0.id != tabID }
-        guard members.count < BrowserSplitGroupPolicy.maximumMembers else { return false }
-
-        let slot = memberIndex.map { min(max($0, 0), members.count) } ?? members.count
-        let anchorTabID: TabID?
-        if slot < members.count {
-            anchorTabID = members[slot].id
-        } else {
-            // Appending after the run anchors on whatever follows it. A `nil`
-            // anchor lands at the end of the destination section, which is the
-            // right answer exactly when the run ends that section.
-            anchorTabID = tabs[runRange.upperBound...].first { $0.id != tabID }?.id
-        }
-
-        let sourceGroupID = tabs.first { $0.id == tabID }?.splitGroupID
-        moveTab(
-            tabID,
-            to: target.placement,
-            folderID: target.folderID,
-            before: anchorTabID,
-            detachesFromSplit: sourceGroupID != nil && sourceGroupID != target.splitGroupID,
-            at: date
-        )
-        guard let joinerIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            spaces[spaceIndex].tabs[joinerIndex].placement == target.placement,
-            spaces[spaceIndex].tabs[joinerIndex].folderID == target.folderID
-        else { return false }
-
-        let resolvedGroupID = target.splitGroupID ?? SplitGroupID()
-        let assignedIDs = Set(members.map(\.id)).union([tabID])
-        for index in spaces[spaceIndex].tabs.indices {
-            guard assignedIDs.contains(spaces[spaceIndex].tabs[index].id) else { continue }
-            spaces[spaceIndex].tabs[index].splitGroupID = resolvedGroupID
-            spaces[spaceIndex].tabs[index].markPositionModified(at: date)
-        }
-        spaces[spaceIndex].selectedTabID = tabID
-        normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
-        return true
-            #endif
     }
 
     /// Drops one tab out of its split group and leaves it as an ordinary
@@ -871,45 +483,9 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         guard spaceID == selectedSpaceID else { return false }
         return applyCoreEdit("split.leave", in: spaceID,
             arguments: ["tabId": tabID.rawValue.uuidString], at: date)?.changed ?? false
-        #else
-        guard spaceID == selectedSpaceID,
-            let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            spaces[spaceIndex].tabs[tabIndex].splitGroupID != nil
-        else { return false }
-
-        let tabs = spaces[spaceIndex].tabs
-        let runRange = splitRunRange(containing: tabIndex, in: tabs)
-        let survivorCount = runRange.count - 1
-        let isRunTail = tabIndex == tabs.index(before: runRange.upperBound)
-        if survivorCount >= BrowserSplitGroupPolicy.minimumRenderableMembers, !isRunTail {
-            let departing = tabs[tabIndex]
-            // A `nil` anchor, or one that belongs to a later section, both land
-            // the tab at the end of its own section — which is exactly past the
-            // run whenever the run ends that section.
-            moveTab(
-                tabID,
-                to: departing.placement,
-                folderID: departing.folderID,
-                before: tabs[runRange.upperBound...].first?.id,
-                at: date
-            )
-        }
-
-        guard
-            let departedIndex = spaces[spaceIndex].tabs.firstIndex(where: {
-                $0.id == tabID
-            })
-        else { return false }
-        spaces[spaceIndex].tabs[departedIndex].splitGroupID = nil
-        spaces[spaceIndex].tabs[departedIndex].markPositionModified(at: date)
-        normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
-        return true
-            #endif
     }
 
     /// Relocates one card to `memberIndex` inside its own split run, leaving
@@ -942,53 +518,9 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         guard spaceID == selectedSpaceID else { return false }
         return applyCoreEdit("split.reorder", in: spaceID,
             arguments: ["tabId": tabID.rawValue.uuidString, "index": memberIndex], at: date)?.changed ?? false
-        #else
-        guard spaceID == selectedSpaceID,
-            let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            // A sub-renderable run answers `nil` here: it presents as a plain
-            // tab, and a card nobody can see is a card nobody can reorder.
-            spaces[spaceIndex].splitGroup(containing: tabID) != nil,
-            let sourceIndex = spaces[spaceIndex].tabs.firstIndex(where: {
-                $0.id == tabID
-            })
-        else { return false }
-
-        let runRange = splitRunRange(
-            containing: sourceIndex,
-            in: spaces[spaceIndex].tabs
-        )
-        let sourceMemberIndex = sourceIndex - runRange.lowerBound
-        let destinationMemberIndex = min(
-            max(memberIndex, 0),
-            runRange.count - 1
-        )
-        guard destinationMemberIndex != sourceMemberIndex else { return false }
-
-        var run = Array(spaces[spaceIndex].tabs[runRange])
-        run.insert(run.remove(at: sourceMemberIndex), at: destinationMemberIndex)
-        // Order rides the `latestPosition` win-set in sync, so every card whose
-        // slot actually changed needs a fresh stamp — the moved one and each
-        // sibling the shift pushed past it. Cards outside that span kept their
-        // slot and must keep their timestamp, or an untouched card would win a
-        // merge it had no opinion about.
-        let firstShifted = min(sourceMemberIndex, destinationMemberIndex)
-        let lastShifted = max(sourceMemberIndex, destinationMemberIndex)
-        for index in firstShifted...lastShifted {
-            run[index].markPositionModified(at: date)
-        }
-        spaces[spaceIndex].tabs.replaceSubrange(runRange, with: run)
-        // The permutation cannot break contiguity, uniformity, or the cap, so
-        // the plain normalizer has nothing to clear here. It runs anyway because
-        // every mutation leaves the Space repaired, and it never reorders.
-        spaces[spaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(
-            spaces[spaceIndex].tabs
-        )
-        return true
-            #endif
     }
 
     /// Steps one card `offset` slots along its run: the "move left" and "move
@@ -1005,29 +537,9 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         return applyCoreEdit("split.reorder", in: spaceID, arguments: [
             "tabId": tabID.rawValue.uuidString, "offset": offset
         ], at: date)?.changed ?? false
-        #else
-        guard offset != 0,
-            let space = space(id: spaceID),
-            let groupID = space.splitGroup(containing: tabID)
-        else { return false }
-        let members = space.splitGroupMembers(of: groupID)
-        guard let memberIndex = members.firstIndex(where: { $0.id == tabID })
-        else { return false }
-        let destinationMemberIndex = memberIndex + offset
-        guard members.indices.contains(destinationMemberIndex) else {
-            return false
-        }
-        return moveSplitMember(
-            tabID,
-            toMemberIndex: destinationMemberIndex,
-            in: spaceID,
-            at: date
-        )
-        #endif
     }
 
     /// "Separate All Tabs": every member of the group becomes a plain tab in
@@ -1038,24 +550,8 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         return applyCoreEdit("split.dissolve", in: spaceID,
             arguments: ["groupId": groupID.rawValue.uuidString], at: date)?.changed ?? false
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }) else {
-            return false
-        }
-        var didClear = false
-        for index in spaces[spaceIndex].tabs.indices {
-            guard spaces[spaceIndex].tabs[index].splitGroupID == groupID else { continue }
-            spaces[spaceIndex].tabs[index].splitGroupID = nil
-            spaces[spaceIndex].tabs[index].markPositionModified(at: date)
-            didClear = true
-        }
-        guard didClear else { return false }
-        normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
-        return true
-        #endif
     }
 
     /// Moves a whole group to a new placement, folder, or anchor as one
@@ -1076,45 +572,12 @@ extension BrowserSession {
         in spaceID: SpaceID,
         at date: Date = .now
     ) -> Bool {
-        #if CREST_CORE_BACKED
         guard spaceID == selectedSpaceID else { return false }
         return applyCoreEdit("split.move", in: spaceID, arguments: [
             "groupId": groupID.rawValue.uuidString, "placement": placement.rawValue,
             "folderId": requestedFolderID?.rawValue.uuidString as Any? ?? NSNull(),
             "before": destinationTabID?.rawValue.uuidString as Any? ?? NSNull()
         ], at: date)?.changed ?? false
-        #else
-        guard spaceID == selectedSpaceID,
-            BrowserSplitGroupPolicy.allowsMembership(placement: placement),
-            let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID })
-        else { return false }
-
-        let memberIDs = spaces[spaceIndex].splitGroupMembers(of: groupID).map(\.id)
-        guard !memberIDs.isEmpty else { return false }
-        let memberIDSet = Set(memberIDs)
-        if let destinationTabID, memberIDSet.contains(destinationTabID) { return false }
-
-        for index in spaces[spaceIndex].tabs.indices {
-            guard memberIDSet.contains(spaces[spaceIndex].tabs[index].id) else { continue }
-            spaces[spaceIndex].tabs[index].splitGroupID = nil
-        }
-        for memberID in memberIDs {
-            moveTab(
-                memberID,
-                to: placement,
-                folderID: requestedFolderID,
-                before: destinationTabID,
-                at: date
-            )
-        }
-        for index in spaces[spaceIndex].tabs.indices {
-            guard memberIDSet.contains(spaces[spaceIndex].tabs[index].id) else { continue }
-            spaces[spaceIndex].tabs[index].splitGroupID = groupID
-            spaces[spaceIndex].tabs[index].markPositionModified(at: date)
-        }
-        normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
-        return true
-        #endif
     }
 
     /// Runs `BrowserSplitGroupNormalizer` and then dissolves any run left with
@@ -1250,17 +713,8 @@ extension BrowserSession {
         tabID: TabID,
         in spaceID: SpaceID
     ) -> Bool {
-        #if CREST_CORE_BACKED
         applyCoreEdit("tab.residency", in: spaceID, arguments: [
             "tabId": tabID.rawValue.uuidString, "keep": keepsPageLoaded
         ], at: .now)?.changed ?? false
-        #else
-        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            spaces[spaceIndex].tabs[tabIndex].keepsPageLoaded != keepsPageLoaded
-        else { return false }
-        spaces[spaceIndex].tabs[tabIndex].keepsPageLoaded = keepsPageLoaded
-        return true
-            #endif
     }
 }

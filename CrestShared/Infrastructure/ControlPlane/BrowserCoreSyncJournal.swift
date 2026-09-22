@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import CrestCoreABI
 import Foundation
 
@@ -94,4 +93,3 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
 
     private enum JournalError: Error { case tooLarge, rejected(Int32) }
 }
-#endif

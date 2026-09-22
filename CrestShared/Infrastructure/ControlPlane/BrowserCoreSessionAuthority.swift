@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import CrestCoreABI
 import Foundation
 import Observation
@@ -572,4 +571,3 @@ final class BrowserCoreSessionCheckpoint: BrowserSessionCheckpoint, Sendable {
         return result == CREST_OK ? output : nil
     }
 }
-#endif

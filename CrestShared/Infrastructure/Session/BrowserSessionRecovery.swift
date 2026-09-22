@@ -6,10 +6,8 @@ struct BrowserSessionStartupFailure: Error {
     let underlying: Error
 
     var requiresNewerApp: Bool {
-        #if CREST_CORE_BACKED
         if case BrowserTransactionalSessionPersistence.StorageError.unsupportedVersion = underlying { return true }
         if case BrowserSyncError.unsupportedSchema = underlying { return true }
-        #endif
         return false
     }
 
@@ -20,12 +18,10 @@ struct BrowserSessionStartupFailure: Error {
     }
 
     func restore() throws {
-        #if CREST_CORE_BACKED
         guard !requiresNewerApp, let storeURL else {
             throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint
         }
         try BrowserSessionRecovery.restore(storeURL)
-        #endif
     }
 }
 
@@ -46,7 +42,6 @@ enum BrowserSessionRecovery {
         }
     }
 
-    #if CREST_CORE_BACKED
     static func restore(_ url: URL) throws {
         let files = FileManager.default
         let directory = url.deletingLastPathComponent()
@@ -111,5 +106,4 @@ enum BrowserSessionRecovery {
         // Account confirmation remains mandatory if the account changed.
         try persistence.save(state)
     }
-    #endif
 }

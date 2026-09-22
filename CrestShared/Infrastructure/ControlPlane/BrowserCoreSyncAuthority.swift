@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import CrestCoreABI
 import Foundation
 
@@ -74,4 +73,3 @@ final class BrowserCoreSyncTransaction {
         owner.publish(journal)
     }
 }
-#endif

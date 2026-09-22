@@ -1122,12 +1122,8 @@ final class BrowserStoreTests: XCTestCase {
 
         XCTAssertEqual(deleter.deletedSpaces, [deletedSpace])
         XCTAssertNotNil(store.session.space(id: deletedSpace.id))
-        #if CREST_CORE_BACKED
         XCTAssertEqual(store.deletingSpaceIDs, [deletedSpace.id])
         XCTAssertEqual(persistence.session?.spaceDeletions?.first?.profileID, deletedSpace.profile.id)
-        #else
-        XCTAssertTrue(store.deletingSpaceIDs.isEmpty)
-        #endif
         let descriptors = await vault.descriptors(
             in: deletedSpace.id
         )

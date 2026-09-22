@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import Foundation
 
 enum BrowserCoreTabTransfer {
@@ -41,4 +40,3 @@ enum BrowserCoreTabTransfer {
         return result
     }
 }
-#endif

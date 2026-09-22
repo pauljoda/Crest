@@ -110,14 +110,10 @@ extension BrowserStore {
         credentialSaveOperations.removeAll()
         family.resetDeletionState()
         interactionObserver?.browserWillResetSession()
-        #if CREST_CORE_BACKED
         do {
             let template = try BrowserCoreSync.value(BrowserSession.privateBrowsing().spaces[0])
             guard family.executeSpace("space.reset_private", arguments: ["template": template], from: self) else { return }
         } catch { localSyncErrorDescription = String(describing: error); return }
-        #else
-        session = .privateBrowsing()
-        #endif
         localSyncErrorDescription = nil
         let revision = family.publish(session, from: self)
         syncCoordinator?.advanceStoreRevision(to: revision)
@@ -172,20 +168,10 @@ extension BrowserStore {
         guard let syncCoordinator else { return }
         let revision = family.reserveSyncRevision()
         syncCoordinator.advanceStoreRevision(to: revision)
-        #if CREST_CORE_BACKED
         _ = try syncCoordinator.merge(remoteRecords: records, into: session, storeRevision: revision) { next, journal, journalPersistence, transaction in
             try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, transaction: transaction, from: self)
         }
         family.publish(session, from: self, at: revision)
-        #else
-        session = try syncCoordinator.merge(
-            remoteRecords: records,
-            into: session,
-            storeRevision: revision
-        )
-        family.publish(session, from: self, at: revision)
-        try family.save(session, to: persistence)
-        #endif
         localSyncErrorDescription = nil
     }
 
@@ -205,20 +191,10 @@ extension BrowserStore {
         guard let syncCoordinator else { return }
         let revision = family.reserveSyncRevision()
         syncCoordinator.advanceStoreRevision(to: revision)
-        #if CREST_CORE_BACKED
         _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session, storeRevision: revision) { next, journal, journalPersistence, transaction in
             try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, transaction: transaction, from: self)
         }
         family.publish(session, from: self, at: revision)
-        #else
-        session = try syncCoordinator.replaceLocalWithCloud(
-            remoteRecords,
-            replacing: session,
-            storeRevision: revision
-        )
-        family.publish(session, from: self, at: revision)
-        try family.save(session, to: persistence)
-        #endif
         localSyncErrorDescription = nil
     }
 

@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import Foundation
 import SQLite3
 
@@ -321,4 +320,3 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
         }
     }
 }
-#endif

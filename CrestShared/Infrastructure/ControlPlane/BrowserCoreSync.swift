@@ -1,4 +1,3 @@
-#if CREST_CORE_BACKED
 import CrestCoreABI
 import Foundation
 
@@ -194,4 +193,3 @@ enum BrowserCoreSync {
 
     private enum CoreSyncError: Error { case tooLarge, rejected(Int32) }
 }
-#endif
