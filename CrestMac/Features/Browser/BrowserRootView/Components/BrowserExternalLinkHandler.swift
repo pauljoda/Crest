@@ -27,14 +27,14 @@ struct BrowserExternalLinkHandler: ViewModifier {
         // for the link-preference rules to route on, and it is not a web link. It
         // belongs in the Space already on screen.
         if url.isFileURL {
-            guard BrowserExternalURLPolicy.acceptsLocalDocument(url),
+            guard BrowserCorePolicy.acceptsLocalDocument(url),
                 let spaceID = browser.selectedSpace?.id,
                 let assignment = await accessibleAssignment(for: spaceID)
             else { return }
             actions.openLocalDocuments([url], in: assignment)
             return
         }
-        guard BrowserExternalURLPolicy.accepts(url) else { return }
+        guard BrowserCorePolicy.acceptsExternalURL(url) else { return }
         let decision = BrowserLinkPreferenceStore.shared.routingDecision(
             for: url,
             in: browser.session,

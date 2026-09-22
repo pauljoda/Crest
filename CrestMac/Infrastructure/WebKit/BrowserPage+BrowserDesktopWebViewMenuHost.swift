@@ -52,7 +52,7 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
 
     func openLinkInSplitView(_ url: URL) {
         guard let context = navigationContext,
-            BrowserExternalURLPolicy.accepts(url)
+            BrowserCorePolicy.acceptsExternalURL(url)
         else { return }
         splitLinkHost.openLink(url, context.tabID, context.assignment)
     }

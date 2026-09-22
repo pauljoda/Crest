@@ -86,6 +86,13 @@ final class BrowserMacApplication {
             usesIsolatedLaunch
             ? BrowserSitePermissionCenter()
             : BrowserSitePermissionCenter.production(reset: shouldReset)
+        // The core ledger never answers or records for a locked Space. A Space
+        // this app does not own has no lock of its own.
+        permissionCenter.attachSpaceLockState { [weak browser, weak privateBrowser, weak spaceAccess] spaceID in
+            guard let spaceAccess else { return true }
+            guard let space = browser?.session.space(id: spaceID) ?? privateBrowser?.session.space(id: spaceID) else { return false }
+            return spaceAccess.isLocked(space)
+        }
         let hostedNotificationCenter = BrowserHostedWebNotificationSystemCenter()
         let sidebarDefaults: UserDefaults?
         if usesIsolatedLaunch, let isolationID = launchEnvironment.persistentIsolationID {

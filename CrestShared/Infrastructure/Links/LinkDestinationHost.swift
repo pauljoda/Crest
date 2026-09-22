@@ -41,7 +41,7 @@ struct BrowserLinkDestinationHost {
             canOpenLink(from: source),
             let provider = browser?.session.space(id: source.spaceID)?.browsingPreferences.searchProvider,
             let url = provider.searchURL(for: query),
-            BrowserExternalURLPolicy.accepts(url)
+            BrowserCorePolicy.acceptsExternalURL(url)
         else { return nil }
         return BrowserSelectionSearchDestination(url: url, provider: provider, source: source)
     }
@@ -52,7 +52,7 @@ struct BrowserLinkDestinationHost {
         from source: BrowserTabRuntimeAssignment,
         in destination: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard BrowserExternalURLPolicy.accepts(url),
+        guard BrowserCorePolicy.acceptsExternalURL(url),
             canOpenLink(from: source), let browser, let spaceAccess,
             BrowserSidebarAccessPolicy.unlockedSpace(
                 matching: destination,

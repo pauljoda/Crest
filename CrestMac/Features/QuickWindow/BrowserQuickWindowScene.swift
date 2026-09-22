@@ -98,7 +98,7 @@ struct BrowserQuickWindowScene: View {
     }
 
     private func routeExternalURL(_ url: URL) async {
-        guard BrowserExternalURLPolicy.accepts(url) else { return }
+        guard BrowserCorePolicy.acceptsExternalURL(url) else { return }
         isRoutingExternalURL = true
         defer { isRoutingExternalURL = false }
         let targetWindowID = request?.targetWindowID

@@ -62,6 +62,24 @@ against the stored secret. `credentials.password_recipe` returns a length and
 character groups, and the platform generates the password itself. Record
 batches hold at most 64 entries; callers reduce longer lists batch by batch.
 
+`crest_permissions_*` owns one process-local site permission ledger per native
+permission center: per-Space saved and session choices, the narrow-then-site-wide
+lookup, the combined camera and microphone rule, listing order and which
+choices persist. `load` restores the saved document exactly as the native store
+has always written it under `crest.site-permissions.v1`; `set`, `reset_record`,
+`reset_space` and `reset_session` answer `applied`, the complete saved
+`document` when it must be written again, and the `changes` observers receive.
+Session choices never appear in the document, and permissions are not synced.
+Every question and write carries the Space's `locked` state: a locked Space
+answers `ask`, lists nothing and records nothing, while resets still apply.
+The pure `geolocation.origin`, `notifications.origin`,
+`notifications.permission_request`, `popups.automatic`, `popups.notice`,
+`external.url`, `external.local_document`, `external.scheme`,
+`external.consent`, `authentication.handling`, `authentication.source_label`
+and `authentication.fixture_trust` operations answer the origin, scheme,
+popup-notice and HTTP authentication rules. URLs arrive as the platform
+parser's facts; every caller refuses, blocks or asks when it gets no answer.
+
 This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 

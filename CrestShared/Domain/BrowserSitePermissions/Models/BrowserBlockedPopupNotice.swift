@@ -12,61 +12,46 @@ struct BrowserBlockedPopupNotice: Equatable, Sendable {
 
 /// Document-scoped state for the one blocked-popup indication a page may show.
 ///
-/// The content bridge coalesces before crossing into native code, and this state
-/// machine is the second boundary: even a hostile page posting directly to the
-/// bridge cannot stack indicators or accessibility announcements in one document.
+/// The content bridge coalesces before crossing into native code, and the
+/// core's notice rules are the second boundary: even a hostile page posting
+/// directly to the bridge cannot stack indicators or accessibility
+/// announcements in one document. Each mutation reports whether it changed
+/// anything; a core that cannot answer changes nothing.
 struct BrowserBlockedPopupPageState: Equatable, Sendable {
     private(set) var notice: BrowserBlockedPopupNotice?
     private(set) var documentIdentifier: String?
     private(set) var indicationRevision = 0
 
-    @discardableResult
-    mutating func recordBlockedAttempt(
-        documentIdentifier: String,
-        origin: BrowserSiteOrigin
-    ) -> Bool {
-        guard notice == nil else { return false }
+    init() {}
+
+    init(notice: BrowserBlockedPopupNotice?, documentIdentifier: String?, indicationRevision: Int) {
+        self.notice = notice
         self.documentIdentifier = documentIdentifier
-        notice = BrowserBlockedPopupNotice(origin: origin, status: .blocked)
-        indicationRevision &+= 1
-        return true
+        self.indicationRevision = indicationRevision
     }
 
     @discardableResult
-    mutating func recordPermissionAllowed() -> Bool {
-        guard let notice, notice.status == .blocked else { return false }
-        self.notice = BrowserBlockedPopupNotice(
-            origin: notice.origin,
-            status: .allowedAwaitingRetry
-        )
-        return true
+    mutating func recordBlockedAttempt(documentIdentifier: String, origin: BrowserSiteOrigin) -> Bool {
+        apply(.blocked, documentIdentifier: documentIdentifier, origin: origin)
     }
 
     @discardableResult
-    mutating func recordPermissionBlockedAgain() -> Bool {
-        guard let notice, notice.status == .allowedAwaitingRetry else {
-            return false
-        }
-        self.notice = BrowserBlockedPopupNotice(
-            origin: notice.origin,
-            status: .blocked
-        )
-        return true
-    }
+    mutating func recordPermissionAllowed() -> Bool { apply(.permissionAllowed) }
 
     @discardableResult
-    mutating func clearForNavigation() -> Bool {
-        guard notice != nil || documentIdentifier != nil else { return false }
-        notice = nil
-        documentIdentifier = nil
-        return true
-    }
+    mutating func recordPermissionBlockedAgain() -> Bool { apply(.permissionBlockedAgain) }
 
     @discardableResult
-    mutating func clearAfterAllowedPopup() -> Bool {
-        guard notice?.status == .allowedAwaitingRetry else { return false }
-        notice = nil
-        documentIdentifier = nil
+    mutating func clearForNavigation() -> Bool { apply(.navigation) }
+
+    @discardableResult
+    mutating func clearAfterAllowedPopup() -> Bool { apply(.popupAllowed) }
+
+    private mutating func apply(_ event: BrowserCorePolicy.BlockedPopupEvent, documentIdentifier: String? = nil,
+        origin: BrowserSiteOrigin? = nil) -> Bool {
+        guard let next = BrowserCorePolicy.blockedPopupState(after: event, from: self,
+            documentIdentifier: documentIdentifier, origin: origin) else { return false }
+        self = next
         return true
     }
 }

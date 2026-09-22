@@ -5,61 +5,8 @@ import XCTest
 
 @MainActor
 final class BrowserAuthenticationPolicyTests: XCTestCase {
-    func testBasicAndDigestPromptOnlyForAWebsiteChallenge() {
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPBasic,
-                isProxy: false,
-                previousFailureCount: 0
-            ),
-            .promptForCredentials
-        )
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPDigest,
-                isProxy: false,
-                previousFailureCount: 1
-            ),
-            .promptForCredentials
-        )
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPBasic,
-                isProxy: true,
-                previousFailureCount: 0
-            ),
-            .performDefaultHandling
-        )
-    }
-
-    func testCredentialAttemptCapPreservesBoundaryAndProxyHandling() {
-        XCTAssertEqual(BrowserAuthenticationPolicy.maximumCredentialAttempts, 3)
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPDigest,
-                isProxy: false,
-                previousFailureCount: BrowserAuthenticationPolicy.maximumCredentialAttempts - 1
-            ),
-            .promptForCredentials
-        )
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPDigest,
-                isProxy: false,
-                previousFailureCount: BrowserAuthenticationPolicy.maximumCredentialAttempts + 1
-            ),
-            .cancel
-        )
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPBasic,
-                isProxy: true,
-                previousFailureCount: BrowserAuthenticationPolicy.maximumCredentialAttempts + 1
-            ),
-            .performDefaultHandling
-        )
-    }
-
+    /// Foundation's challenge names map onto the core's methods so that only
+    /// Basic and Digest reach Crest's credential prompt.
     func testTrustAndClientCertificateChallengesRemainSystemOwned() {
         for method in [
             NSURLAuthenticationMethodServerTrust,
@@ -67,46 +14,21 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
             NSURLAuthenticationMethodNTLM,
         ] {
             XCTAssertEqual(
-                BrowserAuthenticationPolicy.handling(
-                    authenticationMethod: method,
+                BrowserCorePolicy.authenticationHandling(
+                    method: BrowserAuthenticationMethod(authenticationMethod: method),
                     isProxy: false,
                     previousFailureCount: 0
                 ),
                 .performDefaultHandling
             )
         }
-    }
-
-    func testPhysicalValidationTrustRequiresDedicatedIdentityAndExactFingerprint() {
-        let fingerprint = String(repeating: "a", count: 64)
-
-        XCTAssertTrue(
-            BrowserPhysicalValidationTrustPolicy.allows(
-                bundleIdentifier: "com.pauldavis.crest.physical-validation",
-                expectedCertificateSHA256: fingerprint,
-                actualCertificateSHA256: fingerprint.uppercased()
-            )
-        )
-        XCTAssertFalse(
-            BrowserPhysicalValidationTrustPolicy.allows(
-                bundleIdentifier: "com.pauldavis.crest",
-                expectedCertificateSHA256: fingerprint,
-                actualCertificateSHA256: fingerprint
-            )
-        )
-        XCTAssertFalse(
-            BrowserPhysicalValidationTrustPolicy.allows(
-                bundleIdentifier: "com.pauldavis.crest.physical-validation",
-                expectedCertificateSHA256: fingerprint,
-                actualCertificateSHA256: String(repeating: "b", count: 64)
-            )
-        )
-        XCTAssertFalse(
-            BrowserPhysicalValidationTrustPolicy.allows(
-                bundleIdentifier: "com.pauldavis.crest.physical-validation",
-                expectedCertificateSHA256: "not-a-sha256",
-                actualCertificateSHA256: "not-a-sha256"
-            )
+        XCTAssertEqual(
+            BrowserCorePolicy.authenticationHandling(
+                method: BrowserAuthenticationMethod(authenticationMethod: NSURLAuthenticationMethodHTTPDigest),
+                isProxy: false,
+                previousFailureCount: 0
+            ),
+            .promptForCredentials
         )
     }
 

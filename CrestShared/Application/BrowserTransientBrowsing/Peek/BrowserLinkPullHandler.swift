@@ -25,7 +25,7 @@ final class BrowserLinkPullHandler {
     @discardableResult
     func begin(url: URL, label: String?, origin: CGPoint, sample: BrowserLinkPullSample) -> Bool {
         guard !isActive, sample.isValid, origin.x.isFinite, origin.y.isFinite,
-            BrowserExternalURLPolicy.accepts(url), let source = context()
+            BrowserCorePolicy.acceptsExternalURL(url), let source = context()
         else { return false }
         let request = BrowserPeekRequest(
             url: url, sourceTabID: source.tabID, sourceTitle: source.title,

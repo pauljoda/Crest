@@ -39,7 +39,7 @@ extension BrowserPage {
             let requestURL = message.frameInfo.request.url,
             let origin = BrowserSiteOrigin(url: requestURL),
             BrowserSiteOrigin(message.frameInfo.securityOrigin) == origin,
-            BrowserHostedWebNotificationOriginPolicy.allows(origin),
+            BrowserCorePolicy.allowsHostedNotifications(for: origin),
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
             let action = body["action"] as? String
@@ -144,7 +144,7 @@ extension BrowserPage {
             origin: origin,
             in: spaceID
         )
-        switch BrowserHostedWebNotificationPermissionRequestPolicy.action(
+        switch BrowserCorePolicy.hostedNotificationPermissionRequestAction(
             for: decision,
             hasUserActivation: hasUserActivation
         ) {

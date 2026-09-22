@@ -62,8 +62,9 @@ final class BrowserExternalSchemeCoordinator {
             !scheme.isEmpty
         else { return }
 
-        switch BrowserExternalSchemeConsent.resolve(
-            trigger: trigger,
+        // A hand-off launches another application, so an unapproved request
+        // always pauses at Crest's prompt, whether or not a click started it.
+        switch BrowserCorePolicy.externalSchemeConsent(
             decision: permissionCenter.decision(
                 for: .externalApplications,
                 origin: origin,

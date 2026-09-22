@@ -3,33 +3,6 @@ import XCTest
 
 @MainActor
 final class BrowserDefaultBrowserTests: XCTestCase {
-    func testExternalURLPolicyAcceptsOnlyHostBasedHTTPAndHTTPSURLs() throws {
-        XCTAssertTrue(
-            BrowserExternalURLPolicy.accepts(
-                try XCTUnwrap(URL(string: "https://example.com/path?q=1"))
-            )
-        )
-        XCTAssertTrue(
-            BrowserExternalURLPolicy.accepts(
-                try XCTUnwrap(URL(string: "http://127.0.0.1:8765/fixture"))
-            )
-        )
-        XCTAssertFalse(
-            BrowserExternalURLPolicy.accepts(
-                try XCTUnwrap(URL(string: "file:///tmp/index.html"))
-            )
-        )
-        XCTAssertFalse(
-            BrowserExternalURLPolicy.accepts(
-                try XCTUnwrap(URL(string: "crest://settings"))
-            )
-        )
-        XCTAssertFalse(
-            BrowserExternalURLPolicy.accepts(
-                try XCTUnwrap(URL(string: "https:///missing-host"))
-            )
-        )
-    }
 
     func testExternalURLReusesASelectedStartPageThenCreatesANewCurrentTab() throws {
         let browser = BrowserStore.privateBrowsing()

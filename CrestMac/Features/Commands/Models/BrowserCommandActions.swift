@@ -379,7 +379,7 @@ struct BrowserCommandActions {
         in assignment: BrowserSpaceRuntimeAssignment
     ) {
         var selected: URL?
-        for url in urls where BrowserLocalFilePolicy.accepts(url) {
+        for url in urls where BrowserCorePolicy.acceptsLocalDocument(url) {
             guard browser.openNewTab(url: url, matching: assignment) != nil else { continue }
             selected = url
         }

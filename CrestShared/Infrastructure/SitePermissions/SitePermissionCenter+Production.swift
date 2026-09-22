@@ -1,3 +1,5 @@
+import Foundation
+
 extension BrowserSitePermissionCenter {
     convenience init() {
         self.init(persistence: InMemoryBrowserSitePermissionPersistence())
@@ -6,7 +8,7 @@ extension BrowserSitePermissionCenter {
     static func production(reset: Bool = false) -> BrowserSitePermissionCenter {
         let persistence = UserDefaultsBrowserSitePermissionPersistence()
         if reset {
-            persistence.save([])
+            persistence.saveDocument(Data("[]".utf8))
         }
         return BrowserSitePermissionCenter(persistence: persistence)
     }

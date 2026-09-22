@@ -1,15 +1,22 @@
+import Foundation
+
 final class InMemoryBrowserSitePermissionPersistence: BrowserSitePermissionPersisting {
-    private(set) var records: [BrowserSitePermissionRecord]
+    private(set) var document: Data?
 
-    init(records: [BrowserSitePermissionRecord] = []) {
-        self.records = records
+    init(document: Data? = nil) {
+        self.document = document
     }
 
-    func load() -> [BrowserSitePermissionRecord] {
-        records
+    /// The saved records, decoded for inspection.
+    var records: [BrowserSitePermissionRecord] {
+        document.flatMap { try? JSONDecoder().decode([BrowserSitePermissionRecord].self, from: $0) } ?? []
     }
 
-    func save(_ records: [BrowserSitePermissionRecord]) {
-        self.records = records
+    func loadDocument() -> Data? {
+        document
+    }
+
+    func saveDocument(_ document: Data) {
+        self.document = document
     }
 }

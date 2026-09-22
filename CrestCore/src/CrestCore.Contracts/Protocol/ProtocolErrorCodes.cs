@@ -40,5 +40,12 @@ public static class ProtocolErrorCodes {
     public const string UnknownSessionEdit = "unknown_session_edit";
     public const string VersionMismatch = "version_mismatch";
 
+    // Site permissions and origins.
+    public const string InvalidAuthenticationMethod = "invalid_authentication_method";
+    public const string InvalidMediaPermission = "invalid_media_permission";
+    public const string InvalidPopupEvent = "invalid_popup_event";
+    public const string InvalidSitePermission = "invalid_site_permission";
+    public const string SitePermissionInputLimit = "site_permission_input_limit";
+
     #endregion
 }

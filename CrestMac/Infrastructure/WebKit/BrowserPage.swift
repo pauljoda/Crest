@@ -386,7 +386,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                     search.url, from: search.source,
                     in: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID))
             }
-            guard BrowserExternalURLPolicy.accepts(destination) else { return false }
+            guard BrowserCorePolicy.acceptsExternalURL(destination) else { return false }
             switch action {
             case "can_peek": return true
             case "peek":

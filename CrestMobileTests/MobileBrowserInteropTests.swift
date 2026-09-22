@@ -322,33 +322,6 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
     }
 
-    func testHTTPAuthenticationPromptsOnlyForBoundedBasicAndDigestChallenges() {
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPBasic,
-                isProxy: false,
-                previousFailureCount: 0
-            ),
-            .promptForCredentials
-        )
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodHTTPDigest,
-                isProxy: false,
-                previousFailureCount: BrowserAuthenticationPolicy.maximumCredentialAttempts
-            ),
-            .cancel
-        )
-        XCTAssertEqual(
-            BrowserAuthenticationPolicy.handling(
-                authenticationMethod: NSURLAuthenticationMethodServerTrust,
-                isProxy: false,
-                previousFailureCount: 0
-            ),
-            .performDefaultHandling
-        )
-    }
-
     func testMobileDownloadTransferMovesFromPrivateStagingToTheVisibleRecord() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

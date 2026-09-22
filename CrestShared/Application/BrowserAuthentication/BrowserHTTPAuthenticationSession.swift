@@ -45,7 +45,7 @@ final class BrowserHTTPAuthenticationSession {
         to challenge: BrowserAuthenticationChallenge,
         prompt: Prompt
     ) async -> BrowserHTTPAuthenticationDecision {
-        switch BrowserAuthenticationPolicy.handling(for: challenge) {
+        switch BrowserCorePolicy.authenticationHandling(for: challenge) {
         case .performDefaultHandling:
             return .performDefaultHandling
         case .cancel:

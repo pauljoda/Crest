@@ -184,34 +184,6 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
         }
     }
 
-    func testOriginPolicyRequiresSecureOrLoopbackHTTPOrigin() throws {
-        let secureOrigin = try XCTUnwrap(
-            BrowserSiteOrigin(
-                url: try XCTUnwrap(URL(string: "https://maps.example"))
-            )
-        )
-        let loopbackOrigin = try XCTUnwrap(
-            BrowserSiteOrigin(
-                url: try XCTUnwrap(URL(string: "http://localhost:8080"))
-            )
-        )
-        let insecureOrigin = try XCTUnwrap(
-            BrowserSiteOrigin(
-                url: try XCTUnwrap(URL(string: "http://maps.example"))
-            )
-        )
-
-        XCTAssertTrue(
-            BrowserGeolocationOriginPolicy.allows(secureOrigin)
-        )
-        XCTAssertTrue(
-            BrowserGeolocationOriginPolicy.allows(loopbackOrigin)
-        )
-        XCTAssertFalse(
-            BrowserGeolocationOriginPolicy.allows(insecureOrigin)
-        )
-    }
-
     private enum Revocation: CaseIterable { case block, ask, originReset, spaceReset, sessionReset }
     private typealias Fixture = (page: BrowserPage, service: TestBrowserGeolocationService, url: URL)
 

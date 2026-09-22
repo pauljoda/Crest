@@ -73,14 +73,7 @@ internal static class DownloadCodes {
         _ => throw new ProtocolException(ProtocolErrorCodes.InvalidRiskReason)
     };
 
-    public static SitePermissionDecision ParseDecision(string? value) => value switch {
-        "ask" => SitePermissionDecision.Ask,
-        "grantForSession" => SitePermissionDecision.GrantForSession,
-        "denyForSession" => SitePermissionDecision.DenyForSession,
-        "grantPersistently" => SitePermissionDecision.GrantPersistently,
-        "denyPersistently" => SitePermissionDecision.DenyPersistently,
-        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPermissionDecision)
-    };
+    public static SitePermissionDecision ParseDecision(string? value) => SitePermissionCodes.ParseDecision(value);
 
     public static DownloadTelemetry ParseTelemetry(JsonElement value) {
         Protocol.Members(value, "bytesReceived", "totalBytes", "bytesPerSecond", "estimatedTimeRemaining", "isPaused");

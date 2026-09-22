@@ -123,37 +123,6 @@ final class BrowserHostedWebNotificationTests: XCTestCase {
         pool.reconcile(validTabIDs: [])
     }
 
-    func testPermissionRequestRequiresUserActivationBeforePrompting() {
-        XCTAssertEqual(
-            BrowserHostedWebNotificationPermissionRequestPolicy.action(
-                for: .ask,
-                hasUserActivation: false
-            ),
-            .respondDefault
-        )
-        XCTAssertEqual(
-            BrowserHostedWebNotificationPermissionRequestPolicy.action(
-                for: .ask,
-                hasUserActivation: true
-            ),
-            .promptForSitePermission
-        )
-        XCTAssertEqual(
-            BrowserHostedWebNotificationPermissionRequestPolicy.action(
-                for: .denyPersistently,
-                hasUserActivation: true
-            ),
-            .respondDenied
-        )
-        XCTAssertEqual(
-            BrowserHostedWebNotificationPermissionRequestPolicy.action(
-                for: .grantForSession,
-                hasUserActivation: false
-            ),
-            .resolveSystemAuthorization
-        )
-    }
-
     private func stringResult(
         from webView: WKWebView,
         script: String

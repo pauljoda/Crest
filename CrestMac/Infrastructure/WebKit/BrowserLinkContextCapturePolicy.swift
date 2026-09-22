@@ -134,7 +134,7 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
             // The same gate every other link affordance uses, so the menu can
             // never offer a `javascript:` or `data:` destination that the
             // new-tab path would refuse a moment later.
-            BrowserExternalURLPolicy.accepts(url)
+            BrowserCorePolicy.acceptsExternalURL(url)
         else { return nil }
         return url
     }

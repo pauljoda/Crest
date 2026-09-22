@@ -33,19 +33,16 @@ import WebKit
             let expectedFingerprint = ProcessInfo.processInfo.environment[
                 "CREST_PHYSICAL_FIXTURE_CERT_SHA256"
             ]
-            let bundleMatches =
-                Bundle.main.bundleIdentifier
-                == BrowserPhysicalValidationTrustPolicy.bundleIdentifier
             let fingerprintMatches =
                 expectedFingerprint?.caseInsensitiveCompare(fingerprint)
                 == .orderedSame
-            let isAllowed = BrowserPhysicalValidationTrustPolicy.allows(
+            let isAllowed = BrowserCorePolicy.trustsPhysicalValidationServer(
                 bundleIdentifier: Bundle.main.bundleIdentifier,
                 expectedCertificateSHA256: expectedFingerprint,
                 actualCertificateSHA256: fingerprint
             )
             logger.notice(
-                "Physical fixture server trust evaluated: host=\(challenge.protectionSpace.host, privacy: .public), allowed=\(isAllowed, privacy: .public), bundleMatches=\(bundleMatches, privacy: .public), fingerprintMatches=\(fingerprintMatches, privacy: .public)"
+                "Physical fixture server trust evaluated: host=\(challenge.protectionSpace.host, privacy: .public), allowed=\(isAllowed, privacy: .public), fingerprintMatches=\(fingerprintMatches, privacy: .public)"
             )
             guard isAllowed else {
                 return nil

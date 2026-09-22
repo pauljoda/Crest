@@ -21,83 +21,97 @@ protocol BrowserSitePermissionObserver: AnyObject {
     func sitePermissionsDidChange(_ change: BrowserSitePermissionChange)
 }
 
+/// Thin native port of the core's per-Space site permission ledger.
+///
+/// The core owns every rule: which choice answers a request (the narrowest
+/// saved choice, then the site-wide rule, with session choices first), the
+/// combined camera and microphone rule, listing order, which choices are
+/// saved, and the locked-Space gate. This port supplies each Space's lock
+/// state, stores the saved document the core returns without reading it, and
+/// tells observers what changed. An unanswered question is Ask and an
+/// unanswered write records nothing.
 @Observable
 @MainActor
 final class BrowserSitePermissionCenter {
     private struct Observer {
         weak var value: (any BrowserSitePermissionObserver)?
     }
-    private struct Key: Hashable {
-        let origin: BrowserSiteOrigin
-        let permission: BrowserSitePermission
-        let detail: String?
 
-        init(
-            origin: BrowserSiteOrigin,
-            permission: BrowserSitePermission,
-            detail: String? = nil
-        ) {
-            self.origin = origin
-            self.permission = permission
-            self.detail = detail
-        }
-
-        /// The site-wide rule this key falls back to, or nil when it already is
-        /// that rule.
-        var siteWide: Key? {
-            guard detail != nil else { return nil }
-            return Key(origin: origin, permission: permission)
-        }
-
-        func matches(_ record: BrowserSitePermissionRecord, in spaceID: SpaceID) -> Bool {
-            record.spaceID == spaceID
-                && record.origin == origin
-                && record.permission == permission
-                && record.detail == detail
-        }
+    private struct DecisionAnswer: Decodable {
+        let decision: BrowserSitePermissionDecision
     }
 
-    private(set) var persistentRecords: [BrowserSitePermissionRecord]
+    private struct RecordsAnswer: Decodable {
+        let records: [BrowserSitePermissionRecord]
+    }
+
+    private struct CommandAnswer: Decodable {
+        struct Change: Decodable {
+            let spaceID: UUID?
+            let origin: BrowserSiteOrigin?
+            let permission: BrowserSitePermission?
+            let detail: String?
+            let revokesAuthorization: Bool
+        }
+
+        let applied: Bool
+        let document: String?
+        let changes: [Change]
+    }
+
     private(set) var revision: UInt64 = 0
 
     @ObservationIgnored private let persistence: any BrowserSitePermissionPersisting
-    @ObservationIgnored private var sessionDecisions: [SpaceID: [Key: BrowserSitePermissionDecision]] = [:]
+    @ObservationIgnored private let core = BrowserCoreSitePermissionLedger()
     @ObservationIgnored private var observers: [Observer] = []
+    @ObservationIgnored private var isSpaceLocked: @MainActor (SpaceID) -> Bool = { _ in false }
 
     init(persistence: any BrowserSitePermissionPersisting) {
         self.persistence = persistence
-        persistentRecords = persistence.load().filter {
-            BrowserSitePermissionDecisionPersistencePolicy.isPersistent($0.decision)
-        }
+        let document = persistence.loadDocument().flatMap { String(data: $0, encoding: .utf8) }
+        _ = core.apply("load", ["document": document as Any? ?? NSNull()])
+    }
+
+    /// Composition supplies the lock state of every Space it owns. Until then
+    /// no Space is locked, as in previews and practice pages that own none.
+    func attachSpaceLockState(_ isLocked: @escaping @MainActor (SpaceID) -> Bool) {
+        isSpaceLocked = isLocked
+        revision &+= 1
     }
 
     /// The choice that applies to one request. `detail` narrows a capability a
-    /// site can ask for more than one way; the narrowest saved choice wins, and a
-    /// site-wide rule for the same capability answers whatever it does not cover.
+    /// site can ask for more than one way.
     func decision(
         for permission: BrowserSitePermission,
         origin: BrowserSiteOrigin,
         detail: String? = nil,
         in spaceID: SpaceID
     ) -> BrowserSitePermissionDecision {
-        let key = Key(origin: origin, permission: permission, detail: detail)
-        for candidate in [key, key.siteWide].compactMap(\.self) {
-            if let sessionDecision = sessionDecisions[spaceID]?[candidate] {
-                return sessionDecision
-            }
-            if let record = persistentRecords.first(where: {
-                candidate.matches($0, in: spaceID)
-            }) {
-                return record.decision
-            }
-        }
-        return .ask
+        _ = revision
+        return answer(DecisionAnswer.self, "decision", [
+            "spaceID": Self.text(spaceID), "origin": origin.coreValue, "permission": permission.rawValue,
+            "detail": detail as Any? ?? NSNull(), "locked": isSpaceLocked(spaceID),
+        ])?.decision ?? .ask
+    }
+
+    /// Combined capture must respect a block on either device.
+    func mediaDecision(
+        for media: BrowserMediaPermission,
+        origin: BrowserSiteOrigin,
+        in spaceID: SpaceID
+    ) -> BrowserSitePermissionDecision {
+        _ = revision
+        return answer(DecisionAnswer.self, "media_decision", [
+            "spaceID": Self.text(spaceID), "origin": origin.coreValue, "media": media.rawValue,
+            "locked": isSpaceLocked(spaceID),
+        ])?.decision ?? .ask
     }
 
     func records(in spaceID: SpaceID) -> [BrowserSitePermissionRecord] {
-        persistentRecords
-            .filter { $0.spaceID == spaceID }
-            .sorted(by: BrowserSitePermissionRecordOrderingPolicy.areInIncreasingOrder)
+        _ = revision
+        return answer(RecordsAnswer.self, "records", [
+            "spaceID": Self.text(spaceID), "locked": isSpaceLocked(spaceID),
+        ])?.records ?? []
     }
 
     /// Authorization withdrawal must be synchronous: observation can coalesce
@@ -105,13 +119,6 @@ final class BrowserSitePermissionCenter {
     func addObserver(_ observer: any BrowserSitePermissionObserver) {
         observers.removeAll { $0.value == nil || $0.value === observer }
         observers.append(Observer(value: observer))
-    }
-
-    private func notify(_ change: BrowserSitePermissionChange) {
-        observers.removeAll { $0.value == nil }
-        for observer in observers.compactMap(\.value) {
-            observer.sitePermissionsDidChange(change)
-        }
     }
 
     func setDecision(
@@ -122,113 +129,47 @@ final class BrowserSitePermissionCenter {
         in spaceID: SpaceID,
         at date: Date = .now
     ) {
-        revision &+= 1
-        let key = Key(origin: origin, permission: permission, detail: detail)
-        switch decision {
-        case .ask:
-            sessionDecisions[spaceID]?.removeValue(forKey: key)
-            removePersistentRecord(for: key, in: spaceID)
-        case .grantForSession, .denyForSession:
-            sessionDecisions[spaceID, default: [:]][key] = decision
-        case .grantPersistently, .denyPersistently:
-            sessionDecisions[spaceID]?.removeValue(forKey: key)
-            if let index = persistentRecords.firstIndex(where: {
-                key.matches($0, in: spaceID)
-            }) {
-                persistentRecords[index].decision = decision
-                persistentRecords[index].modifiedAt = date
-            } else {
-                persistentRecords.append(
-                    BrowserSitePermissionRecord(
-                        spaceID: spaceID,
-                        origin: origin,
-                        permission: permission,
-                        detail: detail,
-                        decision: decision,
-                        modifiedAt: date
-                    )
-                )
-            }
-            persist()
-        }
-        notify(BrowserSitePermissionChange(
-            spaceID: spaceID, origin: origin, permission: permission, detail: detail,
-            revokesAuthorization: decision != .grantPersistently && decision != .grantForSession
-        ))
+        command("set", [
+            "spaceID": Self.text(spaceID), "origin": origin.coreValue, "permission": permission.rawValue,
+            "detail": detail as Any? ?? NSNull(), "decision": decision.rawValue,
+            "recordID": UUID().uuidString.lowercased(), "now": date.timeIntervalSinceReferenceDate,
+            "locked": isSpaceLocked(spaceID),
+        ])
     }
 
     func reset(recordID: BrowserSitePermissionRecord.ID) {
-        revision &+= 1
-        let record = persistentRecords.first { $0.id == recordID }
-        let count = persistentRecords.count
-        persistentRecords.removeAll { $0.id == recordID }
-        if persistentRecords.count != count {
-            persist()
-        }
-        if let record {
-            notify(BrowserSitePermissionChange(
-                spaceID: record.spaceID, origin: record.origin, permission: record.permission,
-                detail: record.detail, revokesAuthorization: true
-            ))
-        }
+        command("reset_record", ["id": recordID.uuidString.lowercased()])
     }
 
     func reset(spaceID: SpaceID) {
-        revision &+= 1
-        sessionDecisions.removeValue(forKey: spaceID)
-        let count = persistentRecords.count
-        persistentRecords.removeAll { $0.spaceID == spaceID }
-        if persistentRecords.count != count {
-            persist()
-        }
-        notify(BrowserSitePermissionChange(spaceID: spaceID, revokesAuthorization: true))
+        command("reset_space", ["spaceID": Self.text(spaceID)])
     }
 
     func resetSession() {
+        command("reset_session", [:])
+    }
+
+    private func command(_ name: String, _ arguments: [String: Any]) {
+        guard let answer = answer(CommandAnswer.self, name, arguments), answer.applied else { return }
         revision &+= 1
-        let decisions = sessionDecisions
-        sessionDecisions.removeAll()
-        for (spaceID, keys) in decisions {
-            for key in keys.keys {
-                notify(BrowserSitePermissionChange(
-                    spaceID: spaceID, origin: key.origin, permission: key.permission,
-                    detail: key.detail, revokesAuthorization: true
-                ))
-            }
+        if let document = answer.document {
+            persistence.saveDocument(Data(document.utf8))
+        }
+        observers.removeAll { $0.value == nil }
+        let current = observers.compactMap(\.value)
+        for change in answer.changes {
+            let change = BrowserSitePermissionChange(
+                spaceID: change.spaceID.map(SpaceID.init(rawValue:)), origin: change.origin,
+                permission: change.permission, detail: change.detail,
+                revokesAuthorization: change.revokesAuthorization)
+            for observer in current { observer.sitePermissionsDidChange(change) }
         }
     }
 
-    private func removePersistentRecord(for key: Key, in spaceID: SpaceID) {
-        let count = persistentRecords.count
-        persistentRecords.removeAll { key.matches($0, in: spaceID) }
-        if persistentRecords.count != count {
-            persist()
-        }
+    private func answer<Answer: Decodable>(_ type: Answer.Type, _ command: String, _ arguments: [String: Any]) -> Answer? {
+        guard let data = core.apply(command, arguments) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
     }
 
-    private func persist() {
-        persistence.save(persistentRecords)
-    }
-
-    /// Combined capture must respect a block on either device. Existing combined
-    /// grants remain a fallback for requests for just one of those devices.
-    func mediaDecision(
-        for media: BrowserMediaPermission,
-        origin: BrowserSiteOrigin,
-        in spaceID: SpaceID
-    ) -> BrowserSitePermissionDecision {
-        let combined = decision(for: .cameraAndMicrophone, origin: origin, in: spaceID)
-        let permissions: [BrowserSitePermission] =
-            media == .cameraAndMicrophone
-            ? [.camera, .microphone] : [media.sitePermission]
-        let decisions = permissions.map { decision(for: $0, origin: origin, in: spaceID) }
-        if ([combined] + decisions).contains(.denyPersistently) { return .denyPersistently }
-        if ([combined] + decisions).contains(.denyForSession) { return .denyForSession }
-        if combined == .grantPersistently || combined == .grantForSession { return combined }
-        if decisions.allSatisfy({ $0 == .grantPersistently }) { return .grantPersistently }
-        if decisions.allSatisfy({ $0 == .grantPersistently || $0 == .grantForSession }) {
-            return .grantForSession
-        }
-        return .ask
-    }
+    private static func text(_ spaceID: SpaceID) -> String { spaceID.rawValue.uuidString.lowercased() }
 }

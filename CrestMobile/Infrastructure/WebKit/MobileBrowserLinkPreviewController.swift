@@ -49,7 +49,7 @@ final class MobileBrowserLinkPreviewController: UIViewController, WKNavigationDe
     ) {
         guard isCurrent(), !action.shouldPerformDownload, action.targetFrame != nil,
             let url = action.request.url,
-            BrowserExternalURLPolicy.accepts(url) || (action.targetFrame?.isMainFrame == false && url.scheme == "about")
+            BrowserCorePolicy.acceptsExternalURL(url) || (action.targetFrame?.isMainFrame == false && url.scheme == "about")
         else {
             decisionHandler(.cancel)
             return

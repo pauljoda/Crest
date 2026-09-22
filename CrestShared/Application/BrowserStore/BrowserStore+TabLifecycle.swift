@@ -182,7 +182,7 @@ extension BrowserStore {
 
     @discardableResult
     func openExternalURL(_ url: URL) -> Bool {
-        guard BrowserExternalURLPolicy.accepts(url) else { return false }
+        guard BrowserCorePolicy.acceptsExternalURL(url) else { return false }
         if selectedTab?.isStartPage == true {
             navigateSelectedTab(to: url)
         } else {

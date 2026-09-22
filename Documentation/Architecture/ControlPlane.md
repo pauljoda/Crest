@@ -567,6 +567,23 @@ and builds every results and suggestion URL, and custom-engine saves and removal
 are Space commands that rewrite only the search fields of the stored preferences.
 Swift keeps engine titles, icons and the editor's explanations. Automatic
 translation rules are policy operations over the persisted rule set.
+
+Site permissions follow the same split. The process-local core ledger behind
+`crest_permissions_*` owns every Space's saved and session choices, the
+narrow-then-site-wide lookup, the combined camera and microphone rule, listing
+order and which choices persist. `BrowserSitePermissionCenter` keeps its API
+for the engines and the Privacy pane, supplies each Space's lock state, stores
+the saved document the core returns under the existing
+`crest.site-permissions.v1` key without reading it, and notifies observers.
+Session choices never reach that document, and permissions are not synced. A
+locked Space answers Ask, lists nothing and records nothing; resets still
+apply. Secure-origin rules for location and hosted notifications, the
+notification request action, automatic popups and the blocked-popup notice,
+external schemes and consent, web-link and local-document acceptance, and HTTP
+authentication handling, prompt labels and fixture trust are policy
+operations; an unanswered permission is Ask, an unanswered URL or document is
+refused and an unanswered scheme is blocked.
+
 The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.

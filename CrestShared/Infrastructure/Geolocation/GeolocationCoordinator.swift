@@ -74,7 +74,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         guard message.webView === webView,
             let requestURL = message.frameInfo.request.url,
             let origin = BrowserSiteOrigin(url: requestURL),
-            BrowserGeolocationOriginPolicy.allows(origin),
+            BrowserCorePolicy.allowsGeolocation(for: origin),
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
             let action = body["action"] as? String,

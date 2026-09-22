@@ -16,7 +16,7 @@ enum MobileBrowserWindowSceneRoute: Equatable, Sendable {
         decision: BrowserLinkRoutingDecision,
         session: BrowserSession
     ) -> MobileBrowserWindowSceneRoute? {
-        guard BrowserExternalURLPolicy.accepts(url),
+        guard BrowserCorePolicy.acceptsExternalURL(url),
               session.space(id: decision.spaceID) != nil else { return nil }
 
         switch decision {

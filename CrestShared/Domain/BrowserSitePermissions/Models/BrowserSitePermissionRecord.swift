@@ -22,7 +22,6 @@ struct BrowserSitePermissionRecord: Codable, Equatable, Identifiable, Sendable {
         decision: BrowserSitePermissionDecision,
         modifiedAt: Date = .now
     ) {
-        precondition(BrowserSitePermissionDecisionPersistencePolicy.isPersistent(decision))
         self.id = id
         self.spaceID = spaceID
         self.origin = origin

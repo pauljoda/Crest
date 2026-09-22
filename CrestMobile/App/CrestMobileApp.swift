@@ -82,6 +82,13 @@ private final class BrowserMobileApplication {
             usesIsolatedLaunch
             ? BrowserSitePermissionCenter()
             : BrowserSitePermissionCenter.production(reset: shouldReset)
+        // The core ledger never answers or records for a locked Space. A Space
+        // this app does not own has no lock of its own.
+        permissionCenter.attachSpaceLockState { [weak browser, weak spaceAccess] spaceID in
+            guard let spaceAccess else { return true }
+            guard let space = browser?.session.space(id: spaceID) else { return false }
+            return spaceAccess.isLocked(space)
+        }
         // An isolated launch keeps its engine session state behind the same
         // boundary as Crest's browser-session and sync owners.
         let tabStateArchive = BrowserTabStateArchive.forLaunch(launchEnvironment)

@@ -9,7 +9,7 @@ extension BrowserPlatformPage {
                 permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
             } ?? .ask
         let allowsAutomaticPopups =
-            BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
+            BrowserCorePolicy.allowsAutomaticPopups(decision: decision)
         // Crest's decision is the record; an engine with its own blocker is
         // told it, and WebKit reads it from its preferences.
         if !pageEngine.applyAutomaticPopups(allowsAutomaticPopups) {

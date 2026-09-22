@@ -37,7 +37,7 @@ struct BrowserDownloadSourceCapture: Equatable, Sendable {
             let href = values["href"] as? String,
             href.count <= 4_096,
             let destinationURL = URL(string: href),
-            BrowserExternalURLPolicy.accepts(destinationURL),
+            BrowserCorePolicy.acceptsExternalURL(destinationURL),
             let minX = Self.number(values["minX"]),
             let minY = Self.number(values["minY"]),
             let width = Self.number(values["width"]),

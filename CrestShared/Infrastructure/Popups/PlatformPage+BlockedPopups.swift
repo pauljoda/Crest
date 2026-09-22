@@ -29,7 +29,7 @@ extension BrowserPlatformPage {
             let origin = BrowserSiteOrigin(url: frameURL),
             let currentURL = webKitView?.url,
             BrowserSiteOrigin(url: currentURL) == origin,
-            !BrowserAutomaticPopupPolicy.allowsAutomaticPopups(
+            !BrowserCorePolicy.allowsAutomaticPopups(
                 decision: permissionCenter.decision(
                     for: .popups,
                     origin: origin,
@@ -51,7 +51,7 @@ extension BrowserPlatformPage {
     /// A popup the engine's own blocker held back in the current document.
     func recordEngineBlockedPopup(pageURL: URL, documentIdentifier: String) {
         guard let origin = BrowserSiteOrigin(url: pageURL),
-            !BrowserAutomaticPopupPolicy.allowsAutomaticPopups(
+            !BrowserCorePolicy.allowsAutomaticPopups(
                 decision: permissionCenter.decision(for: .popups, origin: origin, in: spaceID)
             )
         else { return }

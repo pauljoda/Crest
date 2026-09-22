@@ -1,5 +1,7 @@
 import Foundation
 
+/// The saved document lives where it always has, so existing choices load
+/// without a migration.
 final class UserDefaultsBrowserSitePermissionPersistence: BrowserSitePermissionPersisting {
     private let defaults: UserDefaults
     private let key: String
@@ -9,13 +11,11 @@ final class UserDefaultsBrowserSitePermissionPersistence: BrowserSitePermissionP
         self.key = key
     }
 
-    func load() -> [BrowserSitePermissionRecord] {
-        guard let data = defaults.data(forKey: key) else { return [] }
-        return (try? JSONDecoder().decode([BrowserSitePermissionRecord].self, from: data)) ?? []
+    func loadDocument() -> Data? {
+        defaults.data(forKey: key)
     }
 
-    func save(_ records: [BrowserSitePermissionRecord]) {
-        guard let data = try? JSONEncoder().encode(records) else { return }
-        defaults.set(data, forKey: key)
+    func saveDocument(_ document: Data) {
+        defaults.set(document, forKey: key)
     }
 }

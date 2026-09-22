@@ -114,7 +114,7 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
             "Web content must not be able to replay a file URL Crest once loaded."
         )
         XCTAssertEqual(
-            BrowserExternalSchemePolicy.disposition(
+            BrowserCorePolicy.externalSchemeDisposition(
                 for: fileURL,
                 isAppInitiated: page.isAppInitiated(replay)
             ),

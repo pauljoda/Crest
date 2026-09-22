@@ -415,8 +415,8 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     static func openExternalURLs(_ urls: [URL]) -> Bool {
         let accepted = urls.filter {
             $0.isFileURL
-                ? BrowserExternalURLPolicy.acceptsLocalDocument($0)
-                : BrowserExternalURLPolicy.accepts($0)
+                ? BrowserCorePolicy.acceptsLocalDocument($0)
+                : BrowserCorePolicy.acceptsExternalURL($0)
         }
         guard !accepted.isEmpty else { return true }
         guard let instance else {
@@ -514,7 +514,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     /// the page to its request.
     @objc(openAuthenticationSession:window:)
     static func openAuthenticationSession(_ url: URL, window: String) -> Bool {
-        guard let id = UUID(uuidString: window), BrowserExternalURLPolicy.accepts(url) else { return false }
+        guard let id = UUID(uuidString: window), BrowserCorePolicy.acceptsExternalURL(url) else { return false }
         guard let instance else {
             pendingAuthenticationSessions.append((url, id))
             return true

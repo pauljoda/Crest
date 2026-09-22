@@ -28,6 +28,9 @@ public static partial class NativePolicyEvaluator {
         if (EvaluateCredentials(operation, request) is { } credential) return Encode(credential);
         if (EvaluateSearch(operation, request) is { } search) return Encode(search);
         if (EvaluateTranslation(operation, request) is { } translation) return Encode(translation);
+        if (EvaluateSitePermissions(operation, request) is { } sitePermission) return Encode(sitePermission);
+        if (EvaluateOrigins(operation, request) is { } origin) return Encode(origin);
+        if (EvaluateAuthentication(operation, request) is { } authentication) return Encode(authentication);
         if (operation is PolicyOperation.NavigationLink or PolicyOperation.NavigationModifiedLink) {
             bool peek, newTab;
             if (operation == PolicyOperation.NavigationModifiedLink) {
