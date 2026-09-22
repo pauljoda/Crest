@@ -39,6 +39,9 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// Answers a bar the engine raised for the page; false when there is no
     /// such bar.
     func respondToInfoBar(_ id: Int, response: String) -> Bool
+    /// The verified server trust of the page's current document, for the
+    /// certificate sheet; nil when it was not loaded over verified TLS.
+    var serverTrust: SecTrust? { get }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { get }
     func showInspector() -> Bool
@@ -57,6 +60,7 @@ extension BrowserPageEngine {
     func applyAutomaticPopups(_ allowed: Bool) -> Bool { false }
     func showBlockedPopups() -> Bool { false }
     func respondToInfoBar(_ id: Int, response: String) -> Bool { false }
+    var serverTrust: SecTrust? { nil }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool { false }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { nil }

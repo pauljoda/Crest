@@ -238,6 +238,20 @@ final class ChromiumNativePage: BrowserPageEngine {
         return host.command("engine.infobar", page: id, url: "\(response):\(barID)")
     }
 
+    /// Rebuilt from the chain the engine verified, so the system certificate
+    /// sheet can show it. The trust carries an SSL policy for the page's host.
+    var serverTrust: SecTrust? {
+        guard created, !disposed, let host, let chain = host.certificateChain(forPage: id) as [NSData]?,
+            !chain.isEmpty else { return nil }
+        let certificates = chain.compactMap { SecCertificateCreateWithData(nil, $0 as CFData) }
+        guard certificates.count == chain.count else { return nil }
+        var trust: SecTrust?
+        let policy = SecPolicyCreateSSL(true, pageHost as CFString?)
+        guard SecTrustCreateWithCertificates(certificates as CFArray, policy, &trust) == errSecSuccess else { return nil }
+        return trust
+    }
+    private var pageHost: String?
+
     func showBlockedPopups() -> Bool {
         guard created, !disposed, let host else { return false }
         return host.command("engine.show_blocked_popups", page: id, url: nil)
@@ -408,6 +422,7 @@ final class ChromiumNativePage: BrowserPageEngine {
             backHistory = history(values["backHistory"])
             forwardHistory = history(values["forwardHistory"])
             if values["committed"] as? Bool == true { surface.layoutEngineView() }
+            pageHost = (values["url"] as? String).flatMap(URL.init(string:))?.host()
         }
         if event == "created" {
             created = true

@@ -11,14 +11,14 @@ extension BrowserPage {
     var canReviewCertificate: Bool {
         BrowserSiteCertificatePresentationPolicy.isAvailable(
             url: displayURL,
-            hasServerTrust: webKitView?.serverTrust != nil
+            hasServerTrust: pageEngine.serverTrust != nil
         )
     }
 
     /// Capture the certificate and its window before dismissing a popover.
     /// A later navigation must not change which certificate the action reviews.
     func certificateReviewAction() -> (@MainActor () -> Void)? {
-        guard let trust = webKitView?.serverTrust else { return nil }
+        guard let trust = pageEngine.serverTrust else { return nil }
         let window = presentationWindow
         return { BrowserSiteCertificatePresenter.present(trust: trust, for: window) }
     }

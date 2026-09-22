@@ -1933,6 +1933,14 @@
     "space-default-zoom-desktop": {
       "category": "fixed",
       "message": "A Space's default page zoom now applies to new pages in the desktop browser."
+    },
+    "security-indicator-desktop": {
+      "category": "fixed",
+      "message": "The desktop browser's lock now reflects the engine's own security verdict, and View Certificate shows the site's certificate."
+    },
+    "certificate-errors-desktop": {
+      "category": "fixed",
+      "message": "Sites with certificate problems show the engine's warning page, with its option to proceed, instead of a dead-end error."
     }
   }
 }

@@ -142,6 +142,12 @@
 #include "net/base/apple/url_conversions.h"
 #include "components/password_manager/core/common/password_manager_pref_names.h"
 #include "components/blocked_content/popup_blocker_tab_helper.h"
+#include "components/security_state/content/security_state_tab_helper.h"
+#include "components/security_state/core/security_state.h"
+#include "content/public/browser/ssl_status.h"
+#include "net/base/net_errors.h"
+#include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util.h"
 #include "components/infobars/content/content_infobar_manager.h"
 #include "components/infobars/core/confirm_infobar_delegate.h"
 #include "components/infobars/core/infobar.h"
@@ -1463,7 +1469,16 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       @"isLoading": @(web_contents()->IsLoading()),
       @"canGoBack": @(controller.CanGoBack()), @"canGoForward": @(controller.CanGoForward()),
       @"backHistory": History(-1), @"forwardHistory": History(1),
-      @"committed": @(committed), @"failure": failure ?: (id)NSNull.null, @"errorCode": @(error_code) });
+      @"committed": @(committed), @"failure": failure ?: (id)NSNull.null, @"errorCode": @(error_code),
+      @"secure": @(IsSecure()) });
+  }
+  // The engine's own verdict: a secure transport with no mixed content and no
+  // certificate problem. Anything less is not reported as secure.
+  bool IsSecure() {
+    auto* helper = web_contents() ? SecurityStateTabHelper::FromWebContents(web_contents()) : nullptr;
+    if (!helper) return false;
+    const auto level = helper->GetSecurityLevel();
+    return level == security_state::SECURE;
   }
   // Chrome Web Store support. Regular profiles only: a private window must
   // not change a Space's persistent extension state, so its store pages keep
@@ -1594,14 +1609,23 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       if (store_request_open) store_request_open = false;
       else PublishStoreState();
     }
-    if (navigation->IsInPrimaryMainFrame())
-      Publish(navigation->HasCommitted() && !navigation->IsErrorPage(),
-              navigation->IsErrorPage() ? @"navigation_failed" : nil,
-              navigation->IsErrorPage() ? navigation->GetNetErrorCode() : 0);
+    if (navigation->IsInPrimaryMainFrame()) {
+      // A certificate error commits the engine's own interstitial, which
+      // explains the problem and offers to proceed. It is shown as the page
+      // rather than covered by Crest's failure view.
+      const bool certificate_error = navigation->IsErrorPage() &&
+          net::IsCertificateError(navigation->GetNetErrorCode());
+      const bool failed = navigation->IsErrorPage() && !certificate_error;
+      Publish(navigation->HasCommitted() && !failed, failed ? @"navigation_failed" : nil,
+              failed ? navigation->GetNetErrorCode() : 0);
+    }
   }
   void PrimaryMainFrameRenderProcessGone(base::TerminationStatus) override {
     Publish(false, @"process_terminated");
   }
+  // Mixed content found after load, or a certificate decision, changes what
+  // the address shows.
+  void DidChangeVisibleSecurityState() override { Publish(); }
   void BeforeUnloadDialogCancelled() override {
     if (!closing || State().disposing) return;
     closing = false;
@@ -2345,6 +2369,22 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     page->browser->tab_strip_model()->CloseWebContentsAt(index, 0);
   } else { return NO; }
   return YES;
+}
+- (NSArray<NSData*>*)certificateChainForPage:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents()) return @[];
+  auto* entry = page->web_contents()->GetController().GetVisibleEntry();
+  if (!entry || !entry->GetSSL().certificate) return @[];
+  const auto& certificate = entry->GetSSL().certificate;
+  NSMutableArray<NSData*>* chain = [NSMutableArray array];
+  auto append = [&](const CRYPTO_BUFFER* buffer) {
+    auto bytes = net::x509_util::CryptoBufferAsSpan(buffer);
+    [chain addObject:[NSData dataWithBytes:bytes.data() length:bytes.size()]];
+  };
+  append(certificate->cert_buffer());
+  for (const auto& intermediate : certificate->intermediate_buffers()) append(intermediate.get());
+  return chain;
 }
 - (NSArray<NSDictionary<NSString*, id>*>*)permissionsForPage:(NSString*)pageID {
   Page* page = FindPage(pageID);

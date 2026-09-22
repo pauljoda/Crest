@@ -48,6 +48,9 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 - (void)exportPage:(NSString *)pageID format:(NSString *)format width:(CGFloat)width
         completion:(void (^)(NSData * _Nullable data, NSString * _Nullable error))completion;
 - (BOOL)command:(NSString *)command page:(NSString *)pageID url:(nullable NSString *)url;
+// The DER certificate chain of the page's visible entry, leaf first; empty
+// when the page was not loaded over a verified TLS connection.
+- (NSArray<NSData *> *)certificateChainForPage:(NSString *)pageID;
 - (NSArray<NSDictionary<NSString *, id> *> *)permissionsForPage:(NSString *)pageID;
 - (BOOL)setPermission:(NSString *)permissionID page:(NSString *)pageID value:(NSInteger)value;
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForPage:(NSString *)pageID;

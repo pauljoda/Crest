@@ -1318,7 +1318,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 linkHover?.didFailNavigation()
             }
             estimatedProgress = isLoading ? 0.5 : 1
-            hasOnlySecureContent = destination?.scheme == "https"
+            hasOnlySecureContent = values["secure"] as? Bool == true
             canGoBack = values["canGoBack"] as? Bool ?? false
             canGoForward = values["canGoForward"] as? Bool ?? false
             // A failure is reported once, by the navigation that failed; the
