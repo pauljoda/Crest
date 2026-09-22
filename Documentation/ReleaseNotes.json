@@ -1885,6 +1885,10 @@
     "sign-ins-survive-quitting": {
       "category": "fixed",
       "message": "Quitting Crest during an app sign-in no longer holds up later sign-ins."
+    },
+    "content-bridge-world-admitted": {
+      "category": "internal",
+      "message": "Admit Crest's content-bridge isolated world in the engine's script-execution bounds check."
     }
   }
 }

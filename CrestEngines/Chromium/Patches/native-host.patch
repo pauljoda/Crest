@@ -1042,7 +1042,18 @@
    params.initiator_frame_token = base::OptionalFromPtr(initiator_frame_token);
 --- a/content/browser/renderer_host/render_frame_host_impl.cc
 +++ b/content/browser/renderer_host/render_frame_host_impl.cc
-@@ -10289,6 +10289,18 @@
+@@ -3879,7 +3879,9 @@
+     int32_t world_id) {
+   CHECK_CURRENTLY_ON(BrowserThread::UI);
+   CHECK_GT(world_id, ISOLATED_WORLD_ID_GLOBAL);
+-  CHECK_LE(world_id, ISOLATED_WORLD_ID_MAX);
++  // Crest's content-bridge world sits at the top of the embedder range, above
++  // every world Chromium or its extensions allocate.
++  CHECK(world_id <= ISOLATED_WORLD_ID_MAX || world_id == (1 << 29) - 1);
+   AssertFrameWasCommitted();
+ 
+   const bool wants_result = !callback.is_null();
+@@ -10289,6 +10291,18 @@
    }
    // TODO(crbug.com/385170155): Consider whether to pass actual_navigation_start
    // through this path as well, which may involve a lot of plumbing.
@@ -1061,7 +1072,7 @@
    owner->GetCurrentNavigator().RequestOpenURL(
        this, validated_url, base::OptionalToPtr(params->initiator_frame_token),
        GetProcess()->GetDeprecatedID(), params->initiator_origin,
-@@ -10297,7 +10309,8 @@
+@@ -10297,7 +10311,8 @@
        params->disposition, params->should_replace_current_entry,
        params->user_gesture, params->triggering_event_info,
        params->href_translate, std::move(blob_url_loader_factory),
@@ -1069,7 +1080,7 @@
 +      params->has_rel_opener, params->started_by_ad, params->crest_link_modifiers,
 +      std::move(crest_download_fallback));
  }
-
+ 
  void RenderFrameHostImpl::GetAssociatedInterface(
 --- a/content/browser/renderer_host/navigator.h
 +++ b/content/browser/renderer_host/navigator.h
