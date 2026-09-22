@@ -28,6 +28,8 @@
 #include "chrome/browser/profiles/profile_attributes_storage.h"
 #include "chrome/browser/profiles/profile_attributes_storage_observer.h"
 #include "content/public/browser/browsing_data_remover.h"
+#include "content/public/browser/browsing_data_filter_builder.h"
+#include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 #include "components/favicon/content/content_favicon_driver.h"
 #include "components/favicon/core/favicon_driver_observer.h"
 #include "components/sessions/content/content_serialized_navigation_builder.h"
@@ -643,6 +645,38 @@ void RetractSidePanels(Profile* profile, const std::string& extension_id,
 
 // Chromium owns the wipe, profile registry and crash-recoverable disk cleanup.
 // Keep the profile alive until the wipe and deletion marker have both completed.
+// Removes one site's cookies, storage and cache from a profile, then replies.
+// The object owns itself until the remover reports back.
+class SiteDataClearance final : public content::BrowsingDataRemover::Observer {
+ public:
+  static void Start(Profile* profile, const GURL& url, void (^completion)(BOOL)) {
+    std::string domain = net::registry_controlled_domains::GetDomainAndRegistry(
+        url, net::registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES);
+    if (domain.empty()) domain = url.host();
+    if (domain.empty()) { completion(NO); return; }
+    auto filter = content::BrowsingDataFilterBuilder::Create(content::BrowsingDataFilterBuilder::Mode::kDelete);
+    filter->AddRegisterableDomain(domain);
+    auto* clearance = new SiteDataClearance(profile->GetBrowsingDataRemover(), completion);
+    clearance->remover_->RemoveWithFilterAndReply(
+        base::Time(), base::Time::Max(),
+        chrome_browsing_data_remover::DATA_TYPE_SITE_DATA | content::BrowsingDataRemover::DATA_TYPE_CACHE,
+        content::BrowsingDataRemover::ORIGIN_TYPE_UNPROTECTED_WEB, std::move(filter), clearance);
+  }
+  void OnBrowsingDataRemoverDone(uint64_t failures) override {
+    remover_->RemoveObserver(this);
+    completion_(failures == 0);
+    delete this;
+  }
+
+ private:
+  SiteDataClearance(content::BrowsingDataRemover* remover, void (^completion)(BOOL))
+      : remover_(remover), completion_([completion copy]) {
+    remover_->AddObserver(this);
+  }
+  raw_ptr<content::BrowsingDataRemover> remover_;
+  void (^completion_)(BOOL);
+};
+
 class NativeProfileDeletion final : public content::BrowsingDataRemover::Observer,
                                     public ProfileAttributesStorageObserver {
  public:
@@ -2488,6 +2522,14 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     page->browser->tab_strip_model()->CloseWebContentsAt(index, 0);
   } else { return NO; }
   return YES;
+}
+- (void)clearSiteDataForPage:(NSString*)pageID completion:(void (^)(BOOL))completion {
+  CHECK(NSThread.isMainThread);
+  Page* page = FindPage(pageID);
+  if (!page || !page->web_contents() || State().disposing) { completion(NO); return; }
+  const GURL url = page->web_contents()->GetLastCommittedURL();
+  if (!url.SchemeIsHTTPOrHTTPS()) { completion(NO); return; }
+  SiteDataClearance::Start(Profile::FromBrowserContext(page->web_contents()->GetBrowserContext()), url, completion);
 }
 - (void)setPermissionHandlerForPage:(NSString*)pageID
                            handler:(void (^)(NSDictionary<NSString*, id>*, void (^)(NSInteger)))handler {

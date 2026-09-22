@@ -272,6 +272,13 @@ final class ChromiumNativePage: BrowserPageEngine {
     /// prompt; the reply codes are the host's.
     var permissionHandler: ((BrowserSitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> Int)?
 
+    func clearSiteData() async -> Bool {
+        guard created, !disposed, let host else { return false }
+        return await withCheckedContinuation { continuation in
+            host.clearSiteData(page: id) { cleared in continuation.resume(returning: cleared) }
+        }
+    }
+
     func refreshFavicon() {
         guard created, !disposed else { return }
         _ = host?.command("engine.favicon_refresh", page: id, url: nil)

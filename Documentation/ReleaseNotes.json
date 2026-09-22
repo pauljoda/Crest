@@ -1985,6 +1985,14 @@
     "viewport-fit-desktop": {
       "category": "improved",
       "message": "Split cards and Peek in the desktop browser zoom pages with a fixed minimum width to fit, as they do on WebKit."
+    },
+    "clear-site-data-desktop": {
+      "category": "fixed",
+      "message": "Clear Site Data and Reload works in the desktop browser."
+    },
+    "side-panel-quick-window-notice": {
+      "category": "improved",
+      "message": "An extension side panel requested from a Quick Window now explains that side panels open in the main window."
     }
   }
 }

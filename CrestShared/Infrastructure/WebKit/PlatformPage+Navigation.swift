@@ -53,7 +53,11 @@ extension BrowserPlatformPage {
     func reload() { pageEngine.reload(bypassingCache: false) }
 
     func clearSiteDataAndReload() async {
-        guard let webView = webKitView else { return }
+        guard let webView = webKitView else {
+            // An engine with its own website data clears it itself.
+            if await pageEngine.clearSiteData() { pageEngine.reload(bypassingCache: true) }
+            return
+        }
         guard let targetURL = displayURL ?? webView.url else { return }
         await BrowserWebsiteDataStore.clearSiteData(
             for: targetURL,

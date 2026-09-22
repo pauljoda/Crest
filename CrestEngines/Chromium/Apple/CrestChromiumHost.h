@@ -57,6 +57,9 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
                             handler:(void (^)(NSDictionary<NSString *, id> *request, void (^reply)(NSInteger response)))handler
     NS_SWIFT_NAME(setPermissionHandler(page:handler:));
 - (NSArray<NSData *> *)certificateChainForPage:(NSString *)pageID;
+// Removes the page's site cookies, storage and cache from its profile.
+- (void)clearSiteDataForPage:(NSString *)pageID completion:(void (^)(BOOL cleared))completion
+    NS_SWIFT_NAME(clearSiteData(page:completion:));
 - (NSArray<NSDictionary<NSString *, id> *> *)permissionsForPage:(NSString *)pageID;
 - (BOOL)setPermission:(NSString *)permissionID page:(NSString *)pageID value:(NSInteger)value;
 - (NSArray<NSDictionary<NSString *, id> *> *)extensionsForPage:(NSString *)pageID;

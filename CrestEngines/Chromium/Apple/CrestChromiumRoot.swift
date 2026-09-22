@@ -748,7 +748,17 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     static func routeSidePanel(_ extensionID: String, page pageID: String,
                                request: CrestSidePanelRequest) {
         guard let instance, !instance.quitting, let page = ChromiumNativePage.live(pageID),
-            let window = page.surface.window, let host = sidePanelHost(for: window) else { return }
+            let window = page.surface.window else { return }
+        guard let host = sidePanelHost(for: window) else {
+            // A Quick Window or setup page has no card row to hold a panel,
+            // and a panel belongs to its page, so say where it can open.
+            if request != .close {
+                BrowserNoticeCenter.shared.post(BrowserNotice(
+                    message: String(localized: "Side panels open in the main window. Open this page there to use it."),
+                    systemImage: "sidebar.right"))
+            }
+            return
+        }
         BrowserExtensionSidePanelHost.route(request, extensionID: extensionID, page: page, host: host)
     }
 
