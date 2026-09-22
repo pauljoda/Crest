@@ -26,6 +26,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     /// them over during startup, which can be while session recovery is still
     /// on screen; they open once the first window exists.
     private static var pendingExternalURLs: [URL] = []
+    private static var pendingAuthenticationSessions: [(url: URL, id: UUID)] = []
     private let host: any CrestChromiumEngineHost
     private let application: BrowserMacApplication
     private var downloads: ChromiumDownloadAdapter?
@@ -128,6 +129,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
         NSApp.activate(ignoringOtherApps: true)
         root.openPendingExternalURLs()
+        root.openPendingAuthenticationSessions()
     }
 
     private init(host: any CrestChromiumEngineHost) throws {
@@ -465,8 +467,11 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func openExternalURL(_ url: URL) async {
-        guard let model = externalTargetModel() else { return }
+    /// Where a link from another app lands: the window that receives it, the
+    /// Space its routing names, and whether it opens as a Quick Window.
+    private func externalDestination(for url: URL) async
+        -> (model: BrowserMacWindowModel, assignment: BrowserSpaceRuntimeAssignment, decision: BrowserLinkRoutingDecision)? {
+        guard let model = externalTargetModel() else { return nil }
         let browser = model.browser
         let decision = BrowserLinkPreferenceStore.shared.routingDecision(
             for: url, in: browser.session, unavailableSpaceIDs: browser.deletingSpaceIDs)
@@ -475,12 +480,18 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         guard let destination = BrowserExternalLinkLockPolicy.destination(
             routedTo: decision.spaceID, selectedSpaceID: browser.selectedSpace?.id,
             spaces: browser.session.spaces, unavailableSpaceIDs: browser.deletingSpaceIDs,
-            isLocked: application.spaceAccess.isLocked) else { return }
+            isLocked: application.spaceAccess.isLocked) else { return nil }
         let space = destination.space
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        guard await application.spaceAccess.unlock(space), browser.space(matching: assignment) != nil else { return }
+        guard await application.spaceAccess.unlock(space), browser.space(matching: assignment) != nil else { return nil }
         let effective: BrowserLinkRoutingDecision =
             destination.substitutesForLockedSpace ? .quickWindow(spaceID: space.id) : decision
+        return (model, assignment, effective)
+    }
+
+    private func openExternalURL(_ url: URL) async {
+        guard let (model, assignment, effective) = await externalDestination(for: url) else { return }
+        let browser = model.browser
         switch effective {
         case .quickWindow:
             openQuickWindow(BrowserQuickWindowRequest(url: url, spaceAssignment: assignment, targetWindowID: model.id))
@@ -490,6 +501,53 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             model.pages.load(url)
             model.chrome.dismissCommandPalette()
             windows[model.id]?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    // MARK: - System sign-in
+
+    /// An app's `ASWebAuthenticationSession` sign-in. It lands in the Space a
+    /// link from that app routes to, always as a Quick Window: the session is
+    /// transient and the engine closes the window when the page reaches the
+    /// app's callback. `window` names the Quick Window so the engine can match
+    /// the page to its request.
+    @objc(openAuthenticationSession:window:)
+    static func openAuthenticationSession(_ url: URL, window: String) -> Bool {
+        guard let id = UUID(uuidString: window), BrowserExternalURLPolicy.accepts(url) else { return false }
+        guard let instance else {
+            pendingAuthenticationSessions.append((url, id))
+            return true
+        }
+        instance.openAuthenticationSession(url, id: id)
+        return true
+    }
+
+    @objc(closeAuthenticationSession:)
+    static func closeAuthenticationSession(_ window: String) {
+        guard let instance, let id = UUID(uuidString: window) else { return }
+        // The sign-in is over; a before-unload prompt would only get in the way.
+        instance.quickWindows[id]?.window.closeAfterApproval()
+    }
+
+    private func openPendingAuthenticationSessions() {
+        let pending = Self.pendingAuthenticationSessions
+        Self.pendingAuthenticationSessions = []
+        for (url, id) in pending { openAuthenticationSession(url, id: id) }
+    }
+
+    private func openAuthenticationSession(_ url: URL, id: UUID) {
+        Task { @MainActor in
+            guard let (model, assignment, _) = await externalDestination(for: url) else {
+                host.cancelAuthenticationSession(window: id.uuidString)
+                return
+            }
+            openQuickWindow(BrowserQuickWindowRequest(id: id, url: url, spaceAssignment: assignment, targetWindowID: model.id))
+            guard let window = quickWindows[id]?.window else {
+                host.cancelAuthenticationSession(window: id.uuidString)
+                return
+            }
+            window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
     }

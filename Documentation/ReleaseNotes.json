@@ -1853,6 +1853,18 @@
     "native-core-typed-session-record-codecs": {
       "category": "internal",
       "message": "Keep native session command and tab serialization in reusable typed models."
+    },
+    "copy-link-without-crashing": {
+      "category": "fixed",
+      "message": "Copying a link from a page's context menu no longer quits Crest; a short confirmation appears instead."
+    },
+    "app-sign-in-in-quick-window": {
+      "category": "fixed",
+      "message": "Signing in to an app through your browser now opens the sign-in page in a Quick Window and returns you to the app when you finish."
+    },
+    "page-crash-keeps-browser-running": {
+      "category": "fixed",
+      "message": "When a page's content process crashes, only that page is affected; Crest keeps running."
     }
   }
 }

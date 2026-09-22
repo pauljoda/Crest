@@ -3,6 +3,7 @@
 
 #ifdef __OBJC__
 #import <Cocoa/Cocoa.h>
+@class ASWebAuthenticationSessionRequest;
 #endif
 
 #include <string>
@@ -40,6 +41,10 @@ bool CompletePageClosePreparation(content::WebContents* contents, bool proceed);
 // Called after Chromium has approved a renderer's drag request.
 bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data);
 void AddNavigationThrottle(content::NavigationThrottleRegistry& registry);
+// Chromium's toasts ("Link copied" and similar) anchor to a Views browser frame
+// that this build never creates. Their message is shown as a Crest notice
+// named by an SF Symbol instead.
+void ShowEngineNotice(const std::u16string& message, const std::string& symbol);
 // Extension side panels are cards in Crest's own page row, so this build never
 // creates Chrome's Views side-panel UI. `chrome.sidePanel.open()`, `close()`
 // and an action click that toggles a panel are routed to the card that belongs
@@ -68,6 +73,12 @@ bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& par
 // Consumes an external open: a link from another app, a document, or the
 // default-browser role. Crest applies its own routing policy.
 bool OpenExternalURLs(NSArray<NSURL*>* urls);
+// An app's system sign-in (`ASWebAuthenticationSession`). Crest runs it in a
+// Quick Window of the Space the app's links route to, instead of Chromium's
+// Views popup in a profile no Space owns. Both return false only when Crest is
+// not hosting, which leaves Chromium's own handling in place.
+bool BeginAuthenticationSession(ASWebAuthenticationSessionRequest* request);
+bool CancelAuthenticationSession(ASWebAuthenticationSessionRequest* request);
 NSWindow* WindowForBrowser(Browser* browser);
 void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url);
 #endif

@@ -115,5 +115,8 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
                 completion:(void (^)(BOOL allowed))completion NS_SWIFT_NAME(prepareToClose(pages:windows:completion:));
 - (void)prepareToQuit:(void (^)(BOOL allowed))completion NS_SWIFT_NAME(prepareToQuit(_:));
 - (void)cancelQuitPreparation;
+// Declines a system sign-in the core could not place, so the requesting app
+// learns at once rather than waiting on a window that will never open.
+- (void)cancelAuthenticationSessionForWindow:(NSString *)windowID NS_SWIFT_NAME(cancelAuthenticationSession(window:));
 @end
 NS_ASSUME_NONNULL_END

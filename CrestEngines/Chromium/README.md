@@ -218,6 +218,17 @@ registered window. Normal windows are restored at startup from the list of
 windows that were open at quit; their contents come from the existing per-window
 state and their frames from AppKit's autosave records. Private and Quick Windows
 are not restored.
+
+An app's system sign-in (`ASWebAuthenticationSession`) reaches the host through
+the same `AppController`. Chromium's handler would open a Views popup in the
+last-used engine profile, which belongs to no Space, so
+`crest::BeginAuthenticationSession` runs the session in a Quick Window of the
+Space a link from that app routes to. A navigation throttle completes the
+request when that window's page reaches the app's callback URL and then closes
+the window; closing the window first cancels the request. Chromium's toasts,
+which anchor to a Views frame this build never creates, become Crest notices,
+and the sad-tab overlay yields to Crest's own renderer recovery.
+
 The native UI uses the named isolated session `chromium-native-ui-review` by
 default. Set `CREST_ISOLATED_PERSISTENCE_ID` to a different name and provide a
 separate `--user-data-dir` for an independent session, including benchmark runs.

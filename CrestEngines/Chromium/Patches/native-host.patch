@@ -67,7 +67,7 @@
  #include "chrome/browser/ui/browser_live_tab_context.h"
 @@ -930,6 +931,9 @@
  }
-
+ 
  - (void)tryToTerminateApplication {
 +  if (crest::DeferQuit()) {
 +    return;
@@ -75,39 +75,38 @@
    if ([self confirmQuitIfNeeded] == ConfirmQuitResultAborted) {
      return;
    }
-@@ -1123,6 +1127,14 @@
+@@ -1122,7 +1126,15 @@
+       GlobalBrowserCollection::GetInstance()->FindBrowserWithWindow(
            gfx::NativeWindow([notify object]));
    if (!browser)
-     return;
++    return;
 +
 +  // Crest owns the application menu and tab organization. Retain Chromium
 +  // profile/lifecycle context without attaching Chrome menu bridges.
 +  if (crest::IsEnabled()) {
 +    _lastActiveBrowser = browser->GetWeakPtr();
 +    [self setLastProfile:browser->GetProfile()];
-+    return;
+     return;
 +  }
-
+ 
    // Since we may have different windows with different profiles, we clear the
    // subscription each time a window becomes the main.
-@@ -1853,7 +1865,13 @@
-   // If the browser is currently trying to quit, don't do anything and return NO
-   // to prevent AppKit from doing anything.
+@@ -1855,6 +1867,12 @@
    if (browser_shutdown::IsTryingToQuit())
      return NO;
-+
+ 
 +  // Crest owns window composition. Chromium must not create a browser here,
 +  // because that browser would have no registered native window.
 +  if (crest::Reopen()) {
 +    return NO;
 +  }
-
++
    // Bring all browser windows to the front. Specifically, this brings them in
    // front of any app windows. FocusWindowSet will also unminimize the most
-@@ -2052,6 +2070,11 @@
-   return ProfileManager::MaybeForceOffTheRecordMode(profile);
+   // recently minimized window if no windows in the set are visible.
+@@ -2053,6 +2071,11 @@
  }
-
+ 
  - (void)application:(NSApplication*)sender openURLs:(NSArray<NSURL*>*)urls {
 +  // Crest applies its own external-URL policy, Space routing and placement.
 +  if (crest::OpenExternalURLs(urls)) {
@@ -116,10 +115,11 @@
 +
    StartupTabs startupTabs;
    for (NSURL* url in urls) {
+     // Handle the google-chrome:// scheme (and chromium://).
 @@ -2197,6 +2220,14 @@
    if (profile == _lastProfile)
      return;
-
+ 
 +  if (crest::IsEnabled()) {
 +    // These observers update Chrome menu commands, which Crest replaces.
 +    // Keeping the profile itself is still required by Chromium app services.
@@ -131,6 +131,29 @@
    // If _lastProfile becomes null, remember the last state of Cmd+Shift+T so the
    // command can continue working (or stay disabled). This is primarily meant
    // for the zero-profile state.
+@@ -2502,6 +2533,11 @@
+ - (void)beginHandlingWebAuthenticationSessionRequest:
+     (ASWebAuthenticationSessionRequest*)request {
+   dispatch_async(dispatch_get_main_queue(), ^{
++    // Crest runs the sign-in in a window of the Space it belongs to.
++    if (crest::BeginAuthenticationSession(request)) {
++      return;
++    }
++
+     // Start tracking the pending request, so it's possible to cancel it before
+     // the session actually starts.
+     NSUUID* key = request.UUID;
+@@ -2519,6 +2555,10 @@
+ - (void)cancelWebAuthenticationSessionRequest:
+     (ASWebAuthenticationSessionRequest*)request {
+   dispatch_async(dispatch_get_main_queue(), ^{
++    if (crest::CancelAuthenticationSession(request)) {
++      return;
++    }
++
+     if (NSUUID* key = request.UUID;
+         [GetPendingWebAuthRequests() objectForKey:key]) {
+       // If the web authentication request is still pending, remove it from the
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
 @@ -3448,6 +3448,11 @@
@@ -1482,3 +1505,59 @@
    // Register component_updater PathProvider after DIR_USER_DATA overridden by
    // command line flags. Maybe move the chrome PathProvider down here also?
    component_updater::RegisterPathProvider(chrome::DIR_COMPONENTS,
+--- a/chrome/browser/ui/toasts/toast_controller.cc
++++ b/chrome/browser/ui/toasts/toast_controller.cc
+@@ -4,6 +4,11 @@
+ 
+ #include "chrome/browser/ui/toasts/toast_controller.h"
+ 
++#include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
++
+ #include <memory>
+ #include <optional>
+ #include <string>
+@@ -137,6 +142,26 @@
+ }
+ 
+ bool ToastController::MaybeShowToast(ToastParams params) {
++#if BUILDFLAG(IS_MAC)
++  // Crest has no Views browser frame to anchor a toast in. The message becomes
++  // a Crest notice; toast actions and menus are not offered there.
++  if (crest::IsEnabled()) {
++    const ToastSpecification* spec =
++        toast_registry_->GetToastSpecification(params.toast_id);
++    if (!params.body_string_override.has_value() &&
++        (!spec || spec->body_string_id() == 0)) {
++      return false;
++    }
++    crest::ShowEngineNotice(
++        params.body_string_override.has_value()
++            ? params.body_string_override.value()
++            : FormatString(spec->body_string_id(),
++                           params.body_string_replacement_params,
++                           params.body_string_cardinality_param),
++        params.toast_id == ToastId::kLinkCopied ? "link" : "checkmark.circle");
++    return true;
++  }
++#endif
+   if (!CanShowToast(params.toast_id)) {
+     RecordToastFailedToShow(params.toast_id);
+     return false;
+--- a/chrome/browser/ui/sad_tab_controller.cc
++++ b/chrome/browser/ui/sad_tab_controller.cc
+@@ -29,7 +29,11 @@
+     return nullptr;
+   }
+   BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
+-  DCHECK(browser_view);
++  // A browser hosted by Crest has a native window and no BrowserView. Crest
++  // presents a terminated renderer itself.
++  if (!browser_view) {
++    return nullptr;
++  }
+ 
+   for (auto* contents_view : browser_view->GetAllVisibleContentsWebViews()) {
+     if (contents_view->web_contents() == web_contents) {

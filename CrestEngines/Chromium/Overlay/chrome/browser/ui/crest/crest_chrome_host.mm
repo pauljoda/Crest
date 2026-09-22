@@ -1,3 +1,4 @@
+#import <AuthenticationServices/AuthenticationServices.h>
 #import <Cocoa/Cocoa.h>
 #import "CrestChromiumHost.h"
 
@@ -137,6 +138,7 @@
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "content/public/common/drop_data.h"
+#include "net/base/apple/url_conversions.h"
 #include "ui/base/page_transition_types.h"
 
 @interface CrestRoot : NSObject
@@ -151,6 +153,9 @@
                request:(CrestSidePanelRequest)request;
 + (void)routeDevTools:(NSString*)pageID;
 + (void)closeDevToolsPanel:(NSString*)pageID;
++ (void)showNativeNotice:(NSString*)message icon:(NSString*)icon;
++ (BOOL)openAuthenticationSession:(NSURL*)url window:(NSString*)windowID;
++ (void)closeAuthenticationSession:(NSString*)windowID;
 @end
 
 @interface CrestLinkMenuAction : NSObject
@@ -547,8 +552,53 @@ struct HostState {
   void (^browser_observation)(NSDictionary<NSString*, id>*);
   void (^download_observation)(NSDictionary<NSString*, id>*);
   void (^download_destination)(NSDictionary<NSString*, id>*, void (^)(NSString*));
+  // System sign-in requests from other apps, by the Quick Window running each.
+  // Requests that arrive before the native root starts wait in `pending_*`.
+  std::map<std::string, ASWebAuthenticationSessionRequest*> authentication_sessions;
+  std::vector<ASWebAuthenticationSessionRequest*> pending_authentication_sessions;
 };
 HostState& State() { static base::NoDestructor<HostState> state; return *state; }
+
+// System sign-in (`ASWebAuthenticationSession`). Chromium's own handler opens a
+// Views popup Browser in the last-used engine profile; that profile belongs to
+// no Space and the popup never appears, so the sign-in page loads where nobody
+// can see it. Crest runs the session in a Quick Window of the Space an external
+// link from the requesting app routes to, and completes it when that page
+// reaches the requester's callback. The window shows the page's address and
+// has no editable location, which is what the system API requires.
+//
+// An ephemeral-session request still uses the Space's profile: the API leaves
+// honoring it to the browser, and a Space is Crest's unit of identity.
+void EndAuthenticationSession(const std::string& window, NSURL* callback, bool close_window) {
+  auto& sessions = State().authentication_sessions;
+  auto found = sessions.find(window);
+  if (found == sessions.end()) return;
+  ASWebAuthenticationSessionRequest* request = found->second;
+  sessions.erase(found);
+  if (callback) {
+    [request completeWithCallbackURL:callback];
+  } else {
+    [request cancelWithError:[NSError errorWithDomain:ASWebAuthenticationSessionErrorDomain
+                                                 code:ASWebAuthenticationSessionErrorCodeCanceledLogin
+                                             userInfo:nil]];
+  }
+  if (close_window)
+    [NSClassFromString(@"CrestRoot") closeAuthenticationSession:base::SysUTF8ToNSString(window)];
+}
+
+void StartAuthenticationSession(ASWebAuthenticationSessionRequest* request) {
+  if (State().disposing || State().quitting) {
+    [request cancelWithError:[NSError errorWithDomain:ASWebAuthenticationSessionErrorDomain
+                                                 code:ASWebAuthenticationSessionErrorCodePresentationContextInvalid
+                                             userInfo:nil]];
+    return;
+  }
+  NSString* window = NSUUID.UUID.UUIDString;
+  State().authentication_sessions[base::SysNSStringToUTF8(window)] = request;
+  if (![NSClassFromString(@"CrestRoot") openAuthenticationSession:request.URL window:window])
+    EndAuthenticationSession(base::SysNSStringToUTF8(window), nil, false);
+}
+
 
 // Drops any open panel card for `extension_id` in `profile`, for one tab or
 // for all of them. An extension that unloads or turns its entry off has no
@@ -2508,6 +2558,8 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   }
   for (NSString* identifier in windowIDs) {
     const auto id = base::SysNSStringToUTF8(identifier);
+    // A sign-in window closed before its page reached the callback.
+    EndAuthenticationSession(id, nil, false);
     for (;;) {
       auto owner = std::find_if(state.browsers.begin(), state.browsers.end(),
           [&](const auto& entry) { return entry.second->window == id; });
@@ -2641,6 +2693,10 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   state.quit_preflight = [completion copy];
   ContinueQuitPreparation(++state.quit_generation, true);
 }
+- (void)cancelAuthenticationSessionForWindow:(NSString*)windowID {
+  CHECK(NSThread.isMainThread);
+  EndAuthenticationSession(base::SysNSStringToUTF8(windowID), nil, false);
+}
 - (void)cancelQuitPreparation {
   CHECK(NSThread.isMainThread);
   auto& state = State();
@@ -2754,8 +2810,54 @@ class LinkNavigationThrottle final : public content::NavigationThrottle {
 };
 }  // namespace
 
+namespace {
+bool MatchesAuthenticationCallback(ASWebAuthenticationSessionRequest* request, const GURL& url) {
+  NSURL* candidate = net::NSURLWithGURL(url);
+  if (!candidate) return false;
+  if (@available(macOS 14.4, *)) return [request.callback matchesURL:candidate];
+  return request.callbackURLScheme.length &&
+      [candidate.scheme caseInsensitiveCompare:request.callbackURLScheme] == NSOrderedSame;
+}
+
+class AuthenticationSessionThrottle final : public content::NavigationThrottle {
+ public:
+  explicit AuthenticationSessionThrottle(content::NavigationThrottleRegistry& registry)
+      : NavigationThrottle(registry) {}
+  const char* GetNameForLogging() override { return "CrestAuthenticationSessionThrottle"; }
+  ThrottleCheckResult WillStartRequest() override { return Check(); }
+  ThrottleCheckResult WillRedirectRequest() override { return Check(); }
+
+ private:
+  ThrottleCheckResult Check() {
+    auto& state = State();
+    auto* navigation = navigation_handle();
+    if (state.authentication_sessions.empty() || state.disposing || !navigation->IsInPrimaryMainFrame())
+      return PROCEED;
+    Browser* browser = nullptr;
+    for (const auto& [id, page] : state.pages)
+      if (page->web_contents() == navigation->GetWebContents()) { browser = page->browser; break; }
+    if (!browser) return PROCEED;
+    for (const auto& [key, owner] : state.browsers) {
+      if (owner->browser != browser) continue;
+      auto session = state.authentication_sessions.find(owner->window);
+      if (session == state.authentication_sessions.end() ||
+          !MatchesAuthenticationCallback(session->second, navigation->GetURL())) return PROCEED;
+      // Completing closes the window and destroys this navigation's page, so
+      // it happens after the navigation stack has unwound.
+      NSURL* callback = net::NSURLWithGURL(navigation->GetURL());
+      const std::string window = owner->window;
+      dispatch_async(dispatch_get_main_queue(), ^{ EndAuthenticationSession(window, callback, true); });
+      return CANCEL_AND_IGNORE;
+    }
+    return PROCEED;
+  }
+};
+}  // namespace
+
 void AddNavigationThrottle(content::NavigationThrottleRegistry& registry) {
-  if (IsEnabled()) registry.AddThrottle(std::make_unique<LinkNavigationThrottle>(registry));
+  if (!IsEnabled()) return;
+  registry.AddThrottle(std::make_unique<LinkNavigationThrottle>(registry));
+  registry.AddThrottle(std::make_unique<AuthenticationSessionThrottle>(registry));
 }
 
 bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data) {
@@ -3042,6 +3144,9 @@ void EnsureCrestUIStarted(Browser* browser) {
   CHECK(NSClassFromString(@"CrestRoot"));
   State().started = true;
   [NSClassFromString(@"CrestRoot") startWithHost:[[CrestChromiumHost alloc] init]];
+  auto pending = std::move(State().pending_authentication_sessions);
+  State().pending_authentication_sessions.clear();
+  for (ASWebAuthenticationSessionRequest* request : pending) StartAuthenticationSession(request);
 }
 void OnEngineWindowShown(Browser* browser, bool focused) {
   if (!State().started) return;
@@ -3169,5 +3274,38 @@ bool OpenExternalURLs(NSArray<NSURL*>* urls) {
   // its own behavior rather than dropping the request.
   if (!IsEnabled() || !State().started || State().disposing || State().quitting) return false;
   return [NSClassFromString(@"CrestRoot") openExternalURLs:urls];
+}
+bool BeginAuthenticationSession(ASWebAuthenticationSessionRequest* request) {
+  CHECK(NSThread.isMainThread);
+  if (!IsEnabled()) return false;
+  if (!State().started) { State().pending_authentication_sessions.push_back(request); return true; }
+  StartAuthenticationSession(request);
+  return true;
+}
+bool CancelAuthenticationSession(ASWebAuthenticationSessionRequest* request) {
+  CHECK(NSThread.isMainThread);
+  if (!IsEnabled()) return false;
+  auto& state = State();
+  auto pending = std::find_if(state.pending_authentication_sessions.begin(),
+      state.pending_authentication_sessions.end(),
+      [&](ASWebAuthenticationSessionRequest* candidate) { return [candidate.UUID isEqual:request.UUID]; });
+  if (pending != state.pending_authentication_sessions.end()) {
+    state.pending_authentication_sessions.erase(pending);
+    [request cancelWithError:[NSError errorWithDomain:ASWebAuthenticationSessionErrorDomain
+                                                 code:ASWebAuthenticationSessionErrorCodeCanceledLogin
+                                             userInfo:nil]];
+    return true;
+  }
+  for (const auto& [window, candidate] : state.authentication_sessions) {
+    if (![candidate.UUID isEqual:request.UUID]) continue;
+    EndAuthenticationSession(std::string(window), nil, true);
+    break;
+  }
+  return true;
+}
+void ShowEngineNotice(const std::u16string& message, const std::string& symbol) {
+  if (!IsEnabled() || !State().started || State().disposing || message.empty()) return;
+  [NSClassFromString(@"CrestRoot") showNativeNotice:base::SysUTF16ToNSString(message)
+                                               icon:base::SysUTF8ToNSString(symbol)];
 }
 }  // namespace crest

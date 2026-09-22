@@ -9,7 +9,7 @@
   },
   "chrome/browser/app_controller_mac.mm": {
     "before": "f82d0e17923e264fbb1bf472637e40332d69afc347a3dda391bd3f681076bc5e",
-    "after": "a628d008f4f3b9afaed2b3c114522ac935dec53cfc91f3357b5a93231ec26dcc"
+    "after": "addf7c7e08958385f713ae02261f0399a09309de26f6dc191005b12e1a8a8497"
   },
   "chrome/browser/ui/BUILD.gn": {
     "before": "d00a05b597c3f25aa7e7eea8b777f5fbcebd1e67ace0e4d0e926a75a62f79ee3",
@@ -194,5 +194,13 @@
   "chrome/browser/webauthn/authenticator_request_dialog_controller.h": {
     "before": "7c683c5683093b44bc3777b32340ed640c2c222f463570123c1867be61dea9a5",
     "after": "4db19d8f4e86fea15d243d80b9a1cd2f4c8f6991234909b8e3c3602319621468"
+  },
+  "chrome/browser/ui/toasts/toast_controller.cc": {
+    "before": "544c3725544ee6b0918d879c2e03a458e85500c6c96e0fb18134cbb33ac37072",
+    "after": "949bfc3b49198ecbbb12bf5f169c4dd0d1d728ce6f4507a393dd66f468e5d03b"
+  },
+  "chrome/browser/ui/sad_tab_controller.cc": {
+    "before": "f27895f484d5d13cd84d624622d2813c3e0d122893fe0863515a367d80ec950d",
+    "after": "bd13851d3e47e2d69e3c39578ffdb8cb51bdb02660150a13d89ce6fcaef74acf"
   }
 }
