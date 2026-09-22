@@ -776,16 +776,16 @@
 +++ b/chrome/browser/ui/browser.cc
 @@ -3,6 +3,9 @@
  // found in the LICENSE file.
-
+ 
  #include "chrome/browser/ui/browser.h"
 +#if BUILDFLAG(IS_MAC)
 +#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 +#endif
-
+ 
  #include <stddef.h>
-
+ 
 @@ -1245,9 +1248,10 @@
-
+ 
  WebContents* Browser::OpenURLFromTab(
      WebContents* source,
 -    const OpenURLParams& params,
@@ -804,9 +804,24 @@
 +#if BUILDFLAG(IS_MAC)
 +  if (crest::RouteModifiedLink(source, params)) return nullptr;
 +#endif
-
+ 
    // If the source is already split, navigate the other pane instead of
    // creating a new tab. Return |source| so that WebContentsImpl::OpenURL()
+@@ -1504,6 +1512,14 @@
+ }
+ 
+ void Browser::UpdateTargetURL(WebContents* source, const GURL& url) {
++#if BUILDFLAG(IS_MAC)
++  // Crest shows the hovered link itself; this build has no Views status
++  // bubble to cast to.
++  if (crest::IsEnabled()) {
++    crest::UpdateTargetURL(source, url);
++    return;
++  }
++#endif
+   std::vector<StatusBubble*> status_bubbles = GetStatusBubbles();
+   for (StatusBubble* status_bubble : status_bubbles) {
+     StatusBubbleViews* status_bubble_views =
 --- a/third_party/blink/public/web/web_navigation_params.h
 +++ b/third_party/blink/public/web/web_navigation_params.h
 @@ -108,6 +108,9 @@

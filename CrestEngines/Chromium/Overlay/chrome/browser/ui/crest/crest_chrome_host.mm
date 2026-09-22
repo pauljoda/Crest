@@ -1559,6 +1559,15 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       observation(@"navigation_started", @{});
     }
   }
+  // Typing, clicking and scrolling in the page, at most once a second, so a
+  // Quick Window's idle timer sees the person working in it.
+  base::TimeTicks last_user_activity;
+  void DidGetUserInteraction(const blink::WebInputEvent&) override {
+    const auto now = base::TimeTicks::Now();
+    if (!last_user_activity.is_null() && now - last_user_activity < base::Seconds(1)) return;
+    last_user_activity = now;
+    if (!State().disposing) observation(@"user_activity", @{});
+  }
   void PrimaryMainDocumentElementAvailable() override {
     InjectStoreScript();
     if (web_contents()) InjectContentScripts(web_contents()->GetPrimaryMainFrame());
@@ -3573,6 +3582,15 @@ bool CancelAuthenticationSession(ASWebAuthenticationSessionRequest* request) {
     break;
   }
   return true;
+}
+void UpdateTargetURL(content::WebContents* contents, const GURL& url) {
+  if (!IsEnabled() || !State().started || State().disposing || !contents) return;
+  for (auto& [page_id, page] : State().pages) {
+    if (page->web_contents() != contents) continue;
+    page->observation(@"link_hover", @{
+      @"url": url.is_valid() ? base::SysUTF8ToNSString(url.spec()) : (id)NSNull.null });
+    return;
+  }
 }
 void UpdateSiteIndicators(content::WebContents* contents) {
   if (!IsEnabled() || !State().started || State().disposing || !contents) return;

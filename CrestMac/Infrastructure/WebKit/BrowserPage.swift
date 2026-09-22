@@ -24,7 +24,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var webView: WKWebView { pageEngine.webView }
     #endif
     @ObservationIgnored lazy var pictureInPicture = webKitView.map { BrowserPictureInPicturePageController(webView: $0) }
-    @ObservationIgnored lazy var linkHover = webKitView.map { BrowserLinkHoverController(webView: $0) }
+    @ObservationIgnored lazy var linkHover: BrowserLinkHoverController? =
+        webKitView.map { BrowserLinkHoverController(webView: $0) }
+        ?? BrowserLinkHoverController(contentView: pageEngine.nativeView)
     #if CREST_CHROMIUM_HOST
     @ObservationIgnored lazy var linkDrag: BrowserLinkDragController? = BrowserLinkDragController(
         nativeView: nativeView,
@@ -329,6 +331,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         Self.lifecycleSignposter.endInterval("Initialize WKWebView", webViewInterval)
         #endif
         super.init()
+        // The Space's default zoom. WebKit takes it from its view below; other
+        // engines replay it when their page is created.
+        if webKitView == nil { pageEngine.setZoom(pageZoom) }
         // An engine that runs Crest's content bridges itself receives them here;
         // WebKit installs its own through the user content controller below.
         if allowsCredentialAccess, let scripting = pageEngine.contentScripting {
@@ -593,8 +598,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func monitorUserActivity(_ handler: @escaping () -> Void) {
-        guard let webView = webKitView else { return }
         userActivityHandler = handler
+        // An engine without a user content controller reports input itself.
+        guard let webView = webKitView else { return }
         guard ownsUserContentController, userActivityMessageProxy == nil else { return }
         userActivityMessageProxy = BrowserUserActivityBridge.install(
             in: webView.configuration.userContentController
@@ -1277,6 +1283,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         switch event {
         case "navigation_started":
             linkDrag?.beginNavigation()
+            linkHover?.beginNavigation()
             credentialState.didStartNavigation()
             beginBlockedPopupNavigation()
         case "infobar_added":
@@ -1285,6 +1292,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             engineInfoBars.append(bar)
         case "infobar_removed":
             engineInfoBars.removeAll { $0.id == values["id"] as? Int }
+        case "user_activity":
+            userActivityHandler?()
+        case "link_hover":
+            linkHover?.receiveEngineHover((values["url"] as? String).flatMap(URL.init(string:)))
         case "popup_blocked":
             guard let raw = values["url"] as? String, let pageURL = URL(string: raw) else { return }
             recordEngineBlockedPopup(pageURL: pageURL, documentIdentifier: "\(committedNavigationCount)")
@@ -1300,7 +1311,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             url = destination
             title = values["title"] as? String ?? ""
             isLoading = values["isLoading"] as? Bool ?? false
-            if !isLoading { linkDrag?.didFinishNavigation() }
+            if !isLoading {
+                linkDrag?.didFinishNavigation()
+                // A navigation that failed or turned into a download ends
+                // here without committing.
+                linkHover?.didFailNavigation()
+            }
             estimatedProgress = isLoading ? 0.5 : 1
             hasOnlySecureContent = destination?.scheme == "https"
             canGoBack = values["canGoBack"] as? Bool ?? false
@@ -1323,6 +1339,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 pendingNavigationURL = nil
                 navigationFailure = nil
                 webContentFailureMessage = nil
+                linkHover?.didCommitNavigation()
                 committedNavigationCount += 1
                 synchronizePopupPermission(for: destination)
             }

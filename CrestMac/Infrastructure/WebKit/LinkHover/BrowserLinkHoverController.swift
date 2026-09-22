@@ -9,7 +9,11 @@ import WebKit
 final class BrowserLinkHoverController {
     private(set) var destination: BrowserLinkHoverDestination?
     private(set) var isExpanded = false
+    /// The engine's page view; the preview only shows while the pointer is
+    /// over it. WebKit pages also validate each report against the document.
+    @ObservationIgnored private weak var contentView: NSView?
     @ObservationIgnored private weak var webView: WKWebView?
+    @ObservationIgnored private var engineSequence = 0
     @ObservationIgnored private weak var presentationHost: NSView?
     @ObservationIgnored private var state = BrowserLinkHoverState()
     @ObservationIgnored private var work: Task<Void, Never>?
@@ -20,6 +24,12 @@ final class BrowserLinkHoverController {
 
     init(webView: WKWebView) {
         self.webView = webView
+        contentView = webView
+    }
+
+    /// An engine that reports hovered links itself.
+    init(contentView: NSView) {
+        self.contentView = contentView
     }
 
     isolated deinit {
@@ -154,6 +164,48 @@ final class BrowserLinkHoverController {
         }
     }
 
+    /// The link under the pointer as the engine reports it, or nil when the
+    /// pointer left it. The engine's own hit testing is authoritative, so
+    /// there is no document to validate against.
+    func receiveEngineHover(_ url: URL?) {
+        if let host = contentView?.superview { attach(to: host) }
+        engineSequence &+= 1
+        let sequence = engineSequence
+        guard let href = url?.absoluteString else {
+            state.leave(document: "engine", sequence: sequence)
+            work?.cancel()
+            work = nil
+            publish()
+            return
+        }
+        guard canPresent, BrowserLinkHoverDestination(resolvedURL: href) != nil else {
+            invalidate()
+            return
+        }
+        work?.cancel()
+        let ticket = state.receive(
+            document: "engine", sequence: sequence, href: href,
+            at: ProcessInfo.processInfo.systemUptime
+        )
+        publish()
+        work = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(BrowserLinkHoverState.appearanceDelay))
+                guard let self, !Task.isCancelled, self.state.ticket == ticket, self.canPresent,
+                    self.state.reveal(ticket: ticket, at: ProcessInfo.processInfo.systemUptime)
+                else { return }
+                self.publish()
+                try await Task.sleep(for: .seconds(BrowserLinkHoverState.expansionDelay))
+                guard !Task.isCancelled, self.state.ticket == ticket, self.canPresent,
+                    self.state.expand(ticket: ticket, at: ProcessInfo.processInfo.systemUptime)
+                else { return }
+                self.publish()
+            } catch {
+                // Cancellation retires pending work without publishing text.
+            }
+        }
+    }
+
     private func validate(document: String, sequence: Int, href: String, frame: WKFrameInfo) async -> Bool {
         guard let webView else { return false }
         let result = try? await webView.callAsyncJavaScript(
@@ -165,15 +217,15 @@ final class BrowserLinkHoverController {
     }
 
     private var canPresent: Bool {
-        guard !isNavigating, let webView, let presentationHost,
-            webView.superview === presentationHost, !webView.isHiddenOrHasHiddenAncestor,
-            let window = webView.window, window.isKeyWindow, NSApp.isActive,
+        guard !isNavigating, let contentView, let presentationHost,
+            contentView.superview === presentationHost, !contentView.isHiddenOrHasHiddenAncestor,
+            let window = contentView.window, window.isKeyWindow, NSApp.isActive,
             window.attachedSheet == nil, !BrowserMenuTrackingMonitor.shared.isTracking,
             let content = window.contentView
         else { return false }
         let point = content.convert(window.mouseLocationOutsideOfEventStream, from: nil)
         guard let hit = content.hitTest(point) else { return false }
-        return hit === webView || hit.isDescendant(of: webView)
+        return hit === contentView || hit.isDescendant(of: contentView)
     }
 
     private func publish() {

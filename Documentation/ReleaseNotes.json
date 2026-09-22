@@ -1921,6 +1921,18 @@
     "quick-window-size-on-wide-displays": {
       "category": "fixed",
       "message": "Quick Windows open at a comfortable size on wide displays and when the main window shows the Start Page."
+    },
+    "link-hover-desktop": {
+      "category": "new",
+      "message": "Hovering a link in the desktop browser shows where it goes at the bottom of the page."
+    },
+    "quick-window-activity-desktop": {
+      "category": "fixed",
+      "message": "Quick Windows in the desktop browser stay open while you type or click in them."
+    },
+    "space-default-zoom-desktop": {
+      "category": "fixed",
+      "message": "A Space's default page zoom now applies to new pages in the desktop browser."
     }
   }
 }

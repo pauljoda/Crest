@@ -55,6 +55,8 @@ void TranslateSelection(const std::u16string& text);
 // A page's site state changed — the engine blocked a pop-up, for one. Crest
 // relays what its own Site Controls show.
 void UpdateSiteIndicators(content::WebContents* contents);
+// The link under the pointer changed; an empty URL means it left the link.
+void UpdateTargetURL(content::WebContents* contents, const GURL& url);
 // Extension side panels are cards in Crest's own page row, so this build never
 // creates Chrome's Views side-panel UI. `chrome.sidePanel.open()`, `close()`
 // and an action click that toggles a panel are routed to the card that belongs
