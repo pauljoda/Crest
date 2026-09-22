@@ -6,43 +6,28 @@ import SwiftUI
 // compiled into a target, so the shared presentation layer composes these
 // without naming an engine or asking a compile-time condition of its own.
 
-/// The engine keeps its own content settings, so the list comes from the page
-/// rather than from Crest's permission centre.
+/// Crest's per-Space record decides site permissions on this engine too; a
+/// change is applied to the engine at once rather than on the next page load.
 struct BrowserEngineSitePermissionsSection: View {
     let page: BrowserPage
     let origin: BrowserSiteOrigin
     let permissionCenter: BrowserSitePermissionCenter
     @Binding var isExpanded: Bool
 
-    @State private var permissions: [ChromiumNativePage.SitePermission] = []
-
     var body: some View {
-        if let native = page.chromiumPage {
-            VStack(alignment: .leading, spacing: CrestSpacing.small) {
-                Text("Permissions").font(.headline)
-                ForEach(permissions) { permission in
-                    Picker(
-                        permission.label,
-                        selection: Binding(
-                            get: {
-                                permissions.first { $0.id == permission.id }?.value
-                                    ?? permission.value
-                            },
-                            set: { value in
-                                if native.setPermission(permission.id, value: value) {
-                                    permissions = native.permissions
-                                }
-                            })
-                    ) {
-                        if permission.supportsAsk { Text("Ask").tag(3) }
-                        Text("Allow").tag(1)
-                        Text("Block").tag(2)
-                    }
-                    .pickerStyle(.menu)
+        BrowserSitePermissionDisclosure(
+            origin: origin,
+            spaceID: page.spaceID,
+            permissionCenter: permissionCenter,
+            didChange: { permission in
+                if permission == .popups {
+                    page.synchronizePopupPermission()
+                } else {
+                    page.synchronizeEngineSitePermissions()
                 }
-            }
-            .onAppear { permissions = native.permissions }
-        }
+            },
+            isExpanded: $isExpanded
+        )
     }
 }
 

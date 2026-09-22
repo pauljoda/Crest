@@ -367,6 +367,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             }
         }
         #if CREST_CHROMIUM_HOST
+        chromiumPage?.permissionHandler = { [weak self] permission, origin, topLevelOrigin in
+            await self?.resolveEngineSitePermission(permission, origin: origin, topLevelOrigin: topLevelOrigin) ?? 4
+        }
         chromiumPage?.observer = { [weak self] event, values in
             self?.receiveChromiumEvent(event, values: values)
         }
@@ -1315,6 +1318,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             linkHover?.beginNavigation()
             credentialState.didStartNavigation()
             beginBlockedPopupNavigation()
+            // A prompt the engine withdrew with its document has no one to answer.
+            sitePermissionRequests.cancelAll()
             mediaSessionCoordinator?.prepareForNavigation()
         case "infobar_added":
             guard let bar = BrowserEngineInfoBar(values: values), !engineInfoBars.contains(where: { $0.id == bar.id })
@@ -1377,6 +1382,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 mediaSessionCoordinator?.didCommitNavigation()
                 committedNavigationCount += 1
                 synchronizePopupPermission(for: destination)
+                synchronizeEngineSitePermissions(for: destination)
             }
             if wasLoading, !isLoading, committedNavigationCount > 0 { completedNavigationCount += 1 }
         case "developer_panel":
@@ -1399,6 +1405,58 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         }
     }
     #endif
+
+    // MARK: Engine-enforced site permissions
+
+    /// The permissions an engine enforces itself. Crest's per-Space record
+    /// decides them and the engine is told the answer.
+    static let engineEnforcedPermissions: [BrowserSitePermission] = [.camera, .microphone, .location, .notifications]
+
+    /// Applies Crest's record for `url`'s site to an engine that enforces site
+    /// permissions itself, so a revocation in Crest takes effect in the engine.
+    func synchronizeEngineSitePermissions(for url: URL? = nil) {
+        guard let origin = (url ?? displayURL).flatMap(BrowserSiteOrigin.init(url:)) else { return }
+        for permission in Self.engineEnforcedPermissions {
+            var decision = permissionCenter.decision(for: permission, origin: origin, in: spaceID)
+            if decision == .ask, permission == .camera || permission == .microphone {
+                decision = permissionCenter.decision(for: .cameraAndMicrophone, origin: origin, in: spaceID)
+            }
+            let allowed: Bool? = switch decision {
+            case .grantPersistently, .grantForSession: true
+            case .denyPersistently, .denyForSession: false
+            case .ask: nil
+            }
+            _ = pageEngine.applySitePermission(permission, allowed: allowed)
+        }
+    }
+
+    /// An engine's request for a permission Crest records: a saved decision
+    /// answers at once, otherwise Crest's prompt asks and a lasting answer is
+    /// saved for the Space. Replies use the host's codes: 1 allow, 2 allow this
+    /// time, 3 block, 4 dismiss.
+    func resolveEngineSitePermission(
+        _ permission: BrowserSitePermission,
+        origin: BrowserSiteOrigin,
+        topLevelOrigin: BrowserSiteOrigin
+    ) async -> Int {
+        switch permissionCenter.decision(for: permission, origin: origin, in: spaceID) {
+        case .grantPersistently, .grantForSession: return 1
+        case .denyPersistently, .denyForSession: return 3
+        case .ask: break
+        }
+        let response = await sitePermissionRequests.response(
+            to: permission, origin: origin, topLevelOrigin: topLevelOrigin, spaceName: spaceName)
+        switch response {
+        case .allowOnce: return 2
+        case .denyOnce: return 4
+        case .grantPersistently:
+            permissionCenter.setDecision(.grantPersistently, for: permission, origin: origin, in: spaceID)
+            return 1
+        case .denyPersistently:
+            permissionCenter.setDecision(.denyPersistently, for: permission, origin: origin, in: spaceID)
+            return 3
+        }
+    }
 
     func refreshNavigationState() {
         #if CREST_CHROMIUM_HOST

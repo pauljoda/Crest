@@ -254,6 +254,24 @@ final class ChromiumNativePage: BrowserPageEngine {
     private(set) var mediaSessionLocation: String?
     var mediaSessionTransport: (any BrowserMediaSessionTransport)? { self }
 
+    func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool {
+        let key: String
+        switch permission {
+        case .camera: key = "camera"
+        case .microphone: key = "microphone"
+        case .location: key = "location"
+        case .notifications: key = "notifications"
+        default: return false
+        }
+        guard created, !disposed else { return true }
+        _ = setPermission(key, value: allowed.map { $0 ? 1 : 2 } ?? 0)
+        return true
+    }
+
+    /// Answers the engine's site permission requests from Crest's record and
+    /// prompt; the reply codes are the host's.
+    var permissionHandler: ((BrowserSitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> Int)?
+
     func showBlockedPopups() -> Bool {
         guard created, !disposed, let host else { return false }
         return host.command("engine.show_blocked_popups", page: id, url: nil)
@@ -432,6 +450,17 @@ final class ChromiumNativePage: BrowserPageEngine {
             creating = false
             for script in contentScripts {
                 _ = host?.addContentScript(script.source, page: id, mainFrameOnly: script.mainFrameOnly)
+            }
+            host?.setPermissionHandler(page: id) { [weak self] request, reply in
+                MainActor.assumeIsolated {
+                    guard let self, let handler = self.permissionHandler,
+                        let permission = (request["permission"] as? String).flatMap(BrowserSitePermission.init(rawValue:)),
+                        let origin = (request["origin"] as? String).flatMap(URL.init(string:)).flatMap(BrowserSiteOrigin.init(url:))
+                    else { reply(4); return }
+                    let topLevel = (request["topLevelOrigin"] as? String).flatMap(URL.init(string:))
+                        .flatMap(BrowserSiteOrigin.init(url:)) ?? origin
+                    Task { @MainActor in reply(await handler(permission, origin, topLevel)) }
+                }
             }
             host?.setLinkHandler(page: id) { [weak self] action, address, label in
                 MainActor.assumeIsolated {

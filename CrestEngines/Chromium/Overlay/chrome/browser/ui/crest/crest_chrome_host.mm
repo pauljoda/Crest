@@ -1332,6 +1332,10 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   std::string profile;
   Observation observation;
   BOOL (^link_handler)(NSString*, NSString*, NSString*) = nil;
+  // Crest answers site permission requests from its own per-Space record and
+  // prompt. The reply is 1 to allow, 2 to allow this time, 3 to block and 4 to
+  // dismiss without deciding.
+  void (^permission_handler)(NSDictionary<NSString*, id>*, void (^)(NSInteger)) = nil;
   CrestDeferredNavigation (^protected_link_handler)(NSString*) = nil;
   void (^modified_link_handler)(NSString*, NSUInteger, NSString*, void (^)(NSString*, CrestDeferredNavigation)) = nil;
   bool closing = false;
@@ -2474,6 +2478,11 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   } else { return NO; }
   return YES;
 }
+- (void)setPermissionHandlerForPage:(NSString*)pageID
+                           handler:(void (^)(NSDictionary<NSString*, id>*, void (^)(NSInteger)))handler {
+  CHECK(NSThread.isMainThread);
+  if (Page* page = FindPage(pageID)) page->permission_handler = [handler copy];
+}
 - (NSArray<NSData*>*)certificateChainForPage:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
   Page* page = FindPage(pageID);
@@ -3511,9 +3520,78 @@ void ShowExtensionPrompt(
     std::move(pending->callback).Run(Payload(result));
   }];
 }
+namespace {
+// A request Crest's permission record covers, asked through the page's own
+// prompt so the decision is recorded per Space and listed in Privacy.
+class CrestPagePermissionPrompt final : public permissions::PermissionPrompt {
+ public:
+  CrestPagePermissionPrompt(Page* page, Delegate* delegate, NSString* permission)
+      : delegate_(delegate->GetWeakPtr()) {
+    auto weak = weak_factory_.GetWeakPtr();
+    page->permission_handler(@{
+      @"permission": permission,
+      @"origin": base::SysUTF8ToNSString(delegate->GetRequestingOrigin().spec()),
+      @"topLevelOrigin": base::SysUTF8ToNSString(delegate->GetEmbeddingOrigin().spec()) },
+      ^(NSInteger reply) {
+        if (!weak || !weak->delegate_) return;
+        auto current = weak->delegate_;
+        switch (reply) {
+          case 1: current->Accept(std::monostate()); break;
+          case 2: current->AcceptThisTime(std::monostate()); break;
+          case 3: current->Deny(std::monostate()); break;
+          default: current->Dismiss(std::monostate()); break;
+        }
+      });
+  }
+  bool UpdateAnchor() override { return true; }
+  TabSwitchingBehavior GetTabSwitchingBehavior() override { return kKeepPromptAlive; }
+  permissions::PermissionPromptDisposition GetPromptDisposition() const override {
+    return permissions::PermissionPromptDisposition::ANCHORED_BUBBLE;
+  }
+  bool IsAskPrompt() const override { return true; }
+  std::optional<gfx::Rect> GetViewBoundsInScreen() const override { return std::nullopt; }
+  bool ShouldFinalizeRequestAfterDecided() const override { return true; }
+  std::vector<permissions::ElementAnchoredBubbleVariant> GetPromptVariants() const override { return {}; }
+  std::optional<permissions::feature_params::PermissionElementPromptPosition> GetPromptPosition() const override {
+    return std::nullopt;
+  }
+
+ private:
+  base::WeakPtr<Delegate> delegate_;
+  base::WeakPtrFactory<CrestPagePermissionPrompt> weak_factory_{this};
+};
+
+// The Crest permission a batch of engine requests amounts to, or nil when any
+// of them is one Crest's record does not cover.
+NSString* CrestPermissionForRequests(permissions::PermissionPrompt::Delegate* delegate) {
+  bool camera = false, microphone = false;
+  NSString* single = nil;
+  for (const auto& request : delegate->Requests()) {
+    switch (request->request_type()) {
+      case permissions::RequestType::kCameraStream: camera = true; break;
+      case permissions::RequestType::kMicStream: microphone = true; break;
+      case permissions::RequestType::kGeolocation: single = single ? @"" : @"location"; break;
+      case permissions::RequestType::kNotifications: single = single ? @"" : @"notifications"; break;
+      default: return nil;
+    }
+  }
+  if (camera || microphone) {
+    if (single) return nil;
+    return camera && microphone ? @"cameraAndMicrophone" : camera ? @"camera" : @"microphone";
+  }
+  return single.length ? single : nil;
+}
+}  // namespace
+
 std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
     content::WebContents* contents, permissions::PermissionPrompt::Delegate* delegate) {
   if (delegate->ShouldDropCurrentRequestIfCannotShowQuietly()) return nullptr;
+  if (NSString* permission = CrestPermissionForRequests(delegate)) {
+    for (auto& [id, page] : State().pages) {
+      if (page->web_contents() == contents && page->permission_handler)
+        return std::make_unique<CrestPagePermissionPrompt>(page.get(), delegate, permission);
+    }
+  }
   BrowserWindowInterface* browser = GlobalBrowserCollection::GetInstance()->FindBrowserWithTab(contents);
   NSWindow* window = browser ? WindowForBrowser(browser->GetBrowserForMigrationOnly()) : nil;
   if (!window || window.attachedSheet) return nullptr;

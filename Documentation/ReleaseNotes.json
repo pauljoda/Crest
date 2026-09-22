@@ -1969,6 +1969,10 @@
     "selection-search-desktop": {
       "category": "new",
       "message": "Right-click selected text in the desktop browser to search for it with your Space's search engine."
+    },
+    "site-permissions-desktop": {
+      "category": "improved",
+      "message": "In the desktop browser, camera, microphone, location and notification requests use Crest's own prompt, are remembered per Space, and can be reviewed and revoked in Site Controls and Privacy."
     }
   }
 }

@@ -50,6 +50,12 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 - (BOOL)command:(NSString *)command page:(NSString *)pageID url:(nullable NSString *)url;
 // The DER certificate chain of the page's visible entry, leaf first; empty
 // when the page was not loaded over a verified TLS connection.
+// Site permission requests the page's Crest record covers — camera,
+// microphone, location, notifications. The handler replies 1 allow, 2 allow
+// this time, 3 block, 4 dismiss; other requests keep the engine's own prompt.
+- (void)setPermissionHandlerForPage:(NSString *)pageID
+                            handler:(void (^)(NSDictionary<NSString *, id> *request, void (^reply)(NSInteger response)))handler
+    NS_SWIFT_NAME(setPermissionHandler(page:handler:));
 - (NSArray<NSData *> *)certificateChainForPage:(NSString *)pageID;
 - (NSArray<NSDictionary<NSString *, id> *> *)permissionsForPage:(NSString *)pageID;
 - (BOOL)setPermission:(NSString *)permissionID page:(NSString *)pageID value:(NSInteger)value;

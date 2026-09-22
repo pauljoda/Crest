@@ -33,6 +33,10 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// engine that runs its own popup blocker; false when the page applies it
     /// through the engine's own preferences instead.
     func applyAutomaticPopups(_ allowed: Bool) -> Bool
+    /// Applies Crest's decision for one site permission to an engine that
+    /// enforces it itself: true allows, false blocks, nil leaves it to ask.
+    /// False when the page enforces the decision through Crest's own bridges.
+    func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool
     /// Opens the popups the engine's blocker held back, once the person has
     /// allowed them. False when the engine keeps no such list.
     func showBlockedPopups() -> Bool
@@ -61,6 +65,7 @@ extension BrowserPageEngine {
     var interactionState: Data? { nil }
     var contentScripting: (any BrowserPageContentScripting)? { nil }
     func applyAutomaticPopups(_ allowed: Bool) -> Bool { false }
+    func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool { false }
     func showBlockedPopups() -> Bool { false }
     func respondToInfoBar(_ id: Int, response: String) -> Bool { false }
     var serverTrust: SecTrust? { nil }
