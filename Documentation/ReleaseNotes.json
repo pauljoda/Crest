@@ -1961,6 +1961,10 @@
     "experimental-chromium-release": {
       "category": "internal",
       "message": "Publish experimental releases with the Chromium build as the default download and a WebKit build as an alternate, each on its own update feed, from a prebuilt engine published per engine revision."
+    },
+    "now-playing-desktop": {
+      "category": "new",
+      "message": "Now Playing in the desktop browser shows what a tab is playing and can play, pause, skip and mute it."
     }
   }
 }

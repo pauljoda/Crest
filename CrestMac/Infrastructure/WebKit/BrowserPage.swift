@@ -334,6 +334,24 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         // The Space's default zoom. WebKit takes it from its view below; other
         // engines replay it when their page is created.
         if webKitView == nil { pageEngine.setZoom(pageZoom) }
+        if webKitView == nil, let mediaSessionStore, let transport = pageEngine.mediaSessionTransport {
+            mediaSessionCoordinator = BrowserMediaSessionPageCoordinator(
+                transport: transport,
+                endpoint: self,
+                store: mediaSessionStore,
+                owner: { [weak self] in
+                    self?.navigationContext.map {
+                        BrowserTabRuntimeAssignment(
+                            tabID: $0.tabID, spaceID: $0.spaceID, profileID: $0.spaceAssignment.profileID)
+                    }
+                },
+                fallbackTitle: { [weak self] in
+                    guard let self else { return nil }
+                    return self.navigationContext?.mediaSessionOwnerTitle(observedPageTitle: self.title)
+                        ?? BrowserTab.resolvedCustomTitle(self.title)
+                }
+            )
+        }
         // An engine that runs Crest's content bridges itself receives them here;
         // WebKit installs its own through the user content controller below.
         if allowsCredentialAccess, let scripting = pageEngine.contentScripting {
@@ -1286,12 +1304,15 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             linkHover?.beginNavigation()
             credentialState.didStartNavigation()
             beginBlockedPopupNavigation()
+            mediaSessionCoordinator?.prepareForNavigation()
         case "infobar_added":
             guard let bar = BrowserEngineInfoBar(values: values), !engineInfoBars.contains(where: { $0.id == bar.id })
             else { return }
             engineInfoBars.append(bar)
         case "infobar_removed":
             engineInfoBars.removeAll { $0.id == values["id"] as? Int }
+        case "media_session":
+            if let body = values["body"] { mediaSessionCoordinator?.receive(body, isMainFrame: true) }
         case "user_activity":
             userActivityHandler?()
         case "link_hover":
@@ -1316,6 +1337,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 // A navigation that failed or turned into a download ends
                 // here without committing.
                 linkHover?.didFailNavigation()
+                mediaSessionCoordinator?.didFinishNavigation()
             }
             estimatedProgress = isLoading ? 0.5 : 1
             hasOnlySecureContent = values["secure"] as? Bool == true
@@ -1329,6 +1351,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             case "process_terminated":
                 webContentFailureMessage = "process_terminated"
                 credentialState.webContentProcessDidTerminate()
+                mediaSessionCoordinator?.webContentProcessDidTerminate()
             case "navigation_failed":
                 pendingNavigationURL = nil
                 navigationFailure = BrowserNavigationFailure(
@@ -1340,6 +1363,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 navigationFailure = nil
                 webContentFailureMessage = nil
                 linkHover?.didCommitNavigation()
+                mediaSessionCoordinator?.didCommitNavigation()
                 committedNavigationCount += 1
                 synchronizePopupPermission(for: destination)
             }

@@ -251,6 +251,8 @@ final class ChromiumNativePage: BrowserPageEngine {
         return trust
     }
     private var pageHost: String?
+    private(set) var mediaSessionLocation: String?
+    var mediaSessionTransport: (any BrowserMediaSessionTransport)? { self }
 
     func showBlockedPopups() -> Bool {
         guard created, !disposed, let host else { return false }
@@ -423,6 +425,7 @@ final class ChromiumNativePage: BrowserPageEngine {
             forwardHistory = history(values["forwardHistory"])
             if values["committed"] as? Bool == true { surface.layoutEngineView() }
             pageHost = (values["url"] as? String).flatMap(URL.init(string:))?.host()
+            mediaSessionLocation = values["url"] as? String
         }
         if event == "created" {
             created = true
@@ -624,6 +627,22 @@ extension ChromiumNativePage: BrowserPageContentScripting {
             let value = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
             !(value is NSNull) else { return nil }
         return value
+    }
+}
+extension ChromiumNativePage: BrowserMediaSessionTransport {
+    func activateMediaSession(documentIdentifier: String) {
+        guard created, !disposed else { return }
+        _ = host?.command("engine.media_activate", page: id, url: documentIdentifier)
+    }
+
+    func performMediaSessionAction(_ action: BrowserMediaSessionAction, documentIdentifier: String) {
+        guard created, !disposed else { return }
+        _ = host?.command("engine.media_action", page: id, url: "\(action.rawValue):\(documentIdentifier)")
+    }
+
+    func setMediaSessionMuted(_ muted: Bool, documentIdentifier: String) {
+        guard created, !disposed else { return }
+        _ = host?.command("engine.media_mute", page: id, url: "\(muted ? 1 : 0):\(documentIdentifier)")
     }
 }
 #endif

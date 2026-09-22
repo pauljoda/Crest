@@ -42,6 +42,9 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// The verified server trust of the page's current document, for the
     /// certificate sheet; nil when it was not loaded over verified TLS.
     var serverTrust: SecTrust? { get }
+    /// An engine that reports its own Media Session and runs its commands;
+    /// nil when Crest's bridge runs in the page instead.
+    var mediaSessionTransport: (any BrowserMediaSessionTransport)? { get }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { get }
     func showInspector() -> Bool
@@ -61,6 +64,7 @@ extension BrowserPageEngine {
     func showBlockedPopups() -> Bool { false }
     func respondToInfoBar(_ id: Int, response: String) -> Bool { false }
     var serverTrust: SecTrust? { nil }
+    var mediaSessionTransport: (any BrowserMediaSessionTransport)? { nil }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool { false }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { nil }

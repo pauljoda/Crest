@@ -143,6 +143,9 @@
 #include "components/password_manager/core/common/password_manager_pref_names.h"
 #include "components/blocked_content/popup_blocker_tab_helper.h"
 #include "components/security_state/content/security_state_tab_helper.h"
+#include "content/public/browser/media_session.h"
+#include "mojo/public/cpp/bindings/receiver.h"
+#include "services/media_session/public/mojom/media_session.mojom.h"
 #include "components/security_state/core/security_state.h"
 #include "content/public/browser/ssl_status.h"
 #include "net/base/net_errors.h"
@@ -1264,7 +1267,8 @@ std::string ContentFrameIdentifier(content::RenderFrameHost* frame, const std::s
 }
 
 struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
-                    favicon::FaviconDriverObserver, infobars::InfoBarManager::Observer {
+                    favicon::FaviconDriverObserver, infobars::InfoBarManager::Observer,
+                    media_session::mojom::MediaSessionObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
        Observation observer)
       : content::WebContentsObserver(contents), browser(owner),
@@ -1272,6 +1276,8 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     find_helper = find_in_page::FindTabHelper::FromWebContents(contents);
     if (find_helper) find_helper->AddObserver(this);
     if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents)) driver->AddObserver(this);
+    if (auto* media_session = content::MediaSession::Get(contents))
+      media_session->AddObserver(media_receiver.BindNewPipeAndPassRemote());
     infobar_manager = infobars::ContentInfoBarManager::FromWebContents(contents);
     if (infobar_manager) {
       infobar_manager->AddObserver(this);
@@ -1397,6 +1403,74 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     else return false;
     if (remove) bar->RemoveSelf();
     return true;
+  }
+  // The engine's own Media Session — metadata, playback state and the actions
+  // the page handles — reported in the event shape Crest's store reads, under
+  // the document identifier Crest issued for the committed document.
+  mojo::Receiver<media_session::mojom::MediaSessionObserver> media_receiver{this};
+  media_session::mojom::MediaSessionInfoPtr media_info;
+  std::optional<media_session::MediaMetadata> media_metadata;
+  std::vector<media_session::mojom::MediaSessionAction> media_actions;
+  std::string media_document;
+  uint64_t media_sequence = 0;
+  // The engine deactivates a session whose tab is muted; Crest keeps showing
+  // it, muted, so the person can unmute it.
+  bool media_seen_active = false;
+  bool media_last_playing = false;
+  void MediaSessionInfoChanged(media_session::mojom::MediaSessionInfoPtr info) override {
+    media_info = std::move(info);
+    PublishMediaSession();
+  }
+  void MediaSessionMetadataChanged(const std::optional<media_session::MediaMetadata>& metadata) override {
+    media_metadata = metadata;
+    PublishMediaSession();
+  }
+  void MediaSessionActionsChanged(const std::vector<media_session::mojom::MediaSessionAction>& actions) override {
+    media_actions = actions;
+    PublishMediaSession();
+  }
+  void MediaSessionImagesChanged(
+      const base::flat_map<media_session::mojom::MediaSessionImageType,
+                           std::vector<media_session::MediaImage>>&) override {}
+  void MediaSessionPositionChanged(const std::optional<media_session::MediaPosition>&) override {}
+  void OnAudioStateChanged(bool) override { PublishMediaSession(); }
+  void DidUpdateAudioMutingState(bool) override { PublishMediaSession(); }
+  void PublishMediaSession() {
+    if (media_document.empty() || State().disposing || !web_contents()) return;
+    using SessionState = media_session::mojom::MediaSessionInfo::SessionState;
+    const bool engine_active = media_info && media_info->state != SessionState::kInactive;
+    if (engine_active) {
+      media_seen_active = true;
+      media_last_playing = media_info->playback_state == media_session::mojom::MediaPlaybackState::kPlaying;
+    }
+    const bool active = engine_active || (media_info && media_seen_active && web_contents()->IsAudioMuted());
+    // While muted the engine reports no playback; the last state it did report stands.
+    NSString* playback = !active ? @"none" : media_last_playing ? @"playing" : @"paused";
+    NSMutableArray* actions = [NSMutableArray array];
+    for (auto action : media_actions) {
+      switch (action) {
+        case media_session::mojom::MediaSessionAction::kPlay: [actions addObject:@"play"]; break;
+        case media_session::mojom::MediaSessionAction::kPause: [actions addObject:@"pause"]; break;
+        case media_session::mojom::MediaSessionAction::kPreviousTrack: [actions addObject:@"previoustrack"]; break;
+        case media_session::mojom::MediaSessionAction::kNextTrack: [actions addObject:@"nexttrack"]; break;
+        default: break;
+      }
+    }
+    auto text = [](const std::u16string& value) -> id {
+      return value.empty() ? (id)NSNull.null : base::SysUTF16ToNSString(value);
+    };
+    observation(@"media_session", @{ @"body": @{
+      @"version": @1, @"documentIdentifier": base::SysUTF8ToNSString(media_document),
+      @"sequence": @(++media_sequence),
+      @"location": base::SysUTF8ToNSString(web_contents()->GetLastCommittedURL().spec()),
+      @"active": @(active),
+      @"title": media_metadata ? text(media_metadata->title) : (id)NSNull.null,
+      @"artist": media_metadata ? text(media_metadata->artist) : (id)NSNull.null,
+      @"album": media_metadata ? text(media_metadata->album) : (id)NSNull.null,
+      @"playbackState": playback,
+      @"audible": @(web_contents()->IsCurrentlyAudible()),
+      @"muted": @(web_contents()->IsAudioMuted()),
+      @"actions": actions } });
   }
   // How many blocked pop-ups this document has already been reported.
   size_t published_blocked_popups = 0;
@@ -1600,6 +1674,12 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
         navigation->IsSameDocument() && ConsumeStoreRequest(navigation->GetURL()))
       return;
     if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted()) ++navigation_revision;
+    // Crest issues a new Media Session identity for the next document.
+    if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted() && !navigation->IsSameDocument()) {
+      media_document.clear();
+      media_seen_active = false;
+      media_last_playing = false;
+    }
     // The store is a single-page application: a listing change keeps the
     // document, so the script stays and only its state has to be refreshed.
     if (navigation->IsInPrimaryMainFrame() && navigation->HasCommitted() &&
@@ -2302,6 +2382,30 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
         ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
   } else if ([command isEqualToString:@"engine.stop"]) {
     contents->Stop();
+  } else if ([command isEqualToString:@"engine.media_activate"]) {
+    const std::string document = base::SysNSStringToUTF8(url ?: @"");
+    if (document.empty() || document.size() > 128) return NO;
+    page->media_document = document;
+    page->PublishMediaSession();
+  } else if ([command isEqualToString:@"engine.media_action"] ||
+             [command isEqualToString:@"engine.media_mute"]) {
+    // `url` carries "<action or 0/1>:<document>"; a stale document is ignored.
+    const std::string value = base::SysNSStringToUTF8(url ?: @"");
+    const auto separator = value.find(':');
+    if (separator == std::string::npos || value.substr(separator + 1) != page->media_document) return NO;
+    const std::string argument = value.substr(0, separator);
+    if ([command isEqualToString:@"engine.media_mute"]) {
+      contents->SetAudioMuted(argument == "1");
+      return YES;
+    }
+    auto* media_session = content::MediaSession::Get(contents);
+    if (!media_session) return NO;
+    using SuspendType = media_session::mojom::MediaSession::SuspendType;
+    if (argument == "play") media_session->Resume(SuspendType::kUI);
+    else if (argument == "pause") media_session->Suspend(SuspendType::kUI);
+    else if (argument == "previoustrack") media_session->PreviousTrack();
+    else if (argument == "nexttrack") media_session->NextTrack();
+    else return NO;
   } else if ([command isEqualToString:@"engine.infobar"]) {
     // `url` carries "<response>:<id>".
     auto parts = base::SplitString(base::SysNSStringToUTF8(url ?: @""), ":", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
