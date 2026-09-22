@@ -6,6 +6,8 @@ enum BrowserQuickWindowLayout {
     static let defaultHeight: CGFloat = 460
     static let minimumWidth: CGFloat = 600
     static let minimumHeight: CGFloat = 400
+    static let maximumScreenFallbackWidth: CGFloat = 1_440
+    static let maximumScreenFallbackHeight: CGFloat = 1_000
     // The page surface owns the gap below the controls through its frame inset.
     static let toolbarHeight: CGFloat = controlHeight + toolbarTopPadding
     static let controlHeight: CGFloat = BrowserChromeLayout.addressHeight

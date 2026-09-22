@@ -41,18 +41,29 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         self.targetWindowID = targetWindowID
     }
 
+    /// Sized against the page the Quick Window came from, else that page's
+    /// window — a Start Page has no page view to measure — and only then the
+    /// screen, capped so a wide display does not produce a giant window.
     static func targetFrame(
         sourceWebContentFrame: CGRect?,
+        sourceWindowFrame: CGRect? = nil,
         fallbackVisibleFrame: CGRect
     ) -> CGRect {
-        let referenceFrame =
-            sourceWebContentFrame.flatMap { frame in
-                guard frame.width > 0, frame.height > 0 else { return nil }
-                return frame
-            } ?? fallbackVisibleFrame
-        return BrowserTransientWindowGeometryPolicy.centeredContentFrame(
-            in: referenceFrame
-        )
+        let usable: (CGRect?) -> CGRect? = { frame in
+            guard let frame, frame.width > 0, frame.height > 0 else { return nil }
+            return frame
+        }
+        if let referenceFrame = usable(sourceWebContentFrame) ?? usable(sourceWindowFrame) {
+            return BrowserTransientWindowGeometryPolicy.centeredContentFrame(in: referenceFrame)
+        }
+        let proposed = BrowserTransientWindowGeometryPolicy.centeredContentFrame(in: fallbackVisibleFrame)
+        let size = CGSize(
+            width: min(proposed.width, BrowserQuickWindowLayout.maximumScreenFallbackWidth),
+            height: min(proposed.height, BrowserQuickWindowLayout.maximumScreenFallbackHeight))
+        return CGRect(
+            x: fallbackVisibleFrame.midX - size.width / 2,
+            y: fallbackVisibleFrame.midY - size.height / 2,
+            width: size.width, height: size.height)
     }
 
     func updateWindowGeometry() {
@@ -66,8 +77,14 @@ final class BrowserQuickWindowGeometryHostView: NSView {
                 .runtime(for: targetWindowID)?
                 .activeWebContentFrame
         }
+        let sourceWindowFrame = targetWindowID.flatMap { targetWindowID in
+            NSApp.windows.first {
+                $0 !== window && $0.identifier?.rawValue == targetWindowID.rawValue.uuidString
+            }?.frame
+        }
         let frame = Self.targetFrame(
             sourceWebContentFrame: sourceWebContentFrame,
+            sourceWindowFrame: sourceWindowFrame,
             fallbackVisibleFrame: screen.visibleFrame
         )
         guard !framesApproximatelyEqual(window.frame, frame) else { return }

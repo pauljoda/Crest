@@ -141,6 +141,10 @@
 #include "content/public/common/drop_data.h"
 #include "net/base/apple/url_conversions.h"
 #include "components/password_manager/core/common/password_manager_pref_names.h"
+#include "components/blocked_content/popup_blocker_tab_helper.h"
+#include "components/infobars/content/content_infobar_manager.h"
+#include "components/infobars/core/confirm_infobar_delegate.h"
+#include "components/infobars/core/infobar.h"
 #include "content/public/browser/global_routing_id.h"
 #include "mojo/public/cpp/bindings/callback_helpers.h"
 #include "ui/base/page_transition_types.h"
@@ -1254,7 +1258,7 @@ std::string ContentFrameIdentifier(content::RenderFrameHost* frame, const std::s
 }
 
 struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
-                    favicon::FaviconDriverObserver {
+                    favicon::FaviconDriverObserver, infobars::InfoBarManager::Observer {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
        Observation observer)
       : content::WebContentsObserver(contents), browser(owner),
@@ -1262,8 +1266,23 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     find_helper = find_in_page::FindTabHelper::FromWebContents(contents);
     if (find_helper) find_helper->AddObserver(this);
     if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents)) driver->AddObserver(this);
+    infobar_manager = infobars::ContentInfoBarManager::FromWebContents(contents);
+    if (infobar_manager) {
+      infobar_manager->AddObserver(this);
+      // A page adopted from the engine may already carry bars.
+      auto weak = contents->GetWeakPtr();
+      std::vector<infobars::InfoBar*> existing(infobar_manager->infobars().begin(), infobar_manager->infobars().end());
+      dispatch_async(dispatch_get_main_queue(), ^{
+        if (!weak || State().disposing) return;
+        for (auto& [id, page] : State().pages) {
+          if (page->web_contents() != weak.get()) continue;
+          for (auto* bar : existing) page->PublishInfoBar(bar);
+        }
+      });
+    }
   }
   ~Page() override {
+    if (infobar_manager) infobar_manager->RemoveObserver(this);
     std::erase_if(State().pending_link_navigations, [&](const auto& entry) {
       return !entry.second.source || entry.second.source.get() == web_contents();
     });
@@ -1320,6 +1339,61 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   // Content bridge sources, in install order, and whether each is limited to
   // the main frame.
   std::vector<std::pair<std::string, bool>> content_scripts;
+  // Chromium's info bars — tab sharing, `chrome.debugger`, extension notices —
+  // have no Views container here. Confirm bars are relayed for Crest to show
+  // in the page; the rest carry no text of their own and stay silent.
+  infobars::InfoBarManager* infobar_manager = nullptr;
+  std::map<int, infobars::InfoBar*> infobars;
+  int next_infobar_id = 0;
+  void PublishInfoBar(infobars::InfoBar* bar) {
+    if (!bar || State().disposing) return;
+    auto* confirm = bar->delegate() ? bar->delegate()->AsConfirmInfoBarDelegate() : nullptr;
+    if (!confirm) return;
+    for (const auto& [id, known] : infobars) if (known == bar) return;
+    const int id = ++next_infobar_id;
+    infobars[id] = bar;
+    const int buttons = confirm->GetButtons();
+    NSString* ok = buttons & ConfirmInfoBarDelegate::BUTTON_OK
+        ? base::SysUTF16ToNSString(confirm->GetButtonLabel(ConfirmInfoBarDelegate::BUTTON_OK)) : @"";
+    NSString* cancel = buttons & ConfirmInfoBarDelegate::BUTTON_CANCEL
+        ? base::SysUTF16ToNSString(confirm->GetButtonLabel(ConfirmInfoBarDelegate::BUTTON_CANCEL)) : @"";
+    observation(@"infobar_added", @{ @"id": @(id), @"message": base::SysUTF16ToNSString(confirm->GetMessageText()),
+        @"ok": ok, @"cancel": cancel, @"closeable": @(confirm->IsCloseable()) });
+  }
+  void OnInfoBarAdded(infobars::InfoBar* bar) override { PublishInfoBar(bar); }
+  void OnInfoBarRemoved(infobars::InfoBar* bar, bool) override {
+    for (auto it = infobars.begin(); it != infobars.end(); ++it) {
+      if (it->second != bar) continue;
+      const int id = it->first;
+      infobars.erase(it);
+      if (!State().disposing) observation(@"infobar_removed", @{ @"id": @(id) });
+      return;
+    }
+  }
+  void OnInfoBarReplaced(infobars::InfoBar* old_bar, infobars::InfoBar* new_bar) override {
+    OnInfoBarRemoved(old_bar, false);
+    PublishInfoBar(new_bar);
+  }
+  void OnManagerWillBeDestroyed(infobars::InfoBarManager* manager) override {
+    if (manager == infobar_manager) { manager->RemoveObserver(this); infobar_manager = nullptr; }
+    infobars.clear();
+  }
+  // Runs the person's answer to a bar: accept, cancel or dismiss.
+  bool RespondToInfoBar(int id, const std::string& response) {
+    auto found = infobars.find(id);
+    if (found == infobars.end() || !found->second->delegate()) return false;
+    infobars::InfoBar* bar = found->second;
+    auto* confirm = bar->delegate()->AsConfirmInfoBarDelegate();
+    bool remove = false;
+    if (response == "accept" && confirm) remove = confirm->Accept();
+    else if (response == "cancel" && confirm) remove = confirm->Cancel();
+    else if (response == "dismiss") { bar->delegate()->InfoBarDismissed(); remove = true; }
+    else return false;
+    if (remove) bar->RemoveSelf();
+    return true;
+  }
+  // How many blocked pop-ups this document has already been reported.
+  size_t published_blocked_popups = 0;
   void InjectContentScripts(content::RenderFrameHost* frame) {
     if (content_scripts.empty() || State().disposing || !frame || !frame->IsRenderFrameLive()) return;
     const bool main = frame->IsInPrimaryMainFrame();
@@ -2195,6 +2269,17 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
         ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
   } else if ([command isEqualToString:@"engine.stop"]) {
     contents->Stop();
+  } else if ([command isEqualToString:@"engine.infobar"]) {
+    // `url` carries "<response>:<id>".
+    auto parts = base::SplitString(base::SysNSStringToUTF8(url ?: @""), ":", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+    int id = 0;
+    if (parts.size() != 2 || !base::StringToInt(parts[1], &id)) return NO;
+    return page->RespondToInfoBar(id, parts[0]) ? YES : NO;
+  } else if ([command isEqualToString:@"engine.show_blocked_popups"]) {
+    auto* blocker = blocked_content::PopupBlockerTabHelper::FromWebContents(contents);
+    if (!blocker || !blocker->GetBlockedPopupsCount()) return NO;
+    blocker->ShowAllBlockedPopups();
+    page->published_blocked_popups = 0;
   } else if ([command isEqualToString:@"engine.extensions"]) {
     if (page->browser->GetProfile()->IsOffTheRecord()) return NO;
     NavigateParams params(page->browser, GURL("chrome://extensions/"), ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
@@ -2273,7 +2358,8 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   if (!origin.SchemeIsHTTPOrHTTPS()) return NO;
   for (const auto& permission : kSitePermissions) {
     if (base::SysNSStringToUTF8(permissionID) != permission.key) continue;
-    if (value != CONTENT_SETTING_ALLOW && value != CONTENT_SETTING_BLOCK &&
+    // CONTENT_SETTING_DEFAULT clears the site's own setting.
+    if (value != CONTENT_SETTING_DEFAULT && value != CONTENT_SETTING_ALLOW && value != CONTENT_SETTING_BLOCK &&
         !(permission.supports_ask && value == CONTENT_SETTING_ASK)) return NO;
     HostContentSettingsMapFactory::GetForProfile(page->browser->GetProfile())
         ->SetContentSettingDefaultScope(origin, GURL(), permission.type, static_cast<ContentSetting>(value));
@@ -3487,6 +3573,23 @@ bool CancelAuthenticationSession(ASWebAuthenticationSessionRequest* request) {
     break;
   }
   return true;
+}
+void UpdateSiteIndicators(content::WebContents* contents) {
+  if (!IsEnabled() || !State().started || State().disposing || !contents) return;
+  for (auto& [id, page] : State().pages) {
+    if (page->web_contents() != contents) continue;
+    auto* blocker = blocked_content::PopupBlockerTabHelper::FromWebContents(contents);
+    const size_t count = blocker ? blocker->GetBlockedPopupsCount() : 0;
+    // The blocker forgets its pop-ups when the document changes.
+    if (count < page->published_blocked_popups) page->published_blocked_popups = count;
+    if (count > page->published_blocked_popups) {
+      page->published_blocked_popups = count;
+      page->observation(@"popup_blocked", @{
+        @"url": base::SysUTF8ToNSString(contents->GetLastCommittedURL().spec()),
+        @"count": @(count) });
+    }
+    return;
+  }
 }
 void TranslateSelection(const std::u16string& text) {
   if (!IsEnabled() || !State().started || State().disposing || text.empty()) return;

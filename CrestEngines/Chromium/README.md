@@ -229,6 +229,16 @@ the window; closing the window first cancels the request. Chromium's toasts,
 which anchor to a Views frame this build never creates, become Crest notices,
 and the sad-tab overlay yields to Crest's own renderer recovery.
 
+Site state reaches Crest through the location bar Chromium already calls.
+`CrestLocationBar::UpdateContentSettingsIcons` forwards to
+`crest::UpdateSiteIndicators`, which relays a pop-up the engine's blocker held
+back to Crest's Site Controls. Crest's per-Space permission record stays the
+source of truth: each committed page applies its automatic-pop-up decision to
+the engine, and allowing a blocked site opens the pop-ups the blocker kept.
+Chromium's confirm info bars — tab sharing, `chrome.debugger` — have no Views
+container here, so each page observes its `ContentInfoBarManager` and Crest
+shows the bars in the page with the engine's own button labels.
+
 The native UI uses the named isolated session `chromium-native-ui-review` by
 default. Set `CREST_ISOLATED_PERSISTENCE_ID` to a different name and provide a
 separate `--user-data-dir` for an independent session, including benchmark runs.

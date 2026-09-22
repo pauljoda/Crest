@@ -59,6 +59,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var completedNavigationCount = 0
     private(set) var navigationFailure: BrowserNavigationFailure?
     var blockedPopupState = BrowserBlockedPopupPageState()
+    private(set) var engineInfoBars: [BrowserEngineInfoBar] = []
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
     #if CREST_CHROMIUM_HOST
@@ -930,6 +931,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         readerModeSession?.toggle()
     }
 
+    func respond(to bar: BrowserEngineInfoBar, with response: BrowserEngineInfoBar.Response) {
+        // The engine withdraws the bar itself once it has taken the answer.
+        if !pageEngine.respondToInfoBar(bar.id, response: response.rawValue) {
+            engineInfoBars.removeAll { $0.id == bar.id }
+        }
+    }
+
     func dismissCredentialFillRequest() {
         credentialState.dismissFillRequest()
     }
@@ -1270,6 +1278,16 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         case "navigation_started":
             linkDrag?.beginNavigation()
             credentialState.didStartNavigation()
+            beginBlockedPopupNavigation()
+        case "infobar_added":
+            guard let bar = BrowserEngineInfoBar(values: values), !engineInfoBars.contains(where: { $0.id == bar.id })
+            else { return }
+            engineInfoBars.append(bar)
+        case "infobar_removed":
+            engineInfoBars.removeAll { $0.id == values["id"] as? Int }
+        case "popup_blocked":
+            guard let raw = values["url"] as? String, let pageURL = URL(string: raw) else { return }
+            recordEngineBlockedPopup(pageURL: pageURL, documentIdentifier: "\(committedNavigationCount)")
         case "favicon":
             guard let rawURL = values["url"] as? String, let source = URL(string: rawURL),
                 let url, BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url) else { return }
@@ -1306,6 +1324,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 navigationFailure = nil
                 webContentFailureMessage = nil
                 committedNavigationCount += 1
+                synchronizePopupPermission(for: destination)
             }
             if wasLoading, !isLoading, committedNavigationCount > 0 { completedNavigationCount += 1 }
         case "developer_panel":

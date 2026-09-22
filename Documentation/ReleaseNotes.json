@@ -1909,6 +1909,18 @@
     "translate-selection-desktop": {
       "category": "fixed",
       "message": "Translating selected text works in the desktop browser, and foreign-language pages no longer show a translation notice on their own."
+    },
+    "blocked-popups-desktop": {
+      "category": "new",
+      "message": "In the desktop browser, Site Controls now shows when a site's pop-up was blocked and can allow pop-ups for that site, opening the one it tried."
+    },
+    "engine-info-bars-in-page": {
+      "category": "fixed",
+      "message": "Messages that need an answer, such as the prompt to stop sharing a tab or an extension debugging the browser, now appear at the top of the page."
+    },
+    "quick-window-size-on-wide-displays": {
+      "category": "fixed",
+      "message": "Quick Windows open at a comfortable size on wide displays and when the main window shows the Start Page."
     }
   }
 }

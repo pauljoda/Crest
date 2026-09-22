@@ -52,6 +52,9 @@ void ShowEngineNotice(const std::u16string& message, const std::string& symbol);
 // A selection the person asked to translate. Crest shows the system's
 // translation panel rather than Chromium's partial-translate bubble.
 void TranslateSelection(const std::u16string& text);
+// A page's site state changed — the engine blocked a pop-up, for one. Crest
+// relays what its own Site Controls show.
+void UpdateSiteIndicators(content::WebContents* contents);
 // Extension side panels are cards in Crest's own page row, so this build never
 // creates Chrome's Views side-panel UI. `chrome.sidePanel.open()`, `close()`
 // and an action click that toggles a panel are routed to the card that belongs

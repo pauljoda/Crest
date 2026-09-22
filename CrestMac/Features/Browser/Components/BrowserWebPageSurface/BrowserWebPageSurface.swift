@@ -44,6 +44,10 @@ struct BrowserWebPageSurface: View {
                 )
             }
 
+            if !page.engineInfoBars.isEmpty {
+                BrowserEngineInfoBarStack(page: page)
+            }
+
             BrowserWebPageFailureOverlay(
                 page: page,
                 branding: browser.space(

@@ -29,6 +29,16 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// Content bridges run by the engine itself, or nil when the page installs
     /// them through the engine's own API.
     var contentScripting: (any BrowserPageContentScripting)? { get }
+    /// Applies Crest's automatic-popup decision for the current site to an
+    /// engine that runs its own popup blocker; false when the page applies it
+    /// through the engine's own preferences instead.
+    func applyAutomaticPopups(_ allowed: Bool) -> Bool
+    /// Opens the popups the engine's blocker held back, once the person has
+    /// allowed them. False when the engine keeps no such list.
+    func showBlockedPopups() -> Bool
+    /// Answers a bar the engine raised for the page; false when there is no
+    /// such bar.
+    func respondToInfoBar(_ id: Int, response: String) -> Bool
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { get }
     func showInspector() -> Bool
@@ -44,6 +54,9 @@ extension BrowserPageEngine {
     func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool { false }
     var interactionState: Data? { nil }
     var contentScripting: (any BrowserPageContentScripting)? { nil }
+    func applyAutomaticPopups(_ allowed: Bool) -> Bool { false }
+    func showBlockedPopups() -> Bool { false }
+    func respondToInfoBar(_ id: Int, response: String) -> Bool { false }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool { false }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { nil }

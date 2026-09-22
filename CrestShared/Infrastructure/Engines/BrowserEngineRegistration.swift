@@ -89,15 +89,9 @@ enum BrowserEngineRegistration {
                     "workspace-profiles", "workspace-transfer", "profile-deletion",
                     "before-unload", "downloads", "permissions", "viewport-capture", "inspector", "internal-pages",
                     "full-page-capture", "pdf", "web-archive", "print", "local-files",
-                    "extensions", "selection-translation"],
-        // The engine blocks automatic popups itself, but nothing relays its
-        // blocker's observations back, so Crest's blocked-popup notice and its
-        // per-site allow action have nothing to show. Declared honestly rather
-        // than left advertising a control that cannot appear.
-        unverified: ["popups"],
+                    "extensions", "selection-translation", "popups"],
         unavailable: ["reader", "translation", "content-blocking", "feature-flags"],
         limitations: [
-            "Blocked-popup notices are not relayed from the engine's popup blocker; the per-site allow action is unavailable.",
             "Find does not honour a non-wrapping search: the host command takes no wrap argument and the engine always wraps.",
             "Extensions cover actions, installation, side panels and per-Space permissions; full API parity and Apple password-helper pairing remain incomplete.",
             "Translation is limited to the selection service; whole-page translation is unavailable.",

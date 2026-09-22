@@ -309,7 +309,11 @@ void CrestLocationBar::FocusSearch() {}
 
 void CrestLocationBar::UpdateFocusBehavior(bool toolbar_visible) {}
 
-void CrestLocationBar::UpdateContentSettingsIcons() {}
+void CrestLocationBar::UpdateContentSettingsIcons() {
+  // Chromium reports a page's site state here — a blocked pop-up among it.
+  // Crest draws that state in its own Site Controls.
+  crest::UpdateSiteIndicators(browser_->tab_strip_model()->GetActiveWebContents());
+}
 
 void CrestLocationBar::SaveStateToContents(content::WebContents* contents) {}
 

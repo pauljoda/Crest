@@ -225,6 +225,24 @@ final class ChromiumNativePage: BrowserPageEngine {
         host?.setPermission(permission, page: id, value: value) ?? false
     }
 
+    // Chromium's content-setting values: 1 allows; 0 clears the site's own
+    // setting, which leaves the engine's default of blocking.
+    func applyAutomaticPopups(_ allowed: Bool) -> Bool {
+        guard created, !disposed else { return true }
+        _ = setPermission("popups", value: allowed ? 1 : 0)
+        return true
+    }
+
+    func respondToInfoBar(_ barID: Int, response: String) -> Bool {
+        guard created, !disposed, let host else { return false }
+        return host.command("engine.infobar", page: id, url: "\(response):\(barID)")
+    }
+
+    func showBlockedPopups() -> Bool {
+        guard created, !disposed, let host else { return false }
+        return host.command("engine.show_blocked_popups", page: id, url: nil)
+    }
+
     struct ExtensionAction: Identifiable {
         let id: String
         let name: String

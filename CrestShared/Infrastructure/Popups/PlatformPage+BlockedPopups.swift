@@ -48,6 +48,18 @@ extension BrowserPlatformPage {
         blockedPopupState = nextState
     }
 
+    /// A popup the engine's own blocker held back in the current document.
+    func recordEngineBlockedPopup(pageURL: URL, documentIdentifier: String) {
+        guard let origin = BrowserSiteOrigin(url: pageURL),
+            !BrowserAutomaticPopupPolicy.allowsAutomaticPopups(
+                decision: permissionCenter.decision(for: .popups, origin: origin, in: spaceID)
+            )
+        else { return }
+        var nextState = blockedPopupState
+        guard nextState.recordBlockedAttempt(documentIdentifier: documentIdentifier, origin: origin) else { return }
+        blockedPopupState = nextState
+    }
+
     func beginBlockedPopupNavigation() {
         var nextState = blockedPopupState
         guard nextState.clearForNavigation() else { return }
@@ -74,6 +86,9 @@ extension BrowserPlatformPage {
             in: spaceID
         )
         synchronizePopupPermission(for: currentURL)
+        // An engine that kept the blocked popups opens them now; WebKit waits
+        // for the page to try again.
+        if pageEngine.showBlockedPopups() { recordAcceptedPopup() }
     }
 
     func recordPopupPermissionSynchronized(
