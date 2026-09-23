@@ -567,8 +567,8 @@ jobs:
             print ''
             print '### Downloads'
             print ''
-            print "- **Crest** (Chromium engine, recommended): \`$installer_name\`"
-            print "- **Crest WebKit** (alternate, WebKit engine, updates on its own feed): \`${webkit_base}.dmg\`"
+            print -r -- "- **Crest** (Chromium engine, recommended): \`$installer_name\`"
+            print -r -- "- **Crest WebKit** (alternate, WebKit engine, updates on its own feed): \`${webkit_base}.dmg\`"
           } >> "$release_notes"
 
           ensure_prerelease() {
