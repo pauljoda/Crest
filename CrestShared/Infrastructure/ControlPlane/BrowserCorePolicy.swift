@@ -41,7 +41,7 @@ enum BrowserCorePolicy {
         return decision
     }
     static func addressIntent(_ input: String, provider: BrowserSearchProvider) -> BrowserAddressIntent? {
-        let allowsInternalPages = BrowserEngineRegistration.current.supports("internal-pages")
+        let allowsInternalPages = BrowserEngineRegistration.current.supports(.internalPages)
         guard let response = evaluate([
             "version": 1, "operation": "address.intent", "input": input,
             "allowsInternalPages": allowsInternalPages,

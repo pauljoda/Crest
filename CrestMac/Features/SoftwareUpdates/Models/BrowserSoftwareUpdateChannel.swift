@@ -69,7 +69,7 @@ enum BrowserSoftwareUpdateChannel: String, Identifiable, Sendable, CaseIterable 
             // WebKit build as an alternate download. Each follows its own feed,
             // so an update never changes the engine someone chose.
             URL(
-                string: BrowserEngineRegistration.current.implementationId.hasPrefix("crest.webkit")
+                string: BrowserEngineRegistration.current.implementationId.family == .webKit
                     ? "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental-webkit.xml"
                     : "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-experimental.xml"
             )

@@ -92,11 +92,11 @@ extension BrowserShortcutCommand {
     /// Only features an engine may lack outright belong here. Document actions
     /// such as printing or export stay listed and are dimmed through the
     /// page's own capability when the active page cannot perform them.
-    var requiredEngineCapability: String? {
+    var requiredEngineCapability: BrowserEngineCapability? {
         switch self {
-        case .toggleReaderMode: "reader"
-        case .toggleContentBlocking: "content-blocking"
-        case .toggleTranslationToolbar: "translation"
+        case .toggleReaderMode: .reader
+        case .toggleContentBlocking: .contentBlocking
+        case .toggleTranslationToolbar: .translation
         default: nil
         }
     }

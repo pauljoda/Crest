@@ -341,7 +341,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// The adapter's tagged, opaque history. Uncommitted pages return nil so
     /// an empty renderer cannot overwrite a useful archive.
     var interactionState: Data? {
-        guard pageEngine.registration.supports("interaction-state") else { return nil }
+        guard pageEngine.registration.supports(.interactionState) else { return nil }
         return pageEngine.interactionState
     }
 
@@ -352,7 +352,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
         // WebKit owns an adopted popup's first navigation, and an adopted popup
         // has no archived state of its own to restore in the first place.
-        guard pageEngine.registration.supports("interaction-state"),
+        guard pageEngine.registration.supports(.interactionState),
             !isAwaitingPopupNavigation, !wasOpenedAsPopup
         else { return false }
         appInitiatedURL = url

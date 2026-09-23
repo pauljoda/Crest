@@ -2033,6 +2033,10 @@
     "engine-neutral-page": {
       "category": "internal",
       "message": "Split the shared page model from the WebKit adapter and give the Chromium composition a host-commands port instead of direct store edits."
+    },
+    "typed-engine-capabilities": {
+      "category": "internal",
+      "message": "Declare engine capabilities, statuses and implementations as typed values instead of raw strings, keeping the core descriptor unchanged."
     }
   }
 }

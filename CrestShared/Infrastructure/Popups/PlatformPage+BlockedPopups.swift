@@ -22,7 +22,7 @@ extension BrowserPlatformPage {
     /// engine cannot report a blocked popup at all. An engine that does not
     /// declare `popups` must not present a control that can never populate.
     var blockedPopupNotice: BrowserBlockedPopupNotice? {
-        guard pageEngine.registration.supports("popups") else { return nil }
+        guard pageEngine.registration.supports(.popups) else { return nil }
         return blockedPopupState.notice
     }
 

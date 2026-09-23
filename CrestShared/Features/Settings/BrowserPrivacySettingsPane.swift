@@ -49,7 +49,7 @@ struct BrowserPrivacySettingsPane: View {
                     }
                 }
 
-                if BrowserEngineRegistration.current.supports("permissions") {
+                if BrowserEngineRegistration.current.supports(.permissions) {
                     BrowserSavedSitePermissionSection(
                         records: records,
                         permissionCenter: permissionCenter,
@@ -110,7 +110,7 @@ struct BrowserPrivacySettingsPane: View {
     /// the engine is worse than an absent one: where blocking comes from an
     /// extension instead, the section only says so.
     private var supportsContentBlocking: Bool {
-        BrowserEngineRegistration.current.supports("content-blocking")
+        BrowserEngineRegistration.current.supports(.contentBlocking)
     }
 
     private var contentBlockingPolicyBinding: Binding<BrowserContentBlockingPolicy> {

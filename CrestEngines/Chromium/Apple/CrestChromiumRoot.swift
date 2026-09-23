@@ -900,14 +900,14 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     /// this adapter declares unavailable; the notice points at what is offered.
     @objc static func translateURL(_ url: String) {
         showNativeNotice(
-            BrowserEngineRegistration.chromium.supports("selection-translation")
+            BrowserEngineRegistration.chromium.supports(.selectionTranslation)
                 ? "Whole-page translation is not available in this engine. Select text on the page, then translate the selection."
                 : "Translation is not available in this engine.",
             icon: "globe"
         )
     }
     @objc static func translateText(_ text: String) {
-        guard BrowserEngineRegistration.chromium.supports("selection-translation") else { return }
+        guard BrowserEngineRegistration.chromium.supports(.selectionTranslation) else { return }
         ChromiumSelectionTranslation.present(text)
     }
     @objc static func showTabSearch() { instance?.activeContext?.chrome.presentCommandPalette() }

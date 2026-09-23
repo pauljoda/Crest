@@ -21,7 +21,7 @@ struct BrowserTranslationHost: ViewModifier {
     private var languageRules: BrowserAutomaticTranslationRules { preferences.translationRules }
 
     private var translationTarget: (any BrowserPageEngine)? {
-        page.pageEngine.registration.supports("translation") ? page.pageEngine : nil
+        page.pageEngine.registration.supports(.translation) ? page.pageEngine : nil
     }
 
     private var detectionID: String {

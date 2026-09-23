@@ -65,7 +65,7 @@ struct BrowserGeneralSettingsPane: View {
 
             // Whole-page translation preferences; an engine without page
             // translation has nothing for them to reach.
-            if BrowserEngineRegistration.current.supports("translation") {
+            if BrowserEngineRegistration.current.supports(.translation) {
                 BrowserTranslationSettingsSection()
             }
 

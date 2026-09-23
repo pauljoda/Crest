@@ -107,7 +107,7 @@ extension BrowserPageEngine {
 }
 
 struct BrowserEngineNavigation: Equatable, Sendable {
-    let implementation: String
+    let implementation: BrowserEngineImplementation
     let token: String
 }
 

@@ -1147,7 +1147,7 @@ final class BrowserPagePool:
         // host. SwiftUI attaches the retained native view on a later update.
         // An engine that cannot move a live page between windows leaves the
         // caller to load the tab afresh instead.
-        guard page.pageEngine.registration.supports("workspace-transfer"),
+        guard page.pageEngine.registration.supports(.workspaceTransfer),
             page.pageEngine.transferOwnership(to: windowID)
         else { return false }
         guard lease.relinquishPage() === page else { return false }
@@ -1908,7 +1908,7 @@ final class BrowserPagePool:
             // release and later restore a page.
             guard !runtimeStore.presentedTabIDs.contains(entry.key),
                 let page = tabRuntimes[entry.key]?.page,
-                page.pageEngine.registration.supports("page-residency")
+                page.pageEngine.registration.supports(.pageResidency)
             else { return }
             pages[entry.key] = page
         }

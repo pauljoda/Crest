@@ -1,99 +1,45 @@
 import Foundation
 
-/// The versioned descriptor shared by native page ports and message adapters.
-/// A declaration describes this adapter's integration, not every feature of its engine.
-struct BrowserAdapterRegistration: Encodable, Sendable {
-    struct Capability: Encodable, Sendable {
-        let status: String
-        let contractVersion = 1
-        let scope: String
-        let limitations: [String]
-        let evidence: String
-    }
-    let adapterId: String
-    let role: String
-    let implementationId: String
-    let implementationVersion = "1"
-    let protocolVersion = 1
-    let capabilities: [String: Capability]
-    /// The page archive this engine writes and reads. It follows the engine, not
-    /// the platform, so callers that have no page yet can still name the format
-    /// without asking a compile-time condition. Not part of the encoded
-    /// descriptor: the core session contract is the capability map.
-    let archiveFormat: BrowserPageArchiveFormat
-
-    private enum CodingKeys: String, CodingKey {
-        case adapterId, role, implementationId, implementationVersion
-        case protocolVersion, capabilities
-    }
-
-    init(id: String, role: String, implementation: String, scope: String,
-         supported: [String], unverified: [String] = [], unavailable: [String] = [],
-         limitations: [String] = [], archiveFormat: BrowserPageArchiveFormat, evidence: String) {
-        adapterId = id; self.role = role; implementationId = implementation
-        self.archiveFormat = archiveFormat
-        var values: [String: Capability] = [:]
-        for (status, names) in [("supported", supported), ("unverified", unverified), ("unavailable", unavailable)] {
-            for name in names {
-                precondition(values[name] == nil, "Duplicate adapter capability: \(name)")
-                values[name] = Capability(status: status, scope: scope, limitations: limitations, evidence: evidence)
-            }
-        }
-        capabilities = values
-    }
-    func supports(_ name: String) -> Bool {
-        capabilities[name]?.status == "supported" && capabilities[name]?.contractVersion == 1
-    }
-    func encoded() throws -> Data { try JSONEncoder().encode(self) }
-}
-
+/// The adapter descriptors each composition can select. `current` comes from
+/// the composition (`BrowserEngineRegistration+Composition.swift` for WebKit,
+/// the Chromium framework's own extension otherwise).
 enum BrowserEngineRegistration {
+
+    // MARK: - Variables
+
     #if os(macOS)
-    static let platform = "macos"
+        private static let webKitImplementation = BrowserEngineImplementation.webKitMacOS
     #else
-    static let platform = "ios"
+        private static let webKitImplementation = BrowserEngineImplementation.webKitIOS
     #endif
 
     static let webKit = BrowserAdapterRegistration(
-        id: "engine", role: "engine", implementation: "crest.webkit.\(platform)",
-        scope: "Native \(platform) page and profile ports",
-        supported: ["pages", "navigation", "find", "zoom", "interaction-state", "page-residency",
-                    "popups", "workspace-profiles", "workspace-transfer", "profile-deletion",
-                    "content-blocking", "downloads", "permissions", "reader", "translation",
-                    "selection-translation", "local-files"] + desktopWebKit,
-        unavailable: ["extensions"],
+        implementation: webKitImplementation,
+        scope: "Native \(webKitImplementation.platformName.lowercased()) page and profile ports",
+        supported: [
+            .pages, .navigation, .find, .zoom, .interactionState, .pageResidency,
+            .popups, .workspaceProfiles, .workspaceTransfer, .profileDeletion,
+            .contentBlocking, .downloads, .permissions, .reader, .translation,
+            .selectionTranslation, .localFiles,
+        ] + desktopWebKit,
+        unavailable: [.extensions],
         limitations: [
-            "A staged Peek navigation replays only a GET link's URL and referrer; WebKit has no public way to carry the initiating frame's origin, user activation or sandbox into another page.",
+            "A staged Peek navigation replays only a GET link's URL and referrer; WebKit has no public way to carry the initiating frame's origin, user activation or sandbox into another page."
         ] + desktopWebKitLimitations,
         archiveFormat: .webKit,
         evidence: "Existing native WebKit services and retained page, popup, profile and navigation contracts")
 
-    private static var desktopWebKit: [String] {
-        #if os(macOS)
-        ["viewport-capture", "full-page-capture", "pdf", "web-archive", "print", "inspector", "feature-flags",
-         "before-unload"]
-        #else
-        []
-        #endif
-    }
-
-    private static var desktopWebKitLimitations: [String] {
-        #if os(macOS)
-        ["Before-unload uses WebKit's desktop close and prompt SPI; a WebKit without it closes pages without asking."]
-        #else
-        []
-        #endif
-    }
-
     static let chromium = BrowserAdapterRegistration(
-        id: "engine", role: "engine", implementation: "crest.chromium.macos",
+        implementation: .chromiumMacOS,
         scope: "Native macOS Chromium host with Crest page and profile ports",
-        supported: ["pages", "navigation", "find", "zoom", "interaction-state", "page-residency",
-                    "workspace-profiles", "workspace-transfer", "profile-deletion",
-                    "before-unload", "downloads", "permissions", "viewport-capture", "inspector", "internal-pages",
-                    "full-page-capture", "pdf", "web-archive", "print", "local-files",
-                    "extensions", "selection-translation", "popups"],
-        unavailable: ["reader", "translation", "content-blocking", "feature-flags"],
+        supported: [
+            .pages, .navigation, .find, .zoom, .interactionState, .pageResidency,
+            .workspaceProfiles, .workspaceTransfer, .profileDeletion,
+            .beforeUnload, .downloads, .permissions, .viewportCapture, .inspector, .internalPages,
+            .fullPageCapture, .pdf, .webArchive, .print, .localFiles,
+            .extensions, .selectionTranslation, .popups,
+        ],
+        unavailable: [.reader, .translation, .contentBlocking, .featureFlags],
         limitations: [
             "Find does not honour a non-wrapping search: the host command takes no wrap argument and the engine always wraps.",
             "Extensions cover actions, installation, side panels and per-Space permissions; full API parity and Apple password-helper pairing remain incomplete.",
@@ -101,4 +47,22 @@ enum BrowserEngineRegistration {
         ],
         archiveFormat: .mhtml,
         evidence: "Native host page, lifecycle, download, permission and compositor ports; isolated app validation")
+
+    private static var desktopWebKit: [BrowserEngineCapability] {
+        #if os(macOS)
+            [.viewportCapture, .fullPageCapture, .pdf, .webArchive, .print, .inspector, .featureFlags, .beforeUnload]
+        #else
+            []
+        #endif
+    }
+
+    private static var desktopWebKitLimitations: [String] {
+        #if os(macOS)
+            [
+                "Before-unload uses WebKit's desktop close and prompt SPI; a WebKit without it closes pages without asking."
+            ]
+        #else
+            []
+        #endif
+    }
 }
