@@ -159,7 +159,10 @@ extension BrowserPage: WKUIDelegate {
         completionHandler: @escaping @MainActor @Sendable ([URL]?) -> Void
     ) {
         dialogPresenter.presentFileInput(
-            parameters: parameters,
+            options: BrowserFileInputOptions(
+                allowsDirectories: parameters.allowsDirectories,
+                allowsMultipleSelection: parameters.allowsMultipleSelection
+            ),
             request: frame.request,
             completion: { [weak self] urls in
                 guard let self, let urls else {

@@ -833,8 +833,16 @@
 +  }
 +#endif
    std::vector<StatusBubble*> status_bubbles = GetStatusBubbles();
-   for (StatusBubble* status_bubble : status_bubbles) {
-     StatusBubbleViews* status_bubble_views =
+  for (StatusBubble* status_bubble : status_bubbles) {
+    StatusBubbleViews* status_bubble_views =
+@@ -1759,4 +1775,7 @@
+ content::JavaScriptDialogManager* Browser::GetJavaScriptDialogManager(
+     WebContents* source) {
++#if BUILDFLAG(IS_MAC)
++  if (auto* manager = crest::JavaScriptDialogManagerFor(source)) return manager;
++#endif
+   return javascript_dialogs::TabModalDialogManager::FromWebContents(source);
+ }
 --- a/third_party/blink/public/web/web_navigation_params.h
 +++ b/third_party/blink/public/web/web_navigation_params.h
 @@ -108,6 +108,9 @@
@@ -1709,6 +1717,39 @@
 +    return;
 +  }
 +#endif
-   tabs::TabInterface* active_tab = browser_window_->GetActiveTabInterface();
-   if (!active_tab) {
-     return;
+  tabs::TabInterface* active_tab = browser_window_->GetActiveTabInterface();
+  if (!active_tab) {
+    return;
+--- a/chrome/browser/ui/views/login_handler_views.cc
++++ b/chrome/browser/ui/views/login_handler_views.cc
+@@ -7,0 +8 @@
++#include "base/memory/weak_ptr.h"
+@@ -11,0 +13 @@
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+@@ -52,0 +55 @@
++  base::WeakPtrFactory<LoginHandlerViews> weak_factory_{this};
+@@ -119,0 +123,8 @@
++
++  if (crest::PresentHTTPAuthentication(web_contents(), auth_info(),
++          [weak = weak_factory_.GetWeakPtr()](bool accepted,
++              const std::u16string& username, const std::u16string& password) {
++            if (!weak) return;
++            if (accepted) weak->SetAuth(username, password);
++            else weak->CancelAuth(false);
++          })) return true;
+--- a/chrome/browser/ui/views/overlay/video_overlay_window_views.h
++++ b/chrome/browser/ui/views/overlay/video_overlay_window_views.h
+@@ -121,0 +122 @@
++  void OnNativeWidgetUserDragEnded() override;
+--- a/chrome/browser/ui/views/overlay/video_overlay_window_views.cc
++++ b/chrome/browser/ui/views/overlay/video_overlay_window_views.cc
+@@ -25,0 +26 @@
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+@@ -589,0 +591,7 @@
++void VideoOverlayWindowViews::OnNativeWidgetUserDragEnded() {
++  views::Widget::OnNativeWidgetUserDragEnded();
++#if BUILDFLAG(IS_MAC)
++  crest::SnapPictureInPictureWindow(this);
++#endif
++}
++

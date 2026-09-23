@@ -717,7 +717,7 @@ extension BrowserStore {
             !deletingSpaceIDs.contains(id),
             session.space(id: id) != nil
         else { return }
-        session.selectSpace(id)
+        selectPresentedSpace(id)
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -758,7 +758,7 @@ extension BrowserStore {
         if let fallbackID {
             _ = activateSessionTab(fallbackID, in: space.id)
         } else {
-            session.clearTabSelection(in: space.id)
+            clearPresentedTabSelection(in: space.id)
         }
         persist(syncUrgency: .coalesced, scope: .core)
         return fallbackID

@@ -34,6 +34,7 @@ struct BrowserSettingsDestinationRouter: View {
     var shortcuts: BrowserShortcutStore? = nil
     var requestedSpaceID: SpaceID? = nil
     var requestRevision = 0
+    var featureFlagsProfileID: UUID? = nil
 
     @ViewBuilder
     var body: some View {
@@ -88,7 +89,7 @@ struct BrowserSettingsDestinationRouter: View {
                 manage: managePasswords
             )
         case .featureFlags:
-            BrowserPlatformWebKitFeatureFlagSettingsPane()
+            BrowserEngineRegistration.featureFlagsPane(profileID: featureFlagsProfileID)
         case .advanced:
             BrowserAdvancedSettingsPane(
                 browser: browser,

@@ -439,6 +439,7 @@ void CrestExclusiveAccessContext::EnterFullscreen(
     const url::Origin& origin,
     ExclusiveAccessBubbleType bubble_type,
     FullscreenTabParams fullscreen_tab_params) {
+  crest::ReportContentFullscreen(GetWebContentsForExclusiveAccess(), true);
   NSWindow* window = crest::WindowForBrowser(browser_);
   if (window && !(window.styleMask & NSWindowStyleMaskFullScreen)) {
     [window toggleFullScreen:nil];
@@ -447,6 +448,7 @@ void CrestExclusiveAccessContext::EnterFullscreen(
 }
 
 void CrestExclusiveAccessContext::ExitFullscreen() {
+  crest::ReportContentFullscreen(GetWebContentsForExclusiveAccess(), false);
   HideFullscreenDisclosure(ExclusiveAccessBubbleHideReason::kInterrupted);
   NSWindow* window = crest::WindowForBrowser(browser_);
   if (window && (window.styleMask & NSWindowStyleMaskFullScreen)) {

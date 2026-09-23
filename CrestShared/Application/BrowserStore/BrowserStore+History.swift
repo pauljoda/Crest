@@ -221,7 +221,7 @@ extension BrowserStore {
         // Retention is one field of the same Space preferences record every
         // other settings surface writes, so it takes the same core command.
         guard setCoreSpaceValue("space.browsing_preferences", preferences, in: spaceID) else { return }
-        let removedRecords = session.applyDataRetentionPolicies(now: now)
+        let removedRecords = family.applyDataRetentionPolicies(at: now, from: self)
         persist(
             deletionReason: removedRecords ? .retention : .superseded,
             scope: removedRecords ? .everything : .core

@@ -28,6 +28,18 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 - (void)setLinkHandlerForPage:(NSString *)pageID
                      handler:(BOOL (^)(NSString *action, NSString *url, NSString *label))handler
     NS_SWIFT_NAME(setLinkHandler(page:handler:));
+- (void)setContextMenuHandlerForPage:(NSString *)pageID
+    provider:(NSArray<NSDictionary<NSString *, NSString *> *> * (^)(NSString *url, NSString *selection))provider
+    action:(BOOL (^)(NSString *identifier, NSString *url, NSString *selection))action
+    NS_SWIFT_NAME(setContextMenuHandler(page:provider:action:));
+- (void)setJavaScriptDialogHandlerForPage:(NSString *)pageID
+    handler:(void (^)(NSString *kind, NSString *message, NSString *defaultText,
+        NSString *sourceURL, void (^reply)(BOOL accepted, NSString * _Nullable input)))handler
+    NS_SWIFT_NAME(setJavaScriptDialogHandler(page:handler:));
+- (void)setHTTPAuthenticationHandlerForPage:(NSString *)pageID
+    handler:(void (^)(NSDictionary<NSString *, id> *challenge,
+        void (^reply)(NSString * _Nullable username, NSString * _Nullable password)))handler
+    NS_SWIFT_NAME(setHTTPAuthenticationHandler(page:handler:));
 - (void)setProtectedLinkHandlerForPage:(NSString *)pageID
     handler:(CrestDeferredNavigation _Nullable (^)(NSString *url))handler
     NS_SWIFT_NAME(setProtectedLinkHandler(page:handler:));

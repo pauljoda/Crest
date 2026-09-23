@@ -7,11 +7,14 @@
 #endif
 
 #include <string>
+#include <functional>
 
 class Browser;
 class GURL;
 class Profile;
-namespace content { class WebContents; class NavigationThrottleRegistry; struct DropData; struct OpenURLParams; }
+namespace content { class WebContents; class NavigationThrottleRegistry; class JavaScriptDialogManager; struct DropData; struct OpenURLParams; }
+namespace net { class AuthChallengeInfo; }
+namespace views { class Widget; }
 
 namespace crest {
 // The isolated world Crest's content bridges run in. It sits at the top of
@@ -42,6 +45,14 @@ bool DeferQuit();
 bool Reopen();
 // Consumes the result of a native close preflight without destroying the page.
 bool CompletePageClosePreparation(content::WebContents* contents, bool proceed);
+// Shares HTTP Basic and Digest prompts with Crest's per-Space credential flow.
+// False leaves a WebContents that Crest does not own to Chromium.
+bool PresentHTTPAuthentication(content::WebContents* contents, const net::AuthChallengeInfo& challenge,
+    std::function<void(bool, const std::u16string&, const std::u16string&)> reply);
+// Tells the shared page presentation when web content enters or leaves video
+// fullscreen; the renderer still owns Escape and the fullscreen lifecycle.
+void ReportContentFullscreen(content::WebContents* contents, bool active);
+void SnapPictureInPictureWindow(views::Widget* window);
 // Called after Chromium has approved a renderer's drag request.
 bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data);
 void AddNavigationThrottle(content::NavigationThrottleRegistry& registry);
@@ -81,6 +92,9 @@ bool UpdateDockedDevTools(content::WebContents* inspected);
 void OnDevToolsClosing(content::WebContents* inspected);
 // Applies semantic policy after Chromium validates a renderer's original request.
 bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& params);
+// Crest presents script dialogs for its pages with the same native presenter
+// WebKit uses. Other Chromium pages keep their engine dialog manager.
+content::JavaScriptDialogManager* JavaScriptDialogManagerFor(content::WebContents* contents);
 #ifdef __OBJC__
 // Consumes an external open: a link from another app, a document, or the
 // default-browser role. Crest applies its own routing policy.

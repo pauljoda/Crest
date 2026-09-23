@@ -49,8 +49,6 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     var isProvidedByCurrentEngine: Bool {
         switch self {
         case .extensions: BrowserEngineRegistration.current.supports(.extensions)
-        // The catalog is WebKit's runtime feature list; another engine has
-        // nothing for these switches to reach.
         case .featureFlags: BrowserEngineRegistration.current.supports(.featureFlags)
         default: true
         }

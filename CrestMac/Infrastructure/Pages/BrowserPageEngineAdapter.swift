@@ -18,7 +18,7 @@ protocol BrowserPageEngineAdapter: AnyObject {
 
     var linkHover: BrowserLinkHoverController? { get }
     var linkDrag: BrowserLinkDragController? { get }
-    var pictureInPicture: BrowserPictureInPicturePageController? { get }
+    var pictureInPicture: (any BrowserPagePictureInPictureController)? { get }
     var readerModeSession: BrowserReaderModeSession? { get }
     var faviconSession: BrowserFaviconSession? { get }
     var isContentBlockingActive: Bool { get }
@@ -49,6 +49,26 @@ protocol BrowserPageEngineAdapter: AnyObject {
     func adoptEngineCreatedPage(_ token: String) -> Bool
 }
 
+/// The page's PiP lifecycle follows tab presentation, regardless of which
+/// engine owns the video and its floating window.
+@MainActor
+protocol BrowserPagePictureInPictureController: AnyObject {
+    var canRestoreSource: Bool { get }
+    var protectsPageResidency: Bool { get }
+    func leaveTab()
+    func returnToTab()
+    func navigationDidCommit()
+    func nativePresentationDidChange(isActive: Bool)
+    func invalidate()
+}
+
+extension BrowserPagePictureInPictureController {
+    var canRestoreSource: Bool { false }
+    var protectsPageResidency: Bool { false }
+    func navigationDidCommit() {}
+    func nativePresentationDidChange(isActive: Bool) {}
+}
+
 /// Something the engine observed about its page. The WebKit adapter reports
 /// individual property changes; an engine that reports a navigation snapshot
 /// delivers `.stateChanged`.
@@ -65,6 +85,7 @@ enum BrowserPageEngineEvent {
     case infoBarAdded(BrowserEngineInfoBar)
     case infoBarRemoved(id: Int?)
     case mediaSession(body: Any)
+    case contentFullscreenChanged(Bool)
     case userActivity
     case linkHovered(URL?)
     case popupBlocked(pageURL: URL)

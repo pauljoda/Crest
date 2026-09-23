@@ -5,8 +5,8 @@ import SwiftUI
 /// real sidebar here must never let a practice gesture reach the person's tabs.
 @Observable @MainActor
 final class BrowserGettingStartedPractice {
-    let sidebarInteraction: BrowserSidebarInteractionState
-    let browser: BrowserStore
+    private(set) var sidebarInteraction: BrowserSidebarInteractionState
+    private(set) var browser: BrowserStore
     let spaceAccess = BrowserSpaceAccessController()
     let downloads = BrowserDownloadCenter(
         permissionCenter: BrowserSitePermissionCenter(persistence: InMemoryBrowserSitePermissionPersistence()))
@@ -45,8 +45,9 @@ final class BrowserGettingStartedPractice {
             branding: .house(.winter, symbol: "leaf.fill"), folders: [],
             tabs: [calendar, reading, mail, trail, packing], selectedTabID: trail.id)
         seed = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-        browser = BrowserStore(session: seed, persistence: InMemoryBrowserSessionPersistence())
-        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        let practiceBrowser = BrowserStore(session: seed, persistence: InMemoryBrowserSessionPersistence())
+        browser = practiceBrowser
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: practiceBrowser)
     }
 
     var space: BrowserSpace { browser.session.spaces[0] }
@@ -62,7 +63,8 @@ final class BrowserGettingStartedPractice {
 
     func reset() {
         sidebarInteraction.cancel()
-        browser.session = seed
+        browser = BrowserStore(session: seed, persistence: InMemoryBrowserSessionPersistence())
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         splitWidthMembers = []
         reconcileSplitWidths()
     }
@@ -87,9 +89,10 @@ final class BrowserGettingStartedPractice {
 
     func openExampleTab() {
         guard let id = browser.openNewTab(url: URL(string: "https://wikipedia.org")!) else { return }
-        browser.session.updateTab(
+        _ = browser.updateTabFromPage(
             url: URL(string: "https://wikipedia.org"), title: "Wikipedia",
-            faviconData: BrowserGettingStartedArtwork.favicon("GuideWikipedia"), tabID: id, in: space.id)
+            faviconData: BrowserGettingStartedArtwork.favicon("GuideWikipedia"),
+            for: id, matching: assignment)
     }
 
     func move(_ id: TabID, by offset: Int) {

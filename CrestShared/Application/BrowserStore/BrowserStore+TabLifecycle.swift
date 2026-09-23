@@ -260,7 +260,9 @@ extension BrowserStore {
     }
 
     func setTabEmojiIcon(_ emoji: String, for id: TabID, in spaceID: SpaceID) {
-        guard session.setTabEmojiIcon(emoji, tabID: id, in: spaceID) else { return }
+        guard let normalized = BrowserIconSymbol.normalizedEmoji(emoji),
+            setSessionTabIcon("emoji", emoji: normalized, tabID: id, in: spaceID)
+        else { return }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
     }
 
@@ -272,11 +274,8 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             space.tabs.contains(where: { $0.id == id }),
-            session.setTabEmojiIcon(
-                emoji,
-                tabID: id,
-                in: assignment.spaceID
-            )
+            let normalized = BrowserIconSymbol.normalizedEmoji(emoji),
+            setSessionTabIcon("emoji", emoji: normalized, tabID: id, in: assignment.spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
         return true
@@ -289,12 +288,8 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) {
         guard
-            session.setTabFavicon(
-                faviconData,
-                iconAccent: iconAccent,
-                tabID: id,
-                in: spaceID
-            )
+            setSessionTabIcon("pulled", faviconData: faviconData,
+                iconAccent: iconAccent, tabID: id, in: spaceID)
         else { return }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
     }
@@ -308,12 +303,8 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             space.tabs.contains(where: { $0.id == id }),
-            session.setTabFavicon(
-                faviconData,
-                iconAccent: iconAccent,
-                tabID: id,
-                in: assignment.spaceID
-            )
+            setSessionTabIcon("pulled", faviconData: faviconData,
+                iconAccent: iconAccent, tabID: id, in: assignment.spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
         return true
@@ -327,19 +318,14 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) {
         guard
-            session.cacheAutomaticTabFavicon(
-                faviconData,
-                iconAccent: iconAccent,
-                url: url,
-                tabID: id,
-                in: spaceID
-            )
+            cacheSessionTabFavicon(faviconData, iconAccent: iconAccent,
+                url: url, tabID: id, in: spaceID)
         else { return }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
     }
 
     func clearTabIcon(for id: TabID, in spaceID: SpaceID) {
-        guard session.clearTabIcon(tabID: id, in: spaceID) else { return }
+        guard setSessionTabIcon("automatic", tabID: id, in: spaceID) else { return }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
     }
 
@@ -350,7 +336,7 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             space.tabs.contains(where: { $0.id == id }),
-            session.clearTabIcon(tabID: id, in: assignment.spaceID)
+            setSessionTabIcon("automatic", tabID: id, in: assignment.spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
         return true
@@ -362,10 +348,7 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) -> Bool {
         guard
-            session.replaceTabSavedLocationWithCurrent(
-                tabID: id,
-                in: spaceID
-            )
+            setSessionSavedLocation("replace", tabID: id, in: spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
@@ -376,11 +359,8 @@ extension BrowserStore {
         _ id: TabID,
         in spaceID: SpaceID
     ) -> URL? {
-        guard
-            let url = session.restoreTabSavedLocation(
-                tabID: id,
-                in: spaceID
-            )
+        guard setSessionSavedLocation("restore", tabID: id, in: spaceID),
+            let url = session.space(id: spaceID)?.tabs.first(where: { $0.id == id })?.url
         else { return nil }
         persist(syncUrgency: .coalesced, scope: .core)
         return url
@@ -397,13 +377,11 @@ extension BrowserStore {
     }
 
     func navigateSelectedTab(to url: URL) {
-        session.updateSelectedTab(
-            url: url,
-            title: url.host() ?? url.absoluteString,
-            faviconData: nil,
-            iconAccent: nil
-        )
-        persist(syncUrgency: .coalesced, scope: .core)
+        guard let space = selectedSpace, let tabID = space.selectedTabID,
+            let observation = observeSessionTab(url: url, title: url.host() ?? url.absoluteString,
+                faviconData: nil, iconAccent: nil, tabID: tabID, in: space.id)
+        else { return }
+        persist(syncUrgency: .coalesced, scope: saveScope(for: observation))
     }
 
     func updateSelectedTabFromPage(
@@ -412,10 +390,9 @@ extension BrowserStore {
         faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil
     ) {
-        guard
-            let observation = session.updateSelectedTab(
-                url: observedURL, title: title, faviconData: faviconData, iconAccent: iconAccent
-            )
+        guard let space = selectedSpace, let tabID = space.selectedTabID,
+            let observation = observeSessionTab(url: observedURL, title: title,
+                faviconData: faviconData, iconAccent: iconAccent, tabID: tabID, in: space.id)
         else { return }
         persist(syncUrgency: .coalesced, scope: saveScope(for: observation))
     }
@@ -446,24 +423,23 @@ extension BrowserStore {
         completedNavigationURL: URL? = nil
     ) -> Bool {
         guard let space = space(matching: assignment) else { return false }
-        var draft = session
         var scope: BrowserSessionSaveScope?
         if space.tabs.contains(where: { $0.id == tabID }),
-            let observation = draft.observePage(
-                url: observedURL, title: title, faviconData: faviconData, iconAccent: iconAccent,
-                tabID: tabID, in: assignment.spaceID
-            )
+            let observation = observeSessionTab(url: observedURL, title: title,
+                faviconData: faviconData, iconAccent: iconAccent, tabID: tabID, in: assignment.spaceID)
         {
             scope = saveScope(for: observation)
         }
         let changedMetadata = scope != nil
         if let url = completedNavigationURL {
-            draft.recordVisit(url: url, title: title, in: assignment.spaceID)
-            scope = scope ?? .history(in: assignment.spaceID)
-            scope?.history = .only([assignment.spaceID])
+            if family.executeRecords("history.visit", in: assignment.spaceID,
+                arguments: ["url": url.absoluteString, "title": title as Any? ?? NSNull()],
+                from: self) {
+                scope = scope ?? .history(in: assignment.spaceID)
+                scope?.history = .only([assignment.spaceID])
+            }
         }
         guard let scope else { return false }
-        session = draft
         persist(syncUrgency: .coalesced, scope: scope)
         return changedMetadata
     }

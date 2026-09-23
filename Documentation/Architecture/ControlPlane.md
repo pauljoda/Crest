@@ -13,9 +13,9 @@ publishing a release as part of this migration.
 The working Chromium host establishes that the rendering approach is viable.
 It does not complete core ownership, sync, platform services or shipping
 composition. The normal `Crest` and `CrestMobile` targets now use the same
-`CREST_CORE_BACKED` state composition as `CrestChromiumUI`, `CrestNativeCore` and
-`CrestMobileNativeCore`. `CREST_REVIEW_BUILD` separately enforces isolated launch
-for the review targets. The normal Mac target still hosts WebKit. The Chromium
+core-backed state composition as `CrestChromiumUI`. `CREST_REVIEW_BUILD`
+separately enforces isolated launch for the review targets. The normal Mac
+target still hosts WebKit. The Chromium
 host also builds as `CrestChromiumUIProduct` without `CREST_REVIEW_BUILD`, which
 `package-chromium-host.py --product` assembles into Crest's own desktop identity;
 signing and provisioning that identity is the remaining external requirement for
@@ -33,7 +33,7 @@ below.
 | .NET Domain and Application | Session and workspace rules; Spaces, profiles, tabs, folders, splits, history and archive; durable commands; sync projection, ordering, conflict and deletion policy; restore and migration rules; authorization decisions based on platform results |
 | Engine adapter | Native page creation, rendering, input, navigation, engine history, page observations, origin permissions, downloads, popups and extension execution where supported |
 | Apple platform services | CloudKit transport and account state, filesystem storage, Keychain and system authentication, OS permission dialogs, native download destinations, app lifecycle, signing and packaging |
-| Existing SwiftUI/AppKit UI | Current layout and interaction, read projections, presentation state and commands; native card attachment and window presentation |
+| Existing SwiftUI/AppKit UI | Current layout and interaction, viewed Space and tab selection, read projections, presentation state and commands; native card attachment and window presentation |
 
 Native rendering, pointer input, scrolling and compositing stay in the engine.
 They do not make round trips through JSON or the .NET command processor. A core
@@ -235,7 +235,7 @@ already holds the grant, and the local record wins on the next upload otherwise.
 `CrestNativeCore` and `CrestMobileNativeCore` build the existing platform entry
 points, all original native views, and the current page infrastructure. Each has
 an isolated bundle and profile.
-`CREST_CORE_BACKED` routes migrated domain operations through the packaged .NET
+The active composition routes migrated domain operations through the packaged .NET
 library without changing their callers. Tab opening, activation, duplication,
 closing, deletion, placement, filing, renaming, residency preferences, folders,
 split groups, archive restoration, and automatic tab cleanup execute through the core.
@@ -751,8 +751,8 @@ then mounts `BrowserMacApplication.browserWindowContent` in native windows. It h
 no `@main` and does not replace Chromium's application delegate. The temporary
 control-plane window it replaced has been removed.
 
-`CREST_CORE_BACKED` uses the same .NET session authority and domain commands as
-`CrestNativeCore`. `ChromiumNativePage` creates a WebContents for the existing
+The Chromium target uses the same .NET session authority and domain commands as
+the WebKit targets. `ChromiumNativePage` creates a WebContents for the existing
 `BrowserPage` and mounts its NSView inside the original page card. Navigation,
 Back, Forward, reload, stop, title, URL and loading observations cross the native
 host port. The existing pools still own page lifetimes and window presentation.

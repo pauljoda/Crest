@@ -81,6 +81,7 @@ struct BrowserSidebarCustomizationPreview: View {
 }
 
 @MainActor
+@Observable
 private final class BrowserAppearancePreviewState {
     let sidebarInteraction: BrowserSidebarInteractionState
     let browser: BrowserStore
@@ -90,6 +91,7 @@ private final class BrowserAppearancePreviewState {
     /// The color each sample site would hand its pin, keyed the way the shipping
     /// sidebar asks for it.
     private let siteAccents: [TabID: BrowserTabIconAccent]
+    private var themeSpace: BrowserSpace?
 
     init() {
         let folder = BrowserFolder(title: String(localized: "Example folder"), symbol: "book.closed")
@@ -139,16 +141,21 @@ private final class BrowserAppearancePreviewState {
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 
-    var space: BrowserSpace { browser.session.spaces[0] }
+    var space: BrowserSpace {
+        var preview = browser.session.spaces[0]
+        if let themeSpace {
+            preview.branding = themeSpace.branding
+            if let folder = themeSpace.folders.first {
+                preview.folders[0].color = folder.color
+                preview.folders[0].symbol = folder.symbol
+            }
+        }
+        return preview
+    }
     var assignment: BrowserSpaceRuntimeAssignment { BrowserSpaceRuntimeAssignment(space: space) }
 
     func applyTheme(_ source: BrowserSpace?) {
-        guard let source else { return }
-        browser.session.spaces[0].branding = source.branding
-        if let folder = source.folders.first {
-            browser.session.spaces[0].folders[0].color = folder.color
-            browser.session.spaces[0].folders[0].symbol = folder.symbol
-        }
+        themeSpace = source
     }
 
     var siteThemeAccent: @Sendable (BrowserTabRuntimeAssignment) -> BrowserTabIconAccent? {

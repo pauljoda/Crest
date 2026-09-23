@@ -1,6 +1,10 @@
 import AppKit
 import Foundation
-import WebKit
+
+struct BrowserFileInputOptions {
+    let allowsDirectories: Bool
+    let allowsMultipleSelection: Bool
+}
 
 @MainActor
 final class BrowserDialogPresenter {
@@ -58,15 +62,15 @@ final class BrowserDialogPresenter {
     }
 
     func presentFileInput(
-        parameters: WKOpenPanelParameters,
+        options: BrowserFileInputOptions,
         request: URLRequest,
         completion: @escaping @MainActor @Sendable ([URL]?) -> Void
     ) {
         let panel = NSOpenPanel()
         panel.title = "Choose Files for \(Self.sourceLabel(for: request))"
         panel.canChooseFiles = true
-        panel.canChooseDirectories = parameters.allowsDirectories
-        panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+        panel.canChooseDirectories = options.allowsDirectories
+        panel.allowsMultipleSelection = options.allowsMultipleSelection
         panel.canCreateDirectories = false
         panel.resolvesAliases = true
 

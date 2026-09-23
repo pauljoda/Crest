@@ -140,7 +140,12 @@ public sealed class BrowserTab(Guid id, TabContent content, string? url, Guid? p
     /// Split View card can record its own page without claiming the focused
     /// tab's loading, history or failure state.
     public void ObserveAppearance(string? url, string? title) {
-        if (url is not null) Url = url;
+        if (url is not null) {
+            // A URL entered while a native tab is selected replaces that
+            // surface with a web page. Persisting both is an impossible tab.
+            Content = TabContent.Web;
+            Url = url;
+        }
         if (!string.IsNullOrEmpty(title)) Title = title;
     }
 

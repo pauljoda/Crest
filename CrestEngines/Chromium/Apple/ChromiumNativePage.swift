@@ -17,6 +17,14 @@ final class ChromiumNativePage: BrowserPageEngine {
     private weak var hostCommands: (any BrowserEngineHostCommands)?
     var observer: (String, [String: Any]) -> Void
     var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
+    var contextMenuActions: (URL?, String?) -> [[String: String]] = { _, _ in [] }
+    var contextMenuAction: (String, URL?, String?) -> Bool = { _, _, _ in false }
+    var httpAuthenticationHandler: ([String: Any], @escaping (String?, String?) -> Void) -> Void = {
+        _, reply in reply(nil, nil)
+    }
+    var javaScriptDialogHandler: (
+        String, String, String, URL?, @escaping (Bool, String?) -> Void
+    ) -> Void = { _, _, _, _, reply in reply(false, nil) }
     var protectedLinkHandler: (URL) -> (() -> Void)? = { _ in nil }
     var modifiedLinkHandler: (URL, Int, String) -> (BrowserLinkNavigationDecision, (() -> Void)?) = { _, _, _ in (.navigate, nil) }
     private var host: (any CrestChromiumEngineHost)?
@@ -63,21 +71,21 @@ final class ChromiumNativePage: BrowserPageEngine {
     }
     func showInspector() -> Bool {
         guard created, !disposed, let host else { return false }
-        return host.command("engine.inspect", page: id, url: nil)
+        return host.command(ChromiumPageHostCommand.inspect.rawValue, page: id, url: nil)
     }
     func toggleInspector(_ panel: BrowserDeveloperPanel, current: BrowserDeveloperPanel?) -> BrowserWebInspectorToggleResult {
         guard created, !disposed, let host else { return .unavailable }
-        let isOpen = host.command("engine.inspect_visible", page: id, url: nil)
+        let isOpen = host.command(ChromiumPageHostCommand.inspectVisible.rawValue, page: id, url: nil)
         if isOpen, current == panel {
-            return host.command("engine.inspect_close", page: id, url: nil) ? .closed : .unavailable
+            return host.command(ChromiumPageHostCommand.inspectClose.rawValue, page: id, url: nil) ? .closed : .unavailable
         }
-        let command: String
+        let command: ChromiumPageHostCommand
         switch panel {
-        case .console: command = "engine.inspect_console"
-        case .elements: command = "engine.inspect_elements"
-        case .network: command = "engine.inspect_network"
+        case .console: command = .inspectConsole
+        case .elements: command = .inspectElements
+        case .network: command = .inspectNetwork
         }
-        guard host.command(command, page: id, url: nil) else { return .unavailable }
+        guard host.command(command.rawValue, page: id, url: nil) else { return .unavailable }
         // Chromium selects a starting panel for Console and Elements only. A
         // Network request opens DevTools wherever it was, so report no panel
         // rather than claiming a selection the engine did not make.
@@ -107,11 +115,16 @@ final class ChromiumNativePage: BrowserPageEngine {
     /// Every `changed` report carries the page's history, loading and failure
     /// state, so the page reads them from it.
     var reportsNavigationState: Bool { true }
-    func mediaActivity() async -> BrowserPageMediaActivity? {
+    var currentMediaActivity: BrowserPageMediaActivity? {
         guard created, !disposed, let values = host?.mediaActivity(forPage: id) else { return nil }
         return BrowserPageMediaActivity(isPlaying: values["playing"] as? Bool == true,
             isCapturing: values["capturing"] as? Bool == true,
             hasPictureInPicture: values["pictureInPicture"] as? Bool == true)
+    }
+    func mediaActivity() async -> BrowserPageMediaActivity? { currentMediaActivity }
+    func enterPictureInPicture() -> Bool {
+        guard created, !disposed, let host else { return false }
+        return host.command(ChromiumPageHostCommand.pictureInPictureEnter.rawValue, page: id, url: nil)
     }
     func transferOwnership(to windowID: BrowserWindowID) -> Bool {
         guard created, !disposed, let host else { return false }
@@ -130,12 +143,12 @@ final class ChromiumNativePage: BrowserPageEngine {
     }
     func navigateHistory(by offset: Int) {
         guard created, !disposed, offset != 0 else { return }
-        _ = host?.command("engine.history", page: id, url: String(offset))
+        _ = host?.command(ChromiumPageHostCommand.history.rawValue, page: id, url: String(offset))
     }
     func reload(bypassingCache: Bool) {
-        command(bypassingCache ? "engine.reload_from_origin" : "engine.reload")
+        command(bypassingCache ? .reloadFromOrigin : .reload)
     }
-    func stop() { command("engine.stop") }
+    func stop() { command(.stop) }
 
     func load(_ url: URL) {
         if let pendingNavigation, pendingNavigation.url != url {
@@ -246,7 +259,7 @@ final class ChromiumNativePage: BrowserPageEngine {
 
     func respondToInfoBar(_ barID: Int, response: String) -> Bool {
         guard created, !disposed, let host else { return false }
-        return host.command("engine.infobar", page: id, url: "\(response):\(barID)")
+        return host.command(ChromiumPageHostCommand.infoBar.rawValue, page: id, url: "\(response):\(barID)")
     }
 
     /// Rebuilt from the chain the engine verified, so the system certificate
@@ -293,12 +306,12 @@ final class ChromiumNativePage: BrowserPageEngine {
 
     func refreshFavicon() {
         guard created, !disposed else { return }
-        _ = host?.command("engine.favicon_refresh", page: id, url: nil)
+        _ = host?.command(ChromiumPageHostCommand.faviconRefresh.rawValue, page: id, url: nil)
     }
 
     func showBlockedPopups() -> Bool {
         guard created, !disposed, let host else { return false }
-        return host.command("engine.show_blocked_popups", page: id, url: nil)
+        return host.command(ChromiumPageHostCommand.showBlockedPopups.rawValue, page: id, url: nil)
     }
 
     struct ExtensionAction: Identifiable {
@@ -388,7 +401,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     /// an install review has finished, been canceled, or was never offered.
     private func refreshStoreState() {
         guard created, !disposed else { return }
-        _ = host?.command("engine.store_state", page: id, url: nil)
+        _ = host?.command(ChromiumPageHostCommand.storeState.rawValue, page: id, url: nil)
     }
 
     static func webStoreExtensionID(_ url: URL?) -> String? {
@@ -401,14 +414,14 @@ final class ChromiumNativePage: BrowserPageEngine {
 
     func setZoom(_ zoom: CGFloat) {
         self.zoom = zoom
-        if created { _ = host?.command("engine.zoom", page: id, url: String(Double(zoom))) }
+        if created { _ = host?.command(ChromiumPageHostCommand.zoom.rawValue, page: id, url: String(Double(zoom))) }
     }
 
     func detach() { if created { host?.didDetachPage(id) } }
 
-    func command(_ command: String) {
+    private func command(_ command: ChromiumPageHostCommand) {
         guard created, !disposed else { return }
-        _ = host?.command(command, page: id, url: nil)
+        _ = host?.command(command.rawValue, page: id, url: nil)
     }
 
     func dispose() {
@@ -442,7 +455,7 @@ final class ChromiumNativePage: BrowserPageEngine {
         pendingInteractionState = nil
         if let state, host?.restorePage(id, interactionState: state,
             expectedURL: ChromiumInternalURL.engine(requestedURL.absoluteString)) == true { return }
-        _ = host?.command("engine.navigate", page: id, url: ChromiumInternalURL.engine(requestedURL.absoluteString))
+        _ = host?.command(ChromiumPageHostCommand.navigate.rawValue, page: id, url: ChromiumInternalURL.engine(requestedURL.absoluteString))
     }
 
     private func history(_ value: Any?) -> [BrowserNavigationHistoryItem] {
@@ -493,6 +506,31 @@ final class ChromiumNativePage: BrowserPageEngine {
                 MainActor.assumeIsolated {
                     guard let self, !self.disposed, let url = URL(string: address) else { return false }
                     return self.linkHandler(action, url, label)
+                }
+            }
+            host?.setContextMenuHandler(page: id, provider: { [weak self] address, selection in
+                MainActor.assumeIsolated {
+                    guard let self, !self.disposed else { return [] }
+                    let url = address == "about:blank" ? nil : URL(string: address)
+                    return self.contextMenuActions(url, selection.isEmpty ? nil : selection)
+                }
+            }, action: { [weak self] identifier, address, selection in
+                MainActor.assumeIsolated {
+                    guard let self, !self.disposed else { return false }
+                    let url = address == "about:blank" ? nil : URL(string: address)
+                    return self.contextMenuAction(identifier, url, selection.isEmpty ? nil : selection)
+                }
+            })
+            host?.setJavaScriptDialogHandler(page: id) { [weak self] kind, message, defaultText, address, reply in
+                MainActor.assumeIsolated {
+                    guard let self, !self.disposed else { reply(false, nil); return }
+                    self.javaScriptDialogHandler(kind, message, defaultText, URL(string: address), reply)
+                }
+            }
+            host?.setHTTPAuthenticationHandler(page: id) { [weak self] challenge, reply in
+                MainActor.assumeIsolated {
+                    guard let self, !self.disposed else { reply(nil, nil); return }
+                    self.httpAuthenticationHandler(challenge, reply)
                 }
             }
             host?.setProtectedLinkHandler(page: id) { [weak self] address in
@@ -699,17 +737,40 @@ extension ChromiumNativePage: BrowserPageContentScripting {
 extension ChromiumNativePage: BrowserMediaSessionTransport {
     func activateMediaSession(documentIdentifier: String) {
         guard created, !disposed else { return }
-        _ = host?.command("engine.media_activate", page: id, url: documentIdentifier)
+        _ = host?.command(ChromiumPageHostCommand.mediaActivate.rawValue, page: id, url: documentIdentifier)
     }
 
     func performMediaSessionAction(_ action: BrowserMediaSessionAction, documentIdentifier: String) {
         guard created, !disposed else { return }
-        _ = host?.command("engine.media_action", page: id, url: "\(action.rawValue):\(documentIdentifier)")
+        _ = host?.command(ChromiumPageHostCommand.mediaAction.rawValue, page: id, url: "\(action.rawValue):\(documentIdentifier)")
     }
 
     func setMediaSessionMuted(_ muted: Bool, documentIdentifier: String) {
         guard created, !disposed else { return }
-        _ = host?.command("engine.media_mute", page: id, url: "\(muted ? 1 : 0):\(documentIdentifier)")
+        _ = host?.command(ChromiumPageHostCommand.mediaMute.rawValue, page: id, url: "\(muted ? 1 : 0):\(documentIdentifier)")
     }
+}
+
+private enum ChromiumPageHostCommand: String, Codable, Sendable {
+    case inspect = "engine.inspect"
+    case inspectVisible = "engine.inspect_visible"
+    case inspectClose = "engine.inspect_close"
+    case inspectConsole = "engine.inspect_console"
+    case inspectElements = "engine.inspect_elements"
+    case inspectNetwork = "engine.inspect_network"
+    case pictureInPictureEnter = "engine.picture_in_picture_enter"
+    case history = "engine.history"
+    case reload = "engine.reload"
+    case reloadFromOrigin = "engine.reload_from_origin"
+    case stop = "engine.stop"
+    case infoBar = "engine.infobar"
+    case faviconRefresh = "engine.favicon_refresh"
+    case showBlockedPopups = "engine.show_blocked_popups"
+    case storeState = "engine.store_state"
+    case zoom = "engine.zoom"
+    case navigate = "engine.navigate"
+    case mediaActivate = "engine.media_activate"
+    case mediaAction = "engine.media_action"
+    case mediaMute = "engine.media_mute"
 }
 #endif

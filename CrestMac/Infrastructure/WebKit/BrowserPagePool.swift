@@ -626,6 +626,9 @@ final class BrowserPagePool:
         // each one is built and started here. A card the person can see must
         // never wait for focus to load: lazy loading is for tabs off screen.
         let members = presentedMembers(for: tab, in: space)
+        // Ask the departing engine while its view is still attached. Creating
+        // the destination page can hide the previous native surface first.
+        requestAutomaticPictureInPicture(forDeparturesBefore: members.map(\.id))
         for member in members { nativeTabs.load(tab: member, space: space, at: time) }
         let memberPages = members.filter { $0.nativeContent == nil }.map {
             (tab: $0, page: page(for: $0, space: space))
@@ -1097,7 +1100,6 @@ final class BrowserPagePool:
     ) -> BrowserTransientPageLease? {
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard canHostTransientPage(matching: assignment) else { return nil }
-        let tabID = TabID()
         var pendingNavigation = engineNavigation
         let makeTransientPage = { [weak self] () -> BrowserPage? in
             guard let self,
@@ -1815,17 +1817,7 @@ final class BrowserPagePool:
     ) {
         prepareFocusTransition(to: tabID.flatMap { tabRuntimes[$0]?.page })
         let departed = Set(self.presentedTabIDs).subtracting(presentedTabIDs)
-        // Only pages leaving the visible set qualify. Moving focus within a
-        // split must not float a video that is still visible beside the tab.
-        let departures = ([activeTabID].compactMap { $0 } + self.presentedTabIDs)
-            .filter { departed.contains($0) }
-        var requested: Set<TabID> = []
-        for departedTabID in departures
-        where requested.insert(departedTabID).inserted
-            && !runtimeStore.isPresented(departedTabID, outside: windowID)
-        {
-            tabRuntimes[departedTabID]?.page.pictureInPicture?.leaveTab()
-        }
+        requestAutomaticPictureInPicture(forDeparturesBefore: presentedTabIDs)
         for arrivingTabID in presentedTabIDs where !self.presentedTabIDs.contains(arrivingTabID) {
             tabRuntimes[arrivingTabID]?.page.pictureInPicture?.returnToTab()
         }
@@ -1842,6 +1834,20 @@ final class BrowserPagePool:
         }
         activeTabID = tabID
         self.presentedTabIDs = presentedTabIDs
+    }
+
+    private func requestAutomaticPictureInPicture(forDeparturesBefore arriving: [TabID]) {
+        let departed = Set(presentedTabIDs).subtracting(arriving)
+        // Only pages leaving the visible set qualify. Moving focus within a
+        // split must not float a video that is still visible beside the tab.
+        let departures = ([activeTabID].compactMap { $0 } + presentedTabIDs)
+            .filter { departed.contains($0) }
+        var requested: Set<TabID> = []
+        for tabID in departures where requested.insert(tabID).inserted
+            && !runtimeStore.isPresented(tabID, outside: windowID)
+        {
+            tabRuntimes[tabID]?.page.pictureInPicture?.leaveTab()
+        }
     }
 
     private func prepareFocusTransition(to destination: BrowserPage?) {

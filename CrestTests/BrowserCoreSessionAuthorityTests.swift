@@ -412,7 +412,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         next.spaces[0].tabs[0].customTitle = "Edited after snapshot"
         next.spaces[0].history = []
         next.spaces.removeLast()
-        try core.replace(with: next)
+        try core.replaceDurably(with: next) { _ in }
         persistence.save(emptyWindow, scope: .everything, checkpoint: checkpoint)
         await persistence.flushPendingSaves()
         let restored = UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: icons).load()

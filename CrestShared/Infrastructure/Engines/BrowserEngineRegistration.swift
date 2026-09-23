@@ -37,9 +37,9 @@ enum BrowserEngineRegistration {
             .workspaceProfiles, .workspaceTransfer, .profileDeletion,
             .beforeUnload, .downloads, .permissions, .viewportCapture, .inspector, .internalPages,
             .fullPageCapture, .pdf, .webArchive, .print, .localFiles,
-            .extensions, .selectionTranslation, .popups,
+            .extensions, .selectionTranslation, .popups, .featureFlags,
         ],
-        unavailable: [.reader, .translation, .contentBlocking, .featureFlags],
+        unavailable: [.reader, .translation, .contentBlocking],
         limitations: [
             "Find does not honour a non-wrapping search: the host command takes no wrap argument and the engine always wraps.",
             "Extensions cover actions, installation, side panels and per-Space permissions; full API parity and Apple password-helper pairing remain incomplete.",

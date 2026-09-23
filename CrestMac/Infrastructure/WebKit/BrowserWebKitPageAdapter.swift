@@ -36,7 +36,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
     private var hostedNotificationMessageProxy: BrowserHostedWebNotificationScriptMessageProxy?
 
-    private(set) lazy var pictureInPicture: BrowserPictureInPicturePageController? =
+    private(set) lazy var pictureInPicture: (any BrowserPagePictureInPictureController)? =
         BrowserPictureInPicturePageController(webView: webView)
     private(set) lazy var linkHover: BrowserLinkHoverController? = BrowserLinkHoverController(webView: webView)
     private(set) lazy var linkDrag: BrowserLinkDragController? = BrowserLinkDragController(

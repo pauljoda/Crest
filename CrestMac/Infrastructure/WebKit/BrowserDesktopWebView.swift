@@ -46,24 +46,17 @@ final class BrowserDesktopWebView: WKWebView {
         true
     }
 
-    /// Routes search and Space destinations through Crest in WebKit's native menu.
-    ///
-    /// AppKit calls this with the finished menu, which is the one moment a
-    /// link-aware item can be added: WebKit's items stay exactly as WebKit
-    /// ordered them, and the destination comes from the `contextmenu` report
-    /// the content bridge posted a moment earlier rather than from a second
-    /// hit test of Crest's own.
+    /// Adds Crest's actions ahead of WebKit's native and extension items.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
         if menuHost?.opensLinksInCurrentSpace == true {
             BrowserDesktopWebViewMenuPolicy.relabelLinkDestination(in: menu)
         }
-        let context = menuHost?.takeMenuContext()
-        replaceSelectionSearch(in: menu, with: context?.selectionSearch)
-        guard let context else { return }
-        if let destinations = context.linkDestinations {
-            addSpaceDestinations(destinations, to: menu)
-        }
+        BrowserDesktopWebViewMenuPolicy.removeDefaultSelectionSearch(in: menu)
+        guard let context = menuHost?.takeMenuContext() else { return }
+        let actions = menuHost?.contextMenuActions(
+            linkURL: context.linkURL, selectionText: context.selectionText) ?? []
+        addCrestActions(actions, to: menu)
         if let imageDownloadURL = context.imageDownloadURL,
             let item = BrowserDesktopWebViewMenuPolicy.downloadImageItem(in: menu)
         {
@@ -71,15 +64,6 @@ final class BrowserDesktopWebView: WKWebView {
             item.action = #selector(downloadImage(_:))
             item.representedObject = imageDownloadURL
         }
-        guard let destination = context.splitViewLinkDestination else { return }
-        let item = NSMenuItem(
-            title: String(localized: "Open Link in Split View"),
-            action: #selector(openLinkInSplitView(_:)),
-            keyEquivalent: ""
-        )
-        item.target = self
-        item.representedObject = destination
-        BrowserDesktopWebViewMenuPolicy.append([item], to: menu)
     }
 
     /// A capture belongs to one menu. Whatever this one did not use is dropped
@@ -90,9 +74,12 @@ final class BrowserDesktopWebView: WKWebView {
         menuHost?.discardSplitViewLinkCapture()
     }
 
-    @objc private func openLinkInSplitView(_ sender: NSMenuItem) {
-        guard let destination = sender.representedObject as? URL else { return }
-        menuHost?.openLinkInSplitView(destination)
+    @objc private func performCrestMenuAction(_ sender: NSMenuItem) {
+        guard let action = sender.representedObject as? CrestMenuAction,
+            window?.windowNumber == action.windowNumber else { return }
+        _ = menuHost?.performContextMenuAction(
+            identifier: action.value.kind.identifier, linkURL: action.value.linkURL,
+            selectionText: action.value.selectionText)
     }
 
     @objc private func downloadImage(_ sender: NSMenuItem) {
@@ -100,69 +87,51 @@ final class BrowserDesktopWebView: WKWebView {
         menuHost?.downloadImage(from: url)
     }
 
-    private func replaceSelectionSearch(in menu: NSMenu, with destination: BrowserSelectionSearchDestination?) {
-        guard
-            let item = menu.items.first(where: {
-                $0.identifier == BrowserDesktopWebViewMenuPolicy.searchWebIdentifier
-            })
-        else { return }
-        // Never leave the macOS service action behind when this menu has no
-        // fresh selection or its source Space is no longer available.
-        guard let destination, let window else {
-            menu.removeItem(item)
-            return
+    private func addCrestActions(_ actions: [BrowserPageContextMenuAction], to menu: NSMenu) {
+        guard !actions.isEmpty else { return }
+        var items: [NSMenuItem] = []
+        let spaceActions = actions.filter(\.isSpaceDestination)
+        if !spaceActions.isEmpty {
+            let group = NSMenuItem(title: String(localized: "Open Link in Another Space"), action: nil, keyEquivalent: "")
+            group.image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: nil)
+            let submenu = NSMenu()
+            for action in spaceActions { submenu.addItem(menuItem(for: action)) }
+            group.submenu = submenu
+            items.append(group)
         }
-        item.title = String(localized: "Search with \(destination.provider.title)")
+        items.append(contentsOf: actions.filter { !$0.isSpaceDestination }.map(menuItem(for:)))
+        for (index, item) in items.enumerated() { menu.insertItem(item, at: index) }
+        if menu.items.count > items.count { menu.insertItem(.separator(), at: items.count) }
+    }
+
+    private func menuItem(for action: BrowserPageContextMenuAction) -> NSMenuItem {
+        let item = NSMenuItem(title: action.title, action: #selector(performCrestMenuAction(_:)), keyEquivalent: "")
         item.target = self
-        item.action = #selector(openLinkInSpace(_:))
-        item.representedObject = LinkSpaceAction(
-            url: destination.url, source: destination.source,
-            destination: BrowserSpaceRuntimeAssignment(
-                spaceID: destination.source.spaceID, profileID: destination.source.profileID
-            ),
-            windowNumber: window.windowNumber
-        )
+        item.representedObject = CrestMenuAction(action, windowNumber: window?.windowNumber)
+        item.image = NSImage(systemSymbolName: action.symbolName, accessibilityDescription: nil)
+        return item
     }
 
-    private func addSpaceDestinations(_ destinations: BrowserDesktopLinkDestinations, to menu: NSMenu) {
-        guard !destinations.spaces.isEmpty, let window else { return }
-        let item = NSMenuItem(
-            title: String(localized: "Open Link in Another Space"), action: nil, keyEquivalent: ""
-        )
-        let submenu = NSMenu()
-        for space in destinations.spaces {
-            let choice = NSMenuItem(title: space.name, action: #selector(openLinkInSpace(_:)), keyEquivalent: "")
-            choice.target = self
-            choice.representedObject = LinkSpaceAction(
-                url: destinations.url, source: destinations.source,
-                destination: BrowserSpaceRuntimeAssignment(space: space),
-                windowNumber: window.windowNumber
-            )
-            submenu.addItem(choice)
+    private final class CrestMenuAction: NSObject {
+        let value: BrowserPageContextMenuAction
+        let windowNumber: Int?
+
+        init(_ value: BrowserPageContextMenuAction, windowNumber: Int?) {
+            self.value = value
+            self.windowNumber = windowNumber
         }
-        item.submenu = submenu
-        let sourceIndex = menu.items.firstIndex { $0.identifier == BrowserDesktopWebViewMenuPolicy.openLinkIdentifier }
-        menu.insertItem(item, at: sourceIndex.map { $0 + 1 } ?? 0)
-    }
-
-    @objc private func openLinkInSpace(_ sender: NSMenuItem) {
-        guard let action = sender.representedObject as? LinkSpaceAction,
-            window?.windowNumber == action.windowNumber
-        else { return }
-        menuHost?.openLink(action.url, from: action.source, in: action.destination)
-    }
-
-    private struct LinkSpaceAction {
-        let url: URL
-        let source: BrowserTabRuntimeAssignment
-        let destination: BrowserSpaceRuntimeAssignment
-        let windowNumber: Int
     }
 }
 
 enum BrowserDesktopWebViewMenuPolicy {
     static let searchWebIdentifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierSearchWeb")
     static let openLinkIdentifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierOpenLinkInNewWindow")
+
+    static func removeDefaultSelectionSearch(in menu: NSMenu) {
+        if let item = menu.items.first(where: { $0.identifier == searchWebIdentifier }) {
+            menu.removeItem(item)
+        }
+    }
 
     static func relabelLinkDestination(in menu: NSMenu) {
         menu.items.first { $0.identifier == openLinkIdentifier }?.title =
@@ -177,13 +146,4 @@ enum BrowserDesktopWebViewMenuPolicy {
         menu.items.first { $0.identifier == downloadImageIdentifier }
     }
 
-    static func append(_ items: [NSMenuItem], to menu: NSMenu) {
-        guard !items.isEmpty else { return }
-        if let last = menu.items.last, !last.isSeparatorItem {
-            menu.addItem(.separator())
-        }
-        for item in items {
-            menu.addItem(item)
-        }
-    }
 }

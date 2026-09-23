@@ -19,7 +19,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// goes through it or through `pageEngine`.
     @ObservationIgnored let engineAdapter: any BrowserPageEngineAdapter
     @ObservationIgnored let pageEngine: any BrowserPageEngine
-    var pictureInPicture: BrowserPictureInPicturePageController? { engineAdapter.pictureInPicture }
+    var pictureInPicture: (any BrowserPagePictureInPictureController)? { engineAdapter.pictureInPicture }
     var linkHover: BrowserLinkHoverController? { engineAdapter.linkHover }
     var linkDrag: BrowserLinkDragController? { engineAdapter.linkDrag }
     @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
@@ -32,6 +32,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     private(set) var title = ""
     private(set) var estimatedProgress = 0.0
     private(set) var isLoading = false
+    private(set) var isContentFullscreen = false
     private(set) var hasOnlySecureContent = false
     private(set) var faviconData: Data?
     private(set) var themeColor: NSColor?
@@ -973,6 +974,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             engineInfoBars.removeAll { $0.id == id }
         case .mediaSession(let body):
             mediaSessionCoordinator?.receive(body, isMainFrame: true)
+        case .contentFullscreenChanged(let active):
+            isContentFullscreen = active
         case .userActivity:
             userActivityHandler?()
         case .linkHovered(let destination):
@@ -1035,15 +1038,18 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         case .navigationFailed(let failure):
             pendingNavigationURL = nil
             navigationFailure = failure
+            httpAuthenticationSession.authenticationFailed()
         case nil: break
         }
         if state.committed {
+            isContentFullscreen = false
             pendingNavigationURL = nil
             navigationFailure = nil
             webContentFailureMessage = nil
             linkHover?.didCommitNavigation()
             mediaSessionCoordinator?.didCommitNavigation()
             committedNavigationCount += 1
+            Task { await httpAuthenticationSession.authenticationSucceeded() }
             synchronizePopupPermission(for: state.url)
             synchronizeEngineSitePermissions(for: state.url)
         }

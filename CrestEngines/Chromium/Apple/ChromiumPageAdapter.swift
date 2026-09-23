@@ -20,9 +20,10 @@ final class ChromiumPageAdapter: BrowserPageEngineAdapter {
         nativeView: native.nativeView,
         context: { [weak self] in self?.page?.navigationContext },
         handle: { [weak self] event in self?.page?.handleLinkDrag(event) })
-    // Chromium presents Picture in Picture, favicons and its error pages
-    // itself; reader and content blocking are unavailable.
-    var pictureInPicture: BrowserPictureInPicturePageController? { nil }
+    private(set) lazy var pictureInPicture: (any BrowserPagePictureInPictureController)? =
+        ChromiumPictureInPicturePageController(native: native)
+    // Chromium presents favicons and its error pages itself; reader and
+    // content blocking are unavailable.
     var readerModeSession: BrowserReaderModeSession? { nil }
     var faviconSession: BrowserFaviconSession? { nil }
     var isContentBlockingActive: Bool { false }
@@ -53,6 +54,55 @@ final class ChromiumPageAdapter: BrowserPageEngineAdapter {
             guard let page, let action = ChromiumLinkAction(rawValue: name) else { return false }
             return page.performEngineLinkAction(action.pageAction, destination: destination, label: label)
         }
+        native.contextMenuActions = { [weak page] url, selection in
+            page?.contextMenuActions(linkURL: url, selectionText: selection).map(\.engineValues) ?? []
+        }
+        native.contextMenuAction = { [weak page] identifier, url, selection in
+            page?.performContextMenuAction(
+                identifier: identifier, linkURL: url, selectionText: selection) ?? false
+        }
+        native.javaScriptDialogHandler = { [weak page] kind, message, defaultText, sourceURL, reply in
+            guard let page else { reply(false, nil); return }
+            let request = URLRequest(url: sourceURL ?? page.url ?? URL(fileURLWithPath: "/"))
+            switch kind {
+            case "alert":
+                page.dialogPresenter.presentAlert(message: message, request: request) {
+                    reply(true, nil)
+                }
+            case "confirm":
+                page.dialogPresenter.presentConfirm(message: message, request: request) {
+                    reply($0, nil)
+                }
+            case "prompt":
+                page.dialogPresenter.presentPrompt(
+                    message: message, defaultText: defaultText, request: request
+                ) { answer in
+                    reply(answer != nil, answer)
+                }
+            case "beforeUnload":
+                page.dialogPresenter.presentBeforeUnload(request: request) {
+                    reply($0, nil)
+                }
+            default:
+                reply(false, nil)
+            }
+        }
+        native.httpAuthenticationHandler = { [weak page] values, reply in
+            guard let page, let challenge = BrowserAuthenticationChallenge(chromiumValues: values) else {
+                reply(nil, nil)
+                return
+            }
+            Task { @MainActor in
+                let decision = await page.httpAuthenticationSession.response(to: challenge) {
+                    [dialogPresenter = page.dialogPresenter, spaceName = page.spaceName] prompt in
+                    await dialogPresenter.presentHTTPAuthentication(prompt: prompt, spaceName: spaceName)
+                }
+                switch decision {
+                case let .useCredential(username, password): reply(username, password)
+                case .cancel, .performDefaultHandling: reply(nil, nil)
+                }
+            }
+        }
         native.protectedLinkHandler = { [weak page] destination in
             page?.protectedLinkAction(to: destination)
         }
@@ -65,7 +115,10 @@ final class ChromiumPageAdapter: BrowserPageEngineAdapter {
         linkDrag?.observeNativeMouseDown()
     }
 
-    func detach(from page: BrowserPage) { native.dispose() }
+    func detach(from page: BrowserPage) {
+        pictureInPicture?.invalidate()
+        native.dispose()
+    }
 
     func setPrivateBrowsing(_ isPrivate: Bool) { native.isPrivateBrowsing = isPrivate }
     func adoptEngineCreatedPage(_ token: String) -> Bool { native.adopt(token) }
@@ -81,6 +134,40 @@ final class ChromiumPageAdapter: BrowserPageEngineAdapter {
     func prepareForNavigation() {}
 }
 
+private extension BrowserAuthenticationChallenge {
+    init?(chromiumValues values: [String: Any]) {
+        guard let urlString = values["url"] as? String,
+            let url = URL(string: urlString),
+            let host = values["host"] as? String,
+            let port = values["port"] as? Int,
+            let methodCode = values["method"] as? String,
+            let origin = CredentialOrigin(securityProtocol: url.scheme ?? "", host: host, port: port)
+        else { return nil }
+        let realm = (values["realm"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        let method: BrowserAuthenticationMethod
+        let scope: BrowserCredentialScope
+        switch methodCode {
+        case "basic": method = .httpBasic; scope = .httpBasic(realm: realm)
+        case "digest": method = .httpDigest; scope = .httpDigest(realm: realm)
+        default: return nil
+        }
+        let previousFailures = values["previousFailureCount"] as? Int ?? 0
+        self.init(
+            authenticationMethod: method,
+            isProxy: values["isProxy"] as? Bool ?? false,
+            previousFailureCount: previousFailures,
+            protectionSpace: BrowserHTTPAuthenticationProtectionSpace(origin: origin, credentialScope: scope),
+            descriptor: BrowserHTTPAuthenticationDescriptor(
+                source: BrowserCorePolicy.authenticationSourceLabel(
+                    host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name),
+                realm: realm,
+                authenticationMethod: methodCode,
+                isSecureTransport: origin.isSecure,
+                previousFailureCount: previousFailures),
+            proposedUsername: nil)
+    }
+}
+
 /// The page events the engine host reports, in the host's spelling.
 private enum ChromiumPageEvent: String {
     case navigationStarted = "navigation_started"
@@ -88,6 +175,7 @@ private enum ChromiumPageEvent: String {
     case infoBarAdded = "infobar_added"
     case infoBarRemoved = "infobar_removed"
     case mediaSession = "media_session"
+    case fullscreenChanged = "fullscreen_changed"
     case userActivity = "user_activity"
     case linkHover = "link_hover"
     case popupBlocked = "popup_blocked"
@@ -106,6 +194,7 @@ private enum ChromiumPageEvent: String {
         case .infoBarAdded: return BrowserEngineInfoBar(values: values).map { .infoBarAdded($0) }
         case .infoBarRemoved: return .infoBarRemoved(id: values["id"] as? Int)
         case .mediaSession: return values["body"].map { .mediaSession(body: $0) }
+        case .fullscreenChanged: return .contentFullscreenChanged(values["active"] as? Bool == true)
         case .userActivity: return .userActivity
         case .linkHover: return .linkHovered(url)
         case .popupBlocked: return url.map { .popupBlocked(pageURL: $0) }
@@ -209,6 +298,60 @@ extension BrowserEnginePageAdoption {
             url: (values["url"] as? String).flatMap(URL.init(string:)),
             foreground: values["foreground"] as? Bool ?? true
         )
+    }
+}
+/// Chromium's browser Media Session can ask the active video player to enter
+/// PiP without page JavaScript or a synthetic click. The floating surface is
+/// still Chromium-owned; this controller only follows Crest's tab lifecycle.
+@MainActor
+private final class ChromiumPictureInPicturePageController:
+    BrowserPagePictureInPictureController, BrowserAutomaticPictureInPictureClient
+{
+    private let native: ChromiumNativePage
+    private let coordinator: BrowserAutomaticPictureInPictureCoordinator
+    private var completion: (@MainActor (Bool) -> Void)?
+    private var check: Task<Void, Never>?
+
+    var isPictureInPictureActive: Bool { native.currentMediaActivity?.hasPictureInPicture == true }
+    var protectsPageResidency: Bool { isPictureInPictureActive || completion != nil }
+    var canAutomaticallyEnterPictureInPicture: Bool {
+        native.currentMediaActivity.map { $0.isPlaying && !$0.hasPictureInPicture } == true
+    }
+
+    init(native: ChromiumNativePage, coordinator: BrowserAutomaticPictureInPictureCoordinator = .shared) {
+        self.native = native
+        self.coordinator = coordinator
+        coordinator.register(self)
+    }
+
+    func leaveTab() {
+        coordinator.request(from: self)
+    }
+    func returnToTab() { coordinator.cancel(self) }
+
+    func beginAutomaticPictureInPicture(completion: @escaping @MainActor (Bool) -> Void) {
+        guard native.enterPictureInPicture() else { completion(false); return }
+        self.completion = completion
+        check = Task { @MainActor [weak self] in
+            // Media Session sends the request to the renderer. Check its
+            // resulting browser state before releasing the reservation.
+            do { try await Task.sleep(for: .milliseconds(600)) } catch { return }
+            guard let self else { return }
+            self.completion?(self.isPictureInPictureActive)
+            self.completion = nil
+            self.check = nil
+        }
+    }
+
+    func cancelAutomaticPictureInPicture() {
+        check?.cancel()
+        check = nil
+        completion?(false)
+        completion = nil
+    }
+
+    func invalidate() {
+        coordinator.cancel(self)
     }
 }
 #endif

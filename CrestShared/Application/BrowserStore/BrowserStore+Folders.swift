@@ -5,7 +5,7 @@ extension BrowserStore {
     @discardableResult
     func createTabFolder(_ tabs: [TabID], in spaceID: SpaceID, detachesSplitMembers: Bool = false) -> FolderID? {
         guard !deletingSpaceIDs.contains(spaceID),
-            let id = session.createTabFolder(tabs, in: spaceID, detachesSplitMembers: detachesSplitMembers)
+            let id = createSessionTabFolder(tabs, in: spaceID, detachesSplitMembers: detachesSplitMembers)
         else { return nil }
         persist(syncUrgency: .coalesced, scope: .core)
         return id

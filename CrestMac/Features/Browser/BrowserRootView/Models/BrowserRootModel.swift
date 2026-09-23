@@ -260,6 +260,9 @@ extension BrowserRootModel {
             )
         else { return }
         browser.navigateSelectedTab(to: url)
+        // A native Settings or Getting Started tab has no resident page.
+        // Selection builds the web page after the core changes its content.
+        pages.select(session: browser.session)
         pages.load(url)
         address = url.absoluteString
         isAddressEditing = false

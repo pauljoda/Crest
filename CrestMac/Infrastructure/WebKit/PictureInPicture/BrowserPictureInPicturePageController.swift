@@ -1,7 +1,7 @@
 import WebKit
 
 @MainActor
-final class BrowserPictureInPicturePageController: BrowserAutomaticPictureInPictureClient {
+final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureController, BrowserAutomaticPictureInPictureClient {
     private struct FrameCandidate {
         let frame: WKFrameInfo
         let documentID: String

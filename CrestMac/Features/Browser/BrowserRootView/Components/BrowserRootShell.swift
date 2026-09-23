@@ -22,96 +22,108 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
 
     var body: some View {
         ZStack(alignment: .leading) {
-            BrowserRootBackdrop(
-                space: model.browser.selectedSpace,
-                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
-                transparencyIsEnabled: windowTransparencyIsEnabled,
-                transparencyStrength: windowTransparencyStrength,
-                isWindowFocused: model.isWindowFocused
-            )
-
-            BrowserSidebarPageLayout(
-                presentation: model.sidebarPresentation,
-                width: model.sidebarWidth,
-                edge: sidebarEdge,
-                isApproachingDock: model.isSidebarApproachingDock
-            ) {
-                BrowserSpacePageSurface(
-                    model: model, transientBrowsing: transientBrowsing,
-                    tabPromotionNamespace: tabPromotionNamespace, appearance: appearance
+            if let page = model.pages.activePage, page.isContentFullscreen {
+                BrowserPlatformWebView(
+                    page: page,
+                    isPageActive: true,
+                    focusRestorationGate: .suppressed
                 )
-                .clipped()
-            } sidebar: {
-                BrowserRootSidebarSurfaceLayer(
+                .environment(\.browserPagePresentationWindowID, model.pages.windowID)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.black)
+                .ignoresSafeArea()
+            } else {
+                BrowserRootBackdrop(
+                    space: model.browser.selectedSpace,
+                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
+                    transparencyIsEnabled: windowTransparencyIsEnabled,
+                    transparencyStrength: windowTransparencyStrength,
+                    isWindowFocused: model.isWindowFocused
+                )
+
+                BrowserSidebarPageLayout(
                     presentation: model.sidebarPresentation,
                     width: model.sidebarWidth,
                     edge: sidebarEdge,
-                    space: model.browser.selectedSpace,
-                    reduceTransparency: reduceTransparency,
-                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
-                    hoverChanged: {
-                        model.sidebarSurfaceHoverChanged(
-                            $0,
-                            reduceMotion: reduceMotion
+                    isApproachingDock: model.isSidebarApproachingDock
+                ) {
+                    BrowserSpacePageSurface(
+                        model: model, transientBrowsing: transientBrowsing,
+                        tabPromotionNamespace: tabPromotionNamespace, appearance: appearance
+                    )
+                    .clipped()
+                } sidebar: {
+                    BrowserRootSidebarSurfaceLayer(
+                        presentation: model.sidebarPresentation,
+                        width: model.sidebarWidth,
+                        edge: sidebarEdge,
+                        space: model.browser.selectedSpace,
+                        reduceTransparency: reduceTransparency,
+                        spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
+                        hoverChanged: {
+                            model.sidebarSurfaceHoverChanged(
+                                $0,
+                                reduceMotion: reduceMotion
+                            )
+                        }
+                    ) {
+                        BrowserRootSidebarContent(
+                            model: model,
+                            sidebarOnRight: appearance.sidebarOnRight,
+                            spaceSettingsPresentation: spaceSettingsPresentation,
+                            commandSurfaceNamespace: commandSurfaceNamespace,
+                            tabPromotionNamespace: tabPromotionNamespace
                         )
                     }
-                ) {
-                    BrowserRootSidebarContent(
-                        model: model,
-                        sidebarOnRight: appearance.sidebarOnRight,
-                        spaceSettingsPresentation: spaceSettingsPresentation,
-                        commandSurfaceNamespace: commandSurfaceNamespace,
-                        tabPromotionNamespace: tabPromotionNamespace
-                    )
+                    .background {
+                        BrowserSidebarAuxiliaryMouseMonitor(
+                            isSidebarVisible:
+                                model.sidebarPresentation.showsSidebar
+                                && !model.chrome.isCommandPalettePresented,
+                            perform: model.handleAuxiliaryMouseAction,
+                            navigationTargets: { [pages = model.pages] in pages.livePages }
+                        )
+                    }
+                } controls: {
+                    BrowserRootShellControls(
+                        model: model, storedSidebarWidth: $storedSidebarWidth, sidebarEdge: sidebarEdge)
                 }
-                .background {
-                    BrowserSidebarAuxiliaryMouseMonitor(
-                        isSidebarVisible:
-                            model.sidebarPresentation.showsSidebar
-                            && !model.chrome.isCommandPalettePresented,
-                        perform: model.handleAuxiliaryMouseAction,
-                        navigationTargets: { [pages = model.pages] in pages.livePages }
-                    )
+                .allowsHitTesting(!model.chrome.isCommandPalettePresented)
+                .accessibilityHidden(model.chrome.isCommandPalettePresented)
+
+                BrowserRootUtilityFanLayer(model: model, sidebarOnRight: appearance.sidebarOnRight)
+                    .zIndex(BrowserRootMetrics.utilityFanZIndex)
+
+                BrowserMacDownloadFeedbackLayer(model: model, feedback: downloadFeedback)
+                    .zIndex(BrowserRootMetrics.utilityFanZIndex + 1)
+
+                BrowserRootDragPreviewLayer(
+                    model: model,
+                    reduceMotion: reduceMotion
+                )
+
+                BrowserNativeWindowControlsBridge(
+                    isVisible: model.sidebarPresentation.showsWindowControls,
+                    sidebarPosition: appearance.sidebarOnRight ? 1 : 0,
+                    sidebarWidth: model.sidebarWidth
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+
+                BrowserWindowTransparencyBridge(
+                    isEnabled: windowTransparencyIsEnabled && !reduceTransparency,
+                    isWindowFocused: model.isWindowFocusedBinding
+                )
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+
+                if let notice = model.visibleNotice {
+                    BrowserNoticeView(notice: notice)
+                        .id(notice)
                 }
-            } controls: {
-                BrowserRootShellControls(
-                    model: model, storedSidebarWidth: $storedSidebarWidth, sidebarEdge: sidebarEdge)
-            }
-            .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-            .accessibilityHidden(model.chrome.isCommandPalettePresented)
-
-            BrowserRootUtilityFanLayer(model: model, sidebarOnRight: appearance.sidebarOnRight)
-                .zIndex(BrowserRootMetrics.utilityFanZIndex)
-
-            BrowserMacDownloadFeedbackLayer(model: model, feedback: downloadFeedback)
-                .zIndex(BrowserRootMetrics.utilityFanZIndex + 1)
-
-            BrowserRootDragPreviewLayer(
-                model: model,
-                reduceMotion: reduceMotion
-            )
-
-            BrowserNativeWindowControlsBridge(
-                isVisible: model.sidebarPresentation.showsWindowControls,
-                sidebarPosition: appearance.sidebarOnRight ? 1 : 0,
-                sidebarWidth: model.sidebarWidth
-            )
-            .frame(maxWidth: .infinity)
-            .frame(height: 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-
-            BrowserWindowTransparencyBridge(
-                isEnabled: windowTransparencyIsEnabled && !reduceTransparency,
-                isWindowFocused: model.isWindowFocusedBinding
-            )
-            .frame(width: 0, height: 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-
-            if let notice = model.visibleNotice {
-                BrowserNoticeView(notice: notice)
-                    .id(notice)
             }
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in

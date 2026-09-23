@@ -4,12 +4,16 @@ import Observation
 @Observable
 @MainActor
 final class BrowserStore {
-    var session: BrowserSession {
-        get { selection.applying(to: family.currentSession) }
-        set {
-            family.replaceSession(newValue, from: self)
+    #if DEBUG
+        var session: BrowserSession {
+            get { selection.applying(to: family.currentSession) }
+            // Existing test fixtures replace synthetic sessions. Release
+            // compositions expose only the core-owned read projection.
+            set { family.replaceSessionForTesting(newValue, from: self) }
         }
-    }
+    #else
+        var session: BrowserSession { selection.applying(to: family.currentSession) }
+    #endif
     private var selection: BrowserStoreSelection
     private(set) var sessionRevision = 0
     var localSyncErrorDescription: String?
@@ -50,6 +54,26 @@ final class BrowserStore {
         return syncCoordinator?.journal.pendingRecordIDs.count ?? 0
     }
     var localSyncCoordinatorStatus: BrowserSyncCoordinatorStatus? { syncCoordinator?.status }
+
+    /// The viewed Space and an empty tab selection belong to this window.
+    /// A core command is only needed when saved tab data changes.
+    func selectPresentedSpace(_ id: SpaceID) {
+        guard !deletingSpaceIDs.contains(id), session.space(id: id) != nil else { return }
+        var presented = session
+        presented.selectSpace(id)
+        selection = BrowserStoreSelection(session: presented)
+        tabMultiSelection.clear()
+        sessionRevision &+= 1
+        tabSelectionHistory.reconcile(session: session)
+    }
+
+    func clearPresentedTabSelection(in spaceID: SpaceID) {
+        var presented = session
+        presented.clearTabSelection(in: spaceID)
+        selection = BrowserStoreSelection(session: presented)
+        sessionRevision &+= 1
+        tabSelectionHistory.reconcile(session: session)
+    }
 
     convenience init(
         session: BrowserSession,

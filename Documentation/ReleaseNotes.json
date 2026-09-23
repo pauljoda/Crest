@@ -2037,6 +2037,26 @@
     "typed-engine-capabilities": {
       "category": "internal",
       "message": "Declare engine capabilities, statuses and implementations as typed values instead of raw strings, keeping the core descriptor unchanged."
+    },
+    "shared-native-page-menus": {
+      "category": "improved",
+      "message": "Crest's link and Space actions appear first in native page menus while browser and extension actions stay available."
+    },
+    "shared-page-dialogs-auth": {
+      "category": "improved",
+      "message": "Page dialogs and website sign-in prompts work across both desktop browser engines."
+    },
+    "chromium-feature-flags-settings": {
+      "category": "new",
+      "message": "Chromium feature flags open inside Crest Settings."
+    },
+    "chromium-automatic-video-pip": {
+      "category": "improved",
+      "message": "Playing Chromium videos can enter Picture in Picture when switching tabs, with a window that settles into a screen corner."
+    },
+    "core-session-command-cleanup": {
+      "category": "internal",
+      "message": "Route remaining tab, icon, page and retention changes through the core and remove the obsolete core-backed build switch."
     }
   }
 }

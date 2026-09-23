@@ -15,14 +15,8 @@ protocol BrowserDesktopWebViewMenuHost: AnyObject {
     /// the same report is never handed to a second menu.
     func takeMenuContext() -> BrowserDesktopWebViewMenuContext?
 
-    /// Opens `url` as a new card beside the tab this page presents.
-    func openLinkInSplitView(_ url: URL)
-
-    func openLink(
-        _ url: URL,
-        from source: BrowserTabRuntimeAssignment,
-        in destination: BrowserSpaceRuntimeAssignment
-    )
+    func contextMenuActions(linkURL: URL?, selectionText: String?) -> [BrowserPageContextMenuAction]
+    func performContextMenuAction(identifier: String, linkURL: URL?, selectionText: String?) -> Bool
 
     /// Starts a person-requested image transfer in this page's WebKit context.
     func downloadImage(from url: URL)
@@ -32,14 +26,7 @@ protocol BrowserDesktopWebViewMenuHost: AnyObject {
 }
 
 struct BrowserDesktopWebViewMenuContext: Equatable, Sendable {
-    let splitViewLinkDestination: URL?
+    let linkURL: URL?
     let imageDownloadURL: URL?
-    var linkDestinations: BrowserDesktopLinkDestinations? = nil
-    var selectionSearch: BrowserSelectionSearchDestination? = nil
-}
-
-struct BrowserDesktopLinkDestinations: Equatable, Sendable {
-    let url: URL
-    let source: BrowserTabRuntimeAssignment
-    let spaces: [BrowserSpace]
+    let selectionText: String?
 }

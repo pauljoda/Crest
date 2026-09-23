@@ -3,6 +3,7 @@
 #import "CrestChromiumHost.h"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <cmath>
 #include <memory>
@@ -139,6 +140,9 @@
 #include "content/public/browser/navigation_entry.h"
 #include "content/public/browser/navigation_handle.h"
 #include "content/public/browser/web_contents.h"
+#include "content/public/browser/javascript_dialog_manager.h"
+#include "net/base/auth.h"
+#include "ui/views/widget/widget.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "content/public/common/drop_data.h"
 #include "net/base/apple/url_conversions.h"
@@ -146,6 +150,7 @@
 #include "components/blocked_content/popup_blocker_tab_helper.h"
 #include "components/security_state/content/security_state_tab_helper.h"
 #include "content/public/browser/media_session.h"
+#include "content/public/browser/media_player_id.h"
 #include "mojo/public/cpp/bindings/receiver.h"
 #include "services/media_session/public/mojom/media_session.mojom.h"
 #include "components/security_state/core/security_state.h"
@@ -1366,6 +1371,11 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   std::string profile;
   Observation observation;
   BOOL (^link_handler)(NSString*, NSString*, NSString*) = nil;
+  NSArray<NSDictionary<NSString*, NSString*>*>* (^context_menu_provider)(NSString*, NSString*) = nil;
+  BOOL (^context_menu_action)(NSString*, NSString*, NSString*) = nil;
+  void (^javascript_dialog_handler)(NSString*, NSString*, NSString*, NSString*, void (^)(BOOL, NSString*)) = nil;
+  void (^http_authentication_handler)(NSDictionary<NSString*, id>*, void (^)(NSString*, NSString*)) = nil;
+  std::map<std::string, int> http_authentication_attempts;
   // Crest answers site permission requests from its own per-Space record and
   // prompt. The reply is 1 to allow, 2 to allow this time, 3 to block and 4 to
   // dismiss without deciding.
@@ -1455,6 +1465,15 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   // it, muted, so the person can unmute it.
   bool media_seen_active = false;
   bool media_last_playing = false;
+  std::set<content::MediaPlayerId> playing_videos;
+  bool video_was_playing_when_detached = false;
+  void MediaStartedPlaying(const MediaPlayerInfo& info, const content::MediaPlayerId& id) override {
+    if (info.has_video) playing_videos.insert(id);
+  }
+  void MediaStoppedPlaying(const MediaPlayerInfo& info, const content::MediaPlayerId& id,
+                           content::WebContentsObserver::MediaStoppedReason) override {
+    playing_videos.erase(id);
+  }
   void MediaSessionInfoChanged(media_session::mojom::MediaSessionInfoPtr info) override {
     media_info = std::move(info);
     PublishMediaSession();
@@ -1722,6 +1741,9 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       media_document.clear();
       media_seen_active = false;
       media_last_playing = false;
+      playing_videos.clear();
+      video_was_playing_when_detached = false;
+      http_authentication_attempts.clear();
     }
     // The store is a single-page application: a listing change keeps the
     // document, so the script stays and only its state has to be refreshed.
@@ -2280,6 +2302,25 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   CHECK(NSThread.isMainThread);
   if (Page* page = FindPage(pageID)) page->link_handler = [handler copy];
 }
+- (void)setContextMenuHandlerForPage:(NSString*)pageID
+    provider:(NSArray<NSDictionary<NSString*, NSString*>*>* (^)(NSString*, NSString*))provider
+    action:(BOOL (^)(NSString*, NSString*, NSString*))action {
+  CHECK(NSThread.isMainThread);
+  if (Page* page = FindPage(pageID)) {
+    page->context_menu_provider = [provider copy];
+    page->context_menu_action = [action copy];
+  }
+}
+- (void)setJavaScriptDialogHandlerForPage:(NSString*)pageID
+    handler:(void (^)(NSString*, NSString*, NSString*, NSString*, void (^)(BOOL, NSString*)))handler {
+  CHECK(NSThread.isMainThread);
+  if (Page* page = FindPage(pageID)) page->javascript_dialog_handler = [handler copy];
+}
+- (void)setHTTPAuthenticationHandlerForPage:(NSString*)pageID
+    handler:(void (^)(NSDictionary<NSString*, id>*, void (^)(NSString*, NSString*)))handler {
+  CHECK(NSThread.isMainThread);
+  if (Page* page = FindPage(pageID)) page->http_authentication_handler = [handler copy];
+}
 - (void)setProtectedLinkHandlerForPage:(NSString*)pageID handler:(CrestDeferredNavigation (^)(NSString*))handler {
   CHECK(NSThread.isMainThread);
   if (Page* page = FindPage(pageID)) page->protected_link_handler = [handler copy];
@@ -2397,13 +2438,17 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
 - (void)didAttachPage:(NSString*)pageID window:(NSString*)windowID {
   CHECK(NSThread.isMainThread);
   if (Page* page = FindPage(pageID); page && page->web_contents()) {
+    page->video_was_playing_when_detached = false;
     page->web_contents()->WasShown();
     page->web_contents()->Focus();
   }
 }
 - (void)didDetachPage:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
-  if (Page* page = FindPage(pageID); page && page->web_contents()) page->web_contents()->WasHidden();
+  if (Page* page = FindPage(pageID); page && page->web_contents()) {
+    page->video_was_playing_when_detached = !page->playing_videos.empty();
+    page->web_contents()->WasHidden();
+  }
 }
 - (BOOL)command:(NSString*)command page:(NSString*)pageID url:(NSString*)url {
   CHECK(NSThread.isMainThread);
@@ -2429,6 +2474,15 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
         ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
   } else if ([command isEqualToString:@"engine.stop"]) {
     contents->Stop();
+  } else if ([command isEqualToString:@"engine.picture_in_picture_enter"]) {
+    // The browser Media Session chooses the active video player and asks its
+    // renderer to enter PiP. Do not synthesize a page gesture in JavaScript.
+    if ((!page->video_was_playing_when_detached && page->playing_videos.empty() &&
+         !page->media_last_playing && contents->GetCurrentlyPlayingVideoCount() == 0) ||
+        contents->HasPictureInPictureVideo() || contents->HasPictureInPictureDocument()) return NO;
+    auto* media_session = content::MediaSession::GetIfExists(contents);
+    if (!media_session) return NO;
+    media_session->EnterPictureInPicture();
   } else if ([command isEqualToString:@"engine.media_activate"]) {
     const std::string document = base::SysNSStringToUTF8(url ?: @"");
     if (document.empty() || document.size() > 128) return NO;
@@ -2920,7 +2974,9 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   if (!contents) return nil;
   auto indicator = MediaCaptureDevicesDispatcher::GetInstance()->GetMediaStreamCaptureIndicator();
   return @{
-    @"playing": @(contents->IsCurrentlyAudible() || contents->GetCurrentlyPlayingVideoCount() > 0),
+    @"playing": @(page->video_was_playing_when_detached || !page->playing_videos.empty() ||
+                   page->media_last_playing || contents->IsCurrentlyAudible() ||
+                   contents->GetCurrentlyPlayingVideoCount() > 0),
     @"capturing": @(contents->IsBeingCaptured() || indicator->IsCapturingUserMedia(contents)
                      || indicator->IsCapturingTab(contents) || indicator->IsCapturingWindow(contents)
                      || indicator->IsCapturingDisplay(contents)),
@@ -3215,6 +3271,65 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
 @end
 
 namespace crest {
+void SnapPictureInPictureWindow(views::Widget* widget) {
+  if (!IsEnabled() || !widget) return;
+  NSWindow* window = widget->GetNativeWindow().GetNativeNSWindow();
+  NSScreen* screen = window.screen;
+  if (!screen) return;
+  constexpr CGFloat kMargin = 16;
+  NSRect frame = window.frame;
+  NSRect work = screen.visibleFrame;
+  const CGFloat left = NSMinX(work) + kMargin;
+  const CGFloat right = std::max(left, NSMaxX(work) - kMargin - NSWidth(frame));
+  const CGFloat bottom = NSMinY(work) + kMargin;
+  const CGFloat top = std::max(bottom, NSMaxY(work) - kMargin - NSHeight(frame));
+  NSRect target = frame;
+  target.origin.x = NSMidX(frame) < NSMidX(work) ? left : right;
+  target.origin.y = NSMidY(frame) < NSMidY(work) ? bottom : top;
+  if (std::abs(target.origin.x - frame.origin.x) < 1 &&
+      std::abs(target.origin.y - frame.origin.y) < 1) return;
+  [NSAnimationContext runAnimationGroup:^(NSAnimationContext* context) {
+    context.duration = 0.22;
+    [[window animator] setFrame:target display:YES];
+  } completionHandler:nil];
+}
+
+void ReportContentFullscreen(content::WebContents* contents, bool active) {
+  if (!IsEnabled() || !contents) return;
+  for (auto& [id, page] : State().pages) {
+    if (page->web_contents() == contents) {
+      page->observation(@"fullscreen_changed", @{ @"active": @(active) });
+      return;
+    }
+  }
+}
+
+bool PresentHTTPAuthentication(content::WebContents* contents, const net::AuthChallengeInfo& challenge,
+    std::function<void(bool, const std::u16string&, const std::u16string&)> reply) {
+  if (!IsEnabled() || !contents || challenge.is_proxy ||
+      (challenge.scheme != "basic" && challenge.scheme != "digest")) return false;
+  for (auto& [id, page] : State().pages) {
+    if (page->web_contents() != contents || page->closing || !page->http_authentication_handler) continue;
+    const std::string key = challenge.challenger.GetURL().spec() + "\n" +
+        challenge.scheme + "\n" + challenge.realm;
+    const int previous_failures = page->http_authentication_attempts[key]++;
+    page->http_authentication_handler(@{
+      @"url": base::SysUTF8ToNSString(challenge.challenger.GetURL().spec()),
+      @"host": base::SysUTF8ToNSString(challenge.challenger.host()),
+      @"port": @(challenge.challenger.port()),
+      @"realm": base::SysUTF8ToNSString(challenge.realm),
+      @"method": base::SysUTF8ToNSString(challenge.scheme),
+      @"isProxy": @(challenge.is_proxy),
+      @"previousFailureCount": @(previous_failures)
+    }, ^(NSString* username, NSString* password) {
+      reply(username != nil && password != nil,
+          base::SysNSStringToUTF16(username ?: @""), base::SysNSStringToUTF16(password ?: @""));
+    });
+    return true;
+  }
+  return false;
+}
+
 bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& params) {
   if (!IsEnabled() || !params.crest_link_modifiers) return false;
   if (!State().disposing && source && params.crest_link_modifiers <= 15 &&
@@ -3384,6 +3499,98 @@ bool BeginLinkDrag(content::WebContents* contents, const content::DropData& data
   return false;
 }
 
+namespace {
+class CrestJavaScriptDialogManager final : public content::JavaScriptDialogManager {
+ public:
+  void RunJavaScriptDialog(content::WebContents* contents,
+                           content::RenderFrameHost* frame,
+                           content::JavaScriptDialogType type,
+                           const std::u16string& message,
+                           const std::u16string& default_text,
+                           DialogClosedCallback callback,
+                           bool* did_suppress_message) override {
+    *did_suppress_message = false;
+    NSString* kind = type == content::JAVASCRIPT_DIALOG_TYPE_ALERT ? @"alert" :
+        type == content::JAVASCRIPT_DIALOG_TYPE_CONFIRM ? @"confirm" : @"prompt";
+    Present(contents, frame, kind, message, default_text, std::move(callback));
+  }
+
+  void RunBeforeUnloadDialog(content::WebContents* contents,
+                             content::RenderFrameHost* frame,
+                             bool is_reload,
+                             DialogClosedCallback callback) override {
+    Present(contents, frame, @"beforeUnload", u"", u"", std::move(callback));
+  }
+
+  bool HandleJavaScriptDialog(content::WebContents* contents, bool accept,
+                              const std::u16string* prompt_override) override {
+    auto it = pending_.find(contents);
+    if (it == pending_.end()) return false;
+    Finish(contents, it->second.token, accept,
+           prompt_override ? *prompt_override : std::u16string());
+    return true;
+  }
+
+  void CancelDialogs(content::WebContents* contents, bool reset_state) override {
+    auto it = pending_.find(contents);
+    if (it != pending_.end()) Finish(contents, it->second.token, false, u"");
+  }
+
+ private:
+  struct Pending {
+    uint64_t token;
+    DialogClosedCallback callback;
+    Pending(uint64_t token, DialogClosedCallback callback)
+        : token(token), callback(std::move(callback)) {}
+  };
+  uint64_t next_token_ = 0;
+  std::map<content::WebContents*, Pending> pending_;
+
+  void Finish(content::WebContents* contents, uint64_t token, bool accepted,
+              const std::u16string& input) {
+    auto it = pending_.find(contents);
+    if (it == pending_.end() || it->second.token != token) return;
+    auto callback = std::move(it->second.callback);
+    pending_.erase(it);
+    std::move(callback).Run(accepted, input);
+  }
+
+  void Present(content::WebContents* contents, content::RenderFrameHost* frame,
+               NSString* kind, const std::u16string& message,
+               const std::u16string& default_text, DialogClosedCallback callback) {
+    const auto weak = contents->GetWeakPtr();
+    CancelDialogs(contents, false);
+    if (!weak) { std::move(callback).Run(false, u""); return; }
+    Page* owner = nullptr;
+    for (auto& [id, page] : State().pages) {
+      if (page->web_contents() == contents && page->javascript_dialog_handler) {
+        owner = page.get();
+        break;
+      }
+    }
+    if (!owner) { std::move(callback).Run(false, u""); return; }
+    const uint64_t token = ++next_token_;
+    pending_.try_emplace(contents, token, std::move(callback));
+    const GURL source = frame ? frame->GetLastCommittedURL() : contents->GetLastCommittedURL();
+    owner->javascript_dialog_handler(kind, base::SysUTF16ToNSString(message),
+        base::SysUTF16ToNSString(default_text), base::SysUTF8ToNSString(source.spec()),
+        ^(BOOL accepted, NSString* input) {
+          if (weak) Finish(weak.get(), token, accepted,
+                           base::SysNSStringToUTF16(input ?: @""));
+        });
+  }
+};
+}  // namespace
+
+content::JavaScriptDialogManager* JavaScriptDialogManagerFor(content::WebContents* contents) {
+  if (!IsEnabled() || State().disposing || !contents) return nullptr;
+  static base::NoDestructor<CrestJavaScriptDialogManager> manager;
+  for (auto& [id, page] : State().pages)
+    if (page->web_contents() == contents && page->javascript_dialog_handler)
+      return manager.get();
+  return nullptr;
+}
+
 void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL& url,
                         const std::u16string& selection) {
   if (!IsEnabled() || State().disposing) return;
@@ -3392,33 +3599,32 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
       std::u16string(base::TrimWhitespace(selection, base::TRIM_ALL)));
   if (!has_link && !selected.length) return;
   for (auto& [id, page] : State().pages) {
-    if (page->web_contents() != contents || !page->link_handler) continue;
+    if (page->web_contents() != contents || !page->context_menu_provider ||
+        !page->context_menu_action) continue;
     NSString* address = has_link ? base::SysUTF8ToNSString(url.spec()) : @"about:blank";
+    NSArray<NSDictionary<NSString*, NSString*>*>* actions = page->context_menu_provider(address, selected);
+    if (!actions.count) return;
     auto weak = contents->GetWeakPtr();
     const uint64_t revision = page->navigation_revision;
-    // Each row is bound to the source page and its navigation revision: the
-    // engine answers availability now, and the action re-resolves the same page
-    // after menu tracking ends rather than holding a raw page pointer.
-    auto append = [&](NSString* title, NSString* invocation, NSString* label) {
-      // A block written inside this lambda cannot read the enclosing function's
-      // locals through the lambda's own by-reference captures: the lambda is
-      // gone long before a menu action runs, so those references dangle and the
-      // action silently declines. Copy what the action needs into this scope,
-      // where the block captures each value itself.
+    // Keep the engine's model rows and extension items in their original order.
+    // Insert Crest's native rows before them; the engine still owns the model.
+    auto make_item = [&](NSDictionary<NSString*, NSString*>* values) -> NSMenuItem* {
+      NSString* const identifier = values[@"id"];
+      NSString* const title = values[@"title"];
+      if (!identifier.length || !title.length) return nil;
       const base::WeakPtr<content::WebContents> source = weak;
       NSString* const destination = address;
-      NSString* const detail = label;
+      NSString* const chosen_selection = selected;
+      NSString* const chosen_identifier = identifier;
       const uint64_t expected_revision = revision;
       CrestLinkMenuAction* action = [[CrestLinkMenuAction alloc] init];
       action.run = ^{
-        // Return from menu tracking before mounting native UI or mutating the
-        // owning window's tab state.
         dispatch_async(dispatch_get_main_queue(), ^{
           if (!source || State().disposing) return;
           for (auto& [current_id, current] : State().pages) {
             if (current->web_contents() == source.get() &&
-                current->navigation_revision == expected_revision && current->link_handler) {
-              current->link_handler(invocation, destination, detail);
+                current->navigation_revision == expected_revision && current->context_menu_action) {
+              current->context_menu_action(chosen_identifier, destination, chosen_selection);
               return;
             }
           }
@@ -3427,23 +3633,33 @@ void AppendLinkMenuItem(NSMenu* menu, content::WebContents* contents, const GURL
       NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:title action:@selector(invoke:) keyEquivalent:@""];
       item.target = action;
       item.representedObject = action;
-      // MenuControllerCocoa maps existing items by model index. Append native
-      // actions so asynchronous engine updates still address their original rows.
-      [menu addItem:item];
+      NSString* symbol = values[@"symbol"];
+      if (symbol.length) item.image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil];
+      return item;
     };
-    // The selection is searched with the Space's own provider; the engine's
-    // default search engine is not Crest's.
-    const bool can_search = selected.length && page->link_handler(@"can_search", address, selected);
-    const bool can_peek = has_link && page->link_handler(@"can_peek", address, @"");
-    const bool can_split = has_link && page->link_handler(@"can_split", address, @"");
-    if (!can_search && !can_peek && !can_split) return;
-    [menu addItem:NSMenuItem.separatorItem];
-    if (can_search) {
-      NSString* shown = selected.length > 32 ? [[selected substringToIndex:31] stringByAppendingString:@"…"] : selected;
-      append([NSString stringWithFormat:@"Search for “%@”", shown], @"search", selected);
+    NSMutableArray<NSMenuItem*>* crest_items = [NSMutableArray array];
+    NSMenu* spaces = [[NSMenu alloc] init];
+    for (NSDictionary<NSString*, NSString*>* values in actions) {
+      NSMenuItem* item = make_item(values);
+      if (!item) continue;
+      if ([values[@"group"] isEqualToString:@"spaces"]) [spaces addItem:item];
+      else [crest_items addObject:item];
     }
-    if (can_peek) append(@"Open Link in Peek", @"peek", @"");
-    if (can_split) append(@"Open Link in Split View", @"split", @"");
+    if (spaces.numberOfItems) {
+      NSString* group_title = [actions firstObject][@"groupTitle"] ?: @"Open Link in Another Space";
+      NSMenuItem* group = [[NSMenuItem alloc] initWithTitle:group_title
+          action:nil keyEquivalent:@""];
+      group.image = [NSImage imageWithSystemSymbolName:@"square.stack.3d.up" accessibilityDescription:nil];
+      group.submenu = spaces;
+      [crest_items insertObject:group atIndex:0];
+    }
+    if (!crest_items.count) return;
+    // MenuControllerCocoa identifies existing rows by their model indices.
+    // Inserting ahead of them only changes native positions, not model indices.
+    for (NSUInteger index = 0; index < crest_items.count; ++index)
+      [menu insertItem:crest_items[index] atIndex:index];
+    if (menu.numberOfItems > static_cast<NSInteger>(crest_items.count))
+      [menu insertItem:NSMenuItem.separatorItem atIndex:crest_items.count];
     return;
   }
 }

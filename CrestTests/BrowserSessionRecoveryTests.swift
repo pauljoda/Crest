@@ -14,6 +14,19 @@ import XCTest
 final class BrowserSessionRecoveryTests: XCTestCase {
     private typealias Storage = UserDefaultsBrowserSessionPersistence
 
+    func testBehaviorPreferencesSurviveSessionRoundTrip() throws {
+        var session = BrowserSession.freshInstallSeed
+        var preferences = BrowserAppPreferences()
+        preferences.checksSpelling = true
+        preferences.automaticallyEntersPictureInPicture = false
+        session.appPreferences = preferences
+
+        let restored = try JSONDecoder().decode(
+            BrowserSession.self, from: JSONEncoder().encode(session))
+
+        XCTAssertEqual(restored.appPreferences, preferences)
+    }
+
     // MARK: - An unreadable core
 
     func testAnUnreadableV2CoreIsPreservedAndSurvivesTheFreshInstallSeedSave() async throws {

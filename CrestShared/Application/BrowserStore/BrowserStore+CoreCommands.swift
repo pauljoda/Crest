@@ -1,8 +1,70 @@
 import Foundation
 
 // Store commands use the owned core session. Value-only session operations remain
-// available for imports, prepared transfers, and the legacy composition root.
+// available for imports and prepared transfers.
 extension BrowserStore {
+    func createSessionTabFolder(_ tabIDs: [TabID], in spaceID: SpaceID,
+        detachesSplitMembers: Bool) -> FolderID? {
+        guard !tabIDs.isEmpty else { return nil }
+        let id = FolderID()
+        let result = family.execute("folder.create", in: spaceID, arguments: [
+            "folderId": id.rawValue.uuidString, "placement": BrowserFolderLocation.current.rawValue,
+            "parentId": NSNull(), "title": NSNull(), "symbol": "folder",
+            "color": BrowserCoreSessionEditing.value(BrowserSpaceBrandColor.folderDefault) ?? NSNull(),
+            "tabIds": tabIDs.map { $0.rawValue.uuidString }, "detach": detachesSplitMembers
+        ], from: self, at: .now)
+        return result?.space.folders.contains(where: { $0.id == id }) == true ? id : nil
+    }
+
+    func observeSessionTab(url: URL?, title: String?, faviconData: Data?,
+        iconAccent: BrowserTabIconAccent?, tabID: TabID, in spaceID: SpaceID
+    ) -> BrowserTabObservation? {
+        guard let tab = session.space(id: spaceID)?.tabs.first(where: { $0.id == tabID }),
+            (url ?? tab.url) != tab.url || title != tab.title
+                || faviconData != tab.faviconData || iconAccent != tab.iconAccent
+        else { return nil }
+        let result = family.execute("tab.observe", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString, "url": url?.absoluteString as Any? ?? NSNull(),
+            "title": title as Any? ?? NSNull(), "hasFavicon": !(faviconData?.isEmpty ?? true),
+            "faviconChanged": faviconData != tab.faviconData,
+            "iconAccent": BrowserCoreSessionEditing.value(iconAccent) ?? NSNull()
+        ], from: self, at: .now)
+        guard let result, result.changed else { return nil }
+        let assigned = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
+        return BrowserTabObservation(tabID: assigned ?? tabID, changedFavicon: assigned != nil)
+    }
+
+    func setSessionTabIcon(_ mode: String, emoji: String? = nil, faviconData: Data? = nil,
+        iconAccent: BrowserTabIconAccent? = nil, tabID: TabID, in spaceID: SpaceID) -> Bool {
+        var arguments: [String: Any] = [
+            "tabId": tabID.rawValue.uuidString, "mode": mode,
+            "hasFavicon": !(faviconData?.isEmpty ?? true),
+            "iconAccent": BrowserCoreSessionEditing.value(iconAccent) ?? NSNull()
+        ]
+        if let emoji { arguments["emoji"] = emoji }
+        guard let result = family.execute("tab.icon", in: spaceID, arguments: arguments,
+            from: self, at: .now), result.changed else { return false }
+        _ = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
+        return true
+    }
+
+    func cacheSessionTabFavicon(_ faviconData: Data, iconAccent: BrowserTabIconAccent?,
+        url: URL, tabID: TabID, in spaceID: SpaceID) -> Bool {
+        guard let result = family.execute("tab.favicon.cache", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString, "url": url.absoluteString,
+            "hasFavicon": !faviconData.isEmpty,
+            "iconAccent": BrowserCoreSessionEditing.value(iconAccent) ?? NSNull()
+        ], from: self, at: .now), result.changed else { return false }
+        _ = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
+        return true
+    }
+
+    func setSessionSavedLocation(_ action: String, tabID: TabID, in spaceID: SpaceID) -> Bool {
+        family.execute("tab.saved_location", in: spaceID, arguments: [
+            "tabId": tabID.rawValue.uuidString, "action": action
+        ], from: self, at: .now)?.changed ?? false
+    }
+
     /// Native authentication supplies current access results. The core checks
     /// the owning profiles and completes promotion before an adapter moves a view.
     func promoteTransientPage(requestID: UUID, url: URL?, source: BrowserSpaceRuntimeAssignment,

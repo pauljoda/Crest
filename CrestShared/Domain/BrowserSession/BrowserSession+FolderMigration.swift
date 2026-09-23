@@ -2,7 +2,8 @@ import Foundation
 
 extension BrowserSession {
     private enum CodingKeys: String, CodingKey {
-        case spaces, selectedSpaceID, defaultSpaceID, disposableSeedMarker, currentTabFolders, spaceDeletions
+        case spaces, selectedSpaceID, defaultSpaceID, disposableSeedMarker, currentTabFolders, spaceDeletions,
+            appPreferences
     }
 
     init(from decoder: Decoder) throws {
@@ -12,6 +13,7 @@ extension BrowserSession {
         defaultSpaceID = try values.decodeIfPresent(SpaceID.self, forKey: .defaultSpaceID)
         disposableSeedMarker = try values.decodeIfPresent(UUID.self, forKey: .disposableSeedMarker)
         spaceDeletions = try values.decodeIfPresent([BrowserSpaceDeletionIntent].self, forKey: .spaceDeletions)
+        appPreferences = try values.decodeIfPresent(BrowserAppPreferences.self, forKey: .appPreferences)
         // Read the earlier extension-owned format once. Only folders and tab
         // membership are written back; no parallel group collection survives.
         let legacy = try values.decodeIfPresent([BrowserLegacyTabGroup].self, forKey: .currentTabFolders) ?? []
@@ -40,5 +42,6 @@ extension BrowserSession {
         try values.encodeIfPresent(defaultSpaceID, forKey: .defaultSpaceID)
         try values.encodeIfPresent(disposableSeedMarker, forKey: .disposableSeedMarker)
         try values.encodeIfPresent(spaceDeletions, forKey: .spaceDeletions)
+        try values.encodeIfPresent(appPreferences, forKey: .appPreferences)
     }
 }

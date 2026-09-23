@@ -13,13 +13,17 @@ Ownership after this plan:
 
 | Layer | Owns | Never owns |
 | --- | --- | --- |
-| Portable core (`CrestCore`) | Every rule that must behave identically on both engines and both platforms: session, Spaces, tabs, folders, splits, history, archive, sync, access, downloads ledger and risk, credential capture and save policy, site permission records, search providers, window-state repair, setup and import plans, shortcut conflicts, launch policy, app-wide behavior preferences, media-session arbitration | Rendering, input, scrolling, compositing, engine handles, image bytes, platform services |
+| Portable core (`CrestCore`) | Every saved or shared rule that must behave identically on both engines and both platforms: Spaces, tabs, folders, splits, history, archive, sync, access, downloads ledger and risk, credential capture and save policy, site permission records, search providers, setup and import plans, shortcut conflicts, launch policy, app-wide behavior preferences, media-session arbitration | Rendering, input, scrolling, compositing, engine handles, image bytes, platform services |
 | Engine adapters (`CrestShared/Infrastructure/WebKit`, `CrestEngines/Chromium`) | Page creation and disposal, loads, navigation history, find, zoom, capture, printing, downloads transport, permission prompts transport, server trust, HTTP auth transport, popups, media observations, user scripts, DevTools, extensions execution | Deciding browser rules; mutating shared state directly |
-| Shared Swift (`CrestShared`, `CrestMac`, `CrestMobile`) | Presentation, projections, native window and card hosting, platform services (Keychain, CloudKit transport, notifications delivery, LaunchServices) | Engine-specific types or `#if CREST_CHROMIUM_HOST` outside the adapters; second implementations of core rules |
+| Shared Swift (`CrestShared`, `CrestMac`, `CrestMobile`) | Presentation, the viewed Space and selected tab, native windows and cards, projections, platform services (Keychain, CloudKit transport, notifications delivery, LaunchServices) | Engine-specific types or `#if CREST_CHROMIUM_HOST` outside the adapters; second implementations of core rules |
 
 Direct native operations such as scrolling, pointer input, compositing, focus
 and page zoom stay inside the adapter and never cross the core boundary. A core
-command owns the semantic transition; the adapter reports completion.
+command owns a saved or shared transition; the adapter reports completion.
+Choosing which Space or tab a window currently displays is visual Swift state.
+Release compositions expose the store's session as a read-only projection.
+Sync replacements use the core's checked transaction; the synthetic session
+setter exists only in Debug for retained test fixtures.
 
 Product rules that constrain every work package:
 
@@ -38,9 +42,9 @@ Product rules that constrain every work package:
 
 ## Current state
 
-The core owns the session spine on every shipping target; `CREST_CORE_BACKED`
-is defined for all of them, so every `#if !CREST_CORE_BACKED` branch and every
-`#else` arm of `#if CREST_CORE_BACKED` is dead. The Chromium composition is the
+The core owns the session spine on every shipping target. The obsolete
+`CREST_CORE_BACKED` build flag and its conditional Swift branches are gone.
+The Chromium composition is the
 installed desktop product with its own engine directory, keychain item,
 passkeys through the system sheet, docked DevTools, extensions including side
 panels, shortcuts, Space-owned pinned strip and store install. Upgrade from the
@@ -55,6 +59,16 @@ extensions in `CrestMac/Infrastructure/WebKit`) and the Chromium page adapter
 engine-specific wiring. The composition chooses the engine; no Swift outside
 `CrestEngines` asks `CREST_CHROMIUM_HOST`.
 
+The page port now carries Crest-first native context menu actions ahead of
+engine and extension items, JavaScript dialogs and before-unload through the
+shared dialog presenter, and Chromium Basic and Digest authentication through
+the shared per-Space credential session. Each engine registration supplies
+its own Feature Flags pane. Chromium's page fullscreen reports presentation
+state to the shared shell, which shows the video without browser chrome and
+restores the shell on Escape. The page-level PiP lifecycle can request
+Chromium's own video PiP when a playing tab leaves view; its floating window
+uses Chromium's video surface with a macOS corner snap after a drag.
+
 ## Work packages
 
 Each package lists scope, files, design, acceptance and effort. Packages marked
@@ -63,11 +77,14 @@ M a few days, L a week or more.
 
 ### WP0. Smoke Chromium-owned surfaces (manual, first)
 
-Chromium supplies JavaScript dialogs, the file chooser, HTTP auth prompts,
-color picker, fullscreen, notification delivery and picture-in-picture through
-its `WebContentsDelegate` on a real `chrome::Browser` while the Crest
-`BrowserWindow` override is inert. Any of these anchored to a Views browser
-view may fail silently.
+Chromium routes JavaScript dialogs, before-unload and HTTP Basic/Digest prompts
+to Crest's shared presenters. Its file chooser, color picker, notification
+delivery and picture-in-picture still use engine surfaces on a real
+`chrome::Browser` while the Crest `BrowserWindow` override is inert. Video
+fullscreen fills the Crest window and Escape restores the browser shell in an
+isolated runtime check. A notification permission grant and successful
+`new Notification(...)` call were observed in the isolated app, but macOS
+delivery and activation of the source page have not yet been established.
 
 Checklist in a review package: `alert`, `confirm`, `prompt`; `<input type=file>`
 single and multiple; a Basic-auth URL; `<input type=color>`; fullscreen video
@@ -75,11 +92,11 @@ and Escape; a site notification permission and delivery; PiP button. Record
 each as works, wrong window, or missing. Missing items become host hooks in WP2
 or WP3. Effort S.
 
-### WP1. Dead-code sweep
+### WP1. Dead-code sweep (partly done)
 
-Delete every `#if !CREST_CORE_BACKED` block and every `#else` arm of
-`#if CREST_CORE_BACKED`, then remove the now-unconditional `#if`. Files with the
-most dead lines: `BrowserSession+Tabs.swift`, `BrowserImportReviewPlan.swift`,
+The dead `CREST_CORE_BACKED` branches and build settings have been removed;
+no Swift file still contains that conditional. The original sweep covered
+`BrowserSession+Tabs.swift`, `BrowserImportReviewPlan.swift`,
 `BrowserSyncJournal.swift`, `BrowserSession.swift`, `BrowserSyncProjection.swift`,
 `BrowserSession+Folders.swift`, `BrowserSession+TabBatch.swift`,
 `BrowserSyncMergeResolver.swift`, `BrowserStore+Workspaces.swift`,
@@ -87,9 +104,11 @@ most dead lines: `BrowserSession+Tabs.swift`, `BrowserImportReviewPlan.swift`,
 `BrowserSession+FolderBatch.swift`, `BrowserManualSetupPlan.swift`,
 `BrowserStore+Spaces.swift`, `BrowserSession+History.swift`,
 `BrowserSession+Organization.swift`, `BrowserSession+SplitCopies.swift`.
-Delete `BrowserSession+FolderMigration.swift` (entirely dead) and the
-`BrowserSession` mutators with no live callers after the sweep (`setTabPinned`,
-`setSplitGroupTitle/EmojiIcon/Tint`, `setFolderColor/Symbol`,
+Keep `BrowserSession+FolderMigration.swift`: its custom Codable path still
+loads legacy folder membership and persisted preferences. The unused
+`BrowserSession.setFolderColor/Symbol` mutators were removed. Check whether these
+other `BrowserSession` mutators still have live callers before removing them: `setTabPinned`,
+`setSplitGroupTitle/EmojiIcon/Tint`,
 `setSavedTabsExpanded`, `setDefaultSpace`, `moveSpaces`). Move
 `BrowserShowcaseSessionFactory` and `BrowserPreviewSessionFactory` behind a
 preview-only compilation path. Redirect
@@ -163,7 +182,20 @@ the `unverified` limitation. Effort M.
 
 2e. Media: host events for media session metadata and transport, and a PiP
 toggle command with a `picture_in_picture` event, feeding
-`BrowserMediaSessionStore` and the PiP controller through the port. Effort L.
+`BrowserMediaSessionStore` and the PiP controller through the port. Chromium's
+video PiP currently embeds a Viz surface in a Views overlay window. On macOS,
+the public system PiP controller takes an `AVPlayerLayer` or
+`AVSampleBufferDisplayLayer`; it cannot adopt that Viz surface directly. A
+system PiP implementation therefore needs a real video-frame bridge, with
+playback control and protected-media behavior defined at the engine adapter.
+An isolated macOS probe confirmed that public AVKit presents a live
+`AVSampleBufferDisplayLayer` in the system Picture in Picture window. The
+unresolved part is supplying that layer with Chromium's video surface frames
+at playback rate, without capturing page chrome or requiring Screen Recording.
+Validate it with clear and protected video, multiple displays and full-screen
+Spaces, plus hands-on dragging and resizing. A window-style change alone does
+not satisfy PiP parity. Do not use macOS's private PIP framework without a
+separate product decision. Effort L.
 
 2f. Link hover through 2a or a native `link_hovered` event. Effort M.
 
@@ -260,18 +292,14 @@ both engines. Effort L.
 
 Effort M. Independent.
 
-### WP7. WebKit symmetry
+### WP7. WebKit symmetry (done)
 
-Three places where WebKit is behind Chromium:
-- `hasPictureInPicture` is hardcoded false in `BrowserWebKitPageEngine`;
-  report the real value so residency can evict a PiP page.
-- `stageNavigation` is unimplemented on WebKit, so Peek from a modified link
-  loses the initiating frame's referrer and security context; implement a
-  staged navigation token on WebKit.
-- Declare and implement `before-unload` on WebKit through the close preparer,
-  so a dirty page prompts before closing as it does on Chromium.
-
-Effort M. Independent.
+`BrowserWebKitPageEngine` reports its real PiP activity for residency, stages
+Peek navigation with the source request and website data store, and prepares a
+page close through WebKit's before-unload path. The staged request carries the
+URL and referrer; WebKit does not expose the initiating frame's full security
+context to a second page. The registration declares that limit and the desktop
+before-unload SPI dependency.
 
 ### WP8. Core extraction of the remaining rule aggregates
 
@@ -308,6 +336,14 @@ command applies the same branding rules.
 Stays in Swift by design: heraldry vocabulary and composition, favicon palette
 extraction, sidebar widgets, Peek motion and presentation phases, tear-off
 placement geometry, default-browser prompt cadence.
+
+Page commit ownership still needs a focused pass. The selected-page and Split
+View metadata observers write live URL and title changes to the session before
+their navigation-complete callbacks, and address submission updates the selected
+tab before page commit. Keep the live values in page presentation, then send the
+accepted URL and title to the core on commit while preserving late favicon
+updates and native-tab transitions. This is separate from the release session
+setter guard and needs both engine review.
 
 Acceptance: `Documentation/Architecture/ControlPlane.md` step 1 acceptance
 ("no parallel domain implementation") becomes literally true; a grep for

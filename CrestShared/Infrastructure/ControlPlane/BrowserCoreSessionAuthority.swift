@@ -79,19 +79,6 @@ final class BrowserCoreSessionAuthority {
         return changed
     }
 
-    func replace(with proposed: BrowserSession) throws {
-        let next = keepingPreferences(proposed)
-        if let data = try delta(to: next) {
-            var accepted: UInt64 = 0
-            let result = data.withUnsafeBytes {
-                crest_session_commit(owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &accepted)
-            }
-            guard result == CREST_OK else { throw CoreError.rejected(result) }
-            revision = accepted
-        }
-        projection = next
-    }
-
     /// The reservation excludes core writes until storage succeeds. A failed
     /// write releases it without changing the projection or accepted revision.
     func replaceDurably(with proposed: BrowserSession,
@@ -248,6 +235,14 @@ final class BrowserCoreSessionAuthority {
             next.applyCoreResult(result, at: index)
             return (next, result)
         }
+    }
+
+    /// Image bytes are native assets. The command above owns their assignment;
+    /// only its accepted tab identity can receive the bytes here.
+    func applyFavicon(_ assignment: BrowserCoreSessionEditing.Result.FaviconAssignment?,
+        bytes: Data?, in spaceID: SpaceID) -> TabID? {
+        guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }) else { return nil }
+        return projection.applyCoreFavicon(assignment, bytes: bytes, at: index)
     }
 
     func executeSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],

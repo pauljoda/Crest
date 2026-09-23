@@ -106,12 +106,14 @@ final class BrowserStoreFamily {
         stores.append(WeakStore(value: store))
     }
 
-    func replaceSession(_ session: BrowserSession, from source: BrowserStore, adoptingSelection: Bool = true) {
-        let previous = authoritativeSession
-        do { try core.replace(with: session) }
-        catch { source.localSyncErrorDescription = "Core session update failed: \(error)"; return }
-        reconcileStores(after: previous, from: adoptingSelection ? source : nil)
-    }
+    #if DEBUG
+        func replaceSessionForTesting(_ session: BrowserSession, from source: BrowserStore) {
+            let previous = authoritativeSession
+            do { try core.replaceDurably(with: session) { _ in } }
+            catch { source.localSyncErrorDescription = "Core test session update failed: \(error)"; return }
+            reconcileStores(after: previous, from: source)
+        }
+    #endif
 
     func installSyncedSession(_ session: BrowserSession, journal: BrowserSyncJournal,
         journalPersistence: any BrowserSyncJournalPersisting, transaction: BrowserCoreSyncTransaction, from source: BrowserStore) throws {
@@ -227,6 +229,28 @@ final class BrowserStoreFamily {
         } catch {
             source.localSyncErrorDescription = "Core command failed: \(error)"
             return nil
+        }
+    }
+
+    func applyFavicon(_ assignment: BrowserCoreSessionEditing.Result.FaviconAssignment?,
+        bytes: Data?, in spaceID: SpaceID) -> TabID? {
+        let previous = authoritativeSession
+        let tabID = core.applyFavicon(assignment, bytes: bytes, in: spaceID)
+        if tabID != nil { reconcileStores(after: previous, from: nil) }
+        return tabID
+    }
+
+    func applyDataRetentionPolicies(at date: Date, from source: BrowserStore) -> Bool {
+        let previous = authoritativeSession
+        do {
+            let retained = try BrowserCoreSync.retain(previous, at: date)
+            guard retained.changed else { return false }
+            try core.replaceDurably(with: retained.session) { _ in }
+            reconcileStores(after: previous, from: nil)
+            return true
+        } catch {
+            source.localSyncErrorDescription = "Core retention update failed: \(error)"
+            return false
         }
     }
 
