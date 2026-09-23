@@ -2089,6 +2089,10 @@
     "import-opens-first-tab": {
       "category": "fixed",
       "message": "Importing bookmarks or a Crest archive into a new Space opens that Space on its first tab again."
+    },
+    "compact-sidebar-hover-sync": {
+      "category": "fixed",
+      "message": "In compact mode the sidebar opens and closes reliably on hover again."
     }
   }
 }

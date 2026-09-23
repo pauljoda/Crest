@@ -39,7 +39,23 @@ final class BrowserRootModel {
     var isPrepared = false
     @ObservationIgnored private var isPreparingBrowser = false
     var visibleNotice: BrowserNotice?
-    var isFloatingSidebarPresented = false
+    /// Stored before observers hear about the change. The hover trackers set
+    /// this from AppKit enter/exit events, and in the Chromium host SwiftUI can
+    /// render the window while the change is still being announced. A render
+    /// there must read the new value: one that reads the old value also
+    /// consumes the change, leaving the sidebar stuck open or unable to open.
+    var isFloatingSidebarPresented: Bool {
+        get {
+            access(keyPath: \.isFloatingSidebarPresented)
+            return floatingSidebarPresented
+        }
+        set {
+            guard newValue != floatingSidebarPresented else { return }
+            floatingSidebarPresented = newValue
+            withMutation(keyPath: \.isFloatingSidebarPresented) {}
+        }
+    }
+    @ObservationIgnored private var floatingSidebarPresented = false
     private(set) var isSidebarMorphing = false
     /// True while the page row is making the sidebar's dock available, before
     /// the persistent floating card adopts its docked appearance.
