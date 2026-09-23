@@ -7,38 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.6.34</title>
-            <pubDate>Sat, 19 Sep 2026 12:38:15 +0000</pubDate>
+            <pubDate>Wed, 23 Sep 2026 13:47:45 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1133</sparkle:version>
+            <sparkle:version>1137</sparkle:version>
             <sparkle:shortVersionString>0.6.34</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Maintenance
 
-- Middle-click a split title to close the split and all its tabs.
-- Choose to return saved tabs to their saved URL with one favicon click on Mac.
-
-### Improved
-
-- Choose whether Now Playing appears in the sidebar.
-- Choose whether inactive tabs prioritize lower resource use or faster responsiveness.
-
-### Fixed
-
-- Settings remain fully visible while switching between Spaces.
+- Reliability and internal improvements.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c3a4d4514454519b3dd08b934037576f9ff5bbeb...f6dea9d91064bdf84198de6a4764118d798203e5) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.34-2026-09-19-1133-r133.1/Installer-Crest-0.6.34-nightly-2026-09-19-f6dea9d-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/f6dea9d91064bdf84198de6a4764118d798203e5...fbb48de01b0a79d19164f9cab6dd0a0adfab97bf) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.34-2026-09-23-1137-r137.1/Installer-Crest-0.6.34-nightly-2026-09-23-fbb48de-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.34-2026-09-19-1133-r133.1/Installer-Crest-0.6.34-nightly-2026-09-19-f6dea9d-arm64.dmg" length="27161899" type="application/octet-stream" sparkle:edSignature="8/GjkJFsb9EXSD5QgSn0JpaznumgzYc4dkt/kCHn4LI1iYgHVizeV0IE+VuIcJ32ukHBojiOWjqjS/4nUSKCCQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.34-2026-09-23-1137-r137.1/Installer-Crest-0.6.34-nightly-2026-09-23-fbb48de-arm64.dmg" length="27166508" type="application/octet-stream" sparkle:edSignature="GaW1A1hyU6liPxofSBKpn3ddmgCBc3v0W+W8v32g4EJJcaZpa9fBvku4gnHexADbcxUM3unJq6OmlJOTW8S3Bw=="/>
         </item>
         <item>
             <title>0.6.33</title>
@@ -86,6 +76,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: M3V0TK+Oac744XbgzvDOW1SFt1cDfW4FNeAMxHLGYbNcACYilslT3AE9Z+A8GaslyP+cWB7qHo52/GVWYeumDg==
-length: 4604
+edSignature: 23rIeRQen8SoBDiOzZJQNhig7zBgWAPMxXFR2wjRKFIzLQKhq0U+FSUKnpnkBnPZ37N2Y90Vh3CQT+Ieqc2XDw==
+length: 4276
 -->
