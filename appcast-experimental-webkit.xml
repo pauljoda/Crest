@@ -1,40 +1,52 @@
-<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.133</title>
-            <pubDate>Wed, 23 Sep 2026 15:04:41 +0000</pubDate>
+            <title>0.6.143</title>
+            <pubDate>Wed, 23 Sep 2026 20:58:24 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>experimental</sparkle:channel>
-            <sparkle:version>1139</sparkle:version>
-            <sparkle:shortVersionString>0.6.133</sparkle:shortVersionString>
+            <sparkle:version>1140</sparkle:version>
+            <sparkle:shortVersionString>0.6.143</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### Improved
 
-- Reliability and internal improvements.
+- Site Controls now tell certificate errors, mixed content and dangerous sites apart, and Find in Page shows how many matches a page has where the engine can count them.
+
+### Fixed
+
+- Permission changes made in Settings or Site Controls now reach open pages without reloading them.
+- Background tabs on iPhone keep the page's real title instead of its site name.
+- Importing bookmarks or a Crest archive into a new Space opens that Space on its first tab again.
+- In compact mode the sidebar opens and closes reliably on hover again.
+- Dragging a tab out of a window opens it in a new window again.
+- What's New on the sidebar's update card opens the full release notes again.
 
 ---
 
 Experimental builds are signed and notarized snapshots from the selected branch (chromium-control-plane). They may be less reliable than development or stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/0c5005611bf7dcf7b1299532149f35083e9a84aa...d293aa8a864ecc1a302a27f849a6467190172331) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1139-r4.1/Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/d293aa8a864ecc1a302a27f849a6467190172331...588052f3169930ba7e4a98fb61e02e860f087f48) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/experimental-0.6.143-chromium-control-plane-2026-09-23-1140-r9.1/Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64.dmg)
 
 [Browse Experimental releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Experimental+builds%22)
 
 ### Downloads
 
-- **Crest** (Chromium engine, recommended): `Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64.dmg`
-- **Crest WebKit** (alternate, WebKit engine, updates on its own feed): `Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64-WebKit.dmg`
+- **Crest** (Chromium engine, recommended): `Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64.dmg`
+- **Crest WebKit** (alternate, WebKit engine, updates on its own feed): `Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64-WebKit.dmg`
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1139-r4.1/Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64-WebKit.dmg" length="27446618" type="application/octet-stream" sparkle:edSignature="EO4+9G+39YGtq20zqSLKrt1kQYRGpfTgl462PdGroOPasJzFI6WvOC3fAd8A6MW7toCoHNRK9iqpybjsM3hTAQ=="></enclosure>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/experimental-0.6.143-chromium-control-plane-2026-09-23-1140-r9.1/Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64-WebKit.dmg" length="27732826" type="application/octet-stream" sparkle:edSignature="5JG572OoYlrlGknz+lVAxJd2LFt1xIp16PnUOAZaFQSInCGhED+9AiP7AJZjdkX5IKwOSwxeDmuJ1VDIT1SmBw=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: 5fq1cJr5lVLw2m1Qdlp28BP7CKCeISk5aDEnRm8k3mUE9l/khesRBr7CQEPJlHDx/3ivFZ6v3ZRuzSTA+SYtDA==
-length: 2427
+</rss>
+<!-- sparkle-signatures:
+edSignature: XZ8noydJFgTDCgiOwvrfa6pfztu8eKUc2J+KHNCIAi+QWVEi9g9mZEop3aSB5cyWT3eJSEYWhSdN9hu4zWIICQ==
+length: 3052
 -->

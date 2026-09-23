@@ -6,34 +6,43 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.133</title>
-            <pubDate>Wed, 23 Sep 2026 15:04:33 +0000</pubDate>
+            <title>0.6.143</title>
+            <pubDate>Wed, 23 Sep 2026 20:58:17 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>experimental</sparkle:channel>
-            <sparkle:version>1139</sparkle:version>
-            <sparkle:shortVersionString>0.6.133</sparkle:shortVersionString>
+            <sparkle:version>1140</sparkle:version>
+            <sparkle:shortVersionString>0.6.143</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### Improved
 
-- Reliability and internal improvements.
+- Site Controls now tell certificate errors, mixed content and dangerous sites apart, and Find in Page shows how many matches a page has where the engine can count them.
+
+### Fixed
+
+- Permission changes made in Settings or Site Controls now reach open pages without reloading them.
+- Background tabs on iPhone keep the page's real title instead of its site name.
+- Importing bookmarks or a Crest archive into a new Space opens that Space on its first tab again.
+- In compact mode the sidebar opens and closes reliably on hover again.
+- Dragging a tab out of a window opens it in a new window again.
+- What's New on the sidebar's update card opens the full release notes again.
 
 ---
 
 Experimental builds are signed and notarized snapshots from the selected branch (chromium-control-plane). They may be less reliable than development or stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/0c5005611bf7dcf7b1299532149f35083e9a84aa...d293aa8a864ecc1a302a27f849a6467190172331) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1139-r4.1/Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/d293aa8a864ecc1a302a27f849a6467190172331...588052f3169930ba7e4a98fb61e02e860f087f48) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/experimental-0.6.143-chromium-control-plane-2026-09-23-1140-r9.1/Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64.dmg)
 
 [Browse Experimental releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Experimental+builds%22)
 
 ### Downloads
 
-- **Crest** (Chromium engine, recommended): `Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64.dmg`
-- **Crest WebKit** (alternate, WebKit engine, updates on its own feed): `Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64-WebKit.dmg`
+- **Crest** (Chromium engine, recommended): `Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64.dmg`
+- **Crest WebKit** (alternate, WebKit engine, updates on its own feed): `Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64-WebKit.dmg`
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1139-r4.1/Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64.dmg" length="212663862" type="application/octet-stream" sparkle:edSignature="n3MRmFqkpCaHvtXysObtq8w8jWuhQCeAfM1V3uqE4Pcb0mZja1bVfy2YJ5xuYq+PghpTXgMg4St2o6V0a3wkBQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/experimental-0.6.143-chromium-control-plane-2026-09-23-1140-r9.1/Installer-Crest-0.6.143-experimental-2026-09-23-588052f-arm64.dmg" length="213760055" type="application/octet-stream" sparkle:edSignature="q3mAVmthTaa07MNxIFVi0KmWvnuhksDlPlaKZaEEQyb3wEMYc8mJ9ODlFCWTKQszID3s2OCNqwIbLMR2vXEuAA=="/>
         </item>
         <item>
             <title>0.6.133</title>
@@ -82,6 +91,6 @@ Experimental builds are signed and notarized snapshots from the selected branch 
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: n5j893Suo8vNpE+y5gnpqNbUOVJ60HD0xLylOSVRJ80QWjDCsPW1IJlQwMmT5e49EpYuYHWjlrmaOWo3mGEPCg==
-length: 5548
+edSignature: /rIuOIzazPNJsismPEcb2x7yS0sNk8GaBn298MkoZxM5eW9HkAQStA2m9NQIw9ul+G4HBItKaGTKRQXezi0DAA==
+length: 6181
 -->
