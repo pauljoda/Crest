@@ -10,15 +10,21 @@ namespace CrestCore.Application;
 /// and the download policy operations. They match the native projection's
 /// case names.
 internal static class DownloadCodes {
+    #region Variables
+
+    private static readonly DateTimeOffset ReferenceDate = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    #endregion
+
     #region Actions - Encoding
 
-    public static string State(DownloadItemState state) => state switch {
-        DownloadItemState.Preparing => "preparing",
-        DownloadItemState.AwaitingApproval => "awaitingApproval",
-        DownloadItemState.Downloading => "downloading",
-        DownloadItemState.Finished => "finished",
-        DownloadItemState.BlockedAutomaticDownload => "blockedAutomaticDownload",
-        DownloadItemState.Canceled => "canceled",
+    public static string State(DownloadPhase phase) => phase switch {
+        DownloadPhase.Preparing => "preparing",
+        DownloadPhase.AwaitingApproval => "awaitingApproval",
+        DownloadPhase.Downloading => "downloading",
+        DownloadPhase.Finished => "finished",
+        DownloadPhase.BlockedAutomaticDownload => "blockedAutomaticDownload",
+        DownloadPhase.Canceled => "canceled",
         _ => "failed"
     };
 
@@ -45,15 +51,15 @@ internal static class DownloadCodes {
         ["isPaused"] = telemetry.IsPaused
     };
 
-    public static JsonObject Item(DownloadItem item) => new() {
+    public static JsonObject Item(DownloadState item) => new() {
         ["id"] = item.Id.ToString(),
-        ["profileID"] = item.Profile.ToString(),
-        ["createdAt"] = item.CreatedAt,
+        ["profileID"] = item.ProfileId.ToString(),
+        ["createdAt"] = Seconds(item.CreatedAt),
         ["filename"] = item.Filename,
         ["destination"] = item.Destination,
         ["progress"] = item.Progress,
         ["telemetry"] = Telemetry(item.Telemetry),
-        ["state"] = State(item.State),
+        ["state"] = State(item.Phase),
         ["message"] = item.Message,
         ["risk"] = item.Risk is { } risk ? new JsonObject {
             ["sanitizedFilename"] = risk.SanitizedFilename,
@@ -90,9 +96,16 @@ internal static class DownloadCodes {
         ["hasAllowedAutomaticDownload"] = verdict.HasAllowedAutomaticDownload
     };
 
+    /// Seconds since 1 January 2001, the native projection's date spelling.
+    public static double Seconds(DateTimeOffset date) => (date - ReferenceDate).Ticks / (double)TimeSpan.TicksPerSecond;
+
     #endregion
 
     #region Actions - Decoding
+
+    public static DateTimeOffset Date(double seconds) => double.IsFinite(seconds)
+        ? ReferenceDate.AddTicks((long)Math.Round(seconds * TimeSpan.TicksPerSecond))
+        : throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
 
     public static DownloadRiskReason ParseReason(JsonElement value) => value.GetString() switch {
         "executableOrInstaller" => DownloadRiskReason.ExecutableOrInstaller,

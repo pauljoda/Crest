@@ -1,3 +1,4 @@
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;

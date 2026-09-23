@@ -1,6 +1,22 @@
 # Portable core contract
 
-The implemented C ABI is in `include/crest_core.h`. `CrestCore.Contracts.Protocol`
+The implemented C ABI is in `include/crest_core.h` and `include/crest_app.h`.
+
+`crest_app.h` is the typed application API. Intents, changes, rejections,
+queries and answers are the C# records in `CrestCore.Contracts`, and they cross
+as a positional binary wire: lengths, counts, tags and enums are LEB128
+varints, numbers are fixed-width little-endian, a GUID is 16 RFC 4122 bytes,
+dates are f64 seconds since 2001, an optional is a presence byte and a union
+is its root's tag followed by the type's fields. `crest_app_dispatch` answers
+`CREST_OK` with the published changes or `CREST_REJECTED` with one rejection;
+`crest_app_query` answers the same way. Both hand back a core-allocated
+`crest_buffer_t` that the caller releases with `crest_buffer_free`.
+`crest_app_create` takes the schema fingerprint and answers
+`CREST_VERSION_MISMATCH` for any other. Everything but the header itself is
+generated: run `Scripts/control-plane/generate-contracts.sh` after changing a
+contract record to rewrite the core's codec, the Swift models and codec, and
+`include/crest_contracts.h` with the tags and the fingerprint. Source code
+never spells a wire tag. `CrestCore.Contracts.Protocol`
 defines the current JSON contract. It parses bounded UTF-8 JSON directly and
 builds JSON nodes without reflection. The application and domain have no native
 engine references.

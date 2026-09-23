@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// The process-local record of this run's downloads, newest first.
@@ -6,9 +8,10 @@ namespace CrestCore.Domain;
 /// means for the record: live transfers accept progress, destinations, risk
 /// verdicts and a final outcome; a blocked automatic download may only be
 /// retried or failed; finished, canceled and failed records only expire or are
-/// removed. An event that does not apply to the record's state is ignored and
-/// reported as not applied, so a late engine callback cannot revive a record.
-/// Nothing here is persisted or synced. Callers serialize access.
+/// removed. An event that does not apply to the record's phase is ignored and
+/// answers null, so a late engine callback cannot revive a record. A broken
+/// rule throws `Rejected`. Nothing here is persisted or synced. Callers
+/// serialize access.
 public sealed class DownloadLedger {
     #region Variables
 
@@ -17,9 +20,9 @@ public sealed class DownloadLedger {
     public const int MaximumDestinationLength = 8_192;
     public const int MaximumMessageLength = 2_048;
 
-    private readonly List<DownloadItem> items = [];
+    private readonly List<DownloadState> items = [];
 
-    public IReadOnlyList<DownloadItem> Items => items;
+    public IReadOnlyList<DownloadState> Items => items;
 
     #endregion
 
@@ -28,14 +31,13 @@ public sealed class DownloadLedger {
     /// Records a new download as preparing, ahead of every existing record. The
     /// caller supplies the identity and creation time so a retried call is
     /// deterministic. A download restored by an engine starts acknowledged.
-    public DownloadItem Begin(Guid id, Guid profile, string filename, double createdAt, bool isAcknowledged) {
-        if (id == Guid.Empty || profile == Guid.Empty) throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
-        if (!double.IsFinite(createdAt)) throw new BrowserRuleException(BrowserRuleCodes.InvalidRecordDate);
-        ValidateText(filename, MaximumFilenameLength, BrowserRuleCodes.InvalidDownloadFilename);
-        if (IndexOf(id) >= 0) throw new BrowserRuleException(BrowserRuleCodes.DuplicateDownload);
-        if (items.Count >= MaximumItems) throw new BrowserRuleException(BrowserRuleCodes.DownloadLedgerLimit);
-        var item = new DownloadItem(id, profile, createdAt, filename, null, 0, DownloadTelemetry.Empty,
-            DownloadItemState.Preparing, null, null, isAcknowledged);
+    public DownloadState Begin(Guid id, Guid profileId, string filename, DateTimeOffset createdAt, bool isAcknowledged) {
+        if (id == Guid.Empty || profileId == Guid.Empty) throw new Rejected(new InvalidDownloadIdentity());
+        ValidateText(filename, MaximumFilenameLength, DownloadTextField.Filename);
+        if (IndexOf(id) >= 0) throw new Rejected(new DuplicateDownload());
+        if (items.Count >= MaximumItems) throw new Rejected(new DownloadLimitReached(MaximumItems));
+        var item = new DownloadState(id, profileId, createdAt, filename, null, 0, DownloadTelemetry.Empty,
+            DownloadPhase.Preparing, null, null, isAcknowledged);
         items.Insert(0, item);
         return item;
     }
@@ -47,69 +49,69 @@ public sealed class DownloadLedger {
     #region Actions - Transfers
 
     /// The destination names the file, so the record's filename follows it.
-    public DownloadItem? SetDestination(Guid id, string destination, string filename) {
-        ValidateText(destination, MaximumDestinationLength, BrowserRuleCodes.InvalidDownloadDestination);
-        ValidateText(filename, MaximumFilenameLength, BrowserRuleCodes.InvalidDownloadFilename);
-        return UpdateActive(id, item => item with { Destination = destination, Filename = filename, State = DownloadItemState.Downloading });
+    public DownloadState? SetDestination(Guid id, string destination, string filename) {
+        ValidateText(destination, MaximumDestinationLength, DownloadTextField.Destination);
+        ValidateText(filename, MaximumFilenameLength, DownloadTextField.Filename);
+        return UpdateActive(id, item => item with { Destination = destination, Filename = filename, Phase = DownloadPhase.Downloading });
     }
 
     /// Progress never moves backwards while a transfer is live.
-    public DownloadItem? RecordTransfer(Guid id, DownloadTelemetry telemetry, double progress) {
+    public DownloadState? RecordTransfer(Guid id, DownloadTelemetry telemetry, double progress) {
         ArgumentNullException.ThrowIfNull(telemetry);
-        if (!telemetry.IsValid || !double.IsFinite(progress)) throw new BrowserRuleException(BrowserRuleCodes.InvalidDownloadProgress);
+        if (!telemetry.IsValid || !double.IsFinite(progress)) throw new Rejected(new InvalidDownloadProgress());
         return UpdateActive(id, item => item with {
             Telemetry = telemetry,
-            Progress = Math.Max(item.Progress, DownloadTransferEstimator.Normalized(progress))
+            Progress = Math.Max(item.Progress, Math.Clamp(progress, 0, 1))
         });
     }
 
     /// A download with any risk reason waits for approval under its sanitized name.
-    public DownloadItem? AssessRisk(Guid id, DownloadRiskAssessment assessment) {
+    public DownloadState? AssessRisk(Guid id, DownloadRiskAssessment assessment) {
         ArgumentNullException.ThrowIfNull(assessment);
-        ValidateText(assessment.SanitizedFilename, MaximumFilenameLength, BrowserRuleCodes.InvalidDownloadFilename);
+        ValidateText(assessment.SanitizedFilename, MaximumFilenameLength, DownloadTextField.Filename);
         return UpdateActive(id, item => item with {
             Filename = assessment.SanitizedFilename,
             Risk = assessment,
-            State = assessment.Reasons.Count > 0 ? DownloadItemState.AwaitingApproval : item.State
+            Phase = assessment.Reasons.Count > 0 ? DownloadPhase.AwaitingApproval : item.Phase
         });
     }
 
-    public DownloadItem? AwaitApproval(Guid id) =>
-        UpdateActive(id, item => item with { State = DownloadItemState.AwaitingApproval });
+    public DownloadState? AwaitApproval(Guid id) =>
+        UpdateActive(id, item => item with { Phase = DownloadPhase.AwaitingApproval });
 
-    public DownloadItem? Finish(Guid id, long? finalByteCount) {
-        if (finalByteCount < 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidDownloadProgress);
+    public DownloadState? Finish(Guid id, long? finalByteCount) {
+        if (finalByteCount < 0) throw new Rejected(new InvalidDownloadProgress());
         return UpdateActive(id, item => item with {
             Progress = 1,
             Telemetry = item.Telemetry.Stopped(finalByteCount, completed: true),
-            State = DownloadItemState.Finished
+            Phase = DownloadPhase.Finished
         });
     }
 
-    public DownloadItem? Cancel(Guid id, string message) {
-        ValidateText(message, MaximumMessageLength, BrowserRuleCodes.InvalidDownloadMessage);
-        return UpdateActive(id, item => Stopped(item, DownloadItemState.Canceled, message));
+    public DownloadState? Cancel(Guid id, string message) {
+        ValidateText(message, MaximumMessageLength, DownloadTextField.Message);
+        return UpdateActive(id, item => Stopped(item, DownloadPhase.Canceled, message));
     }
 
     /// A blocked automatic download may also fail, when its retry can no longer
     /// be replayed.
-    public DownloadItem? Fail(Guid id, string message) {
-        ValidateText(message, MaximumMessageLength, BrowserRuleCodes.InvalidDownloadMessage);
-        return Update(id, item => item.IsActive || item.State == DownloadItemState.BlockedAutomaticDownload,
-            item => Stopped(item, DownloadItemState.Failed, message));
+    public DownloadState? Fail(Guid id, string message) {
+        ValidateText(message, MaximumMessageLength, DownloadTextField.Message);
+        return Update(id, item => item.IsActive || item.Phase == DownloadPhase.BlockedAutomaticDownload,
+            item => Stopped(item, DownloadPhase.Failed, message));
     }
 
-    public DownloadItem? BlockAutomaticDownload(Guid id) =>
-        UpdateActive(id, item => Stopped(item, DownloadItemState.BlockedAutomaticDownload, null));
+    public DownloadState? BlockAutomaticDownload(Guid id) =>
+        UpdateActive(id, item => Stopped(item, DownloadPhase.BlockedAutomaticDownload, null));
 
     /// Retrying a blocked automatic download starts the same record again from
     /// nothing and counts as news for the downloads badge.
-    public DownloadItem? Restart(Guid id) =>
-        Update(id, item => item.State == DownloadItemState.BlockedAutomaticDownload, item => item with {
+    public DownloadState? Restart(Guid id) =>
+        Update(id, item => item.Phase == DownloadPhase.BlockedAutomaticDownload, item => item with {
             Destination = null,
             Progress = 0,
             Telemetry = DownloadTelemetry.Empty,
-            State = DownloadItemState.Preparing,
+            Phase = DownloadPhase.Preparing,
             Message = null,
             Risk = null,
             IsAcknowledged = false
@@ -121,10 +123,10 @@ public sealed class DownloadLedger {
 
     /// Opening a profile's downloads acknowledges its records without clearing
     /// them. Returns the records that were newly acknowledged.
-    public IReadOnlyList<DownloadItem> AcknowledgeProfile(Guid profile) {
-        var acknowledged = new List<DownloadItem>();
+    public IReadOnlyList<DownloadState> AcknowledgeProfile(Guid profileId) {
+        var acknowledged = new List<DownloadState>();
         for (int index = 0; index < items.Count; index++) {
-            if (items[index].Profile != profile || items[index].IsAcknowledged) continue;
+            if (items[index].ProfileId != profileId || items[index].IsAcknowledged) continue;
             items[index] = items[index] with { IsAcknowledged = true };
             acknowledged.Add(items[index]);
         }
@@ -146,30 +148,28 @@ public sealed class DownloadLedger {
 
     /// Deleting a profile's data removes every record it owns, live or not; the
     /// caller cancels the matching transfers.
-    public IReadOnlyList<Guid> RemoveProfile(Guid profile) => RemoveWhere(item => item.Profile == profile);
+    public IReadOnlyList<Guid> RemoveProfile(Guid profileId) => RemoveWhere(item => item.ProfileId == profileId);
 
     /// Removes records whose age strictly exceeds their profile's retention.
     /// When several Spaces share a profile the shortest retention wins; a
     /// profile with no limit keeps its records. Live transfers never expire.
-    public IReadOnlyList<Guid> RemoveExpired(IReadOnlyList<DownloadRetentionLimit> limits, double now) {
-        ArgumentNullException.ThrowIfNull(limits);
-        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidRetentionInterval);
-        var lifetimes = new Dictionary<Guid, double?>();
-        foreach (var limit in limits) {
-            if (limit.Lifetime is { } seconds && (!double.IsFinite(seconds) || seconds < 0))
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidRetentionInterval);
-            lifetimes[limit.Profile] = lifetimes.TryGetValue(limit.Profile, out var existing)
-                ? Shorter(existing, limit.Lifetime)
-                : limit.Lifetime;
+    public IReadOnlyList<Guid> RemoveExpired(IReadOnlyList<DownloadRetention> retentions, DateTimeOffset now) {
+        ArgumentNullException.ThrowIfNull(retentions);
+        var lifetimes = new Dictionary<Guid, TimeSpan?>();
+        foreach (var retention in retentions) {
+            if (retention.Lifetime < TimeSpan.Zero) throw new Rejected(new InvalidRetentionLifetime());
+            lifetimes[retention.ProfileId] = lifetimes.TryGetValue(retention.ProfileId, out var existing)
+                ? Shorter(existing, retention.Lifetime)
+                : retention.Lifetime;
         }
-        return RemoveWhere(item => !item.IsActive && lifetimes.TryGetValue(item.Profile, out var lifetime)
-            && lifetime is { } seconds && now - item.CreatedAt > seconds);
+        return RemoveWhere(item => !item.IsActive && lifetimes.TryGetValue(item.ProfileId, out var lifetime)
+            && lifetime is { } limit && now - item.CreatedAt > limit);
     }
 
-    private static double? Shorter(double? existing, double? proposed) =>
-        existing is not { } current ? proposed : proposed is not { } next ? current : Math.Min(current, next);
+    private static TimeSpan? Shorter(TimeSpan? existing, TimeSpan? proposed) =>
+        existing is not { } current ? proposed : proposed is not { } next ? current : TimeSpan.FromTicks(Math.Min(current.Ticks, next.Ticks));
 
-    private List<Guid> RemoveWhere(Predicate<DownloadItem> predicate) {
+    private List<Guid> RemoveWhere(Predicate<DownloadState> predicate) {
         var removed = items.Where(item => predicate(item)).Select(item => item.Id).ToList();
         items.RemoveAll(predicate);
         return removed;
@@ -179,21 +179,21 @@ public sealed class DownloadLedger {
 
     #region Actions - Transitions
 
-    private static DownloadItem Stopped(DownloadItem item, DownloadItemState state, string? message) =>
-        item with { Telemetry = item.Telemetry.Stopped(), State = state, Message = message };
+    private static DownloadState Stopped(DownloadState item, DownloadPhase phase, string? message) =>
+        item with { Telemetry = item.Telemetry.Stopped(), Phase = phase, Message = message };
 
-    private DownloadItem? UpdateActive(Guid id, Func<DownloadItem, DownloadItem> transition) =>
+    private DownloadState? UpdateActive(Guid id, Func<DownloadState, DownloadState> transition) =>
         Update(id, item => item.IsActive, transition);
 
-    private DownloadItem? Update(Guid id, Func<DownloadItem, bool> accepts, Func<DownloadItem, DownloadItem> transition) {
+    private DownloadState? Update(Guid id, Func<DownloadState, bool> accepts, Func<DownloadState, DownloadState> transition) {
         int index = IndexOf(id);
         if (index < 0 || !accepts(items[index])) return null;
         items[index] = transition(items[index]);
         return items[index];
     }
 
-    private static void ValidateText(string? value, int maximumLength, string code) {
-        if (string.IsNullOrEmpty(value) || value.Length > maximumLength) throw new BrowserRuleException(code);
+    private static void ValidateText(string? value, int maximumLength, DownloadTextField field) {
+        if (string.IsNullOrEmpty(value) || value.Length > maximumLength) throw new Rejected(new InvalidDownloadText(field));
     }
 
     #endregion

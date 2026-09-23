@@ -41,8 +41,9 @@ def main():
         ["xcrun", "--sdk", platform, "--show-sdk-path"], text=True).strip()
     version = subprocess.check_output([dotnet, "--version"], cwd=core, env=environment, text=True).strip()
     sdk = subprocess.check_output(["xcrun", "--sdk", platform, "--show-sdk-version"], text=True).strip()
-    inputs = [p for p in (core / "src").rglob("*") if p.is_file()
+    inputs = [p for folder in ("src", "tools") for p in (core / folder).rglob("*") if p.is_file()
               and not {"bin", "obj"}.intersection(p.relative_to(core).parts)]
+    inputs += list((repo / "CrestShared/Infrastructure/Core/Generated").glob("*.swift"))
     inputs += list(core.glob("Directory.*")) + [core / "global.json", Path(__file__).resolve(),
                                                repo / "Scripts/control-plane/package-apple-core.py"]
     digest = hashlib.sha256(f"{version}:{platform}:{sdk}:{os.environ.get('DEVELOPER_DIR', '')}".encode())
@@ -58,6 +59,10 @@ def main():
         if product.is_file() and stamp.exists() and stamp.read_text() == fingerprint:
             print(f"Crest core is current ({runtimes[platform]}, SDK {version})")
             return
+        # The Swift models and codecs are generated from the same contract
+        # records; a stale copy would misread the core, so refuse to build.
+        subprocess.run([dotnet, "run", "--project", "tools/CrestCore.Generator", "--nologo", "--",
+                        "--check", "--root", str(repo)], cwd=core, env=environment, check=True)
         publish = output / "publish"
         command = [dotnet, "publish", "src/CrestCore.Native", "-c", "Release", "-r", runtimes[platform],
                    "--artifacts-path", str(output / "intermediates"), "-o", str(publish), "--nologo"]

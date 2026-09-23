@@ -788,7 +788,9 @@ self-contained core library and does not require an installed .NET runtime.
 app with the same output-path convention and temporary-data cleanup.
 
 For core-only development, run `dotnet test tests/CrestCore.Tests` from
-`CrestCore`. See [the contract](../../CrestContracts/README.md) before adding a
+`CrestCore`. After changing a record in `CrestCore.Contracts`, run
+`Scripts/control-plane/generate-contracts.sh`; the lint script and the Apple
+core build fail while the generated codecs and models are stale. See [the contract](../../CrestContracts/README.md) before adding a
 command or provider. Frequent page observations use incremental tab projections
 and stable observed row objects. Oversized structural snapshots stream in bounded
 chunks and become visible only after complete digest validation. Creation limits

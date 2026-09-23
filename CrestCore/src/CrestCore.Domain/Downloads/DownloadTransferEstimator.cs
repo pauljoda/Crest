@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Turns event-driven engine progress samples into stable row telemetry.

@@ -60,6 +60,8 @@ typeset -A seen_paths
 typeset -a swift_paths
 for changed_file in "${candidate_paths[@]}"; do
   [[ "$changed_file" == *.swift && -f "$changed_file" ]] || continue
+  # Generated sources follow their generator, not the formatter.
+  [[ "$changed_file" != */Generated/* ]] || continue
   [[ -z "${seen_paths[$changed_file]-}" ]] || continue
   seen_paths[$changed_file]=1
   swift_paths+=("$changed_file")

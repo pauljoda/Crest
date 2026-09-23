@@ -1,8 +1,8 @@
-namespace CrestCore.Domain;
+namespace CrestCore.Contracts;
 
-/// Live transfer facts for one download row. They travel with the ledger item
-/// so every presentation sees one snapshot, and become inactive as soon as the
-/// transfer stops.
+/// Live transfer facts for one download row. They travel with the record so
+/// every presentation sees one snapshot, and become inactive as soon as the
+/// transfer stops. `EstimatedTimeRemaining` is in seconds.
 public sealed record DownloadTelemetry(long BytesReceived, long? TotalBytes, double? BytesPerSecond,
     double? EstimatedTimeRemaining, bool IsPaused) {
     #region Variables

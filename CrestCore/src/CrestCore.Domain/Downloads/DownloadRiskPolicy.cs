@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Why a download deserves a warning, and whether the warning must be shown.
@@ -28,7 +30,7 @@ public static class DownloadRiskPolicy {
 
     public static DownloadRiskAssessment Assess(DownloadRiskFacts facts) {
         ArgumentNullException.ThrowIfNull(facts);
-        if (string.IsNullOrEmpty(facts.SanitizedFilename)) throw new BrowserRuleException(BrowserRuleCodes.InvalidDownloadFilename);
+        if (string.IsNullOrEmpty(facts.SanitizedFilename)) throw new Rejected(new InvalidDownloadText(DownloadTextField.Filename));
         bool extensionIsDangerous = facts.ExtensionRunsCode || DangerousExtensions.Contains(Extension(facts.SanitizedFilename));
         bool mimeIsDangerous = facts.MimeTypeRunsCode
             || facts.MimeType is { } mime && DangerousMimeTypes.Contains(mime.ToLowerInvariant());

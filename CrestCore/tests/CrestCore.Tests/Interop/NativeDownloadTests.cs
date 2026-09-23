@@ -75,7 +75,7 @@ public sealed class NativeDownloadTests {
         Apply(ledger, new() { ["command"] = "begin", ["id"] = id, ["profileID"] = Profile, ["filename"] = "a.pdf", ["createdAt"] = 1.0, ["acknowledged"] = false });
         Assert.NotEmpty(ledger.LastResult);
 
-        Assert.Throws<BrowserRuleException>(() => Apply(ledger, new() { ["command"] = "begin", ["id"] = id, ["profileID"] = Profile, ["filename"] = "a.pdf", ["createdAt"] = 1.0, ["acknowledged"] = false }));
+        Assert.Throws<Rejected>(() => Apply(ledger, new() { ["command"] = "begin", ["id"] = id, ["profileID"] = Profile, ["filename"] = "a.pdf", ["createdAt"] = 1.0, ["acknowledged"] = false }));
         Assert.Empty(ledger.LastResult);
         Assert.Throws<BrowserRuleException>(() => Apply(ledger, new() { ["command"] = "resurrect", ["id"] = id }));
         Assert.Throws<ProtocolException>(() => Apply(ledger, new() { ["command"] = "remove", ["id"] = id.ToUpperInvariant() }));

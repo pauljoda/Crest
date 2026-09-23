@@ -23,7 +23,7 @@ public sealed class NativeDownloadLedger {
 
     private readonly DownloadLedger ledger = new();
 
-    public IReadOnlyList<DownloadItem> Items => ledger.Items;
+    public IReadOnlyList<DownloadState> Items => ledger.Items;
 
     /// The answer to the most recent command, or empty after a rejected one.
     public byte[] LastResult { get; private set; } = [];
@@ -49,7 +49,7 @@ public sealed class NativeDownloadLedger {
                 Protocol.Members(request, "version", "command", "id", "profileID", "filename", "createdAt", "acknowledged");
                 return Changed(ledger.Begin(Protocol.Id(request, "id"), Protocol.Id(request, "profileID"),
                     Protocol.Text(request, "filename", DownloadLedger.MaximumFilenameLength),
-                    request.GetProperty("createdAt").GetDouble(), request.GetProperty("acknowledged").GetBoolean()));
+                    DownloadCodes.Date(request.GetProperty("createdAt").GetDouble()), request.GetProperty("acknowledged").GetBoolean()));
             case DownloadCommand.Destination:
                 Protocol.Members(request, "version", "command", "id", "destination", "filename");
                 return Changed(ledger.SetDestination(Protocol.Id(request, "id"),
@@ -99,17 +99,18 @@ public sealed class NativeDownloadLedger {
                 Protocol.Members(request, "version", "command", "now", "retention");
                 var limits = request.GetProperty("retention").EnumerateArray().Select(limit => {
                     Protocol.Members(limit, "profileID", "lifetime");
-                    return new DownloadRetentionLimit(Protocol.Id(limit, "profileID"), DownloadCodes.Optional(limit, "lifetime")?.GetDouble());
+                    var lifetime = DownloadCodes.Optional(limit, "lifetime")?.GetDouble();
+                    return new DownloadRetention(Protocol.Id(limit, "profileID"), lifetime is { } seconds ? TimeSpan.FromSeconds(seconds) : null);
                 }).ToArray();
-                return Removed(ledger.RemoveExpired(limits, request.GetProperty("now").GetDouble()));
+                return Removed(ledger.RemoveExpired(limits, DownloadCodes.Date(request.GetProperty("now").GetDouble())));
         }
     }
 
-    private JsonObject Changed(DownloadItem? item) => item is null ? Delta(false, [], []) : Delta(true, [item], []);
+    private JsonObject Changed(DownloadState? item) => item is null ? Delta(false, [], []) : Delta(true, [item], []);
 
     private JsonObject Removed(IReadOnlyList<Guid> identities) => Delta(identities.Count > 0, [], identities);
 
-    private JsonObject Delta(bool applied, IReadOnlyList<DownloadItem> changed, IReadOnlyList<Guid> removed) => new() {
+    private JsonObject Delta(bool applied, IReadOnlyList<DownloadState> changed, IReadOnlyList<Guid> removed) => new() {
         ["applied"] = applied,
         ["items"] = new JsonArray(changed.Select(item => (JsonNode?)new JsonObject {
             ["index"] = ledger.IndexOf(item.Id),

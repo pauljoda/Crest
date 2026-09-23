@@ -536,7 +536,7 @@
     },
     "2026-09-04-extension-frame-content-security-policy": {
       "category": "fixed",
-      "message": "Let websites an extension embeds in its side panel run under their own security policy instead of the extension’s"
+      "message": "Let websites an extension embeds in its side panel run under their own security policy instead of the extension\u2019s"
     },
     "2026-09-04-extension-identity-web-auth-flow": {
       "category": "new",
@@ -544,7 +544,7 @@
     },
     "2026-09-04-extension-frame-message-relay": {
       "category": "fixed",
-      "message": "Deliver messages from websites embedded in an extension’s side panel back to that extension, as Chrome does"
+      "message": "Deliver messages from websites embedded in an extension\u2019s side panel back to that extension, as Chrome does"
     },
     "2026-09-04-extension-window-resolution": {
       "category": "fixed",
@@ -572,7 +572,7 @@
     },
     "2026-09-05-sidepanel-content-isolation": {
       "category": "fixed",
-      "message": "Keep website styling extensions from changing other extensions’ sidebars"
+      "message": "Keep website styling extensions from changing other extensions\u2019 sidebars"
     },
     "2026-09-05-safe-extension-worker-paths": {
       "category": "fixed",
@@ -1140,7 +1140,7 @@
     },
     "selected-text-search-in-crest": {
       "category": "fixed",
-      "message": "Search selected text in a new Crest tab using the current Space’s search engine"
+      "message": "Search selected text in a new Crest tab using the current Space\u2019s search engine"
     },
     "tab-owned-peeks": {
       "category": "improved",
@@ -1168,7 +1168,7 @@
     },
     "temporary-blank-windows": {
       "category": "new",
-      "message": "Open disposable blank windows with your Space’s cookies and extensions, or create one by dragging a tab outside the window"
+      "message": "Open disposable blank windows with your Space\u2019s cookies and extensions, or create one by dragging a tab outside the window"
     },
     "window-titles-and-drag-previews": {
       "category": "fixed",
@@ -1552,7 +1552,7 @@
     },
     "chromium-native-downloads": {
       "category": "improved",
-      "message": "Track Chromium downloads in Crest, cancel transfers, and save files using each Space’s download folder preferences."
+      "message": "Track Chromium downloads in Crest, cancel transfers, and save files using each Space\u2019s download folder preferences."
     },
     "chromium-history-and-site-icons": {
       "category": "improved",
@@ -1596,7 +1596,7 @@
     },
     "chromium-native-document-output": {
       "category": "new",
-      "message": "Export PDFs, save offline web archives, capture full pages, and print Chromium pages through Crest’s native controls."
+      "message": "Export PDFs, save offline web archives, capture full pages, and print Chromium pages through Crest\u2019s native controls."
     },
     "core-owned-temporary-window-profiles": {
       "category": "improved",
@@ -2105,6 +2105,10 @@
     "store-first-presentation-state": {
       "category": "internal",
       "message": "Store window presentation, find, peek and Space lock state before announcing a change, so a render SwiftUI performs during the announcement never keeps a stale value."
+    },
+    "typed-core-contract-generator": {
+      "category": "internal",
+      "message": "Download intents, changes and rejections are typed C# records, and a generator derives the core codec, Swift models and C header from them."
     }
   }
 }

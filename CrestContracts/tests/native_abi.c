@@ -1,3 +1,5 @@
+#include "crest_app.h"
+#include "crest_contracts.h"
 #include "crest_core.h"
 #include <assert.h>
 #include <stdio.h>
@@ -21,6 +23,31 @@ static void access_boundary(void) {
     assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_OK && locked == 1);
     assert(crest_access_destroy(access) == CREST_OK);
     assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_INVALID_HANDLE && locked == 1);
+}
+static void app_boundary(void) {
+    const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
+    uint8_t stale[CREST_CONTRACTS_FINGERPRINT_LENGTH];
+    memcpy(stale, fingerprint, sizeof(stale)); stale[0] ^= 1;
+    uint64_t app = 0;
+    crest_buffer_t buffer = { (uint8_t*)1, 1 };
+    assert(crest_app_create(stale, sizeof(stale), &app) == CREST_VERSION_MISMATCH && app == 0);
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), &app) == CREST_OK && app != 0);
+    /* A union tag no contract uses is malformed input, not a rejection. */
+    const uint8_t garbage[] = { 0x7f, 0x01, 0x02 };
+    assert(crest_app_dispatch(app, garbage, sizeof(garbage), &buffer) == CREST_INVALID_MESSAGE);
+    assert(buffer.bytes == NULL && buffer.length == 0);
+    /* AcknowledgeDownloads: its tag, then the profile's 16 RFC 4122 bytes. */
+    uint8_t acknowledge[17] = { CREST_INTENT_ACKNOWLEDGE_DOWNLOADS };
+    for (int index = 1; index < 17; index++) acknowledge[index] = (uint8_t)index;
+    assert(crest_app_dispatch(app, acknowledge, sizeof(acknowledge), &buffer) == CREST_OK);
+    /* Nothing to acknowledge: a change list with a count of zero. */
+    assert(buffer.bytes != NULL && buffer.length == 1 && buffer.bytes[0] == 0);
+    crest_buffer_free(&buffer);
+    assert(buffer.bytes == NULL && buffer.length == 0);
+    crest_buffer_free(&buffer);
+    assert(crest_app_destroy(app) == CREST_OK);
+    assert(crest_app_dispatch(app, acknowledge, sizeof(acknowledge), &buffer) == CREST_INVALID_HANDLE);
+    assert(crest_app_destroy(app) == CREST_INVALID_HANDLE);
 }
 static void downloads_boundary(void) {
     const char *begin = "{\"version\":1,\"command\":\"begin\",\"id\":\"66666666-6666-6666-6666-666666666666\","
@@ -314,6 +341,7 @@ int main(void) {
     policy_boundary();
     links_boundary();
     access_boundary();
+    app_boundary();
     downloads_boundary();
     permissions_boundary();
     session_boundary();
