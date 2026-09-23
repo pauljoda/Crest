@@ -72,7 +72,7 @@ public sealed partial class NativeSessionAuthority {
             }
             var changes = new JsonArray();
             foreach (var space in edited) {
-                var groups = space!["tabs"]!.AsArray().Where(t => t!["splitGroupID"] is not null)
+                var groups = space![SpaceSections.TabsSection]!.AsArray().Where(t => t!["splitGroupID"] is not null)
                     .Select(t => Id(t!["splitGroupID"])).ToHashSet();
                 if (space["splitGroups"] is JsonArray metadata)
                     for (int i = metadata.Count - 1; i >= 0; i--) if (!groups.Contains(Id(metadata[i]!["id"]))) metadata.RemoveAt(i);

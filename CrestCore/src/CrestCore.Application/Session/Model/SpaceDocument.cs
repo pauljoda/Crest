@@ -16,7 +16,8 @@ internal sealed record SpaceDocument(JsonObject Metadata, SpaceSections Sections
     #region Constructors
 
     internal SpaceDocument(JsonObject metadata, IReadOnlyDictionary<string, IReadOnlyList<JsonNode>> sections)
-        : this(metadata, new SpaceSections(sections["tabs"], sections["folders"], sections["history"], sections["archivedTabs"])) { }
+        : this(metadata, new SpaceSections(sections[SpaceSections.TabsSection], sections[SpaceSections.FoldersSection],
+            sections[SpaceSections.HistorySection], sections[SpaceSections.ArchivedTabsSection])) { }
 
     #endregion
 }

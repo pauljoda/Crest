@@ -69,7 +69,7 @@ public static class ManualSetupPolicy {
         ArgumentNullException.ThrowIfNull(url);
         if (!string.IsNullOrWhiteSpace(title)) return title.Trim();
         string host = Uri.TryCreate(url, UriKind.Absolute, out var parsed) && parsed.Host.Length > 0 ? parsed.Host : url;
-        return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
+        return SiteHost.WithoutWww(host);
     }
 
     #endregion

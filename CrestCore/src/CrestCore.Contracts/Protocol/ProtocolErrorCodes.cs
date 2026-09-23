@@ -7,6 +7,7 @@ public static class ProtocolErrorCodes {
     public const string CapabilityLimit = "capability_limit";
     public const string DownloadInputLimit = "download_input_limit";
     public const string DuplicateMember = "duplicate_member";
+    public const string HandleCollision = "handle_collision";
     public const string InvalidAdapter = "invalid_adapter";
     public const string InvalidCounter = "invalid_counter";
     public const string InvalidCredentialEvent = "invalid_credential_event";

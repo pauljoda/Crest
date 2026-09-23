@@ -30,9 +30,8 @@ public sealed partial class NativeSessionAuthority {
     private NativeSessionCommand PrepareLaunchPlan(ulong expected, JsonObject request) {
         var stored = document.Metadata[PreferencesDocument.Field];
         using var parsed = JsonDocument.Parse(request.ToJsonString());
-        Protocol.Members(parsed.RootElement, LaunchCodes.RequestMembers);
-        var plan = NativePolicyEvaluator.PlanLaunch(parsed.RootElement,
-            stored is null ? null : PreferencesDocument.Read(stored).Startup);
+        var launch = LaunchPlanRequest.Decode(parsed.RootElement);
+        var plan = launch.Plan(stored is null ? null : PreferencesDocument.Read(stored).Startup);
         var output = Encoding.UTF8.GetBytes(LaunchCodes.Plan(plan).ToJsonString());
         return new NativeSessionCommand(this, expected, document, output);
     }

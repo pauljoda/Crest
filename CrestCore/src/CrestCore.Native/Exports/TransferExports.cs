@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 
 namespace CrestCore.Native;
 
@@ -53,7 +54,7 @@ public static unsafe partial class Exports {
             value.Reserve(sync);
             a = checked((ulong)Interlocked.Increment(ref nextHandle)); b = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!Checkpoints.TryAdd(a, value.SourceCheckpoint) || !Checkpoints.TryAdd(b, value.DestinationCheckpoint))
-                throw new InvalidOperationException("handle_collision");
+                throw new InvalidOperationException(ProtocolErrorCodes.HandleCollision);
             *sourceCheckpoint = a; *destinationCheckpoint = b; return CoreStatus.Ok;
         } catch (Exception e) { Checkpoints.TryRemove(a, out _); Checkpoints.TryRemove(b, out _); value.Dispose(); return SessionError(e); }
     }

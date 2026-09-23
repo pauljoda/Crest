@@ -249,13 +249,13 @@ public static class NativeSessionEditor {
                 if (!retained.Contains(LegacySessionDocument.Id(groups[i]!["id"]))) groups.RemoveAt(i);
         }
         // Archives are new records only; their images remain in the native cache.
-        foreach (var archived in output["archivedTabs"]!.AsArray()) archived!["tab"]!.AsObject().Remove("faviconData");
+        foreach (var archived in output[SpaceSections.ArchivedTabsSection]!.AsArray()) archived!["tab"]!.AsObject().Remove("faviconData");
         return new SessionEditResult(output, result, selected, selectSpace, copies, changed, favicon).Encode();
 
         BrowserTab? Target(Guid? id) => id is { } value ? space.Tabs.FirstOrDefault(t => t.Id == value) : null;
 
-        string Mode(BrowserTab tab) => TabIconPolicy.Mode(
-            document.TabMetadata(tab.Id, "storedIconMode")?.GetValue<string>(),
+        TabIconMode Mode(BrowserTab tab) => TabIconPolicy.Mode(
+            TabIconModeCodes.Parse(document.TabMetadata(tab.Id, "storedIconMode")?.GetValue<string>()),
             document.TabMetadata(tab.Id, "symbol")?.GetValue<string>());
 
         // The image itself stays in the native cache. The core names the tab
@@ -276,7 +276,7 @@ public static class NativeSessionEditor {
             var url = args.Url ?? tab.Url;
             var title = args.Title;
             var accent = args.IconAccent;
-            var automatic = Mode(tab) == TabIconPolicy.Automatic;
+            var automatic = Mode(tab) == TabIconMode.Automatic;
             var updatesIcon = automatic && (args.FaviconChanged == true
                 || !JsonNode.DeepEquals(document.TabMetadata(tab.Id, "iconAccent"), accent));
             if (url == tab.Url && Blank(title) == Blank(tab.Title) && !updatesIcon) return false;
@@ -293,22 +293,22 @@ public static class NativeSessionEditor {
         bool SetIcon(BrowserTab? tab) {
             if (tab is null) return false;
             var mode = TabIconPolicy.RequireMode(args.Mode);
-            if (mode == TabIconPolicy.Pulled && args.HasFavicon != true) return false;
-            document.SetTabMetadata(tab.Id, "symbol", mode == TabIconPolicy.Emoji
+            if (mode == TabIconMode.Pulled && args.HasFavicon != true) return false;
+            document.SetTabMetadata(tab.Id, "symbol", mode == TabIconMode.Emoji
                 ? TabIconPolicy.Symbol(args.Emoji) : TabIconPolicy.WebSymbol);
-            if (mode == TabIconPolicy.Pulled) {
+            if (mode == TabIconMode.Pulled) {
                 document.SetTabMetadata(tab.Id, "faviconURL", tab.Url is null ? null : JsonValue.Create(tab.Url));
                 document.SetTabMetadata(tab.Id, "iconAccent", args.IconAccent);
                 Assign(tab.Id, true);
             } else ClearIconAssets(tab);
-            document.SetTabMetadata(tab.Id, "storedIconMode", mode);
+            document.SetTabMetadata(tab.Id, "storedIconMode", TabIconModeCodes.Name(mode));
             return true;
         }
 
         // A favicon that finished loading after the page moved on belongs to
         // the address it was captured from, not to whatever the tab shows now.
         bool CacheFavicon(BrowserTab? tab) {
-            if (tab is null || Mode(tab) != TabIconPolicy.Automatic
+            if (tab is null || Mode(tab) != TabIconMode.Automatic
                 || args.HasFavicon != true) return false;
             var captured = args.Url ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
             if (!HistoryPolicy.SamePage(tab.Url, captured)) return false;

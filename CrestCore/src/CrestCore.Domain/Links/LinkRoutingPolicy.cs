@@ -37,8 +37,7 @@ public static class LinkRoutingPolicy {
     /// without a leading `www.`. Null for an address without a host.
     public static string? Site(string url) {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var value) || string.IsNullOrEmpty(value.Host)) return null;
-        string host = value.Host.ToLowerInvariant();
-        return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
+        return SiteHost.WithoutWww(value.Host.ToLowerInvariant());
     }
 
     private static bool Matches(LinkRoute route, string url) {

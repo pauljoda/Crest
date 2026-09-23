@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 
 namespace CrestCore.Native;
 
@@ -59,7 +60,7 @@ public static unsafe partial class Exports {
             transactionId = checked((ulong)Interlocked.Increment(ref nextHandle));
             journalId = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SyncTransactions.TryAdd(transactionId, value) || !SyncJournals.TryAdd(journalId, value.Journal))
-                throw new InvalidOperationException("handle_collision");
+                throw new InvalidOperationException(ProtocolErrorCodes.HandleCollision);
             if (value.Materialization is { } bytes) queryId = RetainSyncQuery(bytes);
             *transaction = transactionId; *journal = journalId; *query = queryId;
             return CoreStatus.Ok;

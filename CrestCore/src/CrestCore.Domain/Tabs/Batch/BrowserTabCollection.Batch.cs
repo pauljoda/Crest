@@ -25,7 +25,7 @@ public sealed partial class BrowserTabCollection {
                 case TabBatchKind.NewFolder:
                     FileBatchRoots(request, action with { Folder = CreateFolder(action.Placement) }, now); break;
                 case TabBatchKind.KeepLoaded:
-                    Require(members.All(t => t.Content.IsWebPage), "web_pages_only");
+                    Require(members.All(t => t.Content.IsWebPage), BrowserRuleCodes.WebPagesOnly);
                     foreach (var tab in members) tab.SetResidency(action.KeepLoaded);
                     break;
                 default: throw new BrowserRuleException(BrowserRuleCodes.FolderActionUnavailable);
@@ -37,9 +37,9 @@ public sealed partial class BrowserTabCollection {
             case TabBatchKind.File:
                 Require(action.Before is not { } anchor || !selectedIds.Contains(anchor));
                 if (action.Placement == TabPlacement.Pinned) {
-                    Require(groups.Count == 0, "cannot_pin_split");
+                    Require(groups.Count == 0, BrowserRuleCodes.CannotPinSplit);
                     Require(tabs.Count(t => t.Placement == TabPlacement.Pinned && !selectedIds.Contains(t.Id)) + members.Length <= BrowserLimits.PinnedTabs,
-                        "pinned_capacity");
+                        BrowserRuleCodes.PinnedCapacity);
                     Require(action.Folder is null && action.BeforeFolder is null
                         && (action.Before is not { } before || tabs.Any(t => t.Id == before && t.Placement == TabPlacement.Pinned)));
                     foreach (var tab in requested) MoveTab(tab, TabPlacement.Pinned, null, action.Before, false, now);
@@ -62,10 +62,10 @@ public sealed partial class BrowserTabCollection {
                 FileTabs(wrapped, action.Placement, CreateFolder(action.Placement), now);
                 break;
             case TabBatchKind.MoveToSpace:
-                Require(groups.Count == 0, "cannot_move_split_across_spaces");
+                Require(groups.Count == 0, BrowserRuleCodes.CannotMoveSplitAcrossSpaces);
                 Require(destination is not null && !ReferenceEquals(this, destination));
                 Require(destination!.Tabs.Count(t => t.Placement == TabPlacement.Pinned)
-                    + members.Count(t => t.Placement == TabPlacement.Pinned) <= BrowserLimits.PinnedTabs, "pinned_capacity");
+                    + members.Count(t => t.Placement == TabPlacement.Pinned) <= BrowserLimits.PinnedTabs, BrowserRuleCodes.PinnedCapacity);
                 var follow = selected is { } active && selectedIds.Contains(active) ? active : requested[0];
                 foreach (var tab in requested)
                     selected = TransferTo(destination, tab, selected, fallback, null, null, null, false, destinationSelection, now);
@@ -75,7 +75,7 @@ public sealed partial class BrowserTabCollection {
                 var targetId = action.Target ?? requested[0];
                 Require(!Tab(targetId).Content.IsStartPage);
                 var existing = SplitMembers(targetId).Select(t => t.Id).ToHashSet();
-                Require(existing.Union(selectedIds).Count() is >= 2 and <= MaximumSplitMembers, "split_capacity");
+                Require(existing.Union(selectedIds).Count() is >= 2 and <= MaximumSplitMembers, BrowserRuleCodes.SplitCapacity);
                 var insertion = action.Index;
                 foreach (var id in requested.Where(id => !existing.Contains(id))) {
                     var oldGroup = Tab(targetId).SplitGroupId;
@@ -92,7 +92,7 @@ public sealed partial class BrowserTabCollection {
             case TabBatchKind.Close:
             case TabBatchKind.Delete:
                 bool deleting = action.Kind == TabBatchKind.Delete;
-                Require(deleting || members.All(t => t.Placement == TabPlacement.Current), "current_tabs_only");
+                Require(deleting || members.All(t => t.Placement == TabPlacement.Current), BrowserRuleCodes.CurrentTabsOnly);
                 var previous = selected;
                 selected = DismissTabs(requested, selected, fallback, now, deleting, deleting, deleting);
                 if (deleting && previous is { } removed && selectedIds.Contains(removed))
@@ -111,7 +111,7 @@ public sealed partial class BrowserTabCollection {
                 }
                 break;
             case TabBatchKind.KeepLoaded:
-                Require(members.All(t => t.Content.IsWebPage), "web_pages_only");
+                Require(members.All(t => t.Content.IsWebPage), BrowserRuleCodes.WebPagesOnly);
                 foreach (var tab in members) tab.SetResidency(action.KeepLoaded);
                 break;
             case TabBatchKind.SeparateSplits:

@@ -84,5 +84,29 @@ internal static class ShortcutCodes {
 
     public static string Target(NumberedSelectionTarget target) => target == NumberedSelectionTarget.Tab ? "tab" : "space";
 
+    public static JsonObject BindingsAnswer(IEnumerable<ShortcutBinding> bindings) => new() {
+        ["bindings"] = new JsonArray(bindings.Select(binding => (JsonNode?)new JsonObject {
+            ["command"] = binding.Command,
+            ["shortcut"] = Chord(binding.Shortcut),
+            ["default"] = Chord(binding.Default),
+            ["customized"] = binding.IsCustomized
+        }).ToArray())
+    };
+
+    /// The assignment's outcome; `overrides` is null when nothing changed.
+    public static JsonObject AssignmentAnswer(ShortcutAssignment assignment) => new() {
+        ["result"] = Result(assignment.Result),
+        ["conflicts"] = Names(assignment.Conflicts),
+        ["overrides"] = assignment.Overrides is { } overrides ? Overrides(overrides) : null
+    };
+
+    public static JsonObject SelectionsAnswer(IEnumerable<NumberedSelection> selections) => new() {
+        ["selections"] = new JsonArray(selections.Select(selection => (JsonNode?)new JsonObject {
+            ["command"] = selection.Command,
+            ["target"] = Target(selection.Target),
+            ["index"] = selection.Index
+        }).ToArray())
+    };
+
     #endregion
 }

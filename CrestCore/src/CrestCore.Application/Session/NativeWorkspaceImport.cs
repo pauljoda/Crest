@@ -37,7 +37,7 @@ public sealed class NativeWorkspaceImport {
     }
 
     private void Track(JsonNode space, int source, int index) {
-        foreach (var section in new[] { "tabs", "archivedTabs" })
+        foreach (var section in new[] { SpaceSections.TabsSection, SpaceSections.ArchivedTabsSection })
             for (int ti = 0; ti < Items(space, section).Count; ti++)
                 origins[Items(space, section)[ti]!] = new(source, index, ti, section);
     }
@@ -48,7 +48,7 @@ public sealed class NativeWorkspaceImport {
         return copy;
     }
 
-    private void Tabs(JsonNode space, IEnumerable<JsonNode> tabs) => space["tabs"] = new JsonArray(tabs.Select(Copy).ToArray());
+    private void Tabs(JsonNode space, IEnumerable<JsonNode> tabs) => space[SpaceSections.TabsSection] = new JsonArray(tabs.Select(Copy).ToArray());
 
     private static void Customize(JsonNode space, JsonNode values) {
         space["name"] = SpaceOrganizationPolicy.Name(values["name"]!.GetValue<string>());
@@ -74,8 +74,8 @@ public sealed class NativeWorkspaceImport {
         Dictionary<JsonNode, HashSet<Guid>> originalHistoryIds = new(ReferenceEqualityComparer.Instance);
         for (int si = 0; si < spaces.Count; si++) {
             var space = spaces[si]!;
-            originalFolderIds[space] = Items(space, "folders").Select(f => Id(f!["id"])).ToHashSet();
-            originalHistoryIds[space] = Items(space, "history").Select(h => Id(h!["id"])).ToHashSet();
+            originalFolderIds[space] = Items(space, SpaceSections.FoldersSection).Select(f => Id(f!["id"])).ToHashSet();
+            originalHistoryIds[space] = Items(space, SpaceSections.HistorySection).Select(h => Id(h!["id"])).ToHashSet();
             Track(space, 0, si);
         }
         var inputs = Items(arguments, "sources").Select((n, i) => {
@@ -83,11 +83,11 @@ public sealed class NativeWorkspaceImport {
             var requested = OptionalId(value[LegacySelectionFields.SelectedTab]);
             LegacySelectionFields.WithoutSpaceSelection(value);
             Track(value, i + 1, 0);
-            if (requested is { } tab && Items(value, "tabs").Any(t => Id(t!["id"]) == tab)) shownTabs[value] = tab;
+            if (requested is { } tab && Items(value, SpaceSections.TabsSection).Any(t => Id(t!["id"]) == tab)) shownTabs[value] = tab;
             return value;
         }).ToArray();
         foreach (var input in inputs)
-            WorkspaceImportPolicy.RequireSplitMembership(Items(input, "tabs").Select(t => new SplitMember(OptionalId(t!["splitGroupID"]),
+            WorkspaceImportPolicy.RequireSplitMembership(Items(input, SpaceSections.TabsSection).Select(t => new SplitMember(OptionalId(t!["splitGroupID"]),
                 TabPlacementCodes.Parse(Placement(t)) ?? TabPlacement.Saved, OptionalId(t["folderID"]))).ToArray());
         JsonNode? affected = null;
         if (mode == WorkspaceImportMode.Portable) {
@@ -108,8 +108,8 @@ public sealed class NativeWorkspaceImport {
                 if (created && spaces.Any(s => Id(s!["id"]) == id || Id(s["profile"]!["id"]) == Id(input["profile"]!["id"])))
                     throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
                 Customize(destination, draft["customization"]!);
-                var added = Items(input, "tabs").Select(t => t!).ToArray();
-                var old = created ? [] : Items(destination, "tabs").Select(t => t!).ToArray();
+                var added = Items(input, SpaceSections.TabsSection).Select(t => t!).ToArray();
+                var old = created ? [] : Items(destination, SpaceSections.TabsSection).Select(t => t!).ToArray();
                 WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => Placement(t) == TabPlacementCodes.Pinned));
                 var ordered = new[] { TabPlacementCodes.Pinned, TabPlacementCodes.Saved, TabPlacementCodes.Current }.SelectMany(p => added.Where(t => Placement(t) == p)).ToArray();
                 if (created) Tabs(destination, ordered);
@@ -155,9 +155,9 @@ public sealed class NativeWorkspaceImport {
                 var included = Items(review, "includedTabIDs").Select(Id).ToHashSet();
                 var overrides = Items(review, "placements").ToDictionary(n => Id(n!["tabID"]), n => n!["placement"]!.GetValue<string>());
                 string PlacementFor(JsonNode tab) => overrides.GetValueOrDefault(Id(tab["id"]), Placement(tab));
-                var additions = Items(input, "tabs").Where(t => included.Contains(Id(t!["id"]))).Select(t => t!).ToArray();
-                var sourceFolders = Items(input, "folders");
-                var folders = destinationId is null ? new JsonArray() : Items(destination, "folders");
+                var additions = Items(input, SpaceSections.TabsSection).Where(t => included.Contains(Id(t!["id"]))).Select(t => t!).ToArray();
+                var sourceFolders = Items(input, SpaceSections.FoldersSection);
+                var folders = destinationId is null ? new JsonArray() : Items(destination, SpaceSections.FoldersSection);
                 var required = additions.Where(t => PlacementFor(t) == TabPlacementCodes.Saved && t["folderID"] is not null)
                     .Select(t => Id(t["folderID"])).ToHashSet();
                 var byId = sourceFolders.ToDictionary(f => Id(f!["id"]), f => f!);
@@ -183,7 +183,7 @@ public sealed class NativeWorkspaceImport {
                     copied["isCollapsed"] = false;
                     folders.Add((JsonNode)copied); mapping[folder.Id] = identity;
                 }
-                int pinned = destinationId is null ? 0 : Items(destination, "tabs").Count(t => Placement(t!) == TabPlacementCodes.Pinned);
+                int pinned = destinationId is null ? 0 : Items(destination, SpaceSections.TabsSection).Count(t => Placement(t!) == TabPlacementCodes.Pinned);
                 var overflowFolder = folders.FirstOrDefault(f => string.Equals(f!["title"]!.GetValue<string>(), "Imported Pinned Tabs", StringComparison.OrdinalIgnoreCase));
                 var edited = additions.Select(tab => {
                     var copy = Copy(tab); var placement = PlacementFor(tab); copy["placement"] = placement;
@@ -206,8 +206,8 @@ public sealed class NativeWorkspaceImport {
                     if (placement == TabPlacementCodes.Pinned) copy["symbol"] = "pin.fill";
                     return copy;
                 }).ToArray();
-                destination["folders"] = destinationId is null ? folders : folders.DeepClone();
-                var existing = destinationId is null ? [] : Items(destination, "tabs").Select(t => t!).ToArray();
+                destination[SpaceSections.FoldersSection] = destinationId is null ? folders : folders.DeepClone();
+                var existing = destinationId is null ? [] : Items(destination, SpaceSections.TabsSection).Select(t => t!).ToArray();
                 // The tab the source chose to show, when it was imported; a new
                 // Space otherwise shows its first imported tab.
                 Guid? requested = shownTabs.TryGetValue(input, out var chosen) ? chosen : null;
@@ -228,17 +228,17 @@ public sealed class NativeWorkspaceImport {
         var historyIds = originalHistoryIds.Values.SelectMany(ids => ids).ToHashSet();
         foreach (var space in spaces.Select(s => s!)) {
             Dictionary<Guid, Guid> mapping = [];
-            foreach (var folder in Items(space, "folders")) {
+            foreach (var folder in Items(space, SpaceSections.FoldersSection)) {
                 var old = Id(folder!["id"]); var id = old;
                 if (!originalSpaces.Contains(space) || !originalFolderIds[space].Contains(old))
                     while (!folderIds.Add(id)) id = Guid.NewGuid();
                 mapping.TryAdd(old, id); folder["id"] = SwiftId(id);
             }
-            foreach (var folder in Items(space, "folders"))
+            foreach (var folder in Items(space, SpaceSections.FoldersSection))
                 if (OptionalId(folder!["parentID"]) is { } parent && mapping.TryGetValue(parent, out var id)) folder["parentID"] = SwiftId(id);
-            foreach (var tab in Items(space, "tabs"))
+            foreach (var tab in Items(space, SpaceSections.TabsSection))
                 if (OptionalId(tab!["folderID"]) is { } folder && mapping.TryGetValue(folder, out var id)) tab["folderID"] = SwiftId(id);
-            foreach (var entry in Items(space, "history")) {
+            foreach (var entry in Items(space, SpaceSections.HistorySection)) {
                 var old = Id(entry!["id"]); var id = old;
                 if (!originalSpaces.Contains(space) || !originalHistoryIds[space].Contains(old))
                     while (!historyIds.Add(id)) id = Guid.NewGuid();
@@ -250,14 +250,14 @@ public sealed class NativeWorkspaceImport {
         var shown = new List<(int Space, int Tab)>();
         for (int si = 0; si < spaces.Count; si++)
             if (shownTabs.TryGetValue(spaces[si]!, out var tab)
-                && Items(spaces[si]!, "tabs").Select(t => Id(t!["id"])).ToList().IndexOf(tab) is var ti and >= 0)
+                && Items(spaces[si]!, SpaceSections.TabsSection).Select(t => Id(t!["id"])).ToList().IndexOf(tab) is var ti and >= 0)
                 shown.Add((si, ti));
         var assets = new JsonArray();
         for (int si = 0; si < spaces.Count; si++)
-            foreach (var section in new[] { "tabs", "archivedTabs" }) {
+            foreach (var section in new[] { SpaceSections.TabsSection, SpaceSections.ArchivedTabsSection }) {
                 int ti = 0;
                 foreach (var node in Items(spaces[si]!, section)) {
-                    if (section == "archivedTabs" && node!["tab"]!["url"] is null && node["tab"]!["nativeContent"] is null) continue;
+                    if (section == SpaceSections.ArchivedTabsSection && node!["tab"]!["url"] is null && node["tab"]!["nativeContent"] is null) continue;
                     if (origins.TryGetValue(node!, out var origin)) assets.Add((JsonNode)new JsonObject {
                         ["spaceIndex"] = si,
                         ["tabIndex"] = ti,
@@ -275,7 +275,7 @@ public sealed class NativeWorkspaceImport {
         var hint = new SessionSelectionHint();
         if (affectedIndex >= 0) hint.SelectSpace(Id(repairedSpaces[affectedIndex]!["id"]));
         foreach (var (si, ti) in shown)
-            hint.SelectTab(SessionView.Empty, Id(repairedSpaces[si]!["id"]), Id(Items(repairedSpaces[si]!, "tabs")[ti]!["id"]));
+            hint.SelectTab(SessionView.Empty, Id(repairedSpaces[si]!["id"]), Id(Items(repairedSpaces[si]!, SpaceSections.TabsSection)[ti]!["id"]));
         repaired["assets"] = assets;
         repaired[SessionSelectionHint.Key] = hint.Encode();
         return repaired;

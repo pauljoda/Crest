@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
 using CrestCore.Domain;
@@ -56,6 +57,21 @@ internal static class MediaSessionCodes {
         MediaSessionDisposition.Retire => "retire",
         MediaSessionDisposition.Publish => "publish",
         _ => "clear"
+    };
+
+    public static JsonObject DecisionAnswer(MediaSessionEventDecision decision) => new() {
+        ["accepted"] = decision.Accepted,
+        ["evictOldest"] = decision.EvictOldest,
+        ["disposition"] = Disposition(decision.Disposition),
+        ["supersedesTabSiblings"] = decision.SupersedesTabSiblings,
+        ["ordinal"] = decision.Ordinal,
+        ["nextOrdinal"] = decision.NextOrdinal,
+        ["clearsDismissal"] = decision.ClearsDismissal
+    };
+
+    public static JsonObject ArbitrationAnswer(MediaSessionArbitration arbitration) => new() {
+        ["order"] = new JsonArray(arbitration.Order.Select(index => (JsonNode?)JsonValue.Create(index)).ToArray()),
+        ["nowPlaying"] = arbitration.NowPlaying
     };
 
     #endregion

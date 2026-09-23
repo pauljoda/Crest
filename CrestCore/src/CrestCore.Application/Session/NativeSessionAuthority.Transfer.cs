@@ -18,7 +18,7 @@ public sealed partial class NativeSessionAuthority {
 
     private static JsonObject TransferProjection(SpaceDocument space) {
         var value = space.Metadata.DeepClone().AsObject();
-        foreach (var section in Sections) value[section] = new JsonArray(section is "history" or "archivedTabs" ? [] :
+        foreach (var section in Sections) value[section] = new JsonArray(section is SpaceSections.HistorySection or SpaceSections.ArchivedTabsSection ? [] :
             space.Sections[section].Select(n => n.DeepClone()).ToArray());
         return value;
     }
@@ -28,9 +28,9 @@ public sealed partial class NativeSessionAuthority {
             var edited = edits.FirstOrDefault(n => Id(n["id"]) == Id(space.Metadata["id"]));
             if (edited is null) return space;
             var sections = space.Sections.ToDictionary(p => p.Key, p => p.Value);
-            foreach (var section in new[] { "tabs", "folders" }) sections[section] = edited[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
-            if (edited["archivedTabs"] is JsonArray archive && archive.Count > 0)
-                sections["archivedTabs"] = space.ArchivedTabs.Concat(archive.Select(n => n!.DeepClone())).ToArray();
+            foreach (var section in new[] { SpaceSections.TabsSection, SpaceSections.FoldersSection }) sections[section] = edited[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
+            if (edited[SpaceSections.ArchivedTabsSection] is JsonArray archive && archive.Count > 0)
+                sections[SpaceSections.ArchivedTabsSection] = space.ArchivedTabs.Concat(archive.Select(n => n!.DeepClone())).ToArray();
             return new SpaceDocument(SpaceFields(edited), sections);
         }).ToArray();
         var next = new SessionDocument(document.Metadata, spaces); Validate(next); return next;

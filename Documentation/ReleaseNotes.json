@@ -2073,6 +2073,10 @@
     "core-data-only-selection": {
       "category": "internal",
       "message": "Keep the viewed Space and tab as window state, remove the Swift session editing surface and its copies of core rules, and route launch cleanup and retention through core commands."
+    },
+    "core-typed-policy-requests": {
+      "category": "internal",
+      "message": "Decode every core policy request into typed records and keep all rule codes, section names and mode values in their central definitions."
     }
   }
 }

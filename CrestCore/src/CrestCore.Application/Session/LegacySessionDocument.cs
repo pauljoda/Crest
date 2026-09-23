@@ -101,7 +101,7 @@ public sealed class LegacySessionDocument {
         foreach (var value in Array(session["spaces"])) {
             var s = Object(value); var id = Id(s["id"]); Remember(spaces, id, s);
             var folderStates = new List<FolderState>();
-            foreach (var fv in Array(s["folders"])) {
+            foreach (var fv in Array(s[SpaceSections.FoldersSection])) {
                 var f = Object(fv); var fid = Id(f["id"]); Remember(folders, fid, f);
                 var parent = OptionalId(f["parentID"]);
                 folderStates.Add(new(fid, Text(f["title"]) ?? "Folder", Text(f["location"]) == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
@@ -109,12 +109,12 @@ public sealed class LegacySessionDocument {
                     OptionalDate(f["collapseModifiedAt"]), OptionalId(f["orderAnchorTabID"])));
             }
             var archived = new List<ArchiveState>();
-            foreach (var av in Array(s["archivedTabs"])) {
+            foreach (var av in Array(s[SpaceSections.ArchivedTabsSection])) {
                 var a = Object(av); var tab = ReadTab(Object(a["tab"])); Remember(archives, tab.Id, a);
                 archived.Add(new(tab, Date(a["archivedAt"]), Text(a["reason"]) ?? ArchiveReasons.Closed));
             }
             var visits = new List<HistoryVisit>();
-            foreach (var hv in Array(s["history"])) {
+            foreach (var hv in Array(s[SpaceSections.HistorySection])) {
                 var h = Object(hv); var hid = Id(h["id"]); Remember(histories, hid, h);
                 visits.Add(new(hid, Text(h["url"]) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedUrl), Text(h["title"]) ?? "",
                     Date(h["firstVisitedAt"]), Date(h["lastVisitedAt"]), h["visitCount"]?.GetValue<int>() ?? 1));
@@ -132,7 +132,7 @@ public sealed class LegacySessionDocument {
             contentBlockingPolicies.Add(id, ReadEnum(preferences?["contentBlockingPolicy"], ContentBlockingPolicy.Balanced, ContentBlockingPolicy.Balanced));
             states.Add(new(id, Id(Object(s["profile"])["id"]), Text(s["name"]) ?? "Space",
                 Text(s["accessPolicy"]) is { } policy && policy != SpaceAccessPolicyCodes.Open,
-                Array(s["tabs"]).Select(t => ReadTab(Object(t))).ToArray(), folderStates, archived, visits,
+                Array(s[SpaceSections.TabsSection]).Select(t => ReadTab(Object(t))).ToArray(), folderStates, archived, visits,
                 search,
                 Text(s["accessPolicy"]) is null or SpaceAccessPolicyCodes.Open or SpaceAccessPolicyCodes.DeviceOwnerAuthentication, retention,
                 ReadEnum(preferences?["contentBlockingPolicy"], ContentBlockingPolicy.Balanced, ContentBlockingPolicy.Balanced)));
@@ -231,18 +231,18 @@ public sealed class LegacySessionDocument {
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;
                 preferences["contentBlockingPolicy"] = EnumName(space.ContentBlocking);
             }
-            s["tabs"] = new JsonArray(space.Tabs.Select(tab => (JsonNode)TabRecord(tab).Encode(tab)).ToArray());
-            s["folders"] = new JsonArray(space.Folders.Select(f => {
+            s[SpaceSections.TabsSection] = new JsonArray(space.Tabs.Select(tab => (JsonNode)TabRecord(tab).Encode(tab)).ToArray());
+            s[SpaceSections.FoldersSection] = new JsonArray(space.Folders.Select(f => {
                 var value = Copy(folders, f.Id); value["id"] = SwiftId(f.Id); value["title"] = f.Name;
                 value["location"] = TabPlacementCodes.Name(f.Location); value["parentID"] = SwiftId(f.ParentId);
                 value["isCollapsed"] = f.IsCollapsed; WriteDate(value, "collapseModifiedAt", f.CollapseModifiedAt);
                 value["orderAnchorTabID"] = SwiftId(f.OrderAnchorTabId); return (JsonNode)value;
             }).ToArray());
-            s["archivedTabs"] = new JsonArray(space.Archive.Select(a => {
+            s[SpaceSections.ArchivedTabsSection] = new JsonArray(space.Archive.Select(a => {
                 var value = Copy(archives, a.Tab.Id); value["tab"] = TabRecord(a.Tab).Encode(a.Tab);
                 WriteDate(value, "archivedAt", a.ClosedAt); value["reason"] = a.Reason; return (JsonNode)value;
             }).ToArray());
-            s["history"] = new JsonArray(space.History.Select(h => {
+            s[SpaceSections.HistorySection] = new JsonArray(space.History.Select(h => {
                 var value = Copy(histories, h.Id); value["id"] = h.Id.ToString().ToUpperInvariant();
                 value["url"] = h.Url; value["title"] = h.Title; WriteDate(value, "firstVisitedAt", h.FirstVisitedAt);
                 WriteDate(value, "lastVisitedAt", h.VisitedAt); value["visitCount"] = h.VisitCount; return (JsonNode)value;

@@ -62,6 +62,34 @@ internal static class DownloadCodes {
         ["acknowledged"] = item.IsAcknowledged
     };
 
+    public static JsonObject Estimator(DownloadTransferEstimator estimator) => new() {
+        ["publishedBytes"] = estimator.PublishedBytes,
+        ["knownTotalBytes"] = estimator.KnownTotalBytes,
+        ["totalIsUnreliable"] = estimator.TotalIsUnreliable,
+        ["measurementBytes"] = estimator.MeasurementBytes,
+        ["measurementUptime"] = estimator.MeasurementUptime,
+        ["smoothedBytesPerSecond"] = estimator.SmoothedBytesPerSecond
+    };
+
+    /// The next estimator state, to send back with the following sample, and
+    /// the telemetry this sample publishes.
+    public static JsonObject ProgressAnswer(DownloadTransferEstimator next, DownloadTransferSample sample) => new() {
+        ["estimator"] = Estimator(next),
+        ["telemetry"] = Telemetry(sample.Telemetry),
+        ["progress"] = sample.Progress
+    };
+
+    public static JsonObject RiskAnswer(DownloadRiskAssessment assessment, bool requiresConfirmation) => new() {
+        ["sanitizedFilename"] = assessment.SanitizedFilename,
+        ["reasons"] = Reasons(assessment.Reasons),
+        ["requiresConfirmation"] = requiresConfirmation
+    };
+
+    public static JsonObject AutomaticAnswer(AutomaticDownloadVerdict verdict) => new() {
+        ["action"] = Action(verdict.Action),
+        ["hasAllowedAutomaticDownload"] = verdict.HasAllowedAutomaticDownload
+    };
+
     #endregion
 
     #region Actions - Decoding
@@ -84,16 +112,23 @@ internal static class DownloadCodes {
             value.GetProperty("isPaused").GetBoolean());
     }
 
-    public static JsonElement? Optional(JsonElement value, string field) =>
-        value.TryGetProperty(field, out var member) && member.ValueKind != JsonValueKind.Null ? member : null;
+    /// The estimator state a previous `downloads.progress` answer returned.
+    public static DownloadTransferEstimator ParseEstimator(JsonElement state) {
+        Protocol.Members(state, "publishedBytes", "knownTotalBytes", "totalIsUnreliable", "measurementBytes",
+            "measurementUptime", "smoothedBytesPerSecond");
+        return new(state.GetProperty("publishedBytes").GetInt64(),
+            Optional(state, "knownTotalBytes")?.GetInt64(),
+            state.GetProperty("totalIsUnreliable").GetBoolean(),
+            Optional(state, "measurementBytes")?.GetInt64(),
+            Optional(state, "measurementUptime")?.GetDouble(),
+            Optional(state, "smoothedBytesPerSecond")?.GetDouble());
+    }
+
+    public static JsonElement? Optional(JsonElement value, string field) => PolicyFields.Optional(value, field);
 
     /// A string that may be empty, such as a filename an engine could not name.
-    public static string AnyText(JsonElement value, string field, int maximumLength) {
-        var member = value.GetProperty(field);
-        if (member.ValueKind != JsonValueKind.String || member.GetString() is not { } text || text.Length > maximumLength)
-            throw new ProtocolException(ProtocolErrorCodes.InvalidString);
-        return text;
-    }
+    public static string AnyText(JsonElement value, string field, int maximumLength) =>
+        PolicyFields.AnyText(value, field, maximumLength);
 
     #endregion
 }

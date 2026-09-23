@@ -9,13 +9,19 @@ internal sealed record SpaceSections(IReadOnlyList<JsonNode> Tabs, IReadOnlyList
     : IReadOnlyDictionary<string, IReadOnlyList<JsonNode>> {
     #region Variables
 
-    internal static readonly IReadOnlyList<string> Names = Array.AsReadOnly<string>(["tabs", "folders", "history", "archivedTabs"]);
+    public const string TabsSection = "tabs";
+    public const string FoldersSection = "folders";
+    public const string HistorySection = "history";
+    public const string ArchivedTabsSection = "archivedTabs";
+
+    internal static readonly IReadOnlyList<string> Names =
+        Array.AsReadOnly<string>([TabsSection, FoldersSection, HistorySection, ArchivedTabsSection]);
 
     public IReadOnlyList<JsonNode> this[string key] => key switch {
-        "tabs" => Tabs,
-        "folders" => Folders,
-        "history" => History,
-        "archivedTabs" => ArchivedTabs,
+        TabsSection => Tabs,
+        FoldersSection => Folders,
+        HistorySection => History,
+        ArchivedTabsSection => ArchivedTabs,
         _ => throw new KeyNotFoundException(key)
     };
 

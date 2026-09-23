@@ -46,11 +46,11 @@ public sealed partial class NativeSessionAuthority {
                 SessionEditArguments? editArguments = null;
                 if (operation == SessionOperation.ArchiveRestore) {
                     var tabId = Id(args["tabId"]);
-                    var archiveIndex = Array.FindIndex(sections["archivedTabs"].ToArray(), a => Id(a["tab"]!["id"]) == tabId);
+                    var archiveIndex = Array.FindIndex(sections[SpaceSections.ArchivedTabsSection].ToArray(), a => Id(a["tab"]!["id"]) == tabId);
                     if (archiveIndex < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownArchivedTab);
-                    var archived = sections["archivedTabs"][archiveIndex];
+                    var archived = sections[SpaceSections.ArchivedTabsSection][archiveIndex];
                     editArguments = new() { Tab = new SessionTabRecord(archived["tab"]!.AsObject()) };
-                    sections["archivedTabs"] = sections["archivedTabs"].Where((_, index) => index != archiveIndex).ToArray();
+                    sections[SpaceSections.ArchivedTabsSection] = sections[SpaceSections.ArchivedTabsSection].Where((_, index) => index != archiveIndex).ToArray();
                     change["removedArchiveIndices"] = new JsonArray(JsonValue.Create(archiveIndex));
                 } else if (operation is SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup) {
                     var term = fields["browsingPreferences"]?["currentTabCleanupPolicy"]?.GetValue<string>();
@@ -64,7 +64,7 @@ public sealed partial class NativeSessionAuthority {
                 if (editArguments is not null) {
                     var compact = fields.DeepClone().AsObject();
                     foreach (var section in Sections)
-                        compact[section] = new JsonArray(section is "history" or "archivedTabs" ? []
+                        compact[section] = new JsonArray(section is SpaceSections.HistorySection or SpaceSections.ArchivedTabsSection ? []
                             : sections[section].Select(n => n.DeepClone()).ToArray());
                     // Cleanup keeps the tab this window shows; a restored tab is the
                     // one it should show next.
@@ -73,11 +73,11 @@ public sealed partial class NativeSessionAuthority {
                         compact, editArguments, now, view.Tab(spaceId));
                     var edited = SessionEditResult.Decode(NativeSessionEditor.Evaluate(editRequest.Encode()));
                     var result = edited.Space;
-                    if (operation == SessionOperation.ArchiveRestore || !JsonNode.DeepEquals(compact["tabs"], result["tabs"])) {
-                        foreach (var section in new[] { "tabs", "folders" })
+                    if (operation == SessionOperation.ArchiveRestore || !JsonNode.DeepEquals(compact[SpaceSections.TabsSection], result[SpaceSections.TabsSection])) {
+                        foreach (var section in new[] { SpaceSections.TabsSection, SpaceSections.FoldersSection })
                             sections[section] = result[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
                         fields["splitGroups"] = result["splitGroups"]?.DeepClone();
-                        sections["archivedTabs"] = sections["archivedTabs"].Concat(result["archivedTabs"]!.AsArray().Select(n => n!.DeepClone())).ToArray();
+                        sections[SpaceSections.ArchivedTabsSection] = sections[SpaceSections.ArchivedTabsSection].Concat(result[SpaceSections.ArchivedTabsSection]!.AsArray().Select(n => n!.DeepClone())).ToArray();
                         var spaceHint = new SessionSelectionHint().SelectTab(view, spaceId, edited.SelectedTabId);
                         hint.SelectTab(view, spaceId, edited.SelectedTabId);
                         change["tabEdit"] = JsonNode.Parse(edited.Encode(spaceHint));
@@ -85,15 +85,15 @@ public sealed partial class NativeSessionAuthority {
                 }
                 if (operation == SessionOperation.RecordsSweep) {
                     foreach (var (section, preference, date, output) in new[] {
-                        ("history", "history", "lastVisitedAt", "removedHistory"),
-                        ("archivedTabs", "archive", "archivedAt", "removedArchiveIndices") }) {
+                        (SpaceSections.HistorySection, "history", "lastVisitedAt", "removedHistory"),
+                        (SpaceSections.ArchivedTabsSection, "archive", "archivedAt", "removedArchiveIndices") }) {
                         var term = fields["browsingPreferences"]?["dataRetention"]?[preference]?.GetValue<string>();
                         var policy = Enum.TryParse<DataRetention>(term, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : DataRetention.Forever;
                         if (RetentionPreferences.Lifetime(policy) is not { } lifetime) continue;
                         var records = sections[section];
                         var expired = RecordRemovalPolicy.Expired(records.Select(n => n[date]!.GetValue<double>()).ToArray(), now, lifetime.TotalSeconds).ToHashSet();
                         if (expired.Count == 0) continue;
-                        change[output] = section == "archivedTabs"
+                        change[output] = section == SpaceSections.ArchivedTabsSection
                             ? new JsonArray(expired.Order().Select(i => (JsonNode?)JsonValue.Create(i)).ToArray())
                             : IDs(records.Where((_, i) => expired.Contains(i)).Select(n => RecordId(n, section)));
                         sections[section] = records.Where((_, i) => !expired.Contains(i)).ToArray();
@@ -118,7 +118,7 @@ public sealed partial class NativeSessionAuthority {
 
     private static void EditHistory(SessionOperation operation, JsonObject args, double now,
         Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change) {
-        var history = sections["history"];
+        var history = sections[SpaceSections.HistorySection];
         if (operation == SessionOperation.HistoryVisit) {
             var url = HistoryPolicy.Normalize(args["url"]!.GetValue<string>());
             if (url is null) return;
@@ -133,7 +133,7 @@ public sealed partial class NativeSessionAuthority {
             var retained = next.Select(h => Id(h["id"])).ToHashSet();
             change["removedHistory"] = IDs(history.Where(h => !retained.Contains(Id(h["id"]))).Select(h => Id(h["id"])));
             change["historyEntry"] = entry.DeepClone();
-            sections["history"] = next;
+            sections[SpaceSections.HistorySection] = next;
             return;
         }
         HashSet<int> removed;
@@ -151,13 +151,13 @@ public sealed partial class NativeSessionAuthority {
         }
         if (removed.Count == 0) return;
         change["removedHistory"] = IDs(history.Where((_, i) => removed.Contains(i)).Select(h => Id(h["id"])));
-        sections["history"] = history.Where((_, i) => !removed.Contains(i)).ToArray();
+        sections[SpaceSections.HistorySection] = history.Where((_, i) => !removed.Contains(i)).ToArray();
     }
 
     private static void EditSplitMetadata(SessionOperation operation, JsonObject args, double now, JsonObject fields,
         Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change) {
         var id = Id(args["groupId"]);
-        var run = sections["tabs"].SkipWhile(t => t["splitGroupID"] is null || Id(t["splitGroupID"]) != id)
+        var run = sections[SpaceSections.TabsSection].SkipWhile(t => t["splitGroupID"] is null || Id(t["splitGroupID"]) != id)
             .TakeWhile(t => t["splitGroupID"] is not null && Id(t["splitGroupID"]) == id);
         if (run.Take(2).Count() < 2) throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitGroup);
         var (field, clock) = operation switch {

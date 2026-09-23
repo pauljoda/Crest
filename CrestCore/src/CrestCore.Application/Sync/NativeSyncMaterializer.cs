@@ -30,7 +30,7 @@ public static class NativeSyncMaterializer {
         OptionalId(node["parentID"]));
 
     private static Dictionary<Guid, BrowserFolder> LocalFolders(JsonNode? space)
-        => Local(space, "folders").Select(Folder).ToDictionary(f => f.Id);
+        => Local(space, SpaceSections.FoldersSection).Select(Folder).ToDictionary(f => f.Id);
 
     private static NativeSyncDocumentException Error(string code, Guid id) => new(code, id.ToString("D"));
 
@@ -75,7 +75,7 @@ public static class NativeSyncMaterializer {
             var tabs = Tabs(id, records, policy, local, folders, owners, deleted);
             var archive = Archive(id, records, policy, local, tabs, now);
             var history = History(id, records, policy, local);
-            var localSplitIds = Local(local, "tabs").Where(t => !PortableTab(t) && t["splitGroupID"] is not null)
+            var localSplitIds = Local(local, SpaceSections.TabsSection).Where(t => !PortableTab(t) && t["splitGroupID"] is not null)
                 .Select(t => Id(t["splitGroupID"])).ToHashSet();
             var groups = (remote["splitGroups"] is JsonArray supplied ? supplied.Select(n => n!) : Local(local, "splitGroups")).ToList();
             var groupIds = groups.Select(g => Id(g["id"])).ToHashSet();
@@ -92,8 +92,8 @@ public static class NativeSyncMaterializer {
             value["profile"] = new JsonObject { ["id"] = remote["profileID"]!.DeepClone() };
             if (AccessPolicy(local, remote, access, id, profile) is { } accessPolicy) value["accessPolicy"] = accessPolicy;
             else value.Remove("accessPolicy");
-            value["folders"] = Array(folders); value["tabs"] = Array(tabs); value["splitGroups"] = Array(groups);
-            value["archivedTabs"] = Array(archive); value["history"] = Array(history);
+            value[SpaceSections.FoldersSection] = Array(folders); value[SpaceSections.TabsSection] = Array(tabs); value["splitGroups"] = Array(groups);
+            value[SpaceSections.ArchivedTabsSection] = Array(archive); value[SpaceSections.HistorySection] = Array(history);
             if (local?["credentialPreferences"] is { } credentials) value["credentialPreferences"] = credentials.DeepClone();
             spaces.Add((JsonNode)value);
         }
@@ -123,7 +123,7 @@ public static class NativeSyncMaterializer {
             return (JsonNode)value;
         }).ToList();
         var included = resolved.Select(f => f.Id).ToHashSet();
-        result.AddRange(Local(local, "folders").Where(f => !included.Contains(Id(f["id"])) && !policy.Includes(Placement(f, "location"))));
+        result.AddRange(Local(local, SpaceSections.FoldersSection).Where(f => !included.Contains(Id(f["id"])) && !policy.Includes(Placement(f, "location"))));
         return result;
     }
 
@@ -143,10 +143,10 @@ public static class NativeSyncMaterializer {
 
     private static List<JsonNode> Tabs(Guid space, IReadOnlyList<JsonObject> records, SyncPreferences policy, JsonNode? local,
         IReadOnlyList<JsonNode> folders, IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted) {
-        var locals = Local(local, "tabs").ToArray();
+        var locals = Local(local, SpaceSections.TabsSection).ToArray();
         var localOnly = locals.Select((tab, index) => (tab, index)).Where(t => !PortableTab(t.tab)).ToArray();
         var localOnlyIds = localOnly.Select(t => Id(t.tab["id"]))
-            .Concat(Local(local, "archivedTabs").Where(a => !PortableTab(a["tab"]!)).Select(a => Id(a["tab"]!["id"]))).ToHashSet();
+            .Concat(Local(local, SpaceSections.ArchivedTabsSection).Where(a => !PortableTab(a["tab"]!)).Select(a => Id(a["tab"]!["id"]))).ToHashSet();
         var synced = Ordered(Payloads(records, SyncRecordKinds.Tab, space)
                 .Where(t => PortableTab(t) && !localOnlyIds.Contains(Id(t["id"])) && policy.Includes(Placement(t))))
             .OrderBy(t => Placement(t) switch { TabPlacement.Pinned => 0, TabPlacement.Saved => 1, _ => 2 }).ToArray();
@@ -172,9 +172,9 @@ public static class NativeSyncMaterializer {
 
     private static List<JsonNode> Archive(Guid space, IReadOnlyList<JsonObject> records, SyncPreferences policy, JsonNode? local,
         IReadOnlyList<JsonNode> tabs, double now) {
-        if (!policy.HistoryAndArchive) return Local(local, "archivedTabs").ToList();
+        if (!policy.HistoryAndArchive) return Local(local, SpaceSections.ArchivedTabsSection).ToList();
         var active = tabs.Select(t => Id(t["id"])).ToHashSet();
-        var byId = Local(local, "archivedTabs").ToDictionary(a => Id(a["tab"]!["id"]));
+        var byId = Local(local, SpaceSections.ArchivedTabsSection).ToDictionary(a => Id(a["tab"]!["id"]));
         var localOnly = byId.Values.Where(a => !PortableTab(a["tab"]!) && !active.Contains(Id(a["tab"]!["id"]))).ToArray();
         var localOnlyIds = localOnly.Select(a => Id(a["tab"]!["id"])).ToHashSet();
         var remote = Payloads(records, SyncRecordKinds.Archive, space).Where(a => PortableTab(a["tab"]!)
@@ -198,7 +198,7 @@ public static class NativeSyncMaterializer {
             result.Add(value);
         }
         var projected = result.Select(a => Id(a["tab"]!["id"])).ToHashSet();
-        var localTabs = Local(local, "tabs").Where(PortableTab).ToDictionary(t => Id(t["id"]));
+        var localTabs = Local(local, SpaceSections.TabsSection).Where(PortableTab).ToDictionary(t => Id(t["id"]));
         foreach (var record in records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Tab && Id(r["spaceID"]) == space
             && Text(r["tombstone"]?["reason"]) == SyncDeletionReasons.ExplicitDelete)) {
             var id = Id(record["id"]!["value"]);
@@ -214,8 +214,8 @@ public static class NativeSyncMaterializer {
     }
 
     private static List<JsonNode> History(Guid space, IReadOnlyList<JsonObject> records, SyncPreferences policy, JsonNode? local) {
-        if (!policy.HistoryAndArchive) return Local(local, "history").ToList();
-        var localOnly = Local(local, "history").Where(h => !SyncContentPolicy.Includes(Text(h["url"]))).ToArray();
+        if (!policy.HistoryAndArchive) return Local(local, SpaceSections.HistorySection).ToList();
+        var localOnly = Local(local, SpaceSections.HistorySection).Where(h => !SyncContentPolicy.Includes(Text(h["url"]))).ToArray();
         var localIds = localOnly.Select(h => Id(h["id"])).ToHashSet();
         var synced = Payloads(records, SyncRecordKinds.History, space).Where(h => SyncContentPolicy.Includes(Text(h["url"])) && !localIds.Contains(Id(h["id"])))
             .OrderByDescending(h => h["lastVisitedAt"]!.GetValue<double>()).ThenBy(h => Id(h["id"]).ToString("D"), StringComparer.Ordinal)

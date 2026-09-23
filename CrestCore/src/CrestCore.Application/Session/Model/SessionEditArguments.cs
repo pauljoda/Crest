@@ -45,7 +45,7 @@ internal sealed record SessionEditArguments {
     public bool? HasFavicon { get; init; }
     public string? Title { get; init; }
     public string? Url { get; init; }
-    public string? Mode { get; init; }
+    public TabIconMode? Mode { get; init; }
     public string? Emoji { get; init; }
     public string? Symbol { get; init; }
     public string? FolderSymbolValue { get; init; }
@@ -107,7 +107,7 @@ internal sealed record SessionEditArguments {
             HasFavicon = Flag("hasFavicon"),
             Title = Text("title"),
             Url = Text("url"),
-            Mode = Text("mode"),
+            Mode = Text("mode") is { } mode ? TabIconModeCodes.Parse(mode) : null,
             Emoji = Text("emoji"),
             Symbol = Text("symbol"),
             FolderSymbolValue = operation == SessionOperation.FolderSymbol ? Text("value") : null
@@ -169,13 +169,14 @@ internal sealed record SessionEditArguments {
         PutId("before", Before); PutId("after", After); PutId("groupId", GroupId);
         if (Placement is { } placement) value["placement"] = TabPlacementCodes.Name(placement);
         if (Action is { } action) value["action"] = SavedLocationActionCodes.Name(action);
+        if (Mode is { } mode) value["mode"] = TabIconModeCodes.Name(mode);
         if (Index is { } index) value["index"] = index;
         if (Offset is { } offset) value["offset"] = offset;
         if (Lifetime is { } lifetime) value["lifetime"] = lifetime;
         PutFlag("select", Select); PutFlag("detach", Detach); PutFlag("returnToSavedURL", ReturnToSavedUrl);
         PutFlag("keep", Keep); PutFlag("collapsed", Collapsed); PutFlag("resetArchivePlacement", ResetArchivePlacement);
         PutFlag("faviconChanged", FaviconChanged); PutFlag("hasFavicon", HasFavicon);
-        PutText("title", Title); PutText("url", Url); PutText("mode", Mode); PutText("emoji", Emoji); PutText("symbol", Symbol);
+        PutText("title", Title); PutText("url", Url); PutText("emoji", Emoji); PutText("symbol", Symbol);
         return value;
     }
 

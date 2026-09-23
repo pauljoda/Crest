@@ -77,7 +77,7 @@ public sealed partial class NativeSessionAuthority {
         return id;
     }
 
-    private static Guid RecordId(JsonNode value, string section) => Id(section == "archivedTabs" ? value["tab"]!["id"] : value["id"]);
+    private static Guid RecordId(JsonNode value, string section) => Id(section == SpaceSections.ArchivedTabsSection ? value["tab"]!["id"] : value["id"]);
 
     private static JsonObject Fields(JsonObject input, IReadOnlyCollection<string> excluded)
         => new(input.Where(f => !excluded.Contains(f.Key)).Select(f => new KeyValuePair<string, JsonNode?>(f.Key, f.Value?.DeepClone())));

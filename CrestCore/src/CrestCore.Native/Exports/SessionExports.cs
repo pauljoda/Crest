@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Native;
@@ -176,7 +177,7 @@ public static unsafe partial class Exports {
             id = checked((ulong)Interlocked.Increment(ref nextHandle));
             snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))
-                throw new InvalidOperationException("handle_collision");
+                throw new InvalidOperationException(ProtocolErrorCodes.HandleCollision);
             *replacement = id; *checkpoint = snapshot;
             return CoreStatus.Ok;
         } catch (Exception e) {
@@ -199,7 +200,7 @@ public static unsafe partial class Exports {
             id = checked((ulong)Interlocked.Increment(ref nextHandle));
             snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))
-                throw new InvalidOperationException("handle_collision");
+                throw new InvalidOperationException(ProtocolErrorCodes.HandleCollision);
             *replacement = id; *checkpoint = snapshot;
             return CoreStatus.Ok;
         } catch (Exception e) {
@@ -224,7 +225,7 @@ public static unsafe partial class Exports {
             id = checked((ulong)Interlocked.Increment(ref nextHandle));
             snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))
-                throw new InvalidOperationException("handle_collision");
+                throw new InvalidOperationException(ProtocolErrorCodes.HandleCollision);
             *replacement = id; *checkpoint = snapshot;
             return CoreStatus.Ok;
         } catch (Exception e) {

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
 using CrestCore.Domain;
@@ -61,6 +62,41 @@ internal static class CredentialCodes {
         _ => "unsupportedPlatform"
     };
 
+    public static JsonObject CaptureAnswer(CredentialCaptureDecision decision) => new() {
+        ["action"] = Action(decision.Action),
+        ["usernameSource"] = Source(decision.UsernameSource),
+        ["clearsUsernameHint"] = decision.ClearsUsernameHint,
+        ["isCrossOriginFrame"] = decision.IsCrossOriginFrame,
+        ["anchorsToField"] = decision.AnchorsToField,
+        ["candidateLifetime"] = CredentialCapturePolicy.CandidateLifetime,
+        ["usernameHintLifetime"] = CredentialCapturePolicy.UsernameHintLifetime
+    };
+
+    public static JsonObject AllowedAnswer(bool allowed) => new() { ["allowed"] = allowed };
+
+    public static JsonObject ValidityAnswer(CredentialSaveValidity validity) => new() { ["verdict"] = Validity(validity) };
+
+    /// The chosen record's identity, or null when none qualifies.
+    public static JsonObject RecordAnswer(CredentialRecord? record) => new() { ["id"] = record?.Id.ToString() };
+
+    public static JsonObject PlanAnswer(CredentialSavePlan plan) => new() {
+        ["plan"] = Plan(plan.Kind),
+        ["id"] = plan.Id?.ToString(),
+        ["requiresConfirmation"] = plan.RequiresConfirmation
+    };
+
+    public static JsonObject RecipeAnswer(StrongPasswordRecipe recipe) => new() {
+        ["length"] = recipe.Length,
+        ["groups"] = new JsonArray(recipe.Groups.Select(group => (JsonNode?)JsonValue.Create(group)).ToArray())
+    };
+
+    public static JsonObject AvailabilityAnswer(SystemPasswordWriteThroughAvailability availability) =>
+        new() { ["availability"] = Availability(availability) };
+
+    public static JsonObject OfferAnswer(bool offers) => new() { ["offers"] = offers };
+
+    public static JsonObject StatusAnswer(PasskeyAccessStatus status) => new() { ["status"] = Status(status) };
+
     #endregion
 
     #region Actions - Decoding
@@ -119,8 +155,8 @@ internal static class CredentialCodes {
     public static CredentialRecord Record(JsonElement value, bool includesUsername) {
         if (includesUsername) Protocol.Members(value, "id", "username", "updatedAt", "lastUsedAt");
         else Protocol.Members(value, "id", "updatedAt", "lastUsedAt");
-        return new(Protocol.Id(value, "id"), includesUsername ? DownloadCodes.AnyText(value, "username", MaximumUsernameLength) : null,
-            value.GetProperty("updatedAt").GetDouble(), DownloadCodes.Optional(value, "lastUsedAt")?.GetDouble());
+        return new(Protocol.Id(value, "id"), includesUsername ? PolicyFields.AnyText(value, "username", MaximumUsernameLength) : null,
+            PolicyFields.Number(value, "updatedAt"), PolicyFields.OptionalNumber(value, "lastUsedAt"));
     }
 
     #endregion

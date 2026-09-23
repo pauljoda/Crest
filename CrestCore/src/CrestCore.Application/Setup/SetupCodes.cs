@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
 using CrestCore.Domain;
@@ -43,6 +44,27 @@ internal static class SetupCodes {
         OnboardingCompletion.OpenGuide => "openGuide",
         _ => "sourceChanged"
     };
+
+    /// A new draft Space's suggested name, accent and symbol.
+    public static JsonObject SpaceAnswer(int number) => new() {
+        ["name"] = ManualSetupPolicy.NewSpaceName(number),
+        ["accent"] = Accent(number),
+        ["symbol"] = ManualSetupPolicy.NewSpaceSymbol
+    };
+
+    public static JsonObject TabAnswer(ManualSetupTab tab) =>
+        new() { ["title"] = tab.Title, ["symbol"] = tab.Symbol, ["keepsSavedURL"] = tab.KeepsSavedUrl };
+
+    public static JsonObject ReconcileAnswer(IEnumerable<ManualSetupEntry> entries) => new() {
+        ["entries"] = new JsonArray(entries.Select(entry => (JsonNode?)new JsonObject {
+            ["draft"] = entry.DraftIndex,
+            ["existing"] = entry.ExistingIndex
+        }).ToArray())
+    };
+
+    public static JsonObject OutcomeAnswer(OnboardingCompletion outcome) => new() { ["outcome"] = Outcome(outcome) };
+
+    public static JsonObject GuideAnswer(bool confirmed) => new() { ["confirmed"] = confirmed };
 
     #endregion
 }

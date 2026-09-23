@@ -1,0 +1,84 @@
+using System.Text.Json;
+
+using CrestCore.Contracts;
+using CrestCore.Domain;
+
+using static CrestCore.Application.PolicyFields;
+
+namespace CrestCore.Application;
+
+/// Typed requests for the page-residency, process-recovery, tab-dismissal and
+/// tab-selection policy operations.
+internal static class TabPolicyRequests {
+    #region Variables
+
+    private const int MaximumSelectionCandidates = 3;
+
+    #endregion
+
+    #region Actions - Decoding
+
+    public sealed record ReleaseLimit(MemoryPressureLevel Level, int EligiblePageCount, MemoryPressurePlatform Platform) {
+        public static ReleaseLimit Decode(JsonElement request) {
+            Members(request, "level", "platform", "eligiblePageCount");
+            var level = PressureLevel(request);
+            int count = Integer(request, "eligiblePageCount");
+            return new(level, count, PressurePlatform(request));
+        }
+    }
+
+    public sealed record ReleasePlan(IReadOnlyList<ResidencyCandidate> Candidates, MemoryPressureLevel Level,
+        MemoryPressurePlatform Platform, int? FocusedIndex) {
+        public static ReleasePlan Decode(JsonElement request) {
+            Members(request, "level", "platform", "focusedIndex", "candidates");
+            var candidates = new List<ResidencyCandidate>();
+            foreach (var value in Element(request, "candidates").EnumerateArray()) {
+                Protocol.Members(value, "tabID", "inactiveSince", "keepsPageLoaded", "isPresented", "presentedIndex");
+                candidates.Add(new(Protocol.Id(value, "tabID").ToString(), OptionalNumber(value, "inactiveSince"),
+                    OptionalFlag(value, "keepsPageLoaded") ?? false, OptionalFlag(value, "isPresented") ?? false,
+                    OptionalInteger(value, "presentedIndex")));
+                if (candidates.Count > PageResidencyPolicy.MaximumCandidates)
+                    throw new ProtocolException(ProtocolErrorCodes.ResidencyCandidateLimit);
+            }
+            var level = PressureLevel(request);
+            var platform = PressurePlatform(request);
+            return new(candidates, level, platform, OptionalInteger(request, "focusedIndex"));
+        }
+    }
+
+    public sealed record ProcessRecovery(int ConsecutiveTerminations) {
+        public static ProcessRecovery Decode(JsonElement request) {
+            Members(request, "consecutiveTerminations");
+            return new(Integer(request, "consecutiveTerminations"));
+        }
+    }
+
+    public sealed record Dismissal(TabPlacement? Placement, bool IsStartPage, int TabCount) {
+        public static Dismissal Decode(JsonElement request) {
+            Members(request, "placement", "isStartPage", "tabCount");
+            var placement = Optional(request, "placement") is null ? (TabPlacement?)null
+                : TabPlacementCodes.Parse(Protocol.Text(request, "placement")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
+            bool isStartPage = OptionalFlag(request, "isStartPage") ?? false;
+            return new(placement, isStartPage, Integer(request, "tabCount"));
+        }
+    }
+
+    public sealed record SelectionFallback(IReadOnlyList<TabPlacement> Placements) {
+        public static SelectionFallback Decode(JsonElement request) {
+            Members(request, "placements");
+            var placements = new List<TabPlacement>();
+            foreach (var item in Element(request, "placements").EnumerateArray()) {
+                if (placements.Count >= MaximumSelectionCandidates) throw new ProtocolException(ProtocolErrorCodes.RecordBatchLimit);
+                placements.Add(TabPlacementCodes.Parse(item.GetString()) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement));
+            }
+            return new(placements);
+        }
+    }
+
+    private static MemoryPressureLevel PressureLevel(JsonElement request) => TabPolicyCodes.Level(Protocol.Text(request, "level"));
+
+    private static MemoryPressurePlatform PressurePlatform(JsonElement request) =>
+        TabPolicyCodes.Platform(Protocol.Text(request, "platform"));
+
+    #endregion
+}

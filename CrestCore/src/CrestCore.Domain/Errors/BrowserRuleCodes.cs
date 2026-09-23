@@ -209,6 +209,17 @@ public static class BrowserRuleCodes {
 
     #endregion
 
+    #region Variables - Tab batches
+
+    public const string CannotMoveSplitAcrossSpaces = "cannot_move_split_across_spaces";
+    public const string CannotPinSplit = "cannot_pin_split";
+    public const string CurrentTabsOnly = "current_tabs_only";
+    public const string PinnedCapacity = "pinned_capacity";
+    public const string SplitCapacity = "split_capacity";
+    public const string WebPagesOnly = "web_pages_only";
+
+    #endregion
+
     #region Variables - App preferences
 
     public const string InvalidPreferenceValue = "invalid_preference_value";

@@ -44,7 +44,7 @@ public sealed partial class NativeSessionAuthority {
         var view = SessionView.Decode(request[SessionView.Key]);
         var compact = original.Metadata.DeepClone().AsObject();
         foreach (var section in Sections)
-            compact[section] = new JsonArray(section is "history" or "archivedTabs" ? [] :
+            compact[section] = new JsonArray(section is SpaceSections.HistorySection or SpaceSections.ArchivedTabsSection ? [] :
                 original.Sections[section].Select(n => n.DeepClone()).ToArray());
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var editorRequest = SessionEditRequest.Create(operation, compact,
@@ -61,11 +61,11 @@ public sealed partial class NativeSessionAuthority {
             var fields = space.Metadata.DeepClone().AsObject();
             fields["splitGroups"] = edited["splitGroups"]?.DeepClone();
             var sections = space.Sections.ToDictionary(pair => pair.Key, pair => pair.Value);
-            sections["tabs"] = edited["tabs"]!.AsArray().Select(n => n!.DeepClone()).ToArray();
-            sections["folders"] = edited["folders"]!.AsArray().Select(n => n!.DeepClone()).ToArray();
-            var archived = edited["archivedTabs"]!.AsArray();
+            sections[SpaceSections.TabsSection] = edited[SpaceSections.TabsSection]!.AsArray().Select(n => n!.DeepClone()).ToArray();
+            sections[SpaceSections.FoldersSection] = edited[SpaceSections.FoldersSection]!.AsArray().Select(n => n!.DeepClone()).ToArray();
+            var archived = edited[SpaceSections.ArchivedTabsSection]!.AsArray();
             if (archived.Count > 0)
-                sections["archivedTabs"] = space.ArchivedTabs.Concat(
+                sections[SpaceSections.ArchivedTabsSection] = space.ArchivedTabs.Concat(
                     archived.Select(n => n!.DeepClone())).ToArray();
             return new SpaceDocument(fields, sections);
         }).ToArray();

@@ -11,9 +11,6 @@ public static class TabIconPolicy {
     /// One storage slot holds either an SF Symbol name or an emoji, so the
     /// emoji spelling carries a prefix that makes the two unambiguous.
     public const string EmojiPrefix = "crest.emoji:";
-    public const string Automatic = "automatic";
-    public const string Pulled = "pulled";
-    public const string Emoji = "emoji";
     public const string WebSymbol = "globe";
 
     #endregion
@@ -23,10 +20,9 @@ public static class TabIconPolicy {
     /// A stored mode wins. A tab written before modes were stored — or one whose
     /// stored term this build cannot name — takes its mode from its own symbol,
     /// so an unfamiliar term never pins a tab to a mode it did not choose.
-    public static string Mode(string? storedMode, string? symbol)
-        => storedMode is Automatic or Pulled or Emoji ? storedMode
-            : symbol is { } value && value.StartsWith(EmojiPrefix, StringComparison.Ordinal)
-                && value.Length > EmojiPrefix.Length ? Emoji : Automatic;
+    public static TabIconMode Mode(TabIconMode? storedMode, string? symbol)
+        => storedMode ?? (symbol is { } value && value.StartsWith(EmojiPrefix, StringComparison.Ordinal)
+            && value.Length > EmojiPrefix.Length ? TabIconMode.Emoji : TabIconMode.Automatic);
 
     public static string Symbol(string? emoji) {
         var trimmed = emoji?.Trim();
@@ -34,8 +30,9 @@ public static class TabIconPolicy {
         return trimmed.StartsWith(EmojiPrefix, StringComparison.Ordinal) ? trimmed : EmojiPrefix + trimmed;
     }
 
-    public static string RequireMode(string? value)
-        => value is Automatic or Pulled or Emoji ? value : throw new BrowserRuleException(BrowserRuleCodes.InvalidTabIcon);
+    /// An edit must name a mode this build knows; an absent or unknown term is refused.
+    public static TabIconMode RequireMode(TabIconMode? value)
+        => value ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidTabIcon);
 
     #endregion
 }

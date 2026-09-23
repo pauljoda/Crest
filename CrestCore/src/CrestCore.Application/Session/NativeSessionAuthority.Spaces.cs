@@ -55,8 +55,8 @@ public sealed partial class NativeSessionAuthority {
                 (workspaceKind == BrowserWorkspaceKind.Private ? "Private " : "Space ") + (spaces.Count + 1);
             var sections = Sections.ToDictionary(section => section,
                 section => (IReadOnlyList<JsonNode>)supplied[section]!.AsArray().Select(n => n!.DeepClone()).ToArray());
-            if (sections["history"].Count != 0 || sections["archivedTabs"].Count != 0 || sections["folders"].Count != 0
-                || sections["tabs"].Count != 1 || sections["tabs"][0]["url"] is not null)
+            if (sections[SpaceSections.HistorySection].Count != 0 || sections[SpaceSections.ArchivedTabsSection].Count != 0 || sections[SpaceSections.FoldersSection].Count != 0
+                || sections[SpaceSections.TabsSection].Count != 1 || sections[SpaceSections.TabsSection][0]["url"] is not null)
                 throw new BrowserRuleException(BrowserRuleCodes.InvalidNewSpace);
             if (workspaceKind == BrowserWorkspaceKind.Private) {
                 fields["symbol"] = "eyeglasses";
@@ -73,7 +73,7 @@ public sealed partial class NativeSessionAuthority {
             }
             spaces.Add(new(fields, sections));
             // A new Space is the one its window shows next, on its only tab.
-            hint.SelectSpace(id).SelectTab(view, id, Id(sections["tabs"][0]["id"]));
+            hint.SelectSpace(id).SelectTab(view, id, Id(sections[SpaceSections.TabsSection][0]["id"]));
             created = id;
         } else if (operation == SessionOperation.SpaceReorder) {
             spaces = SpaceOrganizationPolicy.Move(spaces,

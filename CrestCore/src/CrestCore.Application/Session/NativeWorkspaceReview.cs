@@ -39,7 +39,7 @@ public static class NativeWorkspaceReview {
         (value as JsonArray ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState)).Select(node => {
             var space = node!.AsObject();
             return new ImportReviewSpace(NativeSessionAuthority.Id(space["id"]), space["name"]?.GetValue<string>() ?? "",
-                NativeSyncProjection.Items(space, "tabs").Select(tab => new ImportReviewTab(NativeSessionAuthority.Id(tab!["id"]),
+                NativeSyncProjection.Items(space, SpaceSections.TabsSection).Select(tab => new ImportReviewTab(NativeSessionAuthority.Id(tab!["id"]),
                     tab["url"]?.GetValue<string>(), Placement(tab["placement"]))).ToArray());
         }).ToArray();
 

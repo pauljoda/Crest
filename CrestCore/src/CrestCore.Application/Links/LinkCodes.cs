@@ -27,6 +27,15 @@ internal static class LinkCodes {
             PatternText(value.GetProperty(Pattern)), Protocol.Id(value, DestinationSpaceId));
     }
 
+    /// A route edit names exactly the fields it changes.
+    public static LinkRouteField RouteField(JsonElement value) {
+        Protocol.Members(value, IsEnabled, Match, Pattern, DestinationSpaceId);
+        return new(PolicyFields.OptionalFlag(value, IsEnabled),
+            PolicyFields.Optional(value, Match) is { } match ? RouteMatch(match) : null,
+            PolicyFields.Optional(value, Pattern) is { } pattern ? PatternText(pattern) : null,
+            Protocol.OptionalId(value, DestinationSpaceId));
+    }
+
     public static IReadOnlyList<LinkRoute> Routes(JsonElement value) {
         if (value.GetArrayLength() > LinkRoutePolicy.MaximumRoutes * 2) throw new ProtocolException(ProtocolErrorCodes.LinkRouteBatchLimit);
         return value.EnumerateArray().Select(Route).ToArray();
@@ -73,6 +82,24 @@ internal static class LinkCodes {
 
     public static JsonArray Identities(IEnumerable<Guid> ids) =>
         new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
+
+    public static JsonObject RoutingAnswer(LinkRoutingDecision? decision) => new() {
+        ["quickWindow"] = decision?.OpensQuickWindow ?? false,
+        ["spaceID"] = decision?.SpaceId.ToString("D"),
+        ["substitutesForLockedSpace"] = decision?.SubstitutesForLockedSpace ?? false
+    };
+
+    public static JsonObject SiteAnswer(string? site) => new() { ["site"] = site };
+
+    public static JsonObject RouteAnswer(LinkRoute route) => new() { ["route"] = Route(route) };
+
+    public static JsonObject OrderAnswer(IEnumerable<Guid> order) => new() { ["order"] = Identities(order) };
+
+    public static JsonObject RemovalAnswer(LinkSpaceRemoval removal) => new() {
+        ["retainedRouteIDs"] = Identities(removal.RetainedRouteIds),
+        ["clearsChosenSpace"] = removal.ClearsChosenSpace,
+        ["forgetsRememberedSites"] = removal.ForgetsRememberedSites
+    };
 
     #endregion
 }

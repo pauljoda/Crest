@@ -56,6 +56,12 @@ internal static class SearchCodes {
     public static string? OptionalEdited(JsonElement value, string field) =>
         value.TryGetProperty(field, out var member) && member.ValueKind != JsonValueKind.Null ? Edited(value, field) : null;
 
+    public static SearchUrlPurpose Purpose(string value) => value switch {
+        "search" => SearchUrlPurpose.Search,
+        "suggestions" => SearchUrlPurpose.Suggestions,
+        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidInput)
+    };
+
     #endregion
 
     #region Actions - Encoding
@@ -65,6 +71,17 @@ internal static class SearchCodes {
         [Name] = provider.Name,
         [SearchTemplate] = provider.SearchTemplate,
         [SuggestionTemplate] = provider.SuggestionTemplate
+    };
+
+    public static JsonObject IntentAnswer(AddressResolution? intent) => new() { ["url"] = intent?.Url, ["searchQuery"] = intent?.SearchQuery };
+
+    public static JsonObject UrlAnswer(string? url) => new() { ["url"] = url };
+
+    public static JsonObject ProviderAnswer(SearchProvider provider) => new() { ["provider"] = Custom(provider) };
+
+    public static JsonObject RestoredAnswer(string? selectedId, IEnumerable<int> indices) => new() {
+        ["selectedID"] = selectedId,
+        ["indices"] = new JsonArray(indices.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray())
     };
 
     #endregion

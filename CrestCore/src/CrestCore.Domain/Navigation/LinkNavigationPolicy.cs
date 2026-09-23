@@ -31,10 +31,7 @@ public static class LinkNavigationPolicy {
 
     // Match Crest's saved-site contract: ignore www, but keep other subdomains
     // distinct. IdnHost also compares Unicode and punycode URL spellings equally.
-    private static string NormalizeHost(Uri url) {
-        string host = url.IdnHost.ToLowerInvariant();
-        return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
-    }
+    private static string NormalizeHost(Uri url) => SiteHost.WithoutWww(url.IdnHost.ToLowerInvariant());
 
     #endregion
 }

@@ -41,7 +41,7 @@ public sealed class NativeSessionCheckpoint {
                 foreach (var field in space.Metadata.Where(f => f.Key != LegacySelectionFields.SelectedTab)) { writer.WritePropertyName(field.Key); if (field.Value is { } value) value.WriteTo(writer); else writer.WriteNullValue(); }
                 foreach (var section in space.Sections) {
                     writer.WriteStartArray(section.Key);
-                    if (section.Key != "history") foreach (var record in section.Value) record.WriteTo(writer);
+                    if (section.Key != SpaceSections.HistorySection) foreach (var record in section.Value) record.WriteTo(writer);
                     writer.WriteEndArray();
                 }
                 writer.WriteEndObject();
