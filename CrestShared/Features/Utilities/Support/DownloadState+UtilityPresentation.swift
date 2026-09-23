@@ -1,6 +1,6 @@
-extension BrowserDownloadItemState {
+extension DownloadState {
     var utilityStatusText: BrowserUtilityText {
-        switch self {
+        switch phase {
         case .preparing:
             .localized("Preparing…")
         case .awaitingApproval:
@@ -13,8 +13,8 @@ extension BrowserDownloadItemState {
             .localized(
                 "Automatic download blocked. Use Allow Download to retry, or change Automatic Downloads in this site’s permissions."
             )
-        case .canceled(let message), .failed(let message):
-            .verbatim(message)
+        case .canceled, .failed:
+            .verbatim(message ?? "")
         }
     }
 }

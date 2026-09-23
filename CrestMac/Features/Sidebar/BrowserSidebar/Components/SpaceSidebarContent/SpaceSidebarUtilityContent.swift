@@ -6,7 +6,7 @@ struct SpaceSidebarUtilityContent: View {
     @Binding var searchText: String
     @Binding var filter: BrowserUtilityListFilter
     let commandSurfaceNamespace: Namespace.ID
-    let downloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
     let actions: BrowserUtilityListActions
     let dismissOnBlankSpace: () -> Void
     let clearHistory: () -> Void

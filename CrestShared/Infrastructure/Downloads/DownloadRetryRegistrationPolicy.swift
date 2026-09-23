@@ -2,7 +2,7 @@ enum BrowserDownloadRetryRegistrationPolicy {
     nonisolated static func shouldRegister(
         lease: BrowserDownloadRetryLease,
         currentLease: BrowserDownloadRetryLease?,
-        item: BrowserDownloadItem?,
+        item: DownloadState?,
         contextAssignment: BrowserSpaceRuntimeAssignment?,
         isAssignmentAvailable: Bool
     ) -> Bool {
@@ -11,6 +11,6 @@ enum BrowserDownloadRetryRegistrationPolicy {
             && isAssignmentAvailable
             && item?.id == lease.itemID
             && item?.profileID == lease.assignment.profileID
-            && item?.state == .preparing
+            && item?.phase == .preparing
     }
 }

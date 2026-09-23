@@ -255,7 +255,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let sourceURL = try XCTUnwrap(
             URL(string: "https://downloads.crest.test/private-tool.command")
         )
-        let assessment = BrowserDownloadRiskAssessment(
+        let assessment = DownloadRiskAssessment(
             sanitizedFilename: "private-tool.command",
             reasons: [.executableOrInstaller]
         )
@@ -264,7 +264,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
             await privatePages.downloadRiskConfirmation.requestApproval(
                 assessment: assessment,
                 sourceURL: sourceURL,
-                spaceName: "Private"
+                spaceName: "Private",
+                profileID: UUID()
             )
         }
         try await waitUntil {
@@ -303,11 +304,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testDownloadConfirmationQueuesConcurrentRequestsWithoutChangingSpaceOwnership() async throws {
         let confirmation = MobileDownloadRiskConfirmationCoordinator()
-        let firstAssessment = BrowserDownloadRiskAssessment(
+        let firstAssessment = DownloadRiskAssessment(
             sanitizedFilename: "first.command",
             reasons: [.executableOrInstaller]
         )
-        let secondAssessment = BrowserDownloadRiskAssessment(
+        let secondAssessment = DownloadRiskAssessment(
             sanitizedFilename: "second.mobileconfig",
             reasons: [.executableOrInstaller, .dangerousTypeMismatch]
         )
@@ -316,7 +317,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
             await confirmation.requestApproval(
                 assessment: firstAssessment,
                 sourceURL: URL(string: "https://first.crest.test/file"),
-                spaceName: "Work"
+                spaceName: "Work",
+                profileID: UUID()
             )
         }
         try await waitUntil {
@@ -326,7 +328,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
             await confirmation.requestApproval(
                 assessment: secondAssessment,
                 sourceURL: URL(string: "https://second.crest.test/file"),
-                spaceName: "Private"
+                spaceName: "Private",
+                profileID: UUID()
             )
         }
         await Task.yield()
@@ -352,7 +355,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testDismissingDownloadConfirmationFailsClosed() async throws {
         let confirmation = MobileDownloadRiskConfirmationCoordinator()
-        let assessment = BrowserDownloadRiskAssessment(
+        let assessment = DownloadRiskAssessment(
             sanitizedFilename: "installer.pkg",
             reasons: [.executableOrInstaller]
         )
@@ -360,7 +363,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
             await confirmation.requestApproval(
                 assessment: assessment,
                 sourceURL: nil,
-                spaceName: "Personal"
+                spaceName: "Personal",
+                profileID: UUID()
             )
         }
         try await waitUntil { confirmation.isPresented }

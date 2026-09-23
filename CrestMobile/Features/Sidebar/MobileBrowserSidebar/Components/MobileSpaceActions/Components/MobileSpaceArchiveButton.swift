@@ -4,8 +4,8 @@ struct MobileSpaceArchiveButton: View {
     let utilityPresentationStyle: MobileBrowserSidebarUtilityPresentationStyle
     let archivedTabCount: Int
     let commonListsAreExpanded: Bool
-    let downloads: [BrowserDownloadItem]
-    let newDownloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
+    let newDownloads: [DownloadState]
     let badgeColor: Color
     let showArchive: () -> Void
     let toggleCommonLists: () -> Void
@@ -29,7 +29,7 @@ struct MobileSpaceArchiveButton: View {
             if presentsInline, !newDownloads.isEmpty {
                 BrowserUtilityNotificationBadge(
                     count: newDownloads.count,
-                    tint: downloads.contains(where: { $0.state.needsAttention })
+                    tint: downloads.contains(where: { $0.phase.needsAttention })
                         ? .red
                         : badgeColor,
                     progress: BrowserDownloadNotificationPolicy.progress(

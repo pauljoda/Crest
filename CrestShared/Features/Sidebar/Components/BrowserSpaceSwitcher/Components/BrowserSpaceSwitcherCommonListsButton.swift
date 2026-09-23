@@ -4,8 +4,8 @@ import SwiftUI
 /// and downloads lists, badged when downloads have finished unseen.
 struct BrowserSpaceSwitcherCommonListsButton: View {
     let isExpanded: Bool
-    let downloads: [BrowserDownloadItem]
-    let newDownloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
+    let newDownloads: [DownloadState]
     let badgeColor: Color
     let action: () -> Void
     let recordFrame: (CGRect) -> Void
@@ -33,7 +33,7 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                 if !newDownloads.isEmpty {
                     BrowserUtilityNotificationBadge(
                         count: newDownloads.count,
-                        tint: downloads.contains(where: { $0.state.needsAttention })
+                        tint: downloads.contains(where: { $0.phase.needsAttention })
                             ? .red
                             : badgeColor,
                         progress: BrowserDownloadNotificationPolicy.progress(

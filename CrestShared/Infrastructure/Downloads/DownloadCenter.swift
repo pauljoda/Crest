@@ -1,8 +1,10 @@
 import Foundation
 import Observation
+import os
 
-/// Crest's downloads: the core-owned ledger projection, the feedback it
-/// presents, native data saves, and the transfers each engine runs. An engine
+/// Crest's downloads for one browsing mode: the core's download records, the
+/// feedback they present, native data saves, and the transfers each engine
+/// runs. Every record change is an intent sent to the core. An engine
 /// either reports its own transfers (`receiveEngineDownload`) or runs them
 /// through a `BrowserDownloadTransport` it registers with the center.
 @Observable
@@ -28,11 +30,14 @@ final class BrowserDownloadCenter: NSObject {
             SpaceID
         ) async throws -> Void
 
+    /// Asks the person to approve a risky download: its assessment, source,
+    /// Space name and profile.
     typealias RiskApprovalHandler =
         @MainActor (
-            BrowserDownloadRiskAssessment,
+            DownloadRiskAssessment,
             URL?,
-            String
+            String,
+            UUID
         ) async -> Bool
 
     typealias DownloadDestinationResolver =
@@ -70,12 +75,15 @@ final class BrowserDownloadCenter: NSObject {
 
     // MARK: - Variables
 
-    /// The core-owned ledger projection. Views observe its items directly.
-    let ledger: BrowserDownloadLedger
+    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Downloads")
+
+    /// The core whose read model holds the download records. Views observe
+    /// its records directly.
+    let core: CrestCore
     private(set) var feedbackEvents: [BrowserDownloadFeedbackEvent] = []
 
-    var items: [BrowserDownloadItem] {
-        ledger.items
+    var items: [DownloadState] {
+        core.state.downloads
     }
 
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
@@ -99,12 +107,12 @@ final class BrowserDownloadCenter: NSObject {
     // MARK: - Initializers
 
     init(
-        ledger: BrowserDownloadLedger = BrowserDownloadLedger(),
+        core: CrestCore = CrestCore(),
         promptForCredentials: @escaping CredentialPromptHandler = { _, _ in nil },
         allowsCredentialSaving: Bool = true,
         loadCredential: @escaping CredentialLoader = { _, _ in nil },
         saveCredential: @escaping CredentialSaver = { _, _ in },
-        approveRiskyDownload: @escaping RiskApprovalHandler = { _, _, _ in false },
+        approveRiskyDownload: @escaping RiskApprovalHandler = { _, _, _, _ in false },
         approveEngineDownload: @escaping @MainActor (String, String) async -> Bool = { _, _ in false },
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         resolveDownloadDestination:
@@ -119,7 +127,7 @@ final class BrowserDownloadCenter: NSObject {
                 )
             }
     ) {
-        self.ledger = ledger
+        self.core = core
         self.promptForCredentials = promptForCredentials
         allowsAnyCredentialSaving = allowsCredentialSaving
         self.loadCredential = loadCredential
@@ -181,19 +189,53 @@ final class BrowserDownloadCenter: NSObject {
         )
     }
 
-    // MARK: - Actions - Ledger
+    // MARK: - Actions - Records
 
-    func items(for profileID: UUID) -> [BrowserDownloadItem] {
-        ledger.items(for: profileID)
+    func items(for profileID: UUID) -> [DownloadState] {
+        items.filter { $0.profileID == profileID }
     }
 
-    func unacknowledgedItems(for profileID: UUID) -> [BrowserDownloadItem] {
-        ledger.unacknowledgedItems(for: profileID)
+    func unacknowledgedItems(for profileID: UUID) -> [DownloadState] {
+        items.filter { $0.profileID == profileID && !$0.isAcknowledged }
+    }
+
+    func item(_ itemID: UUID) -> DownloadState? {
+        items.first { $0.id == itemID }
+    }
+
+    /// Sends one download intent. A refused intent changes nothing; the rule
+    /// it broke is logged, since it means an engine reported something the
+    /// core cannot record.
+    func send(_ intent: some Intent) {
+        do {
+            try core.send(intent)
+        } catch {
+            Self.logger.error(
+                "The core refused \(String(describing: type(of: intent)), privacy: .public): \(String(describing: error), privacy: .public)"
+            )
+        }
+    }
+
+    /// Begins a new record and returns its identity.
+    func begin(profileID: UUID, filename: String, createdAt: Date = .now, isAcknowledged: Bool = false) -> UUID {
+        let itemID = UUID()
+        send(
+            BeginDownload(
+                downloadID: itemID, profileID: profileID, filename: filename, createdAt: createdAt,
+                isAcknowledged: isAcknowledged))
+        return itemID
+    }
+
+    /// The destination names the file, so the record's filename follows it.
+    func setDestination(_ destination: URL, for itemID: UUID) {
+        send(
+            SetDownloadDestination(
+                downloadID: itemID, destination: destination.absoluteString, filename: destination.lastPathComponent))
     }
 
     @discardableResult
     func acknowledgeItems(for profileID: UUID) -> Int {
-        ledger.acknowledgeItems(for: profileID)
+        (try? core.send(AcknowledgeDownloads(profileID: profileID)))?.count ?? 0
     }
 
     /// Removes only Crest's terminal download records. Files already written to
@@ -214,15 +256,18 @@ final class BrowserDownloadCenter: NSObject {
             return false
         }
         lastRetentionSweepAt = now
-        let removedItemIDs = ledger.removeExpiredRecords(
-            retention: session.spaces.map {
-                ($0.profile.id, $0.browsingPreferences.dataRetention.downloads.lifetime)
-            },
-            now: now
-        )
-        for itemID in removedItemIDs {
-            forgetEngineDownload(itemID)
-            for transport in transports.values { transport.forget(itemID) }
+        let expiry = ExpireDownloads(
+            now: now,
+            retentions: session.spaces.map {
+                DownloadRetention(
+                    profileID: $0.profile.id, lifetime: $0.browsingPreferences.dataRetention.downloads.lifetime)
+            })
+        let changes = (try? core.send(expiry)) ?? []
+        for case .downloadsRemoved(let removal) in changes {
+            for itemID in removal.downloadIDs {
+                forgetEngineDownload(itemID)
+                for transport in transports.values { transport.forget(itemID) }
+            }
         }
         return true
     }
@@ -231,12 +276,12 @@ final class BrowserDownloadCenter: NSObject {
         if let (id, transfer) = engineTransfers.first(where: { $0.value.itemID == itemID && !$0.value.isFinished }) {
             let controller = transfer.controller
             transfer.finish()
-            ledger.cancel(itemID, message: "Canceled.")
+            send(CancelDownload(downloadID: itemID, message: "Canceled."))
             controller?.cancelDownload(id)
             return
         }
         if dataSaveAssignments.removeValue(forKey: itemID) != nil {
-            ledger.cancel(itemID, message: "Canceled.")
+            send(CancelDownload(downloadID: itemID, message: "Canceled."))
             return
         }
         for transport in transports.values where transport.cancel(itemID) { return }
@@ -248,7 +293,7 @@ final class BrowserDownloadCenter: NSObject {
             dataSaveAssignments[itemID] == nil
         else { return }
         forgetEngineDownload(itemID)
-        ledger.remove(itemID)
+        send(RemoveDownload(downloadID: itemID))
         for transport in transports.values { transport.forget(itemID) }
     }
 
@@ -260,7 +305,7 @@ final class BrowserDownloadCenter: NSObject {
         }
         dataSaveAssignments = dataSaveAssignments.filter { $0.value != assignment }
         for transport in transports.values { transport.removeTransfers(in: assignment) }
-        ledger.removeAll(for: profileID)
+        send(RemoveProfileDownloads(profileID: profileID))
     }
 
     @discardableResult
@@ -270,9 +315,9 @@ final class BrowserDownloadCenter: NSObject {
         isAssignmentAvailable:
             @escaping @MainActor (BrowserSpaceRuntimeAssignment) -> Bool
     ) async -> Bool {
-        guard let item = ledger.items.first(where: { $0.id == itemID }),
+        guard let item = item(itemID),
             item.profileID == assignment.profileID,
-            item.state == .blockedAutomaticDownload
+            item.phase == .blockedAutomaticDownload
         else {
             return false
         }
@@ -283,10 +328,7 @@ final class BrowserDownloadCenter: NSObject {
                 return retried
             }
         }
-        ledger.fail(
-            itemID,
-            message: "Reload the original page, then try the download again."
-        )
+        send(FailDownload(downloadID: itemID, message: "Reload the original page, then try the download again."))
         return false
     }
 
@@ -304,7 +346,7 @@ final class BrowserDownloadCenter: NSObject {
             transfer = existing
         } else {
             transfer = EngineTransfer(
-                itemID: ledger.begin(
+                itemID: begin(
                     profileID: assignment.profileID,
                     filename: BrowserDownloadDestination.safeFilename(from: update.filename),
                     createdAt: update.createdAt,
@@ -313,29 +355,31 @@ final class BrowserDownloadCenter: NSObject {
             engineTransfers[update.id] = transfer
         }
         if let destination = update.destination {
-            ledger.setDestination(destination, for: transfer.itemID)
+            setDestination(destination, for: transfer.itemID)
         }
         if let reading = transfer.estimator.sample(
             completedUnitCount: update.bytesReceived, totalUnitCount: update.totalBytes,
             fractionCompleted: update.totalBytes > 0 ? Double(update.bytesReceived) / Double(update.totalBytes) : 0,
             isPaused: update.isPaused)
         {
-            ledger.setTransferUpdate(reading, for: transfer.itemID)
+            send(
+                RecordDownloadTransfer(
+                    downloadID: transfer.itemID, telemetry: reading.telemetry, progress: reading.progress))
         }
         switch update.state {
         case .preparing, .downloading:
             transfer.warningToken = nil
         case .finished:
-            ledger.finish(transfer.itemID, finalByteCount: update.bytesReceived)
+            send(FinishDownload(downloadID: transfer.itemID, finalByteCount: update.bytesReceived))
             transfer.finish()
         case .canceled:
-            ledger.cancel(transfer.itemID, message: "Canceled.")
+            send(CancelDownload(downloadID: transfer.itemID, message: "Canceled."))
             transfer.finish()
         case .failed(let message):
-            ledger.fail(transfer.itemID, message: message)
+            send(FailDownload(downloadID: transfer.itemID, message: message))
             transfer.finish()
         case .awaitingApproval(let token, let message):
-            ledger.markAwaitingApproval(transfer.itemID)
+            send(AwaitDownloadApproval(downloadID: transfer.itemID))
             guard transfer.warningToken != token else { return }
             transfer.warningToken = token
             Task { [weak self, weak transfer] in
@@ -377,15 +421,16 @@ final class BrowserDownloadCenter: NSObject {
         case .destination(let url, let scoped):
             transfer.securityScopedURL?.stopAccessingSecurityScopedResource()
             transfer.securityScopedURL = scoped
-            ledger.setDestination(url, for: transfer.itemID)
+            setDestination(url, for: transfer.itemID)
             return url
         case .cancelled:
             cancel(transfer.itemID)
         case .unavailable:
             let controller = transfer.controller
-            ledger.fail(
-                transfer.itemID, message: "The download folder is unavailable. Choose another folder in Space settings."
-            )
+            send(
+                FailDownload(
+                    downloadID: transfer.itemID,
+                    message: "The download folder is unavailable. Choose another folder in Space settings."))
             transfer.finish()
             controller?.cancelDownload(id)
         }
@@ -410,8 +455,8 @@ final class BrowserDownloadCenter: NSObject {
         let verdict = BrowserDownloadRiskVerdict.assess(
             suggestedFilename: suggestedFilename, mimeType: mimeType, isUserInitiated: true)
         let assessment = verdict.assessment
-        let itemID = ledger.begin(profileID: assignment.profileID, filename: assessment.sanitizedFilename)
-        ledger.setRiskAssessment(assessment, for: itemID)
+        let itemID = begin(profileID: assignment.profileID, filename: assessment.sanitizedFilename)
+        send(AssessDownloadRisk(downloadID: itemID, assessment: assessment))
         dataSaveAssignments[itemID] = assignment
         if let feedbackSource {
             presentFeedback(
@@ -437,10 +482,12 @@ final class BrowserDownloadCenter: NSObject {
         guard dataSaveAssignments[itemID] == assignment else { return }
         let assessment = verdict.assessment
         if verdict.requiresConfirmation {
-            let approved = await approveRiskyDownload(assessment, originatingURL, spaceName)
+            let approved = await approveRiskyDownload(assessment, originatingURL, spaceName, assignment.profileID)
             guard dataSaveAssignments[itemID] == assignment else { return }
             guard approved else {
-                ledger.cancel(itemID, message: "Canceled before downloading a potentially dangerous file.")
+                send(
+                    CancelDownload(
+                        downloadID: itemID, message: "Canceled before downloading a potentially dangerous file."))
                 return
             }
         }
@@ -450,16 +497,17 @@ final class BrowserDownloadCenter: NSObject {
         guard dataSaveAssignments[itemID] == assignment else { return }
         switch resolution {
         case .cancelled:
-            ledger.cancel(itemID, message: "Canceled.")
+            send(CancelDownload(downloadID: itemID, message: "Canceled."))
         case .unavailable:
             #if os(macOS)
-                ledger.fail(
-                    itemID,
-                    message:
-                        "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
-                )
+                send(
+                    FailDownload(
+                        downloadID: itemID,
+                        message:
+                            "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
+                    ))
             #else
-                ledger.fail(itemID, message: "The Downloads folder is unavailable.")
+                send(FailDownload(downloadID: itemID, message: "The Downloads folder is unavailable."))
             #endif
         case .destination(let destination, let resourceURL):
             let scoped = resourceURL?.startAccessingSecurityScopedResource() ?? false
@@ -467,9 +515,9 @@ final class BrowserDownloadCenter: NSObject {
             do {
                 try saveDataToDestination(
                     data, itemID: itemID, destination: destination, originatingURL: originatingURL)
-                ledger.finish(itemID, finalByteCount: Int64(data.count))
+                send(FinishDownload(downloadID: itemID, finalByteCount: Int64(data.count)))
             } catch {
-                ledger.fail(itemID, message: error.localizedDescription)
+                send(FailDownload(downloadID: itemID, message: error.localizedDescription))
             }
         }
     }
@@ -489,7 +537,7 @@ final class BrowserDownloadCenter: NSObject {
         let staging = BrowserDownloadTransfer.stagingURL(
             itemID: itemID, suggestedFilename: destination.lastPathComponent, directory: stagingDirectory)
         defer { try? fileManager.removeItem(at: staging) }
-        ledger.setDestination(destination, for: itemID)
+        setDestination(destination, for: itemID)
         try data.write(to: staging, options: .atomic)
         try BrowserDownloadTransfer.finish(
             from: staging, to: destination, quarantine: BrowserDownloadQuarantine(sourceURL: originatingURL))

@@ -17,7 +17,7 @@ struct MobileDownloadsView: View {
         )
     }
 
-    private var downloads: [BrowserDownloadItem] {
+    private var downloads: [DownloadState] {
         guard let space else { return [] }
         return pages.downloadCenter.items(for: space.profile.id)
     }
@@ -69,7 +69,7 @@ struct MobileDownloadsView: View {
 
     private func downloadItem(
         for action: BrowserUtilityDownloadAction
-    ) -> BrowserDownloadItem? {
+    ) -> DownloadState? {
         BrowserSidebarUtilityActionPolicy.downloadItem(
             for: action,
             matching: assignment,

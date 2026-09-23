@@ -1,4 +1,4 @@
-extension BrowserDownloadItemState {
+extension DownloadPhase {
     var isInProgress: Bool {
         switch self {
         case .preparing, .awaitingApproval, .downloading:

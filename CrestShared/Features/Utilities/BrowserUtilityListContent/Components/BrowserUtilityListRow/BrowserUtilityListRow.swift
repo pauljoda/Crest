@@ -91,7 +91,7 @@ struct BrowserUtilityListRow: View {
 }
 
 private struct BrowserUtilityDownloadRow: View {
-    let download: BrowserDownloadItem
+    let download: DownloadState
     let assignment: BrowserSpaceRuntimeAssignment
     let actions: BrowserUtilityListActions
 
@@ -132,7 +132,7 @@ private struct BrowserUtilityDownloadRow: View {
 
     private var primaryDestination: BrowserUtilityDownloadDestination? {
         BrowserUtilityDownloadPrimaryActionPolicy.destination(
-            for: download.state,
+            for: download.phase,
             availableDestinations: actions.downloadDestinations
         )
     }
@@ -194,7 +194,7 @@ private struct BrowserUtilityDownloadRow: View {
 }
 
 private struct BrowserDownloadRowLabel: View {
-    let download: BrowserDownloadItem
+    let download: DownloadState
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var availableWidth: CGFloat = 0

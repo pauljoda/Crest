@@ -30,7 +30,7 @@ final class BrowserEngineDownloadTests: XCTestCase {
             assignment: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: UUID()), controller: controller)
         XCTAssertEqual(center.items.count, 1)
         XCTAssertEqual(center.items.first?.progress, 0.1)
-        XCTAssertEqual(center.items.first?.state, .downloading)
+        XCTAssertEqual(center.items.first?.phase, .downloading)
     }
 
     func testRestoredRecordsKeepRetentionDateWithoutAcknowledgingNewTransfers() {
@@ -45,9 +45,9 @@ final class BrowserEngineDownloadTests: XCTestCase {
         restored.isRestored = true
         center.receiveEngineDownload(restored, assignment: assignment, controller: controller)
         XCTAssertEqual(center.items.first?.createdAt, originalDate)
-        XCTAssertEqual(center.items.first?.state, .finished)
+        XCTAssertEqual(center.items.first?.phase, .finished)
         XCTAssertEqual(center.unacknowledgedItems(for: assignment.profileID).count, 1)
-        XCTAssertEqual(center.unacknowledgedItems(for: assignment.profileID).first?.state, .downloading)
+        XCTAssertEqual(center.unacknowledgedItems(for: assignment.profileID).first?.phase, .downloading)
     }
 
     func testCancelAndClearIgnoreLateEngineProgressAndCompletion() throws {
@@ -62,7 +62,8 @@ final class BrowserEngineDownloadTests: XCTestCase {
         center.cancel(item.id)
         center.receiveEngineDownload(update(id, state: .finished, bytes: 100), assignment: assignment, controller: controller)
         XCTAssertEqual(controller.canceled, [id])
-        XCTAssertEqual(center.items.first?.state, .canceled("Canceled."))
+        XCTAssertEqual(center.items.first?.phase, .canceled)
+        XCTAssertEqual(center.items.first?.message, "Canceled.")
         center.clear(item.id)
         XCTAssertEqual(controller.removed, [id])
         center.receiveEngineDownload(update(id), assignment: assignment, controller: controller)
@@ -119,6 +120,7 @@ final class BrowserEngineDownloadTests: XCTestCase {
         continuation?.resume(returning: true)
         await Task.yield()
         XCTAssertTrue(controller.approved.isEmpty)
-        XCTAssertEqual(center.items.first?.state, .failed("Blocked by policy"))
+        XCTAssertEqual(center.items.first?.phase, .failed)
+        XCTAssertEqual(center.items.first?.message, "Blocked by policy")
     }
 }

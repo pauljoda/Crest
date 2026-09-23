@@ -66,7 +66,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             tabs: [tab]
         )
         let center = BrowserDownloadCenter(
-            approveRiskyDownload: { _, _, _ in true }
+            approveRiskyDownload: { _, _, _, _ in true }
         )
         let page = MobileBrowserPage(
             tab: tab,
@@ -90,13 +90,13 @@ final class MobileBrowserInteropTests: XCTestCase {
         }
 
         try await waitUntil(timeout: 5) {
-            center.items.first?.state == .finished
-                || center.items.contains { if case .failed = $0.state { true } else { false } }
+            center.items.first?.phase == .finished
+                || center.items.contains { if case .failed = $0.phase { true } else { false } }
         }
         let item = try XCTUnwrap(center.items.first)
         XCTAssertEqual(item.profileID, profile.id)
         XCTAssertEqual(item.filename, filename)
-        XCTAssertEqual(item.state, .finished)
+        XCTAssertEqual(item.phase, .finished)
         XCTAssertEqual(item.destinationURL, destination)
         XCTAssertEqual(try Data(contentsOf: destination), payload)
         await Self.removeDataStore(profile.id)
@@ -157,7 +157,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         XCTAssertTrue(request.assessment.reasons.contains(.dangerousTypeMismatch))
         XCTAssertEqual(request.spaceName, "Private")
         XCTAssertEqual(request.sourceLabel, "localhost")
-        XCTAssertEqual(pages.downloadCenter.items.first?.state, .awaitingApproval)
+        XCTAssertEqual(pages.downloadCenter.items.first?.phase, .awaitingApproval)
         XCTAssertEqual(
             pages.downloadCenter.items.first?.profileID,
             privateSpace.profile.id
@@ -167,13 +167,14 @@ final class MobileBrowserInteropTests: XCTestCase {
 
         try await waitUntil(timeout: 5) {
             pages.downloadCenter.items.contains {
-                if case .canceled = $0.state { return true }
+                if case .canceled = $0.phase { return true }
                 return false
             }
         }
+        XCTAssertEqual(pages.downloadCenter.items.first?.phase, .canceled)
         XCTAssertEqual(
-            pages.downloadCenter.items.first?.state,
-            .canceled("Canceled before downloading a potentially dangerous file.")
+            pages.downloadCenter.items.first?.message,
+            "Canceled before downloading a potentially dangerous file."
         )
         XCTAssertNil(pages.downloadCenter.items.first?.destinationURL)
         XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
@@ -224,7 +225,7 @@ final class MobileBrowserInteropTests: XCTestCase {
                 XCTAssertEqual(requestedSpaceID, space.id)
                 saveCount += 1
             },
-            approveRiskyDownload: { _, _, _ in true }
+            approveRiskyDownload: { _, _, _, _ in true }
         )
         let page = MobileBrowserPage(
             tab: tab,
@@ -248,11 +249,11 @@ final class MobileBrowserInteropTests: XCTestCase {
         }
 
         try await waitUntil(timeout: 5) {
-            center.items.first?.state == .finished
-                || center.items.contains { if case .failed = $0.state { true } else { false } }
+            center.items.first?.phase == .finished
+                || center.items.contains { if case .failed = $0.phase { true } else { false } }
         }
 
-        XCTAssertEqual(center.items.first?.state, .finished)
+        XCTAssertEqual(center.items.first?.phase, .finished)
         XCTAssertEqual(prompts.count, 1)
         XCTAssertEqual(prompts.first?.allowsSaving, false)
         XCTAssertEqual(loadCount, 0)

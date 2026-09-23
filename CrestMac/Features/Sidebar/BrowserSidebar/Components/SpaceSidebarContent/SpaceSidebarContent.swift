@@ -16,7 +16,7 @@ struct SpaceSidebarContent: View {
     let utilitySurface: BrowserUtilitySurface?
     @Binding var utilitySearchText: String
     @Binding var utilityFilter: BrowserUtilityListFilter
-    let utilityDownloads: [BrowserDownloadItem]
+    let utilityDownloads: [DownloadState]
     let utilityActions: BrowserUtilityListActions
     let dismissUtilityOnBlankSpace: () -> Void
     let clearHistory: () -> Void

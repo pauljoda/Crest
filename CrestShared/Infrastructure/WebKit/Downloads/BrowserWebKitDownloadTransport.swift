@@ -5,7 +5,7 @@ import WebKit
 /// WebKit's download transport for one download center: the `WKDownload`s a
 /// WebKit page hands Crest, their destination and automatic-download decisions,
 /// progress, authentication and blocked-download retries. The center keeps the
-/// engine-neutral ledger and feedback; this transport reports into it.
+/// engine-neutral records and feedback; this transport reports into it.
 @MainActor
 final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
     // MARK: - Types
@@ -19,7 +19,6 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
     // MARK: - Variables
 
     private unowned let center: BrowserDownloadCenter
-    private var ledger: BrowserDownloadLedger { center.ledger }
 
     private var downloads: [ObjectIdentifier: WKDownload] = [:]
     private var itemIDs: [ObjectIdentifier: UUID] = [:]
@@ -30,6 +29,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
     private var securityScopedResources: [ObjectIdentifier: URL] = [:]
     private var spaceNames: [ObjectIdentifier: String] = [:]
     private var spaceIDs: [ObjectIdentifier: SpaceID] = [:]
+    private var profileIDs: [ObjectIdentifier: UUID] = [:]
     private var sourceOrigins: [ObjectIdentifier: BrowserSiteOrigin] = [:]
     private var permissionRequests:
         [ObjectIdentifier: (controller: BrowserPagePermissionController, generation: UUID)] = [:]
@@ -56,7 +56,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
 
     func cancel(_ itemID: UUID) -> Bool {
         if retryLeases.removeValue(forKey: itemID) != nil {
-            ledger.cancel(itemID, message: "Canceled.")
+            center.send(CancelDownload(downloadID: itemID, message: "Canceled."))
             return true
         }
         guard let entry = itemIDs.first(where: { $0.value == itemID }),
@@ -64,7 +64,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         else { return false }
         download.cancel { _ in }
         removeStagingFile(for: entry.key)
-        ledger.cancel(itemID, message: "Canceled.")
+        center.send(CancelDownload(downloadID: itemID, message: "Canceled."))
         release(download)
         return true
     }
@@ -131,7 +131,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
             suggestedFilenameOverride
             ?? download.originalRequest?.url?.lastPathComponent
         let filename = requestedFilename.flatMap { $0.isEmpty ? nil : $0 } ?? "download"
-        let itemID = ledger.begin(profileID: profileID, filename: filename)
+        let itemID = center.begin(profileID: profileID, filename: filename)
         #if os(macOS)
             let feedbackSource = BrowserMacDownloadFeedbackSource.capture(in: webView) ?? feedbackSource
         #endif
@@ -193,7 +193,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
             spaceID: context.assignment.spaceID
         )
         retryLeases[itemID] = lease
-        ledger.restart(itemID)
+        center.send(RestartDownload(downloadID: itemID))
         guard !Task.isCancelled else {
             cancelRetryLease(itemID: itemID, lease: lease)
             return false
@@ -234,7 +234,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         webView: WKWebView,
         isAssignmentAvailable: @MainActor (BrowserSpaceRuntimeAssignment) -> Bool
     ) -> Bool {
-        let currentItem = ledger.items.first { $0.id == itemID }
+        let currentItem = center.item(itemID)
         let currentContext = retryContexts[itemID]
         guard
             BrowserDownloadRetryRegistrationPolicy.shouldRegister(
@@ -272,8 +272,8 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
     ) {
         guard retryLeases[itemID] == lease else { return }
         retryLeases.removeValue(forKey: itemID)
-        if ledger.items.first(where: { $0.id == itemID })?.state == .preparing {
-            ledger.blockAutomaticDownload(itemID)
+        if center.item(itemID)?.phase == .preparing {
+            center.send(BlockAutomaticDownload(downloadID: itemID))
         }
     }
 
@@ -284,8 +284,8 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
     ) {
         if retryLeases[itemID] == lease {
             retryLeases.removeValue(forKey: itemID)
-            if ledger.items.first(where: { $0.id == itemID })?.state == .preparing {
-                ledger.blockAutomaticDownload(itemID)
+            if center.item(itemID)?.phase == .preparing {
+                center.send(BlockAutomaticDownload(downloadID: itemID))
             }
         }
         download.cancel { _ in }
@@ -326,6 +326,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         }
         spaceNames[key] = spaceName
         spaceIDs[key] = spaceID
+        profileIDs[key] = profileID
         sourceWebViewIDs[key] = ObjectIdentifier(sourceWebView)
         if let controller = (sourceWebView.uiDelegate as? any BrowserPagePermissionProviding)?.sitePermissionRequests {
             permissionRequests[key] = (controller, controller.generation)
@@ -385,7 +386,11 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
                     isPaused: isPaused
                 )
                 self.transferEstimators[key] = estimator
-                if let update { self.ledger.setTransferUpdate(update, for: itemID) }
+                if let update {
+                    self.center.send(
+                        RecordDownloadTransfer(
+                            downloadID: itemID, telemetry: update.telemetry, progress: update.progress))
+                }
             }
         }
     }
@@ -422,9 +427,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
             isUserInitiated: isUserInitiated
         )
         let assessment = verdict.assessment
-        update(download) { ledger, itemID in
-            ledger.setRiskAssessment(assessment, for: itemID)
-        }
+        send(for: download) { AssessDownloadRisk(downloadID: $0, assessment: assessment) }
         let savedDecision: BrowserSitePermissionDecision
         if let origin = sourceOrigins[key], let spaceID = spaceIDs[key] {
             savedDecision = center.permissionCenter.decision(
@@ -459,31 +462,34 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         case .allow:
             break
         case .deny:
-            update(download) { ledger, itemID in
-                ledger.blockAutomaticDownload(itemID)
-            }
+            send(for: download) { BlockAutomaticDownload(downloadID: $0) }
             release(download)
             return nil
         case .requestPermission:
             guard
                 await approveAutomaticDownloadIfNeeded(download)
             else {
-                update(download) { ledger, itemID in
-                    ledger.blockAutomaticDownload(itemID)
-                }
+                send(for: download) { BlockAutomaticDownload(downloadID: $0) }
                 release(download)
                 return nil
             }
         }
         if verdict.requiresConfirmation {
-            let approved = await center.approveRiskyDownload(
-                assessment,
-                response.url ?? download.originalRequest?.url,
-                spaceNames[key] ?? "this"
-            )
+            // A download that no longer belongs to a profile cannot be approved.
+            let approved =
+                if let profileID = profileIDs[key] {
+                    await center.approveRiskyDownload(
+                        assessment,
+                        response.url ?? download.originalRequest?.url,
+                        spaceNames[key] ?? "this",
+                        profileID
+                    )
+                } else {
+                    false
+                }
             guard approved else {
-                update(download) { ledger, itemID in
-                    ledger.cancel(itemID, message: "Canceled before downloading a potentially dangerous file.")
+                send(for: download) {
+                    CancelDownload(downloadID: $0, message: "Canceled before downloading a potentially dangerous file.")
                 }
                 release(download)
                 return nil
@@ -507,9 +513,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
             destination = url
             securityScopedURL = resourceURL
         case .cancelled:
-            update(download) { ledger, itemID in
-                ledger.cancel(itemID, message: "Canceled.")
-            }
+            send(for: download) { CancelDownload(downloadID: $0, message: "Canceled.") }
             release(download)
             return nil
         case .unavailable:
@@ -558,9 +562,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         )
         stagingURLs[key] = staging
         destinationURLs[key] = destination
-        update(download) { ledger, itemID in
-            ledger.setDestination(destination, for: itemID)
-        }
+        if let itemID = itemIDs[key] { center.setDestination(destination, for: itemID) }
         return staging
     }
 
@@ -586,9 +588,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
                 to: destination,
                 quarantine: quarantine
             )
-            update(download) { ledger, itemID in
-                ledger.finish(itemID, finalByteCount: finalByteCount)
-            }
+            send(for: download) { FinishDownload(downloadID: $0, finalByteCount: finalByteCount) }
             authenticationSucceeded = true
         } catch {
             fail(download, message: error.localizedDescription)
@@ -633,9 +633,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
 
     private func fail(_ download: WKDownload, message: String) {
         removeStagingFile(for: ObjectIdentifier(download))
-        update(download) { ledger, itemID in
-            ledger.fail(itemID, message: message)
-        }
+        send(for: download) { FailDownload(downloadID: $0, message: message) }
     }
 
     private func removeStagingFile(for key: ObjectIdentifier) {
@@ -643,13 +641,10 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         try? FileManager.default.removeItem(at: stagingURL)
     }
 
-    private func update(
-        _ download: WKDownload,
-        mutation: (BrowserDownloadLedger, UUID) -> Void
-    ) {
-        let key = ObjectIdentifier(download)
-        guard let itemID = itemIDs[key] else { return }
-        mutation(ledger, itemID)
+    /// Sends the intent `make` builds for `download`'s record, if it still has one.
+    private func send<Event: Intent>(for download: WKDownload, _ make: (UUID) -> Event) {
+        guard let itemID = itemIDs[ObjectIdentifier(download)] else { return }
+        center.send(make(itemID))
     }
 
     private func approveAutomaticDownloadIfNeeded(
@@ -673,9 +668,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         case .denyForSession, .denyPersistently:
             return false
         case .ask:
-            update(download) { ledger, itemID in
-                ledger.markAwaitingApproval(itemID)
-            }
+            send(for: download) { AwaitDownloadApproval(downloadID: $0) }
             guard let request = permissionRequests[key],
                 request.generation == request.controller.generation
             else { return false }
@@ -734,6 +727,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
             .stopAccessingSecurityScopedResource()
         spaceNames.removeValue(forKey: key)
         spaceIDs.removeValue(forKey: key)
+        profileIDs.removeValue(forKey: key)
         sourceOrigins.removeValue(forKey: key)
         sourceWebViewIDs.removeValue(forKey: key)
         permissionRequests.removeValue(forKey: key)

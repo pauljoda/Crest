@@ -16,7 +16,7 @@ struct BrowserSidebarUtilityCoordinator {
     let spaceAccess: BrowserSpaceAccessController
     let platformActions: BrowserSidebarUtilityPlatformActions
 
-    var selectedDownloads: [BrowserDownloadItem] {
+    var selectedDownloads: [DownloadState] {
         guard let selectedSpace = browser.selectedSpace,
             let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
                 matching: BrowserSpaceRuntimeAssignment(space: selectedSpace),
@@ -116,7 +116,7 @@ struct BrowserSidebarUtilityCoordinator {
     private func downloadItem(
         for action: BrowserUtilityDownloadAction,
         matching assignment: BrowserSpaceRuntimeAssignment
-    ) -> BrowserDownloadItem? {
+    ) -> DownloadState? {
         BrowserSidebarUtilityActionPolicy.downloadItem(
             for: action,
             matching: assignment,

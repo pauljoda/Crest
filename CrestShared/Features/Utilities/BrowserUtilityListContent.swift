@@ -4,7 +4,7 @@ import SwiftUI
 struct BrowserUtilityListContent: View {
     let surface: BrowserUtilitySurface
     let space: BrowserSpace
-    let downloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
     let searchText: String
     let filter: BrowserUtilityListFilter
     let actions: BrowserUtilityListActions

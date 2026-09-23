@@ -136,16 +136,19 @@ final class BrowserMacApplication {
             sources: [softwareUpdates.widgetSource, mediaSessions],
             preferences: sidebarWidgetPreferences
         )
+        // One core per process. Standard and private windows each share one
+        // download center over it.
+        let core = CrestCore()
+        if launchEnvironment.presentsShowcaseSession, let profileID = browser.selectedSpace?.profile.id {
+            core.addShowcaseDownloads(profileID: profileID)
+        }
         let pages = BrowserPagePool(
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesEphemeralProfileStorage,
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter,
             mediaSessionStore: mediaSessions,
-            downloadLedger: Self.showcaseDownloadLedger(
-                launchEnvironment: launchEnvironment,
-                browser: browser
-            ),
+            core: core,
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
                     for: protectionSpace,
@@ -202,6 +205,7 @@ final class BrowserMacApplication {
             monitorsMemoryPressure: !usesIsolatedLaunch,
             browsingMode: .privateBrowsing,
             permissionCenter: BrowserSitePermissionCenter(),
+            core: core,
             profileRemover: profileRemover,
             makePageEngine: makePageEngine,
             // The private pool answers to the private store, so a popup from a
@@ -307,16 +311,6 @@ final class BrowserMacApplication {
         self.systemNowPlaying = systemNowPlaying
         self.startupBehavior = startupBehavior
         browser.family.configureSpaceDataCleanup(pagePoolRegistry, from: browser)
-    }
-
-    private static func showcaseDownloadLedger(
-        launchEnvironment: BrowserLaunchEnvironment,
-        browser: BrowserStore
-    ) -> BrowserDownloadLedger {
-        guard launchEnvironment.presentsShowcaseSession,
-            let profileID = browser.selectedSpace?.profile.id
-        else { return BrowserDownloadLedger() }
-        return .showcase(profileID: profileID)
     }
 
     func settingsTabContent(

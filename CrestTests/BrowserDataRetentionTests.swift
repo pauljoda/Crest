@@ -194,14 +194,13 @@ final class BrowserDataRetentionTests: XCTestCase {
         var session = BrowserSession.preview
         let cleanedProfileID = session.spaces[0].profile.id
         session.spaces[0].browsingPreferences.dataRetention.downloads = .thirtyDays
-        let ledger = BrowserDownloadLedger()
-        let expiredID = ledger.begin(
+        let center = BrowserDownloadCenter()
+        let expiredID = center.begin(
             profileID: cleanedProfileID,
             filename: "expired.pdf",
             createdAt: oldDate
         )
-        ledger.finish(expiredID)
-        let center = BrowserDownloadCenter(ledger: ledger)
+        center.send(FinishDownload(downloadID: expiredID, finalByteCount: nil))
 
         XCTAssertTrue(center.sweepExpiredRecords(using: session, now: now))
         XCTAssertTrue(center.items.isEmpty)

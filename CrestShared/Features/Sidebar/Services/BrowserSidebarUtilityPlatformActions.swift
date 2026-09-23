@@ -29,7 +29,7 @@ struct BrowserSidebarUtilityPlatformActions {
 
     /// Hands a finished download to the destination the reader picked. Each
     /// shell checks that the file is really there in its own way.
-    let openFinishedDownload: (BrowserDownloadItem, BrowserUtilityDownloadDestination) -> Void
+    let openFinishedDownload: (DownloadState, BrowserUtilityDownloadDestination) -> Void
 
     /// Stops a download that is still running.
     let cancelDownload: (UUID) -> Void

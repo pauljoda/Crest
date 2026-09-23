@@ -22,7 +22,7 @@ builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
 The native Crest apps use the `crest_session_*`, `crest_sync_*`,
-`crest_access_*`, `crest_downloads_*` and `crest_permissions_*` entry points,
+`crest_access_*`, `crest_app_*` and `crest_permissions_*` entry points,
 plus `crest_core_evaluate_policy` and `crest_core_evaluate_sync`.
 The session holds browsing data only; which Space and tab a window shows is
 window state. Session commands take what the requesting window shows as
@@ -71,14 +71,13 @@ restore rule to stored engines. `translation.rule` and `translation.matches`
 answer automatic page-translation choices in their persisted native shape. Custom-engine saves and removals are the
 `space.search_provider.upsert` and `space.search_provider.remove` session commands.
 
-`crest_downloads_*` owns one process-local download ledger per native download
-center: record states and their transitions, newest-first ordering, badge
-acknowledgement and retention expiry (the shortest retention among Spaces sharing
-a profile). It is never persisted or synced. Each v1 JSON `command` runs once and
-leaves a delta (`applied`, changed `items` with their indices, `removed`
-identities) for `crest_downloads_read`. Engines keep reporting download events
-and the native center forwards them; events that do not apply to a record's
-state are reported as not applied. The pure `downloads.progress`,
+The downloads area of `crest_app_*` owns the process's download ledger: record
+phases and their transitions, newest-first ordering, badge acknowledgement and
+retention expiry (the shortest retention among Spaces sharing a profile). It is
+never persisted or synced. Each download intent answers `DownloadUpdated` with
+the record and its newest-first position, or `DownloadsRemoved`; an event that
+does not apply to a record's phase answers no changes. Engines keep reporting
+download events and the native center forwards them as intents. The pure `downloads.progress`,
 `downloads.risk` and `downloads.automatic` policy operations answer transfer
 telemetry and ETA, risk reasons and confirmation, and the automatic-download
 throttle. The platform supplies only its file-system-safe filename and type
@@ -180,7 +179,7 @@ This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 
 `tests/native_abi.c` is a native consumer of the actual shared library. It
-exercises the policy, access, downloads, permissions and session entry points,
+exercises the policy, access, app, permissions and session entry points,
 checking buffer
 ownership, non-consuming size probes, stale revisions and invalid handles. The
 managed suite covers the session, sync and domain rules.

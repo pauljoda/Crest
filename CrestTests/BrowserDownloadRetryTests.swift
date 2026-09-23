@@ -63,16 +63,8 @@ final class BrowserDownloadRetryTests: XCTestCase {
             profileID: profileID,
             spaceID: spaceID
         )
-        let item = BrowserDownloadItem(
-            id: itemID,
-            profileID: profileID,
-            createdAt: Date(timeIntervalSinceReferenceDate: 1_000),
-            filename: "report.pdf",
-            destinationURL: nil,
-            progress: 0,
-            state: .preparing,
-            riskAssessment: nil
-        )
+        let item = DownloadState.fixture(
+            id: itemID, profileID: profileID, createdAt: Date(timeIntervalSinceReferenceDate: 1_000))
 
         XCTAssertTrue(
             BrowserDownloadRetryRegistrationPolicy.shouldRegister(
@@ -95,16 +87,8 @@ final class BrowserDownloadRetryTests: XCTestCase {
             profileID: profileID,
             spaceID: spaceID
         )
-        let item = BrowserDownloadItem(
-            id: itemID,
-            profileID: profileID,
-            createdAt: Date(timeIntervalSinceReferenceDate: 2_000),
-            filename: "report.pdf",
-            destinationURL: nil,
-            progress: 0,
-            state: .preparing,
-            riskAssessment: nil
-        )
+        let createdAt = Date(timeIntervalSinceReferenceDate: 2_000)
+        let item = DownloadState.fixture(id: itemID, profileID: profileID, createdAt: createdAt)
         let replacedLease = BrowserDownloadRetryLease(
             id: fixedID(0x25),
             itemID: itemID,
@@ -115,14 +99,14 @@ final class BrowserDownloadRetryTests: XCTestCase {
             spaceID: spaceID,
             profileID: fixedID(0x26)
         )
-        var completedItem = item
-        completedItem.state = .finished
-        var canceledItem = item
-        canceledItem.state = .canceled("Canceled.")
+        let completedItem = DownloadState.fixture(
+            id: itemID, profileID: profileID, createdAt: createdAt, phase: .finished)
+        let canceledItem = DownloadState.fixture(
+            id: itemID, profileID: profileID, createdAt: createdAt, phase: .canceled, message: "Canceled.")
 
         let rejectedInputs:
             [(
-                BrowserDownloadRetryLease?, BrowserDownloadItem?, BrowserSpaceRuntimeAssignment?, Bool
+                BrowserDownloadRetryLease?, DownloadState?, BrowserSpaceRuntimeAssignment?, Bool
             )] = [
                 (nil, item, lease.assignment, true),
                 (replacedLease, item, lease.assignment, true),

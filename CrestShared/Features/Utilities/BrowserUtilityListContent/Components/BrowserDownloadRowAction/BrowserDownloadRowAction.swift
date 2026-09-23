@@ -2,12 +2,12 @@ import Foundation
 import SwiftUI
 
 struct BrowserDownloadRowAction: View {
-    let item: BrowserDownloadItem
+    let item: DownloadState
     let destinations: [BrowserUtilityDownloadDestination]
     let perform: (BrowserUtilityDownloadAction) -> Void
 
     var body: some View {
-        switch item.state {
+        switch item.phase {
         case .blockedAutomaticDownload:
             actionButton("Allow Download", systemImage: "arrow.clockwise") {
                 perform(.retry(item.id))

@@ -31,7 +31,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         let item = try XCTUnwrap(center.items(for: assignment.profileID).first)
         XCTAssertEqual(destinationRequests, 1)
         XCTAssertEqual(item.id, itemID)
-        XCTAssertEqual(item.state, .finished)
+        XCTAssertEqual(item.phase, .finished)
         XCTAssertEqual(item.filename, "chosen.pdf")
         XCTAssertTrue(center.items(for: UUID()).isEmpty)
         let saved = try Data(contentsOf: destination)
@@ -60,12 +60,12 @@ final class BrowserDownloadTransferTests: XCTestCase {
                 try nativeSavePDFFixture(), suggestedFilename: "displayed.pdf", mimeType: "application/pdf",
                 originatingURL: URL(string: "https://pdf.crest.test/")!,
                 assignment: BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID()), spaceName: "Work")
-            let state = try XCTUnwrap(center.items.first?.state)
+            let item = try XCTUnwrap(center.items.first)
             if index == 0 {
-                guard case .canceled = state else { return XCTFail("Destination cancellation must remain canceled") }
+                guard item.phase == .canceled else { return XCTFail("Destination cancellation must remain canceled") }
             } else {
-                guard case .failed(let message) = state else { return XCTFail("Destination errors must be visible") }
-                XCTAssertFalse(message.isEmpty)
+                guard item.phase == .failed else { return XCTFail("Destination errors must be visible") }
+                XCTAssertFalse(item.message?.isEmpty ?? true)
             }
         }
         XCTAssertEqual(try Data(contentsOf: occupied), original)
@@ -77,7 +77,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         var approvalRequests = 0
         var destinationRequests = 0
         let center = BrowserDownloadCenter(
-            approveRiskyDownload: { assessment, _, spaceName in
+            approveRiskyDownload: { assessment, _, spaceName, _ in
                 approvalRequests += 1
                 XCTAssertTrue(assessment.reasons.contains(.deceptiveFilename))
                 XCTAssertEqual(spaceName, "Work")
@@ -93,7 +93,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
             assignment: BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID()), spaceName: "Work")
         XCTAssertEqual(approvalRequests, 1)
         XCTAssertEqual(destinationRequests, 0)
-        guard case .canceled = center.items.first?.state else { return XCTFail("Rejected save must be canceled") }
+        guard case .canceled = center.items.first?.phase else { return XCTFail("Rejected save must be canceled") }
     }
 
     @MainActor
@@ -129,7 +129,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
             if removesSpace {
                 XCTAssertTrue(center.items.isEmpty)
             } else {
-                guard case .canceled = center.items.first?.state else {
+                guard case .canceled = center.items.first?.phase else {
                     return XCTFail("Late consent resurrected a canceled save")
                 }
             }
@@ -195,23 +195,23 @@ final class BrowserDownloadTransferTests: XCTestCase {
                 arguments: [:], in: nil, contentWorld: .page)
         }
         try await start()
-        try await waitForDownloadCondition { center.items.filter { $0.state == .finished }.count == 1 }
+        try await waitForDownloadCondition { center.items.filter { $0.phase == .finished }.count == 1 }
         XCTAssertNil(owner.sitePermissionRequests.current)
         try await start()
         try await waitForDownloadCondition { owner.sitePermissionRequests.current != nil }
         XCTAssertEqual(owner.sitePermissionRequests.current?.permission, .automaticDownloads)
         XCTAssertEqual(owner.sitePermissionRequests.current?.origin, origin)
         owner.sitePermissionRequests.cancelAll()
-        try await waitForDownloadCondition { center.items.contains { $0.state == .blockedAutomaticDownload } }
+        try await waitForDownloadCondition { center.items.contains { $0.phase == .blockedAutomaticDownload } }
         XCTAssertEqual(permissions.decision(for: .automaticDownloads, origin: origin, in: spaceID), .ask)
         XCTAssertTrue(persistence.records.isEmpty)
         try await start()
         try await waitForDownloadCondition { owner.sitePermissionRequests.current != nil }
         owner.sitePermissionRequests.resolve(
             try XCTUnwrap(owner.sitePermissionRequests.current?.id), response: .grantPersistently)
-        try await waitForDownloadCondition { center.items.filter { $0.state == .finished }.count == 2 }
+        try await waitForDownloadCondition { center.items.filter { $0.phase == .finished }.count == 2 }
         try await start()
-        try await waitForDownloadCondition { center.items.filter { $0.state == .finished }.count == 3 }
+        try await waitForDownloadCondition { center.items.filter { $0.phase == .finished }.count == 3 }
         XCTAssertNil(owner.sitePermissionRequests.current)
         XCTAssertEqual(persistence.records.first?.decision, .grantPersistently)
     }

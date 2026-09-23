@@ -265,7 +265,7 @@ operations or a bounded export. Swift keeps projections and adapters.
 
 | Aggregate | Core surface |
 | --- | --- |
-| Downloads | `crest_downloads_*` ledger; `downloads.progress`, `downloads.risk` and `downloads.automatic` operations |
+| Downloads | Typed download intents and changes on `crest_app_*`; `downloads.progress`, `downloads.risk` and `downloads.automatic` operations |
 | Credentials and passkeys | `credentials.capture`, `.fill`, `.save_validity`, `.save_match`, `.save_plan`, `.most_recent`, `.password_recipe`, `.system_write_through`, `.system_write_through_offer` and `passkeys.access_status`. Passwords never cross the boundary |
 | Site permissions and origins | `crest_permissions_*` ledger (`load`, `decision`, `media_decision`, `records`, `set`, `reset_record`, `reset_space`, `reset_session`); `geolocation.origin`, `notifications.origin`, `notifications.permission_request`, `popups.automatic`, `popups.notice`, `external.url`, `external.local_document`, `external.scheme`, `external.consent`, `authentication.handling`, `authentication.source_label` and `authentication.fixture_trust` |
 | Search and translation | `SearchProviderCatalog`; `search.url`, `search.custom_provider`, `search.custom_providers` and `translation.*`; the `space.search_provider.*` commands |

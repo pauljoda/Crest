@@ -119,7 +119,7 @@ enum BrowserUtilityListPreparation {
                 || entry.url.absoluteString.localizedStandardContains(query)
         case .download(let download):
             return download.filename.localizedStandardContains(query)
-                || download.state.utilityStatusText
+                || download.utilityStatusText
                     .resolvedForSearch()
                     .localizedStandardContains(query)
         }
@@ -158,11 +158,11 @@ enum BrowserUtilityListPreparation {
                 to: now
             ) ?? .distantPast
         case (.downloadsInProgress, let .download(item)):
-            item.state.isInProgress
+            item.phase.isInProgress
         case (.downloadsFinished, let .download(item)):
-            item.state == .finished
+            item.phase == .finished
         case (.downloadsNeedsAttention, let .download(item)):
-            item.state.needsAttention
+            item.phase.needsAttention
         default:
             false
         }

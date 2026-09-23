@@ -303,15 +303,15 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
-        let ledger = BrowserDownloadLedger()
-        let downloadItemID = ledger.begin(
+        let downloadCenter = BrowserDownloadCenter()
+        let downloadItemID = downloadCenter.begin(
             profileID: source.profile.id,
             filename: "Crest.dmg",
             createdAt: Date(timeIntervalSince1970: 1_700_000_004)
         )
         return Context(
             browser: browser,
-            downloadCenter: BrowserDownloadCenter(ledger: ledger),
+            downloadCenter: downloadCenter,
             downloadItemID: downloadItemID,
             access: BrowserSpaceAccessController(
                 authenticator: AcceptingAuthenticator()
@@ -352,17 +352,10 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
         )
     }
 
-    private func downloadItem(profileID: UUID, id: UUID) -> BrowserDownloadItem {
-        BrowserDownloadItem(
-            id: id,
-            profileID: profileID,
-            createdAt: Date(timeIntervalSince1970: 1_700_000_004),
-            filename: "Crest.dmg",
-            destinationURL: nil,
-            progress: 0.5,
-            state: .downloading,
-            riskAssessment: nil
-        )
+    private func downloadItem(profileID: UUID, id: UUID) -> DownloadState {
+        DownloadState.fixture(
+            id: id, profileID: profileID, createdAt: Date(timeIntervalSince1970: 1_700_000_004),
+            filename: "Crest.dmg", progress: 0.5, phase: .downloading)
     }
 
     private static func uuid(_ finalByte: UInt8) -> UUID {
@@ -390,7 +383,7 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
     private final class RecordedPlatformActions {
         var restoredTabs: [TabID] = []
         var openedURLs: [URL] = []
-        var openedDownloads: [(item: BrowserDownloadItem, destination: BrowserUtilityDownloadDestination)] = []
+        var openedDownloads: [(item: DownloadState, destination: BrowserUtilityDownloadDestination)] = []
         var canceledDownloads: [UUID] = []
         var clearedDownloads: [UUID] = []
 

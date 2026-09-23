@@ -9,10 +9,10 @@ import SwiftUI
 /// downloads land.
 struct BrowserSpaceSwitcherDownloads {
     /// Everything the selected Space's profile has downloaded.
-    let items: [BrowserDownloadItem]
+    let items: [DownloadState]
 
     /// The finished downloads that have not been acknowledged.
-    let newItems: [BrowserDownloadItem]
+    let newItems: [DownloadState]
 
     /// The Space's own accent, which the badge wears unless something in the
     /// list needs attention.

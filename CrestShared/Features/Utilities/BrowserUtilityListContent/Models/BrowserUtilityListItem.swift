@@ -3,7 +3,7 @@ import Foundation
 enum BrowserUtilityListItem: Identifiable, Sendable {
     case archive(ArchivedTab)
     case history(BrowserHistoryEntry)
-    case download(BrowserDownloadItem)
+    case download(DownloadState)
 
     var id: BrowserUtilityListItemID {
         switch self {

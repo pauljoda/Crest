@@ -12,24 +12,24 @@ struct BrowserDownloadRowPresentation: Sendable {
     let showsStatusAlongsideMetrics: Bool
 
     static func resolve(
-        item: BrowserDownloadItem
+        item: DownloadState
     ) -> BrowserDownloadRowPresentation {
         let telemetry = item.telemetry
         let isActivelyDownloading =
-            item.state == .downloading
+            item.phase == .downloading
             && !telemetry.isPaused
         let statusText: BrowserUtilityText
-        if item.state == .downloading, telemetry.isPaused {
+        if item.phase == .downloading, telemetry.isPaused {
             statusText = .localized("Paused")
-        } else if item.state == .finished {
+        } else if item.phase == .finished {
             statusText = .localized("Completed")
         } else {
-            statusText = item.state.utilityStatusText
+            statusText = item.utilityStatusText
         }
         let showsTransferMetrics =
             telemetry.bytesReceived > 0
-            || telemetry.hasKnownTotal
-            || item.state == .finished
+            || telemetry.totalBytes != nil
+            || item.phase == .finished
         return BrowserDownloadRowPresentation(
             bytesReceived: telemetry.bytesReceived,
             totalBytes: telemetry.totalBytes,
@@ -41,7 +41,7 @@ struct BrowserDownloadRowPresentation: Sendable {
                 ? telemetry.estimatedTimeRemaining
                 : nil,
             statusText: statusText,
-            statusNeedsAttention: item.state.needsAttention,
+            statusNeedsAttention: item.phase.needsAttention,
             showsTransferMetrics: showsTransferMetrics,
             showsStatusAlongsideMetrics: showsTransferMetrics
                 && !isActivelyDownloading

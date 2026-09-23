@@ -30,7 +30,7 @@ extension BrowserSidebarUtilityCoordinator {
                     pages.select(session: browser.presented)
                 },
                 openFinishedDownload: { item, destination in
-                    guard item.state == .finished,
+                    guard item.phase == .finished,
                         let destinationURL = item.destinationURL
                     else { return }
                     switch destination {

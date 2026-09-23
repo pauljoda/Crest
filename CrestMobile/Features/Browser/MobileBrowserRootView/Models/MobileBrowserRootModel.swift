@@ -640,12 +640,12 @@ extension MobileBrowserRootModel {
 // MARK: - Downloads
 
 extension MobileBrowserRootModel {
-    var selectedUtilityDownloads: [BrowserDownloadItem] {
+    var selectedUtilityDownloads: [DownloadState] {
         guard let profileID = browser.selectedSpace?.profile.id else { return [] }
         return pages.downloadCenter.items(for: profileID)
     }
 
-    var newUtilityDownloads: [BrowserDownloadItem] {
+    var newUtilityDownloads: [DownloadState] {
         guard let profileID = browser.selectedSpace?.profile.id else { return [] }
         return pages.downloadCenter.unacknowledgedItems(for: profileID)
     }

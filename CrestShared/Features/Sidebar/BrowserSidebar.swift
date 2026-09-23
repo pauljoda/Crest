@@ -108,7 +108,7 @@ struct BrowserSidebar<Content: View>: View {
         utilityCoordinator.selectedDownloads.map(\.id)
     }
 
-    private var newUtilityDownloads: [BrowserDownloadItem] {
+    private var newUtilityDownloads: [DownloadState] {
         guard let profileID = browser.selectedSpace?.profile.id else { return [] }
         return pageAccess.downloadCenter.unacknowledgedItems(for: profileID)
     }

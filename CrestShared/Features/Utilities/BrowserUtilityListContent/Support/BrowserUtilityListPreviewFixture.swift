@@ -57,27 +57,28 @@ enum BrowserUtilityListPreviewFixture {
     static let preparingDownload = download(
         id: identifier(0x51),
         filename: "Crest.dmg",
-        state: .preparing
+        phase: .preparing
     )
 
     static let activeDownload = download(
         id: identifier(0x52),
         filename: "Crest.dmg",
         progress: 0.64,
-        state: .downloading
+        phase: .downloading
     )
 
     static let finishedDownload = download(
         id: identifier(0x53),
         filename: "Crest.dmg",
         progress: 1,
-        state: .finished
+        phase: .finished
     )
 
     static let failedDownload = download(
         id: identifier(0x54),
         filename: "Crest.dmg",
-        state: .failed("The connection was interrupted.")
+        phase: .failed,
+        message: "The connection was interrupted."
     )
 
     static let historyRequest = BrowserUtilityListRequest(
@@ -120,17 +121,22 @@ enum BrowserUtilityListPreviewFixture {
         id: UUID,
         filename: String,
         progress: Double = 0,
-        state: BrowserDownloadItemState
-    ) -> BrowserDownloadItem {
-        BrowserDownloadItem(
+        phase: DownloadPhase,
+        message: String? = nil
+    ) -> DownloadState {
+        DownloadState(
             id: id,
             profileID: assignment.profileID,
             createdAt: referenceDate,
             filename: filename,
-            destinationURL: URL(filePath: "/crest-preview/\(filename)"),
+            destination: URL(filePath: "/crest-preview/\(filename)").absoluteString,
             progress: progress,
-            state: state,
-            riskAssessment: nil
+            telemetry: DownloadTelemetry(
+                bytesReceived: 0, totalBytes: nil, bytesPerSecond: nil, estimatedTimeRemaining: nil, isPaused: false),
+            phase: phase,
+            message: message,
+            risk: nil,
+            isAcknowledged: false
         )
     }
 

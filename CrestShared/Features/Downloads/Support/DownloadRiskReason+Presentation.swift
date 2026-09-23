@@ -1,6 +1,6 @@
 import Foundation
 
-extension BrowserDownloadRiskReason {
+extension DownloadRiskReason {
     var message: String {
         String(localized: warningMessage)
     }

@@ -84,8 +84,10 @@
                     bytesReceived: (values["received"] as? NSNumber)?.int64Value ?? 0,
                     totalBytes: (values["total"] as? NSNumber)?.int64Value ?? 0,
                     isPaused: values["paused"] as? Bool == true, state: state,
-                    createdAt: (values["startedAt"] as? NSNumber).map { Date(timeIntervalSince1970: $0.doubleValue) }
-                        ?? .now,
+                    // The core only records finite dates.
+                    createdAt: (values["startedAt"] as? NSNumber).map(\.doubleValue).flatMap {
+                        $0.isFinite ? Date(timeIntervalSince1970: $0) : nil
+                    } ?? .now,
                     isRestored: values["restored"] as? Bool == true),
                 assignment: destination.assignment, controller: self)
             return (id, destination)

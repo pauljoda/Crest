@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct BrowserDownloadStatusIcon: View {
-    let item: BrowserDownloadItem
+    let item: DownloadState
 
     var body: some View {
-        switch item.state {
+        switch item.phase {
         case .preparing:
             ProgressView().controlSize(.small)
         case .awaitingApproval:

@@ -326,6 +326,23 @@ public sealed class NativePolicyTests {
         Assert.Equal(result, NativePolicyEvaluator.Evaluate(bytes));
         return JsonNode.Parse(result)!;
     }
+    [Fact]
+    public void AutomaticDownloadsAnswerTheThrottleInTheNativeSpelling() {
+        static JsonNode Automatic(string savedDecision, bool hasAllowed) => JsonNode.Parse(NativePolicyEvaluator.Evaluate(
+            Encoding.UTF8.GetBytes(new JsonObject {
+                ["version"] = 1,
+                ["operation"] = "downloads.automatic",
+                ["userInitiated"] = false,
+                ["userApprovedRetry"] = false,
+                ["savedDecision"] = savedDecision,
+                ["hasAllowedAutomaticDownload"] = hasAllowed
+            }.ToJsonString())))!;
+
+        var throttled = Automatic("ask", hasAllowed: true);
+        Assert.Equal("requestPermission", throttled["action"]!.GetValue<string>());
+        Assert.True(throttled["hasAllowedAutomaticDownload"]!.GetValue<bool>());
+        Assert.Throws<ProtocolException>(() => Automatic("maybe", hasAllowed: false));
+    }
     private static string[] TabIds(JsonNode plan, string field) =>
         plan[field]!.AsArray().Select(value => value!.GetValue<string>()).ToArray();
 }

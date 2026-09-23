@@ -134,18 +134,15 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
-        let ledger = BrowserDownloadLedger()
-        let downloadItemID = ledger.begin(
+        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let downloadItemID = pages.downloadCenter.begin(
             profileID: source.profile.id,
             filename: "Crest.ipa",
             createdAt: Date(timeIntervalSince1970: 1_700_000_004)
         )
         return Context(
             browser: browser,
-            pages: MobileBrowserPageStore(
-                usesEphemeralWebsiteDataStores: true,
-                downloadLedger: ledger
-            ),
+            pages: pages,
             downloadItemID: downloadItemID,
             access: BrowserSpaceAccessController(
                 authenticator: AcceptingAuthenticator()

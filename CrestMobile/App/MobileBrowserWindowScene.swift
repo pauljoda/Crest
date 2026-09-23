@@ -30,6 +30,8 @@ struct MobileBrowserWindowScene: View {
         onboardingCoordinator: BrowserOnboardingCoordinator,
         automaticallyPresentsOnboarding: Bool,
         mediaSessions: BrowserMediaSessionStore,
+        downloads: MobileBrowserDownloads,
+        privateDownloads: MobileBrowserDownloads,
         sidebarWidgets: BrowserSidebarWidgetRuntime
     ) {
         self.onboardingProgress = onboardingProgress
@@ -48,7 +50,9 @@ struct MobileBrowserWindowScene: View {
                 startupBehavior: startupBehavior,
                 monitorsMemoryPressure: monitorsMemoryPressure,
                 usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
-                mediaSessionStore: mediaSessions
+                mediaSessionStore: mediaSessions,
+                downloads: downloads,
+                privateDownloads: privateDownloads
             ))
         )
     }

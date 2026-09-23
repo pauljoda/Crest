@@ -30,16 +30,18 @@ final class MobileDownloadRiskConfirmationCoordinator {
     }
 
     func requestApproval(
-        assessment: BrowserDownloadRiskAssessment,
+        assessment: DownloadRiskAssessment,
         sourceURL: URL?,
-        spaceName: String
+        spaceName: String,
+        profileID: UUID
     ) async -> Bool {
         await withCheckedContinuation { continuation in
             let pending = PendingRequest(
                 request: MobileDownloadRiskConfirmationRequest(
                     assessment: assessment,
                     sourceURL: sourceURL,
-                    spaceName: spaceName
+                    spaceName: spaceName,
+                    profileID: profileID
                 ),
                 continuation: continuation
             )
@@ -68,6 +70,19 @@ final class MobileDownloadRiskConfirmationCoordinator {
         activeContinuation?.resume(returning: false)
         for continuation in queuedContinuations {
             continuation.resume(returning: false)
+        }
+    }
+
+    /// Cancels the requests of the given profiles, such as one window's
+    /// private browsing, and leaves every other window's requests waiting.
+    func cancelAll(profileIDs: Set<UUID>) {
+        let canceled = queued.filter { profileIDs.contains($0.request.profileID) }
+        queued.removeAll { profileIDs.contains($0.request.profileID) }
+        for pending in canceled {
+            pending.continuation.resume(returning: false)
+        }
+        if let request, profileIDs.contains(request.profileID) {
+            cancel()
         }
     }
 

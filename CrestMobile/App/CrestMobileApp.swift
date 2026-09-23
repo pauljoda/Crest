@@ -37,6 +37,10 @@ private final class BrowserMobileApplication {
     let permissionCenter: BrowserSitePermissionCenter
     let pageStoreRegistry: MobileBrowserPageStoreRegistry
     let mediaSessions: BrowserMediaSessionStore
+    /// Every window shares one download center per browsing mode, over the
+    /// process's one core.
+    let downloads: MobileBrowserDownloads
+    let privateDownloads: MobileBrowserDownloads
     let tabStateArchive: (any BrowserTabStateArchiving)?
     let windowStatePersistence: any BrowserWindowStatePersisting
     let startupBehavior: BrowserStartupBehavior
@@ -99,15 +103,37 @@ private final class BrowserMobileApplication {
             sources: [mediaSessions],
             preferences: sidebarWidgetPreferences
         )
+        let core = CrestCore()
+        if launchEnvironment.presentsShowcaseSession, let profileID = browser.selectedSpace?.profile.id {
+            core.addShowcaseDownloads(profileID: profileID)
+        }
+        let downloads = MobileBrowserDownloads(
+            core: core,
+            permissionCenter: permissionCenter,
+            loadCredential: { protectionSpace, spaceID in
+                try await browser.httpAuthenticationCredential(for: protectionSpace, in: spaceID)
+            },
+            saveCredential: { request, spaceID in
+                try await browser.saveHTTPAuthenticationCredential(
+                    username: request.username,
+                    password: request.password,
+                    protectionSpace: request.protectionSpace,
+                    in: spaceID,
+                    replacing: request.replacing
+                )
+            }
+        )
+        let privateDownloads = MobileBrowserDownloads(
+            core: core,
+            browsingMode: .privateBrowsing,
+            permissionCenter: BrowserSitePermissionCenter()
+        )
         let pages = MobileBrowserPageStore(
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             permissionCenter: permissionCenter,
             mediaSessionStore: mediaSessions,
-            downloadLedger: Self.showcaseDownloadLedger(
-                launchEnvironment: launchEnvironment,
-                browser: browser
-            ),
+            downloads: downloads,
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
                     for: protectionSpace,
@@ -165,6 +191,8 @@ private final class BrowserMobileApplication {
         self.permissionCenter = permissionCenter
         pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
         self.mediaSessions = mediaSessions
+        self.downloads = downloads
+        self.privateDownloads = privateDownloads
         self.tabStateArchive = tabStateArchive
         if usesIsolatedLaunch {
             if let isolationID = launchEnvironment.persistentIsolationID,
@@ -195,16 +223,6 @@ private final class BrowserMobileApplication {
         usesEphemeralWebsiteDataStores = usesIsolatedLaunch
     }
 
-    private static func showcaseDownloadLedger(
-        launchEnvironment: BrowserLaunchEnvironment,
-        browser: BrowserStore
-    ) -> BrowserDownloadLedger {
-        guard launchEnvironment.presentsShowcaseSession,
-            let profileID = browser.selectedSpace?.profile.id
-        else { return BrowserDownloadLedger() }
-        return .showcase(profileID: profileID)
-    }
-
     func windowContent(id windowID: BrowserWindowID) -> some View {
         MobileBrowserWindowScene(
             id: windowID,
@@ -221,6 +239,8 @@ private final class BrowserMobileApplication {
             onboardingCoordinator: onboardingCoordinator,
             automaticallyPresentsOnboarding: automaticallyPresentsOnboarding,
             mediaSessions: mediaSessions,
+            downloads: downloads,
+            privateDownloads: privateDownloads,
             sidebarWidgets: sidebarWidgets
         )
         .environment(cloudSync)

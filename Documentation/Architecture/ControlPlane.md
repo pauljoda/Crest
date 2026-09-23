@@ -573,12 +573,14 @@ as core messages. The decisions behind them are core policy operations: which
 pages a memory squeeze may release, in what order and how many, what dismissing
 a tab means, and when a terminated renderer stops reloading. The adapter keeps
 the per-page veto for media playback, capture and Picture in Picture.
-Downloads follow the same split on both engines: the process-local core ledger
-behind `crest_downloads_*` owns record states, ordering, acknowledgement and
-retention expiry, and policy operations answer progress and ETA, risk reasons
-and the automatic-download throttle. `BrowserDownloadCenter` forwards engine
-download events, owns files, prompts and notices, and renders the ledger's
-projection. The ledger is not persisted.
+Downloads follow the same split on both engines: the process's one `CrestCore`
+owns the download ledger behind `crest_app_*` (record phases, ordering,
+acknowledgement and retention expiry), and policy operations answer progress
+and ETA, risk reasons and the automatic-download throttle.
+`BrowserDownloadCenter` sends engine download events as typed intents, owns
+files, prompts and notices, and renders the records in `core.state`. Each
+browsing mode shares one center across its windows. The ledger is not
+persisted.
 Credentials follow the same split. Policy operations decide what a form
 observation means (fill offer, save candidate, save prompt, username hint), which
 fill a field accepts, whether a candidate is still valid, which saved record is
@@ -698,10 +700,10 @@ WebKit reads its spelling default once per process, so launch reconciles that
 engine copy with the record. Appearance preferences, link preferences,
 shortcut overrides, sync choices and per-Space download locations stay native.
 The C ABI is synchronous: `crest_session_*`, `crest_sync_*`, `crest_access_*`,
-`crest_downloads_*`, `crest_permissions_*`, `crest_core_evaluate_policy` and
+`crest_app_*`, `crest_permissions_*`, `crest_core_evaluate_policy` and
 `crest_core_evaluate_sync`, declared in `CrestContracts/include/crest_core.h`
-and described in `CrestContracts/README.md`.
-`CrestContracts/tests/native_abi.c` exercises the policy, access, downloads,
+and `crest_app.h` and described in `CrestContracts/README.md`.
+`CrestContracts/tests/native_abi.c` exercises the policy, access, app,
 permissions and session entry points against the built library.
 
 Once a store family attaches the access authority, `NativeSessionAuthority`

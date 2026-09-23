@@ -6,20 +6,25 @@ import WebKit
 
 struct MobileDownloadRiskConfirmationRequest: Identifiable, Equatable, Sendable {
     let id: UUID
-    let assessment: BrowserDownloadRiskAssessment
+    let assessment: DownloadRiskAssessment
     let sourceURL: URL?
     let spaceName: String
+    /// The profile the download belongs to. Only windows browsing it present
+    /// the request.
+    let profileID: UUID
 
     init(
         id: UUID = UUID(),
-        assessment: BrowserDownloadRiskAssessment,
+        assessment: DownloadRiskAssessment,
         sourceURL: URL?,
-        spaceName: String
+        spaceName: String,
+        profileID: UUID
     ) {
         self.id = id
         self.assessment = assessment
         self.sourceURL = sourceURL
         self.spaceName = spaceName
+        self.profileID = profileID
     }
 
     var title: String {

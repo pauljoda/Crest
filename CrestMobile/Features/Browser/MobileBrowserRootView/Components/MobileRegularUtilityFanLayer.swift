@@ -10,7 +10,7 @@ struct MobileRegularUtilityFanLayer: View {
     let isExpanded: Bool
     let selectedSurface: BrowserUtilitySurface?
     let badgeColor: Color
-    let downloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
     let newDownloadCount: Int
     let downloadCenter: BrowserDownloadCenter
     let profileID: UUID?

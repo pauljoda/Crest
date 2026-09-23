@@ -6,7 +6,7 @@ struct BrowserUtilityFanControl: View {
     let destination: CGPoint
     let selectedSurface: BrowserUtilitySurface?
     let badgeColor: Color
-    let downloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
     let newDownloadCount: Int
     let select: (BrowserUtilitySurface) -> Void
     var reduceMotionOverride: Bool? = nil

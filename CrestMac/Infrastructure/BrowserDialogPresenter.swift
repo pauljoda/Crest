@@ -252,7 +252,7 @@ final class BrowserDialogPresenter {
     }
 
     func approveRiskyDownload(
-        assessment: BrowserDownloadRiskAssessment,
+        assessment: DownloadRiskAssessment,
         sourceURL: URL?,
         spaceName: String
     ) async -> Bool {

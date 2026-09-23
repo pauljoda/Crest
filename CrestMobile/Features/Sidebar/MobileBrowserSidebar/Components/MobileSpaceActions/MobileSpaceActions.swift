@@ -45,12 +45,12 @@ struct MobileSpaceActions: View {
         .frame(height: 60)
     }
 
-    private var downloads: [BrowserDownloadItem] {
+    private var downloads: [DownloadState] {
         guard let profileID = browser.selectedSpace?.profile.id else { return [] }
         return pages.downloadCenter.items(for: profileID)
     }
 
-    private var newDownloads: [BrowserDownloadItem] {
+    private var newDownloads: [DownloadState] {
         guard let profileID = browser.selectedSpace?.profile.id else { return [] }
         return pages.downloadCenter.unacknowledgedItems(for: profileID)
     }
@@ -60,6 +60,6 @@ struct MobileSpaceActions: View {
     }
 
     private var downloadBadgeColor: Color {
-        downloads.contains(where: { $0.state.needsAttention }) ? .red : selectedAccentColor
+        downloads.contains(where: { $0.phase.needsAttention }) ? .red : selectedAccentColor
     }
 }

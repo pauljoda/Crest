@@ -7,8 +7,8 @@ enum BrowserSidebarUtilityActionPolicy {
         matching assignment: BrowserSpaceRuntimeAssignment,
         in browser: BrowserStore,
         accessController: BrowserSpaceAccessController,
-        itemsForProfile: (UUID) -> [BrowserDownloadItem]
-    ) -> BrowserDownloadItem? {
+        itemsForProfile: (UUID) -> [DownloadState]
+    ) -> DownloadState? {
         guard
             let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
                 matching: assignment,

@@ -6,27 +6,9 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// Wire spellings for the download vocabulary, shared by the ledger commands
-/// and the download policy operations. They match the native projection's
-/// case names.
+/// Wire spellings for the download policy operations.
 internal static class DownloadCodes {
-    #region Variables
-
-    private static readonly DateTimeOffset ReferenceDate = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
-
-    #endregion
-
     #region Actions - Encoding
-
-    public static string State(DownloadPhase phase) => phase switch {
-        DownloadPhase.Preparing => "preparing",
-        DownloadPhase.AwaitingApproval => "awaitingApproval",
-        DownloadPhase.Downloading => "downloading",
-        DownloadPhase.Finished => "finished",
-        DownloadPhase.BlockedAutomaticDownload => "blockedAutomaticDownload",
-        DownloadPhase.Canceled => "canceled",
-        _ => "failed"
-    };
 
     public static string Reason(DownloadRiskReason reason) => reason switch {
         DownloadRiskReason.ExecutableOrInstaller => "executableOrInstaller",
@@ -49,23 +31,6 @@ internal static class DownloadCodes {
         ["bytesPerSecond"] = telemetry.BytesPerSecond,
         ["estimatedTimeRemaining"] = telemetry.EstimatedTimeRemaining,
         ["isPaused"] = telemetry.IsPaused
-    };
-
-    public static JsonObject Item(DownloadState item) => new() {
-        ["id"] = item.Id.ToString(),
-        ["profileID"] = item.ProfileId.ToString(),
-        ["createdAt"] = Seconds(item.CreatedAt),
-        ["filename"] = item.Filename,
-        ["destination"] = item.Destination,
-        ["progress"] = item.Progress,
-        ["telemetry"] = Telemetry(item.Telemetry),
-        ["state"] = State(item.Phase),
-        ["message"] = item.Message,
-        ["risk"] = item.Risk is { } risk ? new JsonObject {
-            ["sanitizedFilename"] = risk.SanitizedFilename,
-            ["reasons"] = Reasons(risk.Reasons)
-        } : null,
-        ["acknowledged"] = item.IsAcknowledged
     };
 
     public static JsonObject Estimator(DownloadTransferEstimator estimator) => new() {
@@ -96,34 +61,11 @@ internal static class DownloadCodes {
         ["hasAllowedAutomaticDownload"] = verdict.HasAllowedAutomaticDownload
     };
 
-    /// Seconds since 1 January 2001, the native projection's date spelling.
-    public static double Seconds(DateTimeOffset date) => (date - ReferenceDate).Ticks / (double)TimeSpan.TicksPerSecond;
-
     #endregion
 
     #region Actions - Decoding
 
-    public static DateTimeOffset Date(double seconds) => double.IsFinite(seconds)
-        ? ReferenceDate.AddTicks((long)Math.Round(seconds * TimeSpan.TicksPerSecond))
-        : throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-
-    public static DownloadRiskReason ParseReason(JsonElement value) => value.GetString() switch {
-        "executableOrInstaller" => DownloadRiskReason.ExecutableOrInstaller,
-        "deceptiveFilename" => DownloadRiskReason.DeceptiveFilename,
-        "dangerousTypeMismatch" => DownloadRiskReason.DangerousTypeMismatch,
-        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidRiskReason)
-    };
-
     public static SitePermissionDecision ParseDecision(string? value) => SitePermissionCodes.ParseDecision(value);
-
-    public static DownloadTelemetry ParseTelemetry(JsonElement value) {
-        Protocol.Members(value, "bytesReceived", "totalBytes", "bytesPerSecond", "estimatedTimeRemaining", "isPaused");
-        return new(value.GetProperty("bytesReceived").GetInt64(),
-            Optional(value, "totalBytes")?.GetInt64(),
-            Optional(value, "bytesPerSecond")?.GetDouble(),
-            Optional(value, "estimatedTimeRemaining")?.GetDouble(),
-            value.GetProperty("isPaused").GetBoolean());
-    }
 
     /// The estimator state a previous `downloads.progress` answer returned.
     public static DownloadTransferEstimator ParseEstimator(JsonElement state) {
@@ -138,10 +80,6 @@ internal static class DownloadCodes {
     }
 
     public static JsonElement? Optional(JsonElement value, string field) => PolicyFields.Optional(value, field);
-
-    /// A string that may be empty, such as a filename an engine could not name.
-    public static string AnyText(JsonElement value, string field, int maximumLength) =>
-        PolicyFields.AnyText(value, field, maximumLength);
 
     #endregion
 }

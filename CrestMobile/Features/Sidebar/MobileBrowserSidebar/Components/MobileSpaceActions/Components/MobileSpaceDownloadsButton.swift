@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct MobileSpaceDownloadsButton: View {
-    let downloads: [BrowserDownloadItem]
-    let newDownloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
+    let newDownloads: [DownloadState]
     let badgeColor: Color
     let action: () -> Void
 
@@ -42,10 +42,10 @@ struct MobileSpaceDownloadsButton: View {
     }
 
     private var symbol: String {
-        if downloads.contains(where: { $0.state.needsAttention }) {
+        if downloads.contains(where: { $0.phase.needsAttention }) {
             return "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
         }
-        if downloads.contains(where: { $0.state.isInProgress }) {
+        if downloads.contains(where: { $0.phase.isInProgress }) {
             return "arrow.down.circle"
         }
         return "arrow.down.circle.fill"

@@ -2109,6 +2109,10 @@
     "typed-core-contract-generator": {
       "category": "internal",
       "message": "Download intents, changes and rejections are typed C# records, and a generator derives the core codec, Swift models and C header from them."
+    },
+    "downloads-typed-core-contract": {
+      "category": "internal",
+      "message": "Downloads run through the typed core contract, with one core per process and one download center per browsing mode across windows."
     }
   }
 }

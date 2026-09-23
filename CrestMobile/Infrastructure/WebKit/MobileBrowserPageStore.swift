@@ -100,7 +100,7 @@ final class MobileBrowserPageStore:
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         mediaSessionStore: BrowserMediaSessionStore? = nil,
-        downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
+        downloads: MobileBrowserDownloads? = nil,
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
         saveHTTPAuthenticationCredential:
@@ -142,28 +142,19 @@ final class MobileBrowserPageStore:
         self.openModifiedLink = openModifiedLink
         self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
-        let downloadRiskConfirmation = MobileDownloadRiskConfirmationCoordinator()
-        self.downloadRiskConfirmation = downloadRiskConfirmation
-        downloadCenter = BrowserDownloadCenter(
-            ledger: downloadLedger,
-            promptForCredentials: { prompt, spaceName in
-                await MobileBrowserDialogPresenter.presentHTTPAuthentication(
-                    prompt: prompt,
-                    spaceName: spaceName
-                )
-            },
-            allowsCredentialSaving: !browsingMode.isPrivate,
-            loadCredential: loadHTTPAuthenticationCredential,
-            saveCredential: saveHTTPAuthenticationCredential,
-            approveRiskyDownload: { assessment, sourceURL, spaceName in
-                await downloadRiskConfirmation.requestApproval(
-                    assessment: assessment,
-                    sourceURL: sourceURL,
-                    spaceName: spaceName
-                )
-            },
-            permissionCenter: permissionCenter
-        )
+        // Windows share their browsing mode's downloads; a store made on its
+        // own, such as a preview's, gets a memory-only core of its own.
+        let downloads =
+            downloads
+            ?? MobileBrowserDownloads(
+                core: CrestCore(),
+                browsingMode: browsingMode,
+                permissionCenter: permissionCenter,
+                loadCredential: loadHTTPAuthenticationCredential,
+                saveCredential: saveHTTPAuthenticationCredential
+            )
+        downloadRiskConfirmation = downloads.riskConfirmation
+        downloadCenter = downloads.center
         if monitorsMemoryPressure {
             installMemoryPressureSource()
         }
@@ -1134,8 +1125,8 @@ final class MobileBrowserPageStore:
         _ itemID: UUID,
         to destination: MobileBrowserFileExportDestination
     ) {
-        guard let item = downloadCenter.items.first(where: { $0.id == itemID }),
-            item.state == .finished,
+        guard let item = downloadCenter.item(itemID),
+            item.phase == .finished,
             let destinationURL = item.destinationURL
         else { return }
         MobileBrowserDialogPresenter.exportDownloadedFile(

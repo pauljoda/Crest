@@ -143,7 +143,22 @@ enum BrowserCorePolicy {
     }
 
     private struct DownloadRiskAnswer: Decodable {
-        @BrowserCoreOptional var reasons: BrowserCoreKnownValues<BrowserDownloadRiskReason>?
+        /// The core's risk reason spellings.
+        enum Reason: String, Decodable {
+            case executableOrInstaller
+            case deceptiveFilename
+            case dangerousTypeMismatch
+
+            var reason: DownloadRiskReason {
+                switch self {
+                case .executableOrInstaller: .executableOrInstaller
+                case .deceptiveFilename: .deceptiveFilename
+                case .dangerousTypeMismatch: .dangerousTypeMismatch
+                }
+            }
+        }
+
+        @BrowserCoreOptional var reasons: BrowserCoreKnownValues<Reason>?
         @BrowserCoreOptional var requiresConfirmation: Bool?
     }
 
@@ -169,8 +184,22 @@ enum BrowserCorePolicy {
     }
 
     private struct DownloadProgressAnswer: Decodable {
+        struct Telemetry: Decodable {
+            let bytesReceived: Int64
+            @BrowserCoreOptional var totalBytes: Int64?
+            @BrowserCoreOptional var bytesPerSecond: Double?
+            @BrowserCoreOptional var estimatedTimeRemaining: Double?
+            let isPaused: Bool
+
+            var telemetry: DownloadTelemetry {
+                DownloadTelemetry(
+                    bytesReceived: bytesReceived, totalBytes: totalBytes, bytesPerSecond: bytesPerSecond,
+                    estimatedTimeRemaining: estimatedTimeRemaining, isPaused: isPaused)
+            }
+        }
+
         let estimator: BrowserCoreOpaqueValue
-        let telemetry: BrowserDownloadTransferTelemetry
+        let telemetry: Telemetry
         let progress: Double
     }
 
@@ -323,8 +352,8 @@ enum BrowserCorePolicy {
             userInitiated: isUserInitiated)
         let answer = evaluate(.downloadsRisk, request, answer: DownloadRiskAnswer.self)
         return BrowserDownloadRiskVerdict(
-            assessment: BrowserDownloadRiskAssessment(
-                sanitizedFilename: sanitizedFilename, reasons: answer?.reasons?.values ?? []),
+            assessment: DownloadRiskAssessment(
+                sanitizedFilename: sanitizedFilename, reasons: answer?.reasons?.values.map(\.reason) ?? []),
             requiresConfirmation: answer?.requiresConfirmation ?? true)
     }
 
@@ -358,7 +387,7 @@ enum BrowserCorePolicy {
         else { return nil }
         return (
             answer.estimator,
-            BrowserDownloadTransferUpdate(telemetry: answer.telemetry, progress: answer.progress)
+            BrowserDownloadTransferUpdate(telemetry: answer.telemetry.telemetry, progress: answer.progress)
         )
     }
 

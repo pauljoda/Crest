@@ -162,7 +162,7 @@ final class BrowserPagePool:
             (any BrowserHostedWebNotificationCentering)? = nil,
         mediaSessionStore: BrowserMediaSessionStore? = nil,
         downloadCenter: BrowserDownloadCenter? = nil,
-        downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
+        core: CrestCore = CrestCore(),
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
         saveHTTPAuthenticationCredential:
@@ -227,7 +227,7 @@ final class BrowserPagePool:
         self.downloadCenter =
             downloadCenter
             ?? BrowserDownloadCenter(
-                ledger: downloadLedger,
+                core: core,
                 promptForCredentials: { prompt, spaceName in
                     await dialogPresenter.presentHTTPAuthentication(
                         prompt: prompt,
@@ -237,7 +237,7 @@ final class BrowserPagePool:
                 allowsCredentialSaving: !browsingMode.isPrivate,
                 loadCredential: loadHTTPAuthenticationCredential,
                 saveCredential: saveHTTPAuthenticationCredential,
-                approveRiskyDownload: { assessment, sourceURL, spaceName in
+                approveRiskyDownload: { assessment, sourceURL, spaceName, _ in
                     await dialogPresenter.approveRiskyDownload(
                         assessment: assessment,
                         sourceURL: sourceURL,
@@ -429,7 +429,7 @@ final class BrowserPagePool:
 
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter, mediaSessionStore: mediaSessionStore,
-            downloadCenter: downloadCenter,
+            downloadCenter: downloadCenter, core: downloadCenter.core,
             loadHTTPAuthenticationCredential: { [weak browser] protectionSpace, spaceID in
                 try await browser?.httpAuthenticationCredential(for: protectionSpace, in: spaceID)
             },

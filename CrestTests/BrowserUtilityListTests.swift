@@ -11,20 +11,16 @@ final class BrowserUtilityListTests: XCTestCase {
             spaceID: SpaceID(rawValue: UUID()),
             profileID: profileID
         )
-        let initial = BrowserDownloadItem(
-            id: id,
-            profileID: profileID,
-            createdAt: .now,
-            filename: "Crest.dmg",
-            destinationURL: nil,
-            progress: 0.1,
-            state: .downloading,
-            riskAssessment: nil
-        )
-        var progressed = initial
-        progressed.progress = 0.9
-        var finished = progressed
-        finished.state = .finished
+        let createdAt = Date.now
+        let initial = DownloadState.fixture(
+            id: id, profileID: profileID, createdAt: createdAt, filename: "Crest.dmg", progress: 0.1,
+            phase: .downloading)
+        let progressed = DownloadState.fixture(
+            id: id, profileID: profileID, createdAt: createdAt, filename: "Crest.dmg", progress: 0.9,
+            phase: .downloading)
+        let finished = DownloadState.fixture(
+            id: id, profileID: profileID, createdAt: createdAt, filename: "Crest.dmg", progress: 0.9,
+            phase: .finished)
 
         let initialRequest = BrowserUtilityListRequest(
             surface: .downloads,
@@ -108,19 +104,19 @@ final class BrowserUtilityListTests: XCTestCase {
             id: context.itemID,
             profileID: context.assignment.profileID,
             progress: 0.1,
-            state: .downloading
+            phase: .downloading
         )
         let current = utilityDownload(
             id: context.itemID,
             profileID: context.assignment.profileID,
             progress: 0.82,
-            state: .downloading
+            phase: .downloading
         )
         let newlyArrived = utilityDownload(
             id: identifier(0x65),
             profileID: context.assignment.profileID,
             progress: 0.3,
-            state: .downloading
+            phase: .downloading
         )
 
         let sections = BrowserUtilityListReconciliation.sections(
@@ -147,13 +143,13 @@ final class BrowserUtilityListTests: XCTestCase {
             id: context.itemID,
             profileID: context.assignment.profileID,
             progress: 0.8,
-            state: .downloading
+            phase: .downloading
         )
         let finished = utilityDownload(
             id: context.itemID,
             profileID: context.assignment.profileID,
             progress: 1,
-            state: .finished
+            phase: .finished
         )
         let preparedSections = [context.section(prepared)]
 
@@ -180,7 +176,7 @@ final class BrowserUtilityListTests: XCTestCase {
         guard case .download(let current) = item else {
             return XCTFail("Expected a current download")
         }
-        XCTAssertEqual(current.state, .finished)
+        XCTAssertEqual(current.phase, .finished)
     }
 
     func testDownloadReconciliationDropsRemovedAndForeignProfileRows() throws {
@@ -189,19 +185,19 @@ final class BrowserUtilityListTests: XCTestCase {
             id: context.itemID,
             profileID: context.assignment.profileID,
             progress: 0.2,
-            state: .downloading
+            phase: .downloading
         )
         let foreign = utilityDownload(
             id: context.itemID,
             profileID: identifier(0x66),
             progress: 0.9,
-            state: .finished
+            phase: .finished
         )
         let exact = utilityDownload(
             id: context.itemID,
             profileID: context.assignment.profileID,
             progress: 0.4,
-            state: .downloading
+            phase: .downloading
         )
         let preparedSections = [context.section(prepared)]
 
@@ -240,13 +236,13 @@ final class BrowserUtilityListTests: XCTestCase {
             id: context.itemID,
             profileID: identifier(0x66),
             progress: 0.1,
-            state: .downloading
+            phase: .downloading
         )
         let exact = utilityDownload(
             id: context.itemID,
             profileID: context.assignment.profileID,
             progress: 0.7,
-            state: .downloading
+            phase: .downloading
         )
         let preparedSections = [
             context.section(foreign),
@@ -335,17 +331,17 @@ final class BrowserUtilityListTests: XCTestCase {
     }
 
     @MainActor
-    func testDownloadLedgerRetainsTheTimeUsedForListGrouping() {
-        let ledger = BrowserDownloadLedger()
+    func testDownloadRecordsRetainTheTimeUsedForListGrouping() {
+        let center = BrowserDownloadCenter()
         let createdAt = Date(timeIntervalSince1970: 1_786_084_200)
 
-        _ = ledger.begin(
+        _ = center.begin(
             profileID: UUID(),
             filename: "crest.dmg",
             createdAt: createdAt
         )
 
-        XCTAssertEqual(ledger.items.first?.createdAt, createdAt)
+        XCTAssertEqual(center.items.first?.createdAt, createdAt)
     }
 
     func testUtilitySectionsArePreparedAwayFromTheRenderPass() async throws {
@@ -428,26 +424,12 @@ final class BrowserUtilityListTests: XCTestCase {
 
     func testDownloadNotificationUsesTheNewestActiveTransferProgress() throws {
         let profileID = identifier(0x70)
-        let older = BrowserDownloadItem(
-            id: identifier(0x71),
-            profileID: profileID,
-            createdAt: Date(timeIntervalSinceReferenceDate: 100),
-            filename: "older.zip",
-            destinationURL: nil,
-            progress: 0.8,
-            state: .downloading,
-            riskAssessment: nil
-        )
-        let newest = BrowserDownloadItem(
-            id: identifier(0x72),
-            profileID: profileID,
-            createdAt: Date(timeIntervalSinceReferenceDate: 200),
-            filename: "newest.pdf",
-            destinationURL: nil,
-            progress: 0.35,
-            state: .downloading,
-            riskAssessment: nil
-        )
+        let older = DownloadState.fixture(
+            id: identifier(0x71), profileID: profileID, createdAt: Date(timeIntervalSinceReferenceDate: 100),
+            filename: "older.zip", progress: 0.8, phase: .downloading)
+        let newest = DownloadState.fixture(
+            id: identifier(0x72), profileID: profileID, createdAt: Date(timeIntervalSinceReferenceDate: 200),
+            filename: "newest.pdf", progress: 0.35, phase: .downloading)
 
         XCTAssertEqual(
             try XCTUnwrap(
@@ -539,7 +521,7 @@ final class BrowserUtilityListTests: XCTestCase {
     private func utilityDownloadContext() -> (
         assignment: BrowserSpaceRuntimeAssignment,
         itemID: UUID,
-        section: (BrowserDownloadItem) -> BrowserUtilityListSection
+        section: (DownloadState) -> BrowserUtilityListSection
     ) {
         let assignment = BrowserSpaceRuntimeAssignment(
             spaceID: SpaceID(rawValue: identifier(0x61)),
@@ -571,17 +553,16 @@ final class BrowserUtilityListTests: XCTestCase {
         id: UUID,
         profileID: UUID,
         progress: Double,
-        state: BrowserDownloadItemState
-    ) -> BrowserDownloadItem {
-        BrowserDownloadItem(
+        phase: DownloadPhase
+    ) -> DownloadState {
+        DownloadState.fixture(
             id: id,
             profileID: profileID,
             createdAt: Date(timeIntervalSinceReferenceDate: 807_969_600),
             filename: "Crest.dmg",
-            destinationURL: URL(filePath: "/crest-preview/Crest.dmg"),
+            destination: URL(filePath: "/crest-preview/Crest.dmg"),
             progress: progress,
-            state: state,
-            riskAssessment: nil
+            phase: phase
         )
     }
 

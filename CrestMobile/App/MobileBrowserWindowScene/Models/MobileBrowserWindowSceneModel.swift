@@ -31,6 +31,8 @@ final class MobileBrowserWindowSceneModel {
         monitorsMemoryPressure: Bool,
         usesEphemeralWebsiteDataStores: Bool = false,
         mediaSessionStore: BrowserMediaSessionStore? = nil,
+        downloads: MobileBrowserDownloads? = nil,
+        privateDownloads: MobileBrowserDownloads? = nil,
         linkPreferenceStore: BrowserLinkPreferenceStore = .shared
     ) {
         let windowState = BrowserWindowStateStore(
@@ -55,6 +57,7 @@ final class MobileBrowserWindowSceneModel {
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             permissionCenter: permissionCenter,
             mediaSessionStore: mediaSessionStore,
+            downloads: downloads,
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
                     for: protectionSpace,
@@ -96,7 +99,8 @@ final class MobileBrowserWindowSceneModel {
         let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
         let privatePages = MobileBrowserPageStore(
             browsingMode: .privateBrowsing,
-            permissionCenter: BrowserSitePermissionCenter(),
+            permissionCenter: privateDownloads?.center.permissionCenter ?? BrowserSitePermissionCenter(),
+            downloads: privateDownloads,
             // The private store answers to the private session, so a popup from a
             // private page can only ever land in a private tab.
             popupTabHost: privateBrowser.popupTabHost,
@@ -188,15 +192,20 @@ final class MobileBrowserWindowSceneModel {
     }
 
     func closeWindowRuntime() {
-        pages.downloadRiskConfirmation.cancelAll()
-        privatePages.downloadRiskConfirmation.cancelAll()
+        // Other windows still present the standard confirmations they share.
+        cancelPrivateDownloadConfirmations()
+        // This window's private session closes with it, and so do its private
+        // downloads and their records in the shared private center.
+        for space in privateBrowser.session.spaces {
+            privatePages.downloadCenter.deleteRecords(profileID: space.profile.id, spaceID: space.id)
+        }
         pageStoreRegistry.unregister(pages)
         flushPendingPersistence()
     }
 
     func togglePrivateBrowsing(from mode: BrowserBrowsingMode) -> BrowserBrowsingMode {
         if mode.isPrivate {
-            privatePages.downloadRiskConfirmation.cancelAll()
+            cancelPrivateDownloadConfirmations()
             synchronizeSidebarPresentation(navigation)
             return .standard
         }
@@ -208,7 +217,7 @@ final class MobileBrowserWindowSceneModel {
 
     func closePrivateBrowsing() -> BrowserBrowsingMode {
         let closingSession = privateBrowser.session
-        privatePages.downloadRiskConfirmation.cancelAll()
+        cancelPrivateDownloadConfirmations()
         privatePages.closePrivateBrowsingSession(closingSession)
         privateBrowser.resetPrivateBrowsingSession()
         privateNavigation.showTabViewer()
@@ -258,6 +267,13 @@ final class MobileBrowserWindowSceneModel {
             navigation.selectTab()
         }
         return true
+    }
+
+    /// Private downloads share one confirmation across windows; this window
+    /// cancels only its own private profile's requests.
+    private func cancelPrivateDownloadConfirmations() {
+        privatePages.downloadRiskConfirmation.cancelAll(
+            profileIDs: Set(privateBrowser.session.spaces.map(\.profile.id)))
     }
 
     private func flushPendingPersistence() {

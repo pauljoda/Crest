@@ -370,7 +370,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         }
         .modifier(
             MobileDownloadRiskConfirmationModifier(
-                confirmation: pages.downloadRiskConfirmation
+                confirmation: pages.downloadRiskConfirmation,
+                profileIDs: Set(browser.session.spaces.map(\.profile.id))
             )
         )
         .onChange(of: pages.urlCopyFeedbackRevision) { _, revision in

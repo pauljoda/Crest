@@ -6,7 +6,7 @@ struct BrowserUtilityListPresentation: View {
     let filter: BrowserUtilityListFilter
     let presentationRequest: BrowserUtilityListRequest?
     let sections: [BrowserUtilityListSection]
-    let downloads: [BrowserDownloadItem]
+    let downloads: [DownloadState]
     let actions: BrowserUtilityListActions
     let dismissOnBlankSpace: (() -> Void)?
 
