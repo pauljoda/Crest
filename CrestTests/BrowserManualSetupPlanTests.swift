@@ -4,21 +4,19 @@ import XCTest
 @testable import Crest
 
 final class BrowserManualSetupPlanTests: XCTestCase {
-    func testReorderingExistingSpacesPreservesSelectionAndContents() throws {
+    func testReorderingExistingSpacesPreservesContents() throws {
         var existing = makeSession()
-        let firstID = existing.selectedSpaceID
-        existing.addSpace()
-        let secondID = existing.selectedSpaceID
+        let firstID = try XCTUnwrap(existing.spaces.first?.id)
+        let second = BrowserSession.makeBlankSpace(number: 2)
+        existing.spaces.append(second)
+        let secondID = second.id
         existing = try BrowserCoreSync.repair(existing)
-        let selectedTabID = existing.space(id: secondID)?.selectedTabID
         var plan = BrowserManualSetupPlan(existing: existing)
 
         plan.moveSpace(secondID, to: firstID)
         let preview = try plan.preview(mergingInto: existing)
 
         XCTAssertEqual(preview.spaces.map(\.id), [secondID, firstID])
-        XCTAssertEqual(preview.selectedSpaceID, secondID)
-        XCTAssertEqual(preview.space(id: secondID)?.selectedTabID, selectedTabID)
         XCTAssertEqual(preview.defaultSpaceID, existing.defaultSpaceID)
         for space in existing.spaces {
             XCTAssertEqual(preview.space(id: space.id)?.tabs, space.tabs)
@@ -30,14 +28,15 @@ final class BrowserManualSetupPlanTests: XCTestCase {
 
     func testDraftOrderSurvivesResumeAndKeepsConcurrentlyAddedSpaces() throws {
         var existing = makeSession()
-        let firstID = existing.selectedSpaceID
+        let firstID = try XCTUnwrap(existing.spaces.first?.id)
         var plan = BrowserManualSetupPlan(existing: existing)
         let newID = try plan.addSpace()
         plan.moveSpace(newID, to: firstID)
         var resumed = try JSONDecoder().decode(
             BrowserManualSetupPlan.self, from: JSONEncoder().encode(plan))
-        existing.addSpace()
-        let concurrentID = existing.selectedSpaceID
+        let concurrent = BrowserSession.makeBlankSpace(number: 2)
+        existing.spaces.append(concurrent)
+        let concurrentID = concurrent.id
 
         XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [newID, firstID, concurrentID])
         resumed.reconcile(with: existing)
@@ -97,7 +96,6 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         XCTAssertEqual(created.pinnedTabs.map(\.url), [URL(string: "https://apple.com")])
         XCTAssertEqual(created.savedTabs.map(\.url), [URL(string: "https://swift.org")])
         XCTAssertEqual(created.currentTabs.map(\.url), [URL(string: "https://example.com")])
-        XCTAssertEqual(created.selectedTabID, created.currentTabs.first?.id)
     }
 
     func testRemovingANewSpaceDoesNotAllowRemovingAnExistingSpace() throws {
@@ -121,7 +119,6 @@ final class BrowserManualSetupPlanTests: XCTestCase {
                 placement: .pinned
             )
         }
-        existing.spaces[0].selectedTabID = existing.spaces[0].tabs.first?.id
         var plan = BrowserManualSetupPlan(existing: existing)
 
         XCTAssertThrowsError(
@@ -149,13 +146,9 @@ final class BrowserManualSetupPlanTests: XCTestCase {
             symbol: "icloud.fill",
             accent: .teal,
             folders: [],
-            tabs: [BrowserTab.startPage()],
-            selectedTabID: nil
+            tabs: [BrowserTab.startPage()]
         )
-        let refreshed = BrowserSession(
-            spaces: [replacement],
-            selectedSpaceID: replacement.id
-        )
+        let refreshed = BrowserSession(spaces: [replacement])
 
         plan.reconcile(with: refreshed)
 
@@ -177,12 +170,10 @@ final class BrowserManualSetupPlanTests: XCTestCase {
             symbol: "briefcase.fill",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         return BrowserSession(
             spaces: [space],
-            selectedSpaceID: space.id,
             disposableSeedMarker: UUID()
         )
     }

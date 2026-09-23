@@ -18,7 +18,7 @@ extension BrowserStore {
     /// that still a Space, and if not, which one now?
     func repairedSpaceSelection(_ selection: SpaceID?) -> SpaceID? {
         guard let selection, session.space(id: selection) != nil else {
-            return session.selectedSpaceID
+            return selectedSpaceID
         }
         return selection
     }
@@ -120,7 +120,7 @@ extension BrowserStore {
     /// The Space a pane defaults to, for preferences that always resolve to one.
     func defaultSpaceBinding() -> Binding<SpaceID> {
         Binding { [self] in
-            session.defaultSpaceID ?? session.selectedSpaceID
+            session.defaultSpaceID ?? selectedSpaceID
         } set: { [self] spaceID in
             setDefaultSpace(spaceID)
         }

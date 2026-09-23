@@ -18,7 +18,7 @@ extension BrowserSidebarPageAccess {
                 pages.siteThemeIconAccent(matching: assignment)
             },
             residencyRevision: { pages.residencyRevision &+ pages.nativeTabs.residencyRevision },
-            selectPages: { pages.select(session: browser.session) },
+            selectPages: { pages.select(session: browser.presented) },
             deactivatePagePresentation: { pages.deactivatePagePresentation() },
             unloadPage: { tabID, assignment in
                 guard let tab = browser.space(matching: assignment)?.tabs.first(where: { $0.id == tabID })
@@ -33,7 +33,7 @@ extension BrowserSidebarPageAccess {
                         tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID
                     ))
                 {
-                    pages.select(session: browser.session)
+                    pages.select(session: browser.presented)
                 }
             },
             pullFavicon: { tabID, assignment in

@@ -47,22 +47,22 @@ final class BrowserContentBlockingTests: XCTestCase {
     }
 
     func testContentBlockingPreferenceChangesOnlyTheTargetSpace() throws {
-        var session = BrowserSession.preview
-        let workID = try XCTUnwrap(session.spaces.first?.id)
-        let personalID = try XCTUnwrap(session.spaces.last?.id)
+        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let workID = try XCTUnwrap(store.session.spaces.first?.id)
+        let personalID = try XCTUnwrap(store.session.spaces.last?.id)
         var workPreferences = try XCTUnwrap(
-            session.space(id: workID)?.browsingPreferences
+            store.session.space(id: workID)?.browsingPreferences
         )
 
         workPreferences.contentBlockingPolicy = .off
-        session.updateBrowsingPreferences(workPreferences, in: workID)
+        store.updateBrowsingPreferences(workPreferences, in: workID)
 
         XCTAssertEqual(
-            session.space(id: workID)?.browsingPreferences.contentBlockingPolicy,
+            store.session.space(id: workID)?.browsingPreferences.contentBlockingPolicy,
             .off
         )
         XCTAssertEqual(
-            session.space(id: personalID)?.browsingPreferences.contentBlockingPolicy,
+            store.session.space(id: personalID)?.browsingPreferences.contentBlockingPolicy,
             .balanced
         )
     }
@@ -78,9 +78,9 @@ final class BrowserContentBlockingTests: XCTestCase {
         let provider = StubContentRuleListProvider(generations: [[ruleList]])
         let firstTab = BrowserTab.startPage()
         let firstSpace = contentBlockingSpace(name: "Protected", tab: firstTab)
-        var session = BrowserSession(
-            spaces: [firstSpace],
-            selectedSpaceID: firstSpace.id
+        var session = BrowserSession(spaces: [firstSpace])
+        let selection = BrowserStoreSelection(
+            selectedSpaceID: firstSpace.id, selectedTabIDsBySpace: [firstSpace.id: firstTab.id]
         )
         let pool = BrowserPagePool(
             browsingMode: .privateBrowsing,
@@ -97,7 +97,7 @@ final class BrowserContentBlockingTests: XCTestCase {
             pool.contentBlockingErrorDescription,
             pool.contentBlockingErrorDescription ?? ""
         )
-        pool.select(session: session)
+        pool.select(session: BrowserPresentedSession(session: session, selection: selection))
         XCTAssertEqual(pool.activePage?.isContentBlockingActive, true)
         let transientLease = try XCTUnwrap(
             pool.makeTransientPageLease(
@@ -107,12 +107,7 @@ final class BrowserContentBlockingTests: XCTestCase {
         )
         XCTAssertEqual(transientLease.page?.isContentBlockingActive, true)
 
-        let protectedSpaceID = try XCTUnwrap(session.selectedSpace?.id)
-        var preferences = try XCTUnwrap(
-            session.space(id: protectedSpaceID)?.browsingPreferences
-        )
-        preferences.contentBlockingPolicy = .off
-        session.updateBrowsingPreferences(preferences, in: protectedSpaceID)
+        session.spaces[0].browsingPreferences.contentBlockingPolicy = .off
         await pool.reconcileContentBlocking(in: session)
 
         XCTAssertEqual(pool.activePage?.isContentBlockingActive, false)
@@ -162,7 +157,7 @@ final class BrowserContentBlockingTests: XCTestCase {
                 to: directory.appendingPathComponent("extension-script.js")
             )
 
-            let space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+            let space = try XCTUnwrap(BrowserSession.preview.spaces.first)
             let configuration = BrowserPageConfiguration.make(
                 for: space.profile,
                 websiteDataStore: .nonPersistent(),
@@ -230,7 +225,8 @@ final class BrowserContentBlockingTests: XCTestCase {
             name: "Protected",
             tabs: [activeTab, backgroundTab]
         )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = BrowserSession(spaces: [space])
+        var selection = BrowserStoreSelection(selectedSpaceID: space.id)
         let pool = BrowserPagePool(
             browsingMode: .privateBrowsing,
             contentRuleListProvider: provider
@@ -242,11 +238,11 @@ final class BrowserContentBlockingTests: XCTestCase {
         }
 
         await pool.prepareContentBlocking()
-        session.selectTab(backgroundTab.id)
-        pool.select(session: session)
+        selection.selectTab(backgroundTab.id, in: space.id)
+        pool.select(session: BrowserPresentedSession(session: session, selection: selection))
         let backgroundPage = try XCTUnwrap(pool.activePage)
-        session.selectTab(activeTab.id)
-        pool.select(session: session)
+        selection.selectTab(activeTab.id, in: space.id)
+        pool.select(session: BrowserPresentedSession(session: session, selection: selection))
         let activePage = try XCTUnwrap(pool.activePage)
         XCTAssertFalse(activePage === backgroundPage)
 
@@ -321,8 +317,7 @@ final class BrowserContentBlockingTests: XCTestCase {
             symbol: "shield",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs.first?.id
+            tabs: tabs
         )
     }
 

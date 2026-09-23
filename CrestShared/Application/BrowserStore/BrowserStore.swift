@@ -4,17 +4,21 @@ import Observation
 @Observable
 @MainActor
 final class BrowserStore {
+    /// The core-owned browsing data. It carries no selection; what this window
+    /// shows is `selection`.
     #if DEBUG
         var session: BrowserSession {
-            get { selection.applying(to: family.currentSession) }
+            get { family.currentSession }
             // Existing test fixtures replace synthetic sessions. Release
             // compositions expose only the core-owned read projection.
             set { family.replaceSessionForTesting(newValue, from: self) }
         }
     #else
-        var session: BrowserSession { selection.applying(to: family.currentSession) }
+        var session: BrowserSession { family.currentSession }
     #endif
-    private var selection: BrowserStoreSelection
+    /// The Space and tabs this window shows. Window records persist it; the core
+    /// session never holds it.
+    private(set) var selection: BrowserStoreSelection
     private(set) var sessionRevision = 0
     var localSyncErrorDescription: String?
     let browsingMode: BrowserBrowsingMode
@@ -36,6 +40,7 @@ final class BrowserStore {
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
 
     var deletingSpaceIDs: Set<SpaceID> { family.deletingSpaceIDs }
+    var selectedSpaceID: SpaceID { selection.selectedSpaceID }
     var selectedSpace: BrowserSpace? {
         guard !deletingSpaceIDs.contains(selection.selectedSpaceID) else {
             return nil
@@ -43,8 +48,19 @@ final class BrowserStore {
         return selection.selectedSpace(in: family.currentSession)
     }
     var selectedTab: BrowserTab? {
-        guard let space = selectedSpace, let tabID = space.selectedTabID else { return nil }
-        return space.tabs.first { $0.id == tabID }
+        guard selectedSpace != nil else { return nil }
+        return selection.selectedTab(in: family.currentSession)
+    }
+
+    /// The tab this window shows in a Space, if any.
+    func selectedTabID(in spaceID: SpaceID) -> TabID? {
+        selection.selectedTabID(in: spaceID)
+    }
+
+    /// The session as this window renders it: the core's data and this
+    /// window's selection.
+    var presented: BrowserPresentedSession {
+        BrowserPresentedSession(session: session, selection: selection)
     }
     var isPrivateBrowsing: Bool { browsingMode.isPrivate }
     var isTemporaryWorkspace: Bool { temporarySourceAssignment != nil }
@@ -58,25 +74,45 @@ final class BrowserStore {
     /// The viewed Space and an empty tab selection belong to this window.
     /// A core command is only needed when saved tab data changes.
     func selectPresentedSpace(_ id: SpaceID) {
-        guard !deletingSpaceIDs.contains(id), session.space(id: id) != nil else { return }
-        var presented = session
-        presented.selectSpace(id)
-        selection = BrowserStoreSelection(session: presented)
+        guard !deletingSpaceIDs.contains(id), let space = session.space(id: id) else { return }
+        selection.selectSpace(space)
         tabMultiSelection.clear()
-        sessionRevision &+= 1
-        tabSelectionHistory.reconcile(session: session)
+        selectionDidChange()
     }
 
     func clearPresentedTabSelection(in spaceID: SpaceID) {
-        var presented = session
-        presented.clearTabSelection(in: spaceID)
-        selection = BrowserStoreSelection(session: presented)
+        selection.clearTab(in: spaceID)
+        selectionDidChange()
+    }
+
+    /// Shows a tab in this window. Only the window's selection changes.
+    func presentTab(_ tabID: TabID, in spaceID: SpaceID) {
+        guard !deletingSpaceIDs.contains(spaceID), session.space(id: spaceID)?.contains(tabID) == true else { return }
+        selection.selectTab(tabID, in: spaceID)
+        selectionDidChange()
+    }
+
+    /// Adopts the tabs a window record remembers for each Space at launch.
+    /// Launch keeps opening the Space it chose (the default Space), as it
+    /// always has; only the per-Space tabs come from the record.
+    func restoreLaunchSelection(tabsFrom record: BrowserWindowState) {
+        var restored = BrowserStoreSelection(
+            selectedSpaceID: selection.selectedSpaceID, selectedTabIDsBySpace: record.selection.tabSelections)
+        restored.reconcile(using: session, excluding: deletingSpaceIDs)
+        if let space = restored.selectedSpace(in: session) { restored.selectSpace(space) }
+        selection = restored
+        tabMultiSelection.clear()
+        selectionDidChange()
+    }
+
+    private func selectionDidChange() {
         sessionRevision &+= 1
-        tabSelectionHistory.reconcile(session: session)
+        tabSelectionHistory.reconcile(session: session, selection: selection)
     }
 
     convenience init(
         session: BrowserSession,
+        selection: BrowserStoreSelection? = nil,
         persistence: any BrowserSessionPersisting,
         credentialVault: any CredentialVault = InMemoryCredentialVault(),
         syncCoordinator: BrowserSyncCoordinator? = nil,
@@ -86,6 +122,7 @@ final class BrowserStore {
     ) {
         self.init(
             session: session,
+            selection: selection,
             persistence: persistence,
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
@@ -96,8 +133,11 @@ final class BrowserStore {
         )
     }
 
+    /// `selection` is what this window shows; without one it opens the launch
+    /// Space on its fallback tab.
     init(
         session: BrowserSession,
+        selection: BrowserStoreSelection? = nil,
         persistence: any BrowserSessionPersisting,
         credentialVault: any CredentialVault,
         syncCoordinator: BrowserSyncCoordinator?,
@@ -107,9 +147,10 @@ final class BrowserStore {
         cloudSyncChangeHandler: (@Sendable () -> Void)? = nil,
         linkPreferences: BrowserLinkPreferenceStore = .shared
     ) {
-        selection = BrowserStoreSelection(session: session)
+        let initial = selection ?? BrowserStoreSelection(launching: session)
+        self.selection = initial
         self.linkPreferences = linkPreferences
-        tabSelectionHistory = BrowserTabSelectionHistory(session: session)
+        tabSelectionHistory = BrowserTabSelectionHistory(session: session, selection: initial)
         self.persistence = persistence
         self.credentialVault = credentialVault
         self.syncCoordinator = syncCoordinator
@@ -119,7 +160,7 @@ final class BrowserStore {
         self.cloudSyncChangeHandler = cloudSyncChangeHandler
         localSyncErrorDescription = nil
         family.register(self)
-        selection.reconcile(using: family.currentSession, excluding: family.deletingSpaceIDs)
+        self.selection.reconcile(using: family.currentSession, excluding: family.deletingSpaceIDs)
     }
 }
 
@@ -150,27 +191,26 @@ extension BrowserStore {
         restoresTabSelection: Bool = true,
         selectingSpaceID: SpaceID? = nil
     ) -> BrowserStore {
-        var windowSession = family.currentSession
+        let windowSession = family.currentSession
+        var windowSelection: BrowserStoreSelection
         if var savedState {
             savedState.repair(using: windowSession)
-            windowSession.selectedSpaceID = savedState.selectedSpaceID
-            for index in windowSession.spaces.indices {
-                let spaceID = windowSession.spaces[index].id
-                windowSession.spaces[index].selectedTabID = savedState.selectedTabIDsBySpace[spaceID]
-            }
+            windowSelection = savedState.selection
         } else {
-            windowSession.selectDefaultSpaceForLaunch()
-        }
-        if let selectingSpaceID, windowSession.space(id: selectingSpaceID) != nil {
-            windowSession.selectedSpaceID = selectingSpaceID
+            windowSelection = BrowserStoreSelection(launching: windowSession, excluding: deletingSpaceIDs)
         }
         if !restoresTabSelection {
-            for index in windowSession.spaces.indices {
-                windowSession.spaces[index].selectedTabID = nil
-            }
+            windowSelection = BrowserStoreSelection(selectedSpaceID: windowSelection.selectedSpaceID)
+        }
+        // Choosing the window's Space keeps whatever tab it restored there,
+        // including none.
+        if let selectingSpaceID, windowSession.space(id: selectingSpaceID) != nil {
+            windowSelection = BrowserStoreSelection(
+                selectedSpaceID: selectingSpaceID, selectedTabIDsBySpace: windowSelection.tabSelections)
         }
         let store = BrowserStore(
             session: windowSession,
+            selection: windowSelection,
             persistence: persistence,
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
@@ -312,16 +352,15 @@ extension BrowserStore {
         }
     }
 
+    /// `hint` is the core's follow-up selection when this window issued the
+    /// accepted command; other windows keep their own selection.
     func receiveFamilySessionChange(
-        from previous: BrowserSession, to shared: BrowserSession, adoptingSelection: Bool
+        from previous: BrowserSession, to shared: BrowserSession, hint: BrowserSelectionHint
     ) {
         let previousSelection = selection
         let previousSpace = previous.space(id: previousSelection.selectedSpaceID)
-        if adoptingSelection {
-            selection = BrowserStoreSelection(session: shared)
-        } else {
-            selection.reconcile(using: shared, excluding: deletingSpaceIDs)
-        }
+        selection.apply(hint)
+        selection.reconcile(using: shared, excluding: deletingSpaceIDs)
         let selectedSpace = shared.space(id: selection.selectedSpaceID)
         if previousSelection.selectedSpaceID != selection.selectedSpaceID
             || previousSpace?.profile.id != selectedSpace?.profile.id
@@ -331,13 +370,13 @@ extension BrowserStore {
         }
         if let activation = pendingMovedTabActivation,
             selection.selectedSpaceID != activation.spaceID
-                || session.selectedTab?.id != activation.tabID
+                || selection.selectedTabID(in: activation.spaceID) != activation.tabID
                 || selectedSpace?.profile.id != activation.profileID
         {
             pendingMovedTabActivation = nil
         }
         sessionRevision &+= 1
-        tabSelectionHistory.reconcile(session: session)
+        tabSelectionHistory.reconcile(session: session, selection: selection)
     }
 
     func invalidatePendingSyncStage() {

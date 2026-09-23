@@ -6,6 +6,9 @@ namespace CrestCore.Application;
 
 /// Reads Crest's existing Swift Codable session. Unowned/additive fields survive
 /// round trips verbatim as JSON values; only fields owned by the domain are replaced.
+/// Older documents stored the viewed Space and each Space's selected tab. That is
+/// window state: it is folded once into windows that lack their own selection
+/// record and is never written again.
 public sealed class LegacySessionDocument {
     #region Variables
 
@@ -94,6 +97,7 @@ public sealed class LegacySessionDocument {
         spaces.Clear(); tabs.Clear(); folders.Clear(); archives.Clear(); histories.Clear(); windows.Clear(); searchPreferences.Clear(); retentionPreferences.Clear();
         var session = Object(original["session"]);
         var states = new List<SpaceState>();
+        var legacySelections = new Dictionary<Guid, Guid?>();
         foreach (var value in Array(session["spaces"])) {
             var s = Object(value); var id = Id(s["id"]); Remember(spaces, id, s);
             var folderStates = new List<FolderState>();
@@ -115,7 +119,7 @@ public sealed class LegacySessionDocument {
                 visits.Add(new(hid, Text(h["url"]) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedUrl), Text(h["title"]) ?? "",
                     Date(h["firstVisitedAt"]), Date(h["lastVisitedAt"]), h["visitCount"]?.GetValue<int>() ?? 1));
             }
-            var selected = OptionalId(s["selectedTabID"]);
+            legacySelections[id] = OptionalId(s[LegacySelectionFields.SelectedTab]);
             var preferences = s["browsingPreferences"] as JsonObject;
             var search = SearchPreferencesDocument.Read(preferences);
             searchPreferences.Add(id, search);
@@ -129,7 +133,7 @@ public sealed class LegacySessionDocument {
             states.Add(new(id, Id(Object(s["profile"])["id"]), Text(s["name"]) ?? "Space",
                 Text(s["accessPolicy"]) is { } policy && policy != SpaceAccessPolicyCodes.Open,
                 Array(s["tabs"]).Select(t => ReadTab(Object(t))).ToArray(), folderStates, archived, visits,
-                selected, search,
+                search,
                 Text(s["accessPolicy"]) is null or SpaceAccessPolicyCodes.Open or SpaceAccessPolicyCodes.DeviceOwnerAuthentication, retention,
                 ReadEnum(preferences?["contentBlockingPolicy"], ContentBlockingPolicy.Balanced, ContentBlockingPolicy.Balanced)));
         }
@@ -145,18 +149,19 @@ public sealed class LegacySessionDocument {
             if (w["capturedSpaceIDs"] is not null)
                 foreach (var captured in Array(w["capturedSpaceIDs"])) selections.TryAdd(Id(captured), null);
             else
-                foreach (var space in states) selections.TryAdd(space.Id, space.SelectedTabId);
+                // A window recorded before capture has no choice of its own for
+                // these Spaces; the document's legacy selection becomes it.
+                foreach (var space in states) selections.TryAdd(space.Id, legacySelections[space.Id]);
             windowStates.Add(new(id, Id(w["selectedSpaceID"]), selections, Text(w["platformSceneId"])));
         }
         var defaultId = OptionalId(session["defaultSpaceID"]);
-        var selectedId = OptionalId(session["selectedSpaceID"]);
         var deletions = Array(original["spaceDeletions"]).Select(value => {
             var deletion = Object(value);
             return new SpaceDeletionState(Id(deletion["spaceId"]), Id(deletion["profileId"]),
                 Date(deletion["requestedAt"]), deletion["completed"]?.GetValue<bool>() ?? false);
         }).ToArray();
         return new(OptionalId(original["workspaceId"]) ?? ids.Next(), defaultId,
-            selectedId, states, windowStates, deletions);
+            states, windowStates, deletions);
     }
 
     private static T ReadEnum<T>(JsonNode? value, T missing, T unknown) where T : struct, Enum
@@ -192,7 +197,7 @@ public sealed class LegacySessionDocument {
             ["requestedAt"] = Seconds(d.RequestedAt),
             ["completed"] = d.Completed
         }).ToArray());
-        session["selectedSpaceID"] = SwiftId(state.SelectedSpaceId);
+        LegacySelectionFields.WithoutSessionSelection(session);
         session["defaultSpaceID"] = SwiftId(state.DefaultSpaceId);
         var spaceValues = new JsonArray(); session["spaces"] = spaceValues;
         foreach (var space in state.Spaces) {
@@ -205,7 +210,7 @@ public sealed class LegacySessionDocument {
             if (originallyProtected != space.RequiresAuthentication)
                 s["accessPolicy"] = space.RequiresAuthentication ? SpaceAccessPolicyCodes.DeviceOwnerAuthentication : SpaceAccessPolicyCodes.Open;
             s["name"] = space.Name; s["symbol"] ??= "square.grid.2x2.fill"; s["accent"] ??= SpaceAccentCodes.Indigo;
-            s["selectedTabID"] = SwiftId(space.SelectedTabId);
+            LegacySelectionFields.WithoutSpaceSelection(s);
             if (space.Search is { } search && searchPreferences.GetValueOrDefault(space.Id) != search) {
                 var preferences = s["browsingPreferences"] as JsonObject ?? new();
                 if (preferences.Parent is null) s["browsingPreferences"] = preferences;

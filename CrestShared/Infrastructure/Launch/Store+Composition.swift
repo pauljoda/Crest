@@ -23,22 +23,19 @@ extension BrowserStore {
         syncPersistence: any BrowserSyncJournalPersisting,
         credentialVault: any CredentialVault
     ) -> BrowserStore {
-        var session = persistence.load() ?? .freshInstallSeed
-        session = launchRepair(session)
-        session.cleanupCurrentTabsUsingSpacePreferences()
-        session.applyDataRetentionPolicies()
-        session.selectDefaultSpaceForLaunch()
+        let session = launchRepair(persistence.load() ?? .freshInstallSeed)
         let syncCoordinator = BrowserSyncCoordinator(
             persistence: syncPersistence
         )
-        persistence.save(session)
         let store = BrowserStore(
             session: session,
+            selection: persistence.loadLegacySelection()?.launchSelection(in: session),
             persistence: persistence,
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator
         )
-        store.beginInitialSyncStaging(session: session)
+        store.saveLaunchCheckpoint()
+        store.beginInitialSyncStaging(session: store.session)
         return store
     }
 
@@ -48,6 +45,28 @@ extension BrowserStore {
     private static func launchRepair(_ session: BrowserSession) -> BrowserSession {
         do { return try BrowserCoreSync.repair(session) }
         catch { preconditionFailure("Core session repair failed before publication: \(error)") }
+    }
+
+    /// Saves the repaired launch session through a core checkpoint before any
+    /// page exists. Repair may have changed what storage holds.
+    func saveLaunchCheckpoint() {
+        do { try family.save(session, to: persistence) }
+        catch { localSyncErrorDescription = String(describing: error) }
+    }
+
+    /// Launch cleanup and retention, as the core's own `records.sweep` on this
+    /// family's session, so its result reaches storage through a core
+    /// checkpoint. No window is on screen yet, so every tab a stored window
+    /// record shows is kept along with this store's own selection. It claims the
+    /// family's sweep slot, so the first active scene does not repeat it.
+    func sweepAtLaunch(keeping windows: [BrowserWindowState], now: Date = .now) {
+        guard family.beginCleanupSweep(at: now) else { return }
+        let kept = Set(windows.flatMap { $0.selection.tabSelections.values })
+            .union(selection.tabSelections.values)
+        guard family.executeRecords("records.sweep", arguments: [
+            "keepTabIds": kept.map(\.rawValue.uuidString)
+        ], from: self, at: now) else { return }
+        persist(deletionReason: .retention, scope: .everything)
     }
 
     static func preview() -> BrowserStore {
@@ -71,11 +90,7 @@ extension BrowserStore {
     private static func inMemoryIsolatedLaunch(
         launchEnvironment: BrowserLaunchEnvironment
     ) -> BrowserStore {
-        var session = isolatedFixtureSession(for: launchEnvironment)
-        session = launchRepair(session)
-        session.cleanupCurrentTabsUsingSpacePreferences()
-        session.applyDataRetentionPolicies()
-        session.selectDefaultSpaceForLaunch()
+        let session = launchRepair(isolatedFixtureSession(for: launchEnvironment))
         let syncCoordinator = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence()
         )
@@ -85,7 +100,8 @@ extension BrowserStore {
             credentialVault: InMemoryCredentialVault(),
             syncCoordinator: syncCoordinator
         )
-        store.beginInitialSyncStaging(session: session)
+        store.saveLaunchCheckpoint()
+        store.beginInitialSyncStaging(session: store.session)
         return store
     }
 
@@ -103,22 +119,17 @@ extension BrowserStore {
         )
         let persistence = try transactionalStorage(legacy: legacy,
             journal: InMemoryBrowserSyncJournalPersistence(), isolationID: isolationID, environment: launchEnvironment)
-        var session =
-            persistence.load()
-            ?? isolatedFixtureSession(for: launchEnvironment)
-        session = launchRepair(session)
-        session.cleanupCurrentTabsUsingSpacePreferences()
-        session.applyDataRetentionPolicies()
-        session.selectDefaultSpaceForLaunch()
-        persistence.save(session)
+        let session = launchRepair(persistence.load() ?? isolatedFixtureSession(for: launchEnvironment))
         let syncCoordinator = BrowserSyncCoordinator(persistence: persistence.journalPersistence)
         let store = BrowserStore(
             session: session,
+            selection: persistence.loadLegacySelection()?.launchSelection(in: session),
             persistence: persistence,
             credentialVault: KeychainCredentialVault(servicePrefix: namespace),
             syncCoordinator: syncCoordinator
         )
-        store.beginInitialSyncStaging(session: session)
+        store.saveLaunchCheckpoint()
+        store.beginInitialSyncStaging(session: store.session)
         return store
     }
 
@@ -162,7 +173,7 @@ extension BrowserStore {
         do {
             let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: favicons)
             try storage.migrateIfNeeded(session: migrationSession(legacy, storeURL: url),
-                journal: journal.load())
+                journal: journal.load(), legacySelection: legacy.loadLegacySelection())
             try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
             try? storage.saveRecoveryCheckpoint()
             return storage

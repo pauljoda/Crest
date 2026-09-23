@@ -21,15 +21,14 @@ public static partial class NativePolicyEvaluator {
     private static JsonObject? EvaluateWindows(PolicyOperation operation, JsonElement request) {
         switch (operation) {
             case PolicyOperation.WindowRepair: {
-                    Protocol.Members(request, "version", "operation", "selectedSpaceID", "sessionSelectedSpaceID",
+                    Protocol.Members(request, "version", "operation", "selectedSpaceID",
                         "capturesSelection", "spaces", "splitLayouts");
                     var spaces = new List<WindowSpaceFacts>();
                     foreach (var item in request.GetProperty("spaces").EnumerateArray()) {
                         if (spaces.Count >= WindowStatePolicy.MaximumSpaces) throw new BrowserRuleException(BrowserRuleCodes.WindowStateLimit);
-                        Protocol.Members(item, "id", "windowTab", "captured", "spaceSelection", "hasTabs");
+                        Protocol.Members(item, "id", "windowTab", "captured", "hasTabs");
                         spaces.Add(new(Protocol.Id(item, "id"), item.GetProperty("windowTab").GetBoolean(),
-                            item.GetProperty("captured").GetBoolean(), item.GetProperty("spaceSelection").GetBoolean(),
-                            item.GetProperty("hasTabs").GetBoolean()));
+                            item.GetProperty("captured").GetBoolean(), item.GetProperty("hasTabs").GetBoolean()));
                     }
                     var layouts = new List<WindowSplitLayout>();
                     foreach (var item in request.GetProperty("splitLayouts").EnumerateArray()) {
@@ -39,8 +38,7 @@ public static partial class NativePolicyEvaluator {
                             Optional(item, "liveMembers") is { } live ? live.GetInt32() : null));
                     }
                     var repair = WindowStatePolicy.Repair(Protocol.Id(request, "selectedSpaceID"),
-                        Protocol.Id(request, "sessionSelectedSpaceID"), request.GetProperty("capturesSelection").GetBoolean(),
-                        spaces, layouts);
+                        request.GetProperty("capturesSelection").GetBoolean(), spaces, layouts);
                     return new() {
                         ["selectedSpaceID"] = repair.SelectedSpaceId.ToString("D"),
                         ["selections"] = new JsonArray(repair.Selections.Select(value => (JsonNode?)WindowCodes.Selection(value)).ToArray()),

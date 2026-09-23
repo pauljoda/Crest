@@ -1,15 +1,16 @@
 import Foundation
 
 extension BrowserSession {
+    /// Older documents also stored `selectedSpaceID`; selection is window state,
+    /// so decoding ignores it and `BrowserLegacySessionSelection` reads it once.
     private enum CodingKeys: String, CodingKey {
-        case spaces, selectedSpaceID, defaultSpaceID, disposableSeedMarker, currentTabFolders, spaceDeletions,
+        case spaces, defaultSpaceID, disposableSeedMarker, currentTabFolders, spaceDeletions,
             appPreferences
     }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         spaces = try values.decode([BrowserSpace].self, forKey: .spaces)
-        selectedSpaceID = try values.decode(SpaceID.self, forKey: .selectedSpaceID)
         defaultSpaceID = try values.decodeIfPresent(SpaceID.self, forKey: .defaultSpaceID)
         disposableSeedMarker = try values.decodeIfPresent(UUID.self, forKey: .disposableSeedMarker)
         spaceDeletions = try values.decodeIfPresent([BrowserSpaceDeletionIntent].self, forKey: .spaceDeletions)
@@ -38,7 +39,6 @@ extension BrowserSession {
     func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(spaces, forKey: .spaces)
-        try values.encode(selectedSpaceID, forKey: .selectedSpaceID)
         try values.encodeIfPresent(defaultSpaceID, forKey: .defaultSpaceID)
         try values.encodeIfPresent(disposableSeedMarker, forKey: .disposableSeedMarker)
         try values.encodeIfPresent(spaceDeletions, forKey: .spaceDeletions)

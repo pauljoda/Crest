@@ -155,13 +155,13 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
 
         do {
-            pool.select(session: store.session)
+            pool.select(session: store.presented)
             let opener = try XCTUnwrap(pool.activePage)
             opener.webView.loadSimulatedRequest(
                 URLRequest(url: origin),
@@ -228,10 +228,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(
-                spaces: [space],
-                selectedSpaceID: space.id
-            ),
+            session: BrowserSession(spaces: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(
@@ -291,7 +288,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
@@ -304,7 +301,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 origin: siteOrigin,
                 in: space.id
             )
-            pool.select(session: store.session)
+            pool.select(session: store.presented)
             let opener = try XCTUnwrap(pool.activePage)
             opener.webView.loadSimulatedRequest(
                 URLRequest(url: origin),
@@ -339,13 +336,13 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
 
         do {
-            pool.select(session: store.session)
+            pool.select(session: store.presented)
             let opener = try XCTUnwrap(pool.activePage)
             opener.webView.loadSimulatedRequest(
                 URLRequest(url: origin),
@@ -403,10 +400,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(
-                spaces: [space],
-                selectedSpaceID: space.id
-            ),
+            session: BrowserSession(spaces: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(
@@ -482,10 +476,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(
-                spaces: [space],
-                selectedSpaceID: space.id
-            ),
+            session: BrowserSession(spaces: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(
@@ -562,11 +553,10 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 searchProvider: .google,
                 currentTabCleanupPolicy: .never,
                 contentBlockingPolicy: .off
-            ),
-            selectedTabID: openerTab.id
+            )
         )
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(
@@ -574,7 +564,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         )
 
         do {
-            pool.select(session: store.session)
+            pool.select(session: store.presented)
             let opener = try XCTUnwrap(pool.activePage)
             // A saved allow decision enables genuinely automatic windows for
             // this top-level origin. User-activated windows do not need it.
@@ -698,8 +688,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 searchProvider: .google,
                 currentTabCleanupPolicy: .never,
                 contentBlockingPolicy: .off
-            ),
-            selectedTabID: tabs.first?.id
+            )
         )
     }
 

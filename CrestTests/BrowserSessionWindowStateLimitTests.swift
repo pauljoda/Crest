@@ -14,10 +14,11 @@ final class BrowserSessionWindowStateLimitTests: XCTestCase {
     func testTheStoredSetStopsGrowingOnceItIsFull() async throws {
         let harness = makeHarness(cap: 4)
         let session = BrowserSession.preview
+        let selection = BrowserStoreSelection(launching: session)
 
         let ids = (0..<20).map { _ in BrowserWindowID() }
         for id in ids {
-            harness.persistence.save(BrowserWindowState(id: id, restoring: session))
+            harness.persistence.save(BrowserWindowState(id: id, restoring: selection, in: session))
         }
         await harness.persistence.flushPendingSaves()
 
@@ -38,15 +39,16 @@ final class BrowserSessionWindowStateLimitTests: XCTestCase {
     func testAWindowStillInUseIsNotEvictedByOlderNeighbours() async throws {
         let harness = makeHarness(cap: 3)
         let session = BrowserSession.preview
+        let selection = BrowserStoreSelection(launching: session)
         let live = BrowserWindowID()
-        harness.persistence.save(BrowserWindowState(id: live, restoring: session))
+        harness.persistence.save(BrowserWindowState(id: live, restoring: selection, in: session))
 
         for _ in 0..<2 {
             harness.persistence.save(
-                BrowserWindowState(id: BrowserWindowID(), restoring: session)
+                BrowserWindowState(id: BrowserWindowID(), restoring: selection, in: session)
             )
             // The live window keeps working, so it keeps saving.
-            harness.persistence.save(BrowserWindowState(id: live, restoring: session))
+            harness.persistence.save(BrowserWindowState(id: live, restoring: selection, in: session))
         }
         await harness.persistence.flushPendingSaves()
 
@@ -57,14 +59,15 @@ final class BrowserSessionWindowStateLimitTests: XCTestCase {
     func testTheFixedMacWindowKeepsExactlyOneRecordAcrossEveryLaunch() async throws {
         let harness = makeHarness()
         let session = BrowserSession.preview
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
 
         for _ in 0..<50 {
             let store = BrowserWindowStateStore(
                 id: .main,
-                session: session,
+                browser: browser,
                 persistence: harness.persistence
             )
-            store.selectSpace(session.spaces[1].id, session: session)
+            store.selectSpace(session.spaces[1].id, session: browser.session)
         }
         await harness.persistence.flushPendingSaves()
 

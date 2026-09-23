@@ -13,7 +13,7 @@ final class BrowserFolderAppearanceTests: XCTestCase {
         first.tabs[0].iconMode = .automatic
         var second = BrowserSession.makeBlankSpace(number: 2)
         second.tabs[0].iconMode = .automatic
-        let session = BrowserSession(spaces: [first, second], selectedSpaceID: first.id)
+        let session = BrowserSession(spaces: [first, second])
         let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
         let emoji = BrowserIconSymbol.symbol(forEmoji: "📚")
         let stale = BrowserSpaceRuntimeAssignment(spaceID: first.id, profileID: UUID())

@@ -24,7 +24,9 @@ struct PortableSpace: Codable, Equatable, Sendable {
         archivedTabs = space.archivedTabs.map(PortableArchivedTab.init)
         history = space.history.map(PortableHistoryEntry.init)
         browsingPreferences = space.browsingPreferences
-        selectedTabID = space.selectedTabID?.rawValue
+        // Selection is window state and no longer part of a Space. The field
+        // stays in the format so older archives still validate.
+        selectedTabID = nil
     }
 
     func materialize() throws -> BrowserSpace {
@@ -125,14 +127,9 @@ struct PortableSpace: Codable, Equatable, Sendable {
         }
         let materializedHistory = try Self.materializeHistory(history)
 
-        let selectedID: TabID?
-        if let selectedTabID {
-            guard let mappedID = tabIDsBySourceID[selectedTabID] else {
-                throw BrowserPortableArchiveError.invalidContents
-            }
-            selectedID = mappedID
-        } else {
-            selectedID = materializedTabs.first?.id
+        // An older archive's selected tab must still name one of its tabs.
+        if let selectedTabID, tabIDsBySourceID[selectedTabID] == nil {
+            throw BrowserPortableArchiveError.invalidContents
         }
 
         return BrowserSpace(
@@ -152,8 +149,7 @@ struct PortableSpace: Codable, Equatable, Sendable {
             archivedTabs: materializedArchive,
             history: materializedHistory,
             browsingPreferences: browsingPreferences,
-            credentialPreferences: .default,
-            selectedTabID: selectedID
+            credentialPreferences: .default
         )
     }
 

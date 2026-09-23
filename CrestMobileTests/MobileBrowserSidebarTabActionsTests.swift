@@ -77,15 +77,12 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
             symbol: "sidebar.left",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         return Context(
             browser: BrowserStore(
-                session: BrowserSession(
-                    spaces: [space],
-                    selectedSpaceID: space.id
-                ),
+                session: BrowserSession(spaces: [space]),
+                selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
                 persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             ),

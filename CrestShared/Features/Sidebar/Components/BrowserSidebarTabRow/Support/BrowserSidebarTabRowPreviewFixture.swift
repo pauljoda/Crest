@@ -29,13 +29,11 @@ enum BrowserSidebarTabRowPreviewFixture {
             accent: .teal,
             branding: .initial(accent: .teal, symbol: "globe"),
             folders: [],
-            tabs: [tab],
-            selectedTabID: tabID
+            tabs: [tab]
         )
         let browser = BrowserStore(
             session: BrowserSession(
-                spaces: [space],
-                selectedSpaceID: spaceID
+                spaces: [space]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing

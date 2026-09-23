@@ -40,8 +40,7 @@ final class BrowserLinkSettingsTests: XCTestCase {
             symbol: "circle.fill",
             accent: .indigo,
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
         let secondarySpace = BrowserSpace(
             id: SpaceID(rawValue: Self.uuid(0x22)),
@@ -50,8 +49,7 @@ final class BrowserLinkSettingsTests: XCTestCase {
             symbol: "square.fill",
             accent: .orange,
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
         let routeID = Self.uuid(0x41)
         var preferences = BrowserLinkPreferences.default
@@ -68,10 +66,7 @@ final class BrowserLinkSettingsTests: XCTestCase {
                 preferences: preferences
             )
         )
-        let session = BrowserSession(
-            spaces: [primarySpace, secondarySpace],
-            selectedSpaceID: primarySpace.id
-        )
+        let session = BrowserSession(spaces: [primarySpace, secondarySpace])
         return (store, session, primarySpace, secondarySpace, routeID)
     }
 

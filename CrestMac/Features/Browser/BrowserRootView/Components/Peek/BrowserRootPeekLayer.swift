@@ -11,7 +11,7 @@ struct BrowserRootPeekLayer: View {
     var body: some View {
         ForEach(
             transientBrowsing.peekRequests.filter {
-                $0.assignment == BrowserSpaceRuntimeAssignment(space: space) && $0.sourceTabID == space.selectedTabID
+                $0.assignment == BrowserSpaceRuntimeAssignment(space: space) && $0.sourceTabID == model.browser.selectedTabID(in: space.id)
             }
         ) { request in
             BrowserPeekOverlay(
@@ -26,7 +26,7 @@ struct BrowserRootPeekLayer: View {
             .environment(
                 \.browserWebFocusRestorationGate,
                 BrowserWebFocusRestorationGate(
-                    browserChromeOwnsFocus: !request.isSelected(in: model.browser.session)
+                    browserChromeOwnsFocus: !request.isSelected(in: model.browser.presented)
                         || !model.isWindowFocused || model.isAddressEditing || model.chrome.isCommandPalettePresented,
                     pageChromeOwnsFocus: false)
             )

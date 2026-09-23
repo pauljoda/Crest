@@ -231,20 +231,22 @@ final class MobileBrowserPageStore:
         await reconcileContentBlocking(in: session)
     }
 
-    func select(session: BrowserSession) {
+    /// Presents what the window selects. `session` pairs the core's data with
+    /// that window's own selection.
+    func select(session: BrowserPresentedSession) {
         select(session: session, at: .now)
     }
 
-    func select(session: BrowserSession, at time: Date) {
+    func select(session: BrowserPresentedSession, at time: Date) {
         if !prepareSelectedPage(in: session, at: time) {
             deactivatePagePresentation(at: time)
         }
-        reconcileCredentialAccess(in: session)
+        reconcileCredentialAccess(in: session.session)
     }
 
     func selectAndLoad(
         _ url: URL,
-        in session: BrowserSession,
+        in session: BrowserPresentedSession,
         at time: Date = .now
     ) {
         if prepareSelectedPage(
@@ -256,7 +258,7 @@ final class MobileBrowserPageStore:
         } else {
             deactivatePagePresentation(at: time)
         }
-        reconcileCredentialAccess(in: session)
+        reconcileCredentialAccess(in: session.session)
     }
 
     func loadOpenedLink(_ registration: BrowserModifiedLinkRegistration, request: URLRequest, selecting: Bool) {
@@ -318,7 +320,7 @@ final class MobileBrowserPageStore:
     }
 
     private func prepareSelectedPage(
-        in session: BrowserSession,
+        in session: BrowserPresentedSession,
         at time: Date,
         loadsInitialURL: Bool = true
     ) -> Bool {
@@ -399,7 +401,7 @@ final class MobileBrowserPageStore:
     @discardableResult
     func prepareResidentPage(
         for tabID: TabID,
-        in session: BrowserSession,
+        in session: BrowserPresentedSession,
         at time: Date = .now
     ) -> MobileBrowserPage? {
         guard let space = session.selectedSpace,

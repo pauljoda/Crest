@@ -72,7 +72,7 @@ struct MobileBrowserDetailView: View {
                         BrowserStartPage(
                             space: browser.selectedSpace,
                             isPrivateBrowsing: browser.isPrivateBrowsing,
-                            selectedTabID: browser.selectedSpace?.selectedTabID,
+                            selectedTabID: browser.selectedSpace.flatMap { browser.selectedTabID(in: $0.id) },
                             isSourceAvailable: isPaletteSourceAvailable,
                             selectTab: selectStartPageTab,
                             openURL: openStartPageURL,
@@ -416,7 +416,7 @@ struct MobileBrowserDetailView: View {
     /// Builds the page a carousel cell is about to show. Called as the cell
     /// materializes, so a group only ever holds the cards near the viewport.
     private func prepareSplitCardPage(_ tabID: TabID) {
-        pages.prepareResidentPage(for: tabID, in: browser.session)
+        pages.prepareResidentPage(for: tabID, in: browser.presented)
     }
 
     private func pagePresentation(
@@ -477,7 +477,7 @@ struct MobileBrowserDetailView: View {
         guard let space = browser.selectedSpace,
             !spaceAccess.isLocked(space)
         else { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     private var emptySelectionPaletteActions: BrowserEmptySelectionPaletteActions? {
@@ -487,7 +487,7 @@ struct MobileBrowserDetailView: View {
             browser: browser,
             accessController: spaceAccess,
             didSelectTab: {
-                pages.select(session: browser.session)
+                pages.select(session: browser.presented)
                 address = browser.selectedTab?.url?.absoluteString ?? ""
             }
         )
@@ -505,7 +505,7 @@ struct MobileBrowserDetailView: View {
             )
         ) {
             browser.navigateSelectedTab(to: url)
-            pages.selectAndLoad(url, in: browser.session)
+            pages.selectAndLoad(url, in: browser.presented)
         }
         return true
     }
@@ -524,7 +524,7 @@ struct MobileBrowserDetailView: View {
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         return true
     }
 

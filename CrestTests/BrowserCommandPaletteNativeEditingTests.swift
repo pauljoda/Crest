@@ -139,7 +139,7 @@ final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
         let tab = BrowserTab(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "globe", accent: .indigo, folders: [],
-            tabs: [tab], selectedTabID: tab.id)
+            tabs: [tab])
         let model = BrowserCommandPaletteModel(
             space: space, selectedTabID: tab.id, initialQuery: "", commands: nil, isSourceAvailable: { _ in true },
             selectTab: { _, _ in false }, openURL: { _, _ in false }, dismiss: {})

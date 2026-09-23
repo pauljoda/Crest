@@ -17,8 +17,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             symbol: "globe",
             accent: .teal,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         let page = MobileBrowserPage(
             tab: tab,
@@ -64,8 +63,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             symbol: "arrow.down.circle",
             accent: .teal,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         let center = BrowserDownloadCenter(
             approveRiskyDownload: { _, _, _ in true }
@@ -130,7 +128,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             origin: sourceOrigin,
             in: privateSpace.id
         )
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let page = try XCTUnwrap(pages.activePage)
         defer {
             server.stop()
@@ -202,8 +200,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             symbol: "arrow.down.circle",
             accent: .teal,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         var prompts: [BrowserHTTPAuthenticationPrompt] = []
         var loadCount = 0
@@ -565,7 +562,8 @@ final class MobileBrowserInteropTests: XCTestCase {
         var routedURLs: [URL] = []
         let space = makePopupSpace()
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -713,8 +711,8 @@ final class MobileBrowserInteropTests: XCTestCase {
         let secondURL = try XCTUnwrap(URL(string: "https://state.crest.test/two"))
         var stateful = BrowserTab(title: "Stateful", url: nil, placement: .current)
         let other = BrowserTab(title: "Other", url: nil, placement: .current)
-        let space = makeStateSpace(tabs: [stateful, other], selectedTabID: stateful.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let space = makeStateSpace(tabs: [stateful, other])
+        var session = presented([space], showing: space.id)
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
@@ -728,17 +726,13 @@ final class MobileBrowserInteropTests: XCTestCase {
         // The store keeps a tab's URL in step with its page, so the test does the
         // same before the page is taken away.
         stateful.url = secondURL
-        session = BrowserSession(
-            spaces: [
+        session = presented([
                 makeStateSpace(
                     id: space.id,
                     profile: space.profile,
-                    tabs: [stateful, other],
-                    selectedTabID: other.id
+                    tabs: [stateful, other]
                 )
-            ],
-            selectedSpaceID: space.id
-        )
+            ], showing: space.id, tabs: [space.id: other.id])
 
         pages.select(session: session)
         pages.unloadPage(for: stateful.id)
@@ -748,17 +742,13 @@ final class MobileBrowserInteropTests: XCTestCase {
             archive.archivedState(profileID: space.profile.id, tabID: stateful.id)
         )
 
-        session = BrowserSession(
-            spaces: [
+        session = presented([
                 makeStateSpace(
                     id: space.id,
                     profile: space.profile,
-                    tabs: [stateful, other],
-                    selectedTabID: stateful.id
+                    tabs: [stateful, other]
                 )
-            ],
-            selectedSpaceID: space.id
-        )
+            ], showing: space.id, tabs: [space.id: stateful.id])
         pages.select(session: session)
         let restoredPage = try XCTUnwrap(pages.activePage)
 
@@ -777,13 +767,13 @@ final class MobileBrowserInteropTests: XCTestCase {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let tab = BrowserTab(title: "Unloadable", url: nil, placement: .current)
-        let space = makeStateSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeStateSpace(tabs: [tab])
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
 
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented([space], showing: space.id))
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.unloadPage(for: tab.id)
         await archive.flushPendingWrites()
@@ -813,13 +803,9 @@ final class MobileBrowserInteropTests: XCTestCase {
             placement: .current
         )
         let space = makeStateSpace(
-            tabs: [stateful, fallback],
-            selectedTabID: stateful.id
+            tabs: [stateful, fallback]
         )
-        var session = BrowserSession(
-            spaces: [space],
-            selectedSpaceID: space.id
-        )
+        var session = presented([space], showing: space.id)
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
@@ -829,17 +815,15 @@ final class MobileBrowserInteropTests: XCTestCase {
         let originalPage = try XCTUnwrap(pages.activePage)
         try await load(firstURL, in: originalPage)
         try await load(secondURL, in: originalPage)
-        XCTAssertTrue(
-            session.updateTab(
-                url: secondURL,
-                title: "Second",
-                tabID: stateful.id,
-                in: space.id
-            )
-        )
+        var spaces = session.spaces
+        spaces[0].tabs[0].url = secondURL
+        spaces[0].tabs[0].title = "Second"
 
-        session.closeTab(stateful.id, fallbackTabID: fallback.id)
-        pages.reconcile(session: session)
+        // What the core does on close: the tab moves to the Space's archive.
+        let closed = spaces[0].tabs.removeFirst()
+        spaces[0].archivedTabs.append(ArchivedTab(tab: closed, archivedAt: .now, reason: .closed))
+        session = presented(spaces, showing: space.id, tabs: [space.id: fallback.id])
+        pages.reconcile(session: session.session)
         await pages.flushPendingTabStateWrites()
 
         XCTAssertFalse(pages.containsResidentPage(for: stateful.id))
@@ -851,7 +835,8 @@ final class MobileBrowserInteropTests: XCTestCase {
             "Closing must write the resident interaction state before the session sweep releases the page."
         )
 
-        session.restoreArchivedTab(stateful.id)
+        spaces[0].tabs.append(spaces[0].archivedTabs.removeLast().tab)
+        session = presented(spaces, showing: space.id, tabs: [space.id: stateful.id])
         pages.select(session: session)
         let restoredPage = try XCTUnwrap(pages.activePage)
 
@@ -869,7 +854,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let tab = BrowserTab(title: "Corrupt", url: url, placement: .current)
-        let space = makeStateSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeStateSpace(tabs: [tab])
         // Correctly framed and stamped for this build, so only WebKit can refuse it.
         archive.archive(
             interactionState: Data((0..<1024).map { _ in UInt8.random(in: 0...255) }),
@@ -883,7 +868,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             tabStateArchive: archive
         )
 
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented([space], showing: space.id))
         let page = try XCTUnwrap(pages.activePage)
 
         XCTAssertTrue(page.webView.backForwardList.backList.isEmpty)
@@ -900,13 +885,13 @@ final class MobileBrowserInteropTests: XCTestCase {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let tab = BrowserTab(title: "Private", url: nil, placement: .current)
-        let space = makeStateSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeStateSpace(tabs: [tab])
         let pages = MobileBrowserPageStore(
             browsingMode: .privateBrowsing,
             tabStateArchive: archive
         )
 
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented([space], showing: space.id))
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.archiveResidentTabStates()
         pages.unloadPage(for: tab.id)
@@ -926,7 +911,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let tab = BrowserTab(title: "Deleted", url: nil, placement: .current)
-        let space = makeStateSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeStateSpace(tabs: [tab])
         let survivingProfileID = UUID()
         let survivingTabID = TabID()
         archive.archive(
@@ -941,7 +926,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             tabStateArchive: archive
         )
 
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented([space], showing: space.id))
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.unloadPage(for: tab.id)
         await archive.flushPendingWrites()
@@ -967,26 +952,22 @@ final class MobileBrowserInteropTests: XCTestCase {
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let stateful = BrowserTab(title: "Stateful", url: nil, placement: .current)
         let other = BrowserTab(title: "Other", url: nil, placement: .current)
-        let space = makeStateSpace(tabs: [stateful, other], selectedTabID: stateful.id)
+        let space = makeStateSpace(tabs: [stateful, other])
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
 
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented([space], showing: space.id))
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.select(
-            session: BrowserSession(
-                spaces: [
+            session: presented([
                     makeStateSpace(
                         id: space.id,
                         profile: space.profile,
-                        tabs: [stateful, other],
-                        selectedTabID: other.id
+                        tabs: [stateful, other]
                     )
-                ],
-                selectedSpaceID: space.id
-            )
+                ], showing: space.id, tabs: [space.id: other.id])
         )
         XCTAssertTrue(pages.containsResidentPage(for: stateful.id))
 
@@ -1007,26 +988,22 @@ final class MobileBrowserInteropTests: XCTestCase {
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let stateful = BrowserTab(title: "Stateful", url: nil, placement: .current)
         let other = BrowserTab(title: "Other", url: nil, placement: .current)
-        let space = makeStateSpace(tabs: [stateful, other], selectedTabID: stateful.id)
+        let space = makeStateSpace(tabs: [stateful, other])
         let pages = MobileBrowserPageStore(
             browsingMode: .privateBrowsing,
             tabStateArchive: archive
         )
 
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented([space], showing: space.id))
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.select(
-            session: BrowserSession(
-                spaces: [
+            session: presented([
                     makeStateSpace(
                         id: space.id,
                         profile: space.profile,
-                        tabs: [stateful, other],
-                        selectedTabID: other.id
+                        tabs: [stateful, other]
                     )
-                ],
-                selectedSpaceID: space.id
-            )
+                ], showing: space.id, tabs: [space.id: other.id])
         )
 
         pages.unloadPage(for: stateful.id)
@@ -1055,7 +1032,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let popupPage = try XCTUnwrap(context.pages.activePage)
         let popupTabID = popupPage.tabID
         context.store.selectTab(openerTabID)
-        context.pages.select(session: context.store.session)
+        context.pages.select(session: context.store.presented)
         XCTAssertTrue(context.pages.containsResidentPage(for: popupTabID))
 
         context.pages.unloadPage(for: popupTabID)
@@ -1086,15 +1063,11 @@ final class MobileBrowserInteropTests: XCTestCase {
         let secret = BrowserTab(title: "Secret", url: nil, placement: .current)
         let protectedSpace = makeStateSpace(
             tabs: [secret],
-            selectedTabID: secret.id,
             accessPolicy: .deviceOwnerAuthentication
         )
         let openTab = BrowserTab(title: "Open", url: nil, placement: .current)
-        let openSpace = makeStateSpace(tabs: [openTab], selectedTabID: openTab.id)
-        var session = BrowserSession(
-            spaces: [protectedSpace, openSpace],
-            selectedSpaceID: openSpace.id
-        )
+        let openSpace = makeStateSpace(tabs: [openTab])
+        var session = presented([protectedSpace, openSpace], showing: openSpace.id)
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
@@ -1103,7 +1076,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         pages.select(session: session)
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.unloadPage(for: openTab.id)
-        session.selectSpace(protectedSpace.id)
+        session = presented(session.spaces, showing: protectedSpace.id, tabs: session.selection.tabSelections)
         pages.select(session: session)
         try await load(url, in: try XCTUnwrap(pages.activePage))
         // The unload that leaves the residue: the page is gone from memory
@@ -1140,19 +1113,15 @@ final class MobileBrowserInteropTests: XCTestCase {
         let secret = BrowserTab(title: "Secret", url: nil, placement: .current)
         let protectedSpace = makeStateSpace(
             tabs: [secret],
-            selectedTabID: secret.id,
             accessPolicy: .deviceOwnerAuthentication
         )
         let openTab = BrowserTab(title: "Open", url: nil, placement: .current)
-        let openSpace = makeStateSpace(tabs: [openTab], selectedTabID: openTab.id)
-        var session = BrowserSession(
-            spaces: [protectedSpace, openSpace],
-            selectedSpaceID: openSpace.id
-        )
+        let openSpace = makeStateSpace(tabs: [openTab])
+        var session = presented([protectedSpace, openSpace], showing: openSpace.id)
         let pages = MobileBrowserPageStore()
 
         pages.select(session: session)
-        session.selectSpace(protectedSpace.id)
+        session = presented(session.spaces, showing: protectedSpace.id, tabs: session.selection.tabSelections)
         pages.select(session: session)
         let secretPage = try XCTUnwrap(pages.activePage)
         XCTAssertTrue(pages.containsResidentPage(for: secret.id))
@@ -1166,7 +1135,7 @@ final class MobileBrowserInteropTests: XCTestCase {
 
         pages.select(session: session)
         XCTAssertTrue(pages.activePage === secretPage)
-        session.selectSpace(openSpace.id)
+        session = presented(session.spaces, showing: openSpace.id, tabs: session.selection.tabSelections)
         pages.select(session: session)
         let openPage = pages.activePage
         pages.relockProtectedSpace(protectedSpace)
@@ -1179,9 +1148,9 @@ final class MobileBrowserInteropTests: XCTestCase {
         let secondURL = try XCTUnwrap(URL(string: "https://state.crest.test/two"))
         let tab = BrowserTab(title: "Secret", url: nil, placement: .current)
         let space = makeStateSpace(
-            tabs: [tab], selectedTabID: tab.id, accessPolicy: .deviceOwnerAuthentication
+            tabs: [tab], accessPolicy: .deviceOwnerAuthentication
         )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        var session = presented([space], showing: space.id)
         let pages = MobileBrowserPageStore()
         pages.select(session: session)
         let original = try XCTUnwrap(pages.activePage)
@@ -1218,7 +1187,9 @@ final class MobileBrowserInteropTests: XCTestCase {
         let scrollValue = try await original.webView.evaluateJavaScript("window.scrollY")
         let scroll = try XCTUnwrap(scrollValue as? Double)
         XCTAssertGreaterThan(scroll, 0)
-        session.spaces[0].tabs[0].url = secondURL
+        var spaces = session.spaces
+        spaces[0].tabs[0].url = secondURL
+        session = presented(spaces, showing: space.id, tabs: session.selection.tabSelections)
 
         for _ in 0..<3 {
             pages.relockProtectedSpace(space)
@@ -1245,13 +1216,9 @@ final class MobileBrowserInteropTests: XCTestCase {
         var secret = BrowserTab(title: "Secret", url: nil, placement: .current)
         let protectedSpace = makeStateSpace(
             tabs: [secret],
-            selectedTabID: secret.id,
             accessPolicy: .deviceOwnerAuthentication
         )
-        var session = BrowserSession(
-            spaces: [protectedSpace],
-            selectedSpaceID: protectedSpace.id
-        )
+        var session = presented([protectedSpace], showing: protectedSpace.id)
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
@@ -1269,18 +1236,14 @@ final class MobileBrowserInteropTests: XCTestCase {
 
         // What the next unlock does: the tab is selected again with no state to
         // restore into.
-        session = BrowserSession(
-            spaces: [
+        session = presented([
                 makeStateSpace(
                     id: protectedSpace.id,
                     profile: protectedSpace.profile,
                     tabs: [secret],
-                    selectedTabID: secret.id,
                     accessPolicy: .deviceOwnerAuthentication
                 )
-            ],
-            selectedSpaceID: protectedSpace.id
-        )
+            ], showing: protectedSpace.id, tabs: [protectedSpace.id: secret.id])
         pages.select(session: session)
         let restoredPage = try XCTUnwrap(pages.activePage)
 
@@ -1302,14 +1265,14 @@ final class MobileBrowserInteropTests: XCTestCase {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let tab = BrowserTab(title: "Ordinary", url: nil, placement: .current)
-        let openSpace = makeStateSpace(tabs: [tab], selectedTabID: tab.id)
+        let openSpace = makeStateSpace(tabs: [tab])
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
 
         pages.select(
-            session: BrowserSession(spaces: [openSpace], selectedSpaceID: openSpace.id)
+            session: presented([openSpace], showing: openSpace.id)
         )
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.unloadPage(for: tab.id)
@@ -1333,13 +1296,9 @@ final class MobileBrowserInteropTests: XCTestCase {
         let second = BrowserTab(title: "Second", url: nil, placement: .current)
         let protectedSpace = makeStateSpace(
             tabs: [first, second],
-            selectedTabID: first.id,
             accessPolicy: .deviceOwnerAuthentication
         )
-        var session = BrowserSession(
-            spaces: [protectedSpace],
-            selectedSpaceID: protectedSpace.id
-        )
+        var session = presented([protectedSpace], showing: protectedSpace.id)
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
@@ -1349,18 +1308,14 @@ final class MobileBrowserInteropTests: XCTestCase {
         try await load(url, in: try XCTUnwrap(pages.activePage))
         // Idle unloading, not a relock: an unlocked protected Space archives like
         // any other, which is what makes the relock purge worth having.
-        session = BrowserSession(
-            spaces: [
+        session = presented([
                 makeStateSpace(
                     id: protectedSpace.id,
                     profile: protectedSpace.profile,
                     tabs: [first, second],
-                    selectedTabID: second.id,
                     accessPolicy: .deviceOwnerAuthentication
                 )
-            ],
-            selectedSpaceID: protectedSpace.id
-        )
+            ], showing: protectedSpace.id, tabs: [protectedSpace.id: second.id])
         pages.select(session: session)
         pages.unloadPage(for: first.id)
         await archive.flushPendingWrites()
@@ -1409,11 +1364,30 @@ final class MobileBrowserInteropTests: XCTestCase {
         return BrowserTabStateArchive(rootDirectory: root)
     }
 
+    /// A window's view of `spaces`: selection is window state, so fixtures pass
+    /// it beside the session. Spaces without a chosen tab show their fallback.
+    private func presented(
+        _ spaces: [BrowserSpace], showing spaceID: SpaceID, tabs: [SpaceID: TabID] = [:]
+    ) -> BrowserPresentedSession {
+        BrowserPresentedSession(
+            session: BrowserSession(spaces: spaces),
+            selection: selection(showing: spaceID, in: spaces, tabs: tabs))
+    }
+
+    private func selection(
+        showing spaceID: SpaceID, in spaces: [BrowserSpace], tabs: [SpaceID: TabID] = [:]
+    ) -> BrowserStoreSelection {
+        var chosen = tabs
+        for space in spaces where chosen[space.id] == nil {
+            chosen[space.id] = BrowserStoreSelection.fallbackTabID(in: space)
+        }
+        return BrowserStoreSelection(selectedSpaceID: spaceID, selectedTabIDsBySpace: chosen)
+    }
+
     private func makeStateSpace(
         id: SpaceID = SpaceID(),
         profile: BrowsingProfile = BrowsingProfile(),
         tabs: [BrowserTab],
-        selectedTabID: TabID,
         accessPolicy: BrowserSpaceAccessPolicy = .open
     ) -> BrowserSpace {
         BrowserSpace(
@@ -1424,8 +1398,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             accent: .teal,
             folders: [],
             tabs: tabs,
-            accessPolicy: accessPolicy,
-            selectedTabID: selectedTabID
+            accessPolicy: accessPolicy
         )
     }
 
@@ -1435,7 +1408,8 @@ final class MobileBrowserInteropTests: XCTestCase {
     ) throws -> MobilePopupAdoptionContext {
         let space = makePopupSpace()
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -1445,7 +1419,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             popupTabHost: store.popupTabHost,
             backgroundPageDidUpdate: { store.updateBackgroundPage($0) }
         )
-        pages.select(session: store.session)
+        pages.select(session: store.presented)
         return MobilePopupAdoptionContext(
             store: store,
             pages: pages,
@@ -1464,8 +1438,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             symbol: "macwindow.on.rectangle",
             accent: .teal,
             folders: [],
-            tabs: [openerTab],
-            selectedTabID: openerTab.id
+            tabs: [openerTab]
         )
     }
 }

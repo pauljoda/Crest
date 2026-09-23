@@ -12,10 +12,9 @@ import Foundation
 /// and Space. They are not group members, do not affect column fractions,
 /// and never enter synced browsing state.
 enum BrowserSplitGroupPolicy {
-    /// The largest number of tabs one split group renders as columns. Arc and
-    /// Zen both stop at four, and four 240pt-minimum cards is already the
-    /// practical limit of a laptop-width window.
-    static let maximumMembers = 4
+    /// The largest number of tabs one split group renders as columns, as the
+    /// core enforces it.
+    static var maximumMembers: Int { BrowserCoreLimits.current.splitMembers }
 
     /// The smallest run that presents as a split rather than as plain tabs.
     /// A shorter run keeps its membership in storage — the core's split

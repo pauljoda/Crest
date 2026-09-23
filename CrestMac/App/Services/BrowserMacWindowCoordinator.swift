@@ -49,7 +49,7 @@ final class BrowserMacWindowCoordinator {
         if let tab = source.selectedTab {
             destination.browser.selectTab(tab.id)
         }
-        destination.pages.select(session: destination.browser.session)
+        destination.pages.select(session: destination.browser.presented)
         if window.isMiniaturized { window.deminiaturize(nil) }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
@@ -81,10 +81,10 @@ final class BrowserMacWindowCoordinator {
             else { return nil }
             windowBrowser = temporary
             state = BrowserWindowStateStore(
-                id: request.id, session: temporary.session, persistence: InMemoryBrowserWindowStatePersistence())
+                id: request.id, browser: temporary, persistence: InMemoryBrowserWindowStatePersistence())
         } else {
             state = BrowserWindowStateStore(
-                id: request.id, session: source.session, persistence: windowStatePersistence)
+                id: request.id, browser: source, persistence: windowStatePersistence)
             windowBrowser = browser.makeWindowStore(restoring: state.state)
         }
         let transient = BrowserTransientBrowsingCoordinator()
@@ -255,9 +255,9 @@ final class BrowserMacWindowCoordinator {
             from: source.pages, matching: item.runtimeAssignment, as: movedTab, in: targetSpace)
         assert(transferred)
         source.pages.reconcile(session: source.browser.session)
-        source.pages.select(session: source.browser.session)
+        source.pages.select(session: source.browser.presented)
         destination.pages.reconcile(session: destination.browser.session)
-        destination.pages.select(session: destination.browser.session)
+        destination.pages.select(session: destination.browser.presented)
         if destination.tearOffPlacement?.isPending != true {
             destination.pages.setWindowFocused(true)
             destination.window?.makeKeyAndOrderFront(nil)

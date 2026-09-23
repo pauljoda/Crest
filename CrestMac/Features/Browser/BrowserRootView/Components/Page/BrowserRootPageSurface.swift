@@ -22,15 +22,15 @@ struct BrowserRootPageSurface: View {
     }
 
     private var selectedTab: BrowserTab? {
-        space.tabs.first { $0.id == space.selectedTabID }
+        space.tabs.first { $0.id == model.browser.selectedTabID(in: space.id) }
     }
 
     private var surfacePage: BrowserPage? {
-        selectedTab.flatMap { model.pages.surfacePage(for: $0, in: space, accessController: model.spaceAccess) }
+        selectedTab.flatMap { model.pages.surfacePage(for: $0, in: space, showing: model.browser.selectedTabID(in: space.id), accessController: model.spaceAccess) }
     }
 
     private var previewsStartPage: Bool {
-        !isSelectedSpace && model.pages.requiresStartPageOnEntry(to: space)
+        !isSelectedSpace && model.pages.requiresStartPageOnEntry(to: space, showing: model.browser.selectedTabID(in: space.id))
     }
 
     private var pageSurfacePresentation: BrowserPageSurfacePresentation {
@@ -41,7 +41,7 @@ struct BrowserRootPageSurface: View {
         return BrowserPageSurfaceBranchPolicy.resolve(
             selectedSpace: space,
             isSelectedSpaceLocked: model.spaceAccess.isLocked(space),
-            selectedTabID: space.selectedTabID,
+            selectedTabID: model.browser.selectedTabID(in: space.id),
             hasEnteredSplitContent:
                 isSelectedSpace && model.sidebarInteraction.sidebarReorderState.hasEnteredSplitContent,
             resolvedTarget: isSelectedSpace ? model.sidebarInteraction.sidebarReorderState.resolvedTarget : nil,
@@ -117,7 +117,10 @@ struct BrowserRootPageSurface: View {
                             },
                             presentation: .contentOverlay
                         )
-                        .background { LockedSpacePagePreview(space: space, pages: model.pages) }
+                        .background {
+                            LockedSpacePagePreview(space: space,
+                                selectedTabID: model.browser.selectedTabID(in: space.id), pages: model.pages)
+                        }
                     } else {
                         BrowserDetailView(
                             presentation: presentation,

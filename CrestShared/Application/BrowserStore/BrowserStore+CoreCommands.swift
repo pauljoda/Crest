@@ -1,7 +1,7 @@
 import Foundation
 
-// Store commands use the owned core session. Value-only session operations remain
-// available for imports and prepared transfers.
+// Store commands use the owned core session: they send intent and what this
+// window shows, and apply the core's selection hint to this window only.
 extension BrowserStore {
     func createSessionTabFolder(_ tabIDs: [TabID], in spaceID: SpaceID,
         detachesSplitMembers: Bool) -> FolderID? {
@@ -102,10 +102,17 @@ extension BrowserStore {
         return TabID(rawValue: id)
     }
 
+    /// Shows a tab in this window and records when it was last used, which
+    /// current-tab cleanup reads. Only that timestamp reaches the core; what the
+    /// window shows is its own selection.
     @discardableResult
     func activateSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
-        return family.execute("tab.activate", in: spaceID, arguments: ["tabId": id.rawValue.uuidString],
-            from: self, at: .now) != nil
+        guard !deletingSpaceIDs.contains(spaceID), session.space(id: spaceID)?.contains(id) == true,
+            family.execute("tab.touch", in: spaceID, arguments: ["tabId": id.rawValue.uuidString],
+                from: self, at: .now) != nil
+        else { return false }
+        presentTab(id, in: spaceID)
+        return true
     }
 
     @discardableResult

@@ -67,19 +67,19 @@ final class BrowserWindowTitleTests: XCTestCase {
 
     func testDeletingSpaceImmediatelyRedactsItsTitle() {
         let model = makeModel()
-        XCTAssertTrue(model.browser.family.beginDeletingSpace(model.browser.session.selectedSpaceID))
+        XCTAssertTrue(model.browser.family.beginDeletingSpace(model.browser.selectedSpaceID))
         XCTAssertEqual(model.windowTitle, ProductIdentity.name)
     }
 
     func testSpaceSwitchRejectsThePreviousActivePage() async throws {
         let model = makeModel()
-        model.pages.select(session: model.browser.session)
+        model.pages.select(session: model.browser.presented)
         let page = try XCTUnwrap(model.pages.activePage)
         try await load("Live Alpha", into: page)
         let beta = BrowserTab(title: "Beta", url: URL(string: "https://beta.crest.test"), placement: .current)
         let destination = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Other", symbol: "circle", accent: .indigo,
-            folders: [], tabs: [beta], selectedTabID: beta.id
+            folders: [], tabs: [beta]
         )
         model.browser.session.spaces.append(destination)
         model.browser.selectSpace(destination.id)
@@ -102,12 +102,12 @@ final class BrowserWindowTitleTests: XCTestCase {
         let beta = BrowserTab(title: "Beta", url: URL(string: "https://beta.crest.test"), placement: .current)
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle", accent: .indigo,
-            folders: [], tabs: [alpha, beta], selectedTabID: alpha.id
+            folders: [], tabs: [alpha, beta]
         )
         return BrowserRootModel(
             browser: browser
                 ?? BrowserStore(
-                    session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                    session: BrowserSession(spaces: [space]),
                     persistence: InMemoryBrowserSessionPersistence()
                 ),
             pages: BrowserPagePool(),

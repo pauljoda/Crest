@@ -77,7 +77,6 @@ final class BrowserSyncTests: XCTestCase {
         let guide = BrowserTab(title: "Getting Started", url: nil, nativeContent: .gettingStarted, placement: .current)
         let start = BrowserTab.startPage(lastActivatedAt: fixedDate(100))
         local.spaces[0].tabs.insert(contentsOf: [settings, guide, start], at: 1)
-        local.spaces[0].selectedTabID = settings.id
         local = try BrowserCoreSync.repair(local)
         let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
         try coordinator.stage(session: local, at: fixedDate(100))
@@ -98,11 +97,10 @@ final class BrowserSyncTests: XCTestCase {
                     .tab(remoteTab),
                     version: BrowserSyncVersion(logicalClock: 10_000, deviceID: fixedUUID(1_700)))
             ], into: local, at: fixedDate(200))
-        XCTAssertEqual(merged.spaces[0].selectedTabID, settings.id)
         XCTAssertEqual(merged.spaces[0].tabs.first { $0.id == remoteTab.id }?.title, "Updated elsewhere")
         XCTAssertEqual(
-            merged.spaces[0].tabs.filter { !BrowserSyncContentPolicy.includes($0) },
-            local.spaces[0].tabs.filter { !BrowserSyncContentPolicy.includes($0) })
+            merged.spaces[0].tabs.filter { !isPortable($0) },
+            local.spaces[0].tabs.filter { !isPortable($0) })
         XCTAssertEqual(Set(merged.spaces[0].archivedTabs.map(\.id)), Set(local.spaces[0].archivedTabs.map(\.id)))
         XCTAssertEqual(Set(merged.spaces[0].history.map(\.id)), Set(local.spaces[0].history.map(\.id)))
         XCTAssertEqual(merged.spaces[0].tabs.firstIndex { $0.id == settings.id }, 1)
@@ -112,7 +110,6 @@ final class BrowserSyncTests: XCTestCase {
         var local = oneSpaceSession()
         let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
         local.spaces[0].tabs.append(settings)
-        local.spaces[0].selectedTabID = settings.id
         local = try BrowserCoreSync.repair(local)
         var native = syncTab(settings, spaceID: local.spaces[0].id)
         native.nativeContent = .settings
@@ -128,7 +125,6 @@ final class BrowserSyncTests: XCTestCase {
         let merged = try journal.materializedSession(applyingTo: local)
         XCTAssertEqual(
             merged.spaces[0].tabs.first { $0.id == settings.id }, local.spaces[0].tabs.first { $0.id == settings.id })
-        XCTAssertEqual(merged.spaces[0].selectedTabID, settings.id)
         XCTAssertFalse(merged.spaces[0].archivedTabs.contains { $0.id == settings.id })
     }
 
@@ -169,11 +165,9 @@ final class BrowserSyncTests: XCTestCase {
         var local = remote
         let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .pinned)
         local.spaces[0].tabs = [settings]
-        local.spaces[0].selectedTabID = settings.id
         let merged = try journal.materializedSession(applyingTo: local)
         XCTAssertEqual(merged.spaces[0].tabs.count, BrowserSpace.maximumPinnedTabs + 1)
         XCTAssertEqual(merged.spaces[0].pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
-        XCTAssertEqual(merged.spaces[0].selectedTabID, settings.id)
     }
 
     func testJournalPayloadIsAPrivacyAllowlistRatherThanAnEncodedSession() throws {
@@ -239,8 +233,8 @@ final class BrowserSyncTests: XCTestCase {
             applyingTo: session
         )
         XCTAssertEqual(
-            materialized.selectedSpace?.tabs.map(\.id),
-            session.selectedSpace?.tabs.map(\.id)
+            materialized.spaces.first?.tabs.map(\.id),
+            session.spaces.first?.tabs.map(\.id)
         )
     }
 
@@ -317,8 +311,8 @@ final class BrowserSyncTests: XCTestCase {
             applyingTo: session
         )
         XCTAssertEqual(
-            materialized.selectedSpace?.tabs.map(\.id),
-            session.selectedSpace?.tabs.map(\.id)
+            materialized.spaces.first?.tabs.map(\.id),
+            session.spaces.first?.tabs.map(\.id)
         )
     }
 
@@ -349,14 +343,14 @@ final class BrowserSyncTests: XCTestCase {
         let firstResult = try first.materializedSession(applyingTo: base)
         let secondResult = try second.materializedSession(applyingTo: base)
         XCTAssertEqual(
-            firstResult.selectedSpace?.tabs.map(\.id),
-            secondResult.selectedSpace?.tabs.map(\.id)
+            firstResult.spaces.first?.tabs.map(\.id),
+            secondResult.spaces.first?.tabs.map(\.id)
         )
     }
 
     func testHostileOrderTokensFailClosed() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let invalidSpace = BrowserSyncSpace(
             id: space.id,
             profileID: space.profile.id,
@@ -387,7 +381,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLegacyOrderTokensCanonicalizeWithoutASchemaMigration() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(228))
         try journal.merge([
@@ -487,7 +481,7 @@ final class BrowserSyncTests: XCTestCase {
         local.spaces[0].browsingPreferences = .default
         let materialized = try journal.materializedSession(applyingTo: local)
 
-        XCTAssertEqual(materialized.selectedSpace?.browsingPreferences, preferences)
+        XCTAssertEqual(materialized.spaces.first?.browsingPreferences, preferences)
     }
 
     func testSpaceBrandingProjectsAndMaterializesWithTheSpaceRecord() throws {
@@ -534,7 +528,7 @@ final class BrowserSyncTests: XCTestCase {
         )
         let materialized = try journal.materializedSession(applyingTo: local)
 
-        XCTAssertEqual(materialized.selectedSpace?.branding, branding)
+        XCTAssertEqual(materialized.spaces.first?.branding, branding)
     }
 
     func testConcurrentCrestEditAndCloudTabAdditionReconcileWithoutDatasetConflict() throws {
@@ -598,9 +592,9 @@ final class BrowserSyncTests: XCTestCase {
 
         XCTAssertFalse(projected.isSavedTabsExpanded)
         XCTAssertEqual(projected.savedTabsExpansionModifiedAt, modifiedAt)
-        XCTAssertEqual(materialized.selectedSpace?.isSavedTabsExpanded, false)
+        XCTAssertEqual(materialized.spaces.first?.isSavedTabsExpanded, false)
         XCTAssertEqual(
-            materialized.selectedSpace?.savedTabsExpansionModifiedAt,
+            materialized.spaces.first?.savedTabsExpansionModifiedAt,
             modifiedAt
         )
     }
@@ -638,7 +632,7 @@ final class BrowserSyncTests: XCTestCase {
         }
         let projectedChild = try XCTUnwrap(projectedFolders.first)
         let materialized = try journal.materializedSession(applyingTo: session)
-        let folders = try XCTUnwrap(materialized.selectedSpace?.folders)
+        let folders = try XCTUnwrap(materialized.spaces.first?.folders)
 
         XCTAssertEqual(projectedChild.parentID, root.id)
         XCTAssertEqual(projectedChild.color, child.color)
@@ -654,7 +648,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLegacySyncFolderWithoutCollapseStateDefaultsToExpanded() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let source = BrowserSyncFolder(
             id: FolderID(rawValue: fixedUUID(248)),
             spaceID: space.id,
@@ -681,7 +675,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testMaterializationRejectsCyclicFolderHierarchy() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let firstID = FolderID(rawValue: fixedUUID(244))
         let secondID = FolderID(rawValue: fixedUUID(245))
         var journal = BrowserSyncJournal(deviceID: fixedUUID(246))
@@ -720,7 +714,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLegacySyncSpaceWithoutBrowsingPreferencesUsesDefaults() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let syncSpace = BrowserSyncSpace(
             id: space.id,
             profileID: space.profile.id,
@@ -745,7 +739,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLegacySyncSpaceWithoutBrandingUsesItsAccentAndSymbol() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let syncSpace = BrowserSyncSpace(
             id: space.id,
             profileID: space.profile.id,
@@ -770,7 +764,7 @@ final class BrowserSyncTests: XCTestCase {
         try journal.stage(session: session, at: fixedDate(100))
         let spaceRecordID = BrowserSyncRecordID(
             kind: .space,
-            value: session.selectedSpaceID.rawValue
+            value: session.spaces[0].id.rawValue
         )
         let uploadedVersion = try XCTUnwrap(
             journal.records.first { $0.id == spaceRecordID }?.version
@@ -838,7 +832,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testHostileMaximumLogicalClockFailsClosedInsteadOfOverflowing() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let remoteSpace = BrowserSyncSpace(
             id: space.id,
             profileID: space.profile.id,
@@ -864,7 +858,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testRemovingAProjectedRecordCreatesADurableTombstone() throws {
         var session = oneSpaceSession()
-        let removedTab = try XCTUnwrap(session.selectedSpace?.tabs.first)
+        let removedTab = try XCTUnwrap(session.spaces.first?.tabs.first)
         let removedTabID = removedTab.id
         var journal = BrowserSyncJournal(deviceID: fixedUUID(3))
         try journal.stage(session: session, at: fixedDate(100))
@@ -892,7 +886,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testAProjectedTabWithoutRemovalEvidenceIsNeverTombstoned() throws {
         var session = oneSpaceSession()
-        let retainedTabID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
+        let retainedTabID = try XCTUnwrap(session.spaces.first?.tabs.first?.id)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(301))
         try journal.stage(session: session, at: fixedDate(100))
         try journal.markUploaded(journal.pendingRecordIDs)
@@ -923,7 +917,7 @@ final class BrowserSyncTests: XCTestCase {
         for placement in [TabPlacement.pinned, .saved] {
             var session = oneSpaceSession()
             session.spaces[0].tabs[0].placement = placement
-            let protectedTab = try XCTUnwrap(session.selectedSpace?.tabs.first)
+            let protectedTab = try XCTUnwrap(session.spaces.first?.tabs.first)
             var journal = BrowserSyncJournal(deviceID: fixedUUID(303))
             try journal.stage(session: session, at: fixedDate(100))
             try journal.markUploaded(journal.pendingRecordIDs)
@@ -1000,7 +994,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testExplicitDeleteWinsAgainstANewerEdit() throws {
         let fixture = oneSpaceSession()
-        let space = try XCTUnwrap(fixture.selectedSpace)
+        let space = try XCTUnwrap(fixture.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         let payload = syncTab(tab, spaceID: space.id)
         let recordID = BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue)
@@ -1027,7 +1021,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testConcurrentPlacementMergeKeepsTheMoreDurableArcPlacement() throws {
         let fixture = oneSpaceSession()
-        let space = try XCTUnwrap(fixture.selectedSpace)
+        let space = try XCTUnwrap(fixture.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var current = syncTab(tab, spaceID: space.id)
         current.placement = .current
@@ -1056,7 +1050,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLaterSavedTabsExpansionWinsAgainstAHigherStaleLogicalClock() throws {
         let fixture = oneSpaceSession()
-        let space = try XCTUnwrap(fixture.selectedSpace)
+        let space = try XCTUnwrap(fixture.spaces.first)
         let stale = BrowserSyncSpace(
             id: space.id,
             profileID: space.profile.id,
@@ -1097,7 +1091,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLaterFolderDisclosureWinsAgainstAHigherStaleLogicalClock() throws {
         let fixture = oneSpaceSession()
-        let space = try XCTUnwrap(fixture.selectedSpace)
+        let space = try XCTUnwrap(fixture.spaces.first)
         let folderID = FolderID(rawValue: fixedUUID(944))
         let stale = BrowserSyncFolder(
             id: folderID,
@@ -1138,7 +1132,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLaterTabPositionChangeWinsAgainstAHigherStaleLogicalClock() throws {
         let fixture = oneSpaceSession()
-        let space = try XCTUnwrap(fixture.selectedSpace)
+        let space = try XCTUnwrap(fixture.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var stale = syncTab(tab, spaceID: space.id)
         stale.placement = .pinned
@@ -1176,7 +1170,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLegacySyncTabWithoutPositionTimestampStillDecodes() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         let encoded = try JSONEncoder().encode(syncTab(tab, spaceID: space.id))
         var object = try XCTUnwrap(
@@ -1192,7 +1186,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLaterTabRenameWinsAgainstAHigherStaleLogicalClock() throws {
         let fixture = oneSpaceSession()
-        let space = try XCTUnwrap(fixture.selectedSpace)
+        let space = try XCTUnwrap(fixture.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var stale = syncTab(tab, spaceID: space.id)
         stale.customTitle = "Stale Name"
@@ -1227,7 +1221,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLaterClearedRenameBeatsAnEarlierRenameFromAnotherDevice() throws {
         let fixture = oneSpaceSession()
-        let space = try XCTUnwrap(fixture.selectedSpace)
+        let space = try XCTUnwrap(fixture.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var renamed = syncTab(tab, spaceID: space.id)
         renamed.customTitle = "Stale Name"
@@ -1262,16 +1256,10 @@ final class BrowserSyncTests: XCTestCase {
 
     func testRenamedTabProjectsAndMaterializesWithinItsOwnSpace() throws {
         var session = oneSpaceSession()
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let tabID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
-        XCTAssertTrue(
-            session.setTabCustomTitle(
-                "Release Notes",
-                tabID: tabID,
-                in: spaceID,
-                at: fixedDate(200)
-            )
-        )
+        let spaceID = try XCTUnwrap(session.spaces.first?.id)
+        let tabID = try XCTUnwrap(session.spaces.first?.tabs.first?.id)
+        session.spaces[0].tabs[0].customTitle = "Release Notes"
+        session.spaces[0].tabs[0].titleModifiedAt = fixedDate(200)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(111))
 
         try journal.stage(session: session, at: fixedDate(300))
@@ -1296,15 +1284,9 @@ final class BrowserSyncTests: XCTestCase {
 
     func testKeepLoadedStateProjectsAndMaterializesWithItsTab() throws {
         var session = oneSpaceSession()
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let tabID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
-        XCTAssertTrue(
-            session.setTabKeepsPageLoaded(
-                true,
-                tabID: tabID,
-                in: spaceID
-            )
-        )
+        let spaceID = try XCTUnwrap(session.spaces.first?.id)
+        let tabID = try XCTUnwrap(session.spaces.first?.tabs.first?.id)
+        session.spaces[0].tabs[0].keepsPageLoaded = true
         var journal = BrowserSyncJournal(deviceID: fixedUUID(112))
 
         try journal.stage(session: session, at: fixedDate(300))
@@ -1326,7 +1308,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLegacySyncTabWithoutRenameFieldsStillDecodes() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var renamed = syncTab(tab, spaceID: space.id)
         renamed.customTitle = "Release Notes"
@@ -1348,7 +1330,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testLegacySyncTabWithoutKeepLoadedStateDefaultsToAutomaticResidency() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var kept = syncTab(tab, spaceID: space.id)
         kept.keepsPageLoaded = true
@@ -1367,8 +1349,8 @@ final class BrowserSyncTests: XCTestCase {
     func testSplitGroupMembershipProjectsAndMaterializesAsAContiguousRun() throws {
         let groupID = SplitGroupID(rawValue: fixedUUID(1_120))
         let session = splitGroupSession(memberships: [nil, groupID, groupID, groupID])
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let memberIDs = try XCTUnwrap(session.selectedSpace).tabs.dropFirst().map(\.id)
+        let spaceID = try XCTUnwrap(session.spaces.first?.id)
+        let memberIDs = try XCTUnwrap(session.spaces.first).tabs.dropFirst().map(\.id)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(1_121))
 
         try journal.stage(session: session, at: fixedDate(300))
@@ -1385,7 +1367,7 @@ final class BrowserSyncTests: XCTestCase {
             [nil, groupID, groupID, groupID]
         )
         let space = try XCTUnwrap(materialized.space(id: spaceID))
-        XCTAssertEqual(space.tabs.map(\.id), try XCTUnwrap(session.selectedSpace).tabs.map(\.id))
+        XCTAssertEqual(space.tabs.map(\.id), try XCTUnwrap(session.spaces.first).tabs.map(\.id))
         XCTAssertEqual(
             space.tabs.map(\.splitGroupID),
             [nil, groupID, groupID, groupID]
@@ -1551,7 +1533,7 @@ final class BrowserSyncTests: XCTestCase {
                 deviceID: fixedUUID(1_201)
             )
         )
-        let resolved = try BrowserSyncMergeResolver.resolve(
+        let resolved = try BrowserCoreSync.resolve(
             renamedRecord,
             tintedRecord
         )
@@ -1577,7 +1559,7 @@ final class BrowserSyncTests: XCTestCase {
             memberships: [groupID, groupID],
             positionModifiedAt: fixedDate(300)
         )
-        let memberID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
+        let memberID = try XCTUnwrap(session.spaces.first?.tabs.first?.id)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(1_131))
         try journal.stage(session: session, at: fixedDate(300))
         let grouped = try XCTUnwrap(projectedTab(memberID, in: journal))
@@ -1623,7 +1605,7 @@ final class BrowserSyncTests: XCTestCase {
             memberships: [groupID, groupID],
             positionModifiedAt: fixedDate(300)
         )
-        let memberID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
+        let memberID = try XCTUnwrap(session.spaces.first?.tabs.first?.id)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(1_141))
         try journal.stage(session: session, at: fixedDate(300))
         let grouped = try XCTUnwrap(projectedTab(memberID, in: journal))
@@ -1665,7 +1647,7 @@ final class BrowserSyncTests: XCTestCase {
     func testSplitMembershipSurvivesRecordsWithNoPositionTimestampAtAll() throws {
         let groupID = SplitGroupID(rawValue: fixedUUID(1_180))
         let session = splitGroupSession(memberships: [groupID, groupID])
-        let memberID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
+        let memberID = try XCTUnwrap(session.spaces.first?.tabs.first?.id)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(1_181))
         try journal.stage(session: session, at: fixedDate(300))
         let grouped = try XCTUnwrap(projectedTab(memberID, in: journal))
@@ -1706,8 +1688,8 @@ final class BrowserSyncTests: XCTestCase {
     func testAnInterleavedNonMemberClearsOnlyTheSplitOffRun() throws {
         let groupID = SplitGroupID(rawValue: fixedUUID(1_150))
         let session = splitGroupSession(memberships: [groupID, groupID, nil, groupID])
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let tabIDs = try XCTUnwrap(session.selectedSpace).tabs.map(\.id)
+        let spaceID = try XCTUnwrap(session.spaces.first?.id)
+        let tabIDs = try XCTUnwrap(session.spaces.first).tabs.map(\.id)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(1_151))
         try journal.stage(session: session, at: fixedDate(300))
 
@@ -1815,7 +1797,7 @@ final class BrowserSyncTests: XCTestCase {
     func testArchivePayloadCarryingSplitMembershipFailsValidation() throws {
         let groupID = SplitGroupID(rawValue: fixedUUID(1_170))
         let session = splitGroupSession(memberships: [groupID, groupID])
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         var archived = syncTab(tab, spaceID: space.id)
         archived.splitGroupID = groupID
@@ -1848,7 +1830,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testArchiveArrivingFromSyncGetsALocalSyncedCauseWithoutEchoingIt() throws {
         var remoteSession = oneSpaceSession()
-        let space = try XCTUnwrap(remoteSession.selectedSpace)
+        let space = try XCTUnwrap(remoteSession.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         remoteSession.spaces[0].tabs.removeAll { $0.id == tab.id }
         remoteSession.spaces[0].archivedTabs = [
@@ -1867,7 +1849,7 @@ final class BrowserSyncTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            try XCTUnwrap(materialized.selectedSpace).archivedTabs.first?.reason,
+            try XCTUnwrap(materialized.spaces.first).archivedTabs.first?.reason,
             .synced
         )
 
@@ -1884,7 +1866,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testDeletionAuditCannotRemoveALiveTabBeforeItsTombstoneArrives() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         let tabRecord = BrowserSyncRecord.save(
             .tab(syncTab(tab, spaceID: space.id)),
@@ -1915,15 +1897,15 @@ final class BrowserSyncTests: XCTestCase {
 
         let materialized = try journal.materializedSession(applyingTo: session)
 
-        XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).contains(tab.id))
-        XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).archivedTabs.isEmpty)
+        XCTAssertTrue(try XCTUnwrap(materialized.spaces.first).contains(tab.id))
+        XCTAssertTrue(try XCTUnwrap(materialized.spaces.first).archivedTabs.isEmpty)
     }
 
     func testOrdinaryRemoteArchiveCannotReplaceAPinnedOrSavedTab() throws {
         for placement in [TabPlacement.pinned, .saved] {
             var session = oneSpaceSession()
             session.spaces[0].tabs[0].placement = placement
-            let space = try XCTUnwrap(session.selectedSpace)
+            let space = try XCTUnwrap(session.spaces.first)
             let tab = try XCTUnwrap(space.tabs.first)
             let tabRecord = BrowserSyncRecord.save(
                 .tab(syncTab(tab, spaceID: space.id)),
@@ -1960,7 +1942,7 @@ final class BrowserSyncTests: XCTestCase {
                 applyingTo: session
             )
 
-            let resolvedSpace = try XCTUnwrap(materialized.selectedSpace)
+            let resolvedSpace = try XCTUnwrap(materialized.spaces.first)
             XCTAssertEqual(
                 resolvedSpace.tabs.first { $0.id == tab.id }?.placement,
                 placement
@@ -1972,7 +1954,7 @@ final class BrowserSyncTests: XCTestCase {
     func testExplicitRemoteDeleteMovesTheLocalTabIntoDeletionArchive() throws {
         var session = oneSpaceSession()
         session.spaces[0].tabs[0].placement = .pinned
-        let tab = try XCTUnwrap(session.selectedSpace?.tabs.first)
+        let tab = try XCTUnwrap(session.spaces.first?.tabs.first)
         let coordinator = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence(),
             deviceID: fixedUUID(1_185)
@@ -1981,7 +1963,7 @@ final class BrowserSyncTests: XCTestCase {
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         let deletion = BrowserSyncRecord.delete(
             id: BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue),
-            spaceID: session.selectedSpaceID,
+            spaceID: session.spaces[0].id,
             version: BrowserSyncVersion(
                 logicalClock: 100,
                 deviceID: fixedUUID(1_186)
@@ -1996,7 +1978,7 @@ final class BrowserSyncTests: XCTestCase {
             at: fixedDate(600)
         )
 
-        let space = try XCTUnwrap(materialized.selectedSpace)
+        let space = try XCTUnwrap(materialized.spaces.first)
         XCTAssertFalse(space.contains(tab.id))
         let archive = try XCTUnwrap(
             space.archivedTabs.first { $0.id == tab.id }
@@ -2020,7 +2002,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testSyncMaterializationPreservesAnExistingLocalArchiveCause() throws {
         var localSession = oneSpaceSession()
-        let tab = try XCTUnwrap(localSession.selectedSpace?.tabs.first)
+        let tab = try XCTUnwrap(localSession.spaces.first?.tabs.first)
         localSession.spaces[0].tabs.removeAll { $0.id == tab.id }
         localSession.spaces[0].archivedTabs = [
             ArchivedTab(
@@ -2037,14 +2019,14 @@ final class BrowserSyncTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            try XCTUnwrap(materialized.selectedSpace).archivedTabs.first?.reason,
+            try XCTUnwrap(materialized.spaces.first).archivedTabs.first?.reason,
             .autoCleanup
         )
     }
 
     func testHistoryMergeRetainsTheFullObservedVisitRange() throws {
         let session = oneSpaceSession()
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
+        let spaceID = try XCTUnwrap(session.spaces.first?.id)
         let historyID = fixedUUID(10)
         let first = BrowserSyncHistory(
             id: historyID,
@@ -2091,7 +2073,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testNewerActivationDefeatsStaleAutoCleanupAcrossDevices() throws {
         let local = oneSpaceSession(lastActivatedAt: fixedDate(300))
-        let space = try XCTUnwrap(local.selectedSpace)
+        let space = try XCTUnwrap(local.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         let records = [
             spaceRecord(space, clock: 1),
@@ -2114,13 +2096,13 @@ final class BrowserSyncTests: XCTestCase {
 
         let materialized = try journal.materializedSession(applyingTo: local)
 
-        XCTAssertEqual(materialized.selectedSpace?.tabs.map(\.id), [tab.id])
-        XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).archivedTabs.isEmpty)
+        XCTAssertEqual(materialized.spaces.first?.tabs.map(\.id), [tab.id])
+        XCTAssertTrue(try XCTUnwrap(materialized.spaces.first).archivedTabs.isEmpty)
     }
 
     func testNewerActivationDefeatsANewerClockRetentionTombstone() throws {
         let local = oneSpaceSession(lastActivatedAt: fixedDate(300))
-        let space = try XCTUnwrap(local.selectedSpace)
+        let space = try XCTUnwrap(local.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         let tabID = BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue)
         let active = BrowserSyncRecord.save(
@@ -2148,7 +2130,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testNewerArchiveWinsWhenTabActivityIsStale() throws {
         let local = oneSpaceSession(lastActivatedAt: fixedDate(100))
-        let space = try XCTUnwrap(local.selectedSpace)
+        let space = try XCTUnwrap(local.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         let records = [
             spaceRecord(space, clock: 1),
@@ -2171,19 +2153,15 @@ final class BrowserSyncTests: XCTestCase {
 
         let materialized = try journal.materializedSession(applyingTo: local)
 
-        XCTAssertFalse(try XCTUnwrap(materialized.selectedSpace).tabs.contains { $0.id == tab.id })
-        XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).archivedTabs.contains { $0.id == tab.id })
+        XCTAssertFalse(try XCTUnwrap(materialized.spaces.first).tabs.contains { $0.id == tab.id })
+        XCTAssertTrue(try XCTUnwrap(materialized.spaces.first).archivedTabs.contains { $0.id == tab.id })
     }
 
-    func testMaterializationPreservesDeviceSelectionDefaultAndCredentialPreferences() throws {
+    func testMaterializationPreservesDeviceDefaultAndCredentialPreferences() throws {
         let source = BrowserSession.preview
         var local = source
         let work = try XCTUnwrap(local.spaces.first)
-        let personal = try XCTUnwrap(local.spaces.last)
-        local.setDefaultSpace(work.id)
-        local.selectSpace(personal.id)
-        let selected = try XCTUnwrap(personal.pinnedTabs.last?.id)
-        local.selectTab(selected, at: fixedDate(500))
+        local.defaultSpaceID = work.id
         local.spaces[1].credentialPreferences = BrowserCredentialPreferences(
             syncsCrestPasswordsWithICloud: false,
             alsoOffersSaveToSystemPasswords: true
@@ -2193,12 +2171,10 @@ final class BrowserSyncTests: XCTestCase {
 
         let result = try journal.materializedSession(applyingTo: local)
 
-        XCTAssertEqual(result.selectedSpaceID, personal.id)
         XCTAssertEqual(result.defaultSpaceID, work.id)
-        XCTAssertEqual(result.selectedTab?.id, selected)
         XCTAssertEqual(
-            result.selectedSpace?.credentialPreferences,
-            local.selectedSpace?.credentialPreferences
+            result.spaces.first?.credentialPreferences,
+            local.spaces.first?.credentialPreferences
         )
     }
 
@@ -2216,7 +2192,6 @@ final class BrowserSyncTests: XCTestCase {
                 lastActivatedAt: fixedDate(300)
             )
         ]
-        local.spaces[0].selectedTabID = local.spaces[0].tabs[0].id
         local.spaces[0].history = [history(id: fixedUUID(23), path: "local")]
         let preferences = BrowserSyncPreferences(
             savedStructure: true,
@@ -2229,9 +2204,9 @@ final class BrowserSyncTests: XCTestCase {
 
         let result = try journal.materializedSession(applyingTo: local)
 
-        XCTAssertEqual(result.selectedSpace?.name, "Renamed remotely")
-        XCTAssertEqual(result.selectedTab?.title, "Local current tab")
-        XCTAssertEqual(result.selectedSpace?.history.map(\.url), local.selectedSpace?.history.map(\.url))
+        XCTAssertEqual(result.spaces.first?.name, "Renamed remotely")
+        XCTAssertEqual(result.spaces.first?.currentTabs.first?.title, "Local current tab")
+        XCTAssertEqual(result.spaces.first?.history.map(\.url), local.spaces.first?.history.map(\.url))
     }
 
     func testTwoDevicesConvergeAfterConcurrentRenames() throws {
@@ -2256,7 +2231,7 @@ final class BrowserSyncTests: XCTestCase {
 
         let firstResult = try first.materializedSession(applyingTo: base)
         let secondResult = try second.materializedSession(applyingTo: base)
-        XCTAssertEqual(firstResult.selectedSpace?.name, secondResult.selectedSpace?.name)
+        XCTAssertEqual(firstResult.spaces.first?.name, secondResult.spaces.first?.name)
         XCTAssertEqual(first.records, second.records)
     }
 
@@ -2312,7 +2287,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testMalformedRecordIdentityFailsClosed() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tab = try XCTUnwrap(space.tabs.first)
         let payload = BrowserSyncPayload.tab(syncTab(tab, spaceID: space.id))
         let record = BrowserSyncRecord(
@@ -2342,8 +2317,7 @@ final class BrowserSyncTests: XCTestCase {
         var duplicateProfiles = BrowserSyncJournal(deviceID: fixedUUID(63))
         try duplicateProfiles.stage(
             session: BrowserSession(
-                spaces: [try XCTUnwrap(first.selectedSpace), try XCTUnwrap(second.selectedSpace)],
-                selectedSpaceID: first.selectedSpaceID
+                spaces: [try XCTUnwrap(first.spaces.first), try XCTUnwrap(second.spaces.first)]
             ),
             at: fixedDate(1)
         )
@@ -2353,7 +2327,7 @@ final class BrowserSyncTests: XCTestCase {
         }
 
         let base = oneSpaceSession()
-        let space = try XCTUnwrap(base.selectedSpace)
+        let space = try XCTUnwrap(base.spaces.first)
         let tabID = TabID(rawValue: fixedUUID(64))
         let danglingFolderID = FolderID(rawValue: fixedUUID(65))
         let dangling = BrowserSyncTab(
@@ -2399,7 +2373,7 @@ final class BrowserSyncTests: XCTestCase {
         throws
     {
         let local = oneSpaceSession()
-        let space = try XCTUnwrap(local.selectedSpace)
+        let space = try XCTUnwrap(local.spaces.first)
         let changedProfileID = fixedUUID(69)
         let remoteSpace = BrowserSyncSpace(
             id: space.id,
@@ -2418,11 +2392,7 @@ final class BrowserSyncTests: XCTestCase {
         )
 
         XCTAssertThrowsError(
-            try BrowserSyncMaterializer.materialize(
-                records: [record],
-                preferences: .default,
-                localSession: local
-            )
+            try BrowserCoreSync.materialize(local, preferences: .default, records: [record])
         ) { error in
             XCTAssertEqual(
                 error as? BrowserSyncError,
@@ -2672,11 +2642,7 @@ final class BrowserSyncTests: XCTestCase {
             profileID: fixedUUID(941),
             tabID: TabID(rawValue: fixedUUID(942))
         )
-        cloudSession.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/cloud")),
-            title: "Cloud history",
-            at: fixedDate(800)
-        )
+        cloudSession.spaces[0].history = [history(id: fixedUUID(9_944), path: "cloud")]
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(943))
         try cloud.stage(session: cloudSession, at: fixedDate(900))
         let cloudSpaceRecordID = BrowserSyncRecordID(
@@ -2745,15 +2711,13 @@ final class BrowserSyncTests: XCTestCase {
             tabID: TabID(rawValue: fixedUUID(955))
         )
         var session = BrowserSession(
-            spaces: [deleted.spaces[0], retained.spaces[0]],
-            selectedSpaceID: deletedSpaceID
+            spaces: [deleted.spaces[0], retained.spaces[0]]
         )
         var journal = BrowserSyncJournal(deviceID: fixedUUID(956))
         try journal.stage(session: session, at: fixedDate(100))
         try journal.markUploaded(journal.pendingRecordIDs)
 
         session.spaces.removeAll { $0.id == deletedSpaceID }
-        session.selectedSpaceID = retained.spaces[0].id
         try journal.stage(session: session, at: fixedDate(200))
 
         let deletedSpaceRecordID = BrowserSyncRecordID(
@@ -2838,14 +2802,12 @@ final class BrowserSyncTests: XCTestCase {
             symbol: "cloud",
             accent: .indigo,
             folders: [folder],
-            tabs: [currentTab, savedTab],
-            selectedTabID: currentTab.id
+            tabs: [currentTab, savedTab]
         )
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(985))
         try cloud.stage(
             session: BrowserSession(
-                spaces: [cloudSpace],
-                selectedSpaceID: cloudSpaceID
+                spaces: [cloudSpace]
             ),
             at: fixedDate(900)
         )
@@ -2932,10 +2894,9 @@ final class BrowserSyncTests: XCTestCase {
             symbol: "cloud",
             accent: .indigo,
             folders: [folder],
-            tabs: [currentTab, savedTab],
-            selectedTabID: currentTab.id
+            tabs: [currentTab, savedTab]
         )
-        let session = BrowserSession(spaces: [space], selectedSpaceID: spaceID)
+        let session = BrowserSession(spaces: [space])
         let persistence = InMemoryBrowserSyncJournalPersistence()
         let coordinator = BrowserSyncCoordinator(
             persistence: persistence,
@@ -3048,14 +3009,12 @@ final class BrowserSyncTests: XCTestCase {
             symbol: "cloud",
             accent: .indigo,
             folders: [root, middle, leaf],
-            tabs: [currentTab, savedTab],
-            selectedTabID: currentTab.id
+            tabs: [currentTab, savedTab]
         )
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(1_017))
         try cloud.stage(
             session: BrowserSession(
-                spaces: [cloudSpace],
-                selectedSpaceID: cloudSpaceID
+                spaces: [cloudSpace]
             ),
             at: fixedDate(900)
         )
@@ -3156,10 +3115,9 @@ final class BrowserSyncTests: XCTestCase {
             symbol: "cloud",
             accent: .indigo,
             folders: [root, middle, leaf],
-            tabs: [currentTab, savedTab],
-            selectedTabID: currentTab.id
+            tabs: [currentTab, savedTab]
         )
-        let session = BrowserSession(spaces: [space], selectedSpaceID: spaceID)
+        let session = BrowserSession(spaces: [space])
         let coordinator = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence(),
             deviceID: fixedUUID(1_027)
@@ -3217,7 +3175,7 @@ final class BrowserSyncTests: XCTestCase {
     /// A parent folder recorded in a different Space is not delivery order either.
     func testAFolderWhoseParentBelongsToAnotherSpaceStillFailsClosed() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let strayParentID = FolderID(rawValue: fixedUUID(1_030))
         let child = BrowserSyncFolder(
             id: FolderID(rawValue: fixedUUID(1_031)),
@@ -3267,7 +3225,7 @@ final class BrowserSyncTests: XCTestCase {
     /// delivery order, so the merge still refuses it outright.
     func testASavedTabReferencingAnotherSpacesFolderStillFailsClosed() throws {
         let session = oneSpaceSession()
-        let space = try XCTUnwrap(session.selectedSpace)
+        let space = try XCTUnwrap(session.spaces.first)
         let tabID = TabID(rawValue: fixedUUID(997))
         let folderID = FolderID(rawValue: fixedUUID(998))
         let strayFolder = BrowserSyncFolder(
@@ -3319,11 +3277,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testReplacingICloudWithThisDeviceLeavesUnsyncedCategoriesAlone() throws {
         var cloudSession = oneSpaceSession()
-        cloudSession.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/cloud")),
-            title: "Cloud history",
-            at: fixedDate(800)
-        )
+        cloudSession.spaces[0].history = [history(id: fixedUUID(9_944), path: "cloud")]
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(970))
         try cloud.stage(session: cloudSession, at: fixedDate(900))
         let historyRecords = cloud.records.filter { $0.id.kind == .history }
@@ -3379,10 +3333,9 @@ final class BrowserSyncTests: XCTestCase {
             symbol: "sparkles",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        return BrowserSession(spaces: [space])
     }
 
     private func currentTabSession(count: Int) -> BrowserSession {
@@ -3404,10 +3357,9 @@ final class BrowserSyncTests: XCTestCase {
             symbol: "list.number",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs.first?.id
+            tabs: tabs
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: spaceID)
+        return BrowserSession(spaces: [space])
     }
 
     /// A one-Space session whose current tabs carry the listed memberships in
@@ -3438,10 +3390,9 @@ final class BrowserSyncTests: XCTestCase {
             symbol: "rectangle.split.2x1",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs.first?.id
+            tabs: tabs
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: resolvedSpaceID)
+        return BrowserSession(spaces: [space])
     }
 
     private func projectedTab(
@@ -3562,6 +3513,11 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(syncedSpace.branding.bannerPattern, .chevron)
         XCTAssertEqual(syncedSpace.branding.colors, [.ink, .ocean, .gold])
         XCTAssertEqual(syncedSpace.name, session.spaces[0].name)
+    }
+
+    /// Only web pages enter sync; native and device-specific tabs stay local.
+    private func isPortable(_ tab: BrowserTab) -> Bool {
+        tab.url?.scheme == "http" || tab.url?.scheme == "https"
     }
 
     private func history(id: UUID, path: String) -> BrowserHistoryEntry {

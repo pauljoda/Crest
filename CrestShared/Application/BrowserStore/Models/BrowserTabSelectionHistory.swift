@@ -1,11 +1,12 @@
 struct BrowserTabSelectionHistory: Equatable, Sendable {
     private var tabIDsBySpaceID: [SpaceID: [TabID]] = [:]
 
-    init(session: BrowserSession) {
-        reconcile(session: session)
+    init(session: BrowserSession, selection: BrowserStoreSelection) {
+        reconcile(session: session, selection: selection)
     }
 
-    mutating func reconcile(session: BrowserSession) {
+    /// Records each Space's shown tab as its most recent choice.
+    mutating func reconcile(session: BrowserSession, selection: BrowserStoreSelection) {
         let availableSpaceIDs = Set(session.spaces.map(\.id))
         tabIDsBySpaceID = tabIDsBySpaceID.filter {
             availableSpaceIDs.contains($0.key)
@@ -14,7 +15,7 @@ struct BrowserTabSelectionHistory: Equatable, Sendable {
         for space in session.spaces {
             var history = tabIDsBySpaceID[space.id, default: []]
 
-            if let selectedTabID = space.selectedTabID,
+            if let selectedTabID = selection.selectedTabID(in: space.id),
                 space.contains(selectedTabID)
             {
                 history.removeAll { $0 == selectedTabID }

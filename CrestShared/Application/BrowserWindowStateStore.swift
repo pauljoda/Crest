@@ -11,15 +11,22 @@ final class BrowserWindowStateStore {
     var sidebarWidth: Double? { state.sidebarWidth }
     var sidebarIsPresented: Bool? { state.sidebarIsPresented }
 
+    /// Loads this window's own record. Without one, the window records what
+    /// `browser` shows now; an older record without captured Spaces folds that
+    /// selection in once.
     init(
         id: BrowserWindowID,
-        session: BrowserSession,
+        browser: BrowserStore,
         persistence: any BrowserWindowStatePersisting
     ) {
         self.persistence = persistence
-        state =
-            persistence.load(id: id)
-            ?? BrowserWindowState(id: id, restoring: session)
+        let session = browser.session
+        if var stored = persistence.load(id: id) {
+            stored.foldLegacySelection(browser.selection, in: session)
+            state = stored
+        } else {
+            state = BrowserWindowState(id: id, restoring: browser.selection, in: session)
+        }
         state.repair(using: session)
         persistence.save(state)
     }
@@ -53,9 +60,9 @@ final class BrowserWindowStateStore {
         persistence.save(state)
     }
 
-    func captureSelection(from session: BrowserSession) {
+    func captureSelection(of browser: BrowserStore) {
         let previousState = state
-        state.captureSelection(from: session)
+        state.captureSelection(browser.selection, in: browser.session)
         guard state != previousState else { return }
         persistence.save(state)
     }

@@ -9,9 +9,11 @@ public sealed partial class NativeSessionAuthority {
 
     private NativeSessionCommand PrepareTabBatch(ulong expected, JsonObject request) {
         try {
-            var window = request["window"]!;
+            // A batch acts on the tabs the person multi-selected in the Space
+            // their window shows; any other Space means the selection is stale.
+            var view = SessionView.Decode(request[SessionView.Key]);
             var sourceId = Id(request["spaceId"]);
-            if (Id(window["selectedSpaceID"]) != sourceId) throw new BrowserRuleException(BrowserRuleCodes.StaleSelection);
+            if (view.SpaceId != sourceId) throw new BrowserRuleException(BrowserRuleCodes.StaleSelection);
             var source = TransferSpace(sourceId, Id(request["profileId"]));
             var args = request["arguments"]!.AsObject();
             var selection = args["selection"]!;
@@ -31,21 +33,22 @@ public sealed partial class NativeSessionAuthority {
                 args["follow"]?.GetValue<bool>() == true);
             SpaceDocument? destination = null;
             if (action.Kind == TabBatchKind.MoveToSpace) {
-                var destinationId = Id(args["destinationSpaceId"]);
-                if (destinationId == sourceId) throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
-                destination = TransferSpace(destinationId, Id(args["destinationProfileId"]));
+                var requested = Id(args["destinationSpaceId"]);
+                if (requested == sourceId) throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
+                destination = TransferSpace(requested, Id(args["destinationProfileId"]));
             }
-            var spaces = new JsonArray(TransferProjection(source, window));
-            if (destination is not null) spaces.Add((JsonNode)TransferProjection(destination, window));
+            var spaces = new JsonArray(TransferProjection(source));
+            if (destination is not null) spaces.Add((JsonNode)TransferProjection(destination));
             var legacy = new LegacySessionDocument(new JsonObject {
-                ["session"] = new JsonObject { ["selectedSpaceID"] = source.Metadata["id"]!.DeepClone(), ["spaces"] = spaces }
+                ["session"] = new JsonObject { ["spaces"] = spaces }
             });
             var state = legacy.Read(new SystemIdSource());
             var a = BrowserTabCollection.Restore(state.Spaces[0]);
             var b = destination is null ? null : BrowserTabCollection.Restore(state.Spaces[1]);
             var now = new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero).AddSeconds(request["now"]!.GetValue<double>());
-            var result = a.ApplyBatch(captured, action, state.Spaces[0].SelectedTabId, Tab(args["fallbackTabId"]),
-                b, destination is null ? null : state.Spaces[1].SelectedTabId, new SystemIdSource(), now);
+            Guid? destinationId = destination is null ? null : Id(destination.Metadata["id"]);
+            var result = a.ApplyBatch(captured, action, view.Tab(sourceId), Tab(args["fallbackTabId"]),
+                b, destinationId is { } target ? view.Tab(target) : null, new SystemIdSource(), now);
             foreach (var pair in result.Copies) {
                 legacy.CopyTabMetadata(pair.Source, pair.Copy);
                 var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o => Id(o!["tabId"]) == pair.Source);
@@ -55,8 +58,8 @@ public sealed partial class NativeSessionAuthority {
             }
             if (result.CreatedFolder is { } created && args["folderColor"] is { } color)
                 legacy.SetFolderMetadata(created, "color", color.DeepClone());
-            var capturedSpaces = new List<SpaceState> { a.Capture(state.Spaces[0], result.Selection) };
-            if (b is not null) capturedSpaces.Add(b.Capture(state.Spaces[1], result.DestinationSelection));
+            var capturedSpaces = new List<SpaceState> { a.Capture(state.Spaces[0]) };
+            if (b is not null) capturedSpaces.Add(b.Capture(state.Spaces[1]));
             var edited = legacy.Write(state with { Spaces = capturedSpaces.ToArray() })["session"]!["spaces"]!.AsArray();
             var outputSource = edited[0]!;
             foreach (var pair in result.GroupCopies) {
@@ -76,17 +79,19 @@ public sealed partial class NativeSessionAuthority {
                 changes.Add((JsonNode)new JsonObject {
                     ["space"] = space.DeepClone(),
                     ["tabId"] = null,
-                    ["selectSpace"] = false,
                     ["changed"] = true,
                     ["copies"] = new JsonArray(result.Copies.Select(p => (JsonNode)new JsonObject { ["source"] = p.Source.ToString(), ["copy"] = p.Copy.ToString() }).ToArray())
                 });
             }
-            var selectedWindow = window.DeepClone();
-            if (destination is not null && action.Follow) selectedWindow["selectedSpaceID"] = destination.Metadata["id"]!.DeepClone();
-            var next = ApplyTransfer(document, selectedWindow, edited.Select(s => s!.AsObject()).ToArray());
+            var hint = new SessionSelectionHint().SelectTab(view, sourceId, result.Selection);
+            if (destinationId is { } moved) {
+                hint.SelectTab(view, moved, result.DestinationSelection);
+                if (action.Follow) hint.SelectSpace(moved);
+            }
+            var next = ApplyTransfer(document, edited.Select(s => s!.AsObject()).ToArray());
             var output = TransferOutput(new JsonObject {
                 ["changes"] = changes,
-                ["selectedSpaceID"] = selectedWindow["selectedSpaceID"]!.DeepClone()
+                [SessionSelectionHint.Key] = hint.Encode()
             });
             return new(this, expected, next, output);
         } catch (BrowserRuleException error) {

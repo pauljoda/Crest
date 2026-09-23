@@ -38,8 +38,7 @@ enum BrowserSiteSettingsPreviewFixture {
             accent: .teal,
             branding: .initial(accent: .teal, symbol: "globe"),
             folders: [],
-            tabs: [tab],
-            selectedTabID: tabID
+            tabs: [tab]
         )
         let permissionCenter = BrowserSitePermissionCenter()
         let pages = BrowserPagePool(

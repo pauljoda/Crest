@@ -182,7 +182,7 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
             let tabs = space.tabSections.tabs(in: folder.id)
             configuration.sidebarInteraction.reconcileCollapsedFolder(
                 configuration.folderRuntimeAssignment, isExpanded: !folder.isCollapsed,
-                selectedTabID: space.selectedTabID, folderTabIDs: tabs.map(\.id),
+                selectedTabID: configuration.browser.selectedTabID(in: space.id), folderTabIDs: tabs.map(\.id),
                 residentFolderTabIDs: tabs.compactMap { tab in
                     configuration.pageAccess.containsResidentPageMatching(
                         BrowserTabRuntimeAssignment(

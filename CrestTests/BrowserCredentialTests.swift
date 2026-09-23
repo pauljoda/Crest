@@ -251,9 +251,7 @@ final class BrowserCredentialTests: XCTestCase {
     func testDisabledSpaceDoesNotOfferOrSaveCrestCredentials() async throws {
         var session = BrowserSession.preview
         let space = try XCTUnwrap(session.spaces.first)
-        var preferences = space.credentialPreferences
-        preferences.isEnabled = false
-        session.updateCredentialPreferences(preferences, in: space.id)
+        session.spaces[0].credentialPreferences.isEnabled = false
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: session,
@@ -615,8 +613,7 @@ final class BrowserCredentialTests: XCTestCase {
                     otherWindow.session.spaces[0] = BrowserSpace(
                         id: original.id, profile: BrowsingProfile(), name: "Replacement", symbol: original.symbol,
                         accent: original.accent,
-                        folders: [], tabs: original.tabs, credentialPreferences: preferences,
-                        selectedTabID: original.selectedTabID)
+                        folders: [], tabs: original.tabs, credentialPreferences: preferences)
                 } else {
                     otherWindow.updateCredentialPreferences(preferences, in: original.id)
                 }

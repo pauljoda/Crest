@@ -185,7 +185,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
     func testAWholeSpaceStillArrivesWhenItsBrandingUsesUnknownVocabulary() throws {
         var space = try XCTUnwrap(
             JSONSerialization.jsonObject(
-                with: JSONEncoder().encode(BrowserSession.preview.selectedSpace)
+                with: JSONEncoder().encode(BrowserSession.preview.spaces.first)
             ) as? [String: Any]
         )
         var branding = try XCTUnwrap(space["branding"] as? [String: Any])
@@ -262,7 +262,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
     }
 
     func testLegacyBrandingDecodingMigratesReadabilityAndHeraldicDefaults() throws {
-        var source = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+        var source = try XCTUnwrap(BrowserSession.preview.spaces.first)
         source.branding = BrowserSpaceBranding(
             colors: [.ink, .ocean, .gold],
             bannerPattern: .diagonal,
@@ -321,7 +321,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
     }
 
     func testLegacySpaceDecodingCreatesACompatibleBrandingIdentity() throws {
-        let source = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+        let source = try XCTUnwrap(BrowserSession.preview.spaces.first)
         let encoded = try JSONEncoder().encode(source)
         var object = try XCTUnwrap(
             JSONSerialization.jsonObject(with: encoded) as? [String: Any]
@@ -337,9 +337,9 @@ final class BrowserSpaceBrandingTests: XCTestCase {
     }
 
     func testUpdatingBrandingChangesOnlyTheTargetSpace() throws {
-        var session = BrowserSession.preview
-        let target = try XCTUnwrap(session.spaces.first)
-        let untouched = try XCTUnwrap(session.spaces.last)
+        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let target = try XCTUnwrap(store.session.spaces.first)
+        let untouched = try XCTUnwrap(store.session.spaces.last)
         let untouchedBranding = untouched.branding
         let targetProfileID = target.profile.id
         let untouchedProfileID = untouched.profile.id
@@ -358,22 +358,22 @@ final class BrowserSpaceBrandingTests: XCTestCase {
             )
         )
 
-        session.updateSpaceBranding(branding, in: target.id)
+        store.updateSpaceBranding(branding, in: target.id)
 
-        XCTAssertEqual(session.space(id: target.id)?.branding, branding)
-        XCTAssertEqual(session.space(id: untouched.id)?.branding, untouchedBranding)
+        XCTAssertEqual(store.session.space(id: target.id)?.branding, branding)
+        XCTAssertEqual(store.session.space(id: untouched.id)?.branding, untouchedBranding)
         XCTAssertEqual(
-            session.space(id: target.id)?.profile.id,
+            store.session.space(id: target.id)?.profile.id,
             targetProfileID
         )
         XCTAssertEqual(
-            session.space(id: untouched.id)?.profile.id,
+            store.session.space(id: untouched.id)?.profile.id,
             untouchedProfileID
         )
     }
 
     func testBrandingRoundTripsThroughSpaceCoding() throws {
-        var source = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+        var source = try XCTUnwrap(BrowserSession.preview.spaces.first)
         source.branding = BrowserSpaceBranding(
             colors: [.indigo, .sky, .ember],
             bannerPattern: .bands,

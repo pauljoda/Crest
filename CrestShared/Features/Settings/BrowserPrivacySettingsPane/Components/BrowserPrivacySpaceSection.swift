@@ -17,7 +17,7 @@ struct BrowserPrivacySpaceSection: View {
 
 #if DEBUG
     #Preview("Space selection") {
-        @Previewable @State var selection: SpaceID? = BrowserSession.preview.selectedSpaceID
+        @Previewable @State var selection: SpaceID? = BrowserSession.preview.spaces[0].id
         Form { BrowserPrivacySpaceSection(selectedSpaceID: $selection, spaces: BrowserSession.preview.spaces) }
             .crestSettingsForm().frame(width: 420, height: 220)
     }

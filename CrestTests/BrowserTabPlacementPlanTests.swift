@@ -161,46 +161,47 @@ final class BrowserTabPlacementPlanTests: XCTestCase {
         )
     }
 
-    func testSessionRejectsInvalidSpaceBoundariesWithoutMutation() {
+    @MainActor
+    func testStoreRejectsInvalidSpaceBoundariesWithoutMutation() {
         let moving = makeTab("Moving", placement: .current)
         let source = makeSpace(tabs: [moving])
         let destination = makeSpace(tabs: [])
-        var session = BrowserSession(
-            spaces: [source, destination],
-            selectedSpaceID: source.id
+        let store = BrowserStore(
+            session: BrowserSession(spaces: [source, destination]),
+            persistence: InMemoryBrowserSessionPersistence()
         )
-        let original = session
+        let original = store.session
         let missingSpaceID = SpaceID()
 
         XCTAssertFalse(
-            session.canMoveTab(
+            store.canMoveTab(
                 moving.id,
                 from: source.id,
                 into: source.id
             )
         )
         XCTAssertFalse(
-            session.canMoveTab(
+            store.canMoveTab(
                 moving.id,
                 from: source.id,
                 into: missingSpaceID
             )
         )
         XCTAssertFalse(
-            session.moveTab(
+            store.moveTab(
                 moving.id,
                 from: source.id,
                 into: source.id
             )
         )
         XCTAssertFalse(
-            session.moveTab(
+            store.moveTab(
                 moving.id,
                 from: missingSpaceID,
                 into: destination.id
             )
         )
-        XCTAssertEqual(session, original)
+        XCTAssertEqual(store.session, original)
     }
 
     private func makeTab(
@@ -228,8 +229,7 @@ final class BrowserTabPlacementPlanTests: XCTestCase {
             symbol: "square",
             accent: .indigo,
             folders: folders,
-            tabs: tabs,
-            selectedTabID: tabs.last?.id
+            tabs: tabs
         )
     }
 }

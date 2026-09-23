@@ -7,7 +7,7 @@ struct BrowserExtensionSettingsPane: View {
     var requestRevision = 0
     @State private var selectedSpaceID: SpaceID?
     private var store: ChromiumExtensionStore { CrestChromiumRoot.extensions }
-    private var space: BrowserSpace? { browser.session.space(id: selectedSpaceID ?? browser.session.selectedSpaceID) }
+    private var space: BrowserSpace? { browser.session.space(id: selectedSpaceID ?? browser.selectedSpaceID) }
 
     var body: some View {
         BrowserSettingsPane(.extensions) {
@@ -22,10 +22,10 @@ struct BrowserExtensionSettingsPane: View {
                     detail: "Unlock this Space before viewing or changing its installed extensions.")
             }
         }
-        .onAppear { if selectedSpaceID == nil { selectedSpaceID = requestedSpaceID ?? browser.session.selectedSpaceID } }
-        .onChange(of: requestRevision) { selectedSpaceID = requestedSpaceID ?? browser.session.selectedSpaceID }
+        .onAppear { if selectedSpaceID == nil { selectedSpaceID = requestedSpaceID ?? browser.selectedSpaceID } }
+        .onChange(of: requestRevision) { selectedSpaceID = requestedSpaceID ?? browser.selectedSpaceID }
         .onChange(of: browser.session.spaces.map(\.id)) {
-            if !browser.session.spaces.contains(where: { $0.id == selectedSpaceID }) { selectedSpaceID = browser.session.selectedSpaceID }
+            if !browser.session.spaces.contains(where: { $0.id == selectedSpaceID }) { selectedSpaceID = browser.selectedSpaceID }
         }
     }
 }

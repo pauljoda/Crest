@@ -23,8 +23,7 @@ final class BrowserMediaSessionWebKitFixtureTests: XCTestCase {
             symbol: "play.fill",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         let store = BrowserMediaSessionStore()
         let pool = BrowserPagePool(

@@ -6,6 +6,16 @@ builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
 The native Crest apps use the `crest_session_*`, sync and policy entry points.
+The session holds browsing data only; which Space and tab a window shows is
+window state. Session commands take what the requesting window shows as
+read-only `view` context (`{"spaceId", "tabs": [{"spaceId", "tabId"}]}`) and answer
+with a `selection` hint of the same shape that only that window applies.
+`tab.touch` records `lastActivatedAt` and nothing else. Checkpoints
+(`crest_session_checkpoint`, `crest_session_reserve_command`,
+`crest_session_reserve_replacement`) take no selection and never write one; a
+stored document with the older session-level `selectedSpaceID` and per-Space
+`selectedTabID` still loads and loses them. `records.sweep` accepts `keepTabIds`,
+the tabs stored window records show, for launch cleanup.
 `crest_access_*` owns process-local Space unlock grants, shared by the native
 desktop and mobile access controllers. The platform supplies device-authentication
 results; the core accepts only the current request for the exact Space/profile
@@ -25,12 +35,12 @@ v1 capability descriptor used by `crest_session_register_engine`.
 `crest_core_evaluate_policy` is a separate pure-function entry point for the
 existing native store APIs during migration. Requests use `version: 1` and an
 `operation`, with a 16 KiB input and 64 KiB output limit. It retains no state or
-executor. Address intent and history visit operations return domain values.
-`records.expired` and `history.remove_range` accept at most 512
-numeric timestamps in a consistent caller-chosen epoch and return zero-based
-indices. Retention uses a strict age cutoff; explicit history ranges include
-their start and exclude their end. Native callers apply the results only after
-validating every batch, preserving their existing persistence and sync behavior.
+executor. Address intent returns domain values. History visits, range removal
+and retention are session commands (`history.*`, `records.sweep`), not policy
+operations; retention uses a strict age cutoff and explicit history ranges
+include their start and exclude their end. `limits` answers every capacity the
+core enforces (pinned tabs, folders and depth, history entries, split members,
+brand colors, crest palette, Spaces, tabs per Space, sync records).
 `address.intent` and `search.url` name the engine as `{"id":"google"}` for a
 built-in or a `custom:<uuid>` identity with its stored templates; the core owns the
 built-in catalog, template validation and query encoding, and a stored custom
@@ -80,7 +90,10 @@ popup-notice and HTTP authentication rules. URLs arrive as the platform
 parser's facts; every caller refuses, blocks or asks when it gets no answer.
 
 The `links.*` operations carry link routes as `{"id","isEnabled","match",
-"pattern","destinationSpaceID"}` with lowercase UUID strings; route edits answer
+"pattern","destinationSpaceID"}` with lowercase UUID strings. `links.route` takes
+optional `lockedSpaceIDs`: a link routed to a locked Space answers a Quick Window
+on an unlocked one with `substitutesForLockedSpace`, or a null `spaceID` when no
+Space can take it. Route edits answer
 the edited route or `{"error":code}`, reorders and removals answer the route
 order, and `links.space_removed` answers what a deleted Space leaves behind.
 `quick_window.*` answer archive lifetime, archive-on-dismissal and retargeting;
@@ -90,15 +103,14 @@ page surfaces, the Balanced rule list and branding range rules.
 command issued from an owned or borrowed workspace.
 
 Window state is device-local and never enters the session. `window.repair`
-takes the window's and the session's selected Space, whether the window records
-captured Spaces, one presence-fact entry per session Space (at most 64) and the
-window's stored split layouts with their live member counts (at most 64); it
-returns the selected Space, one `window`/`space`/`first`/`none` tab choice per
-Space, the layouts to keep and the captured Spaces. `window.split_layout`
+takes the window's selected Space, whether the window records captured Spaces,
+one presence-fact entry per session Space (at most 64) and the window's stored
+split layouts with their live member counts (at most 64); it returns the
+selected Space, one `window`/`first`/`none` tab choice per Space, the layouts to
+keep and the captured Spaces. `window.split_layout`
 validates and normalizes captured column shares, `window.tear_off` decides
 whether a dragged tab may leave its window, and `tabs.selection_fallback`
-returns the tab a Space selects when its selection is gone, the same rule
-checkpoint repair applies. `setup.space`, `setup.tab` and `setup.reconcile`
+returns the tab a Space shows when its selection is gone. `setup.space`, `setup.tab` and `setup.reconcile`
 admit manual-setup draft edits against the import's Space and pinned limits
 and follow Spaces changed elsewhere; `onboarding.completion` and
 `onboarding.guide` decide what finishing setup does. The import review, which

@@ -35,12 +35,13 @@ extension BrowserLinkRouteFieldUpdate {
 /// portable core. The native store keeps the preferences and persists what the
 /// core decides.
 extension BrowserCorePolicy {
-    /// Where an external link opens. A core that cannot answer opens a Quick
-    /// Window in the selected Space, which never moves a page into a Space the
-    /// person did not choose.
-    static func linkRoutingDecision(for url: URL, preferences: BrowserLinkPreferences, session: BrowserSession,
-        unavailableSpaceIDs: Set<SpaceID>) -> BrowserLinkRoutingDecision {
-        let fallback = BrowserLinkRoutingDecision.quickWindow(spaceID: session.selectedSpaceID)
+    /// Where an external link opens. A link routed to a Space in
+    /// `lockedSpaceIDs` never raises a prompt for another process: the core
+    /// substitutes a Quick Window on an unlocked Space. Nil when no Space may
+    /// take the link, or when the core cannot answer — the link is then not
+    /// opened rather than landing somewhere the rules did not choose.
+    static func linkRoutingDecision(for url: URL, preferences: BrowserLinkPreferences, session: BrowserPresentedSession,
+        unavailableSpaceIDs: Set<SpaceID>, lockedSpaceIDs: Set<SpaceID> = []) -> BrowserLinkRoutingDecision? {
         let remembered = linkSite(for: url, remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite)
             .flatMap { preferences.rememberedQuickWindowSpacesBySite[$0] }
         func text(_ id: SpaceID?) -> Any { id.map { $0.rawValue.uuidString.lowercased() } ?? NSNull() }
@@ -54,9 +55,10 @@ extension BrowserCorePolicy {
             "spaces": session.spaces.map { $0.id.rawValue.uuidString.lowercased() },
             "selectedSpaceID": text(session.selectedSpaceID),
             "unavailableSpaceIDs": unavailableSpaceIDs.map { $0.rawValue.uuidString.lowercased() },
+            "lockedSpaceIDs": lockedSpaceIDs.map { $0.rawValue.uuidString.lowercased() },
         ]), let quickWindow = response["quickWindow"] as? Bool,
             let space = (response["spaceID"] as? String).flatMap(UUID.init(uuidString:))
-        else { return fallback }
+        else { return nil }
         let spaceID = SpaceID(rawValue: space)
         return quickWindow ? .quickWindow(spaceID: spaceID) : .space(spaceID)
     }
@@ -128,17 +130,17 @@ extension BrowserCorePolicy {
     }
 
     /// Whether dismissing a Quick Window files its page in the archive. A core
-    /// that cannot answer keeps any page; the archive command itself refuses a
-    /// request that was already promoted or archived.
+    /// that cannot answer archives nothing: no durable record is written
+    /// without the core's rule, and the archive command would refuse anyway.
     static func quickWindowArchivesOnDismissal(wasArchived: Bool, wasPromoted: Bool, hasPage: Bool) -> Bool {
         evaluate(["version": 1, "operation": "quick_window.dismissal", "wasArchived": wasArchived,
-            "wasPromoted": wasPromoted, "hasPage": hasPage])?["archives"] as? Bool ?? hasPage
+            "wasPromoted": wasPromoted, "hasPage": hasPage])?["archives"] as? Bool ?? false
     }
 
     /// Whether moving a Quick Window to `url` in `assignment` revises its
     /// request, and whether the move remembers the Space for the page's site.
-    /// `pageURL` is nil for an empty lookup. A core that cannot answer revises
-    /// without remembering anything.
+    /// `pageURL` is nil for an empty lookup. A core that cannot answer leaves
+    /// the request as it was and remembers nothing.
     static func quickWindowRetarget(_ request: BrowserQuickWindowRequest, to url: URL,
         assignment: BrowserSpaceRuntimeAssignment, pageURL: URL?) -> (revises: Bool, remembersSpace: Bool) {
         func placement(_ url: URL, _ assignment: BrowserSpaceRuntimeAssignment) -> [String: Any] {
@@ -150,7 +152,7 @@ extension BrowserCorePolicy {
             "current": placement(request.url, request.assignment), "next": placement(url, assignment),
             "pageURL": pageURL?.absoluteString as Any? ?? NSNull(),
         ]), let revises = response["revises"] as? Bool, let remembers = response["remembersSpace"] as? Bool
-        else { return (true, false) }
+        else { return (false, false) }
         return (revises, remembers)
     }
 

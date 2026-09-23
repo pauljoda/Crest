@@ -43,7 +43,7 @@ final class BrowserPeekModelTests: XCTestCase {
         XCTAssertTrue(context.model.preparePage(isActive: true))
         let firstLease = try XCTUnwrap(context.model.pageLease)
         let secondRequest = BrowserPeekRequest(
-            url: context.request.url, sourceTabID: try XCTUnwrap(context.destination.selectedTabID),
+            url: context.request.url, sourceTabID: try XCTUnwrap(context.destination.tabs.first?.id),
             sourceTitle: "Second", spaceAssignment: BrowserSpaceRuntimeAssignment(space: context.destination),
             trigger: .modifierClick)
         context.coordinator.presentPeek(secondRequest)
@@ -137,10 +137,7 @@ final class BrowserPeekModelTests: XCTestCase {
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
         let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(
-            spaces: [replacement, context.destination],
-            selectedSpaceID: replacement.id
-        )
+        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
 
         context.model.setSourceAvailable(context.model.space != nil)
         XCTAssertNil(lease.page)
@@ -154,10 +151,7 @@ final class BrowserPeekModelTests: XCTestCase {
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
         let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(
-            spaces: [replacement, context.destination],
-            selectedSpaceID: replacement.id
-        )
+        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
 
         XCTAssertFalse(context.model.promote(to: context.request.assignment))
         XCTAssertEqual(
@@ -168,7 +162,7 @@ final class BrowserPeekModelTests: XCTestCase {
             context.browser.session.space(id: context.destination.id)?.tabs.count,
             context.destination.tabs.count
         )
-        XCTAssertEqual(context.browser.session.selectedSpaceID, replacement.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, replacement.id)
         XCTAssertNotNil(lease.page)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
@@ -241,10 +235,7 @@ final class BrowserPeekModelTests: XCTestCase {
             space: context.destination
         )
         let replacement = replacingProfile(of: context.destination)
-        context.browser.session = BrowserSession(
-            spaces: [context.source, replacement],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, replacement])
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -262,10 +253,7 @@ final class BrowserPeekModelTests: XCTestCase {
         )
         var lockedDestination = context.destination
         lockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [context.source, lockedDestination],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, lockedDestination])
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -281,10 +269,7 @@ final class BrowserPeekModelTests: XCTestCase {
         let lease = try XCTUnwrap(context.model.pageLease)
         var lockedSource = context.source
         lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
+        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
 
         XCTAssertFalse(
             context.model.promote(
@@ -318,14 +303,11 @@ final class BrowserPeekModelTests: XCTestCase {
         let assignment = BrowserSpaceRuntimeAssignment(space: context.destination)
         var relockedDestination = context.destination
         relockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [context.source, relockedDestination],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, relockedDestination])
 
         context.model.selectLockedSpace(assignment)
 
-        XCTAssertEqual(context.browser.session.selectedSpaceID, context.source.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
 
@@ -361,7 +343,7 @@ final class BrowserPeekModelTests: XCTestCase {
             context.browser.session.space(id: context.destination.id)?.tabs.count,
             context.destination.tabs.count
         )
-        XCTAssertEqual(context.browser.session.selectedSpaceID, context.source.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
 
@@ -402,7 +384,7 @@ final class BrowserPeekModelTests: XCTestCase {
         let replacement = BrowserPeekRequest(
             id: context.request.id,
             url: try XCTUnwrap(URL(string: "about:srcdoc")),
-            sourceTabID: try XCTUnwrap(context.destination.selectedTabID),
+            sourceTabID: try XCTUnwrap(context.destination.tabs.first?.id),
             sourceTitle: context.destination.name,
             spaceAssignment: BrowserSpaceRuntimeAssignment(
                 space: context.destination
@@ -439,7 +421,7 @@ final class BrowserPeekModelTests: XCTestCase {
         let replacement = BrowserPeekRequest(
             id: context.request.id,
             url: try XCTUnwrap(URL(string: "about:srcdoc")),
-            sourceTabID: try XCTUnwrap(context.destination.selectedTabID),
+            sourceTabID: try XCTUnwrap(context.destination.tabs.first?.id),
             sourceTitle: context.destination.name,
             spaceAssignment: BrowserSpaceRuntimeAssignment(
                 space: context.destination
@@ -463,10 +445,7 @@ final class BrowserPeekModelTests: XCTestCase {
         var renamedSource = context.source
         renamedSource.name = "Renamed Source"
         let inserted = makeSpace(name: "Inserted")
-        context.browser.session = BrowserSession(
-            spaces: [context.destination, inserted, renamedSource],
-            selectedSpaceID: renamedSource.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.destination, inserted, renamedSource])
 
         XCTAssertTrue(context.model.preparePage(isActive: true))
         XCTAssertTrue(context.model.pageLease === lease)
@@ -477,11 +456,10 @@ final class BrowserPeekModelTests: XCTestCase {
     private func makeContext() throws -> PeekTestContext {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
+        let sourceTabID = try XCTUnwrap(source.tabs.first?.id)
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
-            ),
+            session: BrowserSession(spaces: [source, destination]),
+            selection: BrowserStoreSelection(selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: sourceTabID]),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
@@ -496,7 +474,7 @@ final class BrowserPeekModelTests: XCTestCase {
         )
         let request = BrowserPeekRequest(
             url: try XCTUnwrap(URL(string: "about:blank")),
-            sourceTabID: try XCTUnwrap(source.selectedTabID),
+            sourceTabID: sourceTabID,
             sourceTitle: source.name,
             spaceAssignment: BrowserSpaceRuntimeAssignment(space: source),
             trigger: .modifierClick
@@ -548,8 +526,7 @@ final class BrowserPeekModelTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 
@@ -569,8 +546,7 @@ final class BrowserPeekModelTests: XCTestCase {
             credentialPreferences: source.credentialPreferences,
             accessPolicy: source.accessPolicy,
             isSavedTabsExpanded: source.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt,
-            selectedTabID: source.selectedTabID
+            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
         )
     }
 

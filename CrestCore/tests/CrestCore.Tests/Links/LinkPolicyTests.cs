@@ -180,4 +180,21 @@ public sealed class LinkPolicyTests {
         Assert.Equal(ProtocolErrorCodes.InvalidLinkDestination,
             Assert.Throws<ProtocolException>(() => Evaluate(Routing("https://example.com", [], "elsewhere"))).Code);
     }
+
+    [Fact]
+    public void AnExternalLinkRoutedToALockedSpaceOpensInAQuickWindowOnAnUnlockedOne() {
+        var routes = new JsonArray(Route(Personal, "example.com"));
+        var locked = Routing("https://example.com/", routes);
+        locked["lockedSpaceIDs"] = new JsonArray(Personal.ToString("D"));
+        var substituted = Evaluate(locked);
+        Assert.Equal((true, Work.ToString("D")), Decision(substituted));
+        Assert.True(substituted["substitutesForLockedSpace"]!.GetValue<bool>());
+        // With every Space locked there is nowhere the link may open.
+        locked["lockedSpaceIDs"] = new JsonArray(Personal.ToString("D"), Work.ToString("D"));
+        Assert.Null(Evaluate(locked)["spaceID"]);
+        // An unlocked routed Space is used as routed.
+        var open = Evaluate(Routing("https://example.com/", routes.DeepClone().AsArray()));
+        Assert.Equal((false, Personal.ToString("D")), Decision(open));
+        Assert.False(open["substitutesForLockedSpace"]!.GetValue<bool>());
+    }
 }

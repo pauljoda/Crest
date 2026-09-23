@@ -5,6 +5,21 @@ namespace CrestCore.Domain;
 public static class LinkRoutingPolicy {
     #region Actions - Routing
 
+    /// Where a link from another process goes when some Spaces are locked. A
+    /// locked Space is never unlocked on such a link's behalf: the link opens
+    /// in a Quick Window on the selected Space when that one is unlocked and
+    /// available, else on the first that is. Null when no Space can take it.
+    public static LinkRoutingDecision? DecideExternal(string url, LinkRoutingPreferences preferences,
+        LinkRoutingContext context, IReadOnlySet<Guid> locked) {
+        ArgumentNullException.ThrowIfNull(locked);
+        var routed = Decide(url, preferences, context);
+        if (!locked.Contains(routed.SpaceId)) return routed;
+        bool Open(Guid space) => context.IsAvailable(space) && !locked.Contains(space);
+        Guid? substitute = Open(context.SelectedSpaceId) ? context.SelectedSpaceId
+            : context.Spaces.Where(Open).Select(space => (Guid?)space).FirstOrDefault();
+        return substitute is { } space ? new(true, space, SubstitutesForLockedSpace: true) : null;
+    }
+
     public static LinkRoutingDecision Decide(string url, LinkRoutingPreferences preferences, LinkRoutingContext context) {
         var route = preferences.Routes.FirstOrDefault(candidate => candidate.IsEnabled
             && context.IsAvailable(candidate.DestinationSpaceId) && Matches(candidate, url));

@@ -2,7 +2,7 @@ extension BrowserPagePool {
     /// Lets a store observer recognize a selection already performed by the
     /// initiating command. Every card must match, including its runtime and
     /// any first navigation still owed after extension preparation.
-    func isPresentingSelection(in session: BrowserSession) -> Bool {
+    func isPresentingSelection(in session: BrowserPresentedSession) -> Bool {
         guard let space = session.selectedSpace,
             let tab = session.selectedTab,
             activeTabID == tab.id

@@ -47,7 +47,7 @@ struct BrowserSplitCardView: View {
     let onFocusRequest: @MainActor @Sendable () -> Void
 
     private var isSelectedSpace: Bool {
-        browser.session.selectedSpaceID == space.id && !spaceAccess.isLocked(space)
+        browser.selectedSpaceID == space.id && !spaceAccess.isLocked(space)
     }
 
     var body: some View {
@@ -95,7 +95,7 @@ struct BrowserSplitCardView: View {
     }
 
     private var presentedPage: BrowserPage? {
-        pages.surfacePage(for: tab, in: space, accessController: spaceAccess)
+        pages.surfacePage(for: tab, in: space, showing: browser.selectedTabID(in: space.id), accessController: spaceAccess)
     }
 
     private func pagePresentation(

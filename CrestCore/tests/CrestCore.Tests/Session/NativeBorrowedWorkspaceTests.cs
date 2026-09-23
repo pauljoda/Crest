@@ -49,14 +49,14 @@ public sealed partial class BrowserContractsTests {
                 ["tabs"] = new JsonObject { ["replace"] = new JsonArray(localTab) }
             })
         }));
-        var local = JsonNode.Parse(child.Checkpoint(2, Selection(initial)).Read("core"))!;
+        var local = JsonNode.Parse(child.Checkpoint(2).Read("core"))!;
         var request = Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "tab.rename",
             ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["window"] = JsonNode.Parse(Selection(local)),
+            ["view"] = View(local),
             ["arguments"] = new JsonObject { ["tabId"] = localTab["id"]!["rawValue"]!.DeepClone(), ["title"] = "Prepared locally" }
         });
         var pending = child.PrepareCommand(2, request);
@@ -68,11 +68,11 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(2UL, child.Revision);
         Assert.Equal("New canonical name", JsonNode.Parse(refresh.Output)!["session"]!["spaces"]![0]!["name"]!.GetValue<string>());
         refresh.Commit();
-        var after = JsonNode.Parse(child.Checkpoint(3, Selection(local)).Read("core"))!;
+        var after = JsonNode.Parse(child.Checkpoint(3).Read("core"))!;
         Assert.True(JsonNode.DeepEquals(local["spaces"]![0]!["tabs"], after["spaces"]![0]!["tabs"]));
         Assert.Equal("New canonical name", after["spaces"]![0]!["name"]!.GetValue<string>());
         child.PrepareCommand(3, request).Commit();
-        Assert.DoesNotContain("Prepared locally", System.Text.Encoding.UTF8.GetString(owner.Checkpoint(2, Selection(session)).Read("core")));
+        Assert.DoesNotContain("Prepared locally", System.Text.Encoding.UTF8.GetString(owner.Checkpoint(2).Read("core")));
     }
 
     [Fact]
@@ -84,13 +84,13 @@ public sealed partial class BrowserContractsTests {
         session["spaces"]!.AsArray().Add(extra);
         var owner = new NativeSessionAuthority(Bytes(session)); var child = Borrow(owner, session);
         var state = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
-        var old = child.Checkpoint(1, Selection(state));
+        var old = child.Checkpoint(1);
         var prepared = child.PrepareBorrowedRefresh(1);
         owner.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin",
             new() { ["operationID"] = Guid.NewGuid().ToString() })).Commit();
         Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => prepared.Commit()).Code);
         Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => child.PrepareBorrowedRefresh(1)).Code);
-        Assert.Equal(old.Read("core"), child.Checkpoint(1, Selection(state)).Read("core"));
+        Assert.Equal(old.Read("core"), child.Checkpoint(1).Read("core"));
 
         var anotherOwner = new NativeSessionAuthority(Bytes(session)); var another = Borrow(anotherOwner, session);
         var pending = another.PrepareBorrowedRefresh(1);

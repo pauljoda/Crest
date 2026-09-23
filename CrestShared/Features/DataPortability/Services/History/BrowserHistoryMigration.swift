@@ -63,14 +63,12 @@ enum BrowserHistoryMigration {
             archivedTabs: [],
             history: history,
             browsingPreferences: .default,
-            credentialPreferences: .default,
-            selectedTabID: nil
+            credentialPreferences: .default
         )
         do {
             return try BrowserPortableArchive(
                 session: BrowserSession(
-                    spaces: [temporarySpace],
-                    selectedSpaceID: temporarySpace.id
+                    spaces: [temporarySpace]
                 ),
                 exportedAt: importedAt
             ).materialize()

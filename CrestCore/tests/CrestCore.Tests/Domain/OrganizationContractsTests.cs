@@ -35,7 +35,7 @@ public sealed class OrganizationContractsTests {
         space.FileTabs([tab.Id], TabPlacement.Saved, folder, Now); space.CollapseFolder(child, true, Now);
         space.DeleteFolder(folder, Now.AddMinutes(1));
         Assert.Equal(root, tab.FolderId); Assert.Equal(root, space.Folders.Single(f => f.Id == child).ParentId);
-        var saved = BrowserSpace.Restore(space.Capture(null));
+        var saved = BrowserSpace.Restore(space.Capture());
         Assert.Equal(Now, saved.Folders.Single(f => f.Id == child).CollapseModifiedAt);
         Assert.Equal(tab.Id, Assert.Single(saved.Tabs).Id); Assert.Equal(tab.Url, saved.Tabs[0].SavedUrl);
         Assert.Empty(space.Archive);
@@ -69,7 +69,7 @@ public sealed class OrganizationContractsTests {
         space.AddFolder(folder, "Current", TabPlacement.Current); space.FileTabs([first.Id], TabPlacement.Current, folder, Now);
         space.Remove(first, Now, true);
         Assert.Equal(last.Id, Assert.Single(space.Folders).OrderAnchorTabId);
-        var restored = BrowserSpace.Restore(space.Capture(null));
+        var restored = BrowserSpace.Restore(space.Capture());
         Assert.Equal(last.Id, new FolderTree(restored.Folders).TabAnchor(folder, restored.Tabs));
         Assert.Single(restored.Archive);
     }

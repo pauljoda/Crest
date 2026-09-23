@@ -94,7 +94,7 @@ extension BrowserStore {
                 source: self, destination: destination, fallback: fallback, selecting: selecting)
             try BrowserStoreFamily.transfer(command, source: self, destination: destination)
             tabSelectionHistory = history
-            tabSelectionHistory.reconcile(session: session)
+            tabSelectionHistory.reconcile(session: session, selection: selection)
             tabMultiSelection.clear()
             return true
         } catch {

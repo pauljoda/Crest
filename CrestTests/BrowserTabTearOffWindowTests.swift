@@ -9,7 +9,7 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
     func testNativeDragOutsideOnlyWindowWaitsForBlankWindowThenMovesTab() throws {
         let fixture = try Fixture()
         defer { fixture.close() }
-        fixture.source.pages.select(session: fixture.source.browser.session)
+        fixture.source.pages.select(session: fixture.source.browser.presented)
         let page = try XCTUnwrap(fixture.source.pages.activePage)
         let row = try XCTUnwrap(fixture.root.sidebarInteraction.sidebarReorderState.frame(ofRow: .tab(fixture.tabID)))
         let grabFraction = CGPoint(x: 0.25, y: 0.75)
@@ -131,9 +131,10 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
             tabID = tab.id
             let space = BrowserSpace(
                 id: SpaceID(), profile: BrowsingProfile(), name: "Temporary windows", symbol: "globe",
-                accent: .indigo, folders: [], tabs: [tab], selectedTabID: tab.id)
+                accent: .indigo, folders: [], tabs: [tab])
             let browser = BrowserStore(
-                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                session: BrowserSession(spaces: [space]),
+                selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
                 persistence: InMemoryBrowserSessionPersistence())
             let access = BrowserSpaceAccessController()
             coordinator = BrowserMacWindowCoordinator(

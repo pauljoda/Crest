@@ -11,21 +11,21 @@ extension BrowserPagePool {
             return
         }
         if browser.consumeMovedTabActivation() {
-            select(session: browser.session)
-        } else if requiresStartPageOnEntry(to: space) {
+            select(session: browser.presented)
+        } else if requiresStartPageOnEntry(to: space, showing: browser.selectedTabID(in: space.id)) {
             browser.presentStartPageForSpaceEntry()
             leavePagePresentation()
         } else if tab.isStartPage && space.splitGroup(containing: tab.id) == nil {
             leavePagePresentation()
         } else {
-            select(session: browser.session)
+            select(session: browser.presented)
         }
     }
 
     /// The retained content strip asks the same question as selection, without
     /// creating a tab or starting a navigation while preparing a neighbor.
-    func requiresStartPageOnEntry(to space: BrowserSpace) -> Bool {
-        space.presentedSplitMembers(for: space.selectedTabID).contains { member in
+    func requiresStartPageOnEntry(to space: BrowserSpace, showing selectedTabID: TabID?) -> Bool {
+        space.presentedSplitMembers(for: selectedTabID).contains { member in
             member.isWebPage
                 && !containsResidentPage(
                     matching: BrowserTabRuntimeAssignment(
@@ -39,11 +39,11 @@ extension BrowserPagePool {
     /// page may be drawn there before activation, but it cannot own focus or
     /// input until selection commits. Locked surfaces never mount live pages.
     func surfacePage(
-        for tab: BrowserTab, in space: BrowserSpace,
+        for tab: BrowserTab, in space: BrowserSpace, showing selectedTabID: TabID?,
         accessController: BrowserSpaceAccessController
     ) -> BrowserPage? {
         guard !accessController.isLocked(space),
-            space.presentedSplitMembers(for: space.selectedTabID).contains(where: { $0.id == tab.id })
+            space.presentedSplitMembers(for: selectedTabID).contains(where: { $0.id == tab.id })
         else { return nil }
         return residentPage(
             matching: BrowserTabRuntimeAssignment(

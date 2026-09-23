@@ -13,7 +13,7 @@ final class MobileDurableTabCloseTests: XCTestCase {
                 let context = try makeContext(placement: placement)
                 defer { context.pages.reconcile(validTabIDs: []) }
                 preferences.savedTabClosePolicy = policy
-                context.pages.select(session: context.browser.session)
+                context.pages.select(session: context.browser.presented)
                 let commands = MobileBrowserCommandController(browser: context.browser, pages: context.pages)
 
                 XCTAssertEqual(commands.dismissSelectedTab(), context.tab.id)
@@ -35,7 +35,7 @@ final class MobileDurableTabCloseTests: XCTestCase {
         defer { context.pages.reconcile(validTabIDs: []) }
         var space = try XCTUnwrap(context.browser.selectedSpace)
         space.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        context.browser.session = BrowserSession(spaces: [space])
         let original = context.browser.session
         let commands = MobileBrowserCommandController(browser: context.browser, pages: context.pages)
         XCTAssertNil(commands.dismissSelectedTab())
@@ -49,11 +49,12 @@ final class MobileDurableTabCloseTests: XCTestCase {
         )
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle", accent: .indigo,
-            folders: [], tabs: [tab], selectedTabID: tab.id
+            folders: [], tabs: [tab]
         )
         return Context(
             browser: BrowserStore(
-                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                session: BrowserSession(spaces: [space]),
+                selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
                 persistence: InMemoryBrowserSessionPersistence()
             ),
             pages: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true), tab: tab

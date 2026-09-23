@@ -3,7 +3,8 @@ import Foundation
 /// Scene-owned browser selection and chrome restoration. It references the
 /// authoritative session's Space and tab identities without duplicating any
 /// profile or WebKit storage identity, so every native window can restore
-/// independently while retaining the existing Space isolation boundary.
+/// independently while retaining the existing Space isolation boundary. This is
+/// the only persisted home of a window's selection; the session holds none.
 struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
     let id: BrowserWindowID
     private(set) var selectedSpaceID: SpaceID
@@ -41,19 +42,16 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
         self.splitColumnFractionsByGroup = splitColumnFractionsByGroup
     }
 
-    init(id: BrowserWindowID = BrowserWindowID(), restoring session: BrowserSession) {
-        self.init(
-            id: id,
-            selectedSpaceID: session.selectedSpaceID,
-            selectedTabIDsBySpace: Dictionary(
-                uniqueKeysWithValues: session.spaces.compactMap { space in
-                    guard let tabID = space.selectedTabID else { return nil }
-                    return (space.id, tabID)
-                }
-            )
-        )
+    /// A new record of what a window shows now, capturing every Space it knows.
+    init(id: BrowserWindowID = BrowserWindowID(), restoring selection: BrowserStoreSelection, in session: BrowserSession) {
+        self.init(id: id, selectedSpaceID: selection.selectedSpaceID, selectedTabIDsBySpace: selection.tabSelections)
         capturedSpaceIDs = Set(session.spaces.map(\.id))
         repair(using: session)
+    }
+
+    /// The selection a window restores from this record.
+    var selection: BrowserStoreSelection {
+        BrowserStoreSelection(selectedSpaceID: selectedSpaceID, selectedTabIDsBySpace: selectedTabIDsBySpace)
     }
 
     func selectedSpace(in session: BrowserSession) -> BrowserSpace? {
@@ -80,14 +78,21 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
         capturedSpaceIDs?.insert(spaceID)
     }
 
-    mutating func captureSelection(from session: BrowserSession) {
-        selectedSpaceID = session.selectedSpaceID
-        selectedTabIDsBySpace = Dictionary(
-            uniqueKeysWithValues: session.spaces.compactMap { space in
-                guard let tabID = space.selectedTabID else { return nil }
-                return (space.id, tabID)
-            }
-        )
+    mutating func captureSelection(_ selection: BrowserStoreSelection, in session: BrowserSession) {
+        selectedSpaceID = selection.selectedSpaceID
+        selectedTabIDsBySpace = selection.tabSelections
+        capturedSpaceIDs = Set(session.spaces.map(\.id))
+        repair(using: session)
+    }
+
+    /// Folds a legacy selection into a record written before windows captured
+    /// their Spaces: every Space it has no tab for adopts the legacy one, and the
+    /// record captures from then on, so the fold happens once.
+    mutating func foldLegacySelection(_ legacy: BrowserStoreSelection, in session: BrowserSession) {
+        guard capturedSpaceIDs == nil else { return }
+        for space in session.spaces where selectedTabIDsBySpace[space.id] == nil {
+            selectedTabIDsBySpace[space.id] = legacy.selectedTabID(in: space.id)
+        }
         capturedSpaceIDs = Set(session.spaces.map(\.id))
         repair(using: session)
     }
@@ -137,11 +142,10 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
                 id: space.id,
                 hasWindowTab: selectedTabIDsBySpace[space.id].map(space.contains) == true,
                 isCaptured: capturedSpaceIDs?.contains(space.id) == true,
-                hasSpaceSelection: space.selectedTabID.map(space.contains) == true,
                 hasTabs: !space.tabs.isEmpty)
         }
         guard let repair = BrowserCorePolicy.windowRepair(
-            selectedSpaceID: selectedSpaceID, sessionSelectedSpaceID: session.selectedSpaceID,
+            selectedSpaceID: selectedSpaceID,
             capturesSelection: capturedSpaceIDs != nil, spaces: facts,
             splitLayouts: stored.map { groupID, fractions in
                 BrowserCorePolicy.WindowSplitLayout(groupID: groupID, columns: fractions.count, liveMembers: liveMembers[groupID])
@@ -151,7 +155,6 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
         for (space, selection) in zip(session.spaces, repair.selections) {
             switch selection {
             case .window: selections[space.id] = selectedTabIDsBySpace[space.id]
-            case .space: selections[space.id] = space.selectedTabID
             case .first: selections[space.id] = space.tabs.first?.id
             case .none: break
             }

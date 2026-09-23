@@ -21,15 +21,24 @@ public static partial class NativePolicyEvaluator {
     private static JsonObject? EvaluateLinks(PolicyOperation operation, JsonElement request) {
         switch (operation) {
             case PolicyOperation.LinksRoute:
+                // `lockedSpaceIDs` (optional) names Spaces this process holds
+                // locked; a link routed to one opens in a Quick Window on an
+                // unlocked Space instead, and `spaceID` is null when none can.
                 Protocol.Members(request, "version", "operation", "url", "routes", "destination", "chosenSpaceID",
-                    "remembersSpaceBySite", "rememberedSpaceID", "spaces", "selectedSpaceID", "unavailableSpaceIDs");
-                var decision = LinkRoutingPolicy.Decide(Protocol.Text(request, "url"),
+                    "remembersSpaceBySite", "rememberedSpaceID", "spaces", "selectedSpaceID", "unavailableSpaceIDs",
+                    "lockedSpaceIDs");
+                var decision = LinkRoutingPolicy.DecideExternal(Protocol.Text(request, "url"),
                     new(LinkCodes.Routes(request.GetProperty("routes")), LinkCodes.Destination(request.GetProperty("destination")),
                         Protocol.OptionalId(request, "chosenSpaceID"), request.GetProperty("remembersSpaceBySite").GetBoolean(),
                         Protocol.OptionalId(request, "rememberedSpaceID")),
                     new(SpaceIdentities(request, "spaces"), Protocol.Id(request, "selectedSpaceID"),
-                        SpaceIdentities(request, "unavailableSpaceIDs").ToHashSet()));
-                return new() { ["quickWindow"] = decision.OpensQuickWindow, ["spaceID"] = decision.SpaceId.ToString("D") };
+                        SpaceIdentities(request, "unavailableSpaceIDs").ToHashSet()),
+                    (Optional(request, "lockedSpaceIDs") is null ? [] : SpaceIdentities(request, "lockedSpaceIDs")).ToHashSet());
+                return new() {
+                    ["quickWindow"] = decision?.OpensQuickWindow ?? false,
+                    ["spaceID"] = decision?.SpaceId.ToString("D"),
+                    ["substitutesForLockedSpace"] = decision?.SubstitutesForLockedSpace ?? false
+                };
             case PolicyOperation.LinksSite:
                 Protocol.Members(request, "version", "operation", "url", "remembersSpaceBySite");
                 return new() {

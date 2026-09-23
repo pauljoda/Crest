@@ -166,7 +166,7 @@ public sealed partial class BrowserContractsTests {
         var request = JsonNode.Parse(SpaceCommand(source, operation, arguments))!;
         request["now"] = now;
         authority.PrepareCommand(1, Bytes(request)).Commit();
-        source = JsonNode.Parse(authority.Checkpoint(2, Selection(source)).Read("core"))!;
+        source = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!;
         sender = sender.Apply(Stage(source));
         var sent = JsonNode.Parse(sender.Read())!;
         receiver = Receive(receiver.Journal, receiver.Materialization["session"]!, "merge", sender);

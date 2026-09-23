@@ -86,13 +86,13 @@ final class BrowserSplitTabCopyTests: XCTestCase {
         XCTAssertEqual(store.selectedSpace?.splitGroupMetadata(for: copiedGroup)?.customTitle, "Research pair")
         var restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(store.session))
         restored = try BrowserCoreSync.repair(restored)
+        let restoredSpace = restored.space(id: space.id)
         XCTAssertEqual(
-            restored.selectedSpace?.splitGroupMembers(of: copiedGroup).map(\.id),
+            restoredSpace?.splitGroupMembers(of: copiedGroup).map(\.id),
             store.selectedSpace?.splitGroupMembers(of: copiedGroup).map(\.id))
         let restoredOriginals = try JSONDecoder().decode(BrowserSpace.self, from: JSONEncoder().encode(originals))
-        XCTAssertEqual(restored.selectedSpace?.tabs.filter { $0.placement != .current }, restoredOriginals.tabs)
-        XCTAssertEqual(
-            restored.selectedSpace?.splitGroupMetadata(for: groupID), originals.splitGroupMetadata(for: groupID))
+        XCTAssertEqual(restoredSpace?.tabs.filter { $0.placement != .current }, restoredOriginals.tabs)
+        XCTAssertEqual(restoredSpace?.splitGroupMetadata(for: groupID), originals.splitGroupMetadata(for: groupID))
     }
 
     func testFullGroupAndDraftRefuseLinkAndDurableCopiesWithoutMutation() throws {
@@ -167,7 +167,7 @@ final class BrowserSplitTabCopyTests: XCTestCase {
         XCTAssertEqual(copy.folderID, currentFolder.id)
         try journal.stage(session: store.session)
         let materialized = try journal.materializedSession(applyingTo: store.session)
-        let restored = try XCTUnwrap(materialized.selectedSpace)
+        let restored = try XCTUnwrap(materialized.space(id: store.selectedSpaceID))
         XCTAssertEqual(restored.tabs.map(\.id), store.selectedSpace?.tabs.map(\.id))
         XCTAssertEqual(restored.tabs.first { $0.id == source.id }?.folderID, savedFolder.id)
         XCTAssertEqual(restored.tabs.first { $0.id == source.id }?.savedURL, source.savedURL)
@@ -190,9 +190,10 @@ final class BrowserSplitTabCopyTests: XCTestCase {
     private func store(tabs: [BrowserTab], folders: [BrowserFolder] = [], selected: TabID) -> BrowserStore {
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Work", symbol: "globe", accent: .teal, folders: folders,
-            tabs: tabs, selectedTabID: selected)
+            tabs: tabs)
         return BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: selected]),
             persistence: InMemoryBrowserSessionPersistence())
     }
 }

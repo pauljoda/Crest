@@ -8,6 +8,21 @@ namespace CrestCore.Tests;
 /// maintenance suites. It intentionally carries unknown additive fields.
 public sealed partial class BrowserContractsTests {
     private static JsonObject SwiftId(Guid value) => new() { ["rawValue"] = value.ToString().ToUpperInvariant() };
+
+    /// The Space a command's selection hint tells its window to show, if any.
+    private static Guid? HintedSpace(JsonNode output)
+        => output["selection"]!["spaceId"] is { } space ? Guid.Parse(space.GetValue<string>()) : null;
+
+    /// Whether the hint tells the window to show `tab` (null for nothing) in `space`.
+    private static bool HintsTab(JsonNode output, Guid space, Guid? tab) => output["selection"]!["tabs"]!.AsArray().Any(entry =>
+        Guid.Parse(entry!["spaceId"]!.GetValue<string>()) == space
+        && (entry["tabId"] is { } value ? Guid.Parse(value.GetValue<string>()) == tab : tab is null));
+
+    /// A hint that leaves the window's selection exactly as it was.
+    private static bool LeavesSelection(JsonNode output)
+        => output["selection"]!["spaceId"] is null && output["selection"]!["tabs"]!.AsArray().Count == 0;
+
+    private static Guid SpaceId(JsonNode space) => Guid.Parse(space["id"]!["rawValue"]!.GetValue<string>());
     private static (JsonObject Document, Guid Space, Guid Tab, Guid Window) SavedSession(bool empty = false) {
         var space = Guid.NewGuid(); var tab = Guid.NewGuid(); var window = Guid.NewGuid();
         var folder = Guid.NewGuid();

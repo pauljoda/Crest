@@ -17,7 +17,7 @@ struct BrowserStartPageNavigationAction {
         browser.navigateSelectedTab(to: url)
         // A cold launch or unloaded Space has no active page to receive load().
         // Selecting materializes the draft's page and starts its initial URL.
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         return true
     }
 }

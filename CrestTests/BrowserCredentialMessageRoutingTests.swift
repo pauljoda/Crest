@@ -171,8 +171,7 @@ final class BrowserCredentialMessageRoutingTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         let pool = BrowserPagePool()
         pool.select(tab: tab, space: space)

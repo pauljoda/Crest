@@ -111,8 +111,7 @@ final class BrowserPageSurfaceBranchPolicyTests: XCTestCase {
             symbol: "briefcase.fill",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs.first?.id
+            tabs: tabs
         )
     }
 

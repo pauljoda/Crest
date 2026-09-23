@@ -30,7 +30,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
 
             XCTAssertFalse(model.navigation.compactShowsPage)
             XCTAssertNil(model.browser.selectedTab)
-            XCTAssertTrue(model.browser.session.spaces.allSatisfy { $0.selectedTabID == nil })
+            XCTAssertTrue(model.browser.session.spaces.allSatisfy { model.browser.selectedTabID(in: $0.id) == nil })
             XCTAssertEqual(
                 model.browser.session.spaces.flatMap(\.tabs).map(\.id),
                 rootBrowser.session.spaces.flatMap(\.tabs).map(\.id)
@@ -100,7 +100,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
 
         let tabID = try XCTUnwrap(model.browser.selectedSpace?.tabs.first?.id)
         model.browser.selectTab(tabID)
-        model.pages.select(session: model.browser.session)
+        model.pages.select(session: model.browser.presented)
 
         let store = try XCTUnwrap(
             model.pages.activePage?.webView.configuration.websiteDataStore
@@ -115,9 +115,10 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
         let otherTab = BrowserTab(title: "Other", url: url, placement: .current)
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Windows", symbol: "globe", accent: .indigo,
-            folders: [], tabs: [sharedTab, otherTab], selectedTabID: sharedTab.id)
+            folders: [], tabs: [sharedTab, otherTab])
         let root = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: sharedTab.id]),
             persistence: InMemoryBrowserSessionPersistence())
         let registry = MobileBrowserPageStoreRegistry(
             primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
@@ -147,9 +148,9 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
         XCTAssertEqual(first.browser.selectedTab?.id, sharedTab.id)
         XCTAssertEqual(second.browser.selectedTab?.id, otherTab.id)
 
-        first.pages.select(session: first.browser.session)
+        first.pages.select(session: first.browser.presented)
         second.browser.selectTab(sharedTab.id)
-        second.pages.select(session: second.browser.session)
+        second.pages.select(session: second.browser.presented)
         let firstPage = try XCTUnwrap(first.pages.activePage)
         let secondPage = try XCTUnwrap(second.pages.activePage)
         XCTAssertFalse(first.pages === second.pages)

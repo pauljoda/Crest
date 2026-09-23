@@ -9,28 +9,16 @@ import XCTest
 final class BrowserSpaceAccessTests: XCTestCase {
 
     func testChosenDefaultSpaceBecomesTheLaunchSelection() throws {
-        var session = BrowserSession.preview
-        let work = try XCTUnwrap(session.spaces.first)
-        let personal = try XCTUnwrap(session.spaces.last)
+        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let work = try XCTUnwrap(store.session.spaces.first)
+        let personal = try XCTUnwrap(store.session.spaces.last)
 
-        session.setDefaultSpace(personal.id)
-        session.selectSpace(work.id)
-        session.selectDefaultSpaceForLaunch()
+        store.setDefaultSpace(personal.id)
+        store.selectSpace(work.id)
 
-        XCTAssertEqual(session.defaultSpaceID, personal.id)
-        XCTAssertEqual(session.selectedSpaceID, personal.id)
-    }
-
-    func testRemovingTheDefaultSpaceChoosesAValidReplacement() throws {
-        var session = BrowserSession.preview
-        let removed = try XCTUnwrap(session.spaces.first)
-        let replacement = try XCTUnwrap(session.spaces.dropFirst().first)
-        session.setDefaultSpace(removed.id)
-
-        XCTAssertEqual(session.removeSpace(removed.id), removed)
-
-        XCTAssertEqual(session.defaultSpaceID, replacement.id)
-        XCTAssertEqual(session.selectedSpaceID, replacement.id)
+        XCTAssertEqual(store.session.defaultSpaceID, personal.id)
+        XCTAssertEqual(store.selectedSpaceID, work.id)
+        XCTAssertEqual(BrowserStoreSelection(launching: store.session).selectedSpaceID, personal.id)
     }
 
     func testLegacySessionAndSpaceDecodeWithSafeAccessDefaults() throws {
@@ -49,7 +37,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
         var decoded = try JSONDecoder().decode(BrowserSession.self, from: legacyData)
         decoded = try BrowserCoreSync.repair(decoded)
 
-        XCTAssertEqual(decoded.defaultSpaceID, decoded.selectedSpaceID)
+        XCTAssertEqual(decoded.defaultSpaceID, decoded.spaces.first?.id)
         XCTAssertTrue(decoded.spaces.allSatisfy { $0.accessPolicy == .open })
     }
 
@@ -128,8 +116,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
             credentialPreferences: original.credentialPreferences,
             accessPolicy: original.accessPolicy,
             isSavedTabsExpanded: original.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt,
-            selectedTabID: original.selectedTabID
+            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt
         )
 
         XCTAssertTrue(access.isLocked(replacement))
@@ -299,8 +286,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
         let replacement = BrowserSpace(
             id: original.id, profile: BrowsingProfile(), name: "Replacement", symbol: original.symbol,
             accent: original.accent,
-            folders: [], tabs: original.tabs, accessPolicy: .deviceOwnerAuthentication,
-            selectedTabID: original.selectedTabID)
+            folders: [], tabs: original.tabs, accessPolicy: .deviceOwnerAuthentication)
         otherWindow.session.spaces[0] = replacement
 
         authenticator.complete(with: true)
@@ -315,7 +301,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
         var session = BrowserSession.preview
         let work = try XCTUnwrap(session.spaces.first)
         let personal = try XCTUnwrap(session.spaces.last)
-        session.setDefaultSpace(personal.id)
+        session.defaultSpaceID = personal.id
         let root = BrowserStore(
             session: session,
             persistence: InMemoryBrowserSessionPersistence()
@@ -327,8 +313,8 @@ final class BrowserSpaceAccessTests: XCTestCase {
 
         let window = root.makeWindowStore(restoring: savedState)
 
-        XCTAssertEqual(window.session.selectedSpaceID, work.id)
-        XCTAssertEqual(root.makeWindowStore().session.selectedSpaceID, personal.id)
+        XCTAssertEqual(window.selectedSpaceID, work.id)
+        XCTAssertEqual(root.makeWindowStore().selectedSpaceID, personal.id)
     }
 }
 

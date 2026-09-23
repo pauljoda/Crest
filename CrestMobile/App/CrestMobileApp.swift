@@ -137,7 +137,7 @@ private final class BrowserMobileApplication {
                     let space = browser.session.space(id: spaceID),
                     let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
-                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.session)
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.presented)
             },
             backgroundPageDidUpdate: { browser.updateBackgroundPage($0) },
             openPeek: { request in transientBrowsing.presentPeek(request) }
@@ -181,6 +181,9 @@ private final class BrowserMobileApplication {
         } else {
             windowStatePersistence = UserDefaultsBrowserWindowStatePersistence()
         }
+        // Scenes restore their own selection from these records later; launch
+        // cleanup keeps every tab one of them will show.
+        browser.sweepAtLaunch(keeping: windowStatePersistence.loadAll())
         automaticallyPresentsOnboarding =
             MobileBrowserAutomaticOnboardingPolicy
             .shouldPresent(

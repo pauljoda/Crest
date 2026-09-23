@@ -95,22 +95,26 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
                 )
             }
         }
+        // Build every record kind directly; edits run in the core and are
+        // covered there. This test owns the CloudKit payload round trip.
         let renamedID = try XCTUnwrap(session.spaces[0].tabs.first?.id)
-        XCTAssertTrue(
-            session.setTabCustomTitle(
-                "Release Notes",
-                tabID: renamedID,
-                in: session.spaces[0].id,
-                at: Date(timeIntervalSince1970: 150)
+        session.spaces[0].tabs[0].customTitle = "Release Notes"
+        session.spaces[0].tabs[0].titleModifiedAt = Date(timeIntervalSince1970: 150)
+        session.spaces[0].history.append(
+            BrowserHistoryEntry(
+                url: try XCTUnwrap(URL(string: "https://example.com/history")),
+                title: "History",
+                firstVisitedAt: Date(timeIntervalSince1970: 100),
+                lastVisitedAt: Date(timeIntervalSince1970: 100)
             )
         )
-        session.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/history")),
-            title: "History",
-            at: Date(timeIntervalSince1970: 100)
+        let closedIndex = try XCTUnwrap(
+            session.spaces[0].tabs.lastIndex { $0.placement == .current && $0.id != renamedID }
         )
-        let closedID = try XCTUnwrap(session.selectedSpace?.currentTabs.first?.id)
-        session.closeTab(closedID, at: Date(timeIntervalSince1970: 200))
+        let closed = session.spaces[0].tabs.remove(at: closedIndex)
+        session.spaces[0].archivedTabs.append(
+            ArchivedTab(tab: closed, archivedAt: Date(timeIntervalSince1970: 200), reason: .closed)
+        )
         var journal = BrowserSyncJournal(
             deviceID: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
         )
@@ -172,11 +176,9 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
                     crest: BrowserSpaceCrest(trim: .none, symbol: symbol)
                 ),
                 folders: [],
-                tabs: [],
-                selectedTabID: nil
+                tabs: []
             )
         }
-        session.selectedSpaceID = try XCTUnwrap(session.spaces.first).id
         var journal = BrowserSyncJournal(
             deviceID: UUID(uuidString: "10000000-0000-0000-0000-000000000009")!
         )

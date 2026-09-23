@@ -35,7 +35,7 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
             pages: context.pages,
             selectTab: { tabID in
                 context.browser.selectTab(tabID)
-                context.pages.select(session: context.browser.session)
+                context.pages.select(session: context.browser.presented)
             }
         )
 
@@ -69,8 +69,7 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
             symbol: "1.circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         let destinationTab = BrowserTab(
             id: TabID(rawValue: Self.uuid(6)),
@@ -85,13 +84,13 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
             symbol: "2.circle",
             accent: .teal,
             folders: [],
-            tabs: [destinationTab],
-            selectedTabID: destinationTab.id
+            tabs: [destinationTab]
         )
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
+            session: BrowserSession(spaces: [source, destination]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: source.id,
+                selectedTabIDsBySpace: [source.id: tab.id, destination.id: destinationTab.id]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
@@ -99,7 +98,7 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         return Context(
             browser: browser,
             pages: pages,

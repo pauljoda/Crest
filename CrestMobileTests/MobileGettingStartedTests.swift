@@ -9,7 +9,7 @@ final class MobileGettingStartedTests: XCTestCase {
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         defer { pages.reconcile(validTabIDs: []) }
         let id = try XCTUnwrap(browser.openGettingStarted())
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let space = try XCTUnwrap(browser.selectedSpace)
         let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: space.id, profileID: space.profile.id)
         let runtime = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
@@ -17,11 +17,11 @@ final class MobileGettingStartedTests: XCTestCase {
         let state = runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }
         state.lesson = 2
         browser.openNewTab()
-        pages.select(session: browser.session)
-        XCTAssertNil(pages.prepareResidentPage(for: id, in: browser.session))
+        pages.select(session: browser.presented)
+        XCTAssertNil(pages.prepareResidentPage(for: id, in: browser.presented))
         XCTAssertTrue(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted) === runtime)
         browser.selectTab(id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         XCTAssertEqual(state.lesson, 2)
         pages.handleMemoryPressure(.critical)
         await pages.waitForPendingMemoryPressureResponse()
@@ -31,7 +31,7 @@ final class MobileGettingStartedTests: XCTestCase {
                 BrowserTabRuntimeAssignment(tabID: id, spaceID: space.id, profileID: UUID()), discardState: false))
         XCTAssertTrue(pages.unloadPage(for: id, matching: BrowserSpaceRuntimeAssignment(space: space)))
         XCTAssertFalse(pages.nativeTabs.contains(assignment))
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let reopened = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
         XCTAssertFalse(reopened === runtime)
         XCTAssertEqual(reopened.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.lesson, 0)

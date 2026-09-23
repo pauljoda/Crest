@@ -37,7 +37,7 @@ struct BrowserSavedLocationRestoreAction {
         guard let url = browser.restoreTabSavedLocation(assignment.tabID, in: assignment.spaceID)
         else { return false }
         browser.selectTab(assignment.tabID)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         guard let page = pages.activePage(matching: assignment)
         else { return false }
         if hadResidentPage && page.pendingNavigationURL != url { page.load(url) }

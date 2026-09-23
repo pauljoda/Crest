@@ -41,25 +41,24 @@ public sealed partial class NativeSessionAuthority {
         var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == spaceId);
         if (Id(request["profileId"]) != Id(original.Metadata["profile"]!["id"]))
             throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
-        var window = request["window"]!;
-        var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
+        var view = SessionView.Decode(request[SessionView.Key]);
         var compact = original.Metadata.DeepClone().AsObject();
-        compact["selectedTabID"] = selection.GetValueOrDefault(spaceId)?.DeepClone();
         foreach (var section in Sections)
             compact[section] = new JsonArray(section is "history" or "archivedTabs" ? [] :
                 original.Sections[section].Select(n => n.DeepClone()).ToArray());
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var editorRequest = SessionEditRequest.Create(operation, compact,
-            SessionEditArguments.Decode(request["arguments"]!.AsObject(), operation), request["now"]!.GetValue<double>());
-        var output = NativeSessionEditor.Evaluate(editorRequest.Encode());
+            SessionEditArguments.Decode(request["arguments"]!.AsObject(), operation), request["now"]!.GetValue<double>(),
+            view.Tab(spaceId));
+        var result = SessionEditResult.Decode(NativeSessionEditor.Evaluate(editorRequest.Encode()));
+        var hint = new SessionSelectionHint().SelectTab(view, spaceId, result.SelectedTabId);
+        if (result.SelectSpace) hint.SelectSpace(spaceId);
+        var output = result.Encode(hint);
         if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
-        var result = SessionEditResult.Decode(output);
         var edited = result.Space;
         var nextSpaces = document.Spaces.Select(space => {
+            if (Id(space.Metadata["id"]) != spaceId) return space;
             var fields = space.Metadata.DeepClone().AsObject();
-            fields["selectedTabID"] = selection.GetValueOrDefault(Id(fields["id"]))?.DeepClone();
-            if (Id(fields["id"]) != spaceId) return new SpaceDocument(fields, space.Sections);
-            fields["selectedTabID"] = edited["selectedTabID"]?.DeepClone();
             fields["splitGroups"] = edited["splitGroups"]?.DeepClone();
             var sections = space.Sections.ToDictionary(pair => pair.Key, pair => pair.Value);
             sections["tabs"] = edited["tabs"]!.AsArray().Select(n => n!.DeepClone()).ToArray();
@@ -70,10 +69,7 @@ public sealed partial class NativeSessionAuthority {
                     archived.Select(n => n!.DeepClone())).ToArray();
             return new SpaceDocument(fields, sections);
         }).ToArray();
-        var metadata = document.Metadata.DeepClone().AsObject();
-        metadata["selectedSpaceID"] = (result.SelectSpace
-            ? original.Metadata["id"] : window["selectedSpaceID"])!.DeepClone();
-        var next = new SessionDocument(metadata, nextSpaces);
+        var next = new SessionDocument(document.Metadata, nextSpaces);
         Validate(next);
         return new NativeSessionCommand(this, expected, next, output);
     }

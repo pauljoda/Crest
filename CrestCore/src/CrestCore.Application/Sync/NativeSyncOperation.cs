@@ -14,12 +14,9 @@ internal enum NativeSyncOperation {
     OrderAllocate,
     Project,
     Materialize,
-    BatchPreview,
-    TransferPreview,
     WorkspacePreview,
     WorkspaceReview,
     SessionRepair,
-    SessionRetain,
 }
 
 internal static class NativeSyncOperationCodes {
@@ -38,12 +35,9 @@ internal static class NativeSyncOperationCodes {
         "order.allocate" => NativeSyncOperation.OrderAllocate,
         "project" => NativeSyncOperation.Project,
         "materialize" => NativeSyncOperation.Materialize,
-        "batch.preview" => NativeSyncOperation.BatchPreview,
-        "transfer.preview" => NativeSyncOperation.TransferPreview,
         "workspace.preview" => NativeSyncOperation.WorkspacePreview,
         "workspace.review" => NativeSyncOperation.WorkspaceReview,
         "session.repair" => NativeSyncOperation.SessionRepair,
-        "session.retain" => NativeSyncOperation.SessionRetain,
         _ => NativeSyncOperation.Unknown
     };
 
@@ -60,12 +54,9 @@ internal static class NativeSyncOperationCodes {
         NativeSyncOperation.OrderAllocate => "order.allocate",
         NativeSyncOperation.Project => "project",
         NativeSyncOperation.Materialize => "materialize",
-        NativeSyncOperation.BatchPreview => "batch.preview",
-        NativeSyncOperation.TransferPreview => "transfer.preview",
         NativeSyncOperation.WorkspacePreview => "workspace.preview",
         NativeSyncOperation.WorkspaceReview => "workspace.review",
         NativeSyncOperation.SessionRepair => "session.repair",
-        NativeSyncOperation.SessionRetain => "session.retain",
         _ => throw new ArgumentOutOfRangeException(nameof(operation))
     };
 

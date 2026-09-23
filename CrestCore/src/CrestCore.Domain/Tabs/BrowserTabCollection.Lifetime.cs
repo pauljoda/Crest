@@ -54,9 +54,12 @@ public sealed partial class BrowserTabCollection {
             ? other : null : selected;
     }
 
-    public Guid? CleanupCurrentTabs(Guid? selected, TimeSpan lifetime, DateTimeOffset now) {
+    /// Archives open tabs unused for longer than `lifetime`. The tab the caller
+    /// shows and any tab in `kept` (tabs other windows show) survive.
+    public Guid? CleanupCurrentTabs(Guid? selected, TimeSpan lifetime, DateTimeOffset now,
+        IReadOnlyCollection<Guid>? kept = null) {
         var expired = tabs.Where(t => t.Placement == TabPlacement.Current && !t.Content.IsStartPage
-            && t.Id != selected && now - t.LastActivatedAt > lifetime).ToArray();
+            && t.Id != selected && kept?.Contains(t.Id) != true && now - t.LastActivatedAt > lifetime).ToArray();
         var ids = expired.Select(t => t.Id).ToHashSet();
         var nextFolders = new FolderTree(folders).PreserveOrder(ids, tabs);
         foreach (var tab in expired)

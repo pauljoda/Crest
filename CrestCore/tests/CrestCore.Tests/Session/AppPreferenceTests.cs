@@ -64,7 +64,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("showStartPage", Startup(authority));
 
         authority.PrepareCommand(1, PreferenceCommand("preferences.import", new() { ["legacy"] = LegacyPreferences() })).Commit();
-        var saved = JsonNode.Parse(authority.Checkpoint(2, Selection(session)).Read("core"))!;
+        var saved = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!;
         var stored = saved["appPreferences"]!;
         Assert.Equal("lastActiveTab", stored["startupBehavior"]!.GetValue<string>());
         Assert.False(stored["offersTranslation"]!.GetValue<bool>());
@@ -84,7 +84,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("lastActiveTab", JsonNode.Parse(repeated.Output)!["preferences"]!["startupBehavior"]!.GetValue<string>());
         repeated.Commit();
         Assert.Equal("lastActiveTab", Startup(restored));
-        Assert.True(JsonNode.Parse(restored.Checkpoint(2, Selection(session)).Read("core"))!["appPreferences"]!["checksSpelling"]!
+        Assert.True(JsonNode.Parse(restored.Checkpoint(2).Read("core"))!["appPreferences"]!["checksSpelling"]!
             .GetValue<bool>());
     }
 
@@ -134,7 +134,7 @@ public sealed partial class BrowserContractsTests {
         // A native value edit whose header omits the record keeps the owned one.
         var header = session.DeepClone().AsObject(); header.Remove("spaces");
         authority.Commit(4, Bytes(new JsonObject { ["version"] = 1, ["metadata"] = header, ["spaces"] = new JsonArray() }));
-        var saved = JsonNode.Parse(authority.Checkpoint(5, Selection(session)).Read("core"))!["appPreferences"]!;
+        var saved = JsonNode.Parse(authority.Checkpoint(5).Read("core"))!["appPreferences"]!;
         Assert.True(saved["checksSpelling"]!.GetValue<bool>());
         Assert.Equal("lastActiveTab", Startup(authority));
     }

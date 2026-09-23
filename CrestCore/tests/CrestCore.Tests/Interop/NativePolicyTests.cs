@@ -172,15 +172,11 @@ public sealed class NativePolicyTests {
     public void RetentionAndExplicitDeletionKeepTheirDifferentBoundaryRules() {
         // Retention excludes an exact cutoff and future records. Explicit
         // deletion includes its start and excludes its end.
-        var expiry = JsonNode.Parse(NativePolicyEvaluator.Evaluate(
-            "{\"version\":1,\"operation\":\"records.expired\",\"timestamps\":[9,10,11,21],\"now\":20,\"lifetime\":10}"u8))!;
-        Assert.Equal("[0]", expiry["indices"]!.ToJsonString());
-        var range = JsonNode.Parse(NativePolicyEvaluator.Evaluate(
-            "{\"version\":1,\"operation\":\"history.remove_range\",\"timestamps\":[9,10,11,20],\"start\":10,\"end\":20}"u8))!;
-        Assert.Equal("[1,2]", range["indices"]!.ToJsonString());
-        var reversed = JsonNode.Parse(NativePolicyEvaluator.Evaluate(
-            "{\"version\":1,\"operation\":\"history.remove_range\",\"timestamps\":[10],\"start\":20,\"end\":10}"u8))!;
-        Assert.Empty(reversed["indices"]!.AsArray());
+        // The records commands (`records.sweep`, `history.remove_range`) apply
+        // this rule; the stateless policy operations that exposed it are gone.
+        Assert.Equal([0], RecordRemovalPolicy.Expired([9, 10, 11, 21], 20, 10));
+        Assert.Equal([1, 2], RecordRemovalPolicy.WithinRange([9, 10, 11, 20], 10, 20));
+        Assert.Empty(RecordRemovalPolicy.WithinRange([10], 20, 10));
     }
     [Theory]
     [InlineData("warning", "desktop", 8, 1)]

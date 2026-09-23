@@ -41,7 +41,7 @@ extension BrowserMacApplication: BrowserEngineHostCommands {
         else { return false }
         host.browser.selectSpace(target.id)
         guard host.browser.openNewTab(url: url, matching: space) != nil else { return false }
-        host.pages.select(session: host.browser.session)
+        host.pages.select(session: host.browser.presented)
         return true
     }
 
@@ -49,7 +49,7 @@ extension BrowserMacApplication: BrowserEngineHostCommands {
     func openExternalLink(_ url: URL, in space: BrowserSpaceRuntimeAssignment, window: BrowserWindowID) -> Bool {
         guard let host = hostWindow(window), host.browser.openNewTab(url: url, matching: space) != nil
         else { return false }
-        host.pages.select(session: host.browser.session)
+        host.pages.select(session: host.browser.presented)
         host.pages.load(url)
         host.chrome.dismissCommandPalette()
         return true
@@ -58,20 +58,20 @@ extension BrowserMacApplication: BrowserEngineHostCommands {
     func openSettings(in window: BrowserWindowID) {
         guard let host = hostWindow(window) else { return }
         host.browser.openSettings()
-        host.pages.select(session: host.browser.session)
+        host.pages.select(session: host.browser.presented)
     }
 
     func openExtensionSettings(for space: BrowserSpaceRuntimeAssignment, in window: BrowserWindowID) {
         guard let host = hostWindow(window) else { return }
         host.settings.present(.extensions, assignment: space)
         host.browser.openSettings()
-        host.pages.select(session: host.browser.session)
+        host.pages.select(session: host.browser.presented)
     }
 
     func openGettingStarted(in window: BrowserWindowID) {
         guard let host = hostWindow(window) else { return }
         host.browser.openGettingStarted()
-        host.pages.select(session: host.browser.session)
+        host.pages.select(session: host.browser.presented)
     }
 
     // MARK: - Actions - Lifecycle

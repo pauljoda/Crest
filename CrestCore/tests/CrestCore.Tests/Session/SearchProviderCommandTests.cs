@@ -68,7 +68,7 @@ public sealed partial class BrowserContractsTests {
         var unsafeTemplate = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2, SpaceCommand(session,
             "space.search_provider.upsert", new() { ["provider"] = Engine(Guid.NewGuid(), "Local", "https://localhost/?q=%s") })));
         Assert.Equal(BrowserRuleCodes.UnsafeSearchTemplate, unsafeTemplate.Code);
-        var saved = JsonNode.Parse(authority.Checkpoint(2, Selection(session)).Read("core"))!;
+        var saved = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!;
         Assert.Single(saved["spaces"]![0]!["browsingPreferences"]!["customSearchProviders"]!.AsArray());
     }
 }

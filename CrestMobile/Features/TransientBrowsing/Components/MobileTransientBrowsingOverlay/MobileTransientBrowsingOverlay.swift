@@ -12,7 +12,7 @@ struct MobileTransientBrowsingOverlay: View {
     var body: some View {
         ZStack {
             if showsPeeks {
-                ForEach(coordinator.peekRequests.filter { $0.isSelected(in: browser.session) }) { request in
+                ForEach(coordinator.peekRequests.filter { $0.isSelected(in: browser.presented) }) { request in
                     overlay(
                         MobileTransientBrowsingPresentation(
                             request: .peek(request), phase: coordinator.presentationPhase(for: request) ?? .committed)

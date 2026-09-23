@@ -43,8 +43,8 @@ final class BrowserGettingStartedPractice {
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Practice", symbol: "leaf.fill", accent: .indigo,
             branding: .house(.winter, symbol: "leaf.fill"), folders: [],
-            tabs: [calendar, reading, mail, trail, packing], selectedTabID: trail.id)
-        seed = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+            tabs: [calendar, reading, mail, trail, packing])
+        seed = BrowserSession(spaces: [space])
         let practiceBrowser = BrowserStore(session: seed, persistence: InMemoryBrowserSessionPersistence())
         browser = practiceBrowser
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: practiceBrowser)
@@ -52,7 +52,8 @@ final class BrowserGettingStartedPractice {
 
     var space: BrowserSpace { browser.session.spaces[0] }
     var assignment: BrowserSpaceRuntimeAssignment { BrowserSpaceRuntimeAssignment(space: space) }
-    var members: [BrowserTab] { space.presentedSplitMembers(for: space.selectedTabID) }
+    var selectedTabID: TabID? { browser.selectedTabID(in: space.id) }
+    var members: [BrowserTab] { space.presentedSplitMembers(for: selectedTabID) }
 
     func reconcileSplitWidths() {
         let ids = members.map(\.id)
@@ -101,7 +102,7 @@ final class BrowserGettingStartedPractice {
     }
 
     func moveFocused(by offset: Int) {
-        guard let id = space.selectedTabID else { return }
+        guard let id = browser.selectedTabID(in: space.id) else { return }
         _ = browser.moveSplitMember(id, by: offset, matching: assignment)
     }
 

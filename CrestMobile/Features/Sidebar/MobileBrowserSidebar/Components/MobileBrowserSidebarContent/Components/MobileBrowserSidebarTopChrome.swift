@@ -71,7 +71,7 @@ struct MobileBrowserSidebarTopChrome: View {
             GlassEffectContainer(spacing: 0) {
                 MobileCompactNewTabPrompt(
                     namespace: configuration.compactChromeNamespace,
-                    geometryID: configuration.context.browser.session
+                    geometryID: configuration.context.browser
                         .selectedSpaceID,
                     transitionEnded: configuration.compactTransitionEnded,
                     openNewTab: configuration.openNewTab
@@ -116,7 +116,7 @@ struct MobileBrowserSidebarTopChrome: View {
     }
 
     private var morphID: String {
-        "crest-address-command-\(configuration.context.browser.session.selectedSpaceID)"
+        "crest-address-command-\(configuration.context.browser.selectedSpaceID)"
     }
 
     /// The toolbar sits above the pager, so the Space it clears is the selected

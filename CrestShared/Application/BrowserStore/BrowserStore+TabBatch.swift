@@ -12,7 +12,7 @@ extension BrowserStore {
         throws -> (command: BrowserCoreSessionAuthority.PreparedChange, result: BrowserTabBatchResult) {
         guard let source = space(matching: request.assignment) else { throw BrowserTabBatchError.staleSelection }
         var history = tabSelectionHistory
-        let fallback = source.selectedTabID.flatMap {
+        let fallback = selectedTabID(in: source.id).flatMap {
             history.fallbackTabID(afterDismissing: $0, in: source.id,
                 availableTabIDs: Set(source.tabs.map(\.id)).subtracting(request.ids))
         }
@@ -42,7 +42,7 @@ extension BrowserStore {
             tabCopying?.prepareTabCopy(from: original, to: &copy, in: source)
         }
         if case .moveToSpace(let destination) = action, linkPreferences.followsTabsMovedToAnotherSpace,
-            let id = prepared.session.space(id: destination.spaceID)?.selectedTabID {
+            let id = selectedTabID(in: destination.spaceID) {
             pendingMovedTabActivation = BrowserTabRuntimeAssignment(tabID: id, spaceID: destination.spaceID,
                 profileID: destination.profileID)
         } else { pendingMovedTabActivation = nil }

@@ -124,13 +124,8 @@ struct BrowserMacWindowScene: View {
                 pages.downloadCenter.sweepExpiredRecords(using: browser.session)
             }
         }
-        .onChange(
-            of: BrowserWindowState(
-                id: id,
-                restoring: browser.session
-            )
-        ) {
-            windowState.captureSelection(from: browser.session)
+        .onChange(of: browser.selection) {
+            windowState.captureSelection(of: browser)
         }
         .onChange(of: chrome.columnVisibility, initial: true) { _, visibility in
             windowState.captureSidebar(
@@ -146,7 +141,7 @@ struct BrowserMacWindowScene: View {
                 spaceSettingsPresentation.requestedDestination, assignment: assignment)
             browser.selectSpace(assignment.spaceID)
             browser.openSettings()
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active {

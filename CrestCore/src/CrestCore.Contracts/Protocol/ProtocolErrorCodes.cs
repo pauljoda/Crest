@@ -10,7 +10,6 @@ public static class ProtocolErrorCodes {
     public const string InvalidAdapter = "invalid_adapter";
     public const string InvalidCounter = "invalid_counter";
     public const string InvalidCredentialEvent = "invalid_credential_event";
-    public const string InvalidDate = "invalid_date";
     public const string InvalidEndpoint = "invalid_endpoint";
     public const string InvalidEntryPoint = "invalid_entry_point";
     public const string InvalidFillSource = "invalid_fill_source";
@@ -30,7 +29,6 @@ public static class ProtocolErrorCodes {
     public const string InvalidString = "invalid_string";
     public const string InvalidUuid = "invalid_uuid";
     public const string InvalidVersion = "invalid_version";
-    public const string InvalidVisitCount = "invalid_visit_count";
     public const string InvalidWriteThroughAvailability = "invalid_write_through_availability";
     public const string LanguageBatchLimit = "language_batch_limit";
     public const string PolicyInputLimit = "policy_input_limit";

@@ -38,7 +38,7 @@ public sealed partial class BrowserTabCollection {
                 Require(action.Before is not { } anchor || !selectedIds.Contains(anchor));
                 if (action.Placement == TabPlacement.Pinned) {
                     Require(groups.Count == 0, "cannot_pin_split");
-                    Require(tabs.Count(t => t.Placement == TabPlacement.Pinned && !selectedIds.Contains(t.Id)) + members.Length <= 12,
+                    Require(tabs.Count(t => t.Placement == TabPlacement.Pinned && !selectedIds.Contains(t.Id)) + members.Length <= BrowserLimits.PinnedTabs,
                         "pinned_capacity");
                     Require(action.Folder is null && action.BeforeFolder is null
                         && (action.Before is not { } before || tabs.Any(t => t.Id == before && t.Placement == TabPlacement.Pinned)));
@@ -65,7 +65,7 @@ public sealed partial class BrowserTabCollection {
                 Require(groups.Count == 0, "cannot_move_split_across_spaces");
                 Require(destination is not null && !ReferenceEquals(this, destination));
                 Require(destination!.Tabs.Count(t => t.Placement == TabPlacement.Pinned)
-                    + members.Count(t => t.Placement == TabPlacement.Pinned) <= 12, "pinned_capacity");
+                    + members.Count(t => t.Placement == TabPlacement.Pinned) <= BrowserLimits.PinnedTabs, "pinned_capacity");
                 var follow = selected is { } active && selectedIds.Contains(active) ? active : requested[0];
                 foreach (var tab in requested)
                     selected = TransferTo(destination, tab, selected, fallback, null, null, null, false, destinationSelection, now);

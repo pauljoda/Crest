@@ -10,7 +10,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let pageActions = try XCTUnwrap(
             MobileSelectedPageActionPort(browser: browser, pages: pages, spaceAccess: BrowserSpaceAccessController())
         )
@@ -59,11 +59,10 @@ final class MobileContentBlockingActionTests: XCTestCase {
         let performed = await action.perform()
 
         XCTAssertTrue(performed)
-        XCTAssertEqual(browser.session.selectedSpaceID, fixture.secondSpaceID)
+        XCTAssertEqual(browser.selectedSpaceID, fixture.secondSpaceID)
         let reconciledSession = try XCTUnwrap(
             pageActions.reconciledSessions.first
         )
-        XCTAssertEqual(reconciledSession.selectedSpaceID, fixture.firstSpaceID)
         XCTAssertEqual(
             reconciledSession.space(id: fixture.firstSpaceID)?
                 .browsingPreferences.contentBlockingPolicy,
@@ -94,8 +93,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
             symbol: "1.circle",
             accent: .indigo,
             folders: [],
-            tabs: [firstTab],
-            selectedTabID: firstTab.id
+            tabs: [firstTab]
         )
         let secondSpace = BrowserSpace(
             id: SpaceID(rawValue: UUID()),
@@ -104,14 +102,14 @@ final class MobileContentBlockingActionTests: XCTestCase {
             symbol: "2.circle",
             accent: .teal,
             folders: [],
-            tabs: [secondTab],
-            selectedTabID: secondTab.id
+            tabs: [secondTab]
         )
         return ContentBlockingFixture(
             browser: BrowserStore(
-                session: BrowserSession(
-                    spaces: [firstSpace, secondSpace],
-                    selectedSpaceID: firstSpace.id
+                session: BrowserSession(spaces: [firstSpace, secondSpace]),
+                selection: BrowserStoreSelection(
+                    selectedSpaceID: firstSpace.id,
+                    selectedTabIDsBySpace: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
                 ),
                 persistence: InMemoryBrowserSessionPersistence()
             ),

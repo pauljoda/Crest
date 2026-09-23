@@ -24,7 +24,7 @@ struct BrowserPinnedTabsDropSection: View {
             PinnedTabGrid(
                 tabs: tabSections.pinnedTabs,
                 assignment: assignment,
-                selectedTabID: space.selectedTabID,
+                selectedTabID: browser.selectedTabID(in: space.id),
                 select: { runtimeAssignment in
                     guard isCurrentAndUnlocked else { return }
                     select(runtimeAssignment.tabID)

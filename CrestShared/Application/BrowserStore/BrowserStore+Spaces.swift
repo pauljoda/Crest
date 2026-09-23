@@ -209,6 +209,16 @@ extension BrowserStore {
         return folderID
     }
 
+    /// Whether a folder may be created inside `parentID`. The core answers
+    /// with its folder count and depth limits.
+    func canAddFolder(inside parentID: FolderID, matching assignment: BrowserSpaceRuntimeAssignment) -> Bool {
+        guard space(matching: assignment) != nil else { return false }
+        return family.accepts("folder.create", in: assignment.spaceID, arguments: [
+            "folderId": UUID().uuidString, "title": NSNull(), "placement": "saved",
+            "parentId": parentID.rawValue.uuidString
+        ], from: self)
+    }
+
     @discardableResult
     func addFolder(
         title: String = "New Folder",
@@ -340,12 +350,18 @@ extension BrowserStore {
         )
     }
 
+    /// Whether a folder may move under `parentID`. The core's folder rules
+    /// answer (no cycles, the depth limit including the moving subtree).
     func canMoveFolder(
         _ folderID: FolderID,
         in spaceID: SpaceID,
         into parentID: FolderID?
     ) -> Bool {
-        session.canMoveFolder(folderID, in: spaceID, into: parentID)
+        guard !deletingSpaceIDs.contains(spaceID) else { return false }
+        return family.accepts("folder.move", in: spaceID, arguments: [
+            "folderId": folderID.rawValue.uuidString, "parentId": parentID?.rawValue.uuidString as Any? ?? NSNull(),
+            "beforeFolderId": NSNull(), "before": NSNull(), "placement": NSNull()
+        ], from: self)
     }
 
     func canMoveFolder(

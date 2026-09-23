@@ -43,7 +43,7 @@ final class MobileBrowserSettingsPresentation {
             let space = browser.selectedSpace, !spaceAccess.isLocked(space),
             browser.selectedTab?.nativeContent == .settings
         {
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
         } else {
             routeSelectedSettingsAction()
         }
@@ -76,7 +76,7 @@ final class MobileBrowserSettingsPresentation {
         switch presentation {
         case .embedded:
             browser.selectTab(tab.id)
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
             navigation.selectTab()
         case .sheet:
             guard let retained = retainedState(for: tab, in: space) else { return false }
@@ -95,7 +95,7 @@ final class MobileBrowserSettingsPresentation {
         guard let retained = retainedState(for: tab, in: space) else { return false }
         state = retained
         browser.dismissNativeTab(tab.id, matching: BrowserSpaceRuntimeAssignment(space: space))
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         presentSheet(in: space, tabID: tab.id)
         return true
     }
@@ -152,7 +152,7 @@ final class MobileBrowserSettingsPresentation {
             state.path = sheetState.path
         }
         state.prepareForEmbeddedPresentation()
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         navigation.selectTab()
     }
 

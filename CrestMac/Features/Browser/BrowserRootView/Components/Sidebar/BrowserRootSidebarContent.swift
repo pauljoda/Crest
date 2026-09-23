@@ -79,14 +79,14 @@ struct BrowserRootSidebarContent: View {
             assignment: BrowserSpaceRuntimeAssignment(space: space)
         )
         model.browser.openSettings()
-        model.pages.select(session: model.browser.session)
+        model.pages.select(session: model.browser.presented)
     }
 
 
     private func createSpace() {
         model.browser.addSpace()
         guard let space = model.browser.selectedSpace else { return }
-        model.pages.select(session: model.browser.session)
+        model.pages.select(session: model.browser.presented)
         presentSpaceSettings(for: space)
     }
 }

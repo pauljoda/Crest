@@ -17,7 +17,7 @@ enum BrowserCoreWorkspaceImport {
         let sources = plan.spaces.map { draft in
             BrowserSpace(id: draft.id, profile: draft.profile, name: draft.customization.name,
                 symbol: draft.customization.symbol, accent: draft.customization.accent,
-                branding: draft.customization.branding, folders: [], tabs: draft.addedTabs, selectedTabID: nil)
+                branding: draft.customization.branding, folders: [], tabs: draft.addedTabs)
         }
         let drafts = try plan.spaces.enumerated().map { index, draft -> [String: Any] in
             ["sourceIndex": index, "isNew": draft.isNew, "customization": try customization(draft.customization)]
@@ -49,9 +49,8 @@ enum BrowserCoreWorkspaceImport {
         return try BrowserCoreSync.value(value)
     }
     private static func compact(_ spaces: [BrowserSpace]) throws -> Any {
-        guard let first = spaces.first else { return [] as [Any] }
-        return try BrowserCoreSync.value(BrowserCoreSessionAuthority.compact(
-            BrowserSession(spaces: spaces, selectedSpaceID: first.id)).spaces)
+        guard !spaces.isEmpty else { return [] as [Any] }
+        return try BrowserCoreSync.value(BrowserCoreSessionAuthority.compact(BrowserSession(spaces: spaces)).spaces)
     }
 
     static func preview(_ request: Request, existing: BrowserSession) throws -> BrowserSession {
@@ -67,6 +66,8 @@ enum BrowserCoreWorkspaceImport {
         let session: BrowserSession?
         let assets: [Asset]?
         let error: String?
+        /// The imported Space and the tabs it shows first, for the importing window.
+        let selection: BrowserSelectionHint?
         struct Asset: Decodable {
             let spaceIndex: Int
             let tabIndex: Int

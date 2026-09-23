@@ -4,6 +4,9 @@ import Observation
 
 /// One core session per store family. `projection` is the accepted native read
 /// model, including native favicon assets; it cannot publish an unaccepted edit.
+/// It holds browsing data only: each command reads what the requesting window
+/// shows as context (`view`) and answers with a `BrowserSelectionHint` the window
+/// applies to its own selection.
 @Observable @MainActor
 final class BrowserCoreSessionAuthority {
     private(set) var projection: BrowserSession
@@ -69,7 +72,7 @@ final class BrowserCoreSessionAuthority {
         let prepared = crest_session_prepare_borrowed_refresh(owner.value, revision, &command)
         guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
         defer { crest_session_release_command(command) }
-        let next = try decodeMetadataProjection(readCommand(command))
+        let next = try decodeMetadataProjection(readCommand(command)).session
         var accepted: UInt64 = 0
         let committed = crest_session_commit_command(command, &accepted)
         guard committed == CREST_OK else { throw CoreError.rejected(committed) }
@@ -86,18 +89,15 @@ final class BrowserCoreSessionAuthority {
         persist: (any BrowserSessionCheckpoint) throws -> Void) throws {
         let next = keepingPreferences(proposed)
         let delta = try delta(to: next) ?? Data(#"{"version":1,"spaces":[]}"#.utf8)
-        let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: next))
         var replacement: UInt64 = 0, checkpoint: UInt64 = 0
-        let result = delta.withUnsafeBytes { bytes in selection.withUnsafeBytes { window in
+        let result = delta.withUnsafeBytes { bytes in
             if let sync {
                 return crest_session_reserve_sync_replacement(owner.value, revision, sync.handle,
-                    bytes.bindMemory(to: UInt8.self).baseAddress, delta.count,
-                    window.bindMemory(to: UInt8.self).baseAddress, selection.count, &replacement, &checkpoint)
+                    bytes.bindMemory(to: UInt8.self).baseAddress, delta.count, &replacement, &checkpoint)
             }
             return crest_session_reserve_replacement(owner.value, revision,
-                bytes.bindMemory(to: UInt8.self).baseAddress, delta.count,
-                window.bindMemory(to: UInt8.self).baseAddress, selection.count, &replacement, &checkpoint)
-        } }
+                bytes.bindMemory(to: UInt8.self).baseAddress, delta.count, &replacement, &checkpoint)
+        }
         guard result == CREST_OK else { throw CoreError.rejected(result) }
         defer { crest_session_release_replacement(replacement) }
         let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
@@ -124,34 +124,42 @@ final class BrowserCoreSessionAuthority {
     }
 
     func prepareTabMove(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
-        destination: BrowserSpaceRuntimeAssignment, arguments: [String: Any], window: BrowserSession,
+        destination: BrowserSpaceRuntimeAssignment, arguments: [String: Any], view: BrowserStoreSelection,
         at date: Date) throws -> PreparedChange {
-        guard let moved = window.space(id: source.spaceID)?.tabs.first(where: { $0.id == tabID })
+        guard let moved = projection.space(id: source.spaceID)?.tabs.first(where: { $0.id == tabID })
         else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
         let data = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": "tab.transfer", "spaceId": source.spaceID.rawValue.uuidString,
             "profileId": source.profileID.uuidString, "destinationSpaceId": destination.spaceID.rawValue.uuidString,
             "destinationProfileId": destination.profileID.uuidString, "arguments": arguments,
-            "window": Self.selection(for: window), "now": date.timeIntervalSinceReferenceDate
+            "view": Self.view(view, in: projection), "now": date.timeIntervalSinceReferenceDate
         ])
         let handle = try prepareCommand(data)
         do {
             let result = try JSONDecoder().decode(BrowserCoreTabTransfer.Result.self, from: readCommand(handle))
-            let intermediate = try BrowserCoreTabTransfer.applying(result.source, to: window, moved: moved)
-            let next = try BrowserCoreTabTransfer.applying(result.destination, to: intermediate, moved: moved,
-                selectingSpace: arguments["select"] as? Bool == true)
-            return PreparedChange(handle: handle, session: next)
+            let intermediate = try BrowserCoreTabTransfer.applying(result.source, to: projection, moved: moved)
+            let next = try BrowserCoreTabTransfer.applying(result.destination, to: intermediate, moved: moved)
+            return PreparedChange(handle: handle, session: next, hint: result.selection ?? .none)
         } catch { crest_session_release_command(handle); throw error }
     }
 
-    static func prepareTransfer(source: BrowserCoreSessionAuthority, sourceWindow: BrowserSession,
-        destination: BrowserCoreSessionAuthority, destinationWindow: BrowserSession,
+    /// Whether the core would accept a cross-Space move. The command is
+    /// prepared, read and released without committing.
+    func acceptsTabMove(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
+        destination: BrowserSpaceRuntimeAssignment, view: BrowserStoreSelection) -> Bool {
+        (try? prepareTabMove(tabID, source: source, destination: destination,
+            arguments: BrowserCoreTabTransfer.arguments(tabID: tabID), view: view, at: .now)) != nil
+    }
+
+    static func prepareTransfer(source: BrowserCoreSessionAuthority, sourceView: BrowserStoreSelection,
+        destination: BrowserCoreSessionAuthority, destinationView: BrowserStoreSelection,
         tabID: TabID, assignment: BrowserSpaceRuntimeAssignment, fallback: TabID?, selecting: Bool) throws -> PreparedTransfer {
-        guard let moved = sourceWindow.space(id: assignment.spaceID)?.tabs.first(where: { $0.id == tabID })
+        guard let moved = source.projection.space(id: assignment.spaceID)?.tabs.first(where: { $0.id == tabID })
         else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
         let input = try JSONSerialization.data(withJSONObject: [
             "version": 1, "spaceId": assignment.spaceID.rawValue.uuidString, "profileId": assignment.profileID.uuidString,
-            "sourceWindow": selection(for: sourceWindow), "destinationWindow": selection(for: destinationWindow),
+            "sourceView": view(sourceView, in: source.projection),
+            "destinationView": view(destinationView, in: destination.projection),
             "arguments": BrowserCoreTabTransfer.arguments(tabID: tabID, fallback: fallback, selecting: selecting),
             "now": Date.now.timeIntervalSinceReferenceDate
         ])
@@ -174,17 +182,21 @@ final class BrowserCoreSessionAuthority {
             guard read == CREST_OK else { throw CoreError.rejected(read) }
             let result = try JSONDecoder().decode(BrowserCoreTabTransfer.Result.self, from: data)
             return PreparedTransfer(handle: handle,
-                source: try BrowserCoreTabTransfer.applying(result.source, to: sourceWindow, moved: moved),
-                destination: try BrowserCoreTabTransfer.applying(result.destination, to: destinationWindow, moved: moved,
-                    selectingSpace: selecting))
+                source: try BrowserCoreTabTransfer.applying(result.source, to: source.projection, moved: moved),
+                destination: try BrowserCoreTabTransfer.applying(result.destination, to: destination.projection, moved: moved),
+                sourceHint: result.sourceSelection ?? .none, destinationHint: result.destinationSelection ?? .none)
         } catch { crest_session_release_transfer(handle); throw error }
     }
     final class PreparedTransfer {
         fileprivate let handle: UInt64
         let source: BrowserSession
         let destination: BrowserSession
-        fileprivate init(handle: UInt64, source: BrowserSession, destination: BrowserSession) {
+        let sourceHint: BrowserSelectionHint
+        let destinationHint: BrowserSelectionHint
+        fileprivate init(handle: UInt64, source: BrowserSession, destination: BrowserSession,
+            sourceHint: BrowserSelectionHint, destinationHint: BrowserSelectionHint) {
             self.handle = handle; self.source = source; self.destination = destination
+            self.sourceHint = sourceHint; self.destinationHint = destinationHint
         }
         deinit { crest_session_release_transfer(handle) }
     }
@@ -206,33 +218,51 @@ final class BrowserCoreSessionAuthority {
         source.projection = prepared.source; destination.projection = prepared.destination
     }
 
-    private static func selection(for window: BrowserSession) throws -> [String: Any] {
+    /// What a window shows, as read-only command context: its Space and the tab
+    /// it shows in each of the session's Spaces (null for none).
+    private static func view(_ selection: BrowserStoreSelection, in session: BrowserSession) -> [String: Any] {
         [
-            "selectedSpaceID": try Self.value(window.selectedSpaceID),
-            "selectedTabs": try window.spaces.map { space -> [String: Any] in
-                ["spaceID": try Self.value(space.id), "tabID": try space.selectedTabID.map(Self.value) ?? NSNull()]
+            "spaceId": selection.selectedSpaceID.rawValue.uuidString,
+            "tabs": session.spaces.map { space -> [String: Any] in
+                ["spaceId": space.id.rawValue.uuidString,
+                 "tabId": selection.selectedTabID(in: space.id)?.rawValue.uuidString as Any? ?? NSNull()]
             },
         ]
     }
 
+    /// Whether the core would accept a tab, folder or split command: it is
+    /// prepared against the owned records and released without committing.
+    /// This is how native menus ask the core's rules (folder depth, split
+    /// capacity) instead of keeping copies of them.
+    func accepts(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
+        view: BrowserStoreSelection) -> Bool {
+        guard let space = projection.space(id: spaceID),
+            let data = try? JSONSerialization.data(withJSONObject: [
+                "version": 1, "operation": operation, "spaceId": spaceID.rawValue.uuidString,
+                "profileId": space.profile.id.uuidString, "arguments": arguments,
+                "view": Self.view(view, in: projection), "now": Date.now.timeIntervalSinceReferenceDate,
+            ]),
+            let handle = try? prepareCommand(data)
+        else { return false }
+        crest_session_release_command(handle)
+        return true
+    }
+
     func execute(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
-        window: BrowserSession, at date: Date) throws -> BrowserCoreSessionEditing.Result {
-        guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }),
-            let windowSpace = window.space(id: spaceID) else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+        view: BrowserStoreSelection, at date: Date) throws -> BrowserCoreSessionEditing.Result {
+        guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }) else {
+            throw CoreError.rejected(CREST_INVALID_ARGUMENT)
+        }
         let data = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": operation, "spaceId": spaceID.rawValue.uuidString,
-            "profileId": windowSpace.profile.id.uuidString,
-            "arguments": arguments, "window": try Self.selection(for: window),
+            "profileId": projection.spaces[index].profile.id.uuidString,
+            "arguments": arguments, "view": Self.view(view, in: projection),
             "now": date.timeIntervalSinceReferenceDate,
         ])
         return try commitCommand(data) { output in
             let result = try BrowserCoreSessionEditing.decode(output, preservingAssetsFrom: self.projection.spaces[index])
             var next = self.projection
-            next.selectedSpaceID = window.selectedSpaceID
-            for i in next.spaces.indices {
-                next.spaces[i].selectedTabID = window.space(id: next.spaces[i].id)?.selectedTabID
-            }
-            next.applyCoreResult(result, at: index)
+            BrowserCoreSessionEditing.apply(result, to: &next, at: index)
             return (next, result)
         }
     }
@@ -242,22 +272,23 @@ final class BrowserCoreSessionAuthority {
     func applyFavicon(_ assignment: BrowserCoreSessionEditing.Result.FaviconAssignment?,
         bytes: Data?, in spaceID: SpaceID) -> TabID? {
         guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }) else { return nil }
-        return projection.applyCoreFavicon(assignment, bytes: bytes, at: index)
+        return BrowserCoreSessionEditing.applyFavicon(assignment, bytes: bytes, to: &projection, at: index)
     }
 
     func executeSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
-        window: BrowserSession, at date: Date) throws -> Bool {
-        let prepared = try prepareSpace(operation, in: spaceID, arguments: arguments, window: window, at: date)
+        view: BrowserStoreSelection, at date: Date) throws -> (changed: Bool, hint: BrowserSelectionHint) {
+        let previous = projection
+        let prepared = try prepareSpace(operation, in: spaceID, arguments: arguments, view: view, at: date)
         var accepted: UInt64 = 0
         let result = crest_session_commit_command(prepared.handle, &accepted)
         guard result == CREST_OK else { throw CoreError.rejected(result) }
         revision = accepted
         projection = prepared.session
-        return projection != window
+        return (projection != previous || !prepared.hint.isEmpty, prepared.hint)
     }
 
     func executeRecords(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
-        window: BrowserSession, at date: Date) throws -> Bool {
+        view: BrowserStoreSelection, at date: Date) throws -> (changed: Bool, hint: BrowserSelectionHint) {
         struct Changes: Decodable {
             struct Change: Decodable {
                 let spaceId: UUID
@@ -269,22 +300,19 @@ final class BrowserCoreSessionAuthority {
                 let splitGroups: [BrowserSplitGroupMetadata]?
             }
             let changes: [Change]
+            let selection: BrowserSelectionHint?
         }
-        let space = spaceID.flatMap { window.space(id: $0) }
+        let space = spaceID.flatMap { projection.space(id: $0) }
         let data = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": operation,
             "spaceId": spaceID?.rawValue.uuidString as Any? ?? NSNull(),
             "profileId": space?.profile.id.uuidString as Any? ?? NSNull(),
-            "arguments": arguments, "window": try Self.selection(for: window),
+            "arguments": arguments, "view": Self.view(view, in: projection),
             "now": date.timeIntervalSinceReferenceDate,
         ])
         return try commitCommand(data) { output in
             let result = try JSONDecoder().decode(Changes.self, from: output)
             var next = self.projection
-            next.selectedSpaceID = window.selectedSpaceID
-            for index in next.spaces.indices {
-                next.spaces[index].selectedTabID = window.space(id: next.spaces[index].id)?.selectedTabID
-            }
             for change in result.changes {
                 guard let index = next.spaces.firstIndex(where: { $0.id.rawValue == change.spaceId }),
                     next.spaces[index].profile.id == change.profileId else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
@@ -302,7 +330,7 @@ final class BrowserCoreSessionAuthority {
                     for archiveIndex in edit.space.archivedTabs.indices {
                         edit.space.archivedTabs[archiveIndex].tab.faviconData = images[edit.space.archivedTabs[archiveIndex].id] ?? nil
                     }
-                    next.applyCoreResult(edit, at: index)
+                    BrowserCoreSessionEditing.apply(edit, to: &next, at: index)
                 }
                 if let removed = change.removedHistory {
                     let ids = Set(removed)
@@ -322,93 +350,95 @@ final class BrowserCoreSessionAuthority {
                 }
                 if let groups = change.splitGroups { next.spaces[index].splitGroups = groups }
             }
-            return (next, !result.changes.isEmpty)
+            return (next, (!result.changes.isEmpty, result.selection ?? .none))
         }
     }
 
-    func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: [String: Any], window: BrowserSession,
+    func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: [String: Any], view: BrowserStoreSelection,
         at date: Date) throws -> (command: PreparedChange, result: BrowserTabBatchResult) {
         let data = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": "tabs.batch", "spaceId": request.assignment.spaceID.rawValue.uuidString,
             "profileId": request.assignment.profileID.uuidString, "arguments": arguments,
-            "window": try Self.selection(for: window), "now": date.timeIntervalSinceReferenceDate
+            "view": Self.view(view, in: projection), "now": date.timeIntervalSinceReferenceDate
         ])
         let handle = try prepareCommand(data)
         do {
             let response = try JSONDecoder().decode(BrowserCoreTabBatch.Response.self, from: readCommand(handle))
-            var current = projection
-            current.selectedSpaceID = window.selectedSpaceID
-            for i in current.spaces.indices { current.spaces[i].selectedTabID = window.space(id: current.spaces[i].id)?.selectedTabID }
-            let prepared = try BrowserCoreTabBatch.applying(response, to: current)
-            return (PreparedChange(handle: handle, session: prepared.session), prepared.result)
+            let prepared = try BrowserCoreTabBatch.applying(response, to: projection)
+            return (PreparedChange(handle: handle, session: prepared.session, hint: response.selection ?? .none),
+                prepared.result)
         } catch { crest_session_release_command(handle); throw error }
     }
 
     func prepareSpace(_ operation: String, in spaceID: SpaceID?, arguments: [String: Any],
-        window: BrowserSession, at date: Date) throws -> PreparedChange {
-        let space = spaceID.flatMap { window.space(id: $0) }
+        view: BrowserStoreSelection, at date: Date) throws -> PreparedChange {
+        let space = spaceID.flatMap { projection.space(id: $0) }
         let data = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": operation,
             "spaceId": spaceID?.rawValue.uuidString as Any? ?? NSNull(),
             "profileId": space?.profile.id.uuidString as Any? ?? NSNull(),
-            "arguments": arguments, "window": try Self.selection(for: window),
+            "arguments": arguments, "view": Self.view(view, in: projection),
             "now": date.timeIntervalSinceReferenceDate,
         ])
         let handle = try prepareCommand(data)
         do {
             let next = try decodeMetadataProjection(readCommand(handle))
-            return PreparedChange(handle: handle, session: next)
+            return PreparedChange(handle: handle, session: next.session, hint: next.selection ?? .none)
         } catch {
             crest_session_release_command(handle)
             throw error
         }
     }
 
-    private func decodeMetadataProjection(_ output: Data) throws -> BrowserSession {
-        struct Result: Decodable { let session: BrowserSession }
-        var next = try JSONDecoder().decode(Result.self, from: output).session
-        for index in next.spaces.indices {
-            guard let existing = projection.space(id: next.spaces[index].id) else { continue }
-            guard next.spaces[index].profile == existing.profile else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+    private struct MetadataProjection: Decodable {
+        var session: BrowserSession
+        let selection: BrowserSelectionHint?
+    }
+
+    private func decodeMetadataProjection(_ output: Data) throws -> MetadataProjection {
+        var next = try JSONDecoder().decode(MetadataProjection.self, from: output)
+        for index in next.session.spaces.indices {
+            guard let existing = projection.space(id: next.session.spaces[index].id) else { continue }
+            guard next.session.spaces[index].profile == existing.profile else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
             // The command keeps these collections in the core. Reattach native
             // read models and image assets without moving them across the ABI.
-            next.spaces[index].tabs = existing.tabs
-            next.spaces[index].folders = existing.folders
-            next.spaces[index].history = existing.history
-            next.spaces[index].archivedTabs = existing.archivedTabs
+            next.session.spaces[index].tabs = existing.tabs
+            next.session.spaces[index].folders = existing.folders
+            next.session.spaces[index].history = existing.history
+            next.session.spaces[index].archivedTabs = existing.archivedTabs
         }
         return next
     }
 
-    func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, window: BrowserSession) throws -> PreparedChange {
+    func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, view: BrowserStoreSelection) throws -> PreparedChange {
         let input = try JSONSerialization.data(withJSONObject: [
             "version": 1, "operation": "workspace.import", "mode": request.mode,
-            "arguments": request.arguments, "window": Self.selection(for: window),
+            "arguments": request.arguments, "view": Self.view(view, in: projection),
             "now": Date.now.timeIntervalSinceReferenceDate
         ])
         let handle = try prepareCommand(input)
         do {
             let result = try JSONDecoder().decode(BrowserCoreWorkspaceImport.Result.self, from: readCommand(handle))
-            let next = try result.materialize(existing: window, request: request)
-            return PreparedChange(handle: handle, session: next)
+            let next = try result.materialize(existing: projection, request: request)
+            return PreparedChange(handle: handle, session: next, hint: result.selection ?? .none)
         } catch { crest_session_release_command(handle); throw error }
     }
 
     final class PreparedChange {
         fileprivate let handle: UInt64
         let session: BrowserSession
-        fileprivate init(handle: UInt64, session: BrowserSession) { self.handle = handle; self.session = session }
+        /// The follow-up selection for the window that issued the command.
+        let hint: BrowserSelectionHint
+        fileprivate init(handle: UInt64, session: BrowserSession, hint: BrowserSelectionHint) {
+            self.handle = handle; self.session = session; self.hint = hint
+        }
         deinit { crest_session_release_command(handle) }
     }
 
     func commitDurably(_ command: PreparedChange, sync: BrowserCoreSyncTransaction? = nil,
         persist: (any BrowserSessionCheckpoint) throws -> Void) throws {
-        let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: command.session))
         var replacement: UInt64 = 0, checkpoint: UInt64 = 0
-        let reserved = selection.withUnsafeBytes {
-            crest_session_reserve_command(command.handle, $0.bindMemory(to: UInt8.self).baseAddress,
-                selection.count, &replacement, &checkpoint)
-        }
+        let reserved = crest_session_reserve_command(command.handle, &replacement, &checkpoint)
         guard reserved == CREST_OK else { throw CoreError.rejected(reserved) }
         defer { crest_session_release_replacement(replacement) }
         let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
@@ -462,12 +492,9 @@ final class BrowserCoreSessionAuthority {
         return output
     }
 
-    func checkpoint(for window: BrowserSession) throws -> BrowserCoreSessionCheckpoint {
-        let data = try JSONSerialization.data(withJSONObject: Self.selection(for: window))
+    func checkpoint() throws -> BrowserCoreSessionCheckpoint {
         var handle: UInt64 = 0
-        let result = data.withUnsafeBytes {
-            crest_session_checkpoint(owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &handle)
-        }
+        let result = crest_session_checkpoint(owner.value, revision, &handle)
         guard result == CREST_OK else { throw CoreError.rejected(result) }
         return BrowserCoreSessionCheckpoint(handle: handle)
     }

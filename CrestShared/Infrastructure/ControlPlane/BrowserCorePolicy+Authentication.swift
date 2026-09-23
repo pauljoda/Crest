@@ -25,15 +25,14 @@ extension BrowserCorePolicy {
         }
     }
 
-    /// The server as the credential prompt names it. Without a core answer
-    /// the prompt shows host and port in full rather than a shortened name.
+    /// The server as the credential prompt names it. The core owns the
+    /// formatting; without its answer the prompt uses the generic label. A
+    /// prompt never appears without the core in practice, because
+    /// `authenticationHandling` cancels the challenge when it cannot answer.
     static func authenticationSourceLabel(host: String, port: Int, scheme: String?, emptyHostLabel: String) -> String {
         let scheme = scheme.flatMap { $0.isEmpty ? nil : $0 }
-        guard let response = evaluate(["version": 1, "operation": "authentication.source_label", "host": host,
-            "port": port, "scheme": scheme as Any? ?? NSNull()]) else {
-            return host.isEmpty ? emptyHostLabel : "\(host):\(port)"
-        }
-        return response["label"] as? String ?? emptyHostLabel
+        return evaluate(["version": 1, "operation": "authentication.source_label", "host": host,
+            "port": port, "scheme": scheme as Any? ?? NSNull()])?["label"] as? String ?? emptyHostLabel
     }
 
     /// Whether the physical-validation fixture build trusts this server

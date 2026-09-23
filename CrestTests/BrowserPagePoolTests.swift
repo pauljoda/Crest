@@ -13,16 +13,16 @@ final class BrowserPagePoolTests: XCTestCase {
         let target = BrowserTab(title: "Saved", url: root, placement: .saved)
         let selected = BrowserTab.startPage()
         let unloaded = BrowserTab(title: "Pinned", url: root, placement: .pinned)
-        var space = makeSpace(tabs: [target, selected, unloaded], selectedTabID: target.id)
+        let space = makeSpace(tabs: [target, selected, unloaded], selectedTabID: target.id)
         let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
         defer { pages.reconcile(validTabIDs: []) }
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented(BrowserSession(spaces: [space]), showing: space.id))
         let page = try XCTUnwrap(pages.activePage)
         page.webView.loadSimulatedRequest(
             URLRequest(url: current), responseHTML: "<html><title>Copy fixture</title></html>")
         try await waitForLoad(current, in: page.webView)
-        space.selectedTabID = selected.id
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        fixtureSelections[space.id] = selected.id
+        pages.select(session: presented(BrowserSession(spaces: [space]), showing: space.id))
         let before = pages.retainedTabIDs
         let activePage = pages.activePage
         let history = page.webView.backForwardList.backList.map(\.url)
@@ -41,7 +41,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let draft = BrowserTab.startPage()
         let space = makeSpace(tabs: [draft], selectedTabID: draft.id)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
@@ -71,7 +71,7 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let space = makeSpace(tabs: [remembered], selectedTabID: remembered.id)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
@@ -101,7 +101,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let draft = BrowserTab.startPage()
         let space = makeSpace(tabs: [draft], selectedTabID: draft.id)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
@@ -121,11 +121,11 @@ final class BrowserPagePoolTests: XCTestCase {
 
         var locked = space
         locked.accessPolicy = .deviceOwnerAuthentication
-        browser.session = BrowserSession(spaces: [locked], selectedSpaceID: locked.id)
+        browser.session = BrowserSession(spaces: [locked])
         XCTAssertFalse(action.perform(assignment, url: url))
         XCTAssertEqual(browser.selectedTab, draft)
 
-        browser.session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        browser.session = BrowserSession(spaces: [space])
         let previousURL = try XCTUnwrap(URL(string: "about:blank#already-navigated"))
         browser.navigateSelectedTab(to: previousURL)
         XCTAssertFalse(action.perform(assignment, url: url))
@@ -142,11 +142,11 @@ final class BrowserPagePoolTests: XCTestCase {
             let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
             let persistence = InMemoryBrowserSessionPersistence()
             let browser = BrowserStore(
-                session: BrowserSession(spaces: [space], selectedSpaceID: space.id), persistence: persistence
+                session: BrowserSession(spaces: [space]), selection: selection(showing: space.id), persistence: persistence
             )
             let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
             defer { pool.reconcile(validTabIDs: []) }
-            pool.select(session: browser.session)
+            pool.select(session: browser.presented)
             let page = try XCTUnwrap(pool.activePage)
             try await load(root, in: page)
             try await load(child, in: page)
@@ -170,7 +170,7 @@ final class BrowserPagePoolTests: XCTestCase {
             XCTAssertNil(pool.activePage)
             XCTAssertTrue(pool.retainedTabIDs.isEmpty)
             XCTAssertEqual(archive.archivedState(profileID: space.profile.id, tabID: unrelatedID), unrelatedState)
-            let savedTab = try XCTUnwrap(persistence.session?.selectedSpace?.tabs.first)
+            let savedTab = try XCTUnwrap(persistence.session?.spaces.first?.tabs.first)
             XCTAssertEqual(savedTab.url, policy == .returnToSavedURL ? root : child)
             let state = archive.archivedState(profileID: space.profile.id, tabID: tab.id)
             XCTAssertEqual(state == nil, policy == .returnToSavedURL)
@@ -197,12 +197,12 @@ final class BrowserPagePoolTests: XCTestCase {
         let tab = BrowserTab(title: "Saved", url: nil, savedURL: root, placement: .saved)
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
         defer { pool.reconcile(validTabIDs: []) }
-        pool.select(session: browser.session)
+        pool.select(session: browser.presented)
         let page = try XCTUnwrap(pool.activePage)
         try await load(root, in: page)
         try await load(child, in: page)
@@ -233,12 +233,12 @@ final class BrowserPagePoolTests: XCTestCase {
         let tab = BrowserTab(title: "Pinned", url: root, placement: .pinned)
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
         defer { pool.reconcile(validTabIDs: []) }
-        pool.select(session: browser.session)
+        pool.select(session: browser.presented)
         let page = try XCTUnwrap(pool.activePage)
         page.load(try XCTUnwrap(URL(string: "https://state.crest.test/slow-child")))
         let preferences = BrowserAppPreferenceStore()
@@ -331,7 +331,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let openedTab = try XCTUnwrap(context.openedTabs.first)
         XCTAssertEqual(context.store.selectedTab?.id, openedTab.id)
 
-        context.pool.select(session: context.store.session)
+        context.pool.select(session: context.store.presented)
 
         XCTAssertEqual(context.pool.activeTabID, openedTab.id)
         XCTAssertTrue(context.pool.containsResidentPage(for: openedTab.id))
@@ -475,13 +475,13 @@ final class BrowserPagePoolTests: XCTestCase {
     func testCredentialAccessReconcilesAcrossAnExistingSpacePage() throws {
         var session = BrowserSession.preview
         let pool = BrowserPagePool()
-        pool.select(session: session)
+        let shown = presented(session)
+        pool.select(session: shown)
         XCTAssertTrue(try XCTUnwrap(pool.activePage).isCredentialAccessEnabled)
 
-        let space = try XCTUnwrap(session.selectedSpace)
-        var preferences = space.credentialPreferences
-        preferences.isEnabled = false
-        session.updateCredentialPreferences(preferences, in: space.id)
+        let space = try XCTUnwrap(shown.selectedSpace)
+        let index = try XCTUnwrap(session.spaces.firstIndex { $0.id == space.id })
+        session.spaces[index].credentialPreferences.isEnabled = false
         pool.reconcileCredentialAccess(in: session)
 
         XCTAssertFalse(try XCTUnwrap(pool.activePage).isCredentialAccessEnabled)
@@ -489,8 +489,8 @@ final class BrowserPagePoolTests: XCTestCase {
     }
 
     func testDeactivatingDesktopPagePresentationRetainsAndRestoresItsPage() throws {
-        let space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let space = try XCTUnwrap(presented(BrowserSession.preview).selectedSpace)
+        let session = presented(BrowserSession(spaces: [space]), showing: space.id)
         let selectedTabID = try XCTUnwrap(session.selectedTab?.id)
         let pool = BrowserPagePool()
 
@@ -518,7 +518,7 @@ final class BrowserPagePoolTests: XCTestCase {
             placement: .current
         )
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = presented(BrowserSession(spaces: [space]), showing: space.id)
         let pool = BrowserPagePool()
 
         pool.reloadOrStop(in: session)
@@ -532,20 +532,16 @@ final class BrowserPagePoolTests: XCTestCase {
         let url = try XCTUnwrap(URL(string: "about:blank"))
         let sourceTab = BrowserTab(title: "Source", url: url, placement: .current)
         let space = makeSpace(tabs: [sourceTab], selectedTabID: sourceTab.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        var session = BrowserSession(spaces: [space])
         let pool = BrowserPagePool()
         let lease = try XCTUnwrap(
             pool.makeTransientPageLease(url: url, in: space)
         )
         let promotedPage = try XCTUnwrap(lease.page)
-        let promotedTabID = try XCTUnwrap(
-            session.openTab(
-                title: "Promoted",
-                url: url,
-                in: space.id,
-                shouldSelect: true
-            )
-        )
+        let promoted = BrowserTab(title: "Promoted", url: url, placement: .current)
+        session.spaces[0].tabs.append(promoted)
+        fixtureSelections[space.id] = promoted.id
+        let promotedTabID = promoted.id
         let updatedSpace = try XCTUnwrap(session.space(id: space.id))
 
         XCTAssertTrue(
@@ -555,7 +551,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 in: updatedSpace
             )
         )
-        pool.select(session: session)
+        pool.select(session: presented(session))
 
         XCTAssertEqual(pool.activeTabID, promotedTabID)
         XCTAssertTrue(try XCTUnwrap(pool.activePage) === promotedPage)
@@ -577,7 +573,7 @@ final class BrowserPagePoolTests: XCTestCase {
             url: url,
             placement: .current
         )
-        let replacementSpace = BrowserSpace(
+        let replacementSpace = showing(promotedTab.id, in: BrowserSpace(
             id: sourceSpace.id,
             profile: BrowsingProfile(),
             name: sourceSpace.name,
@@ -593,9 +589,8 @@ final class BrowserPagePoolTests: XCTestCase {
             accessPolicy: sourceSpace.accessPolicy,
             isSavedTabsExpanded: sourceSpace.isSavedTabsExpanded,
             savedTabsExpansionModifiedAt:
-                sourceSpace.savedTabsExpansionModifiedAt,
-            selectedTabID: promotedTab.id
-        )
+                sourceSpace.savedTabsExpansionModifiedAt
+        ))
 
         XCTAssertFalse(
             pool.adoptTransientPage(
@@ -633,7 +628,7 @@ final class BrowserPagePoolTests: XCTestCase {
     }
 
     func testTransientLeaseDoesNotCrashWhenItsPagePoolHasBeenReleased() throws {
-        let space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+        let space = try XCTUnwrap(BrowserSession.preview.spaces.first)
         let url = try XCTUnwrap(URL(string: "about:blank"))
         var pool: BrowserPagePool? = BrowserPagePool()
         let lease = try XCTUnwrap(
@@ -709,16 +704,12 @@ final class BrowserPagePoolTests: XCTestCase {
         let secondTab = BrowserTab(title: "Second", url: nil, placement: .current)
         let firstSpace = makeSpace(tabs: [firstTab], selectedTabID: firstTab.id)
         let secondSpace = makeSpace(tabs: [secondTab], selectedTabID: secondTab.id)
-        var session = BrowserSession(
-            spaces: [firstSpace, secondSpace],
-            selectedSpaceID: firstSpace.id
-        )
+        let session = BrowserSession(spaces: [firstSpace, secondSpace])
         let pool = BrowserPagePool()
 
-        pool.select(session: session)
+        pool.select(session: presented(session, showing: firstSpace.id))
         let firstPage = try XCTUnwrap(pool.activePage)
-        session.selectSpace(secondSpace.id)
-        pool.select(session: session)
+        pool.select(session: presented(session, showing: secondSpace.id))
 
         XCTAssertTrue(pool.containsResidentPage(for: firstTab.id))
         XCTAssertTrue(pool.containsResidentPage(for: secondTab.id))
@@ -741,8 +732,7 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         XCTAssertEqual(pool.activeTabID, secondTab.id)
 
-        session.selectSpace(firstSpace.id)
-        pool.select(session: session)
+        pool.select(session: presented(session, showing: firstSpace.id))
         XCTAssertTrue(try XCTUnwrap(pool.activePage) === firstPage)
 
         pool.unloadPages(in: firstSpace.id)
@@ -776,7 +766,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let preferences = BrowserLinkPreferenceStore(persistence: InMemoryBrowserLinkPreferencesPersistence())
         preferences.followsTabsMovedToAnotherSpace = false
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [source, destination], selectedSpaceID: source.id),
+            session: BrowserSession(spaces: [source, destination]), selection: selection(showing: source.id),
             persistence: InMemoryBrowserSessionPersistence(), linkPreferences: preferences)
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
         let chrome = BrowserChromeState()
@@ -786,14 +776,14 @@ final class BrowserPagePoolTests: XCTestCase {
             startupBehavior: .lastActiveTab, persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth)
         model.isPrepared = true
         defer { pool.reconcile(validTabIDs: []) }
-        pool.select(session: browser.session)
+        pool.select(session: browser.presented)
         let previousPage = try XCTUnwrap(pool.activePage)
         browser.selectSpace(destination.id)
-        pool.select(session: browser.session)
+        pool.select(session: browser.presented)
         let destinationPage = try XCTUnwrap(pool.activePage)
         browser.selectSpace(source.id)
         browser.selectTab(tab.id)
-        pool.select(session: browser.session)
+        pool.select(session: browser.presented)
         let sourcePage = try XCTUnwrap(pool.activePage)
         sourcePage.focusRestoration.remember(sourcePage.webView)
         sourcePage.focusRestoration.requestRestoration()
@@ -880,9 +870,7 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let pool = BrowserPagePool()
 
-        pool.select(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id)
-        )
+        pool.select(session: presented(BrowserSession(spaces: [space]), showing: space.id))
 
         XCTAssertEqual(pool.retainedTabIDs, [current.id])
     }
@@ -893,7 +881,7 @@ final class BrowserPagePoolTests: XCTestCase {
             let chosen = BrowserTab(title: "Chosen", url: URL(string: "about:blank#chosen"), placement: .current)
             let space = makeSpace(tabs: [restored, chosen], selectedTabID: restored.id)
             let browser = BrowserStore(
-                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
                 persistence: InMemoryBrowserSessionPersistence()
             )
             let started = expectation(description: "Startup is waiting for content blocking")
@@ -932,7 +920,7 @@ final class BrowserPagePoolTests: XCTestCase {
             placement: .current
         )
         let space = makeSpace(tabs: [selected], selectedTabID: selected.id)
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = BrowserSession(spaces: [space])
 
         for behavior in [
             BrowserStartupBehavior.showStartPage,
@@ -940,6 +928,7 @@ final class BrowserPagePoolTests: XCTestCase {
         ] {
             let browser = BrowserStore(
                 session: session,
+                selection: selection(showing: space.id),
                 persistence: InMemoryBrowserSessionPersistence()
             )
             let pages = BrowserPagePool(
@@ -978,11 +967,11 @@ final class BrowserPagePoolTests: XCTestCase {
             placement: .current
         )
         let space = makeSpace(tabs: [restored], selectedTabID: restored.id)
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = BrowserSession(spaces: [space])
         let persistence = InMemoryBrowserSessionPersistence()
         persistence.save(session)
         let savedScopeCount = persistence.savedScopes.count
-        let browser = BrowserStore(session: session, persistence: persistence)
+        let browser = BrowserStore(session: session, selection: selection(showing: space.id), persistence: persistence)
         let pages = BrowserPagePool(
             contentRuleListProvider: EmptyBrowserContentRuleListProvider()
         )
@@ -1006,22 +995,23 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         XCTAssertNil(pages.activeTabID)
         XCTAssertTrue(pages.retainedTabIDs.isEmpty)
-        XCTAssertEqual(persistence.session?.selectedTab?.id, restored.id)
         XCTAssertEqual(persistence.savedScopes.count, savedScopeCount)
     }
 
     func testSpaceEntryLeavesAnUnloadedTabUntouchedUntilManualSelection() throws {
         let tab = BrowserTab(title: "Remembered", url: URL(string: "about:blank#remembered"), placement: .pinned)
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = BrowserSession(spaces: [space])
         let persistence = InMemoryBrowserSessionPersistence()
         persistence.save(session)
-        let browser = BrowserStore(session: session, persistence: persistence)
+        let browser = BrowserStore(session: session, selection: selection(showing: space.id), persistence: persistence)
         let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
         let savedCount = persistence.savedScopes.count
 
-        XCTAssertTrue(pages.requiresStartPageOnEntry(to: space))
-        XCTAssertNil(pages.surfacePage(for: tab, in: space, accessController: BrowserSpaceAccessController()))
+        XCTAssertTrue(pages.requiresStartPageOnEntry(to: space, showing: tab.id))
+        XCTAssertNil(
+            pages.surfacePage(
+                for: tab, in: space, showing: tab.id, accessController: BrowserSpaceAccessController()))
         XCTAssertTrue(pages.retainedTabIDs.isEmpty, "Preparing an unloaded card must not create a WebKit runtime")
         pages.selectSpace(in: browser)
 
@@ -1029,11 +1019,10 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.tabs.first(where: { $0.id == tab.id }), tab)
         XCTAssertTrue(pages.retainedTabIDs.isEmpty)
         XCTAssertNil(pages.activePage)
-        XCTAssertEqual(persistence.session?.selectedTab?.id, tab.id)
         XCTAssertEqual(persistence.savedScopes.count, savedCount)
 
         browser.selectTab(tab.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         XCTAssertEqual(pages.activeTabID, tab.id)
         XCTAssertTrue(pages.containsResidentPage(for: tab.id))
     }
@@ -1042,17 +1031,18 @@ final class BrowserPagePoolTests: XCTestCase {
         let tab = BrowserTab(title: "Resident", url: URL(string: "about:blank#resident"), placement: .current)
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence())
         let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let resident = try XCTUnwrap(pages.activePage)
         let pending = resident.pendingNavigationURL
         pages.deactivatePagePresentation()
 
-        XCTAssertFalse(pages.requiresStartPageOnEntry(to: space))
+        XCTAssertFalse(pages.requiresStartPageOnEntry(to: space, showing: tab.id))
         XCTAssertTrue(
-            pages.surfacePage(for: tab, in: space, accessController: BrowserSpaceAccessController()) === resident)
+            pages.surfacePage(
+                for: tab, in: space, showing: tab.id, accessController: BrowserSpaceAccessController()) === resident)
         XCTAssertNil(pages.activePage, "Drawing a retained card must not activate or focus it")
         pages.selectSpace(in: browser)
 
@@ -1065,12 +1055,12 @@ final class BrowserPagePoolTests: XCTestCase {
     func testSpaceEntryDoesNotReuseAResidentPageFromAnOldProfile() throws {
         let tab = BrowserTab(title: "Moved", url: URL(string: "about:blank#moved"), placement: .current)
         let old = makeSpace(tabs: [tab], selectedTabID: tab.id)
-        let current = BrowserSpace(
+        let current = showing(tab.id, in: BrowserSpace(
             id: old.id, profile: BrowsingProfile(), name: old.name, symbol: old.symbol,
-            accent: old.accent, folders: [], tabs: [tab], selectedTabID: tab.id
-        )
+            accent: old.accent, folders: [], tabs: [tab]
+        ))
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [current], selectedSpaceID: current.id),
+            session: BrowserSession(spaces: [current]), selection: selection(showing: current.id),
             persistence: InMemoryBrowserSessionPersistence())
         let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
         pages.select(tab: tab, space: old)
@@ -1093,7 +1083,7 @@ final class BrowserPagePoolTests: XCTestCase {
             title: "Unloaded split", url: URL(string: "about:blank#split"), placement: .current, splitGroupID: group)
         let space = makeSpace(tabs: [draft, unloaded], selectedTabID: unloaded.id)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence())
         let pages = BrowserPagePool()
 
@@ -1150,8 +1140,7 @@ final class BrowserPagePoolTests: XCTestCase {
             credentialPreferences: original.credentialPreferences,
             accessPolicy: original.accessPolicy,
             isSavedTabsExpanded: original.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt,
-            selectedTabID: original.selectedTabID
+            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt
         )
         let pool = BrowserPagePool(
             browsingMode: .privateBrowsing,
@@ -1397,7 +1386,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let popupTabID = try XCTUnwrap(context.pool.activeTabID)
         let popupPage = try XCTUnwrap(context.pool.activePage)
         context.store.selectTab(openerTabID)
-        context.pool.select(session: context.store.session)
+        context.pool.select(session: context.store.presented)
         XCTAssertTrue(context.pool.containsResidentPage(for: popupTabID))
 
         context.pool.unloadPage(for: popupTabID)
@@ -1478,7 +1467,7 @@ final class BrowserPagePoolTests: XCTestCase {
     func testClosingPrivatePoolReleasesEveryResidentPage() {
         let session = BrowserSession.privateBrowsing()
         let pool = BrowserPagePool(browsingMode: .privateBrowsing)
-        pool.select(session: session)
+        pool.select(session: presented(session))
         XCTAssertFalse(pool.retainedTabIDs.isEmpty)
 
         pool.closePrivateBrowsingSession(session)
@@ -1559,7 +1548,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let temporaryTab = BrowserTab.startPage()
         var temporarySpace = space
         temporarySpace.tabs = [temporaryTab]
-        temporarySpace.selectedTabID = temporaryTab.id
+        fixtureSelections[temporarySpace.id] = temporaryTab.id
         let remover = RecordingWebsiteDataStoreRemover()
         let sharedRuntime = BrowserPageRuntimeStore()
         let primaryPool = BrowserPagePool(
@@ -1762,7 +1751,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 profileID: try XCTUnwrap(context.store.session.space(id: context.opener.spaceID)).profile.id))?.webView === popup)
         XCTAssertTrue(popup.configuration.websiteDataStore === configuration.websiteDataStore)
         context.store.selectTab(tab.id)
-        context.pool.select(session: context.store.session)
+        context.pool.select(session: context.store.presented)
         XCTAssertTrue(context.pool.activePage?.isAwaitingPopupNavigation == true)
         XCTAssertNil(context.pool.activePage?.pendingNavigationURL)
     }
@@ -1792,7 +1781,7 @@ final class BrowserPagePoolTests: XCTestCase {
             context.requestPopup(url: popupURL, navigationType: .linkActivated)
         )
         let popupPage = try XCTUnwrap(context.pool.activePage)
-        context.pool.select(session: context.store.session)
+        context.pool.select(session: context.store.presented)
 
         XCTAssertTrue(context.pool.activePage === popupPage)
         XCTAssertTrue(popupPage.isAwaitingPopupNavigation)
@@ -1805,7 +1794,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
         let space = makeSpace(tabs: [openerTab], selectedTabID: openerTab.id)
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(
@@ -1959,20 +1948,18 @@ final class BrowserPagePoolTests: XCTestCase {
     func testInvalidProfileAssignmentReleasesItsRememberedResponder() throws {
         let tab = BrowserTab(title: "Editor", url: nil, placement: .current)
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
-        let replacement = BrowserSpace(
+        let replacement = showing(tab.id, in: BrowserSpace(
             id: space.id, profile: BrowsingProfile(), name: space.name,
             symbol: space.symbol, accent: space.accent, folders: [],
-            tabs: [tab], selectedTabID: tab.id
-        )
+            tabs: [tab]
+        ))
         let pool = BrowserPagePool()
         pool.select(tab: tab, space: space)
         let original = try XCTUnwrap(pool.activePage)
         original.focusRestoration.remember(original.webView)
         original.focusRestoration.requestRestoration()
 
-        pool.reconcile(
-            session: BrowserSession(spaces: [replacement], selectedSpaceID: replacement.id)
-        )
+        pool.reconcile(session: BrowserSession(spaces: [replacement]))
 
         XCTAssertFalse(pool.containsResidentPage(for: tab.id))
         XCTAssertFalse(original.focusRestoration.hasPendingRestoration)
@@ -2253,7 +2240,7 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         XCTAssertNotNil(context.pool.presentedPage(for: popupTabID))
 
-        context.pool.select(session: context.store.session)
+        context.pool.select(session: context.store.presented)
 
         XCTAssertEqual(context.pool.presentedTabIDs, [popupTabID])
         XCTAssertNil(context.pool.presentedPage(for: openerTabID))
@@ -2268,7 +2255,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let target = BrowserTab(title: "Open", url: root, placement: .current)
         let space = makeSpace(tabs: [source, target], selectedTabID: source.id)
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence())
         let pool = BrowserPagePool()
         store.tabCopying = pool
@@ -2285,7 +2272,7 @@ final class BrowserPagePoolTests: XCTestCase {
         // Copying an unmaterialized copy must leave its own native state available.
         var nextCopy = BrowserTab(title: copy.title, url: copy.url, placement: .current)
         pool.prepareTabCopy(from: copy, to: &nextCopy, in: space)
-        pool.select(session: store.session)
+        pool.select(session: store.presented)
         let copyPage = try XCTUnwrap(pool.activePage)
         XCTAssertFalse(copyPage === originalPage)
         XCTAssertEqual(copyPage.webView.url, child)
@@ -2408,29 +2395,21 @@ final class BrowserPagePoolTests: XCTestCase {
             tabs: [stateful, fallback],
             selectedTabID: stateful.id
         )
-        var session = BrowserSession(
-            spaces: [space],
-            selectedSpaceID: space.id
-        )
+        var session = BrowserSession(spaces: [space])
         let pool = BrowserPagePool(
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
 
-        pool.select(session: session)
+        pool.select(session: presented(session))
         let originalPage = try XCTUnwrap(pool.activePage)
         try await load(firstURL, in: originalPage)
         try await load(secondURL, in: originalPage)
-        XCTAssertTrue(
-            session.updateTab(
-                url: secondURL,
-                title: "Second",
-                tabID: stateful.id,
-                in: space.id
-            )
-        )
+        session.spaces[0].tabs[0].url = secondURL
+        session.spaces[0].tabs[0].title = "Second"
 
-        session.closeTab(stateful.id, fallbackTabID: fallback.id)
+        archiveTab(stateful.id, reason: .closed, in: &session)
+        fixtureSelections[space.id] = fallback.id
         pool.reconcile(session: session)
         await pool.flushPendingTabStateWrites()
 
@@ -2443,8 +2422,9 @@ final class BrowserPagePoolTests: XCTestCase {
             "Closing must write the resident interaction state before the session sweep releases the page."
         )
 
-        session.restoreArchivedTab(stateful.id)
-        pool.select(session: session)
+        restoreArchivedTab(stateful.id, in: &session)
+        fixtureSelections[space.id] = stateful.id
+        pool.select(session: presented(session))
         let restoredPage = try XCTUnwrap(pool.activePage)
 
         XCTAssertFalse(restoredPage === originalPage)
@@ -2706,7 +2686,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let closed = BrowserTab(title: "Closed", url: url, placement: .current)
         let deleted = BrowserTab(title: "Deleted", url: url, placement: .current)
         let space = makeSpace(tabs: [live, closed, deleted], selectedTabID: live.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        var session = BrowserSession(spaces: [space])
         for tab in [live, closed, deleted] {
             archive.archive(
                 interactionState: Data("state".utf8),
@@ -2721,8 +2701,8 @@ final class BrowserPagePoolTests: XCTestCase {
             tabStateArchive: archive
         )
 
-        session.closeTab(closed.id)
-        XCTAssertTrue(session.deleteTab(deleted.id, in: space.id))
+        archiveTab(closed.id, reason: .closed, in: &session)
+        archiveTab(deleted.id, reason: .deleted, in: &session)
         pool.reconcile(session: session)
         await archive.flushPendingWrites()
 
@@ -2888,7 +2868,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
         let space = makeSpace(tabs: [openerTab], selectedTabID: openerTab.id)
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pool = BrowserPagePool(
@@ -2897,7 +2877,7 @@ final class BrowserPagePoolTests: XCTestCase {
             tabStateArchive: tabStateArchive,
             popupTabHost: store.popupTabHost
         )
-        pool.select(session: store.session)
+        pool.select(session: store.presented)
         return PopupAdoptionContext(
             store: store,
             pool: pool,
@@ -2909,7 +2889,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let sourceTab = BrowserTab(title: "Source", url: nil, placement: .current)
         let space = makeSpace(tabs: [sourceTab], selectedTabID: sourceTab.id)
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]), selection: selection(showing: space.id),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let updates = BrowserBackgroundPageUpdateRecorder()
@@ -2927,7 +2907,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 return BrowserModifiedLinkRegistration(
                     tab: tab,
                     space: space,
-                    session: store.session
+                    session: store.presented
                 )
             },
             backgroundPageDidUpdate: { update in
@@ -2936,7 +2916,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 return store.session
             }
         )
-        pool.select(session: store.session)
+        pool.select(session: store.presented)
         return ModifiedLinkContext(
             store: store,
             pool: pool,
@@ -2952,7 +2932,7 @@ final class BrowserPagePoolTests: XCTestCase {
         selectedTabID: TabID,
         accessPolicy: BrowserSpaceAccessPolicy = .open
     ) -> BrowserSpace {
-        BrowserSpace(
+        showing(selectedTabID, in: BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
             name: "Test",
@@ -2960,9 +2940,49 @@ final class BrowserPagePoolTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: tabs,
-            accessPolicy: accessPolicy,
-            selectedTabID: selectedTabID
-        )
+            accessPolicy: accessPolicy
+        ))
+    }
+
+    /// Which tab each fixture Space shows. Selection is window state, so the
+    /// fixtures keep it beside the session rather than inside it.
+    private var fixtureSelections: [SpaceID: TabID] = [:]
+
+    private func showing(_ tabID: TabID, in space: BrowserSpace) -> BrowserSpace {
+        fixtureSelections[space.id] = tabID
+        return space
+    }
+
+    /// What the core does when a tab is closed or deleted: the tab moves to
+    /// its Space's archive.
+    private func archiveTab(_ tabID: TabID, reason: TabArchiveReason, in session: inout BrowserSession) {
+        for index in session.spaces.indices {
+            guard let position = session.spaces[index].tabs.firstIndex(where: { $0.id == tabID }) else { continue }
+            let tab = session.spaces[index].tabs.remove(at: position)
+            session.spaces[index].archivedTabs.append(ArchivedTab(tab: tab, archivedAt: .now, reason: reason))
+        }
+    }
+
+    private func restoreArchivedTab(_ tabID: TabID, in session: inout BrowserSession) {
+        for index in session.spaces.indices {
+            guard let position = session.spaces[index].archivedTabs.firstIndex(where: { $0.id == tabID }) else { continue }
+            session.spaces[index].tabs.append(session.spaces[index].archivedTabs.remove(at: position).tab)
+        }
+    }
+
+    private func selection(showing spaceID: SpaceID) -> BrowserStoreSelection {
+        BrowserStoreSelection(selectedSpaceID: spaceID, selectedTabIDsBySpace: fixtureSelections)
+    }
+
+    private func presented(_ session: BrowserSession, showing spaceID: SpaceID? = nil) -> BrowserPresentedSession {
+        var tabs = fixtureSelections
+        for space in session.spaces where tabs[space.id] == nil {
+            tabs[space.id] = BrowserStoreSelection.fallbackTabID(in: space)
+        }
+        let shown = spaceID ?? session.defaultSpaceID ?? session.spaces.first?.id ?? SpaceID()
+        return BrowserPresentedSession(
+            session: session,
+            selection: BrowserStoreSelection(selectedSpaceID: shown, selectedTabIDsBySpace: tabs))
     }
 
     private func mountForFocus(_ page: BrowserPage) -> PageFocusMount {

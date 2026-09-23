@@ -23,7 +23,7 @@ struct BrowserCommands: Commands {
         CommandGroup(replacing: .appSettings) {
             Button("Settings…", systemImage: "gearshape") {
                 commandBrowser.openSettings()
-                commandPages.select(session: commandBrowser.session)
+                commandPages.select(session: commandBrowser.presented)
                 if focusedContext == nil { openWindow(id: BrowserSceneID.browser.rawValue) }
             }
             .keyboardShortcut(",", modifiers: .command)
@@ -109,7 +109,7 @@ struct BrowserCommands: Commands {
                 "Reload Page",
                 systemImage: BrowserShortcutCommand.reloadPage.paletteSymbol
             ) {
-                commandPages.reloadOrStop(in: commandBrowser.session)
+                commandPages.reloadOrStop(in: commandBrowser.presented)
             }
             .keyboardShortcut(shortcut(.reloadPage))
             .disabled(!actions.canReloadSelectedTab)
@@ -124,7 +124,7 @@ struct BrowserCommands: Commands {
                 "Reload from Origin",
                 systemImage: BrowserShortcutCommand.reloadFromOrigin.paletteSymbol
             ) {
-                commandPages.reloadFromOrigin(in: commandBrowser.session)
+                commandPages.reloadFromOrigin(in: commandBrowser.presented)
             }
             .keyboardShortcut(shortcut(.reloadFromOrigin))
             .disabled(!actions.canReloadSelectedTab)
@@ -422,7 +422,7 @@ struct BrowserCommands: Commands {
         CommandGroup(replacing: .help) {
             Button("Getting Started with Crest") {
                 commandBrowser.openGettingStarted()
-                commandPages.select(session: commandBrowser.session)
+                commandPages.select(session: commandBrowser.presented)
             }
         }
 

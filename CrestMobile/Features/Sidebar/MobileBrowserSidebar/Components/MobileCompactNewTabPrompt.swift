@@ -43,7 +43,7 @@ struct MobileCompactNewTabPrompt: View {
     #Preview("New tab prompt") {
         @Previewable @Namespace var namespace
         MobileCompactNewTabPrompt(
-            namespace: namespace, geometryID: BrowserSession.preview.selectedSpaceID, transitionEnded: { _ in },
+            namespace: namespace, geometryID: BrowserSession.preview.spaces[0].id, transitionEnded: { _ in },
             openNewTab: {}
         )
         .padding().frame(width: 340)

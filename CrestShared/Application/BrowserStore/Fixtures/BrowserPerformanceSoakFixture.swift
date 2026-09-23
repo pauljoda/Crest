@@ -36,7 +36,7 @@ enum BrowserPerformanceSoakFixture {
                 baseURL: baseURL
             )
         }
-        guard tabs.count == tabCount, let firstTab = tabs.first else { return nil }
+        guard tabs.count == tabCount, !tabs.isEmpty else { return nil }
         let space = BrowserSpace(
             id: SpaceID(),
             profile: profile,
@@ -49,10 +49,9 @@ enum BrowserPerformanceSoakFixture {
                 searchProvider: .google,
                 currentTabCleanupPolicy: .never,
                 contentBlockingPolicy: .off
-            ),
-            selectedTabID: firstTab.id
+            )
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        return BrowserSession(spaces: [space])
     }
 
     private static func makeHeavySession(
@@ -103,8 +102,7 @@ enum BrowserPerformanceSoakFixture {
                     folderID: folderID
                 )
             }
-            guard tabs.count == tabCount,
-                let firstCurrentTab = tabs.first(where: { $0.placement == .current })
+            guard tabs.count == tabCount, tabs.contains(where: { $0.placement == .current })
             else { return nil }
             let history = (1...96).compactMap { historyIndex -> BrowserHistoryEntry? in
                 guard
@@ -140,12 +138,11 @@ enum BrowserPerformanceSoakFixture {
                     searchProvider: .google,
                     currentTabCleanupPolicy: .never,
                     contentBlockingPolicy: .off
-                ),
-                selectedTabID: firstCurrentTab.id
+                )
             )
         }
-        guard spaces.count == appearances.count, let firstSpace = spaces.first else { return nil }
-        return BrowserSession(spaces: spaces, selectedSpaceID: firstSpace.id)
+        guard spaces.count == appearances.count, !spaces.isEmpty else { return nil }
+        return BrowserSession(spaces: spaces)
     }
 
     private static func isSafeLoopback(_ url: URL) -> Bool {

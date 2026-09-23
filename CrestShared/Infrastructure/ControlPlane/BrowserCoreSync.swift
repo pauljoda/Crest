@@ -23,32 +23,6 @@ enum BrowserCoreSync {
         return try reattachingAssets(result, from: session, byPosition: true)
     }
 
-    static func retain(_ session: BrowserSession, at date: Date) throws -> (session: BrowserSession, changed: Bool) {
-        let retained: RetainedSession = try query([
-            "version": 1, "operation": "session.retain", "session": try value(BrowserCoreSessionAuthority.compact(session)),
-            "now": date.timeIntervalSinceReferenceDate
-        ])
-        var result = retained.session
-        // Retention changes only history/archive, so live assets retain their
-        // exact positional ownership, including deliberately empty windows.
-        guard result.spaces.count == session.spaces.count else { throw CoreSyncError.rejected(CREST_INVALID_MESSAGE) }
-        for si in result.spaces.indices {
-            guard result.spaces[si].id == session.spaces[si].id, result.spaces[si].tabs.count == session.spaces[si].tabs.count
-            else { throw CoreSyncError.rejected(CREST_INVALID_MESSAGE) }
-            for ti in result.spaces[si].tabs.indices {
-                guard result.spaces[si].tabs[ti].id == session.spaces[si].tabs[ti].id else { throw CoreSyncError.rejected(CREST_INVALID_MESSAGE) }
-                result.spaces[si].tabs[ti].faviconData = session.spaces[si].tabs[ti].faviconData
-            }
-            let archive = Dictionary(session.spaces[si].archivedTabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-            for ai in result.spaces[si].archivedTabs.indices {
-                let id = result.spaces[si].archivedTabs[ai].id
-                result.spaces[si].archivedTabs[ai].tab.faviconData = archive[id]?.tab.faviconData
-            }
-        }
-        return (result, retained.changed)
-    }
-
-    private struct RetainedSession: Decodable { let session: BrowserSession; let changed: Bool }
     private struct RepairedSession: Decodable { let session: BrowserSession; let assets: [AssetSource] }
     private struct AssetSource: Decodable {
         let spaceIndex: Int

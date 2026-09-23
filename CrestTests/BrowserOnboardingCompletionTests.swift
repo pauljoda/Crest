@@ -83,7 +83,7 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
                 browser.session.spaces[0] = BrowserSpace(
                     id: first.id, profile: BrowsingProfile(), name: first.name, symbol: first.symbol,
                     accent: first.accent, folders: first.folders, tabs: first.tabs,
-                    accessPolicy: first.accessPolicy, selectedTabID: first.selectedTabID)
+                    accessPolicy: first.accessPolicy)
             case .removal: browser.session.spaces.removeFirst()
             }
             let beforeResolution = browser.session

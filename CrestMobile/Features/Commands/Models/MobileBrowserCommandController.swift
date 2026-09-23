@@ -172,7 +172,7 @@ struct MobileBrowserCommandController {
 
     var presentedSplitMembers: [BrowserTab] {
         guard let space = browser.selectedSpace else { return [] }
-        return space.presentedSplitMembers(for: space.selectedTabID)
+        return space.presentedSplitMembers(for: browser.selectedTabID(in: space.id))
     }
 
     var isSelectedTabInSplit: Bool {
@@ -196,7 +196,7 @@ struct MobileBrowserCommandController {
     func focusAdjacentSplitCard(offset: Int) -> TabID? {
         let members = presentedSplitMembers
         guard members.count > 1,
-            let selectedTabID = browser.selectedSpace?.selectedTabID,
+            let selectedTabID = browser.selectedSpace.flatMap { browser.selectedTabID(in: $0.id) },
             let index = members.firstIndex(where: { $0.id == selectedTabID })
         else { return nil }
         let count = members.count
@@ -209,7 +209,7 @@ struct MobileBrowserCommandController {
     @discardableResult
     func splitWithNextTab() -> TabID? {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID,
+            let selectedTabID = browser.selectedTabID(in: space.id),
             let candidate = browser.nextSplitJoinCandidate,
             browser.addTabToSplit(
                 BrowserTabDragItem(
@@ -228,7 +228,7 @@ struct MobileBrowserCommandController {
     /// Whether the focused card has anywhere to go `offset` slots along its run.
     func canMoveFocusedSplitCard(offset: Int) -> Bool {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID
+            let selectedTabID = browser.selectedTabID(in: space.id)
         else { return false }
         return browser.canMoveSplitMember(
             selectedTabID,
@@ -245,7 +245,7 @@ struct MobileBrowserCommandController {
     @discardableResult
     func moveFocusedSplitCard(offset: Int) -> TabID? {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID,
+            let selectedTabID = browser.selectedTabID(in: space.id),
             browser.moveSplitMember(
                 selectedTabID,
                 by: offset,
@@ -259,7 +259,7 @@ struct MobileBrowserCommandController {
     @discardableResult
     func removeSelectedTabFromSplit() -> TabID? {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID,
+            let selectedTabID = browser.selectedTabID(in: space.id),
             browser.removeTabFromSplit(
                 selectedTabID,
                 matching: BrowserSpaceRuntimeAssignment(space: space)
@@ -273,7 +273,7 @@ struct MobileBrowserCommandController {
     @discardableResult
     func separateSplitTabs() -> TabID? {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID,
+            let selectedTabID = browser.selectedTabID(in: space.id),
             browser.dissolveSplit(
                 containing: selectedTabID,
                 matching: BrowserSpaceRuntimeAssignment(space: space)
@@ -285,6 +285,6 @@ struct MobileBrowserCommandController {
 
     private func synchronizePages() {
         pages.reconcile(session: browser.session)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 }

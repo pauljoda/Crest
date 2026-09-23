@@ -41,7 +41,8 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
         let other = makeSpace(
             BrowserTab(title: "Private", url: URL(string: "https://secret.example/path"), placement: .current))
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [original, other], selectedSpaceID: original.id),
+            session: BrowserSession(spaces: [original, other]),
+            selection: BrowserStoreSelection(selectedSpaceID: original.id, selectedTabIDsBySpace: [original.id: tab.id]),
             persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
         let access = BrowserSpaceAccessController()
         let model = BrowserCommandPaletteModel(
@@ -53,32 +54,32 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
         model.applyCompletion = { _, _ in XCTFail("Stale proposal was accepted") }
         model.updateCompletionEditing(text: "exa", selection: NSRange(location: 3, length: 0), isComposing: false)
         XCTAssertNotNil(model.urlCompletion)
-        browser.session.selectedSpaceID = other.id
+        browser.selectPresentedSpace(other.id)
         XCTAssertNil(model.urlCompletion)
         XCTAssertFalse(model.acceptURLCompletion())
         var locked = original
         locked.accessPolicy = .deviceOwnerAuthentication
-        browser.session = BrowserSession(spaces: [locked], selectedSpaceID: locked.id)
+        browser.session = BrowserSession(spaces: [locked])
         XCTAssertNil(model.urlCompletion)
         XCTAssertFalse(model.acceptURLCompletion())
-        var selectionChanged = original
-        selectionChanged.selectedTabID = nil
-        browser.session = BrowserSession(spaces: [selectionChanged], selectedSpaceID: original.id)
+        browser.session = BrowserSession(spaces: [original])
+        browser.clearPresentedTabSelection(in: original.id)
         XCTAssertNil(model.urlCompletion)
         let replacement = BrowserSpace(
             id: original.id, profile: BrowsingProfile(), name: original.name, symbol: original.symbol,
-            accent: original.accent, folders: [], tabs: original.tabs, selectedTabID: tab.id)
-        browser.session = BrowserSession(spaces: [replacement], selectedSpaceID: original.id)
+            accent: original.accent, folders: [], tabs: original.tabs)
+        browser.session = BrowserSession(spaces: [replacement])
+        browser.presentTab(tab.id, in: original.id)
         XCTAssertNil(model.urlCompletion)
         XCTAssertFalse(model.acceptURLCompletion())
     }
 
     func testEmptySelectionCompletionCreatesDestinationOnlyAfterEnter() {
         let tab = BrowserTab(title: "Example", url: URL(string: "https://example.com/path"), placement: .saved)
-        var space = makeSpace(tab)
-        space.selectedTabID = nil
+        let space = makeSpace(tab)
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id),
             persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
         var explicitSelectionCount = 0
         let actions = BrowserEmptySelectionPaletteActions(
@@ -107,7 +108,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
     private func makeSpace(_ tab: BrowserTab) -> BrowserSpace {
         BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Current", symbol: "globe", accent: .indigo, folders: [],
-            tabs: [tab], selectedTabID: tab.id)
+            tabs: [tab])
     }
 
 }

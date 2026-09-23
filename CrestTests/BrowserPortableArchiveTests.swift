@@ -7,7 +7,7 @@ import XCTest
 final class BrowserPortableArchiveTests: XCTestCase {
     func testRoundTripPreservesPortableStateWithFreshIsolationIdentities() throws {
         let source = try makePortableFixture()
-        let sourceSpace = try XCTUnwrap(source.selectedSpace)
+        let sourceSpace = try XCTUnwrap(source.spaces.first)
 
         let data = try BrowserPortableArchive.encode(
             session: source,
@@ -45,10 +45,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         XCTAssertEqual(space.tabs.map(\.placement), sourceSpace.tabs.map(\.placement))
         XCTAssertTrue(space.tabs.allSatisfy { $0.faviconData == nil })
 
-        let selectedTab = try XCTUnwrap(
-            space.tabs.first { $0.id == space.selectedTabID }
-        )
-        XCTAssertEqual(selectedTab.title, "Reference")
+        XCTAssertEqual(space.savedTabs.first?.title, "Reference")
         XCTAssertEqual(
             space.savedTabs.first?.folderID,
             space.folders.last?.id
@@ -113,13 +110,9 @@ final class BrowserPortableArchiveTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [first, second],
-            splitGroups: [metadata],
-            selectedTabID: first.id
+            splitGroups: [metadata]
         )
-        let source = BrowserSession(
-            spaces: [sourceSpace],
-            selectedSpaceID: sourceSpace.id
-        )
+        let source = BrowserSession(spaces: [sourceSpace])
 
         let imported = try BrowserPortableArchive.decode(
             BrowserPortableArchive.encode(session: source)
@@ -185,7 +178,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
             BrowserSession.preview.spaces.count + imported.spaces.count
         )
         XCTAssertTrue(originalIDs.isSubset(of: store.session.spaces.map(\.id)))
-        XCTAssertEqual(store.session.selectedSpaceID, imported.spaces[0].id)
+        XCTAssertEqual(store.selectedSpaceID, imported.spaces[0].id)
         XCTAssertEqual(persistence.session, store.session)
     }
 
@@ -265,10 +258,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
                 ).materialize().spaces
             )
         }
-        let fullSession = BrowserSession(
-            spaces: existingSpaces,
-            selectedSpaceID: existingSpaces[0].id
-        )
+        let fullSession = BrowserSession(spaces: existingSpaces)
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: fullSession, persistence: persistence)
         let imported = try BrowserPortableArchive(
@@ -313,7 +303,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
 
     func testDuplicateHistoryURLsMergeWithoutDuplicatingRows() throws {
         let source = try makePortableFixture()
-        let sourceEntry = try XCTUnwrap(source.selectedSpace?.history.first)
+        let sourceEntry = try XCTUnwrap(source.spaces.first?.history.first)
         let data = try BrowserPortableArchive.encode(session: source)
         var root = try XCTUnwrap(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -428,9 +418,8 @@ final class BrowserPortableArchiveTests: XCTestCase {
             credentialPreferences: BrowserCredentialPreferences(
                 syncsCrestPasswordsWithICloud: false,
                 alsoOffersSaveToSystemPasswords: true
-            ),
-            selectedTabID: saved.id
+            )
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        return BrowserSession(spaces: [space])
     }
 }

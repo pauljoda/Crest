@@ -6,6 +6,17 @@ import os
 /// remain commands to the core session authority.
 enum BrowserCorePolicy {
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "CorePolicy")
+
+    /// The link decision when the core cannot answer. A person's own top-level
+    /// click opens a new tab in the same Space, so a pinned or saved tab never
+    /// leaves the page it keeps and nothing opens as a Peek or crosses a
+    /// profile; a script or subframe navigation keeps the engine's own
+    /// in-place behavior, which Crest never intercepts.
+    private static func unansweredLinkNavigation(isUserActivatedLink: Bool, isTopLevelNavigation: Bool)
+        -> BrowserLinkNavigationDecision {
+        isUserActivatedLink && isTopLevelNavigation ? .foregroundTab : .navigate
+    }
+
     static func modifiedLinkNavigation(destinationURL: URL?, context: BrowserPageNavigationContext?,
         isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isCommandModified: Bool,
         isOptionModified: Bool, isMiddleClick: Bool, peekModifier: BrowserLinkClickModifier,
@@ -21,7 +32,11 @@ enum BrowserCorePolicy {
             "savedUrl": context?.savedURL?.absoluteString as Any? ?? NSNull(),
             "automaticallyOpensPeek": context?.automaticallyOpensPeek ?? false
         ]), let value = response["decision"] as? String,
-            let decision = BrowserLinkNavigationDecision(rawValue: value) else { return .navigate }
+            let decision = BrowserLinkNavigationDecision(rawValue: value)
+        else {
+            return unansweredLinkNavigation(isUserActivatedLink: isUserActivatedLink,
+                isTopLevelNavigation: isTopLevelNavigation)
+        }
         return decision
     }
     static func linkNavigation(destinationURL: URL?, context: BrowserPageNavigationContext?,
@@ -37,7 +52,11 @@ enum BrowserCorePolicy {
             "savedUrl": context?.savedURL?.absoluteString as Any? ?? NSNull(),
             "automaticallyOpensPeek": context?.automaticallyOpensPeek ?? false
         ]), let value = response["decision"] as? String,
-            let decision = BrowserLinkNavigationDecision(rawValue: value) else { return .navigate }
+            let decision = BrowserLinkNavigationDecision(rawValue: value)
+        else {
+            return unansweredLinkNavigation(isUserActivatedLink: isUserActivatedLink,
+                isTopLevelNavigation: isTopLevelNavigation)
+        }
         return decision
     }
     static func addressIntent(_ input: String, provider: BrowserSearchProvider) -> BrowserAddressIntent? {
@@ -54,47 +73,6 @@ enum BrowserCorePolicy {
         guard let text = evaluate(["version": 1, "operation": "history.normalize", "url": url.absoluteString])?["url"] as? String
         else { return nil }
         return URL(string: text)
-    }
-    static func recordVisit(url: URL, title: String?, at date: Date, previous: BrowserHistoryEntry?)
-        -> (entry: BrowserHistoryEntry, maximumEntries: Int)? {
-        var request: [String: Any] = ["version": 1, "operation": "history.visit", "url": url.absoluteString,
-            "title": title as Any? ?? NSNull(), "now": date.timeIntervalSince1970, "newId": UUID().uuidString.lowercased()]
-        if let previous {
-            request["previous"] = ["id": previous.id.uuidString.lowercased(), "url": previous.url.absoluteString,
-                "title": previous.title, "firstVisitedAt": previous.firstVisitedAt.timeIntervalSince1970,
-                "lastVisitedAt": previous.lastVisitedAt.timeIntervalSince1970, "visitCount": previous.visitCount]
-        }
-        guard let response = evaluate(request), let record = response["entry"] as? [String: Any],
-            let maximum = response["maximumEntries"] as? Int, maximum > 0,
-            let bytes = try? JSONSerialization.data(withJSONObject: record) else { return nil }
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .secondsSince1970
-        guard let entry = try? decoder.decode(BrowserHistoryEntry.self, from: bytes) else { return nil }
-        return (entry, maximum)
-    }
-    static func expiredIndices(dates: [Date], now: Date, lifetime: TimeInterval) -> IndexSet? {
-        recordIndices(dates: dates, operation: "records.expired", parameters: [
-            "now": now.timeIntervalSinceReferenceDate, "lifetime": lifetime
-        ])
-    }
-    static func historyIndices(dates: [Date], from start: Date, until end: Date) -> IndexSet? {
-        recordIndices(dates: dates, operation: "history.remove_range", parameters: [
-            "start": start.timeIntervalSinceReferenceDate, "end": end.timeIntervalSinceReferenceDate
-        ])
-    }
-    private static func recordIndices(dates: [Date], operation: String, parameters: [String: Double]) -> IndexSet? {
-        var result = IndexSet()
-        for start in stride(from: 0, to: dates.count, by: 512) {
-            let end = min(start + 512, dates.count)
-            var request: [String: Any] = parameters
-            request["version"] = 1
-            request["operation"] = operation
-            request["timestamps"] = dates[start..<end].map(\.timeIntervalSinceReferenceDate)
-            guard let values = evaluate(request)?["indices"] as? [Int],
-                Set(values).count == values.count,
-                values.allSatisfy({ $0 >= 0 && $0 < end - start }) else { return nil }
-            values.forEach { result.insert(start + $0) }
-        }
-        return result
     }
     /// One off-screen page as the native store sees it. `inactiveSince` is
     /// missing for an engine tab that holds no Crest page of its own.

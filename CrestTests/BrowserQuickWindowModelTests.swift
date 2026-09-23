@@ -118,10 +118,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         model.preparePage(isActive: true)
         let lease = try XCTUnwrap(model.pageLease)
         let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(
-            spaces: [replacement, context.destination],
-            selectedSpaceID: replacement.id
-        )
+        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
 
         model.preparePage(isActive: true)
 
@@ -207,10 +204,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let originalLease = try XCTUnwrap(context.model.pageLease)
         var lockedSource = context.source
         lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
+        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
         context.model.releaseForUnavailableSpace()
 
         context.model.preparePage(isActive: true)
@@ -240,10 +234,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let lease = try XCTUnwrap(context.model.pageLease)
         var lockedSource = context.source
         lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
+        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
 
         XCTAssertFalse(context.model.promote(to: context.destination))
         XCTAssertEqual(
@@ -313,7 +304,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         XCTAssertNotNil(lease.page)
         XCTAssertFalse(model.wasPromoted)
         XCTAssertEqual(
-            context.browser.session.selectedSpaceID,
+            context.browser.selectedSpaceID,
             context.source.id
         )
     }
@@ -323,10 +314,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         context.model.preparePage(isActive: true)
         var protectedDestination = context.destination
         protectedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [context.source, protectedDestination],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, protectedDestination])
 
         XCTAssertFalse(
             context.model.availableSpaces.contains {
@@ -343,7 +331,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             context.browser.session.space(id: protectedDestination.id)?.tabs.count,
             protectedDestination.tabs.count
         )
-        XCTAssertEqual(context.browser.session.selectedSpaceID, context.source.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
     }
 
     func testCapturedDestinationCannotBeSelectedAfterItRelocks() throws {
@@ -351,10 +339,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let capturedDestination = context.destination
         var relockedDestination = context.destination
         relockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [context.source, relockedDestination],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, relockedDestination])
 
         context.model.selectSpace(capturedDestination)
 
@@ -362,7 +347,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             context.model.selectedAssignment,
             BrowserSpaceRuntimeAssignment(space: context.source)
         )
-        XCTAssertEqual(context.browser.session.selectedSpaceID, context.source.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
     }
 
     func testDeletingDestinationRejectsCapturedPromotionWithoutMutation() throws {
@@ -382,7 +367,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             context.browser.session.space(id: context.destination.id)?.tabs.count,
             context.destination.tabs.count
         )
-        XCTAssertEqual(context.browser.session.selectedSpaceID, context.source.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
     }
 
     func testLivePromotionAdoptsOnlyTheExactAssignedPage() throws {
@@ -410,7 +395,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         XCTAssertTrue(context.model.promote(to: context.destination))
         XCTAssertTrue(context.model.wasPromoted)
         XCTAssertEqual(
-            context.browser.session.selectedSpaceID,
+            context.browser.selectedSpaceID,
             context.destination.id
         )
         XCTAssertEqual(
@@ -534,10 +519,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
-            ),
+            session: BrowserSession(spaces: [source, destination]),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
@@ -591,8 +573,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 
@@ -627,8 +608,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             credentialPreferences: source.credentialPreferences,
             accessPolicy: source.accessPolicy,
             isSavedTabsExpanded: source.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt,
-            selectedTabID: source.selectedTabID
+            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
         )
     }
 

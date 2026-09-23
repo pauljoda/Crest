@@ -100,7 +100,7 @@ struct BrowserCurrentTabsDropSection: View {
             case .folder(let node):
                 BrowserFolderGroup(
                     node: node, tree: tree, ordering: ordering, tabSections: tabSections,
-                    spaceID: space.id, profileID: space.profile.id, selectedTabID: space.selectedTabID,
+                    spaceID: space.id, profileID: space.profile.id, selectedTabID: browser.selectedTabID(in: space.id),
                     browser: browser, pageAccess: pageAccess, spaceAccess: spaceAccess, capabilities: capabilities,
                     promotionNamespace: promotionNamespace, pullNewIcon: pullNewIcon, select: select,
                     isExpanded: Binding {
@@ -134,7 +134,7 @@ struct BrowserCurrentTabsDropSection: View {
                     tab: tab,
                     spaceID: space.id,
                     profileID: space.profile.id,
-                    isSelected: tab.id == space.selectedTabID,
+                    isSelected: tab.id == browser.selectedTabID(in: space.id),
                     canClose: true,
                     browser: browser,
                     spaceAccess: spaceAccess,
@@ -162,7 +162,7 @@ struct BrowserCurrentTabsDropSection: View {
                     members: members,
                     spaceID: space.id,
                     profileID: space.profile.id,
-                    selectedTabID: space.selectedTabID,
+                    selectedTabID: browser.selectedTabID(in: space.id),
                     canClose: true,
                     browser: browser,
                     spaceAccess: spaceAccess,

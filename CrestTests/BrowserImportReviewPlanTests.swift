@@ -369,7 +369,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         ]
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: spaces),
-            existing: BrowserSession(spaces: [], selectedSpaceID: SpaceID())
+            existing: BrowserSession(spaces: [])
         )
         plan.setSpace(spaces[2].id, isIncluded: false)
         plan.setPasswords(false, in: spaces[1].id)
@@ -436,8 +436,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
             symbol: "briefcase.fill",
             accent: .indigo,
             folders: [sourceReadingFolder, excludedFolder],
-            tabs: [includedTab, excludedTab],
-            selectedTabID: includedTab.id
+            tabs: [includedTab, excludedTab]
         )
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
@@ -478,18 +477,17 @@ final class BrowserImportReviewPlanTests: XCTestCase {
             symbol: "book.fill",
             accent: .indigo,
             folders: [usedFolder, unusedFolder],
-            tabs: [includedTab, excludedTab],
-            selectedTabID: includedTab.id
+            tabs: [includedTab, excludedTab]
         )
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: BrowserSession(spaces: [], selectedSpaceID: SpaceID())
+            existing: BrowserSession(spaces: [])
         )
 
         plan.setTab(excludedTab.id, isIncluded: false, in: importedSpace.id)
 
         let preview = try plan.preview(
-            mergingInto: BrowserSession(spaces: [], selectedSpaceID: SpaceID())
+            mergingInto: BrowserSession(spaces: [])
         )
         let created = try XCTUnwrap(preview.spaces.first)
         XCTAssertEqual(created.folders, [usedFolder])
@@ -521,10 +519,9 @@ final class BrowserImportReviewPlanTests: XCTestCase {
             symbol: "briefcase.fill",
             accent: .indigo,
             folders: [],
-            tabs: existingTabs,
-            selectedTabID: existingTabs[0].id
+            tabs: existingTabs
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        return BrowserSession(spaces: [space])
     }
 
     func testAnImportThatLandsContentClearsTheDisposableSeedMarker() throws {
@@ -620,8 +617,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
             symbol: "sidebar.left",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs[0].id
+            tabs: tabs
         )
     }
 
@@ -638,8 +634,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
             symbol: symbol,
             accent: accent,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs.first?.id
+            tabs: tabs
         )
     }
 

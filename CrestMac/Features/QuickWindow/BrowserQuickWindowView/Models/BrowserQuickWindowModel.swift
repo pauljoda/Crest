@@ -205,7 +205,7 @@ final class BrowserQuickWindowModel {
         }
         wasPromoted = true
         if outcome != .adoptedLivePage { pageLease?.release() }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         return true
     }
 

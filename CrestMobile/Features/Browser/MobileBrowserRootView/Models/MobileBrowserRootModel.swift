@@ -179,7 +179,7 @@ extension MobileBrowserRootModel {
             return
         }
         browser.selectTab(id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = browser.selectedTab?.url?.absoluteString ?? ""
         navigation.selectTab()
     }
@@ -194,7 +194,7 @@ extension MobileBrowserRootModel {
             )
         else { return false }
         browser.navigateSelectedTab(to: url)
-        pages.selectAndLoad(url, in: browser.session)
+        pages.selectAndLoad(url, in: browser.presented)
         address = url.absoluteString
         navigation.selectTab()
         return true
@@ -202,14 +202,14 @@ extension MobileBrowserRootModel {
 
     func openURL(_ url: URL) {
         browser.openNewTab(url: url)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = url.absoluteString
         navigation.selectTab()
     }
 
     func beginCompactNewTab() {
         browser.openNewTab()
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = ""
         navigation.selectTab()
         if navigation.regularSidebarPresentation == .floating {
@@ -223,7 +223,7 @@ extension MobileBrowserRootModel {
 
     func activateSelectedTab() {
         if routeSelectedSettingsAction() { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = browser.selectedTab?.url?.absoluteString ?? ""
         navigation.selectTab()
     }
@@ -248,7 +248,7 @@ extension MobileBrowserRootModel {
     ) {
         withAnimation(accessibleAnimation(CrestMotion.navigation, reduceMotion)) {
             guard browser.selectAdjacentSpace(direction) != nil else { return }
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
             address = browser.selectedTab?.url?.absoluteString ?? ""
         }
     }
@@ -265,7 +265,7 @@ extension MobileBrowserRootModel {
     var selectionSnapshot: MobileBrowserRootSelectionSnapshot {
         MobileBrowserRootSelectionSnapshot(
             sessionRevision: browser.sessionRevision,
-            selectedSpaceID: browser.session.selectedSpaceID,
+            selectedSpaceID: browser.selectedSpaceID,
             selectedProfileID: browser.selectedSpace?.profile.id,
             assignment: browser.selectedSpace.flatMap { space in
                 browser.selectedTab.map { tab in
@@ -284,7 +284,7 @@ extension MobileBrowserRootModel {
     ) -> MobileBrowserRootLockSnapshot {
         MobileBrowserRootLockSnapshot(
             sessionRevision: browser.sessionRevision,
-            selectedSpaceID: browser.session.selectedSpaceID,
+            selectedSpaceID: browser.selectedSpaceID,
             selectedProfileID: browser.selectedSpace?.profile.id,
             isLocked: selectedSpaceIsLocked,
             presentation: presentation
@@ -364,7 +364,7 @@ extension MobileBrowserRootModel {
             address = ""
             return
         }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = browser.selectedTab?.url?.absoluteString ?? ""
     }
 }
@@ -423,7 +423,7 @@ extension MobileBrowserRootModel {
             let revealsPage =
                 navigation.compactSidebarPresentation == .docked
             if revealsPage {
-                pages.select(session: browser.session)
+                pages.select(session: browser.presented)
                 address = browser.selectedTab?.url?.absoluteString ?? ""
             }
             withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
@@ -497,7 +497,7 @@ extension MobileBrowserRootModel {
             return
         }
         browser.selectTab(tabID)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = browser.selectedTab?.url?.absoluteString ?? ""
     }
 
@@ -508,7 +508,7 @@ extension MobileBrowserRootModel {
     /// one card at a time, not of the platform.
     func prepareSplitCardPages() {
         for member in presentedSplitMembers {
-            pages.prepareResidentPage(for: member.id, in: browser.session)
+            pages.prepareResidentPage(for: member.id, in: browser.presented)
         }
     }
 
@@ -532,7 +532,7 @@ extension MobileBrowserRootModel {
             )
         else { return nil }
         browser.selectTab(target)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = browser.selectedTab?.url?.absoluteString ?? ""
         return target
     }
@@ -581,7 +581,7 @@ extension MobileBrowserRootModel {
         }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = browser.selectedTab?.url?.absoluteString ?? ""
         return true
     }
@@ -617,7 +617,7 @@ extension MobileBrowserRootModel {
                 else { return false }
             }
         }
-        pages.selectAndLoad(url, in: browser.session)
+        pages.selectAndLoad(url, in: browser.presented)
         address = url.absoluteString
         return true
     }

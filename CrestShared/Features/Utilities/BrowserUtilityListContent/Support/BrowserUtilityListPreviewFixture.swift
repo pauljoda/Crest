@@ -51,8 +51,7 @@ enum BrowserUtilityListPreviewFixture {
             )
         ],
         archivedTabs: [archivedTab],
-        history: [historyEntry],
-        selectedTabID: TabID(rawValue: identifier(0x42))
+        history: [historyEntry]
     )
 
     static let preparingDownload = download(

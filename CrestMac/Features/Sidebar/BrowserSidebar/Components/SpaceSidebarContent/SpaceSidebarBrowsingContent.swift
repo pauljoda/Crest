@@ -138,7 +138,7 @@ struct SpaceSidebarBrowsingContent: View {
         BrowserTabActivationPolicy.activate(
             tabID,
             selectTab: browser.selectTab,
-            presentPage: { pages.select(session: browser.session) }
+            presentPage: { pages.select(session: browser.presented) }
         )
     }
 
@@ -192,8 +192,9 @@ private struct BrowserSidebarSelectionReconciler: View {
                     BrowserTabRuntimeAssignment(
                         tabID: tab.id, spaceID: assignment.spaceID, profileID: assignment.profileID)) ? tab.id : nil
             })
-        interaction.reconcileCollapsedFolders(in: space, residentTabIDs: resident)
-        guard browser.session.selectedSpaceID == assignment.spaceID,
+        interaction.reconcileCollapsedFolders(in: space, selectedTabID: browser.selectedTabID(in: space.id),
+            residentTabIDs: resident)
+        guard browser.selectedSpaceID == assignment.spaceID,
             !interaction.sidebarReorderState.hasLiftInFlight
         else { return }
         browser.tabMultiSelection.reconcile(
@@ -209,9 +210,9 @@ private struct BrowserSidebarSelectionReconciler: View {
                     id: $0.id, placement: $0.placement, folderID: $0.folderID,
                     splitGroupID: $0.splitGroupID, isStartPage: $0.isStartPage)
             } ?? [],
-            folders: space?.folders ?? [], selectedTabID: space?.selectedTabID,
+            folders: space?.folders ?? [], selectedTabID: browser.selectedTabID(in: assignment.spaceID),
             isSavedTabsExpanded: space?.isSavedTabsExpanded ?? false,
-            isSelected: browser.session.selectedSpaceID == assignment.spaceID,
+            isSelected: browser.selectedSpaceID == assignment.spaceID,
             isUnlocked: space.map { !spaceAccess.isLocked($0) } ?? false,
             residencyRevision: pageAccess.residencyRevision(),
             spaceMembership: browser.session.spaces.map {

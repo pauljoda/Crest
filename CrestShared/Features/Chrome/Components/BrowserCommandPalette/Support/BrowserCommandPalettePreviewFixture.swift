@@ -46,8 +46,7 @@ enum BrowserCommandPalettePreviewFixture {
                 lastVisitedAt: date(offset: 500),
                 visitCount: 7
             )
-        ],
-        selectedTabID: selectedTabID
+        ]
     )
 
     static let registry = BrowserCommandPaletteCommandRegistry(

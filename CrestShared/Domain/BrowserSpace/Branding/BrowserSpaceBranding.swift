@@ -1,7 +1,7 @@
 import Foundation
 
 struct BrowserSpaceBranding: Codable, Equatable, Sendable {
-    static let maximumColorCount = 3
+    static var maximumColorCount: Int { BrowserCoreLimits.current.brandColors }
     static let initialReadabilityFade = 0.45
 
     /// The vocabulary the currently shipped build draws. Banner strengths stored

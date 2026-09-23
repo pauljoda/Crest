@@ -5,12 +5,14 @@ import SwiftUI
 /// view, and a missing snapshot leaves the opaque access screen in place.
 struct LockedSpacePagePreview: View {
     let space: BrowserSpace
+    /// The tab the window shows in `space`.
+    let selectedTabID: TabID?
     let pages: BrowserPagePool
     @State private var images: [TabID: CGImage] = [:]
 
     var body: some View {
         HStack(spacing: BrowserChromeLayout.pageBrandSeamWidth) {
-            ForEach(space.presentedSplitMembers(for: space.selectedTabID)) { tab in
+            ForEach(space.presentedSplitMembers(for: selectedTabID)) { tab in
                 GeometryReader { geometry in
                     if let image = images[tab.id] {
                         Image(decorative: image, scale: 1)
@@ -26,7 +28,7 @@ struct LockedSpacePagePreview: View {
         .accessibilityHidden(true)
         .task(id: BrowserSpaceRuntimeAssignment(space: space)) {
             var obscured: [TabID: CGImage] = [:]
-            for tab in space.presentedSplitMembers(for: space.selectedTabID) {
+            for tab in space.presentedSplitMembers(for: selectedTabID) {
                 guard !Task.isCancelled else { return }
                 guard
                     let page = pages.residentPage(

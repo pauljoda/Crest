@@ -6,9 +6,10 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// <summary>A decoded native edit and its compact Space snapshot.</summary>
+/// <summary>A decoded native edit, its compact Space snapshot and the tab the
+/// requesting window shows in that Space, if any.</summary>
 internal sealed record SessionEditRequest(SessionOperation Operation, JsonObject Space, SessionEditArguments Arguments,
-    DateTimeOffset Now, double ReferenceSeconds) {
+    DateTimeOffset Now, double ReferenceSeconds, Guid? ViewedTabId) {
     #region Variables
 
     private static readonly DateTimeOffset SwiftEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -18,8 +19,8 @@ internal sealed record SessionEditRequest(SessionOperation Operation, JsonObject
     #region Actions - Construction
 
     public static SessionEditRequest Create(SessionOperation operation, JsonObject space,
-        SessionEditArguments arguments, double referenceSeconds)
-        => new(operation, space, arguments, SwiftEpoch.AddSeconds(referenceSeconds), referenceSeconds);
+        SessionEditArguments arguments, double referenceSeconds, Guid? viewedTabId)
+        => new(operation, space, arguments, SwiftEpoch.AddSeconds(referenceSeconds), referenceSeconds, viewedTabId);
 
     #endregion
 
@@ -35,14 +36,11 @@ internal sealed record SessionEditRequest(SessionOperation Operation, JsonObject
         var operation = SessionOperationCodes.Parse(Protocol.Text(parsed, "operation"));
         return Create(operation,
             (JsonObject)request["space"]!.DeepClone(), SessionEditArguments.Decode(request["arguments"]!.AsObject(), operation),
-            seconds);
+            seconds, request["viewedTabId"] is { } viewed ? NativeSessionAuthority.Id(viewed) : null);
     }
 
     public (LegacySessionDocument Document, WorkspaceState State) RestoreSpace() {
-        var session = new JsonObject {
-            ["spaces"] = new JsonArray(Space.DeepClone()),
-            ["selectedSpaceID"] = Space["id"]!.DeepClone()
-        };
+        var session = new JsonObject { ["spaces"] = new JsonArray(Space.DeepClone()) };
         var document = new LegacySessionDocument(new() { ["session"] = session });
         return (document, document.Read(new SystemIdSource()));
     }
@@ -56,7 +54,8 @@ internal sealed record SessionEditRequest(SessionOperation Operation, JsonObject
         ["operation"] = SessionOperationCodes.Name(Operation),
         ["space"] = Space.DeepClone(),
         ["arguments"] = Arguments.Encode(),
-        ["now"] = ReferenceSeconds
+        ["now"] = ReferenceSeconds,
+        ["viewedTabId"] = ViewedTabId?.ToString("D")
     }.ToJsonString());
 
     #endregion

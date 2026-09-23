@@ -41,6 +41,7 @@ struct SidebarChrome: View {
                 if context.utilityPresentation.surface == nil {
                     SpaceSidebarAddressBand(
                         space: space,
+                        selectedTabID: context.browser.selectedTabID(in: space.id),
                         pages: pages,
                         capabilities: context.capabilities,
                         address: address,
@@ -68,6 +69,6 @@ struct SidebarChrome: View {
     }
 
     private var selectedSpace: BrowserSpace? {
-        context.availableSpaces.first { $0.id == context.browser.session.selectedSpaceID }
+        context.availableSpaces.first { $0.id == context.browser.selectedSpaceID }
     }
 }

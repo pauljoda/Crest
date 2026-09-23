@@ -37,8 +37,7 @@ extension BrowserManualSetupModel {
             accent: draft.customization.accent,
             branding: draft.customization.branding,
             folders: [],
-            tabs: draft.addedTabs,
-            selectedTabID: draft.addedTabs.first?.id
+            tabs: draft.addedTabs
         )
     }
 

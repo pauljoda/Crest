@@ -5,7 +5,7 @@ import XCTest
 @MainActor
 final class BrowserPageAssignmentTests: XCTestCase {
     func testCurrentSelectionRequiresACompletePresentedRuntime() throws {
-        let session = BrowserSession.preview
+        let session = presented(BrowserSession.preview)
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
         XCTAssertFalse(pool.isPresentingSelection(in: session))
 
@@ -16,10 +16,10 @@ final class BrowserPageAssignmentTests: XCTestCase {
         let replacement = BrowserSpace(
             id: space.id, profile: BrowsingProfile(), name: space.name,
             symbol: space.symbol, accent: space.accent, folders: space.folders,
-            tabs: space.tabs, selectedTabID: space.selectedTabID
+            tabs: space.tabs
         )
-        let differentProfile = BrowserSession(
-            spaces: [replacement], selectedSpaceID: replacement.id
+        let differentProfile = BrowserPresentedSession(
+            session: BrowserSession(spaces: [replacement]), selection: session.selection
         )
         XCTAssertFalse(pool.isPresentingSelection(in: differentProfile))
 
@@ -35,25 +35,27 @@ final class BrowserPageAssignmentTests: XCTestCase {
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Split",
             symbol: "circle", accent: .indigo, folders: [],
-            tabs: [first, second], selectedTabID: first.id
+            tabs: [first, second]
         )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        var session = BrowserSession(spaces: [space])
+        var selection = BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: first.id])
+        let shown = { BrowserPresentedSession(session: session, selection: selection) }
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
-        pool.select(session: session)
-        XCTAssertTrue(pool.isPresentingSelection(in: session))
+        pool.select(session: shown())
+        XCTAssertTrue(pool.isPresentingSelection(in: shown()))
 
-        session.spaces[0].selectedTabID = second.id
-        XCTAssertFalse(pool.isPresentingSelection(in: session))
-        session.spaces[0].selectedTabID = first.id
+        selection.selectTab(second.id, in: space.id)
+        XCTAssertFalse(pool.isPresentingSelection(in: shown()))
+        selection.selectTab(first.id, in: space.id)
         session.spaces[0].tabs.reverse()
-        XCTAssertFalse(pool.isPresentingSelection(in: session))
+        XCTAssertFalse(pool.isPresentingSelection(in: shown()))
         session.spaces[0].tabs = [first]
-        XCTAssertFalse(pool.isPresentingSelection(in: session))
+        XCTAssertFalse(pool.isPresentingSelection(in: shown()))
         pool.reconcile(validTabIDs: [])
     }
 
     func testActivePageMatchingRequiresTheExactTabSpaceAndProfileAssignment() throws {
-        let session = BrowserSession.preview
+        let session = presented(BrowserSession.preview)
         let tab = try XCTUnwrap(session.selectedTab)
         let space = try XCTUnwrap(session.selectedSpace)
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
@@ -119,8 +121,7 @@ final class BrowserPageAssignmentTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: members + [outsider],
-            selectedTabID: members[0].id
+            tabs: members + [outsider]
         )
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
         pool.select(tab: members[0], space: space)
@@ -167,5 +168,10 @@ final class BrowserPageAssignmentTests: XCTestCase {
         )
 
         pool.reconcile(validTabIDs: [])
+    }
+
+    /// The preview session as a window that opened it with the launch selection.
+    private func presented(_ session: BrowserSession) -> BrowserPresentedSession {
+        BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session))
     }
 }

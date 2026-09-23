@@ -23,9 +23,6 @@ public static class NativeSyncQuery {
         JsonObject result;
         try {
             JsonNode value = NativeSyncOperationCodes.Parse(request["operation"]!.GetValue<string>()) switch {
-                NativeSyncOperation.BatchPreview => PreviewBatch(request),
-                NativeSyncOperation.TransferPreview => NativeTabTransfer.Evaluate(request["source"]!.AsObject(), request["destination"]!.AsObject(),
-                    request["arguments"]!.AsObject(), request["now"]!.GetValue<double>()),
                 NativeSyncOperation.Project => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
                     request["records"]!.AsArray().Select(n => n!.AsObject())),
                 NativeSyncOperation.Materialize => Materialize(request),
@@ -34,7 +31,6 @@ public static class NativeSyncQuery {
                 NativeSyncOperation.WorkspaceReview => NativeWorkspaceReview.Evaluate(request),
                 NativeSyncOperation.SessionRepair => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
                     request["emptySpace"] as JsonObject),
-                NativeSyncOperation.SessionRetain => NativeSessionMaintenance.Retain(request["session"]!.AsObject(), request["now"]!.GetValue<double>()),
                 _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)
             };
             result = new() { ["value"] = value };
@@ -44,12 +40,6 @@ public static class NativeSyncQuery {
         var bytes = Encoding.UTF8.GetBytes(result.ToJsonString());
         if (bytes.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         return bytes;
-    }
-
-    private static JsonNode PreviewBatch(JsonObject request) {
-        var core = new NativeSessionAuthority(Encoding.UTF8.GetBytes(request["session"]!.ToJsonString()));
-        var command = request["command"]!.AsObject();
-        return JsonNode.Parse(core.PrepareCommand(1, Encoding.UTF8.GetBytes(command.ToJsonString())).Output)!;
     }
 
     private static JsonObject Materialize(JsonObject request) {

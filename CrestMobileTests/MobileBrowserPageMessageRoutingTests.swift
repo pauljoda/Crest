@@ -119,8 +119,7 @@ final class MobileBrowserPageMessageRoutingTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 

@@ -4,6 +4,9 @@ struct BrowserSpaceSidebarPreview: View {
     let space: BrowserSpace
     @Environment(\.browserInteractionCapabilities) private var capabilities
 
+    /// No window shows a previewed Space, so it highlights its fallback tab.
+    private var selectedTabID: TabID? { BrowserStoreSelection.fallbackTabID(in: space) }
+
     var body: some View {
         ZStack {
             BrowserSpaceBannerBackground(branding: space.branding)
@@ -44,7 +47,7 @@ struct BrowserSpaceSidebarPreview: View {
                                 assignment: BrowserSpaceRuntimeAssignment(
                                     space: space
                                 ),
-                                selectedTabID: space.selectedTabID,
+                                selectedTabID: selectedTabID,
                                 select: { _ in },
                                 capabilities: capabilities
                             )
@@ -53,13 +56,13 @@ struct BrowserSpaceSidebarPreview: View {
                             title: "SAVED",
                             tabs: space.unfiledSavedTabs,
                             profileID: space.profile.id,
-                            selectedTabID: space.selectedTabID
+                            selectedTabID: selectedTabID
                         )
                         BrowserSpaceSidebarSection(
                             title: "OPEN TABS",
                             tabs: space.currentTabs,
                             profileID: space.profile.id,
-                            selectedTabID: space.selectedTabID
+                            selectedTabID: selectedTabID
                         )
                     }
                     .padding(

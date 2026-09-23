@@ -54,7 +54,7 @@ struct BrowserEngineSidebarAccessory: View {
     }
 
     private var pinnedActionPage: ChromiumNativePage? {
-        guard let tabID = space.selectedTabID else { return nil }
+        guard let tabID = browser.selectedTabID(in: space.id) else { return nil }
         return pages.activePage(
             matching: BrowserTabRuntimeAssignment(
                 tabID: tabID, spaceID: space.id, profileID: space.profile.id)

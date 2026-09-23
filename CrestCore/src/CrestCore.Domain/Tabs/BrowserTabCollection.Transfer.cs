@@ -16,7 +16,7 @@ public sealed partial class BrowserTabCollection {
         var placement = requestedPlacement ?? tab.Placement;
         Guid? folder = placement != TabPlacement.Pinned && destination.folders.Any(f => f.Id == requestedFolder && f.Location == placement)
             ? requestedFolder : null;
-        if (placement == TabPlacement.Pinned && destination.tabs.Count(t => t.Placement == placement) >= 12)
+        if (placement == TabPlacement.Pinned && destination.tabs.Count(t => t.Placement == placement) >= BrowserLimits.PinnedTabs)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         if (before == id) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
         bool Matches(BrowserTab tab) => tab.Placement == placement && tab.FolderId == folder;

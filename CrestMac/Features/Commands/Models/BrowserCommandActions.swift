@@ -102,9 +102,9 @@ struct BrowserCommandActions {
         case .closeWindow: closeKeyWindow()
         case .back: pages.goBack()
         case .forward: pages.goForward()
-        case .reloadPage: pages.reloadOrStop(in: browser.session)
+        case .reloadPage: pages.reloadOrStop(in: browser.presented)
         case .stopLoading: pages.stopLoading()
-        case .reloadFromOrigin: pages.reloadFromOrigin(in: browser.session)
+        case .reloadFromOrigin: pages.reloadFromOrigin(in: browser.presented)
         case .toggleSelectedTabPinned: toggleSelectedTabPinned()
         case .duplicateTab: duplicateSelectedTab()
         case .reopenClosedTab: reopenClosedTab()
@@ -272,7 +272,7 @@ struct BrowserCommandActions {
             if selectedTab.isStartPage {
                 browser.closeTab(selectedTab.id)
                 pages.reconcile(session: browser.session)
-                pages.select(session: browser.session)
+                pages.select(session: browser.presented)
             } else {
                 archiveSelectedTab()
             }
@@ -286,7 +286,7 @@ struct BrowserCommandActions {
                     tabID: selectedTab.id, spaceID: space.id, profileID: space.profile.id
                 ))
             {
-                pages.select(session: browser.session)
+                pages.select(session: browser.presented)
             }
         case .closeWindow:
             closeKeyWindow()
@@ -384,7 +384,7 @@ struct BrowserCommandActions {
             selected = url
         }
         guard let selected else { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         pages.load(selected)
         chrome.dismissCommandPalette()
     }
@@ -432,13 +432,13 @@ struct BrowserCommandActions {
         guard let tab = browser.selectedTab else { return }
         let destination: TabPlacement = tab.placement == .pinned ? .current : .pinned
         guard browser.moveTab(tab.id, to: destination) else { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     func duplicateSelectedTab() {
         guard browser.duplicateSelectedTab() != nil else { return }
         pages.reconcile(session: browser.session)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     func reopenClosedTab() {
@@ -449,19 +449,19 @@ struct BrowserCommandActions {
         else { return }
         browser.restoreArchivedTab(archived.id)
         browser.selectTab(archived.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     func cleanupCurrentTabs() {
         browser.cleanupCurrentTabs()
         pages.reconcile(session: browser.session)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     func archiveSelectedTab() {
         guard browser.archiveSelectedTab() != nil else { return }
         pages.reconcile(session: browser.session)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     func selectPreviousTab() {
@@ -480,18 +480,18 @@ struct BrowserCommandActions {
                 .max(by: { $0.lastActivatedAt < $1.lastActivatedAt })
         else { return }
         browser.selectTab(recent.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     func selectTab(offset: Int) {
         guard browser.selectAdjacentTab(offset: offset) != nil else { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     func selectTab(at index: Int) {
         guard orderedTabs.indices.contains(index) else { return }
         browser.selectTab(orderedTabs[index].id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     // MARK: - Split View
@@ -500,7 +500,7 @@ struct BrowserCommandActions {
     /// included. One element means the selection is an ordinary tab.
     var presentedSplitMembers: [BrowserTab] {
         guard let space = browser.selectedSpace else { return [] }
-        return space.presentedSplitMembers(for: space.selectedTabID)
+        return space.presentedSplitMembers(for: browser.selectedTabID(in: space.id))
     }
 
     var isSelectedTabInSplit: Bool {
@@ -515,7 +515,7 @@ struct BrowserCommandActions {
     /// split, creating the group when there is none yet.
     func splitWithNextTab() {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID,
+            let selectedTabID = browser.selectedTabID(in: space.id),
             let candidate = browser.nextSplitJoinCandidate,
             browser.addTabToSplit(
                 BrowserTabDragItem(
@@ -527,7 +527,7 @@ struct BrowserCommandActions {
                 at: nil
             )
         else { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     /// Moves focus one card along the presented run and wraps at both ends.
@@ -538,13 +538,13 @@ struct BrowserCommandActions {
     func focusAdjacentSplitCard(offset: Int) {
         let members = presentedSplitMembers
         guard members.count > 1,
-            let selectedTabID = browser.selectedSpace?.selectedTabID,
+            let selectedTabID = browser.selectedTab?.id,
             let index = members.firstIndex(where: { $0.id == selectedTabID })
         else { return }
         let count = members.count
         let wrappedIndex = (index + offset % count + count) % count
         browser.selectTab(members[wrappedIndex].id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     /// The on-screen direction resolved against this shell's layout, so a menu
@@ -566,7 +566,7 @@ struct BrowserCommandActions {
     /// Whether the focused card has anywhere to go `offset` slots along.
     func canMoveFocusedSplitCard(offset: Int) -> Bool {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID
+            let selectedTabID = browser.selectedTabID(in: space.id)
         else { return false }
         return browser.canMoveSplitMember(
             selectedTabID,
@@ -583,7 +583,7 @@ struct BrowserCommandActions {
     /// reads member order straight from the session and re-lays itself out.
     func moveFocusedSplitCard(offset: Int) {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID
+            let selectedTabID = browser.selectedTabID(in: space.id)
         else { return }
         browser.moveSplitMember(
             selectedTabID,
@@ -595,25 +595,25 @@ struct BrowserCommandActions {
     /// Drops the focused card out of its split and leaves it an ordinary tab.
     func removeSelectedTabFromSplit() {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID,
+            let selectedTabID = browser.selectedTabID(in: space.id),
             browser.removeTabFromSplit(
                 selectedTabID,
                 matching: BrowserSpaceRuntimeAssignment(space: space)
             )
         else { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     /// "Separate All Tabs": every card in the presented split becomes a tab.
     func separateSplitTabs() {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID,
+            let selectedTabID = browser.selectedTabID(in: space.id),
             browser.dissolveSplit(
                 containing: selectedTabID,
                 matching: BrowserSpaceRuntimeAssignment(space: space)
             )
         else { return }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
     }
 
     // MARK: - Spaces

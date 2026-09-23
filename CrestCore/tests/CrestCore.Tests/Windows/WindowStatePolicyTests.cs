@@ -15,19 +15,16 @@ public sealed class WindowStatePolicyTests {
         return JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
     }
 
-    private static JsonObject Space(Guid id, bool windowTab = false, bool captured = false, bool spaceSelection = false,
-        bool hasTabs = true) => new() {
-            ["id"] = id.ToString("D"),
-            ["windowTab"] = windowTab,
-            ["captured"] = captured,
-            ["spaceSelection"] = spaceSelection,
-            ["hasTabs"] = hasTabs
-        };
+    private static JsonObject Space(Guid id, bool windowTab = false, bool captured = false, bool hasTabs = true) => new() {
+        ["id"] = id.ToString("D"),
+        ["windowTab"] = windowTab,
+        ["captured"] = captured,
+        ["hasTabs"] = hasTabs
+    };
 
-    private static JsonObject Repair(Guid selected, Guid session, bool captures, JsonArray spaces, JsonArray? layouts = null) => new() {
+    private static JsonObject Repair(Guid selected, bool captures, JsonArray spaces, JsonArray? layouts = null) => new() {
         ["operation"] = "window.repair",
         ["selectedSpaceID"] = selected.ToString("D"),
-        ["sessionSelectedSpaceID"] = session.ToString("D"),
         ["capturesSelection"] = captures,
         ["spaces"] = spaces,
         ["splitLayouts"] = layouts ?? []
@@ -35,36 +32,33 @@ public sealed class WindowStatePolicyTests {
 
     [Fact]
     public void RepairKeepsLiveChoicesLeavesCapturedSpacesEmptyAndFallsBackOtherwise() {
-        Guid kept = Guid.NewGuid(), empty = Guid.NewGuid(), adopted = Guid.NewGuid(), first = Guid.NewGuid(), bare = Guid.NewGuid();
-        var result = Evaluate(Repair(kept, kept, true, [
+        Guid kept = Guid.NewGuid(), empty = Guid.NewGuid(), first = Guid.NewGuid(), bare = Guid.NewGuid();
+        var result = Evaluate(Repair(kept, true, [
             Space(kept, windowTab: true, captured: true),
-            Space(empty, captured: true, spaceSelection: true),
-            Space(adopted, spaceSelection: true),
+            Space(empty, captured: true),
             Space(first),
             Space(bare, hasTabs: false)
         ]));
-        Assert.Equal(["window", "none", "space", "first", "none"],
+        Assert.Equal(["window", "none", "first", "none"],
             result["selections"]!.AsArray().Select(value => value!.GetValue<string>()));
         Assert.Equal(kept.ToString("D"), result["selectedSpaceID"]!.GetValue<string>());
-        Assert.Equal(5, result["capturedSpaceIDs"]!.AsArray().Count);
+        Assert.Equal(4, result["capturedSpaceIDs"]!.AsArray().Count);
     }
 
     [Fact]
-    public void AMissingSpaceFallsBackToTheSessionThenTheFirstSpaceAndLegacyWindowsStayUncaptured() {
-        Guid gone = Guid.NewGuid(), session = Guid.NewGuid(), other = Guid.NewGuid();
-        var toSession = Evaluate(Repair(gone, session, false, [Space(other), Space(session)]));
-        Assert.Equal(session.ToString("D"), toSession["selectedSpaceID"]!.GetValue<string>());
-        Assert.Null(toSession["capturedSpaceIDs"]);
-        var toFirst = Evaluate(Repair(gone, Guid.NewGuid(), false, [Space(other), Space(session)]));
+    public void AMissingSpaceFallsBackToTheFirstSpaceAndLegacyWindowsStayUncaptured() {
+        Guid gone = Guid.NewGuid(), other = Guid.NewGuid(), later = Guid.NewGuid();
+        var toFirst = Evaluate(Repair(gone, false, [Space(other), Space(later)]));
         Assert.Equal(other.ToString("D"), toFirst["selectedSpaceID"]!.GetValue<string>());
-        var nothing = WindowStatePolicy.Repair(gone, Guid.NewGuid(), false, [], []);
+        Assert.Null(toFirst["capturedSpaceIDs"]);
+        var nothing = WindowStatePolicy.Repair(gone, false, [], []);
         Assert.Equal(gone, nothing.SelectedSpaceId);
     }
 
     [Fact]
     public void SplitLayoutsSurviveOnlyWhileTheirGroupRendersWithTheSameColumnCount() {
         Guid same = Guid.NewGuid(), grown = Guid.NewGuid(), gone = Guid.NewGuid();
-        var repair = WindowStatePolicy.Repair(Guid.NewGuid(), Guid.NewGuid(), true, [],
+        var repair = WindowStatePolicy.Repair(Guid.NewGuid(), true, [],
             [new(same, 3, 3), new(grown, 2, 3), new(gone, 2, null)]);
         Assert.Equal([same], repair.SplitLayouts);
     }
@@ -87,11 +81,11 @@ public sealed class WindowStatePolicyTests {
     public void RepairIsBoundedAndRejectsDuplicateSpaces() {
         var many = new JsonArray(Enumerable.Range(0, WindowStatePolicy.MaximumSpaces + 1).Select(_ => (JsonNode?)Space(Guid.NewGuid())).ToArray());
         Assert.Equal(BrowserRuleCodes.WindowStateLimit,
-            Assert.Throws<BrowserRuleException>(() => Evaluate(Repair(Guid.NewGuid(), Guid.NewGuid(), true, many))).Code);
+            Assert.Throws<BrowserRuleException>(() => Evaluate(Repair(Guid.NewGuid(), true, many))).Code);
         var id = Guid.NewGuid();
         Assert.Equal(BrowserRuleCodes.DuplicateSpace,
-            Assert.Throws<BrowserRuleException>(() => Evaluate(Repair(id, id, true, [Space(id), Space(id)]))).Code);
-        var extra = Repair(id, id, true, [Space(id)]);
+            Assert.Throws<BrowserRuleException>(() => Evaluate(Repair(id, true, [Space(id), Space(id)]))).Code);
+        var extra = Repair(id, true, [Space(id)]);
         extra["spaces"]![0]!["tabIDs"] = new JsonArray();
         Assert.Equal(ProtocolErrorCodes.UnexpectedMember, Assert.Throws<ProtocolException>(() => Evaluate(extra)).Code);
     }

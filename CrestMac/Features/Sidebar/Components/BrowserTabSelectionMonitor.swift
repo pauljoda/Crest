@@ -37,7 +37,7 @@ struct BrowserTabSelectionMonitor: View {
             view.assignment = assignment
             view.activate = activate
             view.globalFrame = globalFrame
-            if ownsFocus, browser.session.selectedSpaceID == assignment.spaceID,
+            if ownsFocus, browser.selectedSpaceID == assignment.spaceID,
                 view.window?.attachedSheet == nil,
                 view.window?.firstResponder !== view
             {
@@ -105,7 +105,7 @@ struct BrowserTabSelectionMonitor: View {
                 if event.type == .leftMouseDragged { return event }
             }
             guard let browser, let sidebarInteraction, let spaceAccess, let assignment,
-                browser.session.selectedSpaceID == assignment.spaceID
+                browser.selectedSpaceID == assignment.spaceID
             else { return event }
             guard
                 BrowserSidebarAccessPolicy.selectedUnlockedSpace(
@@ -219,7 +219,7 @@ struct BrowserTabSelectionMonitor: View {
                     let folder = browser.selectedSpace?.folders.first(where: { $0.id == folderID })
                 {
                     browser.setFolderCollapsed(
-                        folderID, in: browser.session.selectedSpaceID, isCollapsed: !folder.isCollapsed)
+                        folderID, in: browser.selectedSpaceID, isCollapsed: !folder.isCollapsed)
                 }
                 return nil
             }

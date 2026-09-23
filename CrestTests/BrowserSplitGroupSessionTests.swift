@@ -3,6 +3,7 @@ import XCTest
 
 @testable import Crest
 
+@MainActor
 final class BrowserSplitGroupSessionTests: XCTestCase {
     private let mutationDate = Date(timeIntervalSince1970: 1_000)
 
@@ -12,13 +13,12 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let bystander = makeTab("Bystander")
         let siblings = [makeTab("Head", group: oldGroup), makeTab("Tail", group: oldGroup)]
         let member = makeTab("Moved Member", group: oldGroup)
-        let space = makeSpace(tabs: [target, bystander] + siblings + [member], selectedTabID: target.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [target, bystander] + siblings + [member], selectedTabID: target.id)
 
-        XCTAssertTrue(session.addTabToSplit(member.id, joining: target.id, at: 0, in: space.id, at: mutationDate))
+        XCTAssertTrue(store.addTabToSplit(try dragItem(member.id, in: store), joining: target.id, at: 0))
 
-        let updated = try XCTUnwrap(session.selectedSpace)
-        XCTAssertEqual(updated.splitGroupMembers(of: oldGroup), siblings)
+        let updated = try XCTUnwrap(store.selectedSpace)
+        XCTAssertEqual(updated.splitGroupMembers(of: oldGroup).map(\.id), siblings.map(\.id))
         let joinedGroup = try XCTUnwrap(updated.splitGroup(containing: target.id))
         XCTAssertNotEqual(joinedGroup, oldGroup)
         XCTAssertEqual(updated.splitGroupMembers(of: joinedGroup).map(\.id), [member.id, target.id])
@@ -29,20 +29,11 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let first = makeTab("First")
         let second = makeTab("Second")
         let third = makeTab("Third")
-        let space = makeSpace(tabs: [first, second, third], selectedTabID: first.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [first, second, third], selectedTabID: first.id)
 
-        XCTAssertTrue(
-            session.addTabToSplit(
-                third.id,
-                joining: first.id,
-                at: nil,
-                in: space.id,
-                at: mutationDate
-            )
-        )
+        XCTAssertTrue(store.addTabToSplit(try dragItem(third.id, in: store), joining: first.id, at: nil))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.selectedSpace)
         XCTAssertEqual(repaired.tabs.map(\.id), [first.id, third.id, second.id])
         let groupID = try XCTUnwrap(repaired.splitGroup(containing: first.id))
         XCTAssertEqual(
@@ -50,7 +41,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             [first.id, third.id]
         )
         XCTAssertEqual(
-            repaired.selectedTabID,
+            store.selectedTabID(in: repaired.id),
             third.id,
             "Drop and context-menu callers rely on the joined tab taking focus."
         )
@@ -60,136 +51,38 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let target = makeTab("Target")
         let joiner = makeTab("Joiner")
         let bystander = makeTab("Bystander")
-        let space = makeSpace(tabs: [target, joiner, bystander], selectedTabID: target.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [target, joiner, bystander], selectedTabID: target.id)
 
-        XCTAssertTrue(
-            session.addTabToSplit(
-                joiner.id,
-                joining: target.id,
-                at: nil,
-                in: space.id,
-                at: mutationDate
-            )
-        )
+        XCTAssertTrue(store.addTabToSplit(try dragItem(joiner.id, in: store), joining: target.id, at: nil))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertEqual(
+        let repaired = try XCTUnwrap(store.selectedSpace)
+        XCTAssertNotNil(
             repaired.tabs.first { $0.id == target.id }?.positionModifiedAt,
-            mutationDate,
             "Membership rides the latestPosition merge win-set, so it needs a fresh stamp."
         )
-        XCTAssertEqual(
-            repaired.tabs.first { $0.id == joiner.id }?.positionModifiedAt,
-            mutationDate
-        )
+        XCTAssertNotNil(repaired.tabs.first { $0.id == joiner.id }?.positionModifiedAt)
         XCTAssertNil(repaired.tabs.first { $0.id == bystander.id }?.positionModifiedAt)
-    }
-
-    func testJoiningIsRefusedWhenTheRunIsAlreadyAtCap() throws {
-        let group = SplitGroupID()
-        let members = (0..<BrowserSplitGroupPolicy.maximumMembers).map {
-            makeTab("Member \($0)", group: group)
-        }
-        let joiner = makeTab("Joiner")
-        let space = makeSpace(tabs: members + [joiner], selectedTabID: members[0].id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertFalse(
-            session.addTabToSplit(
-                joiner.id,
-                joining: members[0].id,
-                at: nil,
-                in: space.id,
-                at: mutationDate
-            )
-        )
-
-        let repaired = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertEqual(repaired.tabs.map(\.id), (members + [joiner]).map(\.id))
-        XCTAssertNil(repaired.tabs.last?.splitGroupID)
-    }
-
-    func testJoiningIsRefusedForTheTargetItselfAndForAbsentTabs() {
-        let target = makeTab("Target")
-        let space = makeSpace(tabs: [target], selectedTabID: target.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertFalse(
-            session.addTabToSplit(
-                target.id,
-                joining: target.id,
-                at: nil,
-                in: space.id,
-                at: mutationDate
-            )
-        )
-        XCTAssertFalse(
-            session.addTabToSplit(
-                TabID(),
-                joining: target.id,
-                at: nil,
-                in: space.id,
-                at: mutationDate
-            )
-        )
-    }
-
-    func testAPinnedJoinerLeavesThePinnedSectionThroughThePlacementPlan() throws {
-        let pinned = makeTab("Pinned", placement: .pinned)
-        let target = makeTab("Target")
-        let trailing = makeTab("Trailing")
-        let space = makeSpace(tabs: [pinned, target, trailing], selectedTabID: target.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertTrue(
-            session.addTabToSplit(
-                pinned.id,
-                joining: target.id,
-                at: nil,
-                in: space.id,
-                at: mutationDate
-            )
-        )
-
-        let repaired = try XCTUnwrap(session.space(id: space.id))
-        let joined = try XCTUnwrap(repaired.tabs.first { $0.id == pinned.id })
-        XCTAssertEqual(joined.placement, .current)
-        let groupID = try XCTUnwrap(repaired.splitGroup(containing: target.id))
-        XCTAssertEqual(
-            repaired.splitGroupMembers(of: groupID).map(\.id),
-            [target.id, pinned.id]
-        )
     }
 
     func testMovingAMemberToAnotherSpaceClearsItsMembership() throws {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)
         let tail = makeTab("Tail", group: group)
-        let source = makeSpace(name: "Source", tabs: [head, tail], selectedTabID: head.id)
+        let source = makeSpace(name: "Source", tabs: [head, tail])
         let resident = makeTab("Resident")
-        let destination = makeSpace(
-            name: "Destination",
-            tabs: [resident],
-            selectedTabID: resident.id
-        )
-        var session = BrowserSession(
-            spaces: [source, destination],
-            selectedSpaceID: source.id
+        let destination = makeSpace(name: "Destination", tabs: [resident])
+        let store = BrowserStore(
+            session: BrowserSession(spaces: [source, destination]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: head.id, destination.id: resident.id]),
+            persistence: InMemoryBrowserSessionPersistence()
         )
 
-        XCTAssertTrue(
-            session.moveTab(
-                head.id,
-                from: source.id,
-                into: destination.id,
-                at: mutationDate
-            )
-        )
+        XCTAssertTrue(store.moveTab(head.id, from: source.id, into: destination.id))
 
-        let repairedDestination = try XCTUnwrap(session.space(id: destination.id))
+        let repairedDestination = try XCTUnwrap(store.session.space(id: destination.id))
         XCTAssertNil(repairedDestination.tabs.first { $0.id == head.id }?.splitGroupID)
-        let repairedSource = try XCTUnwrap(session.space(id: source.id))
+        let repairedSource = try XCTUnwrap(store.session.space(id: source.id))
         XCTAssertEqual(
             repairedSource.tabs.first { $0.id == tail.id }?.splitGroupID,
             group
@@ -200,76 +93,18 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         )
     }
 
-    func testRemovingTheOtherMemberDissolvesTheGroup() throws {
-        let group = SplitGroupID()
-        let head = makeTab("Head", group: group)
-        let tail = makeTab("Tail", group: group)
-        let space = makeSpace(tabs: [head, tail], selectedTabID: head.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertTrue(
-            session.removeTabFromSplit(tail.id, in: space.id, at: mutationDate)
-        )
-
-        let repaired = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertEqual(
-            repaired.tabs.map(\.id),
-            [head.id, tail.id],
-            "A two-card group dissolves anyway, so nothing is relocated."
-        )
-        XCTAssertNil(repaired.tabs[0].splitGroupID)
-        XCTAssertNil(repaired.tabs[1].splitGroupID)
-        XCTAssertEqual(repaired.tabs[0].positionModifiedAt, mutationDate)
-        XCTAssertEqual(repaired.tabs[1].positionModifiedAt, mutationDate)
-    }
-
-    func testRemovingAMiddleMemberSlidesItPastTheRunAndKeepsTheSurvivorsGrouped() throws {
-        let group = SplitGroupID()
-        let head = makeTab("Head", group: group)
-        let middle = makeTab("Middle", group: group)
-        let tail = makeTab("Tail", group: group)
-        let outsider = makeTab("Outsider")
-        let space = makeSpace(
-            tabs: [head, middle, tail, outsider],
-            selectedTabID: head.id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertTrue(
-            session.removeTabFromSplit(middle.id, in: space.id, at: mutationDate)
-        )
-
-        let repaired = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertEqual(
-            repaired.tabs.map(\.id),
-            [head.id, tail.id, middle.id, outsider.id],
-            "The departing tab lands directly after the members it left behind."
-        )
-        XCTAssertEqual(
-            repaired.splitGroupMembers(of: group).map(\.id),
-            [head.id, tail.id]
-        )
-        XCTAssertNil(repaired.tabs[2].splitGroupID)
-        XCTAssertEqual(repaired.tabs[2].positionModifiedAt, mutationDate)
-    }
-
     func testRemovingFromARunThatEndsItsSectionStaysInsideThatSection() throws {
         let group = SplitGroupID()
         let head = makeTab("Head", placement: .saved, group: group)
         let middle = makeTab("Middle", placement: .saved, group: group)
         let tail = makeTab("Tail", placement: .saved, group: group)
         let current = makeTab("Current")
-        let space = makeSpace(
-            tabs: [head, middle, tail, current],
-            selectedTabID: head.id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [head, middle, tail, current], selectedTabID: head.id)
+        let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
 
-        XCTAssertTrue(
-            session.removeTabFromSplit(middle.id, in: space.id, at: mutationDate)
-        )
+        XCTAssertTrue(store.removeTabFromSplit(middle.id, matching: assignment))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.selectedSpace)
         XCTAssertEqual(
             repaired.tabs.map(\.id),
             [head.id, tail.id, middle.id, current.id],
@@ -290,34 +125,17 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let tail = makeTab("Tail", group: group)
         let plain = makeTab("Plain")
         let lone = makeTab("Lone", group: SplitGroupID())
-        let space = makeSpace(
-            tabs: [head, tail, plain, lone],
-            selectedTabID: head.id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [head, tail, plain, lone], selectedTabID: head.id)
+        let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
 
+        XCTAssertFalse(store.moveSplitMember(plain.id, by: -1, matching: assignment))
         XCTAssertFalse(
-            session.moveSplitMember(plain.id, by: -1, in: space.id, at: mutationDate)
-        )
-        XCTAssertFalse(
-            session.moveSplitMember(
-                lone.id,
-                by: -1,
-                in: space.id,
-                at: mutationDate
-            ),
+            store.moveSplitMember(lone.id, by: -1, matching: assignment),
             "A run too short to draw presents as a plain tab, so it reorders nothing."
         )
-        XCTAssertFalse(
-            session.moveSplitMember(
-                TabID(),
-                by: 1,
-                in: space.id,
-                at: mutationDate
-            )
-        )
+        XCTAssertFalse(store.moveSplitMember(TabID(), by: 1, matching: assignment))
         XCTAssertEqual(
-            try XCTUnwrap(session.space(id: space.id)).tabs.map(\.id),
+            try XCTUnwrap(store.selectedSpace).tabs.map(\.id),
             [head.id, tail.id, plain.id, lone.id]
         )
     }
@@ -326,22 +144,12 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let group = SplitGroupID()
         let members = (0..<4).map { makeTab("Member \($0)", group: group) }
         let outsider = makeTab("Outsider")
-        let space = makeSpace(
-            tabs: members + [outsider],
-            selectedTabID: members[0].id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: members + [outsider], selectedTabID: members[0].id)
+        let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
 
-        XCTAssertTrue(
-            session.moveSplitMember(
-                members[3].id,
-                toMemberIndex: 1,
-                in: space.id,
-                at: mutationDate
-            )
-        )
+        XCTAssertTrue(store.moveSplitMember(members[3].id, toMemberIndex: 1, matching: assignment))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.selectedSpace)
         XCTAssertEqual(
             repaired.splitGroupMembers(of: group).map(\.id),
             [members[0].id, members[3].id, members[1].id, members[2].id]
@@ -351,9 +159,8 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             "The head kept slot 0, so it has no position opinion to upload."
         )
         for shifted in [members[3], members[1], members[2]] {
-            XCTAssertEqual(
+            XCTAssertNotNil(
                 repaired.tabs.first { $0.id == shifted.id }?.positionModifiedAt,
-                mutationDate,
                 "Order rides the latestPosition merge win-set."
             )
         }
@@ -368,17 +175,12 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let head = makeTab("Head", group: group)
         let tail = makeTab("Tail", group: group)
         let after = makeTab("After")
-        let space = makeSpace(
-            tabs: [before, head, tail, after],
-            selectedTabID: tail.id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [before, head, tail, after], selectedTabID: tail.id)
+        let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
 
-        XCTAssertTrue(
-            session.moveSplitMember(tail.id, by: -1, in: space.id, at: mutationDate)
-        )
+        XCTAssertTrue(store.moveSplitMember(tail.id, by: -1, matching: assignment))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.selectedSpace)
         XCTAssertEqual(
             repaired.tabs.map(\.id),
             [before.id, tail.id, head.id, after.id],
@@ -389,32 +191,21 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             [tail.id, head.id]
         )
         XCTAssertEqual(
-            repaired.selectedTabID,
+            store.selectedTabID(in: repaired.id),
             tail.id,
             "Reordering the cards does not change which one the chrome speaks for."
         )
     }
 
-    @MainActor
     func testTheStoreRefusesToMoveACardInAnUnselectedSpace() throws {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)
         let tail = makeTab("Tail", group: group)
-        let selected = makeSpace(
-            name: "Selected",
-            tabs: [makeTab("Only")],
-            selectedTabID: nil
-        )
-        let other = makeSpace(
-            name: "Other",
-            tabs: [head, tail],
-            selectedTabID: head.id
-        )
+        let selected = makeSpace(name: "Selected", tabs: [makeTab("Only")])
+        let other = makeSpace(name: "Other", tabs: [head, tail])
         let store = BrowserStore(
-            session: BrowserSession(
-                spaces: [selected, other],
-                selectedSpaceID: selected.id
-            ),
+            session: BrowserSession(spaces: [selected, other]),
+            selection: BrowserStoreSelection(selectedSpaceID: selected.id, selectedTabIDsBySpace: [other.id: head.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let assignment = BrowserSpaceRuntimeAssignment(space: other)
@@ -431,15 +222,15 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)
         let tail = makeTab("Tail", group: group)
-        let space = makeSpace(tabs: [head, tail], selectedTabID: head.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [head, tail], selectedTabID: head.id)
+        let spaceID = store.selectedSpaceID
 
-        session.closeTab(tail.id, at: mutationDate)
+        XCTAssertTrue(store.closeTab(tail.id, in: spaceID))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.session.space(id: spaceID))
         XCTAssertEqual(repaired.tabs.map(\.id), [head.id])
         XCTAssertNil(repaired.tabs[0].splitGroupID)
-        XCTAssertEqual(repaired.tabs[0].positionModifiedAt, mutationDate)
+        XCTAssertNotNil(repaired.tabs[0].positionModifiedAt)
         XCTAssertNil(
             repaired.archivedTabs.last?.tab.splitGroupID,
             "An archived tab leaves its split behind."
@@ -449,12 +240,12 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
     func testClosingOneOfThreeKeepsTheRemainingGroup() throws {
         let group = SplitGroupID()
         let members = (0..<3).map { makeTab("Member \($0)", group: group) }
-        let space = makeSpace(tabs: members, selectedTabID: members[0].id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: members, selectedTabID: members[0].id)
+        let spaceID = store.selectedSpaceID
 
-        session.closeTab(members[1].id, at: mutationDate)
+        XCTAssertTrue(store.closeTab(members[1].id, in: spaceID))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.session.space(id: spaceID))
         XCTAssertEqual(
             repaired.splitGroupMembers(of: group).map(\.id),
             [members[0].id, members[2].id],
@@ -466,8 +257,8 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let group = SplitGroupID()
         var lone = makeTab("Lone", group: group)
         lone.markPositionModified(at: mutationDate)
-        let space = makeSpace(tabs: [lone], selectedTabID: lone.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let space = makeSpace(tabs: [lone])
+        var session = BrowserSession(spaces: [space])
 
         session = try BrowserCoreSync.repair(session)
 
@@ -483,23 +274,12 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let head = makeTab("Head", group: group)
         let tail = makeTab("Tail", group: group)
         let trailing = makeTab("Trailing")
-        let space = makeSpace(
-            tabs: [saved, head, tail, trailing],
-            selectedTabID: head.id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let store = makeStore(tabs: [saved, head, tail, trailing], selectedTabID: head.id)
+        let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
 
-        XCTAssertTrue(
-            session.moveSplitGroup(
-                group,
-                to: .saved,
-                before: nil,
-                in: space.id,
-                at: mutationDate
-            )
-        )
+        XCTAssertTrue(store.moveSplitGroup(group, matching: assignment, to: .saved))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.selectedSpace)
         XCTAssertEqual(
             repaired.tabs.map(\.id),
             [saved.id, head.id, tail.id, trailing.id]
@@ -513,17 +293,15 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         )
     }
 
-    @MainActor
     func testTheStoreRefusesToJoinATabFromAnotherSpace() throws {
         let target = makeTab("Target")
-        let selected = makeSpace(name: "Selected", tabs: [target], selectedTabID: target.id)
+        let selected = makeSpace(name: "Selected", tabs: [target])
         let foreign = makeTab("Foreign")
-        let other = makeSpace(name: "Other", tabs: [foreign], selectedTabID: foreign.id)
+        let other = makeSpace(name: "Other", tabs: [foreign])
         let store = BrowserStore(
-            session: BrowserSession(
-                spaces: [selected, other],
-                selectedSpaceID: selected.id
-            ),
+            session: BrowserSession(spaces: [selected, other]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: selected.id, selectedTabIDsBySpace: [selected.id: target.id, other.id: foreign.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
 
@@ -541,17 +319,13 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         XCTAssertNil(store.selectedSpace?.tabs.first?.splitGroupID)
     }
 
-    @MainActor
     func testTheStoreJoinsRemovesAndDissolvesInsideTheSelectedSpace() throws {
         let target = makeTab("Target")
         let joiner = makeTab("Joiner")
         let extra = makeTab("Extra")
-        let space = makeSpace(tabs: [target, joiner, extra], selectedTabID: target.id)
+        let space = makeSpace(tabs: [target, joiner, extra])
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
+        let store = makeStore(space: space, selectedTabID: target.id)
         let item = BrowserTabDragItem(
             tabID: joiner.id,
             spaceID: space.id,
@@ -586,7 +360,6 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
 
     // MARK: - "Split With Next Tab" candidate resolution
 
-    @MainActor
     func testJoinCandidateResolutionSkipsGroupedTabsAndStartPages() throws {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)
@@ -605,7 +378,6 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         )
     }
 
-    @MainActor
     func testAFullGroupAndDraftSelectionOfferNoCandidateWhilePinnedTabsCanBeCopied() throws {
         let group = SplitGroupID()
         let members = (1...4).map { makeTab("Member \($0)", group: group) }
@@ -635,16 +407,12 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
 
     // MARK: - "Split with Current Tab" and "Open Link in Split View"
 
-    @MainActor
     func testSplittingWithTheCurrentTabJoinsTheSubjectAndFocusesIt() throws {
         let selected = makeTab("Selected")
         let subject = makeTab("Subject", placement: .pinned)
-        let space = makeSpace(tabs: [selected, subject], selectedTabID: selected.id)
+        let space = makeSpace(tabs: [selected, subject])
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
+        let store = makeStore(space: space, selectedTabID: selected.id)
 
         XCTAssertTrue(
             store.canSplitTabWithSelectedTab(subject.id, matching: assignment),
@@ -667,25 +435,18 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             grouped.tabs.first { $0.id == subject.id }?.placement,
             .pinned
         )
-        XCTAssertEqual(grouped.selectedTabID, copied.id)
+        XCTAssertEqual(store.selectedTabID(in: space.id), copied.id)
     }
 
-    @MainActor
     func testSplittingWithTheCurrentTabIsRefusedForSelfSiblingsAndFullGroups()
         throws
     {
         let group = SplitGroupID()
         let members = (1...4).map { makeTab("Member \($0)", group: group) }
         let outsider = makeTab("Outsider")
-        let space = makeSpace(
-            tabs: members + [outsider],
-            selectedTabID: members[0].id
-        )
+        let space = makeSpace(tabs: members + [outsider])
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
+        let store = makeStore(space: space, selectedTabID: members[0].id)
 
         XCTAssertFalse(
             store.canSplitTabWithSelectedTab(members[0].id, matching: assignment),
@@ -704,17 +465,13 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         )
     }
 
-    @MainActor
     func testOpeningALinkInSplitViewCreatesTheTabAndGroupsItWithTheTarget()
         throws
     {
         let target = makeTab("Target")
-        let space = makeSpace(tabs: [target], selectedTabID: target.id)
+        let space = makeSpace(tabs: [target])
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
+        let store = makeStore(space: space, selectedTabID: target.id)
         let link = try XCTUnwrap(URL(string: "https://example.com/linked"))
 
         let openedID = try XCTUnwrap(
@@ -735,7 +492,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             grouped.tabs.first { $0.id == openedID }?.url,
             link
         )
-        XCTAssertEqual(grouped.selectedTabID, openedID)
+        XCTAssertEqual(store.selectedTabID(in: space.id), openedID)
     }
 
     func testSplitGroupCustomizationPersistsEveryFieldAndFullEmojiCluster()
@@ -744,39 +501,19 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)
         let tail = makeTab("Tail", group: group)
-        let space = makeSpace(tabs: [head, tail], selectedTabID: head.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let space = makeSpace(tabs: [head, tail])
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        let store = makeStore(space: space, selectedTabID: head.id)
         let tint = BrowserSpaceBrandColor(red: 0.16, green: 0.48, blue: 0.82)
         let emoji = "👨🏽‍💻"
 
-        XCTAssertTrue(
-            session.setSplitGroupTitle(
-                "  Research Pair  ",
-                groupID: group,
-                in: space.id,
-                at: mutationDate
-            )
-        )
-        XCTAssertTrue(
-            session.setSplitGroupEmojiIcon(
-                emoji,
-                groupID: group,
-                in: space.id,
-                at: mutationDate.addingTimeInterval(1)
-            )
-        )
-        XCTAssertTrue(
-            session.setSplitGroupTint(
-                tint,
-                groupID: group,
-                in: space.id,
-                at: mutationDate.addingTimeInterval(2)
-            )
-        )
+        XCTAssertTrue(store.setSplitGroupTitle("  Research Pair  ", groupID: group, matching: assignment))
+        XCTAssertTrue(store.setSplitGroupEmojiIcon(emoji, groupID: group, matching: assignment))
+        XCTAssertTrue(store.setSplitGroupTint(tint, groupID: group, matching: assignment))
 
         let decoded = try JSONDecoder().decode(
             BrowserSession.self,
-            from: JSONEncoder().encode(session)
+            from: JSONEncoder().encode(store.session)
         )
         let metadata = try XCTUnwrap(
             decoded.space(id: space.id)?.splitGroupMetadata(for: group)
@@ -784,41 +521,23 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         XCTAssertEqual(metadata.displayTitle, "Research Pair")
         XCTAssertEqual(metadata.emojiIcon, emoji)
         XCTAssertEqual(metadata.tint, tint)
-        XCTAssertEqual(metadata.titleModifiedAt, mutationDate)
-        XCTAssertEqual(
-            metadata.iconModifiedAt,
-            mutationDate.addingTimeInterval(1)
-        )
-        XCTAssertEqual(
-            metadata.tintModifiedAt,
-            mutationDate.addingTimeInterval(2)
-        )
+        XCTAssertNotNil(metadata.titleModifiedAt)
+        XCTAssertNotNil(metadata.iconModifiedAt)
+        XCTAssertNotNil(metadata.tintModifiedAt)
     }
 
     func testDissolvingAGroupRemovesItsDurableCustomization() throws {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)
         let tail = makeTab("Tail", group: group)
-        let space = makeSpace(tabs: [head, tail], selectedTabID: head.id)
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-        XCTAssertTrue(
-            session.setSplitGroupTitle(
-                "Temporary Pair",
-                groupID: group,
-                in: space.id,
-                at: mutationDate
-            )
-        )
+        let space = makeSpace(tabs: [head, tail])
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        let store = makeStore(space: space, selectedTabID: head.id)
+        XCTAssertTrue(store.setSplitGroupTitle("Temporary Pair", groupID: group, matching: assignment))
 
-        XCTAssertTrue(
-            session.removeTabFromSplit(
-                tail.id,
-                in: space.id,
-                at: mutationDate.addingTimeInterval(1)
-            )
-        )
+        XCTAssertTrue(store.removeTabFromSplit(tail.id, matching: assignment))
 
-        let repaired = try XCTUnwrap(session.space(id: space.id))
+        let repaired = try XCTUnwrap(store.session.space(id: space.id))
         XCTAssertNil(repaired.splitGroupMetadata(for: group))
         XCTAssertTrue(repaired.splitGroups.isEmpty)
     }
@@ -839,11 +558,10 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [lone],
-            splitGroups: [metadata],
-            selectedTabID: lone.id
+            splitGroups: [metadata]
         )
 
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = BrowserSession(spaces: [space])
 
         XCTAssertEqual(
             try XCTUnwrap(session.space(id: space.id)).splitGroups,
@@ -856,7 +574,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         throws
     {
         let tab = makeTab("Legacy")
-        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeSpace(tabs: [tab])
         var object = try XCTUnwrap(
             JSONSerialization.jsonObject(
                 with: JSONEncoder().encode(space)
@@ -872,28 +590,33 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         XCTAssertTrue(decoded.splitGroups.isEmpty)
     }
 
-    @MainActor
     private func makeStore(
         folders: [BrowserFolder] = [],
         tabs: [BrowserTab],
         selectedTabID: TabID?
     ) -> BrowserStore {
-        let space = makeSpace(
-            folders: folders,
-            tabs: tabs,
-            selectedTabID: selectedTabID
-        )
-        return BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+        makeStore(space: makeSpace(folders: folders, tabs: tabs), selectedTabID: selectedTabID)
+    }
+
+    /// A window showing `space` on `selectedTabID`.
+    private func makeStore(space: BrowserSpace, selectedTabID: TabID?) -> BrowserStore {
+        BrowserStore(
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: space.id, selectedTabIDsBySpace: selectedTabID.map { [space.id: $0] } ?? [:]),
             persistence: InMemoryBrowserSessionPersistence()
         )
+    }
+
+    private func dragItem(_ tabID: TabID, in store: BrowserStore) throws -> BrowserTabDragItem {
+        let space = try XCTUnwrap(store.selectedSpace)
+        return BrowserTabDragItem(tabID: tabID, spaceID: space.id, profileID: space.profile.id)
     }
 
     private func makeSpace(
         name: String = "Work",
         folders: [BrowserFolder] = [],
-        tabs: [BrowserTab],
-        selectedTabID: TabID?
+        tabs: [BrowserTab]
     ) -> BrowserSpace {
         BrowserSpace(
             id: SpaceID(),
@@ -902,8 +625,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             symbol: "briefcase.fill",
             accent: .indigo,
             folders: folders,
-            tabs: tabs,
-            selectedTabID: selectedTabID
+            tabs: tabs
         )
     }
 

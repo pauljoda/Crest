@@ -482,20 +482,17 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         -> (model: BrowserMacWindowModel, assignment: BrowserSpaceRuntimeAssignment, decision: BrowserLinkRoutingDecision)? {
         guard let model = externalTargetModel() else { return nil }
         let browser = model.browser
-        let decision = BrowserLinkPreferenceStore.shared.routingDecision(
-            for: url, in: browser.session, unavailableSpaceIDs: browser.deletingSpaceIDs)
         // A link that arrived from another process never raises the biometric
-        // prompt for a locked Space; it opens in a Quick Window on an unlocked one.
-        guard let destination = BrowserExternalLinkLockPolicy.destination(
-            routedTo: decision.spaceID, selectedSpaceID: browser.selectedSpace?.id,
-            spaces: browser.session.spaces, unavailableSpaceIDs: browser.deletingSpaceIDs,
-            isLocked: application.spaceAccess.isLocked) else { return nil }
-        let space = destination.space
+        // prompt for a locked Space; the core opens it in a Quick Window on an
+        // unlocked one.
+        guard let decision = BrowserLinkPreferenceStore.shared.routingDecision(
+            for: url, in: browser.presented, unavailableSpaceIDs: browser.deletingSpaceIDs,
+            lockedSpaceIDs: Set(browser.session.spaces.filter(application.spaceAccess.isLocked).map(\.id))),
+            let space = browser.session.space(id: decision.spaceID)
+        else { return nil }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard await application.spaceAccess.unlock(space), browser.space(matching: assignment) != nil else { return nil }
-        let effective: BrowserLinkRoutingDecision =
-            destination.substitutesForLockedSpace ? .quickWindow(spaceID: space.id) : decision
-        return (model, assignment, effective)
+        return (model, assignment, decision)
     }
 
     private func openExternalURL(_ url: URL) async {

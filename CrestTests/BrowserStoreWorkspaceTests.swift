@@ -15,7 +15,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
 
         XCTAssertNil(empty.selectedTab)
         XCTAssertEqual(empty.session.tabIDs, ids)
-        first.deleteTab(tab.id, in: first.session.selectedSpaceID)
+        first.deleteTab(tab.id, in: first.selectedSpaceID)
         XCTAssertNil(empty.selectedTab)
         XCTAssertFalse(empty.session.tabIDs.contains(tab.id))
     }
@@ -23,7 +23,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
     func testAnExplicitEmptyWindowSelectionSurvivesPersistenceAndRestoration() throws {
         let owner = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
         let empty = owner.makeWindowStore(restoresTabSelection: false)
-        let captured = BrowserWindowState(restoring: empty.session)
+        let captured = BrowserWindowState(restoring: empty.selection, in: empty.session)
         var saved = try JSONDecoder().decode(BrowserWindowState.self, from: JSONEncoder().encode(captured))
         saved.repair(using: owner.session)
 
@@ -31,12 +31,13 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
 
         XCTAssertNil(saved.selectedTab(in: owner.session))
         XCTAssertNil(restored.selectedTab)
-        XCTAssertTrue(restored.session.spaces.allSatisfy { $0.selectedTabID == nil })
+        XCTAssertTrue(restored.session.spaces.allSatisfy { restored.selectedTabID(in: $0.id) == nil })
         XCTAssertEqual(restored.session.tabIDs, owner.session.tabIDs)
 
-        var legacy = BrowserWindowState(selectedSpaceID: owner.session.selectedSpaceID, selectedTabIDsBySpace: [:])
+        var legacy = BrowserWindowState(selectedSpaceID: owner.selectedSpaceID, selectedTabIDsBySpace: [:])
         legacy.repair(using: owner.session)
-        XCTAssertEqual(legacy.selectedTab(in: owner.session)?.id, owner.selectedTab?.id)
+        // A record written before windows captured their Spaces keeps its legacy fallback.
+        XCTAssertEqual(legacy.selectedTab(in: owner.session)?.id, owner.selectedSpace?.tabs.first?.id)
     }
 
     func testTemporaryWorkspaceBorrowsItsProfileButKeepsAllBrowsingRecordsLocal() throws {
@@ -77,7 +78,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
         let url = try XCTUnwrap(URL(string: "https://temporary.crest.test/keep"))
         let tabID = try XCTUnwrap(temporary.openNewTab(url: url))
-        let folderID = try XCTUnwrap(temporary.session.addFolder(title: "Local folder", in: assignment.spaceID))
+        let folderID = try XCTUnwrap(temporary.addFolder(title: "Local folder", in: assignment.spaceID))
         temporary.pinTab(tabID)
         source.updateSpaceIdentity(assignment.spaceID, name: "Source renamed", symbol: "book", accent: .orange)
 
@@ -90,7 +91,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         var replacement = source.session
         replacement.spaces[0] = BrowserSpace(
             id: assignment.spaceID, profile: BrowsingProfile(), name: "Replacement", symbol: "globe", accent: .indigo,
-            folders: [], tabs: [], selectedTabID: nil)
+            folders: [], tabs: [])
         source.session = replacement
         XCTAssertFalse(temporary.reconcileTemporarySource())
         XCTAssertTrue(temporary.session.spaces.isEmpty)
@@ -153,14 +154,16 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
             placement: .saved, folderID: folder.id)
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Source", symbol: "globe", accent: .indigo,
-            folders: [folder], tabs: [tab], selectedTabID: tab.id)
+            folders: [folder], tabs: [tab])
         let companionTab = BrowserTab(
             title: "Other Space", url: URL(string: "https://transfer.crest.test/other"), placement: .current)
         let companion = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Companion", symbol: "globe", accent: .orange,
-            folders: [], tabs: [companionTab], selectedTabID: companionTab.id)
+            folders: [], tabs: [companionTab])
         let source = BrowserStore(
-            session: BrowserSession(spaces: [space, companion], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space, companion]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id, companion.id: companionTab.id]),
             persistence: InMemoryBrowserSessionPersistence())
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))

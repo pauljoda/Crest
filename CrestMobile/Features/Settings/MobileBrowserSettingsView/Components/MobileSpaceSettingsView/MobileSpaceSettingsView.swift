@@ -134,7 +134,7 @@ struct MobileSpaceSettingsView: View {
     }
 
     private var editedSpaceID: SpaceID? {
-        usesLiveSidebar ? browser.session.selectedSpaceID : selectedSpaceID
+        usesLiveSidebar ? browser.selectedSpaceID : selectedSpaceID
     }
 
     private var space: BrowserSpace? {

@@ -35,7 +35,7 @@ final class MobileBrowserWindowSceneModel {
     ) {
         let windowState = BrowserWindowStateStore(
             id: id,
-            session: rootBrowser.session,
+            browser: rootBrowser,
             persistence: windowStatePersistence
         )
         let browser = rootBrowser.makeWindowStore(
@@ -84,7 +84,7 @@ final class MobileBrowserWindowSceneModel {
                     let space = browser.session.space(id: spaceID),
                     let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
-                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.session)
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.presented)
             },
             backgroundPageDidUpdate: { browser.updateBackgroundPage($0) },
             openPeek: { request in transientBrowsing.presentPeek(request) }
@@ -112,7 +112,7 @@ final class MobileBrowserWindowSceneModel {
                     let space = privateBrowser.session.space(id: spaceID),
                     let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
-                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: privateBrowser.session)
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: privateBrowser.presented)
             },
             backgroundPageDidUpdate: { privateBrowser.updateBackgroundPage($0) },
             openPeek: { request in
@@ -146,10 +146,10 @@ final class MobileBrowserWindowSceneModel {
                 matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),
                 in: browser, accessController: spaceAccess),
             browser.session.spaces.first?.id == space.id,
-            space.selectedTabID == assignment.tabID,
+            browser.selectedTabID(in: space.id) == assignment.tabID,
             space.tabs.first(where: { $0.id == assignment.tabID })?.nativeContent == .gettingStarted
         else { return false }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         navigation.presentSelectedTabAfterSetup()
         return true
     }
@@ -174,7 +174,7 @@ final class MobileBrowserWindowSceneModel {
     }
 
     func captureWindowSelection() {
-        windowState.captureSelection(from: browser.session)
+        windowState.captureSelection(of: browser)
     }
 
     func prepareForInactiveScene() {
@@ -219,12 +219,12 @@ final class MobileBrowserWindowSceneModel {
 
     @discardableResult
     func routeExternalURL(_ url: URL) async -> Bool {
-        let decision = linkPreferenceStore.routingDecision(
-            for: url,
-            in: browser.session,
-            unavailableSpaceIDs: browser.deletingSpaceIDs
-        )
         guard
+            let decision = linkPreferenceStore.routingDecision(
+                for: url,
+                in: browser.presented,
+                unavailableSpaceIDs: browser.deletingSpaceIDs
+            ),
             let route = MobileBrowserWindowSceneRoute.resolve(
                 url: url,
                 decision: decision,
@@ -254,7 +254,7 @@ final class MobileBrowserWindowSceneModel {
             else {
                 return false
             }
-            pages.selectAndLoad(url, in: browser.session)
+            pages.selectAndLoad(url, in: browser.presented)
             navigation.selectTab()
         }
         return true

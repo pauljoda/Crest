@@ -69,8 +69,7 @@ enum BrowserTabMigration {
         do {
             return try BrowserPortableArchive(
                 session: BrowserSession(
-                    spaces: spaces,
-                    selectedSpaceID: spaces[0].id
+                    spaces: spaces
                 ),
                 exportedAt: importedAt
             ).materialize()
@@ -177,7 +176,6 @@ enum BrowserTabMigration {
             fallback: fallbackName,
             maximumLength: 200
         )
-        let selectedIndex = min(max(0, draft.selectedTabIndex ?? 0), tabs.count - 1)
         return BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
@@ -193,8 +191,7 @@ enum BrowserTabMigration {
             archivedTabs: [],
             history: [],
             browsingPreferences: .default,
-            credentialPreferences: .default,
-            selectedTabID: tabs[selectedIndex].id
+            credentialPreferences: .default
         )
     }
 

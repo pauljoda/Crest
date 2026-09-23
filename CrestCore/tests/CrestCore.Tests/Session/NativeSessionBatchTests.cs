@@ -40,11 +40,11 @@ public sealed partial class BrowserContractsTests {
         var copy = change["space"]!["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == copiedId)!;
         Assert.Equal("Latest shared name", copy["customTitle"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(space["tabs"]![0]!["futureTabProperty"], copy["futureTabProperty"]));
-        var before = core.Checkpoint(2, Selection(session)).Read("core");
-        using (command.Reserve(Selection(session))) { }
-        Assert.Equal(before, core.Checkpoint(2, Selection(session)).Read("core"));
+        var before = core.Checkpoint(2).Read("core");
+        using (command.Reserve()) { }
+        Assert.Equal(before, core.Checkpoint(2).Read("core"));
         core.PrepareCommand(2, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject())).Commit();
-        Assert.Equal(2, JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read("core"))!["spaces"]![0]!["tabs"]!.AsArray().Count);
+        Assert.Equal(2, JsonNode.Parse(core.Checkpoint(3).Read("core"))!["spaces"]![0]!["tabs"]!.AsArray().Count);
     }
 
     [Fact]
@@ -60,11 +60,11 @@ public sealed partial class BrowserContractsTests {
         var core = new NativeSessionAuthority(Bytes(session));
         var args = BatchArguments(source, "MoveToSpace");
         args["destinationSpaceId"] = destination["id"]!.DeepClone(); args["destinationProfileId"] = destination["profile"]!["id"]!.DeepClone();
-        var before = core.Checkpoint(1, Selection(session)).Read("core");
+        var before = core.Checkpoint(1).Read("core");
         var rejected = core.PrepareCommand(1, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject()));
         Assert.Equal("pinned_capacity", JsonNode.Parse(rejected.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => rejected.Commit());
-        Assert.Equal(before, core.Checkpoint(1, Selection(session)).Read("core"));
+        Assert.Equal(before, core.Checkpoint(1).Read("core"));
         core.PrepareCommand(1, SpaceCommand(session, "tab.move", new() { ["tabId"] = fixture.Tab.ToString(), ["placement"] = "current", ["detach"] = false })).Commit();
         var staleSelection = core.PrepareCommand(2, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject()));
         Assert.Equal("stale_selection", JsonNode.Parse(staleSelection.Output)!["error"]!.GetValue<string>());

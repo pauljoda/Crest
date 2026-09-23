@@ -92,7 +92,19 @@ and Escape; a site notification permission and delivery; PiP button. Record
 each as works, wrong window, or missing. Missing items become host hooks in WP2
 or WP3. Effort S.
 
-### WP1. Dead-code sweep (partly done)
+### WP1. Dead-code sweep (done for the session edit surface)
+
+The `BrowserSession` value-level edit surface is deleted:
+`BrowserSession+{Tabs,Organization,Folders,History,DurableTabs,SplitCopies}.swift`,
+`applyCoreEdit`, the stateless `crest_core_edit_session`, `crest_session_commit`
+and `crest_session_commit_pair` exports, the `transfer.preview`, `batch.preview`
+and `session.retain` queries and the `records.expired`, `history.visit` and
+`history.remove_range` policy operations. So are `BrowserSyncMaterializer`,
+`BrowserSyncMergeResolver`, `BrowserSyncProjection`, `BrowserSavedSitePolicy`,
+`BrowserExternalLinkLockPolicy`, `BrowserImportDestinationKey`,
+`MobileOnboardingSpaceCarousel` and `MobilePageMenuPrimaryAction`. Launch
+cleanup and retention run as the core `records.sweep` command. The history
+below is kept for context.
 
 The dead `CREST_CORE_BACKED` branches and build settings have been removed;
 no Swift file still contains that conditional. The original sweep covered
@@ -366,6 +378,16 @@ Swift keeps projections and adapters only.
 | Shortcuts, launch, media (done: `shortcuts.bindings`, `.assign`, `.numbered_selection`, `launch.plan`, `media.session_event` and `media.arbitrate` ops; `tab.open` `after` anchor) | Shortcut conflict and numbered selection policies; `BrowserLaunchIsolationPolicy`, startup behavior, tab insertion; `BrowserMediaSessionStore` arbitration | Conflict and selection ops; launch and startup policy op; media-session ownership and eviction op. Section and search grouping stay in Swift | M |
 | Behavior preferences (done: session `appPreferences` record behind `preferences.set`, `preferences.translation_rule` and a one-time `preferences.import` of the legacy defaults; the session's `launch.plan` read applies the saved startup choice; device-local, never synced) | Startup behavior, page translation offer/automatic/rules, WebKit spell checking, automatic Picture in Picture, saved-tab close policy and favicon return, Split View focus-follows-mouse in `@AppStorage` and small defaults stores | Core-owned record persisted with the session checkpoint; `BrowserAppPreferenceStore` is the Swift projection. Appearance preferences, link preferences, shortcut overrides, sync and download settings stay native | M |
 
+Selection left the core entirely: the active Space and each Space's shown tab
+are window state (`BrowserStoreSelection`, persisted in `BrowserWindowState`),
+commands read the window's `view` and answer a `selection` hint, `tab.activate`
+became the timestamp-only `tab.touch`, and legacy stored selection loads once
+into window records. Folder depth and count, split eligibility and cross-Space
+move eligibility are core commands prepared and released without committing;
+`limits` reports the capacities native surfaces used to copy; `links.route`
+substitutes a locked Space itself. Link, Quick Window and authentication-label
+fallbacks now fail closed when the core cannot answer.
+
 Stragglers, all folded in. `BrowserSession.ensureSelection` and
 `repairRuntimeIntegrity`, `BrowserSplitGroupNormalizer`,
 `normalizeSplitGroupsAfterUserMutation` and tear-off eligibility in
@@ -393,9 +415,9 @@ matching saved tab, while address submission can convert a native tab into a
 web tab before loading.
 
 Acceptance: `Documentation/Architecture/ControlPlane.md` step 1 acceptance
-("no parallel domain implementation") becomes literally true; a grep for
-`session.` mutations outside `applyCoreEdit` and command paths returns nothing
-live; core tests cover each aggregate's edge cases.
+("no parallel domain implementation") becomes literally true; no `BrowserSession`
+mutation exists outside the core authority's command and sync paths; core tests
+cover each aggregate's edge cases.
 
 ### WP9. Verification and release gates
 

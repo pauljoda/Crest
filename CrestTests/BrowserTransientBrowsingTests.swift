@@ -551,17 +551,16 @@ final class BrowserTransientBrowsingTests: XCTestCase {
     }
 
     func testMovingTabIntoSavedAreaCapturesRootAndNavigationDoesNotReplaceIt() throws {
-        var session = BrowserSession.preview
+        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
         let destination = try XCTUnwrap(URL(string: "https://example.com/root"))
         let laterURL = try XCTUnwrap(URL(string: "https://example.net/later"))
-        let tabID = try XCTUnwrap(
-            session.openTab(title: "Root", url: destination)
-        )
+        let tabID = try XCTUnwrap(browser.openNewTab(url: destination))
 
-        XCTAssertTrue(session.moveTab(tabID, to: .saved))
-        session.updateSelectedTab(url: laterURL, title: "Later")
+        XCTAssertTrue(browser.moveTab(tabID, to: .saved))
+        browser.updateSelectedTabFromPage(url: laterURL, title: "Later")
 
-        let tab = try XCTUnwrap(session.selectedTab)
+        let tab = try XCTUnwrap(browser.selectedTab)
+        XCTAssertEqual(tab.id, tabID)
         XCTAssertEqual(tab.url, laterURL)
         XCTAssertEqual(tab.savedSiteURL, destination)
     }
@@ -579,7 +578,10 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         store.rememberQuickWindowSpace(personal.id, for: first)
 
         XCTAssertEqual(
-            store.routingDecision(for: second, in: session),
+            store.routingDecision(
+                for: second,
+                in: BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session))
+            ),
             .quickWindow(spaceID: personal.id)
         )
     }
@@ -624,13 +626,15 @@ final class BrowserTransientBrowsingTests: XCTestCase {
     }
 
     func testDismissedQuickWindowArchivesAndRecordsHistoryInExactSpace() throws {
-        var session = BrowserSession.preview
-        let personal = try XCTUnwrap(session.spaces.last)
-        let work = try XCTUnwrap(session.spaces.first)
+        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let personal = try XCTUnwrap(browser.session.spaces.last)
+        let work = try XCTUnwrap(browser.session.spaces.first)
         let url = try XCTUnwrap(URL(string: "https://example.com/transient"))
 
-        session.archiveTransientPage(url: url, title: "Transient", in: personal.id)
-        session.recordVisit(url: url, title: "Transient", in: personal.id)
+        XCTAssertTrue(browser.archiveTransientPage(
+            url: url, title: "Transient", matching: BrowserSpaceRuntimeAssignment(space: personal)))
+        browser.recordVisit(url: url, title: "Transient", in: personal.id)
+        let session = browser.session
 
         XCTAssertEqual(session.space(id: personal.id)?.archivedTabs.last?.reason, .quickWindow)
         XCTAssertEqual(session.space(id: personal.id)?.history.first?.url, url)
@@ -638,7 +642,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
     }
 
     func testTransientMutationsRejectAReplacementProfileWithTheSameSpaceID() throws {
-        let source = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+        let source = try XCTUnwrap(BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence()).selectedSpace)
         let assignment = BrowserSpaceRuntimeAssignment(space: source)
         let replacement = BrowserSpace(
             id: source.id,
@@ -655,14 +659,10 @@ final class BrowserTransientBrowsingTests: XCTestCase {
             credentialPreferences: source.credentialPreferences,
             accessPolicy: source.accessPolicy,
             isSavedTabsExpanded: source.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt,
-            selectedTabID: source.selectedTabID
+            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
         )
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [replacement],
-                selectedSpaceID: replacement.id
-            ),
+            session: BrowserSession(spaces: [replacement]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let url = try XCTUnwrap(URL(string: "https://example.com/stale-lease"))
@@ -682,9 +682,9 @@ final class BrowserTransientBrowsingTests: XCTestCase {
                 matching: assignment
             )
         )
-        XCTAssertTrue(browser.session.selectedSpace?.history.isEmpty == true)
+        XCTAssertTrue(browser.selectedSpace?.history.isEmpty == true)
         XCTAssertTrue(
-            browser.session.selectedSpace?.archivedTabs
+            browser.selectedSpace?.archivedTabs
                 == replacement.archivedTabs
         )
     }
@@ -787,8 +787,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 

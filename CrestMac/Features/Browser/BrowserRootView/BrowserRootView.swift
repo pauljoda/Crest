@@ -93,7 +93,7 @@ struct BrowserRootView: View {
         chrome: BrowserRootPreviewFixture.makeChrome(state: .docked),
         transientBrowsing: BrowserTransientBrowsingCoordinator(),
         windowState: BrowserRootPreviewFixture.makeWindowState(
-            session: browser.session
+            browser: browser
         ),
         initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
         persistSidebarWidth: { _ in }
@@ -110,7 +110,7 @@ struct BrowserRootView: View {
         chrome: BrowserRootPreviewFixture.makeChrome(state: .collapsed),
         transientBrowsing: BrowserTransientBrowsingCoordinator(),
         windowState: BrowserRootPreviewFixture.makeWindowState(
-            session: browser.session
+            browser: browser
         ),
         initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
         persistSidebarWidth: { _ in }
@@ -127,7 +127,7 @@ struct BrowserRootView: View {
         chrome: BrowserRootPreviewFixture.makeChrome(state: .commandPalette),
         transientBrowsing: BrowserTransientBrowsingCoordinator(),
         windowState: BrowserRootPreviewFixture.makeWindowState(
-            session: browser.session
+            browser: browser
         ),
         initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
         persistSidebarWidth: { _ in }

@@ -54,6 +54,10 @@ final class UserDefaultsBrowserWindowStatePersistence:
         }
     }
 
+    func loadAll() -> [BrowserWindowState] {
+        saveQueue.sync { decodedStates() }
+    }
+
     /// Stores one window's state, newest last.
     ///
     /// The record moves to the end of the list even when it already existed, which

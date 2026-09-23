@@ -114,7 +114,7 @@ final class BrowserPagePool:
     @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
     @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
-    @ObservationIgnored private var selectPictureInPictureSource: (BrowserTabRuntimeAssignment) -> BrowserSession? = {
+    @ObservationIgnored private var selectPictureInPictureSource: (BrowserTabRuntimeAssignment) -> BrowserPresentedSession? = {
         _ in nil
     }
     @ObservationIgnored private let activateHostedNotificationSource: (SpaceID, TabID) -> Void
@@ -447,7 +447,7 @@ final class BrowserPagePool:
                     let space = browser.session.space(id: spaceID),
                     let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
-                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.session)
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.presented)
             },
             backgroundPageDidUpdate: { [weak browser] update in
                 guard let browser else { return nil }
@@ -484,7 +484,7 @@ final class BrowserPagePool:
             else { return nil }
             browser.selectSpace(space.id)
             browser.selectTab(source.tabID)
-            return browser.session
+            return browser.presented
         }
     }
 
@@ -660,7 +660,7 @@ final class BrowserPagePool:
         )
         page.load(request)
         if selecting { select(session: registration.session) }
-        reconcileCredentialAccess(in: registration.session)
+        reconcileCredentialAccess(in: registration.session.session)
     }
 
     private func observeBackgroundPage(
@@ -766,18 +766,20 @@ final class BrowserPagePool:
         return members.map { $0.id == tab.id ? tab : $0 }
     }
 
-    func select(session: BrowserSession) {
+    /// Presents what the window selects. `session` pairs the core's data with
+    /// that window's own selection.
+    func select(session: BrowserPresentedSession) {
         select(session: session, at: .now)
     }
 
-    func select(session: BrowserSession, at time: Date) {
+    func select(session: BrowserPresentedSession, at time: Date) {
         let cards = presentCards(
             tab: session.selectedTab,
             space: session.selectedSpace,
             at: time
         )
         startInitialNavigations(cards)
-        reconcileCredentialAccess(in: session)
+        reconcileCredentialAccess(in: session.session)
     }
 
     /// An unlocked empty Space or start page is an ordinary departure. Keep
@@ -1402,11 +1404,11 @@ final class BrowserPagePool:
         tabState.removeStates(profileID: space.profile.id)
     }
 
-    func reloadOrStop(in session: BrowserSession) {
+    func reloadOrStop(in session: BrowserPresentedSession) {
         reload(.standard, selectedBy: session)
     }
 
-    func forceReload(in session: BrowserSession) {
+    func forceReload(in session: BrowserPresentedSession) {
         guard let tab = session.selectedTab,
             let space = session.selectedSpace
         else { return }
@@ -1424,7 +1426,7 @@ final class BrowserPagePool:
         activePage?.stopLoading()
     }
 
-    func reloadFromOrigin(in session: BrowserSession) {
+    func reloadFromOrigin(in session: BrowserPresentedSession) {
         reload(.fromOrigin, selectedBy: session)
     }
 
@@ -1676,7 +1678,7 @@ final class BrowserPagePool:
 
     private func reload(
         _ mode: BrowserPageReloadMode,
-        selectedBy session: BrowserSession
+        selectedBy session: BrowserPresentedSession
     ) {
         guard let tab = session.selectedTab,
             let space = session.selectedSpace

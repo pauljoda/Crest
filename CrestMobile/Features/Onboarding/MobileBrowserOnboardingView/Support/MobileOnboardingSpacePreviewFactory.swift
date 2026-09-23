@@ -50,8 +50,7 @@ enum MobileOnboardingSpacePreviewFactory {
             accent: draft.customization.accent,
             branding: draft.customization.branding,
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
     }
 }

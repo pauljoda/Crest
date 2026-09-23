@@ -8,6 +8,10 @@ final class InMemoryBrowserWindowStatePersistence:
         states[id]
     }
 
+    func loadAll() -> [BrowserWindowState] {
+        Array(states.values)
+    }
+
     func save(_ state: BrowserWindowState) {
         states[state.id] = state
     }

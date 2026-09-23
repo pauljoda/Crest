@@ -221,7 +221,7 @@ them returns its tabs, folders, history or archive; removing protection is the
 decision authentication guards, so it needs the grant like any other command.
 The same rule covers the native value-edit path: a proposed session delta or
 durable replacement that would change a locked Space's metadata, tabs, folders,
-history, archive, splits or selection — or remove it — is rejected with
+history, archive or splits — or remove it — is rejected with
 `space_locked` before the revision is accepted, on the same allowlist. Sync
 staging, merging and materialization commit as journal-bound replacements rather
 than commands or value edits, so background convergence on a locked Space is
@@ -239,8 +239,8 @@ The active composition routes migrated domain operations through the packaged .N
 library without changing their callers. Tab opening, activation, duplication,
 closing, deletion, placement, filing, renaming, residency preferences, folders,
 split groups, archive restoration, and automatic tab cleanup execute through the core.
-Address intent, history visit policy,
-history-range deletion, and history/archive retention also use the library.
+Address intent, history visits, history-range deletion and history/archive
+retention also use the library, as `history.*` and `records.*` session commands.
 Each store family has one `BrowserCoreSessionAuthority`. The .NET authority owns
 committed session records and revisions; Swift retains an accepted read projection
 for the existing UI. Native edits cross as changes to individual records and
@@ -252,8 +252,36 @@ The core captures immutable checkpoints and encodes the session and per-Space
 history on the native persistence worker. Editing can continue while an older
 checkpoint is being saved. The existing storage adapter retains the established
 UserDefaults keys, load/recovery path, scoped writes and favicon side store.
-Per-window selection is projected into each checkpoint, including deliberately
-empty windows. Private and temporary families remain backed by memory storage.
+Checkpoints hold browsing data only; see "Selection is window state" below.
+Private and temporary families remain backed by memory storage.
+
+### Selection is window state
+
+Which Space a window shows and the tab it shows in each Space are UI state. The
+core session holds Spaces, tabs, order, folders, splits and `lastActivatedAt`
+timestamps, never what is on screen. `BrowserSession` and `BrowserSpace` carry no
+selection; each window's `BrowserStoreSelection` is the only copy, persisted in
+its `BrowserWindowState` record so relaunch returns to the same Space and tabs.
+Views and page pools read a window's `BrowserPresentedSession` (the core's data
+plus that window's selection), which is never encoded or sent to the core.
+
+Commands send what the requesting window shows as read-only `view` context,
+because some rules need it (a close falls back from the shown tab; cleanup keeps
+the shown tab; a promotion inserts after it; a batch acts on the Space shown).
+Every answer carries a `selection` hint (`spaceId`, per-Space `tabId`) that only
+the issuing window applies; other windows reconcile their own selection against
+what still exists. Showing a tab sends `tab.touch`, which only records
+`lastActivatedAt`; showing a Space sends nothing. Launch cleanup runs the core's
+`records.sweep` with `keepTabIds`, the tabs every stored window record shows,
+before any window is on screen.
+
+Older documents stored a session-level `selectedSpaceID` and per-Space
+`selectedTabID`. They still load: the core drops the fields on the way in and
+never writes them (`LegacySessionDocument` folds per-Space selection into a
+window record without captured Spaces), and the native storage reads them once
+(`BrowserLegacySessionSelection`) so the first window without its own record
+adopts them; a record that predates captured Spaces folds them in and captures
+from then on. Sync never carried selection and still does not.
 
 This moves live state ownership and checkpoint serialization into the core.
 Remaining native domain operations still submit prepared value changes; replacing
@@ -262,7 +290,7 @@ those proposals with semantic core commands is a separate part of the migration.
 The store's tab opening, activation, closing, deletion, current-tab clearing,
 renaming and residency actions now send commands directly to that authority.
 Folder creation, appearance, renaming, collapse, deletion, moves and tab filing use the same path.
-Requests contain arguments and window selection rather than an encoded Space.
+Requests contain arguments and what the window shows rather than an encoded Space.
 The core prepares the edit against its owned records, the native adapter decodes
 the resulting projection, and a revision-checked commit publishes both sides.
 Abandoned preparations do not change state. Favicon bytes stay native, and
@@ -285,14 +313,14 @@ tombstones with tab removal, while archiving retains its non-deletion cause.
 
 History visits and removal, archive restoration, automatic cleanup, retention and
 split identity metadata now prepare against the authority's owned records. The
-native caller sends intent and window selection, then applies only changed history
+native caller sends intent and what its window shows, then applies only changed history
 entries, removal references and tab or split projections. The core reads retention
 preferences itself. Archive removals use positions so older repeated identities do
 not cause an unexpired occurrence to be removed. Native favicon assets remain
 attached when tabs move into or out of the archive, and other windows retain their
 own selection during reconciliation.
 
-Space creation, identity, appearance, preferences, default selection, saved-tab
+Space creation, identity, appearance, preferences, default Space, saved-tab
 disclosure, reordering and removal also use the authority's commands. Profile
 identity is checked before editing; borrowed workspaces cannot change their source
 profiles. The core enforces new private Space defaults and prevents removal of
@@ -306,7 +334,7 @@ Blank Windows and detached-tab windows request a borrowed workspace from the can
 The core binds the source Space and profile identity, inherits its engine and
 private-browsing registration, and creates empty local browsing collections.
 Policy refresh reads the source authority directly and preserves local tabs,
-folders, history, archive, split groups and selection. A native snapshot cannot
+folders, history, archive and split groups. A native snapshot cannot
 create a borrower or replace its canonical policy. Prepared commands reject a
 changed source revision; source deletion, replacement or release revokes access.
 The Swift family publishes accepted projections and schedules native window
@@ -315,10 +343,10 @@ reconciliation. It no longer merges borrowed profile policy itself.
 Quick Window and Peek promotion on Mac and mobile use the same transient
 completion commands. The authority validates the source and destination profiles
 against its current records and uses native authentication results to authorize
-promotion. It creates and selects the destination tab, preserving insertion after
-the selected split group, and permits live-page adoption only within the same
+promotion. It creates the destination tab, hints the window to show it, preserves
+insertion after the shown split group, and permits live-page adoption only within the same
 Space/profile. The adapter performs the view transfer after commit; an unavailable
-transfer falls back to loading the new tab. Empty Quick Windows only select the
+transfer falls back to loading the new tab. Empty Quick Windows only hint the
 destination Space. Archive-on-dismiss uses the same domain collection and keeps
 window selection unchanged, including when a retained snapshot was relocked.
 Process-local completion receipts prevent a late dismissal or repeated promotion
@@ -342,8 +370,9 @@ setup/import window through the native window port, including completion and
 dismissal; the SwiftUI app continues to use its existing scene.
 
 Cross-Space tab moves and same-profile temporary-window transfers prepare from
-the core's owned records. The core decides placement, split cleanup and
-destination selection, and validates the source window's fallback selection. A workspace transfer reserves both revisions
+the core's owned records. The core decides placement and split cleanup, and
+answers each window's follow-up selection (the source window's fallback, the
+destination window's moved tab). A workspace transfer reserves both revisions
 until the persistent owner's session and sync journal are saved; cancellation
 leaves both graphs unchanged. Private browsing and stale profile identities
 cannot cross that boundary, and matching IDs cannot transfer between unrelated
@@ -370,7 +399,7 @@ Prepared query handles evaluate once and return typed identity-bearing errors.
 Native favicon image bytes stay outside the core and are reattached by the adapter.
 
 `NativeSessionMaintenance` repairs checkpoint identities, folder structure,
-selection, pin limits and split membership, and applies history/archive retention.
+pin limits and split membership, and applies history/archive retention.
 The same domain split policy serves command edits and checkpoint repair. A repair
 returns native asset references separately from semantic records, preserving each
 tab's images when duplicate identities are replaced. Startup must accept repair
@@ -467,21 +496,21 @@ confirmation remains enforced. Recovery checkpoints may predate recent local
 edits, and the confirmation explains that limitation.
 Native presentation codecs continue to normalize platform glyphs and branding values.
 
-Value-only operations still use `crest_core_edit_session`, which receives one
-compact Space and returns an atomic edit.
-It excludes images, history and existing archive records. The native projection
-keeps those records and presentation metadata, applies the returned tab/folder
-values, and reconciles native pages through the existing pools. The core's
-`BrowserTabCollection` owns the tab, folder and split organization rules; profile
-access and page lifetime remain separate responsibilities.
+The value-level `BrowserSession` edit surface and its `crest_core_edit_session`,
+`crest_session_commit` and `crest_session_commit_pair` exports are gone: every
+native edit is a command on the family's authority, including launch cleanup and
+retention. Commands exclude images, history and existing archive records. The
+native projection keeps those records and presentation metadata, applies the
+returned tab/folder values, and reconciles native pages through the existing
+pools. The core's `BrowserTabCollection` owns the tab, folder and split
+organization rules; profile access and page lifetime remain separate
+responsibilities.
 
 `crest_core_evaluate_policy` is a bounded, synchronous pure-function boundary:
 it performs no I/O, engine operation, callback, or executor wait. It evaluates the
 same `CrestCore.Domain` policies the session authority applies.
-Record-removal calls send batches of timestamps and receive indices; they carry
-no page objects, URLs, titles, profile data, or complete session snapshots. The
-native caller validates all batches before applying a category's removals. Its
-existing persistence scopes and sync tombstone rules remain in use.
+Record removal is not a policy call: the `records.sweep` and `history.*`
+session commands apply the retention and range rules to the owned records.
 Engine effects and the remaining command orchestration move behind the existing
 store/page interfaces in coherent sections. The original UI, layout, and
 interaction behavior remain the frontend.
@@ -509,8 +538,9 @@ projection and native assets; commands prepare against the core's current
 revision. The native caller decodes the projection before committing it. Durable
 commands reserve publication while the Apple storage adapter writes the matching
 session and sync journal. Failed storage releases the reservation without
-publishing a partial edit. Per-window selection remains separate when windows
-reconcile with the accepted family state.
+publishing a partial edit. Each window keeps its own selection when windows
+reconcile with the accepted family state; only the issuing window applies a
+command's selection hint.
 
 The real WebKit composition uses `BrowserWebKitPageEngine` and the existing page
 pools. The Chromium composition implements those same native ports through
@@ -529,8 +559,8 @@ and `BrowserWindow` aggregates have been removed. Their former rules now belong 
 | Former kernel rule | Live owner |
 | --- | --- |
 | Session, window, Space, tab, folder and split editing | `NativeSessionAuthority` commands and `BrowserTabCollection` |
-| Value-only Space edits | `NativeSessionEditor` behind `crest_core_edit_session` |
-| History, archive and retention sweeps | `NativeSessionMaintenance`, `NativeSessionAuthority.Records` and `crest_core_evaluate_policy` |
+| One Space's tab, folder and split edit | `NativeSessionEditor`, called by the session commands |
+| History, archive and retention sweeps | `NativeSessionMaintenance` and `NativeSessionAuthority.Records` |
 | Address, search and link decisions | `SearchProviderCatalog`, `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
 | Space locking and device authentication | `SpaceAccessAuthority` behind `crest_access_*` |
 | Cross-workspace transfer and borrowed workspaces | `NativeTabTransfer` and `NativeSessionAuthority.Borrowing`/`Transfer` |
@@ -594,8 +624,10 @@ edits, reordering and removal are `links.route_*` operations, and
 chosen-Space preference and remembered sites go with it. The preferences stay in
 their existing UserDefaults record, unchanged in format; the native store applies
 and persists what the core returns, and an edit the core refuses or cannot answer
-changes nothing. Routing that cannot answer opens a Quick Window in the selected
-Space. Quick Window archive lifetime, archive-on-dismissal and retargeting
+changes nothing. A link routed to a Space this process holds locked never raises
+a prompt: `links.route` takes `lockedSpaceIDs` and substitutes a Quick Window on
+the shown Space when it is unlocked, else the first unlocked one, answering no
+Space when none can open; routing that cannot answer opens nothing. Quick Window archive lifetime, archive-on-dismissal and retargeting
 (whether a move revises the request and remembers the site's Space) are
 `quick_window.*` operations for the Mac window and the mobile overlay.
 
@@ -615,8 +647,10 @@ shares stay device-local records in their existing format; policy operations
 decide how a window reconciles with the session (which tab each Space shows,
 which Space the window keeps, which column shares survive), whether captured
 shares describe columns, whether a dragged tab may tear off, and the tab a
-Space selects when its selection is gone, the same rule checkpoint repair
-applies. The core never receives tab contents for these, only identities and
+Space shows when its selection is gone. Folder depth, folder count and split
+eligibility answers for menus are core commands prepared and released without
+committing, and the `limits` operation reports every capacity the core
+enforces so native surfaces keep no copies. The core never receives tab contents for these, only identities and
 presence facts; without an answer a window keeps its state. Manual setup and
 the import review keep their drafts native: the core admits draft edits
 against the import's Space and pinned limits, gives new draft Spaces their

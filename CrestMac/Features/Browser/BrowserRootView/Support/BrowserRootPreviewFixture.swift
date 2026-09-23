@@ -35,8 +35,7 @@ enum BrowserRootPreviewFixture {
                 id: startTabID,
                 lastActivatedAt: Date(timeIntervalSince1970: 0)
             ),
-        ],
-        selectedTabID: startTabID
+        ]
     )
 
     static let splitGroupID = SplitGroupID(rawValue: uuid(0x61))
@@ -69,8 +68,7 @@ enum BrowserRootPreviewFixture {
     static func makeBrowser() -> BrowserStore {
         BrowserStore(
             session: BrowserSession(
-                spaces: [space],
-                selectedSpaceID: spaceID
+                spaces: [space]
             ),
             persistence: InMemoryBrowserSessionPersistence()
         )
@@ -97,7 +95,7 @@ enum BrowserRootPreviewFixture {
             pages: BrowserPagePool(),
             chrome: makeChrome(state: state),
             spaceAccess: BrowserSpaceAccessController(),
-            windowState: makeWindowState(session: browser.session),
+            windowState: makeWindowState(browser: browser),
             startupBehavior: .showStartPage,
             persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
         )
@@ -105,11 +103,11 @@ enum BrowserRootPreviewFixture {
 
     @MainActor
     static func makeWindowState(
-        session: BrowserSession
+        browser: BrowserStore
     ) -> BrowserWindowStateStore {
         let windowState = BrowserWindowStateStore(
             id: BrowserWindowID(rawValue: uuid(0x51)),
-            session: session,
+            browser: browser,
             persistence: InMemoryBrowserWindowStatePersistence()
         )
         windowState.captureSidebar(

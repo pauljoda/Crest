@@ -11,9 +11,10 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
             session.spaces[0].tabs.append(settings)
             let source = session.spaces[0]
             let destination = session.spaces[1]
-            session.selectedSpaceID = source.id
+            var selection = BrowserStoreSelection(launching: session)
+            selection.selectSpace(source)
             let persistence = InMemoryBrowserSessionPersistence()
-            let browser = BrowserStore(session: session, persistence: persistence)
+            let browser = BrowserStore(session: session, selection: selection, persistence: persistence)
             let action = BrowserSettingsSpaceSelectionAction(
                 browser: browser, spaceAccess: BrowserSpaceAccessController())
             let assignment = BrowserTabRuntimeAssignment(
@@ -29,11 +30,11 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
                 browser.session.spaces[0] = BrowserSpace(
                     id: source.id, profile: BrowsingProfile(id: UUID()), name: source.name,
                     symbol: source.symbol, accent: source.accent, folders: source.folders,
-                    tabs: source.tabs, selectedTabID: source.selectedTabID)
+                    tabs: source.tabs)
             case .lockedSource:
                 browser.session.spaces[0].accessPolicy = .deviceOwnerAuthentication
             case .unselectedSource:
-                browser.session.selectedSpaceID = destination.id
+                browser.selectPresentedSpace(destination.id)
             case .deletingSource:
                 _ = browser.family.beginDeletingSpace(source.id)
             case .lockedDestination:

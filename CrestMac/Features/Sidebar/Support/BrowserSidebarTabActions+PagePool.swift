@@ -21,7 +21,7 @@ extension BrowserSidebarTabActions {
             spaceAccess: spaceAccess,
             syncPagesAfterMutation: {
                 pages.reconcile(session: browser.session)
-                pages.select(session: browser.session)
+                pages.select(session: browser.presented)
             },
             pullFavicon: { tabID, assignment in
                 await pages.pullFavicon(for: tabID, matching: assignment)

@@ -43,7 +43,7 @@ enum BrowserCommandPaletteActionPolicy {
         in browser: BrowserStore,
         accessController: BrowserSpaceAccessController
     ) -> (space: BrowserSpace, tab: BrowserTab)? {
-        guard browser.session.selectedSpaceID == source.spaceID,
+        guard browser.selectedSpaceID == source.spaceID,
             let space = browser.space(
                 matching: BrowserSpaceRuntimeAssignment(
                     spaceID: source.spaceID,
@@ -51,7 +51,7 @@ enum BrowserCommandPaletteActionPolicy {
                 )
             ),
             !accessController.isLocked(space),
-            space.selectedTabID == source.tabID,
+            browser.selectedTabID(in: space.id) == source.tabID,
             let tab = space.tabs.first(where: { $0.id == source.tabID })
         else { return nil }
         return (space, tab)

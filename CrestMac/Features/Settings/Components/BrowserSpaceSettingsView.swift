@@ -204,7 +204,7 @@ struct BrowserSpaceSettingsView: View {
 
     private func addSpace() {
         browser.addSpace()
-        selectedSpaceID = browser.session.selectedSpaceID
+        selectedSpaceID = browser.selectedSpaceID
     }
 
     private func moveSpace(_ sourceID: SpaceID, to targetID: SpaceID) {
@@ -216,7 +216,7 @@ struct BrowserSpaceSettingsView: View {
     }
 
     private var editedSpaceID: SpaceID? {
-        usesLiveSidebar ? browser.session.selectedSpaceID : selectedSpaceID
+        usesLiveSidebar ? browser.selectedSpaceID : selectedSpaceID
     }
 
     private var space: BrowserSpace? {

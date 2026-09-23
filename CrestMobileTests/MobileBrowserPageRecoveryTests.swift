@@ -30,7 +30,10 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
 
     func testAReclaimedBackgroundPageIsRestoredWhenItIsSelectedAgain() throws {
         let space = makeSpace(index: 2)
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = BrowserPresentedSession(
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: space.tabs[0].id])
+        )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         pages.select(session: session)
         let page = try XCTUnwrap(pages.activePage)
@@ -96,8 +99,7 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 

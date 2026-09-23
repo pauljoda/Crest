@@ -4,6 +4,8 @@ import SwiftUI
 /// so semantic selection cannot resize the viewport during a Space transition.
 struct SpaceSidebarAddressBand: View {
     let space: BrowserSpace
+    /// The tab this window shows in `space`.
+    let selectedTabID: TabID?
     let pages: BrowserPagePool
     let capabilities: BrowserInteractionCapabilities
     let address: Binding<String>
@@ -60,12 +62,12 @@ struct SpaceSidebarAddressBand: View {
     }
 
     private var selectedTab: BrowserTab? {
-        guard let selectedTabID = space.selectedTabID else { return nil }
+        guard let selectedTabID else { return nil }
         return space.tabs.first { $0.id == selectedTabID }
     }
 
     private var displayedPage: BrowserPage? {
-        guard let selectedTabID = space.selectedTabID else { return nil }
+        guard let selectedTabID else { return nil }
         let assignment = BrowserTabRuntimeAssignment(
             tabID: selectedTabID, spaceID: space.id, profileID: space.profile.id
         )
@@ -86,7 +88,7 @@ struct SpaceSidebarAddressBand: View {
         return BrowserSiteControlConfiguration(
             page: page,
             space: space,
-            selectedTabID: space.selectedTabID,
+            selectedTabID: selectedTabID,
             permissionCenter: pages.permissionCenter,
             presentationChanged: siteControlPresentationChanged,
             contextMenuPresentationChanged:

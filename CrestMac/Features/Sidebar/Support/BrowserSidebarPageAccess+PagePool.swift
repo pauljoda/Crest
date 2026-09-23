@@ -33,7 +33,7 @@ extension BrowserSidebarPageAccess {
                         tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID
                     ))
                 {
-                    pages.select(session: browser.session)
+                    pages.select(session: browser.presented)
                 }
             },
             pullFavicon: { tabID, assignment in

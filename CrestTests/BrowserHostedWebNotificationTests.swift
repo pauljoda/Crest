@@ -25,8 +25,7 @@ final class BrowserHostedWebNotificationTests: XCTestCase {
                 searchProvider: .google,
                 currentTabCleanupPolicy: .never,
                 contentBlockingPolicy: .off
-            ),
-            selectedTabID: tab.id
+            )
         )
         let permissionCenter = BrowserSitePermissionCenter()
         permissionCenter.setDecision(

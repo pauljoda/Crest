@@ -117,9 +117,9 @@ internal sealed record SessionEditArguments {
     private static IReadOnlyList<string> FieldsFor(SessionOperation operation) => operation switch {
         SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient or SessionOperation.TabRestoreArchive => ["tab"],
         SessionOperation.TabCloseDurable => ["tabId", "fallbackTabId", "returnToSavedURL"],
-        SessionOperation.TabCleanup => ["lifetime"],
+        SessionOperation.TabCleanup => ["lifetime", "tabIds"],
         SessionOperation.TabOpen => ["tab", "index", "after", "select"],
-        SessionOperation.TabActivate => ["tabId"],
+        SessionOperation.TabTouch => ["tabId"],
         SessionOperation.TabCopy => ["tabId", "ids", "placement", "index", "select", "copyObservations"],
         SessionOperation.TabRename => ["tabId", "title"],
         SessionOperation.TabObserve => ["tabId", "url", "title", "iconAccent", "faviconChanged", "hasFavicon"],

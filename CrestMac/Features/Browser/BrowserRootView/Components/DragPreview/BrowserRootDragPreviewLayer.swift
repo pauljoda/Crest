@@ -59,7 +59,7 @@ struct BrowserRootDragPreviewLayer: View {
             subject: subject,
             lift: lift,
             reduceMotion: reduceMotion,
-            selectedTabID: space.selectedTabID,
+            selectedTabID: model.browser.selectedTabID(in: space.id),
             loadedTabIDs: model.pages.retainedTabIDs
         )
     }

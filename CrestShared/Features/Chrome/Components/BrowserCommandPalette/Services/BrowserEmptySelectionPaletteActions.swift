@@ -17,7 +17,7 @@ struct BrowserEmptySelectionPaletteActions {
                 accessController: accessController
             )
         else { return false }
-        return space.selectedTabID == nil
+        return browser.selectedTabID(in: space.id) == nil
     }
 
     func selectTab(_ target: BrowserTabRuntimeAssignment) -> Bool {

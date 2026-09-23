@@ -4,7 +4,7 @@ enum BrowserShowcaseSessionFactory {
     static func make() -> BrowserSession {
         let work = makeWorkSpace()
         let personal = makePersonalSpace()
-        return BrowserSession(spaces: [work, personal], selectedSpaceID: work.id)
+        return BrowserSession(spaces: [work, personal])
     }
 
     private static func makeWorkSpace() -> BrowserSpace {
@@ -80,8 +80,7 @@ enum BrowserShowcaseSessionFactory {
             branding: .house(.lion, symbol: "hammer.fill"),
             folders: [folder],
             tabs: tabs,
-            archivedTabs: archivedTabs,
-            selectedTabID: tabs.last?.id
+            archivedTabs: archivedTabs
         )
     }
 
@@ -105,8 +104,7 @@ enum BrowserShowcaseSessionFactory {
             accent: .teal,
             branding: .house(.winter, symbol: "leaf.fill"),
             folders: [folder],
-            tabs: tabs,
-            selectedTabID: tabs.last?.id
+            tabs: tabs
         )
     }
 

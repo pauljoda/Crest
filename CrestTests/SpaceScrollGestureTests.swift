@@ -485,7 +485,7 @@ final class SpaceScrollGestureTests: XCTestCase {
         (0..<count).map { index in
             BrowserSpace(
                 id: SpaceID(), profile: BrowsingProfile(), name: "Space \(index)",
-                symbol: "globe", accent: .indigo, folders: [], tabs: [], selectedTabID: nil)
+                symbol: "globe", accent: .indigo, folders: [], tabs: [])
         }
     }
 

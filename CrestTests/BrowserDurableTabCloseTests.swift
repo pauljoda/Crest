@@ -30,7 +30,7 @@ final class BrowserDurableTabCloseTests: XCTestCase {
                 XCTAssertEqual(closed, expected)
                 XCTAssertEqual(discardedState, policy == .returnToSavedURL)
                 XCTAssertNil(context.browser.selectedTab)
-                XCTAssertEqual(context.persistence.session?.selectedSpace?.tabs.first, expected)
+                XCTAssertEqual(context.persistence.session?.space(id: context.assignment.spaceID)?.tabs.first, expected)
                 XCTAssertEqual(context.browser.selectedSpace?.tabs.last, context.copy)
                 XCTAssertEqual(context.browser.selectedSpace?.archivedTabs, context.archived)
             }
@@ -60,7 +60,7 @@ final class BrowserDurableTabCloseTests: XCTestCase {
 
             var locked = try XCTUnwrap(context.browser.selectedSpace)
             locked.accessPolicy = .deviceOwnerAuthentication
-            context.browser.session = BrowserSession(spaces: [locked], selectedSpaceID: locked.id)
+            context.browser.session = BrowserSession(spaces: [locked])
             XCTAssertFalse(action.perform(context.assignment))
             XCTAssertEqual(closeCount, 0)
         }
@@ -164,11 +164,13 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         ]
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle", accent: .indigo,
-            folders: [], tabs: [tab, copy], archivedTabs: archived, selectedTabID: tab.id
+            folders: [], tabs: [tab, copy], archivedTabs: archived
         )
         let persistence = InMemoryBrowserSessionPersistence()
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id), persistence: persistence
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
+            persistence: persistence
         )
         return Context(
             browser: browser, persistence: persistence, tab: tab, copy: copy, archived: archived,

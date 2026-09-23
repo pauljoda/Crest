@@ -35,29 +35,18 @@ struct BrowserExternalLinkHandler: ViewModifier {
             return
         }
         guard BrowserCorePolicy.acceptsExternalURL(url) else { return }
-        let decision = BrowserLinkPreferenceStore.shared.routingDecision(
-            for: url,
-            in: browser.session,
-            unavailableSpaceIDs: browser.deletingSpaceIDs
-        )
         // A locked routed Space never raises a prompt for a link that arrived
-        // from another process; the link lands in a Quick Window instead.
+        // from another process; the core lands it in a Quick Window instead.
         guard
-            let destination = BrowserExternalLinkLockPolicy.destination(
-                routedTo: decision.spaceID,
-                selectedSpaceID: browser.selectedSpace?.id,
-                spaces: browser.session.spaces,
+            let decision = BrowserLinkPreferenceStore.shared.routingDecision(
+                for: url,
+                in: browser.presented,
                 unavailableSpaceIDs: browser.deletingSpaceIDs,
-                isLocked: spaceAccess.isLocked
+                lockedSpaceIDs: Set(browser.session.spaces.filter(spaceAccess.isLocked).map(\.id))
             ),
-            let assignment = await accessibleAssignment(
-                for: destination.space.id
-            )
+            let assignment = await accessibleAssignment(for: decision.spaceID)
         else { return }
-        let effective: BrowserLinkRoutingDecision =
-            destination.substitutesForLockedSpace
-            ? .quickWindow(spaceID: destination.space.id) : decision
-        switch effective {
+        switch decision {
         case .quickWindow:
             openWindow(
                 id: BrowserSceneID.quickWindow.rawValue,
@@ -74,7 +63,7 @@ struct BrowserExternalLinkHandler: ViewModifier {
                     matching: assignment
                 ) != nil
             else { return }
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
             pages.load(url)
             chrome.dismissCommandPalette()
         }

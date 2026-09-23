@@ -98,11 +98,8 @@ struct BrowserFolderOrganizationMenuContent: View {
     }
 
     private var canCreateNestedFolder: Bool {
-        guard let space = currentUnlockedSpace,
-            space.folders.count < BrowserSpace.maximumFolderCount,
-            let depth = space.folderTree.depth(of: folder.id)
-        else { return false }
-        return depth + 1 < BrowserSpace.maximumFolderDepth
+        guard currentUnlockedSpace != nil else { return false }
+        return browser.canAddFolder(inside: folder.id, matching: assignment.spaceAssignment)
     }
 
     private var moveDestinations: [BrowserFolderMoveDestination] {

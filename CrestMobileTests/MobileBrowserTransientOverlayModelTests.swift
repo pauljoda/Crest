@@ -30,10 +30,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
         let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(
-            spaces: [replacement, context.destination],
-            selectedSpaceID: replacement.id
-        )
+        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
 
         context.model.setSourceAvailable(context.model.space != nil)
         XCTAssertNil(lease.page)
@@ -47,10 +44,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
         let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(
-            spaces: [replacement, context.destination],
-            selectedSpaceID: replacement.id
-        )
+        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
 
         XCTAssertFalse(context.model.promote(to: context.request.assignment))
         XCTAssertEqual(
@@ -61,7 +55,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             context.browser.session.space(id: context.destination.id)?.tabs.count,
             context.destination.tabs.count
         )
-        XCTAssertEqual(context.browser.session.selectedSpaceID, replacement.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, replacement.id)
         XCTAssertNotNil(lease.page)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
@@ -189,10 +183,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             space: context.destination
         )
         let replacement = replacingProfile(of: context.destination)
-        context.browser.session = BrowserSession(
-            spaces: [context.source, replacement],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, replacement])
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -210,10 +201,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         )
         var lockedDestination = context.destination
         lockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [context.source, lockedDestination],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, lockedDestination])
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -229,10 +217,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let lease = try XCTUnwrap(context.model.pageLease)
         var lockedSource = context.source
         lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
+        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
 
         XCTAssertFalse(
             context.model.promote(
@@ -259,14 +244,11 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let assignment = BrowserSpaceRuntimeAssignment(space: context.destination)
         var relockedDestination = context.destination
         relockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [context.source, relockedDestination],
-            selectedSpaceID: context.source.id
-        )
+        context.browser.session = BrowserSession(spaces: [context.source, relockedDestination])
 
         context.model.selectLockedSpace(assignment)
 
-        XCTAssertEqual(context.browser.session.selectedSpaceID, context.source.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
 
@@ -306,7 +288,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             context.browser.session.space(id: context.destination.id)?.tabs.count,
             context.destination.tabs.count
         )
-        XCTAssertEqual(context.browser.session.selectedSpaceID, context.source.id)
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }
 
@@ -316,9 +298,10 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
+            session: BrowserSession(spaces: [source, destination]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: source.id,
+                selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
@@ -567,10 +550,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let context = try makeQuickWindowContext()
         context.model.preparePage(isActive: true)
         let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(
-            spaces: [replacement, context.destination],
-            selectedSpaceID: replacement.id
-        )
+        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
 
         XCTAssertFalse(context.model.preparePage(isActive: true))
         context.model.handleDisappearance()
@@ -611,10 +591,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let originalLease = try XCTUnwrap(context.model.pageLease)
         var lockedSource = context.source
         lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
+        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
         context.model.setSourceLocked(true)
 
         XCTAssertFalse(context.model.preparePage(isActive: true))
@@ -654,10 +631,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         }
         var lockedSource = context.source
         lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(
-            spaces: [lockedSource, context.destination],
-            selectedSpaceID: lockedSource.id
-        )
+        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
 
         context.model.setActive(false)
 
@@ -719,9 +693,10 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
+            session: BrowserSession(spaces: [source, destination]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: source.id,
+                selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
@@ -733,7 +708,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         )
         let request = BrowserPeekRequest(
             url: try XCTUnwrap(URL(string: "about:blank")),
-            sourceTabID: try XCTUnwrap(source.selectedTabID),
+            sourceTabID: try XCTUnwrap(source.tabs.first?.id),
             sourceTitle: source.name,
             spaceAssignment: BrowserSpaceRuntimeAssignment(space: source),
             trigger: .longPress
@@ -793,9 +768,10 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
+            session: BrowserSession(spaces: [source, destination]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: source.id,
+                selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
@@ -842,8 +818,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 
@@ -863,8 +838,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             credentialPreferences: source.credentialPreferences,
             accessPolicy: source.accessPolicy,
             isSavedTabsExpanded: source.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt,
-            selectedTabID: source.selectedTabID
+            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
         )
     }
 }

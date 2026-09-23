@@ -22,7 +22,7 @@ enum BrowserSidebarAccessPolicy {
         in browser: BrowserStore,
         accessController: BrowserSpaceAccessController
     ) -> BrowserSpace? {
-        guard browser.session.selectedSpaceID == assignment.spaceID else {
+        guard browser.selectedSpaceID == assignment.spaceID else {
             return nil
         }
         return unlockedSpace(

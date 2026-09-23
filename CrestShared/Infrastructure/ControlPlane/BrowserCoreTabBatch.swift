@@ -4,7 +4,8 @@ enum BrowserCoreTabBatch {
     struct Response: Decodable {
         var error: String?
         var changes: [BrowserCoreSessionEditing.Result]?
-        var selectedSpaceID: SpaceID?
+        /// The follow-up selection for the window that ran the batch.
+        var selection: BrowserSelectionHint?
     }
 
     static func arguments(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction,
@@ -55,8 +56,9 @@ enum BrowserCoreTabBatch {
 
     static func applying(_ response: Response, to session: BrowserSession) throws -> (session: BrowserSession, result: BrowserTabBatchResult) {
         if let error = response.error { throw batchError(error) }
-        guard let changes = response.changes, let selected = response.selectedSpaceID,
-            session.spaces.contains(where: { $0.id == selected }) else { throw BrowserTabBatchError.invalidDestination }
+        guard let changes = response.changes,
+            response.selection?.spaceID.map({ id in session.spaces.contains { $0.id == id } }) != false
+        else { throw BrowserTabBatchError.invalidDestination }
         var next = session
         let originals = Dictionary(uniqueKeysWithValues: session.spaces.flatMap(\.tabs).map { ($0.id, $0) })
         var copies: [(source: TabID, copy: TabID)] = []
@@ -71,10 +73,9 @@ enum BrowserCoreTabBatch {
             for i in change.space.archivedTabs.indices {
                 change.space.archivedTabs[i].tab.faviconData = originals[change.space.archivedTabs[i].id]?.faviconData
             }
-            next.applyCoreResult(change, at: index)
+            BrowserCoreSessionEditing.apply(change, to: &next, at: index)
             copies += change.copies.map { (TabID(rawValue: $0.source), TabID(rawValue: $0.copy)) }
         }
-        next.selectedSpaceID = selected
         return (next, BrowserTabBatchResult(copies: copies))
     }
 

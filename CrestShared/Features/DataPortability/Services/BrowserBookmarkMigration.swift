@@ -81,8 +81,7 @@ enum BrowserBookmarkMigration {
             try draft.makeTemporarySpace(source: source)
         }
         let temporarySession = BrowserSession(
-            spaces: spaces,
-            selectedSpaceID: spaces[0].id
+            spaces: spaces
         )
 
         do {

@@ -36,7 +36,7 @@ struct BrowserDetailContent: View {
                         \.browserNativeTabActions,
                         BrowserNativeTabActions(
                             browser: browser, spaceAccess: spaceAccess,
-                            didOpenURL: { pages.select(session: browser.session) }))
+                            didOpenURL: { pages.select(session: browser.presented) }))
             }
         case .startPage:
             BrowserStartPageContent(

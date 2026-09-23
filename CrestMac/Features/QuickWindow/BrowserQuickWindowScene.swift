@@ -107,12 +107,12 @@ struct BrowserQuickWindowScene: View {
                 targetWindowID: targetWindowID
             )
         else { return }
-        let decision = BrowserLinkPreferenceStore.shared.routingDecision(
-            for: url,
-            in: initialContext.browser.session,
-            unavailableSpaceIDs: initialContext.browser.deletingSpaceIDs
-        )
         guard
+            let decision = BrowserLinkPreferenceStore.shared.routingDecision(
+                for: url,
+                in: initialContext.browser.presented,
+                unavailableSpaceIDs: initialContext.browser.deletingSpaceIDs
+            ),
             let space = initialContext.browser.session.space(
                 id: decision.spaceID
             )
@@ -141,7 +141,7 @@ struct BrowserQuickWindowScene: View {
                     matching: assignment
                 ) != nil
             else { return }
-            context.pages.select(session: context.browser.session)
+            context.pages.select(session: context.browser.presented)
             context.pages.load(url)
             openBrowserWindow()
             dismissWindow()

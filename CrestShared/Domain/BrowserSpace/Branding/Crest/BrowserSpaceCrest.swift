@@ -43,7 +43,7 @@ struct BrowserSpaceCrest: Codable, Equatable, Sendable {
     var showsOutline: Bool
     var depth: BrowserSpaceCrestDepth
 
-    static let maximumPaletteCount = 4
+    static var maximumPaletteCount: Int { BrowserCoreLimits.current.crestPalette }
     static let plateScaleRange = 0.7...1.15
     static let edgeWidthRange = 0.0...1.0
     static let divisionCountRange = 2...8

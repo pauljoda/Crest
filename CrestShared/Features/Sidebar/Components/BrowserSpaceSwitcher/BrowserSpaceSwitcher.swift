@@ -64,7 +64,7 @@ struct BrowserSpaceSwitcher: View {
     }
 
     private var selectedSpaceID: SpaceID {
-        browser.session.selectedSpaceID
+        browser.selectedSpaceID
     }
 
     private var metrics: BrowserSpacePickerMetrics {

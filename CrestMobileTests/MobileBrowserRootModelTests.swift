@@ -46,7 +46,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertFalse(
             fixture.model.presentSettings(
                 matching: BrowserTabRuntimeAssignment(
-                    tabID: try XCTUnwrap(space.selectedTabID), spaceID: space.id, profileID: space.profile.id)))
+                    tabID: try XCTUnwrap(space.tabs.first?.id), spaceID: space.id, profileID: space.profile.id)))
         XCTAssertEqual(fixture.browser.session, before)
         XCTAssertEqual(
             fixture.pages.nativeTabs.runtime(matching: assignment, content: .settings)?.assignment, assignment)
@@ -192,7 +192,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         other.model.openSettings()
         let previousState = other.model.settings.state
         let replacement = replacingProfile(of: ordinary, with: BrowsingProfile(id: fixedUUID(999)))
-        other.browser.session = BrowserSession(spaces: [replacement], selectedSpaceID: replacement.id)
+        other.browser.session = BrowserSession(spaces: [replacement])
         other.model.settings.reconcile()
         XCTAssertFalse(other.model.showsSettings)
         XCTAssertFalse(other.model.settings.state === previousState)
@@ -205,7 +205,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         let fixture = makeFixture(spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
         fixture.model.presentationChanged(to: .regular)
         let source = BrowserTabRuntimeAssignment(
-            tabID: try XCTUnwrap(space.selectedTabID), spaceID: space.id, profileID: space.profile.id)
+            tabID: try XCTUnwrap(space.tabs.first?.id), spaceID: space.id, profileID: space.profile.id)
         let target = BrowserTabRuntimeAssignment(tabID: settings.id, spaceID: space.id, profileID: space.profile.id)
         XCTAssertTrue(fixture.model.selectPaletteTab(from: source, to: target))
         XCTAssertEqual(fixture.browser.selectedSpace?.id, space.id)
@@ -277,7 +277,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertFalse(fixture.model.showsSettings)
         XCTAssertEqual(fixture.browser.session, foreignBefore)
         let source = BrowserTabRuntimeAssignment(
-            tabID: try XCTUnwrap(otherSpace.selectedTabID), spaceID: otherSpace.id, profileID: otherSpace.profile.id)
+            tabID: try XCTUnwrap(otherSpace.tabs.first?.id), spaceID: otherSpace.id, profileID: otherSpace.profile.id)
         let target = BrowserTabRuntimeAssignment(
             tabID: settings.id, spaceID: protectedSpace.id, profileID: protectedSpace.profile.id)
         XCTAssertFalse(fixture.model.presentSettings(matching: target))
@@ -376,7 +376,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertEqual(fixture.pages.activePage?.profileID, secondSpace.profile.id)
         XCTAssertTrue(
             fixture.pages.containsResidentPage(
-                for: try XCTUnwrap(firstSpace.selectedTabID)
+                for: try XCTUnwrap(firstSpace.tabs.first?.id)
             )
         )
     }
@@ -680,7 +680,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             startupBehavior: .showStartPage
         )
         let sourceAssignment = BrowserTabRuntimeAssignment(
-            tabID: try XCTUnwrap(source.selectedTabID),
+            tabID: try XCTUnwrap(source.tabs.first?.id),
             spaceID: source.id,
             profileID: source.profile.id
         )
@@ -690,7 +690,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             profileID: source.profile.id
         )
         let foreignAssignment = BrowserTabRuntimeAssignment(
-            tabID: try XCTUnwrap(otherSpace.selectedTabID),
+            tabID: try XCTUnwrap(otherSpace.tabs.first?.id),
             spaceID: otherSpace.id,
             profileID: otherSpace.profile.id
         )
@@ -705,10 +705,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             of: source,
             with: BrowsingProfile(id: fixedUUID(0xFE))
         )
-        fixture.browser.session = BrowserSession(
-            spaces: [replacement, otherSpace],
-            selectedSpaceID: replacement.id
-        )
+        fixture.browser.session = BrowserSession(spaces: [replacement, otherSpace])
         let replacementURL = fixture.browser.selectedTab?.url
 
         XCTAssertFalse(
@@ -731,9 +728,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController()
     ) -> MobileBrowserRootFixture {
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: spaces,
-                selectedSpaceID: selectedSpaceID
+            session: BrowserSession(spaces: spaces),
+            // Every Space shows its first tab, as a window restoring them would.
+            selection: BrowserStoreSelection(
+                selectedSpaceID: selectedSpaceID,
+                selectedTabIDsBySpace: Dictionary(
+                    uniqueKeysWithValues: spaces.compactMap { space in space.tabs.first.map { (space.id, $0.id) } })
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: browsingMode
@@ -773,8 +773,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 
@@ -797,8 +796,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             credentialPreferences: space.credentialPreferences,
             accessPolicy: space.accessPolicy,
             isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
-            selectedTabID: space.selectedTabID
+            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt
         )
     }
 

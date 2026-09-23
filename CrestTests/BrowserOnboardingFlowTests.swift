@@ -299,7 +299,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
     func testDeniedGuideAuthorizationKeepsManualDraftPendingUntilSuccessfulRetry() async throws {
         var first = makeSpace(name: "First")
         first.accessPolicy = .deviceOwnerAuthentication
-        let session = BrowserSession(spaces: [first], selectedSpaceID: first.id)
+        let session = BrowserSession(spaces: [first])
         let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
         let flow = makeFlow(entryPoint: .rerun, browser: browser)
         flow.beginManualSetup()
@@ -332,7 +332,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         XCTAssertEqual(flow.state, .complete)
         XCTAssertEqual(browser.session.spaces.filter { $0.id == newSpaceID }.count, 1)
         XCTAssertEqual(browser.session.spaces.first?.name, "Renamed")
-        XCTAssertEqual(browser.session.selectedSpaceID, first.id)
+        XCTAssertEqual(browser.selectedSpaceID, first.id)
         XCTAssertEqual(browser.selectedTab?.nativeContent, .gettingStarted)
     }
 
@@ -402,8 +402,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
             symbol: "square.and.arrow.down",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 

@@ -2,7 +2,7 @@ import Foundation
 
 struct BrowserSyncJournal: Codable, Equatable, Sendable {
     static let currentSchemaVersion = 1
-    static let maximumRecordCount = 250_000
+    static var maximumRecordCount: Int { BrowserCoreLimits.current.syncRecords }
 
     let schemaVersion: Int
     let deviceID: UUID

@@ -132,7 +132,7 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         let windowStates = UserDefaultsBrowserWindowStatePersistence(defaults: defaults)
         let windowState = BrowserWindowState(selectedSpaceID: installed.spaces[1].id,
             selectedTabIDsBySpace: Dictionary(uniqueKeysWithValues: installed.spaces.compactMap { space in
-                space.selectedTabID.map { (space.id, $0) }
+                space.tabs.first.map { (space.id, $0.id) }
             }))
         windowStates.save(windowState)
         await windowStates.flushPendingSaves()

@@ -179,7 +179,7 @@ final class BrowserMacApplication {
                 return BrowserModifiedLinkRegistration(
                     tab: tab,
                     space: space,
-                    session: browser.session
+                    session: browser.presented
                 )
             },
             backgroundPageDidUpdate: { update in
@@ -221,7 +221,7 @@ final class BrowserMacApplication {
                 return BrowserModifiedLinkRegistration(
                     tab: tab,
                     space: space,
-                    session: privateBrowser.session
+                    session: privateBrowser.presented
                 )
             },
             backgroundPageDidUpdate: { update in
@@ -259,9 +259,14 @@ final class BrowserMacApplication {
         )
         let mainWindowState = BrowserWindowStateStore(
             id: .main,
-            session: browser.session,
+            browser: browser,
             persistence: windowStatePersistence
         )
+        // The main window's own record is where its selection lives between
+        // launches; the session carries none. Launch cleanup then keeps every
+        // tab a stored window will show.
+        browser.restoreLaunchSelection(tabsFrom: mainWindowState.state)
+        browser.sweepAtLaunch(keeping: windowStatePersistence.loadAll())
         self.browser = browser
         self.cloudSync = cloudSync
         self.onboardingProgress = onboardingProgress

@@ -19,7 +19,7 @@ struct MobileSpaceSelectionSection: View {
                 BrowserSpaceOrderControls(browser: browser, spaceID: selectedSpaceID)
                 BrowserSpaceAddButton {
                     browser.addSpace()
-                    selectedSpaceID = browser.session.selectedSpaceID
+                    selectedSpaceID = browser.selectedSpaceID
                 }
             }
         }

@@ -751,13 +751,13 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
                 symbol: "rectangle.stack",
                 accent: .indigo,
                 folders: [],
-                tabs: cards + [joiner],
-                selectedTabID: cards.first?.id ?? joiner.id
+                tabs: cards + [joiner]
             )
             browser = BrowserStore(
-                session: BrowserSession(
-                    spaces: [space],
-                    selectedSpaceID: space.id
+                session: BrowserSession(spaces: [space]),
+                selection: BrowserStoreSelection(
+                    selectedSpaceID: space.id,
+                    selectedTabIDsBySpace: [space.id: cards.first?.id ?? joiner.id]
                 ),
                 persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing

@@ -41,14 +41,14 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         return visibility
     }
 
-    func reconcileCollapsedFolders(in space: BrowserSpace, residentTabIDs: Set<TabID>) {
+    func reconcileCollapsedFolders(in space: BrowserSpace, selectedTabID: TabID?, residentTabIDs: Set<TabID>) {
         let sections = space.tabSections
         for folder in space.folders {
             let assignment = BrowserFolderRuntimeAssignment(
                 folderID: folder.id, spaceID: space.id, profileID: space.profile.id)
             let tabs = sections.tabs(in: folder.id)
             reconcileCollapsedFolder(
-                assignment, isExpanded: !folder.isCollapsed, selectedTabID: space.selectedTabID,
+                assignment, isExpanded: !folder.isCollapsed, selectedTabID: selectedTabID,
                 folderTabIDs: tabs.map(\.id),
                 residentFolderTabIDs: tabs.compactMap { residentTabIDs.contains($0.id) ? $0.id : nil })
         }

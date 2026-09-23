@@ -125,7 +125,7 @@ extension BrowserPagePoolRegistry: BrowserPageDismissalAuthorizing {
             for runtime in self.windowRuntimes.values where runtime.browser?.family === browser.family {
                 guard let store = runtime.browser, let pool = runtime.pages else { continue }
                 pool.reconcile(session: store.session)
-                pool.select(session: store.session)
+                pool.select(session: store.presented)
             }
         }
         return committed

@@ -418,8 +418,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
             tabs: [sourceTab],
             accessPolicy: sourceIsProtected
                 ? .deviceOwnerAuthentication
-                : .open,
-            selectedTabID: sourceTab.id
+                : .open
         )
         let destination = BrowserSpace(
             id: SpaceID(rawValue: fixedUUID(5)),
@@ -428,14 +427,10 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
             symbol: "2.circle",
             accent: .rose,
             folders: [],
-            tabs: [destinationTab],
-            selectedTabID: destinationTab.id
+            tabs: [destinationTab]
         )
         let store = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
-            ),
+            session: BrowserSession(spaces: [source, destination]),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
@@ -476,8 +471,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
             credentialPreferences: current.credentialPreferences,
             accessPolicy: current.accessPolicy,
             isSavedTabsExpanded: current.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: current.savedTabsExpansionModifiedAt,
-            selectedTabID: current.selectedTabID
+            savedTabsExpansionModifiedAt: current.savedTabsExpansionModifiedAt
         )
         guard
             let index = store.session.spaces.firstIndex(where: {

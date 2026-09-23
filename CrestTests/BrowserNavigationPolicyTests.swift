@@ -576,8 +576,7 @@ final class BrowserDownloadNavigationLifecycleTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         var peekRequest: BrowserPeekRequest?
         let pool = BrowserPagePool(openPeek: { peekRequest = $0 })

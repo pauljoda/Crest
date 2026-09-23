@@ -228,7 +228,7 @@ extension BrowserRootModel {
     var selectionSnapshot: BrowserRootSelectionSnapshot {
         BrowserRootSelectionSnapshot(
             tabID: browser.selectedTab?.id,
-            spaceID: browser.session.selectedSpaceID
+            spaceID: browser.selectedSpaceID
         )
     }
 
@@ -262,7 +262,7 @@ extension BrowserRootModel {
         browser.navigateSelectedTab(to: url)
         // A native Settings or Getting Started tab has no resident page.
         // Selection builds the web page after the core changes its content.
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         pages.load(url)
         address = url.absoluteString
         isAddressEditing = false
@@ -280,7 +280,7 @@ extension BrowserRootModel {
         guard isPrepared else { return }
         isAddressEditing = false
         AddressFocusAction.resign()
-        if selectedSpaceIsLocked || !pages.isPresentingSelection(in: browser.session) {
+        if selectedSpaceIsLocked || !pages.isPresentingSelection(in: browser.presented) {
             if selectedSpaceIsLocked {
                 pages.deactivatePagePresentation()
             } else {
@@ -309,7 +309,7 @@ extension BrowserRootModel {
         {
             pages.leavePagePresentation()
         } else {
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
         }
         address = browser.selectedTab?.url?.absoluteString ?? ""
     }
@@ -628,7 +628,7 @@ extension BrowserRootModel {
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         address = browser.selectedTab?.url?.absoluteString ?? ""
         return true
     }
@@ -664,7 +664,7 @@ extension BrowserRootModel {
                 else { return false }
             }
         }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         pages.load(url)
         address = url.absoluteString
         return true

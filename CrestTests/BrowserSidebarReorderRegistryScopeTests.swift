@@ -202,10 +202,8 @@ private struct ReorderRegistryFixture {
             tabs: foreignPins
         )
         browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [own, foreign],
-                selectedSpaceID: own.id
-            ),
+            session: BrowserSession(spaces: [own, foreign]),
+            selection: firstTabSelection(showing: own, alongside: [foreign]),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
@@ -389,10 +387,8 @@ private struct SplitCardRegistryFixture {
             tabs: foreignCards
         )
         browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [own, foreign],
-                selectedSpaceID: own.id
-            ),
+            session: BrowserSession(spaces: [own, foreign]),
+            selection: firstTabSelection(showing: own, alongside: [foreign]),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
@@ -494,9 +490,20 @@ private func makeSpace(
         symbol: "rectangle.stack",
         accent: .indigo,
         folders: [],
-        tabs: tabs,
-        selectedTabID: tabs.first?.id
+        tabs: tabs
     )
+}
+
+/// Each Space shows its first tab, as the sidebar fixtures always have.
+private func firstTabSelection(
+    showing shown: BrowserSpace,
+    alongside others: [BrowserSpace]
+) -> BrowserStoreSelection {
+    var tabs: [SpaceID: TabID] = [:]
+    for space in [shown] + others {
+        tabs[space.id] = space.tabs.first?.id
+    }
+    return BrowserStoreSelection(selectedSpaceID: shown.id, selectedTabIDsBySpace: tabs)
 }
 
 private func makeTab(

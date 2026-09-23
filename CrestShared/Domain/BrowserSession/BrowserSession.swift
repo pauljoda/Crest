@@ -1,8 +1,10 @@
 import Foundation
 
+/// The browsing data the core owns, as the native read projection. Which Space
+/// and tab a window shows is window state (`BrowserStoreSelection`), never part
+/// of the session.
 struct BrowserSession: Codable, Equatable, Sendable {
     var spaces: [BrowserSpace]
-    var selectedSpaceID: SpaceID
     var defaultSpaceID: SpaceID? = nil
     var disposableSeedMarker: UUID? = nil
     /// Local cleanup work. These intents never become CloudKit records.
@@ -10,6 +12,9 @@ struct BrowserSession: Codable, Equatable, Sendable {
     /// The core's device-local behavior preferences. Nil until the legacy
     /// settings are imported; only `preferences.*` commands change it.
     var appPreferences: BrowserAppPreferences? = nil
+
+    /// The history the core keeps per Space.
+    static var maximumHistoryEntriesPerSpace: Int { BrowserCoreLimits.current.historyEntries }
 }
 
 struct BrowserSpaceDeletionIntent: Codable, Equatable, Sendable {
@@ -32,8 +37,7 @@ extension BrowserSession {
             accent: accent,
             branding: .initial(accent: accent, symbol: "square.grid.2x2.fill"),
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 
@@ -52,12 +56,10 @@ extension BrowserSession {
             accent: accent,
             branding: .house(.winter, symbol: symbol),
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
         return BrowserSession(
             spaces: [space],
-            selectedSpaceID: space.id,
             disposableSeedMarker: UUID()
         )
     }
@@ -81,45 +83,10 @@ extension BrowserSession {
                 isEnabled: false,
                 syncsCrestPasswordsWithICloud: false,
                 alsoOffersSaveToSystemPasswords: false
-            ),
-            selectedTabID: tab.id
+            )
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        return BrowserSession(spaces: [space])
     }
-}
-// MARK: - Persistence
-
-extension BrowserSession {
-    var selectedSpaceIndex: Int? {
-        spaces.firstIndex { $0.id == selectedSpaceID }
-    }
-
-    var selectedTabIndices: (space: Int, tab: Int)? {
-        guard let spaceIndex = selectedSpaceIndex else { return nil }
-        guard let tabID = spaces[spaceIndex].selectedTabID else { return nil }
-        guard let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }) else { return nil }
-        return (spaceIndex, tabIndex)
-    }
-
-    /// Gives a Space whose selection is gone the core's fallback tab. The first
-    /// tab of each placement are the only candidates the rule can choose
-    /// between. When the core cannot answer, the selection is left as it was.
-    mutating func ensureSelection(in spaceID: SpaceID) {
-        guard let index = spaces.firstIndex(where: { $0.id == spaceID }) else { return }
-        guard spaces[index].selectedTabID.map(spaces[index].contains) != true else { return }
-        let tabs = spaces[index].tabs
-        let candidates = [TabPlacement.current, .pinned, .saved]
-            .compactMap { placement in tabs.firstIndex { $0.placement == placement } }
-            .sorted()
-        guard !candidates.isEmpty else {
-            spaces[index].selectedTabID = nil
-            return
-        }
-        guard let chosen = BrowserCorePolicy.selectionFallback(placements: candidates.map { tabs[$0].placement })
-        else { return }
-        spaces[index].selectedTabID = tabs[candidates[chosen]].id
-    }
-
 }
 
 // MARK: - Queries
@@ -127,16 +94,6 @@ extension BrowserSession {
 extension BrowserSession {
     var hasDisposableSeedState: Bool {
         disposableSeedMarker != nil
-    }
-
-    var selectedSpace: BrowserSpace? {
-        guard spaceDeletions?.contains(where: { $0.spaceID == selectedSpaceID }) != true else { return nil }
-        return spaces.first { $0.id == selectedSpaceID }
-    }
-
-    var selectedTab: BrowserTab? {
-        guard let space = selectedSpace, let selectedTabID = space.selectedTabID else { return nil }
-        return space.tabs.first { $0.id == selectedTabID }
     }
 
     var tabIDs: [TabID] {

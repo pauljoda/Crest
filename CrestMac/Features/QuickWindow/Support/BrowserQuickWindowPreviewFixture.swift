@@ -26,8 +26,7 @@ enum BrowserQuickWindowPreviewFixture {
     static func makeBrowser() -> BrowserStore {
         BrowserStore(
             session: BrowserSession(
-                spaces: [sourceSpace, destinationSpace],
-                selectedSpaceID: sourceSpace.id
+                spaces: [sourceSpace, destinationSpace]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
@@ -70,8 +69,7 @@ enum BrowserQuickWindowPreviewFixture {
                     id: tabID,
                     lastActivatedAt: Date(timeIntervalSince1970: 0)
                 )
-            ],
-            selectedTabID: tabID
+            ]
         )
     }
 

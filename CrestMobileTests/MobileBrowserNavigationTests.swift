@@ -40,7 +40,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
-        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = presented(BrowserSession(spaces: [space]), showing: space.id)
 
         pages.select(session: session)
         let originalPage = try XCTUnwrap(pages.activePage)
@@ -58,14 +58,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
         async throws
     {
         let space = makeSpace(index: 99)
-        let session = BrowserSession(
-            spaces: [space],
-            selectedSpaceID: space.id
-        )
+        let session = presented(BrowserSession(spaces: [space]), showing: space.id)
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
-        let tabID = try XCTUnwrap(space.selectedTabID)
+        let tabID = try XCTUnwrap(space.tabs.first?.id)
         pages.select(session: session)
         var retainedPage: MobileBrowserPage? = try XCTUnwrap(pages.activePage)
 
@@ -90,33 +87,28 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testMobileSpaceSwitchingRetainsPagesUntilTheProtectedSpaceRelocks() throws {
         let firstSpace = makeSpace(index: 93)
         let secondSpace = makeSpace(index: 94)
-        var session = BrowserSession(
-            spaces: [firstSpace, secondSpace],
-            selectedSpaceID: firstSpace.id
-        )
+        let session = BrowserSession(spaces: [firstSpace, secondSpace])
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
 
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: firstSpace.id))
         let firstPage = try XCTUnwrap(pages.activePage)
-        session.selectSpace(secondSpace.id)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: secondSpace.id))
 
         XCTAssertTrue(pages.containsResidentPage(for: firstPage.tabID))
         XCTAssertTrue(
-            pages.containsResidentPage(for: try XCTUnwrap(secondSpace.selectedTabID))
+            pages.containsResidentPage(for: try XCTUnwrap(secondSpace.tabs.first?.id))
         )
 
-        session.selectSpace(firstSpace.id)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: firstSpace.id))
         XCTAssertTrue(try XCTUnwrap(pages.activePage) === firstPage)
 
         pages.unloadPages(in: firstSpace.id)
 
         XCTAssertFalse(pages.containsResidentPage(for: firstPage.tabID))
         XCTAssertTrue(
-            pages.containsResidentPage(for: try XCTUnwrap(secondSpace.selectedTabID))
+            pages.containsResidentPage(for: try XCTUnwrap(secondSpace.tabs.first?.id))
         )
     }
 
@@ -124,10 +116,10 @@ final class MobileBrowserNavigationTests: XCTestCase {
         var locked = makeSpace(index: 195)
         let tab = BrowserTab(title: "Protected", url: URL(string: "about:blank"), placement: .current)
         locked.tabs = [tab]
-        locked.selectedTabID = tab.id
         locked.accessPolicy = .deviceOwnerAuthentication
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [locked], selectedSpaceID: locked.id),
+            session: BrowserSession(spaces: [locked]),
+            selection: selection(showing: locked.id, in: [locked]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
@@ -205,7 +197,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             usesEphemeralWebsiteDataStores: true
         )
 
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let firstPage = try XCTUnwrap(pages.activePage)
         let firstStore = firstPage.webView.configuration.websiteDataStore
 
@@ -220,7 +212,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
 
         browser.addSpace()
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let secondPage = try XCTUnwrap(pages.activePage)
         let secondStore = secondPage.webView.configuration.websiteDataStore
 
@@ -243,7 +235,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             usesEphemeralWebsiteDataStores: true
         )
 
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let store = try XCTUnwrap(
             pages.activePage?.webView.configuration.websiteDataStore
         )
@@ -419,7 +411,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         for floating in [false, true] {
             let space = makeSpace(index: 334)
             let browser = BrowserStore(
-                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                session: BrowserSession(spaces: [space]),
+                selection: selection(showing: space.id, in: [space]),
                 persistence: InMemoryBrowserSessionPersistence()
             )
             let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
@@ -433,7 +426,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
             model.beginCompactNewTab()
 
-            XCTAssertEqual(browser.session.selectedSpaceID, space.id)
+            XCTAssertEqual(browser.selectedSpaceID, space.id)
             XCTAssertTrue(try XCTUnwrap(browser.selectedTab).isStartPage)
             XCTAssertEqual(model.address, "")
             XCTAssertTrue(model.navigation.compactShowsPage)
@@ -598,22 +591,19 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "keyboard",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs[0].id
+            tabs: tabs
         )
         let secondSpace = makeSpace(index: 52)
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [firstSpace, secondSpace],
-                selectedSpaceID: firstSpace.id
-            ),
+            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace], tabs: [firstSpace.id: tabs[0].id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
 
         XCTAssertEqual(commands.selectNextTab(), tabs[1].id)
         XCTAssertEqual(browser.selectedTab?.id, tabs[1].id)
@@ -645,11 +635,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "keyboard",
             accent: .teal,
             folders: [],
-            tabs: [first, second],
-            selectedTabID: first.id
+            tabs: [first, second]
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: first.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -657,7 +647,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
         browser.selectTab(second.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
 
         XCTAssertEqual(commands.archiveSelectedTab(), second.id)
         XCTAssertEqual(browser.selectedSpace?.archivedTabs.map(\.id), [second.id])
@@ -688,11 +678,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "keyboard",
             accent: .teal,
             folders: [],
-            tabs: [pinned, previous],
-            selectedTabID: pinned.id
+            tabs: [pinned, previous]
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -701,7 +691,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
         browser.selectTab(previous.id)
         browser.selectTab(pinned.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
 
         XCTAssertTrue(pages.containsResidentPage(for: pinned.id))
         XCTAssertEqual(commands.dismissSelectedTab(), pinned.id)
@@ -726,17 +716,17 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "briefcase.fill",
             accent: .indigo,
             folders: [],
-            tabs: [source],
-            selectedTabID: source.id
+            tabs: [source]
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: source.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
 
         let duplicateID = try XCTUnwrap(commands.duplicateSelectedTab())
@@ -861,10 +851,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let firstSpace = makeSpace(index: 13)
         let secondSpace = makeSpace(index: 14)
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [firstSpace, secondSpace],
-                selectedSpaceID: firstSpace.id
-            ),
+            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
@@ -958,7 +946,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let browser = try makeSplitBrowser(split)
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let model = makeModel(browser: browser, pages: pages)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
 
         XCTAssertNil(
             model.selectAdjacentSplitCard(.previous),
@@ -975,10 +963,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let firstSpace = makeSpace(index: 15)
         let secondSpace = makeSpace(index: 16)
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [firstSpace, secondSpace],
-                selectedSpaceID: firstSpace.id
-            ),
+            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
@@ -999,7 +985,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let browser = try makeSplitBrowser(split)
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let model = makeModel(browser: browser, pages: pages)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
 
         model.focusSplitCard(split.members[2].id)
 
@@ -1013,7 +999,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let browser = try makeSplitBrowser(split)
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
 
         XCTAssertTrue(commands.isSelectedTabInSplit)
         XCTAssertEqual(
@@ -1053,8 +1039,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "rectangle.split.2x1",
             accent: .indigo,
             folders: [],
-            tabs: members,
-            selectedTabID: members[selectedIndex].id
+            tabs: members
         )
         return (space, members)
     }
@@ -1063,10 +1048,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         _ split: (space: BrowserSpace, members: [BrowserTab])
     ) throws -> BrowserStore {
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [split.space],
-                selectedSpaceID: split.space.id
-            ),
+            session: BrowserSession(spaces: [split.space]),
+            selection: selection(showing: split.space.id, in: [split.space]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let space = try XCTUnwrap(browser.selectedSpace)
@@ -1099,28 +1082,26 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let firstSpace = makeSpace(index: 1)
         let secondSpace = makeSpace(index: 2)
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [firstSpace, secondSpace],
-                selectedSpaceID: firstSpace.id
-            ),
+            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
 
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let firstPage = try XCTUnwrap(pages.activePage)
         XCTAssertEqual(firstPage.profileID, firstSpace.profile.id)
 
         browser.selectSpace(secondSpace.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let secondPage = try XCTUnwrap(pages.activePage)
         XCTAssertEqual(secondPage.profileID, secondSpace.profile.id)
         XCTAssertFalse(firstPage === secondPage)
 
         browser.selectSpace(firstSpace.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         XCTAssertTrue(try XCTUnwrap(pages.activePage) === firstPage)
     }
 
@@ -1133,10 +1114,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let provider = StubMobileContentRuleListProvider(generations: [[ruleList]])
         let space = makeSpace(index: 28)
-        var session = BrowserSession(
-            spaces: [space],
-            selectedSpaceID: space.id
-        )
+        var session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true,
             contentRuleListProvider: provider
@@ -1144,7 +1122,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         await pages.prepareContentBlocking()
         XCTAssertEqual(provider.requestCount, 1)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id))
         XCTAssertEqual(pages.activePage?.isContentBlockingActive, true)
         let transientLease = try XCTUnwrap(
             pages.makeTransientPageLease(
@@ -1155,10 +1133,10 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertEqual(transientLease.page?.isContentBlockingActive, true)
 
         var preferences = try XCTUnwrap(
-            session.selectedSpace?.browsingPreferences
+            session.spaces.first?.browsingPreferences
         )
         preferences.contentBlockingPolicy = .off
-        session.updateBrowsingPreferences(preferences, in: space.id)
+        session.spaces[0].browsingPreferences = preferences
         await pages.reconcileContentBlocking(in: session)
 
         XCTAssertEqual(pages.activePage?.isContentBlockingActive, false)
@@ -1191,7 +1169,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let activeTab = BrowserTab.startPage()
         let backgroundTab = BrowserTab.startPage()
         let space = contentBlockingSpace(tabs: [activeTab, backgroundTab])
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
@@ -1199,11 +1177,9 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
 
         await pages.prepareContentBlocking()
-        session.selectTab(backgroundTab.id)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id, tabs: [space.id: backgroundTab.id]))
         let backgroundPage = try XCTUnwrap(pages.activePage)
-        session.selectTab(activeTab.id)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id, tabs: [space.id: activeTab.id]))
         let activePage = try XCTUnwrap(pages.activePage)
         XCTAssertFalse(activePage === backgroundPage)
 
@@ -1252,7 +1228,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let activeTab = BrowserTab.startPage()
         let backgroundTab = BrowserTab.startPage()
         let space = contentBlockingSpace(tabs: [activeTab, backgroundTab])
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        var session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
@@ -1260,11 +1236,9 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
 
         await pages.prepareContentBlocking()
-        session.selectTab(backgroundTab.id)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id, tabs: [space.id: backgroundTab.id]))
         let backgroundPage = try XCTUnwrap(pages.activePage)
-        session.selectTab(activeTab.id)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id, tabs: [space.id: activeTab.id]))
         let activePage = try XCTUnwrap(pages.activePage)
         // Adopts the Space's current protection level the way launching does.
         // Nothing may reload for it.
@@ -1281,7 +1255,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             session.space(id: space.id)?.browsingPreferences
         )
         preferences.contentBlockingPolicy = .off
-        session.updateBrowsingPreferences(preferences, in: space.id)
+        session.spaces[0].browsingPreferences = preferences
         await pages.reconcileContentBlocking(in: session)
 
         try await documents.waitForNavigation(
@@ -1312,8 +1286,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "shield",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs.first?.id
+            tabs: tabs
         )
     }
 
@@ -1375,10 +1348,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             in: retainedSpace.id
         )
         pages.select(
-            session: BrowserSession(
-                spaces: [deletedSpace, retainedSpace],
-                selectedSpaceID: deletedSpace.id
-            )
+            session: presented(BrowserSession(spaces: [deletedSpace, retainedSpace]), showing: deletedSpace.id)
         )
         XCTAssertFalse(
             try XCTUnwrap(
@@ -1386,18 +1356,15 @@ final class MobileBrowserNavigationTests: XCTestCase {
             ).isPersistent
         )
         pages.select(
-            session: BrowserSession(
-                spaces: [deletedSpace, retainedSpace],
-                selectedSpaceID: retainedSpace.id
-            )
+            session: presented(BrowserSession(spaces: [deletedSpace, retainedSpace]), showing: retainedSpace.id)
         )
         XCTAssertFalse(
             try XCTUnwrap(
                 pages.activePage?.webView.configuration.websiteDataStore
             ).isPersistent
         )
-        let deletedTabID = try XCTUnwrap(deletedSpace.selectedTabID)
-        let retainedTabID = try XCTUnwrap(retainedSpace.selectedTabID)
+        let deletedTabID = try XCTUnwrap(deletedSpace.tabs.first?.id)
+        let retainedTabID = try XCTUnwrap(retainedSpace.tabs.first?.id)
 
         try await pages.deleteData(for: deletedSpace)
 
@@ -1414,7 +1381,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testDeletingSpaceThroughMobileRegistryReleasesEveryWindowBeforeSharedData() async throws {
         let space = makeSpace(index: 35)
-        let tabID = try XCTUnwrap(space.selectedTabID)
+        let tabID = try XCTUnwrap(space.tabs.first?.id)
         let remover = RecordingMobileWebsiteDataStoreRemover()
         let primaryPages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: false,
@@ -1426,10 +1393,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let registry = MobileBrowserPageStoreRegistry(primary: primaryPages)
         registry.register(secondaryPages)
-        let session = BrowserSession(
-            spaces: [space],
-            selectedSpaceID: space.id
-        )
+        let session = presented(BrowserSession(spaces: [space]), showing: space.id)
         primaryPages.select(session: session)
         secondaryPages.select(session: session)
         XCTAssertFalse(
@@ -1457,10 +1421,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             usesEphemeralWebsiteDataStores: false,
             profileRemover: remover
         )
-        let deletedSession = BrowserSession(
-            spaces: [deletedSpace],
-            selectedSpaceID: deletedSpace.id
-        )
+        let deletedSession = presented(BrowserSession(spaces: [deletedSpace]), showing: deletedSpace.id)
         pages.select(session: deletedSession)
         XCTAssertNotNil(pages.activePage)
         XCTAssertFalse(
@@ -1493,11 +1454,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "briefcase",
             accent: .indigo,
             folders: [],
-            tabs: [reddit, crest],
-            selectedTabID: reddit.id
+            tabs: [reddit, crest]
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: reddit.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -1506,16 +1467,16 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let switchTime = Date(timeIntervalSince1970: 1_000)
 
         pages.select(
-            session: browser.session,
+            session: browser.presented,
             at: switchTime.addingTimeInterval(-1)
         )
         browser.selectTab(crest.id)
-        pages.select(session: browser.session, at: switchTime)
+        pages.select(session: browser.presented, at: switchTime)
 
         XCTAssertTrue(pages.containsResidentPage(for: reddit.id))
         XCTAssertTrue(pages.containsResidentPage(for: crest.id))
 
-        pages.select(session: browser.session, at: .distantFuture)
+        pages.select(session: browser.presented, at: .distantFuture)
         XCTAssertTrue(pages.containsResidentPage(for: reddit.id))
         XCTAssertTrue(pages.containsResidentPage(for: crest.id))
     }
@@ -1542,27 +1503,27 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "minus.circle",
             accent: .teal,
             folders: [],
-            tabs: [pinned, current],
-            selectedTabID: pinned.id
+            tabs: [pinned, current]
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
 
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         browser.selectTab(current.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         pages.unloadPage(for: pinned.id)
 
         XCTAssertFalse(pages.containsResidentPage(for: pinned.id))
         XCTAssertNotNil(browser.selectedSpace?.tabs.first(where: { $0.id == pinned.id }))
 
         browser.selectTab(pinned.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         XCTAssertTrue(pages.containsResidentPage(for: pinned.id))
         XCTAssertEqual(pages.activePage?.tabID, pinned.id)
     }
@@ -1582,8 +1543,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "minus.circle",
             accent: .teal,
             folders: [],
-            tabs: [pinned],
-            selectedTabID: pinned.id
+            tabs: [pinned]
         )
         let replacement = BrowserSpace(
             id: original.id,
@@ -1600,17 +1560,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             credentialPreferences: original.credentialPreferences,
             accessPolicy: original.accessPolicy,
             isSavedTabsExpanded: original.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt,
-            selectedTabID: original.selectedTabID
+            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
         pages.select(
-            session: BrowserSession(
-                spaces: [replacement],
-                selectedSpaceID: replacement.id
-            )
+            session: presented(BrowserSession(spaces: [replacement]), showing: replacement.id, tabs: [replacement.id: pinned.id])
         )
 
         XCTAssertFalse(
@@ -1640,11 +1596,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "memorychip",
             accent: .teal,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs[0].id
+            tabs: tabs
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -1653,7 +1609,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         for tab in tabs {
             browser.selectTab(tab.id)
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
         }
 
         let activePage = try XCTUnwrap(pages.activePage)
@@ -1683,11 +1639,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "memorychip",
             accent: .teal,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs[0].id
+            tabs: tabs
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -1697,7 +1653,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         for tab in tabs {
             browser.selectTab(tab.id)
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
         }
 
         pages.handleMemoryPressure(.critical, at: squeeze)
@@ -1736,11 +1692,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "memorychip",
             accent: .teal,
             folders: [],
-            tabs: pinned + current,
-            selectedTabID: current[0].id
+            tabs: pinned + current
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: current[0].id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
@@ -1749,7 +1705,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         for tab in pinned + current {
             browser.selectTab(tab.id)
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
         }
         XCTAssertEqual(pages.residentPageCount, 5)
 
@@ -1794,7 +1750,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             usesEphemeralWebsiteDataStores: true
         )
 
-        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        pages.select(session: presented(BrowserSession(spaces: [space]), showing: space.id))
         let page = try XCTUnwrap(pages.activePage)
 
         pages.zoomIn()
@@ -1822,26 +1778,21 @@ final class MobileBrowserNavigationTests: XCTestCase {
         var space = makeSpace(index: 12)
         let backgroundTab = BrowserTab.startPage()
         space.tabs.append(backgroundTab)
-        var session = BrowserSession(
-            spaces: [space],
-            selectedSpaceID: space.id
-        )
+        let session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true,
             pageZoomPreferences: preferences
         )
 
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id))
         let page = try XCTUnwrap(pages.activePage)
         XCTAssertEqual(page.pageZoom, 1.00001)
         XCTAssertEqual(page.webView.pageZoom, 1.00001)
 
-        session.selectTab(backgroundTab.id)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id, tabs: [space.id: backgroundTab.id]))
         let backgroundPage = try XCTUnwrap(pages.activePage)
         XCTAssertEqual(backgroundPage.pageZoom, 1.00001)
-        session.selectTab(page.tabID)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id, tabs: [space.id: page.tabID]))
 
         for zoom: CGFloat in [0.25, 5, 1.50001, 1.50002] {
             preferences.defaultZoom = zoom
@@ -1883,7 +1834,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         pages.zoomOut()
         XCTAssertEqual(page.pageZoom, 1.75, accuracy: 0.001)
         pages.unloadPage(for: page.tabID)
-        pages.select(session: session)
+        pages.select(session: presented(session, showing: space.id, tabs: [space.id: page.tabID]))
 
         XCTAssertEqual(pages.activePage?.pageZoom ?? 0, 2, accuracy: 0.001)
         XCTAssertFalse(pages.activePage === page)
@@ -2053,8 +2004,32 @@ final class MobileBrowserNavigationTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
+        )
+    }
+
+    /// What a window shows: `spaceID`, with every Space on the tab `tabs`
+    /// names for it, or else its first tab.
+    private func selection(
+        showing spaceID: SpaceID,
+        in spaces: [BrowserSpace],
+        tabs: [SpaceID: TabID] = [:]
+    ) -> BrowserStoreSelection {
+        var shown: [SpaceID: TabID] = [:]
+        for space in spaces {
+            shown[space.id] = tabs[space.id] ?? space.tabs.first?.id
+        }
+        return BrowserStoreSelection(selectedSpaceID: spaceID, selectedTabIDsBySpace: shown)
+    }
+
+    private func presented(
+        _ session: BrowserSession,
+        showing spaceID: SpaceID,
+        tabs: [SpaceID: TabID] = [:]
+    ) -> BrowserPresentedSession {
+        BrowserPresentedSession(
+            session: session,
+            selection: selection(showing: spaceID, in: session.spaces, tabs: tabs)
         )
     }
 

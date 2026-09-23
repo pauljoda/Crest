@@ -71,7 +71,7 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
         let persistence = CountingPersistence()
         let store = BrowserWindowStateStore(
             id: BrowserWindowID(),
-            session: session,
+            browser: makeBrowser(session),
             persistence: persistence
         )
         let savesAfterLaunch = persistence.saveCount
@@ -97,7 +97,7 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
         let persistence = CountingPersistence()
         let store = BrowserWindowStateStore(
             id: BrowserWindowID(),
-            session: makeSession(memberCount: 2, group: group),
+            browser: makeBrowser(makeSession(memberCount: 2, group: group)),
             persistence: persistence
         )
         store.captureSplitLayout(fractions: [0.6, 0.4], for: group)
@@ -143,9 +143,14 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
         )
     }
 
+    @MainActor
+    private func makeBrowser(_ session: BrowserSession) -> BrowserStore {
+        BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+    }
+
     private func makeSession(memberCount: Int, group: SplitGroupID) -> BrowserSession {
         let space = makeSpace(memberCount: memberCount, group: group)
-        return BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        return BrowserSession(spaces: [space])
     }
 
     private func makeSpace(memberCount: Int, group: SplitGroupID) -> BrowserSpace {
@@ -160,8 +165,7 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
             symbol: "briefcase.fill",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: tabs.first?.id
+            tabs: tabs
         )
     }
 

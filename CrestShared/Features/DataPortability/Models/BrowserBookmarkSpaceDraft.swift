@@ -100,7 +100,7 @@ struct BrowserBookmarkSpaceDraft: Equatable, Sendable {
                 lastActivatedAt: bookmark.addedAt
             )
         }
-        guard let selectedTabID = tabs.first?.id else {
+        guard !tabs.isEmpty else {
             throw BrowserBookmarkMigrationError.noImportableBookmarks
         }
         let normalizedName = try BrowserBookmarkValueSanitizer.title(
@@ -120,8 +120,7 @@ struct BrowserBookmarkSpaceDraft: Equatable, Sendable {
             archivedTabs: [],
             history: [],
             browsingPreferences: .default,
-            credentialPreferences: .default,
-            selectedTabID: selectedTabID
+            credentialPreferences: .default
         )
     }
 }

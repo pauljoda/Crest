@@ -5,7 +5,7 @@ import Foundation
 extension BrowserStore {
     func recordVisit(url: URL, title: String?) {
         guard selectedSpace != nil else { return }
-        let spaceID = session.selectedSpaceID
+        let spaceID = selectedSpaceID
         guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
         persist(syncUrgency: .coalesced, scope: .history(in: spaceID))
     }
@@ -62,7 +62,7 @@ extension BrowserStore {
 
     func clearHistory() {
         guard selectedSpace != nil else { return }
-        clearHistory(in: session.selectedSpaceID)
+        clearHistory(in: selectedSpaceID)
     }
 
     func clearHistory(in spaceID: SpaceID) {
@@ -141,7 +141,7 @@ extension BrowserStore {
 
     func restoreArchivedTab(_ id: TabID) {
         guard selectedSpace != nil else { return }
-        guard family.executeRecords("archive.restore", in: session.selectedSpaceID,
+        guard family.executeRecords("archive.restore", in: selectedSpaceID,
             arguments: ["tabId": id.rawValue.uuidString], from: self) else { return }
         persist(deletionReason: .superseded, scope: .core)
     }
@@ -152,7 +152,7 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard let space = space(matching: assignment),
-            session.selectedSpaceID == assignment.spaceID,
+            selectedSpaceID == assignment.spaceID,
             space.archivedTabs.contains(where: { $0.id == id })
         else { return false }
         guard family.executeRecords("archive.restore", in: assignment.spaceID,
@@ -219,9 +219,10 @@ extension BrowserStore {
         }
         preferences.dataRetention = retention
         // Retention is one field of the same Space preferences record every
-        // other settings surface writes, so it takes the same core command.
+        // other settings surface writes, so it takes the same core command, and
+        // the core's own sweep then applies it.
         guard setCoreSpaceValue("space.browsing_preferences", preferences, in: spaceID) else { return }
-        let removedRecords = family.applyDataRetentionPolicies(at: now, from: self)
+        let removedRecords = family.executeRecords("records.sweep", in: spaceID, from: self, at: now)
         persist(
             deletionReason: removedRecords ? .retention : .superseded,
             scope: removedRecords ? .everything : .core

@@ -48,7 +48,7 @@ extension BrowserStore {
                 url: nil,
                 symbol: BrowserTab.startPageSymbol,
                 in: space.id,
-                insertingAfter: space.selectedTabID
+                insertingAfter: selectedTabID(in: space.id)
             )
         else { return nil }
         return (tabID, true)
@@ -61,7 +61,7 @@ extension BrowserStore {
             title: url.host() ?? url.absoluteString,
             url: url,
             in: space.id,
-            insertingAfter: space.selectedTabID
+            insertingAfter: selectedTabID(in: space.id)
         )
         persist(scope: .core)
         return tabID
@@ -85,7 +85,7 @@ extension BrowserStore {
             title: url.host() ?? url.absoluteString,
             url: url,
             in: spaceID,
-            insertingAfter: space.selectedTabID,
+            insertingAfter: selectedTabID(in: space.id),
             shouldSelect: selecting
         )
         persist(scope: .core)
@@ -122,7 +122,7 @@ extension BrowserStore {
                 title: destinationURL.host() ?? destinationURL.absoluteString,
                 url: destinationURL,
                 in: spaceID,
-                insertingAfter: space.selectedTabID,
+                insertingAfter: selectedTabID(in: space.id),
                 shouldSelect: selecting
             ),
             let updatedSpace = session.space(id: spaceID),
@@ -157,7 +157,7 @@ extension BrowserStore {
         let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: spaceID, profileID: space.profile.id)
         return performPageDismissal(of: [assignment]) { [weak self] in
             guard let self, let current = self.session.space(id: spaceID) else { return false }
-            let fallbackID = current.selectedTabID == id
+            let fallbackID = selectedTabID(in: current.id) == id
                 ? self.dismissalFallbackTabID(afterDismissing: id, in: current) : nil
             guard self.closeSessionTab(id, in: spaceID, fallbackTabID: fallbackID,
                 resetArchivePlacement: resetArchivePlacement) else { return false }
@@ -380,7 +380,7 @@ extension BrowserStore {
         // An existing web page stays at its accepted location until the engine
         // reports the new navigation. Native content needs a web tab to host it.
         guard selectedTab?.isWebPage == false,
-            let space = selectedSpace, let tabID = space.selectedTabID,
+            let space = selectedSpace, let tabID = selectedTabID(in: space.id),
             let observation = observeSessionTab(url: url, title: url.host() ?? url.absoluteString,
                 faviconData: nil, iconAccent: nil, tabID: tabID, in: space.id)
         else { return }
@@ -394,7 +394,7 @@ extension BrowserStore {
         faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil
     ) {
-        guard let space = selectedSpace, let tabID = space.selectedTabID,
+        guard let space = selectedSpace, let tabID = selectedTabID(in: space.id),
             let observation = observeSessionTab(url: observedURL, title: title,
                 faviconData: faviconData, iconAccent: iconAccent, tabID: tabID, in: space.id)
         else { return }

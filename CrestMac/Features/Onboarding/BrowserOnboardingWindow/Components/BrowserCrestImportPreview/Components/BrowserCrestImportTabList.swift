@@ -47,7 +47,7 @@ struct BrowserCrestImportTabList: View {
         BrowserImportSidebarResultTabRow(
             tab: tab,
             profileID: space.profile.id,
-            isSelected: tab.id == space.selectedTabID,
+            isSelected: tab.id == BrowserStoreSelection.fallbackTabID(in: space),
             isMatched: matchedTabIDs.contains(tab.id)
         )
     }

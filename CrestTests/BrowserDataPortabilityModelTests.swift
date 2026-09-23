@@ -109,13 +109,9 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [],
-            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open,
-            selectedTabID: nil
+            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open
         )
-        let session = BrowserSession(
-            spaces: [space],
-            selectedSpaceID: space.id
-        )
+        let session = BrowserSession(spaces: [space])
         let browser = BrowserStore(
             session: session,
             persistence: InMemoryBrowserSessionPersistence()
@@ -144,8 +140,7 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
             symbol: "shippingbox.fill",
             accent: .orange,
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
         return BrowserPortableImport(
             spaces: [importedSpace],

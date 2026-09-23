@@ -58,7 +58,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 return
             }
             guard source.isAvailable(in: reorder), isEnabled,
-                reorder.browser.session.selectedSpaceID == item.spaceAssignment.spaceID
+                reorder.browser.selectedSpaceID == item.spaceAssignment.spaceID
             else { return }
             switch phase {
             case .moved(let startLocation, let location):

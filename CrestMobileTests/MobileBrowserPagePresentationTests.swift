@@ -22,8 +22,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
             symbol: "1.circle",
             accent: .indigo,
             folders: [],
-            tabs: [firstTab],
-            selectedTabID: firstTab.id
+            tabs: [firstTab]
         )
         let secondSpace = BrowserSpace(
             id: SpaceID(rawValue: UUID()),
@@ -32,20 +31,20 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
             symbol: "2.circle",
             accent: .teal,
             folders: [],
-            tabs: [secondTab],
-            selectedTabID: secondTab.id
+            tabs: [secondTab]
         )
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [firstSpace, secondSpace],
-                selectedSpaceID: firstSpace.id
+            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: firstSpace.id,
+                selectedTabIDsBySpace: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
             ),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
         )
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let firstPage = try XCTUnwrap(pages.activePage)
         let firstPort = MobileSelectedPageActionPort(
             browser: browser,
@@ -84,7 +83,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
         XCTAssertNil(secondPort.activeURL)
         XCTAssertFalse(secondPort.copyPageLinkAsMarkdown())
 
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         let secondPage = try XCTUnwrap(pages.activePage)
         XCTAssertTrue(secondPort.isAvailable)
         XCTAssertTrue(secondPort.activePage === secondPage)

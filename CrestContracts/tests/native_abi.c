@@ -109,9 +109,9 @@ static void policy_boundary(void) {
     assert(crest_core_evaluate_policy((const uint8_t*)secret, strlen(secret), output, 256, &length) == CREST_INVALID_MESSAGE);
     /* Window repair answers from presence facts; a captured empty Space stays empty. */
     const char *window = "{\"version\":1,\"operation\":\"window.repair\",\"selectedSpaceID\":\"66666666-6666-6666-6666-666666666666\","
-        "\"sessionSelectedSpaceID\":\"44444444-4444-4444-4444-444444444444\",\"capturesSelection\":true,"
+        "\"capturesSelection\":true,"
         "\"spaces\":[{\"id\":\"44444444-4444-4444-4444-444444444444\",\"windowTab\":false,\"captured\":true,"
-        "\"spaceSelection\":true,\"hasTabs\":true}],\"splitLayouts\":[]}";
+        "\"hasTabs\":true}],\"splitLayouts\":[]}";
     assert(crest_core_evaluate_policy((const uint8_t*)window, strlen(window), output, 256, &length) == CREST_OK);
     output[length] = 0;
     assert(strstr((const char*)output, "\"selectedSpaceID\":\"44444444-4444-4444-4444-444444444444\"")
@@ -179,16 +179,11 @@ static void session_boundary(void) {
     assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_MESSAGE);
     memset(engine, 0xaa, sizeof(engine)); /* The session must own its descriptor copy. */
 
-    char selection[512];
-    size = snprintf(selection, sizeof(selection),
-        "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"selectedTabs\":[{\"spaceID\":{\"rawValue\":\"%s\"},\"tabID\":null}]}",
-        space_id, space_id);
-    assert(size > 0 && (size_t)size < sizeof(selection));
+    /* Selection is window state: the checkpoint takes none and a legacy
+     * session-level selection in the input document is not written back. */
     uint64_t checkpoint = 0;
-    assert(crest_session_checkpoint(session, revision + 1, (const uint8_t*)selection, (size_t)size, &checkpoint)
-        == CREST_INVALID_STATE && checkpoint == 0);
-    assert(crest_session_checkpoint(session, revision, (const uint8_t*)selection, (size_t)size, &checkpoint) == CREST_OK
-        && checkpoint != 0);
+    assert(crest_session_checkpoint(session, revision + 1, &checkpoint) == CREST_INVALID_STATE && checkpoint == 0);
+    assert(crest_session_checkpoint(session, revision, &checkpoint) == CREST_OK && checkpoint != 0);
 
     /* A capacity probe reports the size without consuming the immutable part. */
     const char* part = "core";
@@ -203,13 +198,14 @@ static void session_boundary(void) {
     output[length] = 0;
     /* Engine registration is process-local and never enters the checkpoint. */
     assert(strstr((const char*)output, "fixture") == NULL);
+    assert(strstr((const char*)output, "selectedSpaceID") == NULL);
     free(output);
 
     assert(crest_session_release_checkpoint(checkpoint) == CREST_OK);
     assert(crest_session_release_checkpoint(checkpoint) == CREST_INVALID_HANDLE);
     assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_INVALID_HANDLE);
-    assert(crest_session_checkpoint(session, 1, (const uint8_t*)selection, (size_t)size, &checkpoint) == CREST_INVALID_HANDLE);
+    assert(crest_session_checkpoint(session, 1, &checkpoint) == CREST_INVALID_HANDLE);
 }
 /* A session that consults the access authority refuses commands against a
  * locked Space until that exact Space/profile pair holds a grant. */
@@ -236,8 +232,8 @@ static void locked_space_boundary(void) {
         "{\"version\":1,\"operation\":\"tab.rename\",\"spaceId\":{\"rawValue\":\"%s\"},"
         "\"profileId\":\"%s\",\"now\":800000002,"
         "\"arguments\":{\"tabId\":\"%s\",\"title\":\"Renamed\"},"
-        "\"window\":{\"selectedSpaceID\":{\"rawValue\":\"%s\"},"
-        "\"selectedTabs\":[{\"spaceID\":{\"rawValue\":\"%s\"},\"tabID\":{\"rawValue\":\"%s\"}}]}}",
+        "\"view\":{\"spaceId\":\"%s\","
+        "\"tabs\":[{\"spaceId\":\"%s\",\"tabId\":\"%s\"}]}}",
         space_id, profile_id, tab_id, space_id, space_id, tab_id);
     assert(size > 0 && (size_t)size < sizeof(edit));
     assert(crest_session_prepare_command(session, revision, (const uint8_t*)edit, (size_t)size, &command)

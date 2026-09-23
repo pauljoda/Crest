@@ -134,10 +134,7 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
         )
         return Context(
             browser: BrowserStore(
-                session: BrowserSession(
-                    spaces: [source, destination],
-                    selectedSpaceID: source.id
-                ),
+                session: BrowserSession(spaces: [source, destination]),
                 persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             ),
@@ -163,8 +160,7 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [],
-            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open,
-            selectedTabID: nil
+            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open
         )
     }
 
@@ -187,8 +183,7 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
             credentialPreferences: space.credentialPreferences,
             accessPolicy: space.accessPolicy,
             isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
-            selectedTabID: space.selectedTabID
+            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt
         )
     }
 

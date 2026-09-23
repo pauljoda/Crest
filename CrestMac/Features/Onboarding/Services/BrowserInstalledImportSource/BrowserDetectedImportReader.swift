@@ -114,9 +114,6 @@ enum BrowserDetectedImportReader {
             else { continue }
             result.folders.append(contentsOf: space.folders)
             result.tabs.append(contentsOf: space.tabs)
-            if let selectedTabID = space.selectedTabID {
-                result.selectedTabID = selectedTabID
-            }
         }
         result.symbol = application.migrationSource.symbol
         result.accent = application.migrationSource.accent

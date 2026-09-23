@@ -118,6 +118,13 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
         return migratedLegacySession()
     }
 
+    /// The installed release stored the viewed Space and each Space's tab in
+    /// the session; they are read here once and never written back.
+    func loadLegacySelection() -> BrowserLegacySessionSelection? {
+        BrowserLegacySessionSelection.decode(defaults.data(forKey: Self.coreKey))
+            ?? BrowserLegacySessionSelection.decode(defaults.data(forKey: Self.legacyCoreKey))
+    }
+
     func save(_ session: BrowserSession, scope: BrowserSessionSaveScope) {
         enqueueSave(session, scope: scope, checkpoint: nil)
     }

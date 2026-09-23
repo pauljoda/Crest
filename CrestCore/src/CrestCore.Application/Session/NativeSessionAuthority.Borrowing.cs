@@ -13,10 +13,10 @@ public sealed partial class NativeSessionAuthority {
     private ulong borrowedSourceRevision;
     private bool released;
 
-    // Presentation and organization belong to the temporary workspace. Every
-    // other metadata field, including unknown compatible fields, follows its owner.
+    // Organization belongs to the temporary workspace. Every other metadata
+    // field, including unknown compatible fields, follows its owner.
     private static readonly string[] LocalBorrowedFields =
-        ["selectedTabID", "splitGroups", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt"];
+        ["splitGroups", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt"];
 
     internal ulong? BorrowedRevision => borrowedSource is null ? null : borrowedSource.Revision;
 
@@ -44,12 +44,9 @@ public sealed partial class NativeSessionAuthority {
             RequireAccessible(spaceId);
             var original = TransferSpace(spaceId, profileId);
             var fields = original.Metadata.DeepClone().AsObject();
-            fields["selectedTabID"] = null; fields["splitGroups"] = new JsonArray();
+            fields["splitGroups"] = new JsonArray();
             var empty = Sections.ToDictionary(s => s, _ => (IReadOnlyList<JsonNode>)Array.Empty<JsonNode>());
-            var metadata = new JsonObject {
-                ["selectedSpaceID"] = fields["id"]!.DeepClone(),
-                ["defaultSpaceID"] = fields["id"]!.DeepClone()
-            };
+            var metadata = new JsonObject { ["defaultSpaceID"] = fields["id"]!.DeepClone() };
             return new(new(metadata, [new(fields, empty)]), this, spaceId, profileId);
         }
     }

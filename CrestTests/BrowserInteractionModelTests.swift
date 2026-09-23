@@ -9,26 +9,27 @@ import struct SwiftUI.Color
 final class BrowserInteractionModelTests: XCTestCase {
 
     func testSpaceIdentityAndOrderingRemainStableAcrossEdits() throws {
-        var session = BrowserSession.preview
+        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
         let profilesBySpaceID = Dictionary(
-            uniqueKeysWithValues: session.spaces.map {
+            uniqueKeysWithValues: browser.session.spaces.map {
                 ($0.id, $0.profile.id)
             }
         )
-        session.addSpace()
-        let movedID = try XCTUnwrap(session.spaces.first?.id)
+        browser.addSpace()
+        let movedID = try XCTUnwrap(browser.session.spaces.first?.id)
 
-        session.moveSpaces(
-            from: IndexSet(integer: session.spaces.startIndex),
-            to: session.spaces.endIndex
+        browser.moveSpaces(
+            from: IndexSet(integer: browser.session.spaces.startIndex),
+            to: browser.session.spaces.endIndex
         )
-        session.updateSpaceIdentity(
+        browser.updateSpaceIdentity(
             movedID,
             name: "  Research  ",
             symbol: "graduationcap.fill",
             accent: .teal
         )
 
+        let session = browser.session
         let moved = try XCTUnwrap(session.spaces.last)
         XCTAssertEqual(moved.id, movedID)
         XCTAssertEqual(moved.name, "Research")
@@ -37,7 +38,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         for (spaceID, profileID) in profilesBySpaceID {
             XCTAssertEqual(session.space(id: spaceID)?.profile.id, profileID)
         }
-        XCTAssertEqual(session.selectedSpaceID, session.spaces.dropLast().last?.id)
+        XCTAssertEqual(browser.selectedSpaceID, session.spaces.dropLast().last?.id)
     }
 
     func testRowInsertionLowerHalfResolvesBeforeTheActualFollowingTab() {
@@ -958,7 +959,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             browser.session.space(id: destination.id)?.tabs.first(where: { $0.id == tab.id })
         )
         XCTAssertEqual(moved.placement, .saved)
-        XCTAssertEqual(browser.session.selectedTab?.id, tab.id)
+        XCTAssertEqual(browser.selectedTab?.id, tab.id)
         XCTAssertEqual(sidebarInteraction.tabDragState.item?.spaceID, destination.id)
         XCTAssertEqual(sidebarInteraction.tabDragState.currentPlacement, .current)
         XCTAssertEqual(sidebarInteraction.tabDragState.sessionToken, token)

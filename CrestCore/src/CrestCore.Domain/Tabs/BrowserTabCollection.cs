@@ -31,12 +31,11 @@ public sealed partial class BrowserTabCollection {
         return collection;
     }
 
-    public SpaceState Capture(SpaceState original, Guid? selected) => original with {
+    public SpaceState Capture(SpaceState original) => original with {
         Tabs = tabs.Select(t => t.Capture()).ToArray(),
         Folders = folders.Select(f => new FolderState(f.Id, f.Name, f.Location, f.ParentId,
             f.IsCollapsed, f.CollapseModifiedAt, f.OrderAnchorTabId)).ToArray(),
-        Archive = archive.Select(a => new ArchiveState(a.Tab, a.ClosedAt, a.Reason)).ToArray(),
-        SelectedTabId = selected
+        Archive = archive.Select(a => new ArchiveState(a.Tab, a.ClosedAt, a.Reason)).ToArray()
     };
 
     #endregion

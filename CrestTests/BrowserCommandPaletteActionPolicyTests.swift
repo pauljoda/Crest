@@ -6,11 +6,11 @@ import XCTest
 @MainActor
 final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
     func testEmptySelectionActionsRejectChangedSelectionSpaceProfileAndLock() throws {
-        var source = makeSpace(index: 1)
+        let source = makeSpace(index: 1)
         let target = try assignment(for: source)
-        source.selectedTabID = nil
         let other = makeSpace(index: 2)
-        let browser = makeBrowser(spaces: [source, other], selected: source.id)
+        let browser = makeBrowser(
+            spaces: [source, other], selection: BrowserStoreSelection(selectedSpaceID: source.id))
         var selectionCount = 0
         let actions = BrowserEmptySelectionPaletteActions(
             source: BrowserSpaceRuntimeAssignment(space: source), browser: browser,
@@ -18,23 +18,38 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
         XCTAssertTrue(actions.isAvailable)
         XCTAssertFalse(actions.selectTab(try assignment(for: other)))
 
-        var selectedSource = source
-        selectedSource.selectedTabID = target.tabID
+        func assertUnavailable(line: UInt = #line) {
+            let session = browser.session
+            let selection = browser.selection
+            XCTAssertFalse(actions.isAvailable, line: line)
+            XCTAssertFalse(actions.selectTab(target), line: line)
+            XCTAssertFalse(actions.openURL(URL(string: "about:blank")!), line: line)
+            XCTAssertEqual(browser.session, session, line: line)
+            XCTAssertEqual(browser.selection, selection, line: line)
+        }
+
+        // The window chose a tab in the source Space.
+        browser.presentTab(target.tabID, in: source.id)
+        assertUnavailable()
+        browser.clearPresentedTabSelection(in: source.id)
+        XCTAssertTrue(actions.isAvailable)
+
+        // The window moved to another Space.
+        browser.selectPresentedSpace(other.id)
+        assertUnavailable()
+        browser.selectPresentedSpace(source.id)
+        browser.clearPresentedTabSelection(in: source.id)
+        XCTAssertTrue(actions.isAvailable)
+
         var lockedSource = source
         lockedSource.accessPolicy = .deviceOwnerAuthentication
-        let unavailableSessions = [
-            BrowserSession(spaces: [selectedSource, other], selectedSpaceID: source.id),
-            BrowserSession(spaces: [source, other], selectedSpaceID: other.id),
-            BrowserSession(spaces: [replacingProfile(in: source), other], selectedSpaceID: source.id),
-            BrowserSession(spaces: [lockedSource, other], selectedSpaceID: source.id),
-            BrowserSession(spaces: [other], selectedSpaceID: other.id),
-        ]
-        for session in unavailableSessions {
+        for session in [
+            BrowserSession(spaces: [replacingProfile(in: source), other]),
+            BrowserSession(spaces: [lockedSource, other]),
+            BrowserSession(spaces: [other]),
+        ] {
             browser.session = session
-            XCTAssertFalse(actions.isAvailable)
-            XCTAssertFalse(actions.selectTab(target))
-            XCTAssertFalse(actions.openURL(URL(string: "about:blank")!))
-            XCTAssertEqual(browser.session, session)
+            assertUnavailable()
         }
         XCTAssertEqual(selectionCount, 0)
     }
@@ -42,9 +57,12 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
     func testTargetRequiresCurrentSpaceAndRejectsReplacementOrLock() throws {
         let source = makeSpace(index: 1)
         let destination = makeSpace(index: 2)
-        let browser = makeBrowser(spaces: [source, destination], selected: source.id)
-        let access = BrowserSpaceAccessController()
         let sourceAssignment = try assignment(for: source)
+        let browser = makeBrowser(
+            spaces: [source, destination],
+            selection: BrowserStoreSelection(
+                selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: sourceAssignment.tabID]))
+        let access = BrowserSpaceAccessController()
         let destinationAssignment = try assignment(for: destination)
 
         XCTAssertTrue(
@@ -71,10 +89,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             )
         )
 
-        browser.session = BrowserSession(
-            spaces: [replacingProfile(in: source), destination],
-            selectedSpaceID: source.id
-        )
+        browser.session = BrowserSession(spaces: [replacingProfile(in: source), destination])
 
         XCTAssertFalse(
             BrowserCommandPaletteActionPolicy.isSourceAvailable(
@@ -94,10 +109,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
 
         var protectedSource = source
         protectedSource.accessPolicy = .deviceOwnerAuthentication
-        browser.session = BrowserSession(
-            spaces: [protectedSource, destination],
-            selectedSpaceID: source.id
-        )
+        browser.session = BrowserSession(spaces: [protectedSource, destination])
         XCTAssertNil(
             BrowserCommandPaletteActionPolicy.target(
                 try assignment(for: protectedSource),
@@ -110,10 +122,11 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
 
     private func makeBrowser(
         spaces: [BrowserSpace],
-        selected: SpaceID
+        selection: BrowserStoreSelection
     ) -> BrowserStore {
         BrowserStore(
-            session: BrowserSession(spaces: spaces, selectedSpaceID: selected),
+            session: BrowserSession(spaces: spaces),
+            selection: selection,
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
@@ -133,8 +146,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
+            tabs: [tab]
         )
     }
 
@@ -142,7 +154,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
         for space: BrowserSpace
     ) throws -> BrowserTabRuntimeAssignment {
         BrowserTabRuntimeAssignment(
-            tabID: try XCTUnwrap(space.selectedTabID),
+            tabID: try XCTUnwrap(space.tabs.first?.id),
             spaceID: space.id,
             profileID: space.profile.id
         )
@@ -164,8 +176,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             credentialPreferences: space.credentialPreferences,
             accessPolicy: space.accessPolicy,
             isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
-            selectedTabID: space.selectedTabID
+            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt
         )
     }
 

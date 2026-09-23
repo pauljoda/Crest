@@ -78,7 +78,7 @@ struct BrowserSidebarReorderCommit {
                 beforeFolder: before?.folderID)
         case .splitInsert(let assignment, let index):
             guard assignment == request.assignment,
-                let selected = browser.space(matching: assignment)?.selectedTabID
+                let selected = browser.selectedTabID(in: assignment.spaceID)
             else { return nil }
             return .split(joining: selected, at: index)
         case .createCurrentFolder(let tabID): return .newFolderAround(tabID)
@@ -142,7 +142,7 @@ struct BrowserSidebarReorderCommit {
             // the group when there is none, which is how a window presenting
             // one tab becomes a split.
             guard action.canMove(item, into: assignment),
-                let joiningTabID = browser.space(matching: assignment)?.selectedTabID
+                let joiningTabID = browser.selectedTabID(in: assignment.spaceID)
             else { return false }
             return browser.addTabToSplit(item, joining: joiningTabID, at: index)
         }
@@ -206,7 +206,7 @@ struct BrowserSidebarReorderCommit {
             else { return false }
             let action = BrowserTabDragAction(browser: browser, spaceAccess: spaceAccess)
             guard action.canMove(item, into: item.spaceAssignment),
-                browser.session.selectedSpaceID == item.spaceID,
+                browser.selectedSpaceID == item.spaceID,
                 let space = browser.space(matching: item.spaceAssignment)
             else { return false }
             let anchor = anchorTabID(beforeID, in: item.spaceAssignment)

@@ -14,9 +14,11 @@ final class BrowserDataRetentionTests: XCTestCase {
         session.spaces[0].history = (0..<1025).map { index in
             Self.history(title: String(index), visitedAt: retained.contains(index) ? cutoff : cutoff.addingTimeInterval(-1))
         }
-        XCTAssertTrue(session.applyDataRetentionPolicies(now: now))
-        XCTAssertEqual(session.spaces[0].history.map(\.title), ["0", "511", "512", "1024"])
-        XCTAssertFalse(session.applyDataRetentionPolicies(now: now))
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+
+        XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
+        XCTAssertEqual(browser.session.spaces[0].history.map(\.title), ["0", "511", "512", "1024"])
+        XCTAssertFalse(browser.family.executeRecords("records.sweep", from: browser, at: now))
     }
 
     func testHistoryRangeDeletionUsesLastVisitAndHalfOpenBoundsWithinItsSpace() throws {
@@ -31,10 +33,13 @@ final class BrowserDataRetentionTests: XCTestCase {
             Self.history(title: "End", visitedAt: end),
         ]
         session.spaces[1].history = [Self.history(title: "Other Space", visitedAt: start)]
-        XCTAssertTrue(session.removeHistory(from: start, until: end, in: spaceID))
-        XCTAssertEqual(session.spaces[0].history.map(\.title), ["Before", "End"])
-        XCTAssertEqual(session.spaces[1].history.map(\.title), ["Other Space"])
-        XCTAssertFalse(session.removeHistory(from: end, until: start, in: spaceID))
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(browser.session.space(id: spaceID)))
+
+        XCTAssertTrue(browser.deleteHistory(from: start, until: end, matching: assignment))
+        XCTAssertEqual(browser.session.spaces[0].history.map(\.title), ["Before", "End"])
+        XCTAssertEqual(browser.session.spaces[1].history.map(\.title), ["Other Space"])
+        XCTAssertFalse(browser.deleteHistory(from: end, until: start, matching: assignment))
     }
 
     func testLegacyBrowsingPreferencesKeepEveryStoredCategoryForever() throws {
@@ -82,23 +87,26 @@ final class BrowserDataRetentionTests: XCTestCase {
             Self.archive(title: "Other Space", archivedAt: oldDate)
         ]
 
-        let removedRecords = session.applyDataRetentionPolicies(now: now)
+        let persistence = InMemoryBrowserSessionPersistence()
+        let browser = BrowserStore(session: session, persistence: persistence)
 
-        XCTAssertTrue(removedRecords)
+        XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
+        XCTAssertEqual(persistence.savedScopes.last, .everything)
+        let swept = browser.session
         XCTAssertEqual(
-            try XCTUnwrap(session.space(id: cleanedSpaceID)).history.map(\.title),
+            try XCTUnwrap(swept.space(id: cleanedSpaceID)).history.map(\.title),
             ["Recent"]
         )
         XCTAssertEqual(
-            try XCTUnwrap(session.space(id: cleanedSpaceID)).archivedTabs.map(\.tab.title),
+            try XCTUnwrap(swept.space(id: cleanedSpaceID)).archivedTabs.map(\.tab.title),
             ["Recent"]
         )
         XCTAssertEqual(
-            try XCTUnwrap(session.space(id: untouchedSpaceID)).history.map(\.title),
+            try XCTUnwrap(swept.space(id: untouchedSpaceID)).history.map(\.title),
             ["Other Space"]
         )
         XCTAssertEqual(
-            try XCTUnwrap(session.space(id: untouchedSpaceID)).archivedTabs.map(\.tab.title),
+            try XCTUnwrap(swept.space(id: untouchedSpaceID)).archivedTabs.map(\.tab.title),
             ["Other Space"]
         )
     }
@@ -178,31 +186,6 @@ final class BrowserDataRetentionTests: XCTestCase {
             coordinator.journal.records.first(where: { $0.id == recordID })
         )
         XCTAssertEqual(record.tombstone?.reason, .retention)
-    }
-
-    func testActiveSceneSweepAppliesHistoryAndArchiveRetention() throws {
-        let now = Date(timeIntervalSinceReferenceDate: 50_000_000)
-        let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
-        var session = BrowserSession.preview
-        let spaceID = session.spaces[0].id
-        session.spaces[0].browsingPreferences.dataRetention = .init(
-            history: .thirtyDays,
-            archive: .thirtyDays,
-            downloads: .forever
-        )
-        session.spaces[0].history = [Self.history(title: "Expired", visitedAt: oldDate)]
-        session.spaces[0].archivedTabs = [
-            Self.archive(title: "Expired", archivedAt: oldDate)
-        ]
-        let persistence = InMemoryBrowserSessionPersistence()
-        let browser = BrowserStore(session: session, persistence: persistence)
-
-        XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
-
-        let sweptSpace = try XCTUnwrap(browser.session.space(id: spaceID))
-        XCTAssertTrue(sweptSpace.history.isEmpty)
-        XCTAssertTrue(sweptSpace.archivedTabs.isEmpty)
-        XCTAssertEqual(persistence.savedScopes.last, .everything)
     }
 
     func testDownloadCenterSweepUsesSpacePoliciesAndDeterministicSpacing() {

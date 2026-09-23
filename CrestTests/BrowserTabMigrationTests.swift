@@ -56,7 +56,6 @@ final class BrowserTabMigrationTests: XCTestCase {
             imported.spaces[0].tabs.map { $0.url?.absoluteString },
             ["https://example.com/one#section", "https://webkit.org/"]
         )
-        XCTAssertEqual(imported.spaces[0].selectedTabID, imported.spaces[0].tabs[1].id)
         XCTAssertTrue(imported.spaces.flatMap(\.tabs).allSatisfy { $0.placement == .current })
     }
 
@@ -155,7 +154,6 @@ final class BrowserTabMigrationTests: XCTestCase {
         XCTAssertEqual(imported.spaces.map(\.name), ["Selected", "First"])
         XCTAssertEqual(imported.spaces[0].tabs.map(\.title), ["Selected Tab"])
         XCTAssertEqual(imported.spaces[1].tabs.map(\.title), ["One", "Two"])
-        XCTAssertEqual(imported.spaces[1].selectedTabID, imported.spaces[1].tabs[1].id)
         XCTAssertEqual(imported.spaces[1].tabs[1].placement, .pinned)
     }
 

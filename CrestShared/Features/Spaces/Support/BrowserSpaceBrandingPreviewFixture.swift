@@ -80,8 +80,7 @@ enum BrowserSpaceBrandingPreviewFixture {
             branding: branding,
             folders: [],
             tabs: [],
-            accessPolicy: accessPolicy,
-            selectedTabID: nil
+            accessPolicy: accessPolicy
         )
     }
 

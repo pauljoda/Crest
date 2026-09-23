@@ -139,7 +139,7 @@ struct BrowserSidebar<Content: View>: View {
     /// before the session moves, so nothing is briefly showing one Space's page
     /// under another Space's tabs.
     private func selectSpace(_ spaceID: SpaceID) {
-        guard spaceID != browser.session.selectedSpaceID else { return }
+        guard spaceID != browser.selectedSpaceID else { return }
         if !presentsSelectedSpacePage {
             pageAccess.deactivatePagePresentation()
         }

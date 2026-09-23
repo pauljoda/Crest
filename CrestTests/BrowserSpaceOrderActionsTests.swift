@@ -6,12 +6,13 @@ import XCTest
 final class BrowserSpaceOrderActionsTests: XCTestCase {
     func testMoveResolvesTheCurrentSpaceOrderAndPersistsWithoutChangingSpaceContents() throws {
         var session = BrowserSession.preview
-        session.addSpace()
+        session.spaces.append(BrowserSession.makeBlankSpace(number: session.spaces.count + 1))
         let originalSpaces = session.spaces
         let movedID = originalSpaces[0].id
         session.defaultSpaceID = originalSpaces[1].id
         let persistence = InMemoryBrowserSessionPersistence()
         let browser = BrowserStore(session: session, persistence: persistence)
+        let shownSpaceID = browser.selectedSpaceID
         let actions = BrowserSpaceOrderActions(browser: browser, spaceID: movedID)
         XCTAssertFalse(actions.canMoveUp)
         XCTAssertTrue(actions.canMoveDown)
@@ -20,7 +21,7 @@ final class BrowserSpaceOrderActionsTests: XCTestCase {
         actions.moveUp()
 
         XCTAssertEqual(browser.session.spaces.map(\.id), [originalSpaces[1].id, movedID, originalSpaces[2].id])
-        XCTAssertEqual(browser.session.selectedSpaceID, session.selectedSpaceID)
+        XCTAssertEqual(browser.selectedSpaceID, shownSpaceID)
         XCTAssertEqual(browser.session.defaultSpaceID, session.defaultSpaceID)
         for original in originalSpaces {
             XCTAssertEqual(browser.session.space(id: original.id), original)

@@ -4,7 +4,7 @@ enum BrowserPlatformSidebarSelectionOrder {
         in browser: BrowserStore,
         assignment: BrowserSpaceRuntimeAssignment
     ) -> [BrowserSelectionItemID]? {
-        guard browser.session.selectedSpaceID == assignment.spaceID,
+        guard browser.selectedSpaceID == assignment.spaceID,
             let space = browser.space(matching: assignment)
         else { return [] }
         let interaction = browser.interactionObserver as? BrowserSidebarInteractionState

@@ -41,7 +41,7 @@ public sealed partial class BrowserContractsTests {
             ["operation"] = "workspace.import",
             ["mode"] = "manual",
             ["now"] = 800000002.0,
-            ["window"] = JsonNode.Parse(Selection(session)),
+            ["view"] = View(session),
             ["arguments"] = new JsonObject {
                 ["sources"] = new JsonArray(session["spaces"]![0]!.DeepClone()),
                 ["drafts"] = new JsonArray(new JsonObject {
@@ -62,7 +62,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(2UL, core.Revision);
 
         access.Lock(identity.Space);
-        var current = JsonNode.Parse(core.Checkpoint(2, Selection(session)).Read("core"))!;
+        var current = JsonNode.Parse(core.Checkpoint(2).Read("core"))!;
         var relocked = JsonNode.Parse(SpaceCommand(current, "tab.rename", new() { ["tabId"] = current["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "After relock" }))!;
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
             () => core.PrepareCommand(2, Bytes(relocked))).Code);
@@ -84,14 +84,13 @@ public sealed partial class BrowserContractsTests {
         var access = new SpaceAccessAuthority();
         var core = new NativeSessionAuthority(Bytes(session));
         core.AttachAccess(access);
-        var selection = Selection(session);
         // Materialized records commit as a session replacement, never as a
         // command, so background convergence does not need a grant.
-        using (var reserved = core.ReserveReplacement(1, RenameDelta(session, "Merged from another device"), selection))
+        using (var reserved = core.ReserveReplacement(1, RenameDelta(session, "Merged from another device")))
             Assert.Equal(2UL, reserved.Commit());
         core.Commit(2, RenameDelta(session, "Merged again"));
         Assert.Equal(3UL, core.Revision);
-        var current = JsonNode.Parse(core.Checkpoint(3, Selection(session)).Read("core"))!;
+        var current = JsonNode.Parse(core.Checkpoint(3).Read("core"))!;
         Assert.Equal("Merged again", current["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
         var operation = Guid.NewGuid().ToString();
         core.PrepareCommand(3, SpaceCommand(current, "space.deletion.begin",
@@ -130,12 +129,11 @@ public sealed partial class BrowserContractsTests {
         var core = new NativeSessionAuthority(Bytes(session));
         core.AttachAccess(access);
         var identity = Identity(session);
-        var selection = Selection(session);
         // A value edit proposes records instead of naming an operation, so the
         // gate reads what the delta would actually change.
         foreach (var attempt in new Func<object>[] {
             () => core.Commit(1, SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true),
-            () => core.ReserveReplacement(1, SpaceTabDelta(session, 0, "Leaked"), selection, nativeValueEdit: true)
+            () => core.ReserveReplacement(1, SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true)
         }) Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => attempt()).Code);
         // Removing protection is the decision authentication guards, whether it
         // arrives as a command or as a proposed record.
@@ -151,12 +149,12 @@ public sealed partial class BrowserContractsTests {
 
         // Sync materialization commits as a journal-bound replacement rather
         // than a value edit, so background convergence is still unaffected.
-        var current = JsonNode.Parse(core.Checkpoint(3, selection).Read("core"))!;
+        var current = JsonNode.Parse(core.Checkpoint(3).Read("core"))!;
         core.Commit(3, SpaceTabDelta(current, 0, "Merged from another device"));
         Assert.Equal(4UL, core.Revision);
 
         Grant(access, identity);
-        current = JsonNode.Parse(core.Checkpoint(4, selection).Read("core"))!;
+        current = JsonNode.Parse(core.Checkpoint(4).Read("core"))!;
         core.Commit(4, SpaceTabDelta(current, 0, "Mine again"), nativeValueEdit: true);
         Assert.Equal(5UL, core.Revision);
     }
@@ -222,7 +220,7 @@ public sealed partial class BrowserContractsTests {
             ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["window"] = JsonNode.Parse(Selection(local)),
+            ["view"] = View(local),
             ["arguments"] = new JsonObject { ["tabId"] = Guid.NewGuid().ToString(), ["title"] = "Leaked" }
         }))).Code);
     }

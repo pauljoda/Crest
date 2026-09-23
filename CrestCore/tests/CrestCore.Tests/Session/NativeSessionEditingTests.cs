@@ -10,13 +10,14 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
-    private static byte[] EditRequest(JsonNode space, string operation, JsonObject arguments) =>
+    private static byte[] EditRequest(JsonNode space, string operation, JsonObject arguments, Guid? viewedTab = null) =>
         Encoding.UTF8.GetBytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = operation,
             ["space"] = space.DeepClone(),
             ["arguments"] = arguments,
-            ["now"] = 800000001.0
+            ["now"] = 800000001.0,
+            ["viewedTabId"] = viewedTab?.ToString()
         }.ToJsonString());
 
     [Theory]
@@ -83,14 +84,21 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(bytes, NativeSessionEditor.Evaluate(input)); // ABI size probing must not invent a second identity.
         var opened = JsonNode.Parse(bytes)!;
         Assert.Equal(newId.ToString(), opened["tabId"]!.GetValue<string>());
+        Assert.Equal(newId.ToString(), opened["selectedTabId"]!.GetValue<string>());
+        Assert.True(opened["selectSpace"]!.GetValue<bool>());
         var space = opened["space"]!;
         Assert.Equal(2, space["tabs"]!.AsArray().Count);
         Assert.True(JsonNode.DeepEquals(original["tabs"]![0]!["futureTabProperty"], space["tabs"]![0]!["futureTabProperty"]));
         Assert.True(JsonNode.DeepEquals(original["branding"], space["branding"]));
-        var closed = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.close", new() { ["tabId"] = newId.ToString(), ["fallbackTabId"] = f.Tab.ToString() })))!["space"]!;
+        // Closing the tab the window shows suggests its fallback; the Space
+        // itself records no selection.
+        var closedResult = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.close",
+            new() { ["tabId"] = newId.ToString(), ["fallbackTabId"] = f.Tab.ToString() }, viewedTab: newId)))!;
+        var closed = closedResult["space"]!;
         Assert.Single(closed["tabs"]!.AsArray());
         Assert.Single(closed["archivedTabs"]!.AsArray());
-        Assert.True(JsonNode.DeepEquals(SwiftId(f.Tab), closed["selectedTabID"]));
+        Assert.Equal(f.Tab.ToString(), closedResult["selectedTabId"]!.GetValue<string>());
+        Assert.Null(closed["selectedTabID"]);
         Assert.Equal("closed", closed["archivedTabs"]![0]!["reason"]!.GetValue<string>());
     }
 

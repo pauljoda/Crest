@@ -35,8 +35,7 @@ struct MobileBrowserPreviewFixture {
             accent: .indigo,
             branding: .house(.lion, symbol: "briefcase.fill"),
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
         let alternateSpace = BrowserSpace(
             id: SpaceID(
@@ -60,13 +59,11 @@ struct MobileBrowserPreviewFixture {
             accent: .orange,
             branding: .house(.winter, symbol: "house.fill"),
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
         let browser = BrowserStore(
             session: BrowserSession(
-                spaces: [space, alternateSpace],
-                selectedSpaceID: space.id
+                spaces: [space, alternateSpace]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
@@ -94,7 +91,7 @@ struct MobileBrowserPreviewFixture {
                     )
                 )
             ),
-            session: browser.session,
+            browser: browser,
             persistence: InMemoryBrowserWindowStatePersistence()
         )
         windowState.captureSidebar(

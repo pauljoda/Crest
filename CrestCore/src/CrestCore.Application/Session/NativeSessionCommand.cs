@@ -36,7 +36,7 @@ public sealed class NativeSessionCommand {
 
     public ulong Commit() => owner.CommitCommand(this);
 
-    public NativeSessionReplacement Reserve(ReadOnlySpan<byte> selection) => owner.ReserveCommand(this, selection);
+    public NativeSessionReplacement Reserve() => owner.ReserveCommand(this);
 
     #endregion
 }

@@ -102,12 +102,7 @@ struct MobileBrowserWindowScene: View {
             ) { _ in
                 model.handleMemoryPressure()
             }
-            .onChange(
-                of: BrowserWindowState(
-                    id: model.windowState.id,
-                    restoring: model.browser.session
-                )
-            ) {
+            .onChange(of: model.browser.selection) {
                 model.captureWindowSelection()
             }
             .onChange(of: scenePhase, initial: true) { _, phase in

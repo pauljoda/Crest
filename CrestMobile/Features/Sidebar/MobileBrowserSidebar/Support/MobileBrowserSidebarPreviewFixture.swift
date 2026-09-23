@@ -66,8 +66,7 @@ struct MobileBrowserSidebarPreviewFixture {
                     lastVisitedAt: Self.epoch,
                     visitCount: 2
                 )
-            ],
-            selectedTabID: currentTab.id
+            ]
         )
         let protectedSpace = BrowserSpace(
             id: SpaceID(rawValue: Self.uuid(0x13)),
@@ -78,8 +77,7 @@ struct MobileBrowserSidebarPreviewFixture {
             branding: .house(.winter, symbol: "lock.fill"),
             folders: [],
             tabs: [],
-            accessPolicy: .deviceOwnerAuthentication,
-            selectedTabID: nil
+            accessPolicy: .deviceOwnerAuthentication
         )
         let base = MobileBrowserPreviewFixture()
 
@@ -92,8 +90,7 @@ struct MobileBrowserSidebarPreviewFixture {
         self.protectedSpace = protectedSpace
         browser = BrowserStore(
             session: BrowserSession(
-                spaces: [space, protectedSpace],
-                selectedSpaceID: space.id
+                spaces: [space, protectedSpace]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),

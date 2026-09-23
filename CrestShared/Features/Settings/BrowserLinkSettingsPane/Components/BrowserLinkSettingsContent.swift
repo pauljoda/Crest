@@ -58,9 +58,9 @@ struct BrowserLinkSettingsContent: View {
 
     private var resolvedSelectedSpaceID: SpaceID {
         BrowserLinkSettingsSpacePolicy.resolvedExternalSpaceID(
-            preferredSpaceID: browser.session.selectedSpaceID,
+            preferredSpaceID: browser.selectedSpaceID,
             spaces: browser.session.spaces,
-            selectedSpaceID: browser.session.selectedSpaceID,
+            selectedSpaceID: browser.selectedSpaceID,
             unavailableSpaceIDs: browser.deletingSpaceIDs
         )
     }
@@ -94,7 +94,7 @@ struct BrowserLinkSettingsContent: View {
             BrowserLinkSettingsSpacePolicy.resolvedExternalSpaceID(
                 preferredSpaceID: links.preferences.externalLinkSpaceID,
                 spaces: browser.session.spaces,
-                selectedSpaceID: browser.session.selectedSpaceID,
+                selectedSpaceID: browser.selectedSpaceID,
                 unavailableSpaceIDs: browser.deletingSpaceIDs
             )
         } set: { value in

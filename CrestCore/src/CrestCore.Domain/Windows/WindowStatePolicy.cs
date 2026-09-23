@@ -17,15 +17,14 @@ public static class WindowStatePolicy {
 
     #region Actions - Selection
 
-    /// Repairs a window against the session it reflects. A Space the window
-    /// captured without a tab stays empty; any other Space adopts the
-    /// session's selection, then its first tab. A Space selection the session
-    /// no longer has falls back to the session's, then to the first Space.
-    /// A split layout survives only while its group renders with exactly as
-    /// many members as it has columns. A window that records captured Spaces
-    /// records every Space it has now reconciled; an older window keeps its
-    /// legacy fallback and records none.
-    public static WindowRepair Repair(Guid selectedSpaceId, Guid sessionSelectedSpaceId, bool capturesSelection,
+    /// Repairs a window against the session it reflects. Selection is the
+    /// window's own: a Space the window captured without a tab stays empty, and
+    /// any other Space falls back to its first tab. A Space selection the
+    /// session no longer has falls back to the first Space. A split layout
+    /// survives only while its group renders with exactly as many members as it
+    /// has columns. A window that records captured Spaces records every Space it
+    /// has now reconciled; an older window records none.
+    public static WindowRepair Repair(Guid selectedSpaceId, bool capturesSelection,
         IReadOnlyList<WindowSpaceFacts> spaces, IReadOnlyList<WindowSplitLayout> layouts) {
         ArgumentNullException.ThrowIfNull(spaces);
         ArgumentNullException.ThrowIfNull(layouts);
@@ -36,7 +35,6 @@ public static class WindowStatePolicy {
         if (layouts.Select(layout => layout.GroupId).Distinct().Count() != layouts.Count)
             throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
         var selected = ids.Contains(selectedSpaceId) ? selectedSpaceId
-            : ids.Contains(sessionSelectedSpaceId) ? sessionSelectedSpaceId
             : spaces.Count > 0 ? spaces[0].Id : selectedSpaceId;
         var kept = layouts.Where(layout => layout.LiveMembers == layout.Columns).Select(layout => layout.GroupId).ToArray();
         return new(selected, spaces.Select(Selection).ToArray(), kept,
@@ -46,7 +44,6 @@ public static class WindowStatePolicy {
     private static WindowTabSelection Selection(WindowSpaceFacts space) {
         if (space.HasWindowTab) return WindowTabSelection.Window;
         if (space.IsCaptured) return WindowTabSelection.None;
-        if (space.HasSpaceSelection) return WindowTabSelection.Space;
         return space.HasTabs ? WindowTabSelection.First : WindowTabSelection.None;
     }
 

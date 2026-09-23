@@ -41,18 +41,21 @@ final class BrowserLinkPreferenceStore {
         persistence.remove()
     }
 
-    /// Where an external link opens. The core owns the routing rule; see
-    /// `BrowserCorePolicy.linkRoutingDecision` for its fail-safe answer.
+    /// Where an external link opens, or nil when it may open nowhere. The core
+    /// owns the routing rule, including the locked-Space substitution; see
+    /// `BrowserCorePolicy.linkRoutingDecision`.
     func routingDecision(
         for url: URL,
-        in session: BrowserSession,
-        unavailableSpaceIDs: Set<SpaceID> = []
-    ) -> BrowserLinkRoutingDecision {
+        in session: BrowserPresentedSession,
+        unavailableSpaceIDs: Set<SpaceID> = [],
+        lockedSpaceIDs: Set<SpaceID> = []
+    ) -> BrowserLinkRoutingDecision? {
         BrowserCorePolicy.linkRoutingDecision(
             for: url,
             preferences: preferences,
             session: session,
-            unavailableSpaceIDs: unavailableSpaceIDs
+            unavailableSpaceIDs: unavailableSpaceIDs,
+            lockedSpaceIDs: lockedSpaceIDs
         )
     }
 

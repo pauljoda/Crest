@@ -12,7 +12,7 @@ public sealed partial class BrowserTabCollection {
         Guid? folder = placement != TabPlacement.Pinned && folders.Any(f => f.Id == requestedFolder && f.Location == placement)
             ? requestedFolder : null;
         var remaining = tabs.Where(t => t.Id != id).ToList();
-        if (placement == TabPlacement.Pinned && remaining.Count(t => t.Placement == TabPlacement.Pinned) >= 12)
+        if (placement == TabPlacement.Pinned && remaining.Count(t => t.Placement == TabPlacement.Pinned) >= BrowserLimits.PinnedTabs)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         bool Matches(BrowserTab tab) => tab.Placement == placement && tab.FolderId == folder;
         int insertion = before is { } target ? remaining.FindIndex(t => t.Id == target && Matches(t)) : -1;
@@ -75,7 +75,7 @@ public sealed partial class BrowserTabCollection {
         tabs.Any(t => t.Id == origin) ? tabs.IndexOf(SplitMembers(origin)[^1]) + 1 : null;
 
     public void InsertTab(BrowserTab tab, int? requestedIndex, bool duplicate = false) {
-        if (tab.Placement == TabPlacement.Pinned && tabs.Count(t => t.Placement == TabPlacement.Pinned) >= 12)
+        if (tab.Placement == TabPlacement.Pinned && tabs.Count(t => t.Placement == TabPlacement.Pinned) >= BrowserLimits.PinnedTabs)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         if (tabs.Any(t => t.Id == tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);

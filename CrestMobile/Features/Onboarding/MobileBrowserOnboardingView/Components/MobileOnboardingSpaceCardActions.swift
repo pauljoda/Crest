@@ -49,7 +49,7 @@ struct MobileOnboardingSpaceCardActions: View {
 #if DEBUG
     #Preview("Component") {
         MobileOnboardingSpaceCardActions(
-            spaceID: BrowserSession.preview.selectedSpaceID, canRemove: true, customize: {}, remove: {}
+            spaceID: BrowserSession.preview.spaces[0].id, canRemove: true, customize: {}, remove: {}
         ).padding().frame(width: 320)
     }
 #endif

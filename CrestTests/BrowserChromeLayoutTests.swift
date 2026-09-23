@@ -86,8 +86,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
             credentialPreferences: original.credentialPreferences,
             accessPolicy: original.accessPolicy,
             isSavedTabsExpanded: original.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt,
-            selectedTabID: original.selectedTabID
+            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt
         )
         let index = try XCTUnwrap(
             browser.session.spaces.firstIndex { $0.id == original.id }
@@ -128,20 +127,21 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
 
 
+    @MainActor
     func testSidebarClearHistoryKeepsTheInitiatingSpaceAfterSelectionChanges() throws {
-        var session = BrowserSession.preview
-        let initiatingSpace = try XCTUnwrap(session.selectedSpace)
+        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let initiatingSpace = try XCTUnwrap(browser.selectedSpace)
         let laterSelectedSpace = try XCTUnwrap(
-            session.spaces.first { $0.id != initiatingSpace.id }
+            browser.session.spaces.first { $0.id != initiatingSpace.id }
         )
         let clearHistory = BrowserSidebarClearHistoryConfirmation(
             assignment: BrowserSpaceRuntimeAssignment(space: initiatingSpace),
             spaceName: initiatingSpace.name
         )
 
-        session.selectSpace(laterSelectedSpace.id)
+        browser.selectSpace(laterSelectedSpace.id)
 
-        XCTAssertEqual(session.selectedSpaceID, laterSelectedSpace.id)
+        XCTAssertEqual(browser.selectedSpaceID, laterSelectedSpace.id)
         XCTAssertEqual(clearHistory.spaceID, initiatingSpace.id)
         XCTAssertEqual(clearHistory.spaceName, initiatingSpace.name)
     }
@@ -469,18 +469,23 @@ extension BrowserChromeLayoutTests {
                 space.tabs[index].url = URL(string: "about:blank")
                 if !split { space.tabs[index].splitGroupID = nil }
             }
-            space.selectedTabID = space.tabs[0].id
+            let selectedTabID = space.tabs[0].id
             let browser = BrowserStore(
-                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                session: BrowserSession(spaces: [space]),
+                selection: BrowserStoreSelection(
+                    selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: selectedTabID]),
                 persistence: InMemoryBrowserSessionPersistence())
             let pages = BrowserPagePool()
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
             let model = BrowserRootModel(
                 browser: browser, pages: pages, chrome: BrowserChromeState(sidebarIsPresented: true),
                 spaceAccess: BrowserSpaceAccessController(), windowState: nil, startupBehavior: .showStartPage,
                 persistedSidebarWidth: 289)
             let livePages = try space.tabs.map { tab in
-                try XCTUnwrap(pages.surfacePage(for: tab, in: space, accessController: model.spaceAccess))
+                try XCTUnwrap(
+                    pages.surfacePage(
+                        for: tab, in: space, showing: browser.selectedTabID(in: space.id),
+                        accessController: model.spaceAccess))
             }
             // Finish the pool's initial blank documents before starting this
             // navigation, so their late completion cannot contaminate the baseline.
@@ -528,8 +533,8 @@ extension BrowserChromeLayoutTests {
                 host.rootView = ChromeContinuityTestShell(model: model, appearance: appearance)
                 host.layoutSubtreeIfNeeded()
                 try await Task.sleep(for: .milliseconds(300))
-                XCTAssertEqual(browser.session.selectedSpaceID, space.id)
-                XCTAssertEqual(browser.selectedTab?.id, space.selectedTabID)
+                XCTAssertEqual(browser.selectedSpaceID, space.id)
+                XCTAssertEqual(browser.selectedTab?.id, selectedTabID)
                 for (index, page) in livePages.enumerated() {
                     XCTAssertTrue(
                         page.webView.superview === parents[index], "A chrome change must not detach the live web view")
@@ -551,7 +556,7 @@ extension BrowserChromeLayoutTests {
                     persistedFractions: [0.8, 0.2])
                 for focusedIndex in [1, 0, 1] {
                     model.focusSplitCard(space.tabs[focusedIndex].id)
-                    pages.select(session: browser.session)
+                    pages.select(session: browser.presented)
                     host.layoutSubtreeIfNeeded()
                     try await Task.sleep(for: .milliseconds(300))
                     for (index, livePage) in livePages.enumerated() {

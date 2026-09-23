@@ -84,40 +84,13 @@ public static unsafe partial class Exports {
         } catch (Exception e) { return SessionError(e); }
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_session_commit", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommit(ulong handle, ulong expected, byte* bytes, nuint count, ulong* revision) {
-        if (revision == null) return CoreStatus.InvalidArgument;
-        *revision = 0;
-        if (!ValidSessionInput(bytes, count)) return CoreStatus.InvalidArgument;
-        if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
-        // Only native views reach this export; sync commits its materialization
-        // through the transaction-bound replacement instead.
-        try { *revision = session.Commit(expected, new(bytes, (int)count), nativeValueEdit: true); return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
-    }
-
-    [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_pair", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommitPair(ulong source, ulong sourceExpected, byte* sourceBytes, nuint sourceCount,
-        ulong destination, ulong destinationExpected, byte* destinationBytes, nuint destinationCount,
-        ulong* sourceRevision, ulong* destinationRevision) {
-        if (sourceRevision == null || destinationRevision == null) return CoreStatus.InvalidArgument;
-        *sourceRevision = 0; *destinationRevision = 0;
-        if (!ValidSessionInput(sourceBytes, sourceCount) || !ValidSessionInput(destinationBytes, destinationCount)) return CoreStatus.InvalidArgument;
-        if (!Sessions.TryGetValue(source, out var a) || !Sessions.TryGetValue(destination, out var b)) return CoreStatus.InvalidHandle;
-        try {
-            var result = NativeSessionAuthority.CommitPair(a, sourceExpected, new(sourceBytes, (int)sourceCount),
-                b, destinationExpected, new(destinationBytes, (int)destinationCount));
-            *sourceRevision = result.Source; *destinationRevision = result.Destination; return CoreStatus.Ok;
-        } catch (Exception e) { return SessionError(e); }
-    }
-
     [UnmanagedCallersOnly(EntryPoint = "crest_session_checkpoint", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCheckpoint(ulong handle, ulong expected, byte* selection, nuint count, ulong* checkpoint) {
+    public static int SessionCheckpoint(ulong handle, ulong expected, ulong* checkpoint) {
         if (checkpoint == null) return CoreStatus.InvalidArgument;
         *checkpoint = 0;
-        if (!ValidSessionInput(selection, count)) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
         try {
-            var value = session.Checkpoint(expected, new(selection, (int)count));
+            var value = session.Checkpoint(expected);
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!Checkpoints.TryAdd(id, value)) return CoreStatus.InternalError;
             *checkpoint = id; return CoreStatus.Ok;
@@ -192,15 +165,14 @@ public static unsafe partial class Exports {
     public static int SessionReleaseCommand(ulong handle) => SessionCommands.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_reserve_command", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionReserveCommand(ulong handle, byte* selection, nuint selectionCount, ulong* replacement, ulong* checkpoint) {
+    public static int SessionReserveCommand(ulong handle, ulong* replacement, ulong* checkpoint) {
         if (replacement == null || checkpoint == null) return CoreStatus.InvalidArgument;
         *replacement = 0; *checkpoint = 0;
-        if (!ValidSessionInput(selection, selectionCount)) return CoreStatus.InvalidArgument;
         if (!SessionCommands.TryGetValue(handle, out var command)) return CoreStatus.InvalidHandle;
         NativeSessionReplacement? value = null;
         ulong id = 0, snapshot = 0;
         try {
-            value = command.Reserve(new(selection, (int)selectionCount));
+            value = command.Reserve();
             id = checked((ulong)Interlocked.Increment(ref nextHandle));
             snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))
@@ -215,16 +187,15 @@ public static unsafe partial class Exports {
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_reserve_replacement", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionReserveReplacement(ulong handle, ulong expected, byte* delta, nuint count,
-        byte* selection, nuint selectionCount, ulong* replacement, ulong* checkpoint) {
+        ulong* replacement, ulong* checkpoint) {
         if (replacement == null || checkpoint == null) return CoreStatus.InvalidArgument;
         *replacement = 0; *checkpoint = 0;
-        if (!ValidSessionInput(delta, count) || !ValidSessionInput(selection, selectionCount)) return CoreStatus.InvalidArgument;
+        if (!ValidSessionInput(delta, count)) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
         NativeSessionReplacement? value = null;
         ulong id = 0, snapshot = 0;
         try {
-            value = session.ReserveReplacement(expected, new(delta, (int)count), new(selection, (int)selectionCount),
-                nativeValueEdit: true);
+            value = session.ReserveReplacement(expected, new(delta, (int)count), nativeValueEdit: true);
             id = checked((ulong)Interlocked.Increment(ref nextHandle));
             snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))
@@ -240,16 +211,16 @@ public static unsafe partial class Exports {
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_reserve_sync_replacement", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionReserveSyncReplacement(ulong handle, ulong expected, ulong transaction, byte* delta, nuint count,
-        byte* selection, nuint selectionCount, ulong* replacement, ulong* checkpoint) {
+        ulong* replacement, ulong* checkpoint) {
         if (replacement == null || checkpoint == null) return CoreStatus.InvalidArgument;
         *replacement = 0; *checkpoint = 0;
-        if (!ValidSessionInput(delta, count) || !ValidSessionInput(selection, selectionCount)) return CoreStatus.InvalidArgument;
+        if (!ValidSessionInput(delta, count)) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
         if (!SyncTransactions.TryGetValue(transaction, out var sync)) return CoreStatus.InvalidHandle;
         NativeSessionReplacement? value = null;
         ulong id = 0, snapshot = 0;
         try {
-            value = session.ReserveReplacement(expected, new(delta, (int)count), new(selection, (int)selectionCount), sync);
+            value = session.ReserveReplacement(expected, new(delta, (int)count), sync);
             id = checked((ulong)Interlocked.Increment(ref nextHandle));
             snapshot = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionReplacements.TryAdd(id, value) || !Checkpoints.TryAdd(snapshot, value.Checkpoint))

@@ -117,6 +117,6 @@ final class BrowserURLCompletionTests: XCTestCase {
                 BrowserTab(
                     title: "Page", url: URL(string: $0), placement: .current,
                     lastActivatedAt: Date(timeIntervalSince1970: 0))
-            }, selectedTabID: nil)
+            })
     }
 }

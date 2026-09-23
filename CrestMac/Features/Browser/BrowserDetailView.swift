@@ -47,6 +47,7 @@ struct BrowserDetailView: View {
         guard let tab,
             let space = presentation.presentingSpace
         else { return nil }
-        return pages.surfacePage(for: tab, in: space, accessController: spaceAccess)
+        return pages.surfacePage(for: tab, in: space, showing: browser.selectedTabID(in: space.id),
+            accessController: spaceAccess)
     }
 }

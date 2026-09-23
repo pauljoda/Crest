@@ -141,7 +141,7 @@ extension MobileBrowserRootContent {
 
     var isSelectedTabInSplitGroup: Bool {
         guard let space = browser.selectedSpace,
-            let selectedTabID = space.selectedTabID
+            let selectedTabID = browser.selectedTabID(in: space.id)
         else { return false }
         return space.splitGroup(containing: selectedTabID) != nil
     }

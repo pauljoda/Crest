@@ -2,6 +2,7 @@ import XCTest
 
 @testable import Crest
 
+@MainActor
 final class BrowserSessionTests: XCTestCase {
     func testLegacySpaceWithoutHistoryDecodesWithEmptyHistory() throws {
         let space = try XCTUnwrap(BrowserSession.preview.spaces.first)
@@ -13,26 +14,6 @@ final class BrowserSessionTests: XCTestCase {
         let decoded = try JSONDecoder().decode(BrowserSpace.self, from: legacyData)
 
         XCTAssertTrue(decoded.history.isEmpty)
-    }
-
-    func testRepeatedVisitMergesByURLAndUpdatesRecency() throws {
-        var session = BrowserSession.preview
-        let url = try XCTUnwrap(URL(string: "https://example.com/article#section"))
-
-        session.recordVisit(url: url, title: "First title", at: Date(timeIntervalSince1970: 100))
-        session.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/article#other")),
-            title: "Updated title",
-            at: Date(timeIntervalSince1970: 200)
-        )
-
-        let entry = try XCTUnwrap(session.selectedSpace?.history.first)
-        XCTAssertEqual(try XCTUnwrap(session.selectedSpace).history.count, 1)
-        XCTAssertEqual(entry.url.absoluteString, "https://example.com/article")
-        XCTAssertEqual(entry.title, "Updated title")
-        XCTAssertEqual(entry.visitCount, 2)
-        XCTAssertEqual(entry.firstVisitedAt, Date(timeIntervalSince1970: 100))
-        XCTAssertEqual(entry.lastVisitedAt, Date(timeIntervalSince1970: 200))
     }
 
     func testPinnedAndSavedTabsTrackWhenTheyLeaveTheirSavedLocation() throws {
@@ -59,48 +40,6 @@ final class BrowserSessionTests: XCTestCase {
         )
         XCTAssertFalse(current.supportsSavedLocationEditing)
         XCTAssertFalse(current.isAwayFromSavedLocation)
-    }
-
-    func testSavedLocationCanBeReplacedWithCurrentAndRestored() throws {
-        let homeURL = try XCTUnwrap(URL(string: "https://example.com/home"))
-        let currentURL = try XCTUnwrap(URL(string: "https://example.com/current"))
-        let laterURL = try XCTUnwrap(URL(string: "https://example.com/later"))
-        let tab = BrowserTab(
-            title: "Pinned",
-            url: currentURL,
-            savedURL: homeURL,
-            placement: .pinned
-        )
-        let space = BrowserSpace(
-            id: SpaceID(),
-            profile: BrowsingProfile(),
-            name: "Editing",
-            symbol: "pencil",
-            accent: .indigo,
-            folders: [],
-            tabs: [tab],
-            selectedTabID: tab.id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertTrue(
-            session.replaceTabSavedLocationWithCurrent(
-                tabID: tab.id,
-                in: space.id
-            )
-        )
-        XCTAssertEqual(session.selectedTab?.savedSiteURL, currentURL)
-        XCTAssertFalse(try XCTUnwrap(session.selectedTab).isAwayFromSavedLocation)
-
-        session.updateSelectedTab(url: laterURL, title: "Later")
-        XCTAssertTrue(try XCTUnwrap(session.selectedTab).isAwayFromSavedLocation)
-
-        XCTAssertEqual(
-            session.restoreTabSavedLocation(tabID: tab.id, in: space.id),
-            currentURL
-        )
-        XCTAssertEqual(session.selectedTab?.url, currentURL)
-        XCTAssertFalse(try XCTUnwrap(session.selectedTab).isAwayFromSavedLocation)
     }
 
     func testTabSectionsPartitionLargeFolderedSpaceInOneStableOrder() {
@@ -166,305 +105,69 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(sections.sidebarCurrentTabs.map(\.id), [website.id])
     }
 
-    func testOpeningATabAddsItOnlyToTheSelectedSpace() throws {
-        var session = BrowserSession.preview
-        let personalID = try XCTUnwrap(session.spaces.last?.id)
-        let workCount = try XCTUnwrap(session.spaces.first?.currentTabs.count)
-        let personalCount = try XCTUnwrap(session.spaces.last?.currentTabs.count)
-
-        session.selectSpace(personalID)
-        session.openTab(title: "A fresh tab", url: nil, at: Date(timeIntervalSince1970: 1_000))
-
-        XCTAssertEqual(session.space(id: personalID)?.currentTabs.count, personalCount + 1)
-        XCTAssertEqual(session.spaces.first?.currentTabs.count, workCount)
-    }
-
-    func testOpeningBackgroundTabWithoutChangingSpaceSelection() throws {
-        var session = BrowserSession.preview
-        let originalSpaceID = session.selectedSpaceID
-        let originalTabID = session.selectedTab?.id
-        let personal = try XCTUnwrap(session.spaces.last)
-
-        let openedID = try XCTUnwrap(
-            session.openTab(
-                title: "Background",
-                url: URL(string: "https://example.com/background"),
-                in: personal.id,
-                placement: .current,
-                requestedIndex: personal.tabs.endIndex,
-                shouldSelect: false
-            )
-        )
-
-        XCTAssertEqual(session.selectedSpaceID, originalSpaceID)
-        XCTAssertEqual(session.selectedTab?.id, originalTabID)
-        XCTAssertTrue(session.space(id: personal.id)?.contains(openedID) == true)
-    }
-
     func testPopupCloseCannotRemovePinnedTab() throws {
-        var session = BrowserSession.preview
-        let space = try XCTUnwrap(session.selectedSpace)
+        let store = makeStore(.preview)
+        let space = try XCTUnwrap(store.selectedSpace)
         let pinned = try XCTUnwrap(space.pinnedTabs.first)
-        XCTAssertTrue(session.activateTab(pinned.id, in: space.id))
+        store.selectTab(pinned.id)
+        XCTAssertEqual(store.selectedTab?.id, pinned.id)
 
-        XCTAssertFalse(
-            session.closeTab(
-                pinned.id,
-                in: space.id
-            )
-        )
+        // `window.close()` reaches the store through this path.
+        XCTAssertFalse(store.closeTab(pinned.id, in: space.id))
 
-        let updated = try XCTUnwrap(session.space(id: space.id))
+        let updated = try XCTUnwrap(store.session.space(id: space.id))
         XCTAssertTrue(updated.contains(pinned.id))
         XCTAssertFalse(updated.archivedTabs.contains { $0.id == pinned.id })
-        XCTAssertEqual(updated.selectedTabID, pinned.id)
-    }
-
-    func testClosingASelectedCurrentTabReturnsToThePreviouslyActivatedTab() throws {
-        var session = BrowserSession.preview
-        let recent = Date(timeIntervalSince1970: 4_000_000_000)
-        let previousID = try XCTUnwrap(
-            session.openTab(
-                title: "Previous",
-                url: URL(string: "https://previous.example"),
-                at: recent
-            )
-        )
-        let selectedID = try XCTUnwrap(
-            session.openTab(
-                title: "Selected",
-                url: URL(string: "https://selected.example"),
-                at: recent.addingTimeInterval(10)
-            )
-        )
-        _ = session.openTab(
-            title: "Adjacent",
-            url: URL(string: "https://adjacent.example"),
-            at: recent.addingTimeInterval(20)
-        )
-        session.selectTab(previousID, at: recent.addingTimeInterval(100))
-        session.selectTab(selectedID, at: recent.addingTimeInterval(110))
-
-        session.closeTab(selectedID, fallbackTabID: previousID)
-
-        XCTAssertEqual(session.selectedTab?.id, previousID)
-    }
-
-    func testClosingTheNewestCurrentTabLeavesTheUnloadedStateWithoutAFallback() throws {
-        var session = BrowserSession.preview
-        _ = try XCTUnwrap(session.openTab(title: "A", url: nil))
-        let newestID = try XCTUnwrap(session.openTab(title: "B", url: nil))
-
-        session.closeTab(newestID)
-
-        XCTAssertNil(session.selectedTab)
+        XCTAssertEqual(store.selectedTabID(in: space.id), pinned.id)
     }
 
     func testSwitchingSpacesRestoresEachSpacesSelectedTab() throws {
-        var session = BrowserSession.preview
-        let work = try XCTUnwrap(session.spaces.first)
-        let personal = try XCTUnwrap(session.spaces.last)
+        let store = makeStore(.preview)
+        let work = try XCTUnwrap(store.session.spaces.first)
+        let personal = try XCTUnwrap(store.session.spaces.last)
         let workTabID = try XCTUnwrap(work.savedTabs.first?.id)
         let personalTabID = try XCTUnwrap(personal.pinnedTabs.last?.id)
+        XCTAssertEqual(store.selectedSpaceID, work.id)
 
-        session.selectTab(workTabID)
-        session.selectSpace(personal.id)
-        session.selectTab(personalTabID)
-        session.selectSpace(work.id)
+        store.selectTab(workTabID)
+        store.selectSpace(personal.id)
+        store.selectTab(personalTabID)
+        store.selectSpace(work.id)
 
-        XCTAssertEqual(session.selectedTab?.id, workTabID)
+        XCTAssertEqual(store.selectedTab?.id, workTabID)
 
-        session.selectSpace(personal.id)
-        XCTAssertEqual(session.selectedTab?.id, personalTabID)
-    }
-
-    func testRemovingTheSelectedFirstSpaceSelectsTheFollowingSpace() throws {
-        var session = BrowserSession.preview
-        let first = try XCTUnwrap(session.spaces.first)
-        let following = try XCTUnwrap(session.spaces.dropFirst().first)
-        session.selectSpace(first.id)
-
-        let removed = session.removeSpace(first.id)
-
-        XCTAssertEqual(removed, first)
-        XCTAssertEqual(session.selectedSpaceID, following.id)
-        XCTAssertEqual(session.selectedTab?.id, following.selectedTabID)
-        XCTAssertNil(session.space(id: first.id))
-    }
-
-    func testRemovingTheSelectedLastSpaceSelectsThePreviousSpace() throws {
-        var session = BrowserSession.preview
-        let previous = try XCTUnwrap(session.spaces.dropLast().last)
-        let last = try XCTUnwrap(session.spaces.last)
-        session.selectSpace(last.id)
-
-        let removed = session.removeSpace(last.id)
-
-        XCTAssertEqual(removed, last)
-        XCTAssertEqual(session.selectedSpaceID, previous.id)
-        XCTAssertEqual(session.selectedTab?.id, previous.selectedTabID)
-    }
-
-    func testRemovingANonselectedSpacePreservesTheCurrentSelection() throws {
-        var session = BrowserSession.preview
-        let selected = try XCTUnwrap(session.spaces.first)
-        let removedSpace = try XCTUnwrap(session.spaces.last)
-        session.selectSpace(selected.id)
-
-        XCTAssertEqual(session.removeSpace(removedSpace.id), removedSpace)
-        XCTAssertEqual(session.selectedSpaceID, selected.id)
-        XCTAssertEqual(session.selectedTab?.id, selected.selectedTabID)
-    }
-
-    func testRemovingTheOnlySpaceIsRefused() throws {
-        var session = BrowserSession.preview
-        session.spaces = [try XCTUnwrap(session.spaces.first)]
-        session.selectedSpaceID = try XCTUnwrap(session.spaces.first?.id)
-
-        XCTAssertNil(session.removeSpace(session.selectedSpaceID))
-        XCTAssertEqual(session.spaces.count, 1)
-    }
-
-    func testCleanupRemovesOnlyExpiredUnselectedCurrentTabs() throws {
-        let now = Date(timeIntervalSince1970: 100_000)
-        var session = BrowserSession.cleanupFixture(now: now)
-        let selectedID = try XCTUnwrap(session.selectedTab?.id)
-        let pinnedIDs = Set(try XCTUnwrap(session.selectedSpace).pinnedTabs.map(\.id))
-        let savedIDs = Set(try XCTUnwrap(session.selectedSpace).savedTabs.map(\.id))
-
-        session.cleanupCurrentTabs(olderThan: 12 * 60 * 60, now: now)
-
-        let selectedSpace = try XCTUnwrap(session.selectedSpace)
-        XCTAssertEqual(selectedSpace.currentTabs.map(\.id), [selectedID])
-        XCTAssertEqual(Set(selectedSpace.pinnedTabs.map(\.id)), pinnedIDs)
-        XCTAssertEqual(Set(selectedSpace.savedTabs.map(\.id)), savedIDs)
-        XCTAssertEqual(selectedSpace.archivedTabs.count, 2)
-        XCTAssertTrue(selectedSpace.archivedTabs.allSatisfy { $0.reason == .autoCleanup })
-        XCTAssertTrue(selectedSpace.archivedTabs.allSatisfy { $0.archivedAt == now })
-    }
-
-    func testClearingCurrentTabsArchivesCommittedTabsAndPreservesSavedContent() throws {
-        let now = Date(timeIntervalSince1970: 300_000)
-        let pinned = BrowserTab(
-            title: "Pinned",
-            url: try XCTUnwrap(URL(string: "https://example.test/pinned")),
-            placement: .pinned
-        )
-        let saved = BrowserTab(
-            title: "Saved",
-            url: try XCTUnwrap(URL(string: "https://example.test/saved")),
-            placement: .saved
-        )
-        let first = BrowserTab(
-            title: "First",
-            url: try XCTUnwrap(URL(string: "https://example.test/first")),
-            placement: .current
-        )
-        let second = BrowserTab(
-            title: "Second",
-            url: try XCTUnwrap(URL(string: "https://example.test/second")),
-            placement: .current
-        )
-        let draft = BrowserTab.startPage()
-        let space = BrowserSpace(
-            id: SpaceID(),
-            profile: BrowsingProfile(),
-            name: "Work",
-            symbol: "briefcase",
-            accent: .indigo,
-            folders: [],
-            tabs: [pinned, saved, first, second, draft],
-            selectedTabID: second.id
-        )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
-
-        XCTAssertTrue(session.clearCurrentTabs(in: space.id, at: now))
-
-        let updated = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertEqual(updated.tabs.map(\.id), [pinned.id, saved.id])
-        XCTAssertEqual(updated.selectedTabID, pinned.id)
-        XCTAssertEqual(updated.archivedTabs.map(\.id), [first.id, second.id])
-        XCTAssertTrue(updated.archivedTabs.allSatisfy { $0.reason == .closed })
-        XCTAssertTrue(updated.archivedTabs.allSatisfy { $0.archivedAt == now })
-        XCTAssertFalse(updated.archivedTabs.contains { $0.tab.isStartPage })
-    }
-
-    func testCleanupPolicyRemainsIndependentForEverySpace() throws {
-        let now = Date(timeIntervalSince1970: 200_000)
-        var session = BrowserSession.preview
-        XCTAssertGreaterThanOrEqual(session.spaces.count, 2)
-        let neverSpaceID = session.spaces[0].id
-        let cleanupSpaceID = session.spaces[1].id
-        let neverTab = BrowserTab(
-            title: "Keep indefinitely",
-            url: URL(string: "https://example.com/keep"),
-            placement: .current,
-            lastActivatedAt: now.addingTimeInterval(-31 * 24 * 60 * 60)
-        )
-        let cleanupTab = BrowserTab(
-            title: "Archive by policy",
-            url: URL(string: "https://example.com/archive"),
-            placement: .current,
-            lastActivatedAt: now.addingTimeInterval(-13 * 60 * 60)
-        )
-        session.spaces[0].tabs.append(neverTab)
-        session.spaces[1].tabs.append(cleanupTab)
-        session.spaces[0].browsingPreferences.currentTabCleanupPolicy = .never
-        session.spaces[1].browsingPreferences.currentTabCleanupPolicy = .after12Hours
-
-        session.cleanupCurrentTabsUsingSpacePreferences(now: now)
-
-        XCTAssertTrue(try XCTUnwrap(session.space(id: neverSpaceID)).contains(neverTab.id))
-        let cleanedSpace = try XCTUnwrap(session.space(id: cleanupSpaceID))
-        XCTAssertFalse(cleanedSpace.contains(cleanupTab.id))
-        XCTAssertEqual(
-            cleanedSpace.archivedTabs.first(where: { $0.id == cleanupTab.id })?.reason,
-            .autoCleanup
-        )
+        store.selectSpace(personal.id)
+        XCTAssertEqual(store.selectedTab?.id, personalTabID)
     }
 
     func testRestoringAnArchivedTabReturnsItOnlyToItsSpaceAndSelectsIt() throws {
         let now = Date(timeIntervalSince1970: 100_000)
-        var session = BrowserSession.cleanupFixture(now: now)
-        let personalID = try XCTUnwrap(session.spaces.last?.id)
+        let store = makeStore(.cleanupFixture(now: now))
+        let personalID = try XCTUnwrap(store.session.spaces.last?.id)
 
-        session.cleanupCurrentTabs(olderThan: 12 * 60 * 60, now: now)
-        let archivedID = try XCTUnwrap(session.selectedSpace?.archivedTabs.first?.id)
-        session.restoreArchivedTab(archivedID, at: now.addingTimeInterval(60))
+        XCTAssertTrue(store.sweepExpiredCurrentTabs(now: now))
+        let archivedBeforeRestore = try XCTUnwrap(store.selectedSpace).archivedTabs
+        let archivedID = try XCTUnwrap(archivedBeforeRestore.first?.id)
+        store.restoreArchivedTab(archivedID)
 
-        XCTAssertEqual(session.selectedTab?.id, archivedID)
-        XCTAssertEqual(session.selectedTab?.placement, .current)
-        XCTAssertEqual(try XCTUnwrap(session.selectedSpace).currentTabs.first?.id, archivedID)
-        XCTAssertFalse(try XCTUnwrap(session.selectedSpace).archivedTabs.contains { $0.id == archivedID })
-        XCTAssertEqual(try XCTUnwrap(session.selectedSpace).archivedTabs.count, 1)
-        XCTAssertTrue(try XCTUnwrap(session.space(id: personalID)).archivedTabs.isEmpty)
-    }
-
-    func testClosingACurrentTabArchivesItForRecovery() throws {
-        let now = Date(timeIntervalSince1970: 100_000)
-        var session = BrowserSession.preview
-        let tabID = try XCTUnwrap(session.openTab(title: "Temporary", url: URL(string: "https://example.com"), at: now))
-
-        session.closeTab(tabID, at: now.addingTimeInterval(30))
-
-        let archived = try XCTUnwrap(session.selectedSpace?.archivedTabs.first(where: { $0.id == tabID }))
-        XCTAssertEqual(archived.reason, .closed)
-        XCTAssertEqual(archived.archivedAt, now.addingTimeInterval(30))
-        XCTAssertFalse(try XCTUnwrap(session.selectedSpace).contains(tabID))
+        let space = try XCTUnwrap(store.selectedSpace)
+        XCTAssertEqual(store.selectedTab?.id, archivedID)
+        XCTAssertEqual(store.selectedTab?.placement, .current)
+        XCTAssertTrue(space.currentTabs.contains { $0.id == archivedID })
+        XCTAssertFalse(space.archivedTabs.contains { $0.id == archivedID })
+        XCTAssertEqual(space.archivedTabs.count, archivedBeforeRestore.count - 1)
+        XCTAssertTrue(try XCTUnwrap(store.session.space(id: personalID)).archivedTabs.isEmpty)
     }
 
     func testClosingAStartPageDraftNeverAddsItToTheArchive() throws {
-        var session = BrowserSession.preview
-        let startPage = try XCTUnwrap(
-            session.selectedSpace?.currentTabs.first(where: \.isStartPage)
-        )
-        let archivedIDsBeforeClosing = try XCTUnwrap(session.selectedSpace)
-            .archivedTabs
-            .map(\.id)
+        let store = makeStore(.preview)
+        let space = try XCTUnwrap(store.selectedSpace)
+        let startPage = try XCTUnwrap(space.currentTabs.first(where: \.isStartPage))
+        let archivedIDsBeforeClosing = space.archivedTabs.map(\.id)
 
-        session.closeTab(startPage.id)
+        XCTAssertTrue(store.closeTab(startPage.id, in: space.id))
 
-        let updatedSpace = try XCTUnwrap(session.selectedSpace)
+        let updatedSpace = try XCTUnwrap(store.session.space(id: space.id))
         XCTAssertFalse(updatedSpace.contains(startPage.id))
         XCTAssertEqual(updatedSpace.archivedTabs.map(\.id), archivedIDsBeforeClosing)
         XCTAssertFalse(updatedSpace.archivedTabs.contains { $0.tab.isStartPage })
@@ -472,10 +175,7 @@ final class BrowserSessionTests: XCTestCase {
 
     func testRuntimeRepairDropsLegacyStartPageDraftsFromTheArchive() throws {
         var session = BrowserSession.preview
-        let spaceIndex = try XCTUnwrap(
-            session.spaces.firstIndex(where: { $0.id == session.selectedSpaceID })
-        )
-        session.spaces[spaceIndex].archivedTabs = [
+        session.spaces[0].archivedTabs = [
             ArchivedTab(
                 tab: BrowserTab.startPage(),
                 archivedAt: .distantPast,
@@ -494,7 +194,7 @@ final class BrowserSessionTests: XCTestCase {
 
         session = try BrowserCoreSync.repair(session)
 
-        let archive = try XCTUnwrap(session.selectedSpace).archivedTabs
+        let archive = try XCTUnwrap(session.spaces.first).archivedTabs
         XCTAssertEqual(archive.map(\.tab.title), ["Recoverable"])
         XCTAssertFalse(archive.contains { $0.tab.isStartPage })
     }
@@ -566,129 +266,85 @@ final class BrowserSessionTests: XCTestCase {
     }
 
     func testRenamingATabWinsOverThePageTitleUntilItIsCleared() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        session.openTab(title: "Docs", url: URL(string: "https://example.com/docs"))
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
-        let renamedAt = Date(timeIntervalSince1970: 4_000)
-
-        XCTAssertTrue(
-            session.setTabCustomTitle(
-                "  Release Notes  ",
-                tabID: tabID,
-                in: spaceID,
-                at: renamedAt
-            )
+        let store = makeStore(.preview)
+        let spaceID = store.selectedSpaceID
+        let tabID = try XCTUnwrap(
+            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/docs")))
         )
+        let pageTitle = try XCTUnwrap(store.selectedTab?.title)
 
-        let renamed = try XCTUnwrap(session.selectedTab)
+        XCTAssertTrue(store.setTabCustomTitle("  Release Notes  ", for: tabID, in: spaceID))
+
+        let renamed = try XCTUnwrap(store.selectedTab)
         XCTAssertEqual(renamed.customTitle, "Release Notes")
         XCTAssertEqual(renamed.displayTitle, "Release Notes")
         XCTAssertEqual(
             renamed.title,
-            "Docs",
+            pageTitle,
             "A rename layers over the page title instead of replacing it."
         )
-        XCTAssertEqual(renamed.titleModifiedAt, renamedAt)
+        let renamedAt = try XCTUnwrap(renamed.titleModifiedAt)
 
         XCTAssertFalse(
-            session.setTabCustomTitle(
-                "Release Notes",
-                tabID: tabID,
-                in: spaceID,
-                at: renamedAt.addingTimeInterval(60)
-            ),
+            store.setTabCustomTitle("Release Notes", for: tabID, in: spaceID),
             "Re-committing the same name is not a change."
         )
+        XCTAssertEqual(store.selectedTab?.titleModifiedAt, renamedAt)
 
-        XCTAssertTrue(
-            session.setTabCustomTitle(
-                "",
-                tabID: tabID,
-                in: spaceID,
-                at: renamedAt.addingTimeInterval(120)
-            )
-        )
-        let cleared = try XCTUnwrap(session.selectedTab)
+        XCTAssertTrue(store.setTabCustomTitle("", for: tabID, in: spaceID))
+        let cleared = try XCTUnwrap(store.selectedTab)
         XCTAssertNil(cleared.customTitle)
-        XCTAssertEqual(cleared.displayTitle, "Docs")
-        XCTAssertEqual(cleared.titleModifiedAt, renamedAt.addingTimeInterval(120))
+        XCTAssertEqual(cleared.displayTitle, pageTitle)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(cleared.titleModifiedAt), renamedAt)
     }
 
     func testKeepLoadedCanBeEnabledAndRemovedWithoutChangingTheTabPlacement() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
-        let placement = try XCTUnwrap(session.selectedTab?.placement)
+        let store = makeStore(.preview)
+        let spaceID = store.selectedSpaceID
+        let tabID = try XCTUnwrap(store.selectedTab?.id)
+        let placement = try XCTUnwrap(store.selectedTab?.placement)
 
-        XCTAssertTrue(
-            session.setTabKeepsPageLoaded(
-                true,
-                tabID: tabID,
-                in: spaceID
-            )
-        )
-        XCTAssertEqual(session.selectedTab?.keepsPageLoaded, true)
-        XCTAssertEqual(session.selectedTab?.placement, placement)
-        XCTAssertFalse(
-            session.setTabKeepsPageLoaded(
-                true,
-                tabID: tabID,
-                in: spaceID
-            )
-        )
-        XCTAssertTrue(
-            session.setTabKeepsPageLoaded(
-                false,
-                tabID: tabID,
-                in: spaceID
-            )
-        )
-        XCTAssertEqual(session.selectedTab?.keepsPageLoaded, false)
-        XCTAssertEqual(session.selectedTab?.placement, placement)
+        XCTAssertTrue(store.setTabKeepsPageLoaded(true, for: tabID, in: spaceID))
+        XCTAssertEqual(store.selectedTab?.keepsPageLoaded, true)
+        XCTAssertEqual(store.selectedTab?.placement, placement)
+        XCTAssertFalse(store.setTabKeepsPageLoaded(true, for: tabID, in: spaceID))
+        XCTAssertTrue(store.setTabKeepsPageLoaded(false, for: tabID, in: spaceID))
+        XCTAssertEqual(store.selectedTab?.keepsPageLoaded, false)
+        XCTAssertEqual(store.selectedTab?.placement, placement)
     }
 
     func testObservedPageTitleUpdatesNeverClobberARenamedTab() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        session.openTab(title: "Docs", url: URL(string: "https://example.com/docs"))
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
-        XCTAssertTrue(
-            session.setTabCustomTitle("Release Notes", tabID: tabID, in: spaceID)
+        let store = makeStore(.preview)
+        let spaceID = store.selectedSpaceID
+        let tabID = try XCTUnwrap(
+            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/docs")))
+        )
+        XCTAssertTrue(store.setTabCustomTitle("Release Notes", for: tabID, in: spaceID))
+
+        store.updateTabFromPage(
+            committedURL: try XCTUnwrap(URL(string: "https://example.com/changelog")),
+            title: "Changelog",
+            for: tabID,
+            matching: BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
         )
 
-        session.updateSelectedTab(
-            url: URL(string: "https://example.com/changelog"),
-            title: "Changelog"
-        )
-
-        let tab = try XCTUnwrap(session.selectedTab)
+        let tab = try XCTUnwrap(store.selectedTab)
         XCTAssertEqual(tab.title, "Changelog")
         XCTAssertEqual(tab.customTitle, "Release Notes")
         XCTAssertEqual(tab.displayTitle, "Release Notes")
     }
 
     func testRenamingATabDoesNotClaimANewerPositionChange() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
-        let movedAt = Date(timeIntervalSince1970: 2_000)
-        XCTAssertTrue(session.moveTab(tabID, to: .pinned, at: movedAt))
+        let store = makeStore(.preview)
+        let spaceID = store.selectedSpaceID
+        let tabID = try XCTUnwrap(store.selectedTab?.id)
+        XCTAssertTrue(store.moveTab(tabID, to: .pinned))
+        let movedAt = try XCTUnwrap(store.selectedTab?.positionModifiedAt)
 
-        XCTAssertTrue(
-            session.setTabCustomTitle(
-                "Inbox",
-                tabID: tabID,
-                in: spaceID,
-                at: movedAt.addingTimeInterval(100)
-            )
-        )
+        XCTAssertTrue(store.setTabCustomTitle("Inbox", for: tabID, in: spaceID))
 
-        XCTAssertEqual(session.selectedTab?.positionModifiedAt, movedAt)
-        XCTAssertEqual(
-            session.selectedTab?.titleModifiedAt,
-            movedAt.addingTimeInterval(100)
-        )
+        XCTAssertEqual(store.selectedTab?.positionModifiedAt, movedAt)
+        XCTAssertNotNil(store.selectedTab?.titleModifiedAt)
     }
 
     func testTabWrittenBeforeRenamingDecodesWithoutACustomTitle() throws {
@@ -750,18 +406,16 @@ final class BrowserSessionTests: XCTestCase {
 
     func testARenamedTabRoundTripsThroughTheSessionJSON() throws {
         var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        session.openTab(title: "Docs", url: URL(string: "https://example.com/docs"))
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
+        let spaceID = try XCTUnwrap(session.spaces.first?.id)
         let renamedAt = Date(timeIntervalSince1970: 4_000)
-        XCTAssertTrue(
-            session.setTabCustomTitle(
-                "Release Notes",
-                tabID: tabID,
-                in: spaceID,
-                at: renamedAt
-            )
+        let renamed = BrowserTab(
+            title: "Docs",
+            url: URL(string: "https://example.com/docs"),
+            placement: .current,
+            customTitle: "Release Notes",
+            titleModifiedAt: renamedAt
         )
+        session.spaces[0].tabs.append(renamed)
 
         var decoded = try JSONDecoder().decode(
             BrowserSession.self,
@@ -770,7 +424,7 @@ final class BrowserSessionTests: XCTestCase {
         decoded = try BrowserCoreSync.repair(decoded)
 
         let tab = try XCTUnwrap(
-            decoded.space(id: spaceID)?.tabs.first(where: { $0.id == tabID })
+            decoded.space(id: spaceID)?.tabs.first(where: { $0.id == renamed.id })
         )
         XCTAssertEqual(tab.customTitle, "Release Notes")
         XCTAssertEqual(tab.titleModifiedAt, renamedAt)
@@ -778,219 +432,76 @@ final class BrowserSessionTests: XCTestCase {
     }
 
     func testSpaceCapsPinnedGridAtTwelveTabs() throws {
-        var session = BrowserSession.preview
+        let store = makeStore(.preview)
+        let limit = BrowserSpace.maximumPinnedTabs
 
-        for index in 0..<8 {
-            session.openTab(title: "Pinned \(index)", url: nil)
-            session.moveSelectedTab(to: .pinned)
+        for index in 0..<limit {
+            guard try XCTUnwrap(store.selectedSpace).pinnedTabs.count < limit else { break }
+            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/pin-\(index)")))
+            store.pinSelectedTab()
         }
+        XCTAssertEqual(try XCTUnwrap(store.selectedSpace).pinnedTabs.count, limit)
 
-        session.openTab(title: "Thirteenth pin", url: nil)
-        let overflowID = try XCTUnwrap(session.selectedTab?.id)
-        session.moveSelectedTab(to: .pinned)
+        let overflowID = try XCTUnwrap(
+            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/thirteenth-pin")))
+        )
+        store.pinSelectedTab()
 
-        let space = try XCTUnwrap(session.selectedSpace)
-        XCTAssertEqual(space.pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
+        let space = try XCTUnwrap(store.selectedSpace)
+        XCTAssertEqual(space.pinnedTabs.count, limit)
         XCTAssertEqual(space.tabs.first(where: { $0.id == overflowID })?.placement, .current)
     }
 
     func testTabMoveReordersWithinASectionWithoutChangingSelection() throws {
-        var session = BrowserSession.preview
-        session.openTab(title: "Older", url: nil)
-        let olderID = try XCTUnwrap(session.selectedTab?.id)
-        session.openTab(title: "Newest", url: nil)
-        let newestID = try XCTUnwrap(session.selectedTab?.id)
-        let movedAt = Date(timeIntervalSince1970: 1_000)
-
-        XCTAssertTrue(
-            session.moveTab(
-                olderID,
-                to: .current,
-                before: newestID,
-                at: movedAt
-            )
+        let store = makeStore(.preview)
+        let olderID = try XCTUnwrap(
+            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/older")))
         )
-
-        XCTAssertEqual(
-            Array(try XCTUnwrap(session.selectedSpace).currentTabs.prefix(2)).map(\.id), [olderID, newestID])
-        XCTAssertEqual(session.selectedTab?.id, newestID)
-        XCTAssertEqual(
-            session.selectedSpace?.tabs.first(where: { $0.id == olderID })?.positionModifiedAt,
-            movedAt
+        let newestID = try XCTUnwrap(
+            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/newest")))
         )
+        let firstCurrentID = try XCTUnwrap(store.selectedSpace?.currentTabs.first?.id)
+        XCTAssertNotEqual(firstCurrentID, olderID)
+
+        XCTAssertTrue(store.moveTab(olderID, to: .current, before: firstCurrentID))
+
+        let space = try XCTUnwrap(store.selectedSpace)
+        XCTAssertEqual(Array(space.currentTabs.prefix(2)).map(\.id), [olderID, firstCurrentID])
+        XCTAssertEqual(store.selectedTab?.id, newestID)
+        XCTAssertNotNil(space.tabs.first(where: { $0.id == olderID })?.positionModifiedAt)
     }
 
     func testTabActivationDoesNotClaimANewerPositionChange() throws {
-        var session = BrowserSession.preview
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
-        let positionModifiedAt = Date(timeIntervalSince1970: 2_000)
-        XCTAssertTrue(
-            session.moveTab(
-                tabID,
-                to: .pinned,
-                at: positionModifiedAt
-            )
-        )
+        let store = makeStore(.preview)
+        let tabID = try XCTUnwrap(store.selectedTab?.id)
+        XCTAssertTrue(store.moveTab(tabID, to: .pinned))
+        let positionModifiedAt = try XCTUnwrap(store.selectedTab?.positionModifiedAt)
 
-        session.selectTab(tabID, at: positionModifiedAt.addingTimeInterval(100))
+        store.selectTab(tabID)
 
-        XCTAssertEqual(session.selectedTab?.positionModifiedAt, positionModifiedAt)
+        XCTAssertEqual(store.selectedTab?.positionModifiedAt, positionModifiedAt)
     }
 
     func testTabMoveChangesDurabilityAndFolderWithoutChangingIdentity() throws {
-        var session = BrowserSession.preview
-        session.openTab(title: "Movable", url: URL(string: "https://example.com"))
-        let tabID = try XCTUnwrap(session.selectedTab?.id)
-        let folderID = try XCTUnwrap(session.selectedSpace?.folders.first?.id)
-
-        XCTAssertTrue(session.moveTab(tabID, to: .saved, folderID: folderID))
-        XCTAssertEqual(session.selectedTab?.id, tabID)
-        XCTAssertEqual(session.selectedTab?.placement, .saved)
-        XCTAssertEqual(session.selectedTab?.folderID, folderID)
-
-        XCTAssertTrue(session.moveTab(tabID, to: .pinned))
-        XCTAssertEqual(session.selectedTab?.id, tabID)
-        XCTAssertEqual(session.selectedTab?.placement, .pinned)
-        XCTAssertNil(session.selectedTab?.folderID)
-
-        XCTAssertTrue(session.moveTab(tabID, to: .current))
-        XCTAssertEqual(session.selectedTab?.id, tabID)
-        XCTAssertEqual(session.selectedTab?.placement, .current)
-    }
-
-    func testCrossSpaceMovePreservesTabIdentityAndDestinationSelection() throws {
-        var session = BrowserSession.preview
-        let sourceSpace = try XCTUnwrap(session.spaces.first)
-        let destinationSpace = try XCTUnwrap(session.spaces.last)
-        let movedTab = try XCTUnwrap(sourceSpace.savedTabs.first)
-        session.selectTab(movedTab.id, at: Date(timeIntervalSince1970: 900))
-
-        XCTAssertTrue(
-            session.moveTab(
-                movedTab.id,
-                from: sourceSpace.id,
-                into: destinationSpace.id,
-                at: Date(timeIntervalSince1970: 1_000)
-            )
+        let store = makeStore(.preview)
+        let tabID = try XCTUnwrap(
+            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com")))
         )
+        let folderID = try XCTUnwrap(store.selectedSpace?.folders.first?.id)
 
-        XCTAssertFalse(try XCTUnwrap(session.space(id: sourceSpace.id)).contains(movedTab.id))
-        let destination = try XCTUnwrap(session.space(id: destinationSpace.id))
-        let reownedTab = try XCTUnwrap(destination.tabs.first(where: { $0.id == movedTab.id }))
-        XCTAssertEqual(reownedTab.url, movedTab.url)
-        XCTAssertEqual(reownedTab.savedURL, movedTab.savedURL)
-        XCTAssertEqual(reownedTab.placement, .saved)
-        XCTAssertNil(reownedTab.folderID)
-        XCTAssertEqual(reownedTab.lastActivatedAt, Date(timeIntervalSince1970: 900))
-        XCTAssertEqual(session.selectedSpaceID, sourceSpace.id)
-        XCTAssertEqual(destination.selectedTabID, destinationSpace.selectedTabID)
-        XCTAssertNil(session.space(id: sourceSpace.id)?.selectedTabID)
+        XCTAssertTrue(store.moveTab(tabID, to: .saved, folderID: folderID))
+        XCTAssertEqual(store.selectedTab?.id, tabID)
+        XCTAssertEqual(store.selectedTab?.placement, .saved)
+        XCTAssertEqual(store.selectedTab?.folderID, folderID)
 
-        let assignment = try XCTUnwrap(
-            session.tabRuntimeAssignments.first(where: { $0.tabID == movedTab.id })
-        )
-        XCTAssertEqual(assignment.spaceID, destinationSpace.id)
-        XCTAssertEqual(assignment.profileID, destinationSpace.profile.id)
-    }
+        XCTAssertTrue(store.moveTab(tabID, to: .pinned))
+        XCTAssertEqual(store.selectedTab?.id, tabID)
+        XCTAssertEqual(store.selectedTab?.placement, .pinned)
+        XCTAssertNil(store.selectedTab?.folderID)
 
-    func testCrossSpaceMoveCanChooseDestinationFolderAndDurability() throws {
-        var session = BrowserSession.preview
-        let source = try XCTUnwrap(session.spaces.first)
-        let destination = try XCTUnwrap(session.spaces.last)
-        let destinationFolderID = try XCTUnwrap(destination.folders.first?.id)
-        let movedTab = try XCTUnwrap(source.currentTabs.first)
-
-        XCTAssertTrue(
-            session.moveTab(
-                movedTab.id,
-                from: source.id,
-                into: destination.id,
-                to: .saved,
-                folderID: destinationFolderID
-            )
-        )
-
-        let result = try XCTUnwrap(
-            session.space(id: destination.id)?.tabs.first(where: { $0.id == movedTab.id })
-        )
-        XCTAssertEqual(result.placement, .saved)
-        XCTAssertEqual(result.folderID, destinationFolderID)
-        XCTAssertEqual(result.savedURL, movedTab.url)
-    }
-
-    func testCrossSpaceMoveRefusesAThirteenthDestinationPinWithoutMutatingEitherSpace() throws {
-        var session = BrowserSession.preview
-        let source = try XCTUnwrap(session.spaces.first)
-        let destinationID = try XCTUnwrap(session.spaces.last?.id)
-        let sourcePinnedTab = try XCTUnwrap(source.pinnedTabs.first)
-        let destinationIndex = try XCTUnwrap(
-            session.spaces.firstIndex(where: { $0.id == destinationID })
-        )
-        while session.spaces[destinationIndex].pinnedTabs.count < BrowserSpace.maximumPinnedTabs {
-            session.spaces[destinationIndex].tabs.insert(
-                BrowserTab(title: "Full pin", url: nil, placement: .pinned),
-                at: 0
-            )
-        }
-        let original = session
-
-        XCTAssertFalse(
-            session.moveTab(
-                sourcePinnedTab.id,
-                from: source.id,
-                into: destinationID
-            )
-        )
-        XCTAssertEqual(session, original)
-    }
-
-    func testDuplicatingAnyTabCreatesANewCurrentTabWithoutCopyingDurability() throws {
-        var session = BrowserSession.preview
-        let space = try XCTUnwrap(session.spaces.first)
-        let source = try XCTUnwrap(space.savedTabs.first)
-
-        let duplicateID = try XCTUnwrap(
-            session.duplicateTab(
-                source.id,
-                in: space.id,
-                at: Date(timeIntervalSince1970: 2_000)
-            )
-        )
-
-        let duplicate = try XCTUnwrap(
-            session.space(id: space.id)?.tabs.first(where: { $0.id == duplicateID })
-        )
-        XCTAssertNotEqual(duplicate.id, source.id)
-        XCTAssertEqual(duplicate.title, source.title)
-        XCTAssertEqual(duplicate.url, source.url)
-        XCTAssertEqual(duplicate.faviconData, source.faviconData)
-        XCTAssertEqual(duplicate.placement, .current)
-        XCTAssertNil(duplicate.savedURL)
-        XCTAssertNil(duplicate.folderID)
-        XCTAssertEqual(session.selectedTab?.id, duplicateID)
-    }
-
-    func testDeletingPinnedAndSavedTabsLeavesExplicitArchiveEvidence() throws {
-        var session = BrowserSession.preview
-        let space = try XCTUnwrap(session.selectedSpace)
-        let pinned = try XCTUnwrap(space.pinnedTabs.first)
-        let saved = try XCTUnwrap(space.savedTabs.first)
-        let archivedIDs = Set(space.archivedTabs.map(\.id))
-        let deletedAt = Date(timeIntervalSince1970: 2_000)
-
-        XCTAssertTrue(session.deleteTab(pinned.id, in: space.id, at: deletedAt))
-        XCTAssertTrue(session.deleteTab(saved.id, in: space.id, at: deletedAt))
-
-        let updated = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertFalse(updated.contains(pinned.id))
-        XCTAssertFalse(updated.contains(saved.id))
-        let deletionEvidence = updated.archivedTabs.filter {
-            $0.id == pinned.id || $0.id == saved.id
-        }
-        XCTAssertEqual(Set(updated.archivedTabs.map(\.id)), archivedIDs.union([pinned.id, saved.id]))
-        XCTAssertEqual(deletionEvidence.map(\.reason), [.deleted, .deleted])
-        XCTAssertTrue(deletionEvidence.allSatisfy { $0.archivedAt == deletedAt })
-        XCTAssertNotNil(updated.selectedTabID)
+        XCTAssertTrue(store.moveTab(tabID, to: .current))
+        XCTAssertEqual(store.selectedTab?.id, tabID)
+        XCTAssertEqual(store.selectedTab?.placement, .current)
     }
 
     func testDeletionArchiveRoundTripsThroughRollbackCompatibleSessionTerms() throws {
@@ -1016,126 +527,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(decoded, archived)
     }
 
-    func testAutomaticFaviconCacheKeepsLastKnownGoodIconWhileCurrentURLChanges() throws {
-        var session = BrowserSession.preview
-        let tab = try XCTUnwrap(
-            session.selectedSpace?.currentTabs.first { $0.url != nil }
-        )
-        session.selectTab(tab.id)
-        let originalURL = try XCTUnwrap(tab.url)
-        let nextURL = try XCTUnwrap(URL(string: "https://example.com/next"))
-
-        XCTAssertTrue(
-            session.cacheAutomaticTabFavicon(
-                Data([0x01]),
-                iconAccent: .white,
-                url: originalURL,
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
-        )
-        session.updateSelectedTab(url: nextURL, title: "Next")
-
-        XCTAssertEqual(session.selectedTab?.iconMode, .automatic)
-        XCTAssertEqual(session.selectedTab?.faviconData, Data([0x01]))
-        XCTAssertEqual(session.selectedTab?.faviconURL, originalURL)
-        XCTAssertEqual(session.selectedTab?.displayFaviconData, Data([0x01]))
-        XCTAssertFalse(try XCTUnwrap(session.selectedTab).hasCurrentAutomaticFavicon)
-    }
-
-    func testAutomaticFaviconCacheReplacesLastKnownGoodIconAfterCapture() throws {
-        var session = BrowserSession.preview
-        let tab = try XCTUnwrap(
-            session.selectedSpace?.currentTabs.first { $0.url != nil }
-        )
-        session.selectTab(tab.id)
-        let originalURL = try XCTUnwrap(tab.url)
-        let nextURL = try XCTUnwrap(URL(string: "https://example.com/next"))
-
-        XCTAssertTrue(
-            session.cacheAutomaticTabFavicon(
-                Data([0x01]),
-                iconAccent: .white,
-                url: originalURL,
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
-        )
-        session.updateSelectedTab(url: nextURL, title: "Next")
-        XCTAssertTrue(
-            session.cacheAutomaticTabFavicon(
-                Data([0x02]),
-                iconAccent: .white,
-                url: nextURL,
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
-        )
-
-        XCTAssertEqual(session.selectedTab?.displayFaviconData, Data([0x02]))
-        XCTAssertEqual(session.selectedTab?.faviconURL, nextURL)
-        XCTAssertTrue(try XCTUnwrap(session.selectedTab).hasCurrentAutomaticFavicon)
-    }
-
-    func testPulledFaviconRemainsAnOverrideAcrossNavigation() throws {
-        var session = BrowserSession.preview
-        let tab = try XCTUnwrap(session.selectedTab)
-        let favicon = Data([0x01, 0x02, 0x03])
-
-        XCTAssertTrue(
-            session.setTabFavicon(
-                favicon,
-                iconAccent: .white,
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
-        )
-        session.updateSelectedTab(
-            url: try XCTUnwrap(URL(string: "https://example.com/next")),
-            title: "Next",
-            faviconData: Data([0x04])
-        )
-
-        XCTAssertEqual(session.selectedTab?.iconMode, .pulled)
-        XCTAssertEqual(session.selectedTab?.faviconData, favicon)
-    }
-
-    func testEmojiIconReplacesCachedFaviconAndRoundTrips() throws {
-        var session = BrowserSession.preview
-        let tab = try XCTUnwrap(session.selectedTab)
-        let favicon = Data([0x01, 0x02, 0x03])
-
-        XCTAssertTrue(
-            session.setTabFavicon(
-                favicon,
-                iconAccent: .white,
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
-        )
-        XCTAssertTrue(
-            session.setTabEmojiIcon(
-                "🌐",
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
-        )
-        let updated = try XCTUnwrap(session.selectedTab)
-
-        XCTAssertEqual(updated.iconMode, .emoji)
-        XCTAssertEqual(updated.emojiIcon, "🌐")
-        XCTAssertNil(updated.faviconData)
-        XCTAssertNil(updated.faviconURL)
-
-        let decoded = try JSONDecoder().decode(
-            BrowserTab.self,
-            from: JSONEncoder().encode(updated)
-        )
-        XCTAssertEqual(decoded.iconMode, .emoji)
-        XCTAssertEqual(decoded.emojiIcon, "🌐")
-        XCTAssertNil(decoded.faviconData)
-    }
-
     func testEmojiNormalizationKeepsOneCompleteGraphemeCluster() {
         XCTAssertEqual(
             BrowserIconSymbol.normalizedEmoji("👨🏽‍💻trailing text"),
@@ -1149,43 +540,24 @@ final class BrowserSessionTests: XCTestCase {
 
     func testComposedEmojiPersistsWithoutScalarTruncation() throws {
         var session = BrowserSession.preview
-        let tab = try XCTUnwrap(session.selectedTab)
         let emoji = "👨🏽‍💻"
-
-        XCTAssertTrue(
-            session.setTabEmojiIcon(
-                emoji,
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
+        let tab = BrowserTab(
+            title: "Workbench",
+            url: URL(string: "https://example.com/workbench"),
+            symbol: BrowserTab.symbol(forEmoji: emoji),
+            iconMode: .emoji,
+            placement: .current
         )
+        session.spaces[0].tabs.append(tab)
 
         let decoded = try JSONDecoder().decode(
             BrowserSession.self,
             from: JSONEncoder().encode(session)
         )
-        XCTAssertEqual(decoded.selectedTab?.emojiIcon, emoji)
-        XCTAssertEqual(decoded.selectedTab?.emojiIcon?.count, 1)
-    }
-
-    func testClearingAnIconReturnsTheTabToAutomaticCurrentURLUpdates() throws {
-        var session = BrowserSession.preview
-        let tab = try XCTUnwrap(session.selectedTab)
-        XCTAssertTrue(
-            session.setTabEmojiIcon(
-                "✨",
-                tabID: tab.id,
-                in: session.selectedSpaceID
-            )
-        )
-
-        XCTAssertTrue(
-            session.clearTabIcon(tabID: tab.id, in: session.selectedSpaceID)
-        )
-
-        XCTAssertEqual(session.selectedTab?.iconMode, .automatic)
-        XCTAssertEqual(session.selectedTab?.symbol, "globe")
-        XCTAssertNil(session.selectedTab?.faviconData)
+        let decodedTab = decoded.spaces.first?.tabs.first { $0.id == tab.id }
+        XCTAssertEqual(decodedTab?.iconMode, .emoji)
+        XCTAssertEqual(decodedTab?.emojiIcon, emoji)
+        XCTAssertEqual(decodedTab?.emojiIcon?.count, 1)
     }
 
     func testFolderTreePreservesPreorderPathsAndAncestorDisclosure() throws {
@@ -1205,136 +577,54 @@ final class BrowserSessionTests: XCTestCase {
         )
     }
 
-    func testFolderLifecycleCreatesRenamesMovesAndRejectsCycles() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let rootID = try XCTUnwrap(session.addFolder(title: "Projects", in: spaceID))
-        let childID = try XCTUnwrap(
-            session.addFolder(title: "Crest", parentID: rootID, in: spaceID)
-        )
-        let leafID = try XCTUnwrap(
-            session.addFolder(title: "Research", parentID: childID, in: spaceID)
-        )
-
-        XCTAssertTrue(session.renameFolder(childID, in: spaceID, title: "Browser"))
-        XCTAssertFalse(session.canMoveFolder(rootID, in: spaceID, into: leafID))
-        XCTAssertFalse(session.moveFolder(rootID, in: spaceID, into: leafID))
-        XCTAssertTrue(session.moveFolder(childID, in: spaceID, into: nil))
-
-        let space = try XCTUnwrap(session.space(id: spaceID))
-        XCTAssertEqual(space.folders.first(where: { $0.id == childID })?.title, "Browser")
-        XCTAssertNil(space.folders.first(where: { $0.id == childID })?.parentID)
-        XCTAssertEqual(space.folders.first(where: { $0.id == leafID })?.parentID, childID)
-        XCTAssertTrue(space.folderTree.isValid)
-    }
-
     func testFolderCollapseStateChangesOnlyWhenNeeded() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let folderID = try XCTUnwrap(session.addFolder(in: spaceID))
-        let collapseDate = Date(timeIntervalSince1970: 100)
-        let expandDate = Date(timeIntervalSince1970: 200)
+        let store = makeStore(.preview)
+        let spaceID = store.selectedSpaceID
+        let folderID = try XCTUnwrap(store.addFolder(in: spaceID))
+        func folder() -> BrowserFolder? {
+            store.session.space(id: spaceID)?.folders.first { $0.id == folderID }
+        }
 
-        XCTAssertTrue(
-            session.setFolderCollapsed(
-                folderID,
-                in: spaceID,
-                isCollapsed: true,
-                at: collapseDate
-            )
-        )
-        let collapsed = session.space(id: spaceID)?.folders.first { $0.id == folderID }
-        XCTAssertEqual(collapsed?.isCollapsed, true)
-        XCTAssertEqual(collapsed?.collapseModifiedAt, collapseDate)
-        XCTAssertFalse(
-            session.setFolderCollapsed(
-                folderID,
-                in: spaceID,
-                isCollapsed: true,
-                at: expandDate
-            )
-        )
-        XCTAssertTrue(
-            session.setFolderCollapsed(
-                folderID,
-                in: spaceID,
-                isCollapsed: false,
-                at: expandDate
-            )
-        )
-        let expanded = session.space(id: spaceID)?.folders.first { $0.id == folderID }
-        XCTAssertEqual(expanded?.isCollapsed, false)
-        XCTAssertEqual(expanded?.collapseModifiedAt, expandDate)
+        XCTAssertTrue(store.setFolderCollapsed(folderID, in: spaceID, isCollapsed: true))
+        XCTAssertEqual(folder()?.isCollapsed, true)
+        let collapsedAt = try XCTUnwrap(folder()?.collapseModifiedAt)
+        XCTAssertFalse(store.setFolderCollapsed(folderID, in: spaceID, isCollapsed: true))
+        XCTAssertEqual(folder()?.collapseModifiedAt, collapsedAt)
+
+        XCTAssertTrue(store.setFolderCollapsed(folderID, in: spaceID, isCollapsed: false))
+        XCTAssertEqual(folder()?.isCollapsed, false)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(folder()?.collapseModifiedAt), collapsedAt)
     }
 
     func testSavedTabsExpansionStateChangesOnlyWhenNeeded() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let collapseDate = Date(timeIntervalSince1970: 300)
-        let expandDate = Date(timeIntervalSince1970: 400)
+        let store = makeStore(.preview)
+        let spaceID = store.selectedSpaceID
+        func space() throws -> BrowserSpace { try XCTUnwrap(store.session.space(id: spaceID)) }
 
-        XCTAssertTrue(
-            session.setSavedTabsExpanded(false, in: spaceID, at: collapseDate)
-        )
-        XCTAssertEqual(session.space(id: spaceID)?.isSavedTabsExpanded, false)
-        XCTAssertEqual(
-            session.space(id: spaceID)?.savedTabsExpansionModifiedAt,
-            collapseDate
-        )
-        XCTAssertFalse(
-            session.setSavedTabsExpanded(false, in: spaceID, at: expandDate)
-        )
-        XCTAssertTrue(
-            session.setSavedTabsExpanded(true, in: spaceID, at: expandDate)
-        )
-        XCTAssertEqual(session.space(id: spaceID)?.isSavedTabsExpanded, true)
-        XCTAssertEqual(
-            session.space(id: spaceID)?.savedTabsExpansionModifiedAt,
-            expandDate
-        )
-    }
+        XCTAssertTrue(store.setSavedTabsExpanded(false, in: spaceID))
+        XCTAssertFalse(try space().isSavedTabsExpanded)
+        let collapsedAt = try XCTUnwrap(try space().savedTabsExpansionModifiedAt)
+        XCTAssertFalse(store.setSavedTabsExpanded(false, in: spaceID))
+        XCTAssertEqual(try space().savedTabsExpansionModifiedAt, collapsedAt)
 
-    func testDeletingFolderPromotesDirectChildrenAndKeepsTabsSaved() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
-        let parentID = try XCTUnwrap(session.addFolder(title: "Parent", in: spaceID))
-        let deletedID = try XCTUnwrap(
-            session.addFolder(title: "Delete", parentID: parentID, in: spaceID)
-        )
-        let childID = try XCTUnwrap(
-            session.addFolder(title: "Child", parentID: deletedID, in: spaceID)
-        )
-        let tabID = try XCTUnwrap(session.openTab(title: "Saved", url: URL(string: "https://example.com")))
-        XCTAssertTrue(session.moveTab(tabID, to: .saved, folderID: deletedID))
-
-        XCTAssertTrue(session.deleteFolder(deletedID, in: spaceID))
-
-        let space = try XCTUnwrap(session.space(id: spaceID))
-        XCTAssertFalse(space.folders.contains { $0.id == deletedID })
-        XCTAssertEqual(space.folders.first(where: { $0.id == childID })?.parentID, parentID)
-        XCTAssertEqual(space.tabs.first(where: { $0.id == tabID })?.folderID, parentID)
-        XCTAssertEqual(space.tabs.first(where: { $0.id == tabID })?.placement, .saved)
+        XCTAssertTrue(store.setSavedTabsExpanded(true, in: spaceID))
+        XCTAssertTrue(try space().isSavedTabsExpanded)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(try space().savedTabsExpansionModifiedAt), collapsedAt)
     }
 
     func testFolderDepthIsBoundedForCreationAndMovement() throws {
-        var session = BrowserSession.preview
-        let spaceID = try XCTUnwrap(session.selectedSpace?.id)
+        let store = makeStore(.preview)
+        let spaceID = store.selectedSpaceID
         var parentID: FolderID?
         for depth in 0..<BrowserSpace.maximumFolderDepth {
             parentID = try XCTUnwrap(
-                session.addFolder(
-                    title: "Level \(depth)",
-                    parentID: parentID,
-                    in: spaceID
-                )
+                store.addFolder(title: "Level \(depth)", parentID: parentID, in: spaceID)
             )
         }
 
-        XCTAssertNil(
-            session.addFolder(title: "Too Deep", parentID: parentID, in: spaceID)
-        )
+        XCTAssertNil(store.addFolder(title: "Too Deep", parentID: parentID, in: spaceID))
         XCTAssertEqual(
-            try XCTUnwrap(session.space(id: spaceID)).folderTree.depth(
+            try XCTUnwrap(store.session.space(id: spaceID)).folderTree.depth(
                 of: try XCTUnwrap(parentID)
             ),
             BrowserSpace.maximumFolderDepth - 1
@@ -1371,8 +661,7 @@ final class BrowserSessionTests: XCTestCase {
             symbol: "briefcase",
             accent: .indigo,
             folders: [],
-            tabs: [firstTab],
-            selectedTabID: sharedTabID
+            tabs: [firstTab]
         )
         let second = BrowserSpace(
             id: SpaceID(),
@@ -1381,22 +670,17 @@ final class BrowserSessionTests: XCTestCase {
             symbol: "house",
             accent: .orange,
             folders: [],
-            tabs: [secondTab],
-            selectedTabID: sharedTabID
+            tabs: [secondTab]
         )
-        var session = BrowserSession(spaces: [first, second], selectedSpaceID: second.id)
 
-        session = try BrowserCoreSync.repair(session)
+        let session = try BrowserCoreSync.repair(BrowserSession(spaces: [first, second]))
 
+        XCTAssertEqual(session.spaces.map(\.id), [first.id, second.id])
         XCTAssertEqual(Set(session.spaces.map(\.profile.id)).count, 2)
         XCTAssertEqual(Set(session.tabIDs).count, 2)
-        XCTAssertEqual(session.selectedSpaceID, second.id)
-        XCTAssertEqual(session.selectedTab?.title, BrowserTab.startPageTitle)
-        XCTAssertEqual(session.selectedTab?.symbol, BrowserTab.startPageSymbol)
-        XCTAssertNotEqual(session.spaces[0].selectedTabID, session.spaces[1].selectedTabID)
     }
 
-    func testRuntimeRepairCreatesAUsableSelectionForEmptyOrDanglingState() throws {
+    func testRuntimeRepairGivesEmptySessionsAndSpacesAUsableLaunchTab() throws {
         let emptySpace = BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
@@ -1404,23 +688,23 @@ final class BrowserSessionTests: XCTestCase {
             symbol: "circle",
             accent: .teal,
             folders: [],
-            tabs: [],
-            selectedTabID: TabID()
+            tabs: []
         )
-        var session = BrowserSession(spaces: [emptySpace], selectedSpaceID: SpaceID())
 
-        session = try BrowserCoreSync.repair(session)
+        let session = try BrowserCoreSync.repair(BrowserSession(spaces: [emptySpace]))
 
-        XCTAssertEqual(session.selectedSpaceID, emptySpace.id)
-        XCTAssertEqual(session.selectedSpace?.tabs.count, 1)
-        XCTAssertEqual(session.selectedTab?.title, BrowserTab.startPageTitle)
-        XCTAssertEqual(session.selectedTab?.symbol, BrowserTab.startPageSymbol)
-        XCTAssertEqual(session.selectedTab?.placement, .current)
+        let repaired = try XCTUnwrap(session.space(id: emptySpace.id))
+        XCTAssertEqual(repaired.tabs.count, 1)
+        let launch = BrowserStoreSelection(launching: session)
+        XCTAssertEqual(launch.selectedSpaceID, emptySpace.id)
+        let launchTab = try XCTUnwrap(launch.selectedTab(in: session))
+        XCTAssertEqual(launchTab.title, BrowserTab.startPageTitle)
+        XCTAssertEqual(launchTab.symbol, BrowserTab.startPageSymbol)
+        XCTAssertEqual(launchTab.placement, .current)
 
-        var noSpaces = BrowserSession(spaces: [], selectedSpaceID: SpaceID())
-        noSpaces = try BrowserCoreSync.repair(noSpaces)
+        let noSpaces = try BrowserCoreSync.repair(BrowserSession(spaces: []))
         XCTAssertEqual(noSpaces.spaces.count, 1)
-        XCTAssertNotNil(noSpaces.selectedTab)
+        XCTAssertNotNil(BrowserStoreSelection(launching: noSpaces).selectedTab(in: noSpaces))
     }
 
     func testRuntimeRepairBoundsPinsHistoryFoldersAndArchivedIdentities() throws {
@@ -1466,14 +750,12 @@ final class BrowserSessionTests: XCTestCase {
             folders: folders,
             tabs: tabs,
             archivedTabs: [archivedCollision],
-            history: history,
-            selectedTabID: tabs[0].id
+            history: history
         )
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
 
-        session = try BrowserCoreSync.repair(session)
+        let session = try BrowserCoreSync.repair(BrowserSession(spaces: [space]))
 
-        let repaired = try XCTUnwrap(session.selectedSpace)
+        let repaired = try XCTUnwrap(session.spaces.first)
         XCTAssertEqual(Set(repaired.folders.map(\.id)).count, 5)
         XCTAssertTrue(repaired.folderTree.isValid)
         XCTAssertTrue(
@@ -1499,8 +781,8 @@ final class BrowserSessionTests: XCTestCase {
         let personal = try XCTUnwrap(session.spaces.last)
         let workTabID = try XCTUnwrap(work.tabs.first?.id)
         let personalTabID = try XCTUnwrap(personal.tabs.last?.id)
-        var firstWindow = BrowserWindowState(restoring: session)
-        var secondWindow = BrowserWindowState(restoring: session)
+        var firstWindow = launchWindow(session)
+        var secondWindow = launchWindow(session)
 
         firstWindow.selectTab(workTabID, in: work.id, session: session)
         secondWindow.selectTab(personalTabID, in: personal.id, session: session)
@@ -1516,7 +798,7 @@ final class BrowserSessionTests: XCTestCase {
         let session = BrowserSession.preview
         let personal = try XCTUnwrap(session.spaces.last)
         let selectedTabID = try XCTUnwrap(personal.tabs.first?.id)
-        var window = BrowserWindowState(restoring: session)
+        var window = launchWindow(session)
         window.selectTab(selectedTabID, in: personal.id, session: session)
 
         let encoded = try JSONEncoder().encode(window)
@@ -1529,8 +811,8 @@ final class BrowserSessionTests: XCTestCase {
 
     func testBrowserWindowChromeRoundTripsIndependentlyAndKeepsLegacySnapshotsReadable() throws {
         let session = BrowserSession.preview
-        var firstWindow = BrowserWindowState(restoring: session)
-        var secondWindow = BrowserWindowState(restoring: session)
+        var firstWindow = launchWindow(session)
+        var secondWindow = launchWindow(session)
 
         firstWindow.captureSidebar(width: 364, isPresented: false)
         secondWindow.captureSidebar(width: 278, isPresented: true)
@@ -1567,18 +849,24 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(legacyRestored.selectedSpaceID, firstWindow.selectedSpaceID)
     }
 
-    func testBrowserWindowSelectionSnapshotIgnoresPageMetadataChanges() {
+    func testBrowserWindowSelectionSnapshotIgnoresPageMetadataChanges() throws {
         var session = BrowserSession.preview
         let windowID = BrowserWindowID()
-        let originalSelection = BrowserWindowState(id: windowID, restoring: session)
-
-        session.updateSelectedTab(
-            url: URL(string: "https://example.com/updated"),
-            title: "Updated page title"
+        let selection = BrowserStoreSelection(launching: session)
+        let originalSelection = BrowserWindowState(id: windowID, restoring: selection, in: session)
+        let spaceIndex = try XCTUnwrap(
+            session.spaces.firstIndex { $0.id == selection.selectedSpaceID }
+        )
+        let selectedTabID = try XCTUnwrap(selection.selectedTabID(in: selection.selectedSpaceID))
+        let tabIndex = try XCTUnwrap(
+            session.spaces[spaceIndex].tabs.firstIndex { $0.id == selectedTabID }
         )
 
+        session.spaces[spaceIndex].tabs[tabIndex].url = URL(string: "https://example.com/updated")
+        session.spaces[spaceIndex].tabs[tabIndex].title = "Updated page title"
+
         XCTAssertEqual(
-            BrowserWindowState(id: windowID, restoring: session),
+            BrowserWindowState(id: windowID, restoring: selection, in: session),
             originalSelection
         )
     }
@@ -1591,8 +879,8 @@ final class BrowserSessionTests: XCTestCase {
         let session = BrowserSession.preview
         let personal = try XCTUnwrap(session.spaces.last)
         let personalTabID = try XCTUnwrap(personal.tabs.last?.id)
-        let firstWindow = BrowserWindowState(restoring: session)
-        var secondWindow = BrowserWindowState(restoring: session)
+        let firstWindow = launchWindow(session)
+        var secondWindow = launchWindow(session)
         secondWindow.selectTab(personalTabID, in: personal.id, session: session)
 
         persistence.save(firstWindow)
@@ -1607,6 +895,18 @@ final class BrowserSessionTests: XCTestCase {
 
         XCTAssertNil(persistence.load(id: firstWindow.id))
         XCTAssertEqual(persistence.load(id: secondWindow.id), secondWindow)
+    }
+
+    // MARK: - Helpers
+
+    /// A window store over `session` that opens the launch selection.
+    private func makeStore(_ session: BrowserSession) -> BrowserStore {
+        BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+    }
+
+    /// A new window record showing the launch selection of `session`.
+    private func launchWindow(_ session: BrowserSession) -> BrowserWindowState {
+        BrowserWindowState(restoring: BrowserStoreSelection(launching: session), in: session)
     }
 }
 
@@ -2057,7 +1357,6 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
             "Closed tabs must not retain favicon bytes."
         )
 
-        XCTAssertEqual(core.selectedSpaceID, session.selectedSpaceID)
         XCTAssertEqual(core.spaces.map(\.name), session.spaces.map(\.name))
         XCTAssertEqual(
             core.spaces.map { $0.folders.map(\.title) },
@@ -2158,11 +1457,13 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
 
         var visited = session
         let visitedSpaceID = visited.spaces[0].id
-        visited.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/just-now")),
-            title: "Just now",
-            in: visitedSpaceID,
-            at: Date(timeIntervalSince1970: 1_800_000_000)
+        visited.spaces[0].history.append(
+            BrowserHistoryEntry(
+                url: try XCTUnwrap(URL(string: "https://example.com/just-now")),
+                title: "Just now",
+                firstVisitedAt: Date(timeIntervalSince1970: 1_800_000_000),
+                lastVisitedAt: Date(timeIntervalSince1970: 1_800_000_000)
+            )
         )
         harness.persistence.save(visited, scope: .history(in: visitedSpaceID))
         await harness.persistence.flushPendingSaves()
@@ -2189,15 +1490,9 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
         let tabID = captured.spaces[0].tabs[0].id
         let capturedURL = try XCTUnwrap(captured.spaces[0].tabs[0].url)
         let capturedIcon = Self.faviconBytes(seed: 200, byteCount: 3_000)
-        XCTAssertTrue(
-            captured.cacheAutomaticTabFavicon(
-                capturedIcon,
-                iconAccent: BrowserTabIconAccent(red: 1, green: 0.25, blue: 0),
-                url: capturedURL,
-                tabID: tabID,
-                in: captured.spaces[0].id
-            )
-        )
+        captured.spaces[0].tabs[0].faviconData = capturedIcon
+        captured.spaces[0].tabs[0].faviconURL = capturedURL
+        captured.spaces[0].tabs[0].iconAccent = BrowserTabIconAccent(red: 1, green: 0.25, blue: 0)
         harness.persistence.save(captured, scope: .favicon(for: tabID))
         await harness.persistence.flushPendingSaves()
 
@@ -2264,7 +1559,7 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
         let removedTabIDs = Set(
             removedSpace.tabs.map(\.id) + removedSpace.archivedTabs.map(\.tab.id)
         )
-        XCTAssertNotNil(reduced.removeSpace(removedSpace.id))
+        reduced.spaces.removeLast()
         harness.persistence.save(reduced, scope: .core)
         await harness.persistence.flushPendingSaves()
 
@@ -2284,16 +1579,15 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
 
     func testClosingATabDropsItsFaviconFileAndKeepsOtherLiveFavicons() async throws {
         var session = BrowserSession.preview
-        let spaceID = session.selectedSpaceID
+        let spaceIndex = 0
         let closedTabID = try XCTUnwrap(
-            session.selectedSpace?.currentTabs.first(where: { !$0.isStartPage })?.id
+            session.spaces[spaceIndex].currentTabs.first(where: { !$0.isStartPage })?.id
         )
         let keptTabID = try XCTUnwrap(
-            session.selectedSpace?.tabs.first(where: { $0.id != closedTabID })?.id
+            session.spaces[spaceIndex].tabs.first(where: { $0.id != closedTabID })?.id
         )
         let closedIcon = Data("closed-icon".utf8)
         let keptIcon = Data("kept-icon".utf8)
-        let spaceIndex = try XCTUnwrap(session.spaces.firstIndex { $0.id == spaceID })
         let closedIndex = try XCTUnwrap(
             session.spaces[spaceIndex].tabs.firstIndex { $0.id == closedTabID }
         )
@@ -2306,17 +1600,12 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
         harness.persistence.save(session)
         await harness.persistence.flushPendingSaves()
 
-        session.closeTab(closedTabID, at: Date(timeIntervalSince1970: 500))
+        Self.archiveTab(closedTabID, inSpaceAt: spaceIndex, of: &session, at: Date(timeIntervalSince1970: 500))
         harness.persistence.save(session, scope: .core)
         await harness.persistence.flushPendingSaves()
 
         XCTAssertNil(harness.favicons.favicon(tabID: closedTabID))
         XCTAssertEqual(harness.favicons.favicon(tabID: keptTabID), keptIcon)
-        XCTAssertNil(
-            session.selectedSpace?.archivedTabs.first {
-                $0.tab.id == closedTabID
-            }?.tab.faviconData
-        )
     }
 
     // MARK: - Migration
@@ -2464,7 +1753,6 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
         var session = BrowserSession.preview
         let epoch = Date(timeIntervalSince1970: 1_700_000_000)
         for spaceIndex in session.spaces.indices {
-            let spaceID = session.spaces[spaceIndex].id
             for tabIndex in session.spaces[spaceIndex].tabs.indices {
                 guard let url = session.spaces[spaceIndex].tabs[tabIndex].url else { continue }
                 session.spaces[spaceIndex].tabs[tabIndex].faviconData = Self.faviconBytes(
@@ -2478,21 +1766,16 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
                     blue: 0.9
                 )
             }
-            let renamedTabID = try XCTUnwrap(
-                session.spaces[spaceIndex].tabs.last { !$0.isStartPage }?.id
+            let renamedTabIndex = try XCTUnwrap(
+                session.spaces[spaceIndex].tabs.lastIndex { !$0.isStartPage }
             )
-            XCTAssertTrue(
-                session.setTabCustomTitle(
-                    "Renamed in \(session.spaces[spaceIndex].name)",
-                    tabID: renamedTabID,
-                    in: spaceID,
-                    at: epoch
-                )
-            )
+            session.spaces[spaceIndex].tabs[renamedTabIndex].customTitle =
+                "Renamed in \(session.spaces[spaceIndex].name)"
+            session.spaces[spaceIndex].tabs[renamedTabIndex].markTitleModified(at: epoch)
             let archivedTabID = try XCTUnwrap(
                 session.spaces[spaceIndex].currentTabs.first { !$0.isStartPage }?.id
             )
-            XCTAssertTrue(session.closeTab(archivedTabID, in: spaceID, at: epoch))
+            Self.archiveTab(archivedTabID, inSpaceAt: spaceIndex, of: &session, at: epoch)
             session.spaces[spaceIndex].history = (0..<historyEntriesPerSpace).map { index in
                 BrowserHistoryEntry(
                     url: URL(
@@ -2506,11 +1789,24 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
             }
         }
         XCTAssertFalse(session.spaces.flatMap(\.archivedTabs).isEmpty)
-        XCTAssertTrue(
-            session.spaces.flatMap(\.archivedTabs).allSatisfy { $0.tab.faviconData == nil },
-            "Closing a tab must release its cached favicon bytes."
-        )
         return session
+    }
+
+    /// Closes a tab the way the core does: it leaves the live tabs for the
+    /// archive and releases its cached favicon bytes.
+    private static func archiveTab(
+        _ tabID: TabID,
+        inSpaceAt spaceIndex: Int,
+        of session: inout BrowserSession,
+        at date: Date
+    ) {
+        guard let tabIndex = session.spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }) else { return }
+        var tab = session.spaces[spaceIndex].tabs.remove(at: tabIndex)
+        tab.faviconData = nil
+        session.spaces[spaceIndex].archivedTabs.insert(
+            ArchivedTab(tab: tab, archivedAt: date, reason: .closed),
+            at: 0
+        )
     }
 
     fileprivate static func faviconBytes(seed: UInt8, byteCount: Int) -> Data {

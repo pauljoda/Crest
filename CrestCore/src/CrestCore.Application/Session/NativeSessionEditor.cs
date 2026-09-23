@@ -38,7 +38,9 @@ public static class NativeSessionEditor {
         var original = command.Space;
         var (document, state) = command.RestoreSpace();
         var space = BrowserTabCollection.Restore(state.Spaces.Single());
-        var selected = state.Spaces[0].SelectedTabId;
+        // The viewed tab decides follow-up hints only; the result reports the
+        // tab the window should show next and nothing stores it.
+        var selected = command.ViewedTabId;
         var now = command.Now;
         var args = command.Arguments;
         int? index = args.Index;
@@ -69,7 +71,8 @@ public static class NativeSessionEditor {
                     args.ReturnToSavedUrl == true);
                 break;
             case SessionOperation.TabCleanup:
-                selected = space.CleanupCurrentTabs(selected, TimeSpan.FromSeconds(args.Lifetime ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)), now);
+                selected = space.CleanupCurrentTabs(selected, TimeSpan.FromSeconds(args.Lifetime ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)), now,
+                    args.TabIds);
                 break;
             case SessionOperation.TabOpen: {
                     var supplied = args.RequiredTab;
@@ -80,9 +83,11 @@ public static class NativeSessionEditor {
                     if (args.Select == true) { selected = tab.Id; selectSpace = true; }
                     break;
                 }
-            case SessionOperation.TabActivate:
-                var activatedTabId = args.RequiredTabId;
-                space.Tab(activatedTabId).Activate(now); result = activatedTabId; selected = activatedTabId; selectSpace = true;
+            case SessionOperation.TabTouch:
+                // Records when the person last looked at a tab, which drives
+                // cleanup. Showing it is the window's own selection change.
+                var touchedTabId = args.RequiredTabId;
+                space.Tab(touchedTabId).Activate(now); result = touchedTabId;
                 break;
             case SessionOperation.TabCopy: {
                     var source = args.RequiredTabId;
@@ -223,7 +228,7 @@ public static class NativeSessionEditor {
                 }
             default: throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit);
         }
-        var next = state with { Spaces = [space.Capture(state.Spaces[0], selected)] };
+        var next = state with { Spaces = [space.Capture(state.Spaces[0])] };
         var output = document.Write(next)["session"]!["spaces"]![0]!.DeepClone();
         if (sourceGroup is { } oldGroup && copiedGroup is { } newGroup
             && original["splitGroups"] is JsonArray originalGroups
@@ -245,7 +250,7 @@ public static class NativeSessionEditor {
         }
         // Archives are new records only; their images remain in the native cache.
         foreach (var archived in output["archivedTabs"]!.AsArray()) archived!["tab"]!.AsObject().Remove("faviconData");
-        return new SessionEditResult(output, result, selectSpace, copies, changed, favicon).Encode();
+        return new SessionEditResult(output, result, selected, selectSpace, copies, changed, favicon).Encode();
 
         BrowserTab? Target(Guid? id) => id is { } value ? space.Tabs.FirstOrDefault(t => t.Id == value) : null;
 

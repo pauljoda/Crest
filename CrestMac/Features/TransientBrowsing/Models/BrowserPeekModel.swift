@@ -170,7 +170,7 @@ final class BrowserPeekModel {
         if outcome == .openedNewPage {
             pageLease.release()
         }
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         coordinator.dismissPeek(request)
         return true
     }
@@ -221,7 +221,7 @@ final class BrowserPeekModel {
         }
     }
 
-    var isSelected: Bool { request.isSelected(in: browser.session) }
+    var isSelected: Bool { request.isSelected(in: browser.presented) }
 
     private var isCurrentRequest: Bool {
         coordinator.isPresentingPeek(request)

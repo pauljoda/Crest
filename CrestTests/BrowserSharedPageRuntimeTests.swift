@@ -99,7 +99,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
         let invalidSpace = BrowserSpace(
             id: space.id, profile: BrowsingProfile(), name: space.name,
-            symbol: space.symbol, accent: space.accent, folders: [], tabs: [tab], selectedTabID: tab.id)
+            symbol: space.symbol, accent: space.accent, folders: [], tabs: [tab])
         XCTAssertFalse(destination.transferTabRuntime(from: source, matching: assignment, as: tab, in: invalidSpace))
         XCTAssertTrue(source.activePage === page)
         XCTAssertTrue(destination.transferTabRuntime(from: source, matching: assignment, as: tab, in: space))
@@ -349,6 +349,6 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
     private func makeSpace(tabs: [BrowserTab]) -> BrowserSpace {
         BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Shared", symbol: "globe", accent: .indigo,
-            folders: [], tabs: tabs, selectedTabID: tabs.first?.id)
+            folders: [], tabs: tabs)
     }
 }

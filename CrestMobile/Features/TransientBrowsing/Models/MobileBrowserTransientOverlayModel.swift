@@ -72,7 +72,7 @@ final class MobileBrowserTransientOverlayModel {
 
     var isSelected: Bool {
         guard case .peek(let peek) = request else { return true }
-        return peek.isSelected(in: browser.session)
+        return peek.isSelected(in: browser.presented)
     }
 
     var hasSource: Bool {
@@ -266,7 +266,7 @@ final class MobileBrowserTransientOverlayModel {
         wasPromoted = true
         if outcome == .openedNewPage {
             pageLease.release()
-            pages.select(session: browser.session)
+            pages.select(session: browser.presented)
         }
         dismissCoordinatorRequest()
         didPromote()

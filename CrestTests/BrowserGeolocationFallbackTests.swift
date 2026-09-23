@@ -247,7 +247,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
     ) throws -> Fixture {
         let url = try XCTUnwrap(url ?? URL(string: "https://location.crest.test/"))
         let origin = try XCTUnwrap(BrowserSiteOrigin(url: url))
-        let space = try XCTUnwrap(space ?? BrowserSession.preview.selectedSpace)
+        let space = try XCTUnwrap(space ?? BrowserSession.preview.spaces.first)
         let permissionCenter = center ?? BrowserSitePermissionCenter()
         permissionCenter.setDecision(
             .grantPersistently,

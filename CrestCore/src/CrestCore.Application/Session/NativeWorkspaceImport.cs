@@ -12,6 +12,10 @@ public sealed class NativeWorkspaceImport {
     private sealed record Origin(int Source, int Space, int Tab, string Section);
     private readonly Dictionary<JsonNode, Origin> origins = new(ReferenceEqualityComparer.Instance);
 
+    // The tab each imported Space should show first. It is a hint for the
+    // window that ran the import, never a stored selection.
+    private readonly Dictionary<JsonNode, Guid> shownTabs = new(ReferenceEqualityComparer.Instance);
+
     #endregion
 
     #region Actions - Workspace import
@@ -26,8 +30,10 @@ public sealed class NativeWorkspaceImport {
 
     private static Guid? OptionalId(JsonNode? n) => n is null ? null : Id(n);
 
+    /// The imported session, positional asset references and the `selection`
+    /// hint for the importing window, or `{"error": code}`.
     public static JsonObject Preview(JsonObject session, JsonObject arguments, string mode, double now) {
-        try { return new NativeWorkspaceImport().Apply(session, arguments, WorkspaceImportModeCodes.Parse(mode), now); } catch (BrowserRuleException error) { return new() { ["error"] = error.Code }; }
+        try { return new NativeWorkspaceImport().Apply(LegacySelectionFields.WithoutSelection(session.DeepClone().AsObject()), arguments, WorkspaceImportModeCodes.Parse(mode), now); } catch (BrowserRuleException error) { return new() { ["error"] = error.Code }; }
     }
 
     private void Track(JsonNode space, int source, int index) {
@@ -56,9 +62,9 @@ public sealed class NativeWorkspaceImport {
             throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
     }
 
-    private static void SelectAdded(JsonNode space, IEnumerable<JsonNode> tabs) {
+    private void ShowAdded(JsonNode space, IEnumerable<JsonNode> tabs) {
         var chosen = tabs.LastOrDefault(t => Placement(t) == TabPlacementCodes.Current) ?? tabs.FirstOrDefault();
-        if (chosen is not null) space["selectedTabID"] = chosen["id"]!.DeepClone();
+        if (chosen is not null) shownTabs[space] = Id(chosen["id"]);
     }
 
     private JsonObject Apply(JsonObject source, JsonObject arguments, WorkspaceImportMode mode, double now) {
@@ -72,7 +78,14 @@ public sealed class NativeWorkspaceImport {
             originalHistoryIds[space] = Items(space, "history").Select(h => Id(h!["id"])).ToHashSet();
             Track(space, 0, si);
         }
-        var inputs = Items(arguments, "sources").Select((n, i) => { var value = n!.DeepClone().AsObject(); Track(value, i + 1, 0); return value; }).ToArray();
+        var inputs = Items(arguments, "sources").Select((n, i) => {
+            var value = n!.DeepClone().AsObject();
+            var requested = OptionalId(value[LegacySelectionFields.SelectedTab]);
+            LegacySelectionFields.WithoutSpaceSelection(value);
+            Track(value, i + 1, 0);
+            if (requested is { } tab && Items(value, "tabs").Any(t => Id(t!["id"]) == tab)) shownTabs[value] = tab;
+            return value;
+        }).ToArray();
         foreach (var input in inputs)
             WorkspaceImportPolicy.RequireSplitMembership(Items(input, "tabs").Select(t => new SplitMember(OptionalId(t!["splitGroupID"]),
                 TabPlacementCodes.Parse(Placement(t)) ?? TabPlacement.Saved, OptionalId(t["folderID"]))).ToArray());
@@ -112,7 +125,7 @@ public sealed class NativeWorkspaceImport {
                     list.AddRange(ordered.Where(t => Placement(t) == TabPlacementCodes.Current));
                     Tabs(destination, list);
                 }
-                SelectAdded(destination, created ? added : ordered);
+                ShowAdded(destination, created ? added : ordered);
                 if (created) spaces.Add(destination);
                 if (created || added.Length > 0) affected ??= destination;
             }
@@ -195,11 +208,14 @@ public sealed class NativeWorkspaceImport {
                 }).ToArray();
                 destination["folders"] = destinationId is null ? folders : folders.DeepClone();
                 var existing = destinationId is null ? [] : Items(destination, "tabs").Select(t => t!).ToArray();
-                Tabs(destination, existing.Concat(edited));
-                var requested = OptionalId(input["selectedTabID"]);
+                // The tab the source chose to show, when it was imported; a new
+                // Space otherwise shows its first imported tab.
+                Guid? requested = shownTabs.TryGetValue(input, out var chosen) ? chosen : null;
                 var selected = edited.FirstOrDefault(t => Id(t["id"]) == requested);
-                if (selected is not null || destinationId is null)
-                    destination["selectedTabID"] = (selected ?? edited.FirstOrDefault())?["id"]?.DeepClone();
+                Tabs(destination, existing.Concat(edited));
+                shownTabs.Remove(input);
+                if ((selected ?? (destinationId is null ? edited.FirstOrDefault() : null)) is { } first)
+                    shownTabs[destination] = Id(first["id"]);
                 if (destinationId is null) spaces.Add(destination);
                 affected ??= destination;
             }
@@ -230,7 +246,12 @@ public sealed class NativeWorkspaceImport {
             }
         }
         int affectedIndex = affected is null ? -1 : spaces.IndexOf(affected);
-        if (affected is not null) session["selectedSpaceID"] = affected["id"]!.DeepClone();
+        // Repair may replace colliding identities, so hints travel by position.
+        var shown = new List<(int Space, int Tab)>();
+        for (int si = 0; si < spaces.Count; si++)
+            if (shownTabs.TryGetValue(spaces[si]!, out var tab)
+                && Items(spaces[si]!, "tabs").Select(t => Id(t!["id"])).ToList().IndexOf(tab) is var ti and >= 0)
+                shown.Add((si, ti));
         var assets = new JsonArray();
         for (int si = 0; si < spaces.Count; si++)
             foreach (var section in new[] { "tabs", "archivedTabs" }) {
@@ -249,9 +270,14 @@ public sealed class NativeWorkspaceImport {
                 }
             }
         var repaired = NativeSessionMaintenance.Repair(session, now);
-        // Select the imported instance even when repair replaced a colliding ID.
-        if (affectedIndex >= 0) repaired["session"]!["selectedSpaceID"] = repaired["session"]!["spaces"]![affectedIndex]!["id"]!.DeepClone();
+        // Show the imported instance even when repair replaced a colliding ID.
+        var repairedSpaces = Items(repaired["session"]!, "spaces");
+        var hint = new SessionSelectionHint();
+        if (affectedIndex >= 0) hint.SelectSpace(Id(repairedSpaces[affectedIndex]!["id"]));
+        foreach (var (si, ti) in shown)
+            hint.SelectTab(SessionView.Empty, Id(repairedSpaces[si]!["id"]), Id(Items(repairedSpaces[si]!, "tabs")[ti]!["id"]));
         repaired["assets"] = assets;
+        repaired[SessionSelectionHint.Key] = hint.Encode();
         return repaired;
     }
 

@@ -287,8 +287,7 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             tabs: [selectedTab],
             archivedTabs: [archived],
             history: [history],
-            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open,
-            selectedTabID: selectedTab.id
+            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open
         )
         let destination = BrowserSpace(
             id: SpaceID(rawValue: Self.uuid(5)),
@@ -297,14 +296,10 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             symbol: "square.grid.2x2",
             accent: .rose,
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
         let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
-            ),
+            session: BrowserSession(spaces: [source, destination]),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
@@ -353,8 +348,7 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             credentialPreferences: current.credentialPreferences,
             accessPolicy: current.accessPolicy,
             isSavedTabsExpanded: current.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: current.savedTabsExpansionModifiedAt,
-            selectedTabID: current.selectedTabID
+            savedTabsExpansionModifiedAt: current.savedTabsExpansionModifiedAt
         )
     }
 

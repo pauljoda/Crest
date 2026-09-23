@@ -62,7 +62,7 @@
                         description: Text("Your pinned and saved tabs are still in the sidebar."))
                 } else {
                     BrowserSplitColumnsView(
-                        members: members, focusedTabID: practice.space.selectedTabID,
+                        members: members, focusedTabID: practice.selectedTabID,
                         frameInsets: EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10),
                         accent: CrestBrandPalette.coral,
                         placeholderIndex: nil, liftedTabID: nil, widthTransaction: $practice.splitWidths,
@@ -196,7 +196,7 @@
                 return .sidebarLift(
                     BrowserSidebarLiftPreviewContent(
                         subject: subject, lift: lift, reduceMotion: reduceMotion,
-                        selectedTabID: practice.space.selectedTabID, loadedTabIDs: Set(practice.space.tabs.map(\.id))))
+                        selectedTabID: practice.selectedTabID, loadedTabIDs: Set(practice.space.tabs.map(\.id))))
             }
         #endif
     }

@@ -95,8 +95,6 @@ public static class NativeSyncMaterializer {
             value["folders"] = Array(folders); value["tabs"] = Array(tabs); value["splitGroups"] = Array(groups);
             value["archivedTabs"] = Array(archive); value["history"] = Array(history);
             if (local?["credentialPreferences"] is { } credentials) value["credentialPreferences"] = credentials.DeepClone();
-            if (local?["selectedTabID"] is { } selected && tabs.Any(t => Id(t["id"]) == Id(selected)))
-                value["selectedTabID"] = selected.DeepClone();
             spaces.Add((JsonNode)value);
         }
         foreach (var id in pending.Where(id => !spaces.Any(s => Id(s!["id"]) == id))) {
@@ -104,12 +102,12 @@ public static class NativeSyncMaterializer {
             if (!profiles.Add(Id(local["profile"]!["id"]))) throw Error(NativeSyncDocumentErrorCodes.DuplicateProfile, Id(local["profile"]!["id"]));
             spaces.Add(local.DeepClone());
         }
-        var result = session.DeepClone().AsObject();
+        // Selection is window state: windows reconcile against the materialized
+        // Spaces themselves, and sync never carries it.
+        var result = LegacySelectionFields.WithoutSelection(session.DeepClone().AsObject());
         if (spaces.Count == 0) return result;
         result.Remove("disposableSeedMarker");
         result["spaces"] = spaces;
-        if (!spaces.Any(s => Id(s!["id"]) == Id(session["selectedSpaceID"])))
-            result["selectedSpaceID"] = spaces[0]!["id"]!.DeepClone();
         return result;
     }
 
@@ -167,7 +165,7 @@ public static class NativeSyncMaterializer {
             if (Placement(tab) != TabPlacement.Pinned && folder is { } resolved) value["folderID"] = SwiftId(resolved);
             result.Add(value);
         }
-        if (result.Count(t => Placement(t) == TabPlacement.Pinned) > 12) throw Error(NativeSyncDocumentErrorCodes.TooManyPinnedTabs, space);
+        if (result.Count(t => Placement(t) == TabPlacement.Pinned) > BrowserLimits.PinnedTabs) throw Error(NativeSyncDocumentErrorCodes.TooManyPinnedTabs, space);
         foreach (var (tab, index) in localOnly) result.Insert(Math.Min(index, result.Count), tab);
         return result;
     }

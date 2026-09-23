@@ -83,7 +83,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
             space.splitGroupMembers(of: groupID).map(\.title),
             ["Presented", "Joiner"]
         )
-        XCTAssertEqual(space.selectedTabID, fixture.joiner.id)
+        XCTAssertEqual(fixture.model.browser.selectedTabID(in: space.id), fixture.joiner.id)
         XCTAssertFalse(state.isDragging)
         XCTAssertNil(state.liftPreview)
         pump(0.4)
@@ -95,6 +95,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
         defer { fixture.input.close() }
         let state = fixture.model.sidebarInteraction.sidebarReorderState
         let original = fixture.model.browser.session
+        let originalSelection = fixture.model.browser.selectedTabID(in: fixture.assignment.spaceID)
         let space = try XCTUnwrap(original.space(id: fixture.assignment.spaceID))
         let group = try XCTUnwrap(space.splitGroup(containing: fixture.joiner.id))
         let members = space.splitGroupMembers(of: group)
@@ -144,7 +145,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
         XCTAssertNil(updated.tabs.first(where: { $0.id == fixture.joiner.id })?.splitGroupID)
         XCTAssertEqual(updated.tabs.first?.id, fixture.joiner.id)
         XCTAssertEqual(updated.splitGroupMembers(of: group).map(\.id), members.dropFirst().map(\.id))
-        XCTAssertEqual(updated.selectedTabID, space.selectedTabID)
+        XCTAssertEqual(fixture.model.browser.selectedTabID(in: updated.id), originalSelection)
     }
 
     // MARK: - Fixture
@@ -218,11 +219,11 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
             accent: .indigo,
             branding: .initial(accent: .indigo, symbol: "books.vertical.fill"),
             folders: [],
-            tabs: tabs,
-            selectedTabID: presented.id
+            tabs: tabs
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: presented.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let model = BrowserRootModel(

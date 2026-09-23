@@ -30,15 +30,10 @@ public sealed partial class NativeSessionAuthority {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         BorrowedCommandRouting.RequireLocal(operation, workspaceKind == BrowserWorkspaceKind.Temporary);
         var args = request["arguments"]!.AsObject();
-        var window = request["window"]!;
-        var selection = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
+        var view = SessionView.Decode(request[SessionView.Key]);
+        var hint = new SessionSelectionHint();
         var metadata = document.Metadata.DeepClone().AsObject();
-        metadata["selectedSpaceID"] = window["selectedSpaceID"]!.DeepClone();
-        var spaces = document.Spaces.Select(s => {
-            var fields = s.Metadata.DeepClone().AsObject();
-            fields["selectedTabID"] = selection.GetValueOrDefault(Id(fields["id"]))?.DeepClone();
-            return new SpaceDocument(fields, s.Sections);
-        }).ToList();
+        var spaces = document.Spaces.Select(s => new SpaceDocument(s.Metadata.DeepClone().AsObject(), s.Sections)).ToList();
         Guid? created = null;
         if (operation is SessionOperation.SpaceCreate or SessionOperation.SpaceResetPrivate) {
             if (operation == SessionOperation.SpaceResetPrivate) {
@@ -55,7 +50,7 @@ public sealed partial class NativeSessionAuthority {
             var profile = Id(supplied["profile"]!["id"]);
             if (spaces.Any(s => Id(s.Metadata["id"]) == id || Id(s.Metadata["profile"]!["id"]) == profile))
                 throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
-            var fields = Fields(supplied, Sections);
+            var fields = LegacySelectionFields.WithoutSpaceSelection(Fields(supplied, Sections));
             fields["name"] = operation == SessionOperation.SpaceResetPrivate ? "Private" :
                 (workspaceKind == BrowserWorkspaceKind.Private ? "Private " : "Space ") + (spaces.Count + 1);
             var sections = Sections.ToDictionary(section => section,
@@ -77,7 +72,8 @@ public sealed partial class NativeSessionAuthority {
                 };
             }
             spaces.Add(new(fields, sections));
-            metadata["selectedSpaceID"] = supplied["id"]!.DeepClone();
+            // A new Space is the one its window shows next, on its only tab.
+            hint.SelectSpace(id).SelectTab(view, id, Id(sections["tabs"][0]["id"]));
             created = id;
         } else if (operation == SessionOperation.SpaceReorder) {
             spaces = SpaceOrganizationPolicy.Move(spaces,
@@ -109,9 +105,10 @@ public sealed partial class NativeSessionAuthority {
                         ["profileID"] = fields["profile"]!["id"]!.DeepClone(),
                         ["operationID"] = operationId.ToString("D")
                     });
-                    if (Id(metadata["selectedSpaceID"]) == id)
-                        metadata["selectedSpaceID"] = spaces.First(s => PendingDeletion(metadata, Id(s.Metadata["id"])) is null)
-                            .Metadata["id"]!.DeepClone();
+                    // The window showing a Space that is going away moves to the
+                    // first one that stays.
+                    if (view.SpaceId == id)
+                        hint.SelectSpace(Id(spaces.First(s => PendingDeletion(metadata, Id(s.Metadata["id"])) is null).Metadata["id"]));
                     break;
                 case SessionOperation.SpaceIdentity:
                     fields["name"] = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>());
@@ -157,10 +154,12 @@ public sealed partial class NativeSessionAuthority {
                     spaces.RemoveAt(index);
                     Deletions(metadata).Remove(pending);
                     if (Deletions(metadata).Count == 0) metadata.Remove("spaceDeletions");
-                    if (Id(metadata["selectedSpaceID"]) == id)
-                        metadata["selectedSpaceID"] = spaces[Math.Min(index, spaces.Count - 1)].Metadata["id"]!.DeepClone();
+                    // The Space that takes the removed one's place is where its
+                    // window goes and, when it was the launch Space, the new one.
+                    var neighbor = spaces[Math.Min(index, spaces.Count - 1)].Metadata["id"]!;
+                    if (view.SpaceId == id) hint.SelectSpace(Id(neighbor));
                     if (metadata["defaultSpaceID"] is { } defaultId && Id(defaultId) == id)
-                        metadata["defaultSpaceID"] = metadata["selectedSpaceID"]!.DeepClone();
+                        metadata["defaultSpaceID"] = neighbor.DeepClone();
                     break;
                 default: throw new BrowserRuleException(BrowserRuleCodes.UnknownSpaceCommand);
             }
@@ -175,7 +174,10 @@ public sealed partial class NativeSessionAuthority {
                     ? s.Sections[section].Select(n => n.DeepClone()).ToArray() : []);
             return (JsonNode)value;
         }).ToArray());
-        var output = Encoding.UTF8.GetBytes(new JsonObject { ["session"] = projection }.ToJsonString());
+        var output = Encoding.UTF8.GetBytes(new JsonObject {
+            ["session"] = projection,
+            [SessionSelectionHint.Key] = hint.Encode()
+        }.ToJsonString());
         if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         return new NativeSessionCommand(this, expected, next, output);
     }

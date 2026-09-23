@@ -11,6 +11,9 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
     private var db: OpaquePointer?
     private let favicons: any BrowserFaviconStoring
     private var saveError: Error?
+    /// The installed release's selection, carried from the legacy store when
+    /// this launch migrated it. Checkpoints never store selection.
+    private var migratedLegacySelection: BrowserLegacySessionSelection?
     var journalPersistence: BrowserSyncJournalPersisting { JournalPersistence(owner: self) }
 
     init(url: URL, favicons: any BrowserFaviconStoring) throws {
@@ -116,10 +119,12 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
     /// Called only before stores or background staging exist. Legacy data is
     /// retained for rollback; an existing checkpoint always wins over it.
     func migrateIfNeeded(session: @autoclosure () throws -> BrowserSession?,
-        journal: @autoclosure () throws -> BrowserSyncJournal?) throws {
+        journal: @autoclosure () throws -> BrowserSyncJournal?,
+        legacySelection: @autoclosure () -> BrowserLegacySessionSelection? = nil) throws {
         try queue.sync {
             guard try read("core") == nil else { return }
             guard let session = try session() else { return }
+            migratedLegacySelection = legacySelection()
             let journal = try journal() ?? BrowserSyncJournal()
             try transaction {
                 try writeSession(session, scope: .everything, checkpoint: nil)
@@ -136,6 +141,12 @@ final class BrowserTransactionalSessionPersistence: BrowserSessionPersisting, @u
             do { return try readSession() }
             catch { preconditionFailure("Cannot restore the core checkpoint: \(error)") }
         }
+    }
+
+    /// A checkpoint written before selection became window state still names
+    /// one; a first upgrade carries the installed release's instead.
+    func loadLegacySelection() -> BrowserLegacySessionSelection? {
+        queue.sync { migratedLegacySelection ?? BrowserLegacySessionSelection.decode(try? read("core")) }
     }
 
     func save(_ session: BrowserSession, scope: BrowserSessionSaveScope) {

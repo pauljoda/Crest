@@ -75,7 +75,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
     private var addSpaceButton: some View {
         BrowserSpaceAddButton {
             browser.addSpace()
-            selectedSpaceID = browser.session.selectedSpaceID
+            selectedSpaceID = browser.selectedSpaceID
         }
     }
 

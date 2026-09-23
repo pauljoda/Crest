@@ -34,7 +34,7 @@ struct BrowserSidebarCustomizationPreview: View {
             if showsPins {
                 PinnedTabGrid(
                     tabs: preview.pinnedTabs, assignment: sample.assignment,
-                    selectedTabID: preview.selectedTabID,
+                    selectedTabID: sample.browser.selectedTabID(in: preview.id),
                     select: { sample.browser.selectTab($0.tabID) },
                     browser: sample.browser, spaceAccess: sample.spaceAccess,
                     siteThemeAccent: sample.siteThemeAccent,
@@ -131,12 +131,12 @@ private final class BrowserAppearancePreviewState {
         var space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Preview", symbol: "paintpalette",
             accent: .indigo, branding: .house(.winter, symbol: "paintpalette"),
-            folders: [folder], tabs: pins + [reading, plans, recipes, notes, tickets, docs, research],
-            selectedTabID: notes.id)
+            folders: [folder], tabs: pins + [reading, plans, recipes, notes, tickets, docs, research])
         space.splitGroups = [BrowserSplitGroupMetadata(id: splitGroupID)]
         siteAccents = Dictionary(uniqueKeysWithValues: zip(pins.map(\.id), pinSources.map(\.2)))
         browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: notes.id]),
             persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }

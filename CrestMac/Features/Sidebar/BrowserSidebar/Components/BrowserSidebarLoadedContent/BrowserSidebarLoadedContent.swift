@@ -95,7 +95,7 @@ struct BrowserSidebarLoadedContent: View {
             )
             .modifier(
                 SpaceForegroundBlend(
-                    spaces: context.availableSpaces, selectedSpaceID: context.browser.session.selectedSpaceID))
+                    spaces: context.availableSpaces, selectedSpaceID: context.browser.selectedSpaceID))
         }
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .accessibilityElement(children: .contain)
@@ -119,7 +119,7 @@ struct BrowserSidebarLoadedContent: View {
             else { return }
             context.selectSpace(assignment.spaceID)
             context.browser.selectTab(assignment.tabID)
-            pages.select(session: context.browser.session)
+            pages.select(session: context.browser.presented)
         }
     }
 

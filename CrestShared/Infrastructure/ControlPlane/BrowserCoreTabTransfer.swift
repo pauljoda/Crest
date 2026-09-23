@@ -4,6 +4,11 @@ enum BrowserCoreTabTransfer {
     struct Result: Decodable {
         var source: BrowserSpace
         var destination: BrowserSpace
+        /// A move between two Spaces of one workspace answers its window once.
+        var selection: BrowserSelectionHint?
+        /// A move between workspaces answers each side's window.
+        var sourceSelection: BrowserSelectionHint?
+        var destinationSelection: BrowserSelectionHint?
     }
     static func arguments(tabID: TabID, placement: TabPlacement? = nil, folderID: FolderID? = nil,
         before: TabID? = nil, fallback: TabID? = nil, selecting: Bool = false) -> [String: Any] {
@@ -12,19 +17,7 @@ enum BrowserCoreTabTransfer {
             "before": before?.rawValue.uuidString as Any? ?? NSNull(),
             "fallbackTabId": fallback?.rawValue.uuidString as Any? ?? NSNull(), "select": selecting]
     }
-    static func preview(source: BrowserSpace, destination: BrowserSpace,
-        arguments: [String: Any], at date: Date) throws -> Result {
-        func compact(_ space: BrowserSpace) throws -> Any {
-            var value = space; value.history = []; value.archivedTabs = []
-            value.tabs = value.tabs.map { var tab = $0; tab.faviconData = nil; return tab }
-            return try BrowserCoreSync.value(value)
-        }
-        return try BrowserCoreSync.query(["version": 1, "operation": "transfer.preview",
-            "source": compact(source), "destination": compact(destination), "arguments": arguments,
-            "now": date.timeIntervalSinceReferenceDate])
-    }
-    static func applying(_ edited: BrowserSpace, to session: BrowserSession, moved: BrowserTab,
-        selectingSpace: Bool = false) throws -> BrowserSession {
+    static func applying(_ edited: BrowserSpace, to session: BrowserSession, moved: BrowserTab) throws -> BrowserSession {
         guard let index = session.spaces.firstIndex(where: { $0.id == edited.id }),
             session.spaces[index].profile.id == edited.profile.id
         else { throw BrowserPortableArchiveError.invalidContents }
@@ -36,7 +29,6 @@ enum BrowserCoreTabTransfer {
         }
         space.history = existing.history; space.archivedTabs = existing.archivedTabs
         result.spaces[index] = space
-        if selectingSpace { result.selectedSpaceID = space.id }
         return result
     }
 }

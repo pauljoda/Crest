@@ -417,8 +417,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
             accent: .indigo,
             folders: folders,
             tabs: pinned + tabs,
-            history: history,
-            selectedTabID: tabs.first?.id
+            history: history
         )
     }
 }
@@ -444,8 +443,7 @@ final class BrowserCommandPaletteModelPerformanceTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [tab, secondaryTab],
-            history: [],
-            selectedTabID: nil
+            history: []
         )
         var openedURL: URL?
         let model = BrowserCommandPaletteModel(

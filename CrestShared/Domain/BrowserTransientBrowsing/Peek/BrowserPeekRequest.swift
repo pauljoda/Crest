@@ -21,9 +21,9 @@ struct BrowserPeekRequest: Identifiable, Equatable, Sendable {
         return space.tabs.contains { $0.id == sourceTabID }
     }
 
-    func isSelected(in session: BrowserSession) -> Bool {
-        hasSource(in: session) && session.selectedSpaceID == spaceID
-            && session.selectedSpace?.selectedTabID == sourceTabID
+    func isSelected(in session: BrowserPresentedSession) -> Bool {
+        hasSource(in: session.session) && session.selectedSpaceID == spaceID
+            && session.selectedTabID(in: spaceID) == sourceTabID
     }
 
     init(

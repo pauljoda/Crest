@@ -359,9 +359,11 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             name: "Destination",
             tabs: []
         )
-        var restored = BrowserSession(spaces: [decoy, capturedSource, destination], selectedSpaceID: destination.id)
+        var restored = BrowserSession(spaces: [decoy, capturedSource, destination])
         restored = try BrowserCoreSync.repair(restored)
-        let browser = BrowserStore(session: restored, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(
+            session: restored, selection: BrowserStoreSelection(selectedSpaceID: destination.id),
+            persistence: InMemoryBrowserSessionPersistence())
         let repairedID = try XCTUnwrap(restored.space(id: capturedSource.id)?.tabs.first?.id)
         XCTAssertNotEqual(repairedID, duplicateTabID)
         let stale = BrowserTabDragItem(tabID: duplicateTabID, spaceID: capturedSource.id, profileID: capturedSource.profile.id)
@@ -613,8 +615,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             tabs: [firstPin, secondPin, current]
         )
         let browser = Self.makeBrowser(
-            spaces: [space],
-            selectedSpaceID: space.id
+            spaces: [space]
         )
         let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         let state = sidebarInteraction.sidebarReorderState
@@ -827,7 +828,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
                 let member = Self.makeTab(
                     id: Self.tabID(56), title: "Moved Member", placement: .current, splitGroupID: context.groupID)
                 context.browser.session.spaces[0].tabs.insert(member, at: memberIndex)
-                let folder = try XCTUnwrap(context.browser.session.addFolder(in: context.space.id))
+                let folder = try XCTUnwrap(context.browser.addFolder(in: context.space.id))
                 let originalMembers = context.members
                 let item = BrowserTabDragItem(
                     tabID: member.id, spaceID: context.space.id, profileID: context.space.profile.id)
@@ -1011,7 +1012,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             space.splitGroupMembers(of: context.groupID).map(\.title),
             ["Head", "Outsider", "Tail"]
         )
-        XCTAssertEqual(space.selectedTabID, context.outsider.id)
+        XCTAssertEqual(context.browser.selectedTabID(in: space.id), context.outsider.id)
     }
 
     /// The first drop is the same commit as every later one: a window presenting
@@ -1064,7 +1065,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             updated.splitGroupMembers(of: groupID).map(\.title),
             ["Joiner", "Selected"]
         )
-        XCTAssertEqual(updated.selectedTabID, joiner.id)
+        XCTAssertEqual(browser.selectedTabID(in: space.id), joiner.id)
     }
 
     /// Only a tab becomes a card, and only in its own window's Space. Everything
@@ -1364,10 +1365,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             accessPolicy: accessPolicy
         )
         return SplitContext(
-            browser: Self.makeBrowser(
-                spaces: [space],
-                selectedSpaceID: space.id
-            ),
+            browser: Self.makeBrowser(spaces: [space]),
             spaceAccess: BrowserSpaceAccessController(
                 authenticator: InMemoryAuthenticator()
             ),
@@ -1407,10 +1405,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             accessPolicy: destinationAccessPolicy
         )
         return Context(
-            browser: Self.makeBrowser(
-                spaces: [source, destination],
-                selectedSpaceID: source.id
-            ),
+            browser: Self.makeBrowser(spaces: [source, destination]),
             spaceAccess: BrowserSpaceAccessController(
                 authenticator: InMemoryAuthenticator()
             ),
@@ -1443,15 +1438,21 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    /// A window showing `selectedSpaceID` (else the first Space), with every
+    /// Space showing its first tab.
     private static func makeBrowser(
         spaces: [BrowserSpace],
-        selectedSpaceID: SpaceID
+        selectedSpaceID: SpaceID? = nil
     ) -> BrowserStore {
-        BrowserStore(
-            session: BrowserSession(
-                spaces: spaces,
-                selectedSpaceID: selectedSpaceID
-            ),
+        var tabs: [SpaceID: TabID] = [:]
+        for space in spaces {
+            tabs[space.id] = space.tabs.first?.id
+        }
+        return BrowserStore(
+            session: BrowserSession(spaces: spaces),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: selectedSpaceID ?? spaces.first?.id ?? SpaceID(),
+                selectedTabIDsBySpace: tabs),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
@@ -1472,8 +1473,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: tabs,
-            accessPolicy: accessPolicy,
-            selectedTabID: tabs.first?.id
+            accessPolicy: accessPolicy
         )
     }
 

@@ -78,14 +78,14 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     }
 
     private var selectedTab: BrowserTab? {
-        guard let selectedTabID = space.selectedTabID else { return nil }
+        guard let selectedTabID = browser.selectedTabID(in: space.id) else { return nil }
         return space.tabs.first { $0.id == selectedTabID }
     }
 
     private var selectedPromotionTarget: MobileTabPromotionTarget? {
         MobileTabPromotionPolicy.target(
             for: selectedTab,
-            selectedTabID: space.selectedTabID
+            selectedTabID: browser.selectedTabID(in: space.id)
         )
     }
 }

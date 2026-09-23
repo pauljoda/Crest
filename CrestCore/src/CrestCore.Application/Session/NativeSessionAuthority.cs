@@ -8,7 +8,10 @@ namespace CrestCore.Application;
 /// Owns the native app's durable session during the command-by-command migration.
 /// Native views propose value deltas; only an accepted revision becomes visible.
 /// Published documents are immutable, so storage can serialize an older checkpoint
-/// on its worker while the UI continues editing the current revision.
+/// on its worker while the UI continues editing the current revision. The session
+/// holds browsing data only: which Space and tab a window shows is window state,
+/// so selection fields in an older document are dropped here and never written.
+/// Commands read what the window shows as context and answer with a hint.
 public sealed partial class NativeSessionAuthority {
     #region Variables
 
@@ -35,8 +38,9 @@ public sealed partial class NativeSessionAuthority {
             _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidWorkspaceKind)
         };
         privateBrowsing = input["corePrivateBrowsing"]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
-        document = new(Fields(input, ["spaces", "coreWorkspaceKind", "corePrivateBrowsing"]), input["spaces"]!.AsArray().Select(node =>
-            new SpaceDocument(Fields(node!.AsObject(), Sections), Sections.ToDictionary(section => section,
+        document = new(Fields(input, ["spaces", "coreWorkspaceKind", "corePrivateBrowsing", LegacySelectionFields.SelectedSpace]),
+            input["spaces"]!.AsArray().Select(node =>
+            new SpaceDocument(SpaceFields(node!.AsObject()), Sections.ToDictionary(section => section,
                 section => (IReadOnlyList<JsonNode>)node[section]!.AsArray().Select(item => item!.DeepClone()).ToArray()))).ToArray());
         Validate(document);
     }
@@ -78,6 +82,10 @@ public sealed partial class NativeSessionAuthority {
     private static JsonObject Fields(JsonObject input, IReadOnlyCollection<string> excluded)
         => new(input.Where(f => !excluded.Contains(f.Key)).Select(f => new KeyValuePair<string, JsonNode?>(f.Key, f.Value?.DeepClone())));
 
+    /// A Space's metadata without its record collections or a legacy selection.
+    private static JsonObject SpaceFields(JsonObject space)
+        => LegacySelectionFields.WithoutSpaceSelection(Fields(space, Sections));
+
     private static void Validate(SessionDocument value) {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
@@ -115,7 +123,7 @@ public sealed partial class NativeSessionAuthority {
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         var metadata = delta["metadata"] is JsonObject suppliedMetadata
-            ? KeepingPreferences(Fields(suppliedMetadata, ["spaces"])) : document.Metadata;
+            ? KeepingPreferences(Fields(suppliedMetadata, ["spaces", LegacySelectionFields.SelectedSpace])) : document.Metadata;
         if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
             throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
         var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));
@@ -124,7 +132,7 @@ public sealed partial class NativeSessionAuthority {
             var change = node!.AsObject(); var id = Id(change["id"]);
             proposed.Add(id);
             byId.TryGetValue(id, out var original);
-            var fields = change["metadata"] is JsonObject supplied ? Fields(supplied, Sections) : original?.Metadata;
+            var fields = change["metadata"] is JsonObject supplied ? SpaceFields(supplied) : original?.Metadata;
             if (fields is null || Id(fields["id"]) != id) throw new BrowserRuleException(BrowserRuleCodes.WrongSpaceIdentity);
             var sections = Sections.ToDictionary(section => section,
                 section => original?.Sections[section] ?? (IReadOnlyList<JsonNode>)System.Array.Empty<JsonNode>());
@@ -155,7 +163,7 @@ public sealed partial class NativeSessionAuthority {
             var id = Id(deletion!["spaceID"]);
             var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == id);
             var retained = next.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == id);
-            if (retained is null || !JsonNode.DeepEquals(Fields(original.Metadata, ["selectedTabID"]), Fields(retained.Metadata, ["selectedTabID"]))
+            if (retained is null || !JsonNode.DeepEquals(original.Metadata, retained.Metadata)
                 || Sections.Any(section => original.Sections[section].Count != retained.Sections[section].Count
                     || original.Sections[section].Zip(retained.Sections[section]).Any(pair => !JsonNode.DeepEquals(pair.First, pair.Second))))
                 throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
@@ -200,10 +208,10 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    public NativeSessionCheckpoint Checkpoint(ulong expected, ReadOnlySpan<byte> selection) {
+    public NativeSessionCheckpoint Checkpoint(ulong expected) {
         lock (Gate) {
             if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
-            return new(document, Parse(selection));
+            return new(document);
         }
     }
 

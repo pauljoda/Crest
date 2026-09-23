@@ -5,7 +5,7 @@ extension BrowserStore {
     /// document in Saved. Current copies continue through the normal close path.
     func dismissNativeTab(_ id: TabID, matching assignment: BrowserSpaceRuntimeAssignment) {
         guard let space = selectedSpace, BrowserSpaceRuntimeAssignment(space: space) == assignment,
-            space.selectedTabID == id,
+            selectedTabID(in: space.id) == id,
             space.tabs.first(where: { $0.id == id })?.nativeContent != nil
         else { return }
         selectDismissalFallback(afterDismissing: id)

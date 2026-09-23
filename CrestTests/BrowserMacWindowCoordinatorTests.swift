@@ -98,7 +98,7 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         let source = try XCTUnwrap(fixture.coordinator.model(for: .initial))
         let tab = try XCTUnwrap(source.browser.selectedTab)
         let space = try XCTUnwrap(source.browser.selectedSpace)
-        source.pages.select(session: source.browser.session)
+        source.pages.select(session: source.browser.presented)
         let page = try XCTUnwrap(source.pages.activePage)
         let request = try XCTUnwrap(
             fixture.coordinator.prepareTearOff(
@@ -146,8 +146,8 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         let second = try XCTUnwrap(
             fixture.coordinator.model(for: .normal(sourceWindowID: first.id)))
         let tabID = try XCTUnwrap(first.browser.selectedTab?.id)
-        first.pages.select(session: first.browser.session)
-        second.pages.select(session: second.browser.session)
+        first.pages.select(session: first.browser.presented)
+        second.pages.select(session: second.browser.presented)
         let page = try XCTUnwrap(second.pages.activePage)
 
         fixture.coordinator.closeWindow(first.id)
@@ -232,9 +232,10 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         let tab = BrowserTab(title: "Window lifecycle", url: URL(string: "about:blank"), placement: .current)
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Window lifecycle", symbol: "globe",
-            accent: .indigo, folders: [], tabs: [tab], selectedTabID: tab.id)
+            accent: .indigo, folders: [], tabs: [tab])
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
             persistence: InMemoryBrowserSessionPersistence())
         let pages = BrowserPagePool(monitorsMemoryPressure: false)
         return (

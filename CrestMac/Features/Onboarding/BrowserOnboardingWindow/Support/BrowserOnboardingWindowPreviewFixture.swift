@@ -49,8 +49,7 @@ struct BrowserOnboardingWindowPreviewFixture {
     }
 
     static let session = BrowserSession(
-        spaces: [destinationSpace],
-        selectedSpaceID: destinationSpace.id
+        spaces: [destinationSpace]
     )
 
     static let reviewPlan = BrowserImportReviewPlan(
@@ -149,8 +148,7 @@ struct BrowserOnboardingWindowPreviewFixture {
         accent: .indigo,
         branding: .initial(accent: .indigo, symbol: "briefcase.fill"),
         folders: [],
-        tabs: [tab],
-        selectedTabID: tab.id
+        tabs: [tab]
     )
     private static let sourceTab = BrowserTab(
         id: sourceTabID,
@@ -168,7 +166,6 @@ struct BrowserOnboardingWindowPreviewFixture {
         accent: .orange,
         branding: .initial(accent: .orange, symbol: "shippingbox.fill"),
         folders: [],
-        tabs: [sourceTab],
-        selectedTabID: sourceTab.id
+        tabs: [sourceTab]
     )
 }

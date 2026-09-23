@@ -114,7 +114,7 @@ final class BrowserPageActionsTests: XCTestCase {
     func testDeveloperPreviewBelongsToTheLivePageAndHidingToolbarRestoresNormalMode() throws {
         let first = BrowserTab(title: "Preview", url: nil, placement: .current)
         let second = BrowserTab(title: "Other", url: nil, placement: .current)
-        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
+        let space = makeSpace(tabs: [first, second])
         let pool = BrowserPagePool()
         pool.select(tab: first, space: space)
         let page = try XCTUnwrap(pool.activePage)
@@ -157,8 +157,7 @@ final class BrowserPageActionsTests: XCTestCase {
             placement: .current
         )
         let space = makeSpace(
-            tabs: [first, second],
-            selectedTabID: first.id
+            tabs: [first, second]
         )
         let pool = BrowserPagePool(pageZoomPreferences: preferences)
 
@@ -222,7 +221,7 @@ final class BrowserPageActionsTests: XCTestCase {
 
     func testFindUsesNativeWebKitSearchAndClearsItsStateOnDismiss() async throws {
         let tab = BrowserTab(title: "Find", url: nil, placement: .current)
-        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeSpace(tabs: [tab])
         let pool = BrowserPagePool()
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
@@ -320,7 +319,7 @@ final class BrowserPageActionsTests: XCTestCase {
 
     func testReaderModeCreatesAReversibleSanitizedViewInTheExistingSpacePage() async throws {
         let tab = BrowserTab(title: "Reader", url: nil, placement: .current)
-        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeSpace(tabs: [tab])
         let pool = BrowserPagePool()
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
@@ -385,7 +384,7 @@ final class BrowserPageActionsTests: XCTestCase {
 
     func testLoadedPageCreatesARealPDFDocument() async throws {
         let tab = BrowserTab(title: "PDF", url: nil, placement: .current)
-        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeSpace(tabs: [tab])
         let pool = BrowserPagePool()
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
@@ -407,7 +406,7 @@ final class BrowserPageActionsTests: XCTestCase {
 
     func testLoadedPageCreatesARealWebKitWebArchive() async throws {
         let tab = BrowserTab(title: "Archive", url: nil, placement: .current)
-        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let space = makeSpace(tabs: [tab])
         let pool = BrowserPagePool()
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
@@ -431,7 +430,7 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertTrue(String(decoding: resourceData, as: UTF8.self).contains("Crest Web Archive"))
     }
 
-    private func makeSpace(tabs: [BrowserTab], selectedTabID: TabID) -> BrowserSpace {
+    private func makeSpace(tabs: [BrowserTab]) -> BrowserSpace {
         BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
@@ -439,8 +438,7 @@ final class BrowserPageActionsTests: XCTestCase {
             symbol: "circle",
             accent: .indigo,
             folders: [],
-            tabs: tabs,
-            selectedTabID: selectedTabID
+            tabs: tabs
         )
     }
 

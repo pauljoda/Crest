@@ -1,9 +1,10 @@
 import Foundation
 
 struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
-    static let maximumPinnedTabs = 12
-    static let maximumFolderCount = 500
-    static let maximumFolderDepth = 16
+    // The core enforces these; native surfaces read them to shape their UI.
+    static var maximumPinnedTabs: Int { BrowserCoreLimits.current.pinnedTabs }
+    static var maximumFolderCount: Int { BrowserCoreLimits.current.folders }
+    static var maximumFolderDepth: Int { BrowserCoreLimits.current.folderDepth }
 
     let id: SpaceID
     let profile: BrowsingProfile
@@ -21,7 +22,6 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
     var accessPolicy: BrowserSpaceAccessPolicy
     var isSavedTabsExpanded: Bool
     var savedTabsExpansionModifiedAt: Date?
-    var selectedTabID: TabID?
 
     init(
         id: SpaceID,
@@ -39,8 +39,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         credentialPreferences: BrowserCredentialPreferences = .default,
         accessPolicy: BrowserSpaceAccessPolicy = .open,
         isSavedTabsExpanded: Bool = true,
-        savedTabsExpansionModifiedAt: Date? = nil,
-        selectedTabID: TabID?
+        savedTabsExpansionModifiedAt: Date? = nil
     ) {
         self.id = id
         self.profile = profile
@@ -60,7 +59,6 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         self.accessPolicy = accessPolicy
         self.isSavedTabsExpanded = isSavedTabsExpanded
         self.savedTabsExpansionModifiedAt = savedTabsExpansionModifiedAt
-        self.selectedTabID = selectedTabID
     }
 
     var pinnedTabs: [BrowserTab] {
@@ -112,7 +110,6 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         case accessPolicy
         case isSavedTabsExpanded
         case savedTabsExpansionModifiedAt
-        case selectedTabID
     }
 
     init(from decoder: Decoder) throws {
@@ -174,6 +171,5 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
             Date.self,
             forKey: .savedTabsExpansionModifiedAt
         )
-        selectedTabID = try container.decodeIfPresent(TabID.self, forKey: .selectedTabID)
     }
 }

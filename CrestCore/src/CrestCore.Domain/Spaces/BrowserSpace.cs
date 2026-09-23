@@ -23,12 +23,10 @@ public sealed partial class BrowserSpace {
 
     public IReadOnlyList<HistoryVisit> History => history.AsReadOnly();
 
-    // Identity and selection
+    // Identity
     public Guid Id { get; }
 
     public Guid ProfileId { get; }
-
-    public Guid? RestoredSelection { get; private set; }
 
     // Preferences and display
     public SearchPreferences Search { get; private set; } = SearchPreferences.Default;
@@ -134,7 +132,7 @@ public sealed partial class BrowserSpace {
         if (folder is not null && !folders.Any(f => f.Id == folder && f.Location == placement))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         if (placement == TabPlacement.Pinned && (folder is not null ||
-            tab.Placement != TabPlacement.Pinned && tabs.Count(t => t.Placement == TabPlacement.Pinned) >= 12))
+            tab.Placement != TabPlacement.Pinned && tabs.Count(t => t.Placement == TabPlacement.Pinned) >= BrowserLimits.PinnedTabs))
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         var nextFolders = new FolderTree(folders).PreserveOrder([tab.Id], tabs);
         var remaining = tabs.Where(t => t.Id != id).ToList();
@@ -184,7 +182,7 @@ public sealed partial class BrowserSpace {
     #region Actions - Persistence
 
     public static BrowserSpace Restore(SpaceState state) {
-        var space = new BrowserSpace(state.Id, state.ProfileId, ValidName(state.Name)) { RequiresAuthentication = state.RequiresAuthentication, SupportsDeviceAuthentication = state.SupportsDeviceAuthentication, RestoredSelection = state.SelectedTabId, Search = state.Search ?? SearchPreferences.Default, Retention = state.Retention ?? RetentionPreferences.Default, ContentBlocking = state.ContentBlocking };
+        var space = new BrowserSpace(state.Id, state.ProfileId, ValidName(state.Name)) { RequiresAuthentication = state.RequiresAuthentication, SupportsDeviceAuthentication = state.SupportsDeviceAuthentication, Search = state.Search ?? SearchPreferences.Default, Retention = state.Retention ?? RetentionPreferences.Default, ContentBlocking = state.ContentBlocking };
         foreach (var folder in state.Folders) space.folders.Add(new(folder.Id, folder.Name, folder.Location, folder.ParentId,
             folder.IsCollapsed, folder.CollapseModifiedAt, folder.OrderAnchorTabId));
         new FolderTree(space.folders).Validate();
@@ -196,10 +194,10 @@ public sealed partial class BrowserSpace {
         return space;
     }
 
-    public SpaceState Capture(Guid? selected) => new(Id, ProfileId, Name, RequiresAuthentication,
+    public SpaceState Capture() => new(Id, ProfileId, Name, RequiresAuthentication,
         tabs.Select(t => t.Capture()).ToArray(), folders.Select(f => new FolderState(f.Id, f.Name, f.Location, f.ParentId,
             f.IsCollapsed, f.CollapseModifiedAt, f.OrderAnchorTabId)).ToArray(),
-        archive.Select(a => new ArchiveState(a.Tab, a.ClosedAt, a.Reason)).ToArray(), history.ToArray(), selected, Search, SupportsDeviceAuthentication, Retention, ContentBlocking);
+        archive.Select(a => new ArchiveState(a.Tab, a.ClosedAt, a.Reason)).ToArray(), history.ToArray(), Search, SupportsDeviceAuthentication, Retention, ContentBlocking);
 
     #endregion
 
@@ -249,12 +247,6 @@ public sealed partial class BrowserSpace {
     #region Search preferences
 
     public void SetSearch(SearchPreferences search) { EnsureAccessible(); Search = search; }
-
-    #endregion
-
-    #region Restored selection
-
-    internal void RemovedSelection(Guid tab) { if (RestoredSelection == tab) RestoredSelection = null; }
 
     #endregion
 

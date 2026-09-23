@@ -41,12 +41,10 @@ enum BrowserManualSetupPreviewFixture {
         accent: .indigo,
         branding: .initial(accent: .indigo, symbol: "briefcase.fill"),
         folders: [],
-        tabs: [pinnedTab, savedTab, openTab],
-        selectedTabID: openTab.id
+        tabs: [pinnedTab, savedTab, openTab]
     )
     static let existingSession = BrowserSession(
-        spaces: [space],
-        selectedSpaceID: spaceID
+        spaces: [space]
     )
     static let plan = BrowserManualSetupPlan(existing: existingSession)
     static let selectedSpaceID: SpaceID? = spaceID

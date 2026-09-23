@@ -6,7 +6,7 @@ public static class WorkspaceImportPolicy {
     #region Variables
 
     public const int MaximumSpaces = 64;
-    public const int MaximumPinnedTabs = 12;
+    public const int MaximumPinnedTabs = BrowserLimits.PinnedTabs;
     public const int MaximumFolders = 500;
 
     #endregion

@@ -46,12 +46,12 @@ struct BrowserSplitPageSurface: View {
     @State private var panelFrame: CGRect?
 
     private var isSelectedSpace: Bool {
-        model.browser.session.selectedSpaceID == space.id && !model.spaceAccess.isLocked(space)
+        model.browser.selectedSpaceID == space.id && !model.spaceAccess.isLocked(space)
     }
 
     private var widthTransaction: Binding<BrowserSplitWidthTransaction> {
         guard !isSelectedSpace else { return model.splitWidthTransactionBinding }
-        let persisted = space.selectedTabID.flatMap { space.splitGroup(containing: $0) }
+        let persisted = model.browser.selectedTabID(in: space.id).flatMap { space.splitGroup(containing: $0) }
             .flatMap { model.windowState?.splitColumnFractions(for: $0) }
         return .constant(
             BrowserSplitWidthTransaction(
@@ -62,7 +62,7 @@ struct BrowserSplitPageSurface: View {
     var body: some View {
         BrowserSplitColumnsView(
             members: displayMembers,
-            focusedTabID: isSelectedSpace ? model.pages.activeTabID : space.selectedTabID,
+            focusedTabID: isSelectedSpace ? model.pages.activeTabID : model.browser.selectedTabID(in: space.id),
             frameInsets: appearance.pageInsets(
                 docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection
             ),
@@ -367,7 +367,8 @@ struct BrowserSplitPageSurface: View {
     /// the window: a start-page or not-yet-committed card shows the Space's
     /// atmosphere through it while loaded neighbours keep their page background.
     private func usesTransparentInnerSurface(_ member: BrowserTab) -> Bool {
-        let page = model.pages.surfacePage(for: member, in: space, accessController: model.spaceAccess)
+        let page = model.pages.surfacePage(for: member, in: space, showing: model.browser.selectedTabID(in: space.id),
+            accessController: model.spaceAccess)
         return BrowserPageSurfacePolicy.usesTransparentInnerSurface(
             isStartPage: member.isStartPage,
             hasActivePage: page != nil,

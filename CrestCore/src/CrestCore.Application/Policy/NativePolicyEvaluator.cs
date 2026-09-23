@@ -76,43 +76,26 @@ public static partial class NativePolicyEvaluator {
                 }
             });
         }
-        if (operation is PolicyOperation.RecordsExpired or PolicyOperation.HistoryRemoveRange) {
-            Protocol.Members(request, operation == PolicyOperation.RecordsExpired
-                ? ["version", "operation", "timestamps", "now", "lifetime"]
-                : ["version", "operation", "timestamps", "start", "end"]);
-            var timestamps = request.GetProperty("timestamps").EnumerateArray().Select(value => value.GetDouble()).ToArray();
-            if (timestamps.Length > 512) throw new ProtocolException(ProtocolErrorCodes.RecordBatchLimit);
-            var indices = operation == PolicyOperation.RecordsExpired
-                ? RecordRemovalPolicy.Expired(timestamps, request.GetProperty("now").GetDouble(), request.GetProperty("lifetime").GetDouble())
-                : RecordRemovalPolicy.WithinRange(timestamps, request.GetProperty("start").GetDouble(), request.GetProperty("end").GetDouble());
-            return Encode(new() { ["indices"] = new JsonArray(indices.Select(index => (JsonNode?)JsonValue.Create(index)).ToArray()) });
+        if (operation == PolicyOperation.Limits) {
+            // One answer for every capacity the core enforces, so native
+            // surfaces never keep their own copies of the numbers.
+            Protocol.Members(request, "version", "operation");
+            return Encode(new() {
+                ["pinnedTabs"] = BrowserLimits.PinnedTabs,
+                ["folders"] = BrowserLimits.Folders,
+                ["folderDepth"] = BrowserLimits.FolderDepth,
+                ["historyEntries"] = BrowserLimits.HistoryEntries,
+                ["splitMembers"] = BrowserLimits.SplitMembers,
+                ["brandColors"] = BrowserLimits.BrandColors,
+                ["crestPalette"] = BrowserLimits.CrestPalette,
+                ["spaces"] = BrowserLimits.Spaces,
+                ["tabsPerSpace"] = BrowserLimits.TabsPerSpace,
+                ["syncRecords"] = NativeSyncJournal.MaximumRecords
+            });
         }
         if (operation == PolicyOperation.HistoryNormalize) {
             Protocol.Members(request, "version", "operation", "url");
             return Encode(new() { ["url"] = HistoryPolicy.Normalize(Protocol.Text(request, "url")) });
-        }
-        if (operation == PolicyOperation.HistoryVisit) {
-            Protocol.Members(request, "version", "operation", "url", "title", "now", "newId", "previous");
-            HistoryVisit? previous = null;
-            if (request.TryGetProperty("previous", out var old) && old.ValueKind != JsonValueKind.Null) {
-                Protocol.Members(old, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
-                previous = new(Protocol.Id(old, "id"), Protocol.Text(old, "url"), old.GetProperty("title").GetString() ?? "",
-                    Date(old, "firstVisitedAt"), Date(old, "lastVisitedAt"), old.GetProperty("visitCount").GetInt32());
-                if (previous.VisitCount < 1) throw new ProtocolException(ProtocolErrorCodes.InvalidVisitCount);
-            }
-            string? title = request.TryGetProperty("title", out var name) && name.ValueKind != JsonValueKind.Null ? name.GetString() : null;
-            var visit = HistoryPolicy.Record(Protocol.Text(request, "url"), title, Date(request, "now"), Protocol.Id(request, "newId"), previous);
-            return Encode(new() {
-                ["entry"] = new JsonObject {
-                    ["id"] = visit.Id.ToString(),
-                    ["url"] = visit.Url,
-                    ["title"] = visit.Title,
-                    ["firstVisitedAt"] = (visit.FirstVisitedAt - DateTimeOffset.UnixEpoch).TotalSeconds,
-                    ["lastVisitedAt"] = (visit.VisitedAt - DateTimeOffset.UnixEpoch).TotalSeconds,
-                    ["visitCount"] = visit.VisitCount
-                },
-                ["maximumEntries"] = HistoryPolicy.MaximumEntries
-            });
         }
         if (operation == PolicyOperation.ResidencyReleaseLimit) {
             Protocol.Members(request, "version", "operation", "level", "platform", "eligiblePageCount");
@@ -183,12 +166,6 @@ public static partial class NativePolicyEvaluator {
         "mobile" => MemoryPressurePlatform.Mobile,
         _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPressurePlatform)
     };
-
-    private static DateTimeOffset Date(JsonElement value, string field) {
-        double seconds = value.GetProperty(field).GetDouble();
-        if (!double.IsFinite(seconds)) throw new ProtocolException(ProtocolErrorCodes.InvalidDate);
-        return DateTimeOffset.UnixEpoch.AddSeconds(seconds);
-    }
 
     #endregion
 }

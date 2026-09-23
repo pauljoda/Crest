@@ -14,7 +14,7 @@ public sealed partial class BrowserContractsTests {
         ["mode"] = "portable",
         ["now"] = 800000000.0,
         ["arguments"] = new JsonObject { ["sources"] = sources },
-        ["window"] = JsonNode.Parse(Selection(session))
+        ["view"] = View(session)
     });
 
     [Fact]
@@ -25,12 +25,13 @@ public sealed partial class BrowserContractsTests {
         var result = JsonNode.Parse(command.Output)!;
         var imported = result["session"]!["spaces"]![1]!;
         Assert.NotEqual(session["spaces"]![0]!["id"]!.ToJsonString(), imported["id"]!.ToJsonString());
-        Assert.True(JsonNode.DeepEquals(imported["id"], result["session"]!["selectedSpaceID"]));
+        Assert.Equal(SpaceId(imported), HintedSpace(result));
+        Assert.Null(result["session"]!["selectedSpaceID"]);
         Assert.NotEqual(session["spaces"]![0]!["profile"]!["id"]!.ToJsonString(), imported["profile"]!["id"]!.ToJsonString());
         Assert.Equal(1, result["assets"]!.AsArray().Single(a => a!["spaceIndex"]!.GetValue<int>() == 1)!["sourceIndex"]!.GetValue<int>());
-        using (command.Reserve(Selection(result["session"]!))) { }
+        using (command.Reserve()) { }
         Assert.Equal(1UL, owner.Revision);
-        using var accepted = command.Reserve(Selection(result["session"]!));
+        using var accepted = command.Reserve();
         Assert.Equal(2, JsonNode.Parse(accepted.Checkpoint.Read("core"))!["spaces"]!.AsArray().Count);
         accepted.Commit();
         Assert.Throws<BrowserRuleException>(() => command.Commit());
@@ -44,7 +45,7 @@ public sealed partial class BrowserContractsTests {
         var command = owner.PrepareCommand(1, ImportCommand(session, sources));
         Assert.Equal("space_limit_reached", JsonNode.Parse(command.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => command.Commit());
-        Assert.Throws<BrowserRuleException>(() => command.Reserve(Selection(session)));
+        Assert.Throws<BrowserRuleException>(() => command.Reserve());
         Assert.Equal(1UL, owner.Revision);
     }
 }

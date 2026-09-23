@@ -124,6 +124,6 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
     private static func blankSpace() -> BrowserSpace {
         let tab = BrowserTab.startPage()
         return BrowserSpace(id: SpaceID(), profile: BrowsingProfile(), name: "Space 1",
-            symbol: "square.grid.2x2.fill", accent: .indigo, folders: [], tabs: [tab], selectedTabID: tab.id)
+            symbol: "square.grid.2x2.fill", accent: .indigo, folders: [], tabs: [tab])
     }
 }

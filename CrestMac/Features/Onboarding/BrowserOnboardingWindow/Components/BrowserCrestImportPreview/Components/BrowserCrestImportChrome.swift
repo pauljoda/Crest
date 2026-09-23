@@ -31,7 +31,7 @@ struct BrowserCrestImportChrome: View {
     }
 
     private var selectedHost: String? {
-        space.selectedTabID.flatMap { id in
+        BrowserStoreSelection.fallbackTabID(in: space).flatMap { id in
             space.tabs.first { $0.id == id }?.url?.host
         }
     }

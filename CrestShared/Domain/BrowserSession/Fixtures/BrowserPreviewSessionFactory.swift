@@ -4,7 +4,7 @@ enum BrowserPreviewSessionFactory {
     static func make() -> BrowserSession {
         let work = makeWorkSpace()
         let personal = makePersonalSpace()
-        return BrowserSession(spaces: [work, personal], selectedSpaceID: work.id)
+        return BrowserSession(spaces: [work, personal])
     }
 
     private static func makeWorkSpace() -> BrowserSpace {
@@ -18,8 +18,7 @@ enum BrowserPreviewSessionFactory {
             accent: .indigo,
             branding: .house(.lion, symbol: "briefcase.fill"),
             folders: [folder],
-            tabs: tabs,
-            selectedTabID: tabs.last?.id
+            tabs: tabs
         )
     }
 
@@ -78,8 +77,7 @@ enum BrowserPreviewSessionFactory {
             accent: .orange,
             branding: .house(.winter, symbol: "house.fill"),
             folders: [folder],
-            tabs: tabs,
-            selectedTabID: tabs.last?.id
+            tabs: tabs
         )
     }
 
@@ -106,10 +104,11 @@ enum BrowserPreviewSessionFactory {
 extension BrowserSession {
     static func cleanupFixture(now: Date) -> BrowserSession {
         var session = preview
-        guard let spaceIndex = session.spaces.firstIndex(where: { $0.id == session.selectedSpaceID }) else {
+        let launch = BrowserStoreSelection(launching: session)
+        guard let spaceIndex = session.spaces.firstIndex(where: { $0.id == launch.selectedSpaceID }) else {
             return session
         }
-        let selectedID = session.spaces[spaceIndex].selectedTabID
+        let selectedID = launch.selectedTabID(in: launch.selectedSpaceID)
         for tabIndex in session.spaces[spaceIndex].tabs.indices {
             let tab = session.spaces[spaceIndex].tabs[tabIndex]
             if tab.placement == .current, tab.id != selectedID {

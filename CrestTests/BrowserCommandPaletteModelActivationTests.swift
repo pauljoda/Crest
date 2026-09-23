@@ -24,8 +24,7 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             symbol: "command",
             accent: .indigo,
             folders: [],
-            tabs: [sourceTab, targetTab],
-            selectedTabID: sourceTab.id
+            tabs: [sourceTab, targetTab]
         )
         var sourceIsAvailable = false
         var capturedSource: BrowserTabRuntimeAssignment?
@@ -164,8 +163,7 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [sourceTab, localTab],
-            browsingPreferences: preferences,
-            selectedTabID: sourceTab.id
+            browsingPreferences: preferences
         )
         return (space, sourceTab)
     }

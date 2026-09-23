@@ -22,10 +22,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                     let moving = BrowserTab(
                         title: "Between", url: URL(string: "https://example.com/between"), placement: sourcePlacement)
                     space.tabs = [firstTab, secondTab, moving]
-                    space.selectedTabID = firstTab.id
-                    let browser = BrowserStore(
-                        session: .init(spaces: [space], selectedSpaceID: space.id),
-                        persistence: InMemoryBrowserSessionPersistence())
+                    let browser = makeStore(space, showing: firstTab.id)
                     let target = BrowserSidebarReorderTarget(
                         kind: .insert(
                             section: .tabs(placement: location.tabPlacement, folderID: parent?.id),
@@ -39,7 +36,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                         BrowserSession.self, from: JSONEncoder().encode(browser.session))
                     let result = try XCTUnwrap(restored.space(id: space.id))
                     XCTAssertEqual(result.tabs.first { $0.id == moving.id }?.folderID, parent?.id)
-                    XCTAssertEqual(result.selectedTabID, firstTab.id)
+                    XCTAssertEqual(browser.selectedTabID(in: space.id), firstTab.id)
                     XCTAssertEqual(
                         BrowserSidebarFolderListItem.items(
                             tabs: result.tabs, tree: result.folderTree,
@@ -62,10 +59,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                     let moving = BrowserTab(
                         title: "Between", url: URL(string: "https://example.com/between"), placement: sourcePlacement)
                     space.tabs = [moving]
-                    space.selectedTabID = moving.id
-                    let browser = BrowserStore(
-                        session: .init(spaces: [space], selectedSpaceID: space.id),
-                        persistence: InMemoryBrowserSessionPersistence())
+                    let browser = makeStore(space, showing: moving.id)
                     let target = BrowserSidebarReorderTarget(
                         kind: .insert(
                             section: .tabs(placement: location.tabPlacement, folderID: parent?.id),
@@ -79,17 +73,16 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                         BrowserSession.self, from: JSONEncoder().encode(browser.session))
                     let result = try XCTUnwrap(restored.space(id: space.id))
                     XCTAssertEqual(result.tabs.first { $0.id == moving.id }?.folderID, parent?.id)
-                    XCTAssertEqual(result.selectedTabID, moving.id)
+                    XCTAssertEqual(browser.selectedTabID(in: space.id), moving.id)
                     XCTAssertEqual(
                         BrowserSidebarFolderListItem.items(
                             tabs: result.tabs, tree: result.folderTree,
                             location: location, parentID: parent?.id
                         ).map(\.id), [.folder(first.id), .tab(moving.id), .folder(second.id)])
-                    let records = try BrowserSyncProjection.payloads(
-                        from: browser.session, preferences: .default, existingRecords: []
-                    ).map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
-                    let synced = try BrowserSyncMaterializer.materialize(
-                        records: records, preferences: .default, localSession: .freshInstallSeed)
+                    let records = try BrowserCoreSync.project(browser.session, preferences: .default, records: [])
+                        .map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
+                    let synced = try BrowserCoreSync.materialize(
+                        .freshInstallSeed, preferences: .default, records: records)
                     let syncedSpace = try XCTUnwrap(synced.space(id: space.id))
                     XCTAssertEqual(
                         BrowserSidebarFolderListItem.items(
@@ -136,9 +129,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                 title: "Tab", url: URL(string: "https://example.com"), placement: location.tabPlacement)
             space.folders = [first, second]
             space.tabs = [tab]
-            let browser = BrowserStore(
-                session: .init(spaces: [space], selectedSpaceID: space.id),
-                persistence: InMemoryBrowserSessionPersistence())
+            let browser = makeStore(space, showing: tab.id)
             let commit = BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController())
             for (folder, before) in [(first, BrowserSidebarReorderItemID.tab(tab.id)), (second, .folder(first.id))] {
                 XCTAssertTrue(
@@ -171,16 +162,16 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                 if initiallyEmpty { folder.orderAnchorTabID = moving.id }
                 space.folders = [folder]
                 space.tabs = [moving, after]
-                space.selectedTabID = after.id
-                var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+                let browser = makeStore(space, showing: after.id)
                 switch operation {
-                case "delete": XCTAssertTrue(session.deleteTab(moving.id, in: space.id))
-                case "close": session.closeTab(moving.id)
-                case "popupClose": XCTAssertTrue(session.closeTab(moving.id, in: space.id))
-                case "move": XCTAssertTrue(session.moveTab(moving.id, to: .current))
-                default: XCTAssertTrue(session.moveTab(moving.id, to: .pinned))
+                case "delete":
+                    XCTAssertTrue(browser.deleteTab(moving.id, matching: BrowserSpaceRuntimeAssignment(space: space)))
+                case "close": XCTAssertTrue(browser.closeTab(moving.id))
+                case "popupClose": XCTAssertTrue(browser.closeTab(moving.id, in: space.id))
+                case "move": XCTAssertTrue(browser.moveTab(moving.id, to: .current))
+                default: XCTAssertTrue(browser.moveTab(moving.id, to: .pinned))
                 }
-                let result = try XCTUnwrap(session.space(id: space.id))
+                let result = try XCTUnwrap(browser.session.space(id: space.id))
                 XCTAssertEqual(
                     BrowserSidebarFolderListItem.items(
                         tabs: result.tabs, tree: result.folderTree, location: .current
@@ -195,7 +186,6 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let folder = BrowserFolder(title: "Before", location: .current, orderAnchorTabID: tab.id)
         space.tabs = [tab]
         space.folders = [folder]
-        space.selectedTabID = tab.id
         let portable = try JSONDecoder().decode(PortableSpace.self, from: JSONEncoder().encode(PortableSpace(space)))
         let result = try portable.materialize()
         let importedTab = try XCTUnwrap(result.tabs.first)
@@ -220,10 +210,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             }
             space.folders = [first, second]
             space.tabs = members
-            space.selectedTabID = members[0].id
-            let browser = BrowserStore(
-                session: .init(spaces: [space], selectedSpaceID: space.id),
-                persistence: InMemoryBrowserSessionPersistence())
+            let browser = makeStore(space, showing: members[0].id)
             XCTAssertTrue(
                 BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController()).apply(
                     .init(
@@ -251,10 +238,12 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let moving = BrowserTab(title: "Moving", url: URL(string: "https://example.com/moving"), placement: .current)
         space.folders = [populated, empty]
         space.tabs = [member, moving]
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let browser = makeStore(space, showing: moving.id)
         XCTAssertTrue(
-            session.fileTabs([moving.id], in: space.id, into: nil, location: .current, beforeFolderID: populated.id))
-        let result = try XCTUnwrap(session.space(id: space.id))
+            browser.fileTabs(
+                [moving.id], matching: BrowserSpaceRuntimeAssignment(space: space), into: nil, location: .current,
+                beforeFolderID: populated.id))
+        let result = try XCTUnwrap(browser.session.space(id: space.id))
         XCTAssertEqual(
             BrowserSidebarFolderListItem.items(tabs: result.tabs, tree: result.folderTree, location: .current)
                 .map(\.id), [.folder(empty.id), .tab(moving.id), .folder(populated.id)])
@@ -268,21 +257,19 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let current = BrowserTab(title: "Current", url: URL(string: "https://example.com/current"), placement: .current)
         space.folders = [first, second]
         space.tabs = [moving, current]
-        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let browser = makeStore(space, showing: current.id)
         XCTAssertTrue(
-            session.fileTabs([moving.id], in: space.id, into: nil, location: .saved, beforeFolderID: second.id))
-        XCTAssertEqual(session.space(id: space.id)?.tabs.map(\.id), [moving.id, current.id])
+            browser.fileTabs(
+                [moving.id], matching: BrowserSpaceRuntimeAssignment(space: space), into: nil, location: .saved,
+                beforeFolderID: second.id))
+        XCTAssertEqual(browser.session.space(id: space.id)?.tabs.map(\.id), [moving.id, current.id])
     }
-
-
-
-
 
     func testSavedSubtreeMovesBothDirectionsAndRestoresWithoutLosingIdentityOrSplitMembership() throws {
         let browser = makeBrowser()
         let space = try XCTUnwrap(browser.selectedSpace)
-        let root = try XCTUnwrap(browser.session.addFolder(title: "🧪 Research", color: .ocean, in: space.id))
-        let child = try XCTUnwrap(browser.session.addFolder(title: "Child", color: .rose, parentID: root, in: space.id))
+        let root = try XCTUnwrap(browser.addFolder(title: "🧪 Research", color: .ocean, in: space.id))
+        let child = try XCTUnwrap(browser.addFolder(title: "Child", color: .rose, parentID: root, in: space.id))
         let split = SplitGroupID()
         let ids = Array(space.tabs.prefix(2).map(\.id))
         for i in browser.session.spaces[0].tabs.indices where ids.contains(browser.session.spaces[0].tabs[i].id) {
@@ -290,8 +277,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             browser.session.spaces[0].tabs[i].folderID = child
             browser.session.spaces[0].tabs[i].splitGroupID = split
         }
-        _ = browser.session.setFolderCollapsed(child, in: space.id, isCollapsed: true)
-        browser.persist(scope: .core)
+        XCTAssertTrue(browser.setFolderCollapsed(child, in: space.id, isCollapsed: true))
         let original = browser.selectedSpace?.folders
         let item = BrowserSidebarReorderItem.folder(
             .init(folderID: root, spaceID: space.id, profileID: space.profile.id))
@@ -380,26 +366,24 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
     }
 
     func testNestedCurrentFoldersSyncToAnotherDeviceWithMetadataAndMembership() throws {
-        let browser = makeBrowser()
+        let root = BrowserFolder(
+            title: "Research", location: .current, color: .ocean, isCollapsed: true,
+            collapseModifiedAt: Date(timeIntervalSince1970: 1_800_000_000))
+        let nested = BrowserFolder(title: "Nested", location: .current, color: .rose, parentID: root.id)
+        let child = nested.id
+        let browser = makeBrowser { space in
+            space.folders = [root, nested]
+            space.tabs[1].folderID = child
+        }
         let space = try XCTUnwrap(browser.selectedSpace)
-        let root = try XCTUnwrap(
-            browser.session.addFolder(title: "Research", color: .ocean, location: .current, in: space.id))
-        let child = try XCTUnwrap(
-            browser.session.addFolder(title: "Nested", color: .rose, parentID: root, in: space.id))
-        XCTAssertTrue(
-            browser.session.fileTabs([space.currentTabs[0].id], in: space.id, into: child, location: .current))
-        _ = browser.session.setFolderCollapsed(
-            root, in: space.id, isCollapsed: true, at: Date(timeIntervalSince1970: 1_800_000_000))
-        let payloads = try BrowserSyncProjection.payloads(
-            from: browser.session, preferences: .default, existingRecords: [])
+        let payloads = try BrowserCoreSync.project(browser.session, preferences: .default, records: [])
         let codec = BrowserCloudRecordCodec()
         let records = try payloads.map {
             let record = BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID()))
             return try codec.decode(codec.encode(record))
         }
         for record in records { try record.validate() }
-        let remote = try BrowserSyncMaterializer.materialize(
-            records: records, preferences: .default, localSession: .freshInstallSeed)
+        let remote = try BrowserCoreSync.materialize(.freshInstallSeed, preferences: .default, records: records)
         let restored = try XCTUnwrap(remote.space(id: space.id))
         XCTAssertEqual(restored.folders, browser.session.spaces[0].folders)
         XCTAssertEqual(restored.tabs.first { $0.id == space.currentTabs[0].id }?.folderID, child)
@@ -419,12 +403,11 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
     func testSyncPreferencesIncludeEachFolderWithItsSectionAndPreserveDisabledLocalSections() throws {
         let browser = makeBrowser()
         let space = try XCTUnwrap(browser.selectedSpace)
-        let saved = try XCTUnwrap(browser.session.addFolder(title: "Saved", in: space.id))
-        let current = try XCTUnwrap(browser.session.createTabFolder([space.currentTabs[0].id], in: space.id))
+        let saved = try XCTUnwrap(browser.addFolder(title: "Saved", in: space.id))
+        let current = try XCTUnwrap(browser.createTabFolder([space.currentTabs[0].id], in: space.id))
         var preferences = BrowserSyncPreferences.default
         preferences.currentTabs = false
-        let payloads = try BrowserSyncProjection.payloads(
-            from: browser.session, preferences: preferences, existingRecords: [])
+        let payloads = try BrowserCoreSync.project(browser.session, preferences: preferences, records: [])
         let folderIDs = payloads.compactMap { payload -> FolderID? in
             if case .folder(let folder) = payload { return folder.id }
             return nil
@@ -435,18 +418,19 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             let record = BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID()))
             return try codec.decode(codec.encode(record))
         }
-        let refreshed = try BrowserSyncMaterializer.materialize(
-            records: records, preferences: preferences, localSession: browser.session)
+        let refreshed = try BrowserCoreSync.materialize(browser.session, preferences: preferences, records: records)
         XCTAssertTrue(refreshed.spaces[0].folders.contains { $0.id == current && $0.location == .current })
         XCTAssertEqual(refreshed.spaces[0].tabs.first { $0.id == space.currentTabs[0].id }?.folderID, current)
     }
 
     func testPortableArchivePreservesCurrentFolderHierarchyAndContents() throws {
-        let browser = makeBrowser()
+        let root = BrowserFolder(title: "Root", location: .current)
+        let child = BrowserFolder(title: "Child", location: .current, parentID: root.id)
+        let browser = makeBrowser { space in
+            space.folders = [root, child]
+            space.tabs[1].folderID = child.id
+        }
         let space = try XCTUnwrap(browser.selectedSpace)
-        let root = try XCTUnwrap(browser.session.addFolder(title: "Root", location: .current, in: space.id))
-        let child = try XCTUnwrap(browser.session.addFolder(title: "Child", parentID: root, in: space.id))
-        _ = browser.session.fileTabs([space.currentTabs[0].id], in: space.id, into: child, location: .current)
         let archive = BrowserPortableArchive(session: browser.session)
         let restored = try JSONDecoder().decode(BrowserPortableArchive.self, from: JSONEncoder().encode(archive))
             .materialize()
@@ -459,17 +443,23 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
     }
 
 
-
-    private func makeBrowser() -> BrowserStore {
+    /// One saved tab followed by four open tabs, showing the last one.
+    private func makeBrowser(_ configure: (inout BrowserSpace) -> Void = { _ in }) -> BrowserStore {
         var space = BrowserSession.makeBlankSpace(number: 1)
         space.tabs = (0..<5).map { i in
             BrowserTab(
                 id: TabID(), title: "Tab \(i)", url: URL(string: "https://example.com/\(i)"),
                 symbol: "globe", placement: i == 0 ? .saved : .current)
         }
-        space.selectedTabID = space.tabs.last?.id
-        return BrowserStore(
-            session: .init(spaces: [space], selectedSpaceID: space.id), persistence: InMemoryBrowserSessionPersistence()
-        )
+        configure(&space)
+        return makeStore(space, showing: space.tabs[4].id)
+    }
+
+    /// A window showing `tabID` in the only Space.
+    private func makeStore(_ space: BrowserSpace, showing tabID: TabID) -> BrowserStore {
+        BrowserStore(
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tabID]),
+            persistence: InMemoryBrowserSessionPersistence())
     }
 }

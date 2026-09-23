@@ -84,11 +84,11 @@ public sealed class SplitContractsTests {
         var space = Space(); var group = Guid.NewGuid(); var single = Tab(space, "single", split: group);
         Tab(space, "separator"); var repeated = Tab(space, "repeated", split: group);
         var pinned = Tab(space, "pinned", TabPlacement.Pinned, Guid.NewGuid());
-        var restored = BrowserSpace.Restore(space.Capture(null));
+        var restored = BrowserSpace.Restore(space.Capture());
         Assert.Equal(group, restored.Tab(single.Id).SplitGroupId);
         Assert.Null(restored.Tab(repeated.Id).SplitGroupId); Assert.Null(restored.Tab(pinned.Id).SplitGroupId);
         Assert.All(restored.Tabs, t => Assert.Null(t.PositionModifiedAt));
-        var again = BrowserSpace.Restore(restored.Capture(null));
+        var again = BrowserSpace.Restore(restored.Capture());
         Assert.Equal(restored.Tabs.Select(t => t.Capture()), again.Tabs.Select(t => t.Capture()));
     }
 }

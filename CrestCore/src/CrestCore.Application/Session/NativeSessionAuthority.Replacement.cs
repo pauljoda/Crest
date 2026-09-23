@@ -23,7 +23,7 @@ public sealed partial class NativeSessionAuthority {
     /// Other writes are rejected until commit or cancellation. No platform I/O
     /// occurs under the core lock, and cancellation leaves the authority intact.
     public NativeSessionReplacement ReserveReplacement(ulong expected, ReadOnlySpan<byte> delta,
-        ReadOnlySpan<byte> selection, NativeSyncTransaction? transaction = null, bool nativeValueEdit = false) {
+        NativeSyncTransaction? transaction = null, bool nativeValueEdit = false) {
         lock (Gate) {
             System.Text.Json.Nodes.JsonNode? authorizedDeletions = null;
             if (transaction is not null) {
@@ -33,8 +33,8 @@ public sealed partial class NativeSessionAuthority {
             }
             var next = Prepare(expected, delta, authorizedDeletions, nativeValueEdit && transaction is null);
             var nextRevision = checked(Revision + 1);
-            var checkpoint = new NativeSessionCheckpoint(next, Parse(selection));
-            // Validate the selection and serialization before granting the lease.
+            var checkpoint = new NativeSessionCheckpoint(next);
+            // Validate serialization before granting the lease.
             _ = checkpoint.Read("core");
             var reserved = new NativeSessionReplacement(this, next, nextRevision, checkpoint);
             if (transaction is not null) reserved.BindSync(transaction);
@@ -58,14 +58,14 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    internal NativeSessionReplacement ReserveCommand(NativeSessionCommand command, ReadOnlySpan<byte> selection) {
+    internal NativeSessionReplacement ReserveCommand(NativeSessionCommand command) {
         lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
             command.RequireAccepted();
             if (command.ExpectedRevision != Revision)
                 throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.StaleSessionRevision);
             var nextRevision = checked(Revision + 1);
-            var checkpoint = new NativeSessionCheckpoint(command.Document, Parse(selection));
+            var checkpoint = new NativeSessionCheckpoint(command.Document);
             _ = checkpoint.Read("core");
             replacement = new(this, command.Document, nextRevision, checkpoint, command.BorrowedSourceRevision, command.TransientCompletion);
             return replacement;

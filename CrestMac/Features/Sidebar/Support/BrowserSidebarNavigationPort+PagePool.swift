@@ -21,9 +21,9 @@ extension BrowserSidebarNavigationPort {
             isLoading: { pages.activePage?.isLoading == true },
             hasActivePage: { pages.activePage != nil },
             activeURL: { pages.activePage?.displayURL },
-            reloadOrStop: { pages.reloadOrStop(in: browser.session) },
-            reload: { pages.forceReload(in: browser.session) },
-            reloadFromOrigin: { pages.reloadFromOrigin(in: browser.session) },
+            reloadOrStop: { pages.reloadOrStop(in: browser.presented) },
+            reload: { pages.forceReload(in: browser.presented) },
+            reloadFromOrigin: { pages.reloadFromOrigin(in: browser.presented) },
             clearSiteDataAndReload: { await pages.clearSiteDataAndReload() }
         )
     }

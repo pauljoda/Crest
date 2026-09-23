@@ -53,16 +53,14 @@ enum BrowserSidebarPreviewFixture {
                 id: TabID(rawValue: uuid(0x44)),
                 lastActivatedAt: Date(timeIntervalSince1970: 0)
             ),
-        ],
-        selectedTabID: TabID(rawValue: uuid(0x43))
+        ]
     )
 
     @MainActor
     static func makeBrowser() -> BrowserStore {
         BrowserStore(
             session: BrowserSession(
-                spaces: [space],
-                selectedSpaceID: spaceID
+                spaces: [space]
             ),
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing

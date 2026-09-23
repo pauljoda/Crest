@@ -44,8 +44,7 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
             accent: admitted.accent,
             branding: .initial(accent: admitted.accent, symbol: admitted.symbol),
             folders: [],
-            tabs: [],
-            selectedTabID: nil
+            tabs: []
         )
         spaces.append(BrowserManualSetupSpaceDraft(space: space, isNew: true))
         return space.id

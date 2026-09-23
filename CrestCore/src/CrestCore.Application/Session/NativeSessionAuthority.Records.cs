@@ -13,8 +13,9 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Records
 
-    // The caller sends intent and window selection. Existing history and archive
-    // entries come from the authority; only changed read models cross back.
+    // The caller sends intent and what its window shows. Existing history and
+    // archive entries come from the authority; only changed read models and the
+    // window's follow-up selection hint cross back.
     private NativeSessionCommand PrepareRecordCommand(ulong expected, JsonObject request) {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var args = request["arguments"]!.AsObject();
@@ -24,15 +25,14 @@ public sealed partial class NativeSessionAuthority {
         if (target is { } id) _ = TransferSpace(id, Id(request["profileId"]));
         else if (operation is not (SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup))
             throw new BrowserRuleException(BrowserRuleCodes.MissingSpaceIdentity);
-        var window = request["window"]!;
-        var selected = window["selectedTabs"]!.AsArray().ToDictionary(n => Id(n!["spaceID"]), n => n!["tabID"]);
+        var view = SessionView.Decode(request[SessionView.Key]);
+        var hint = new SessionSelectionHint();
         var changes = new JsonArray();
         var spaces = document.Spaces.Select(original => {
-            var fields = original.Metadata.DeepClone().AsObject();
-            var spaceId = Id(fields["id"]);
-            fields["selectedTabID"] = selected.GetValueOrDefault(spaceId)?.DeepClone();
+            var spaceId = Id(original.Metadata["id"]);
             if (target is { } requested && requested != spaceId || PendingDeletion(document.Metadata, spaceId) is not null)
-                return new SpaceDocument(fields, original.Sections);
+                return original;
+            var fields = original.Metadata.DeepClone().AsObject();
             var sections = original.Sections.ToDictionary(pair => pair.Key, pair => pair.Value);
             var change = new JsonObject {
                 ["spaceId"] = spaceId.ToString("D"),
@@ -56,26 +56,31 @@ public sealed partial class NativeSessionAuthority {
                     var term = fields["browsingPreferences"]?["currentTabCleanupPolicy"]?.GetValue<string>();
                     var policy = Enum.TryParse<CurrentTabCleanup>(term, true, out var parsed) && Enum.IsDefined(parsed)
                         ? parsed : CurrentTabCleanup.After12Hours;
+                    // Launch sweeps before any window is on screen, so the caller
+                    // names every tab its restored windows show.
                     if ((RetentionPreferences.Default with { CurrentTabs = policy }).TabLifetime is { } lifetime)
-                        editArguments = new() { Lifetime = lifetime.TotalSeconds };
+                        editArguments = new() { Lifetime = lifetime.TotalSeconds, TabIds = KeptTabs(args) };
                 } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
                     var compact = fields.DeepClone().AsObject();
                     foreach (var section in Sections)
                         compact[section] = new JsonArray(section is "history" or "archivedTabs" ? []
                             : sections[section].Select(n => n.DeepClone()).ToArray());
+                    // Cleanup keeps the tab this window shows; a restored tab is the
+                    // one it should show next.
                     var editRequest = SessionEditRequest.Create(
                         operation == SessionOperation.ArchiveRestore ? SessionOperation.TabRestoreArchive : SessionOperation.TabCleanup,
-                        compact, editArguments, now);
-                    var edit = JsonNode.Parse(NativeSessionEditor.Evaluate(editRequest.Encode()))!.AsObject();
-                    var result = edit["space"]!;
+                        compact, editArguments, now, view.Tab(spaceId));
+                    var edited = SessionEditResult.Decode(NativeSessionEditor.Evaluate(editRequest.Encode()));
+                    var result = edited.Space;
                     if (operation == SessionOperation.ArchiveRestore || !JsonNode.DeepEquals(compact["tabs"], result["tabs"])) {
                         foreach (var section in new[] { "tabs", "folders" })
                             sections[section] = result[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
-                        fields["selectedTabID"] = result["selectedTabID"]?.DeepClone();
                         fields["splitGroups"] = result["splitGroups"]?.DeepClone();
                         sections["archivedTabs"] = sections["archivedTabs"].Concat(result["archivedTabs"]!.AsArray().Select(n => n!.DeepClone())).ToArray();
-                        change["tabEdit"] = edit;
+                        var spaceHint = new SessionSelectionHint().SelectTab(view, spaceId, edited.SelectedTabId);
+                        hint.SelectTab(view, spaceId, edited.SelectedTabId);
+                        change["tabEdit"] = JsonNode.Parse(edited.Encode(spaceHint));
                     }
                 }
                 if (operation == SessionOperation.RecordsSweep) {
@@ -98,12 +103,16 @@ public sealed partial class NativeSessionAuthority {
             if (change.Count > 2) changes.Add((JsonNode)change);
             return new SpaceDocument(fields, sections);
         }).ToArray();
-        var metadata = document.Metadata.DeepClone().AsObject();
-        metadata["selectedSpaceID"] = window["selectedSpaceID"]!.DeepClone();
-        var next = new SessionDocument(metadata, spaces);
+        var next = new SessionDocument(document.Metadata, spaces);
         Validate(next); ValidateBorrowedDocument(next);
-        return new(this, expected, next, TransferOutput(new JsonObject { ["changes"] = changes }));
+        return new(this, expected, next, TransferOutput(new JsonObject {
+            ["changes"] = changes,
+            [SessionSelectionHint.Key] = hint.Encode()
+        }));
     }
+
+    private static IReadOnlyList<Guid>? KeptTabs(JsonObject args) =>
+        args["keepTabIds"] is JsonArray kept ? kept.Select(Id).ToArray() : null;
 
     private static JsonArray IDs(IEnumerable<Guid> ids) => new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
 

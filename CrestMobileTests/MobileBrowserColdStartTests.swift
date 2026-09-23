@@ -25,7 +25,7 @@ final class MobileBrowserColdStartTests: XCTestCase {
         persistence.save(
             BrowserWindowState(
                 id: id,
-                selectedSpaceID: session.selectedSpaceID,
+                selectedSpaceID: root.selectedSpaceID,
                 selectedTabIDsBySpace: [:],
                 sidebarIsPresented: false
             ))

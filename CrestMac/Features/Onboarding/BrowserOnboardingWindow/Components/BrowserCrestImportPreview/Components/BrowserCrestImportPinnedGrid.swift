@@ -19,7 +19,7 @@ struct BrowserCrestImportPinnedGrid: View {
                     isMatched
                         ? BrowserOnboardingPalette.match.opacity(0.2)
                         : Color.primary.opacity(
-                            tab.id == space.selectedTabID ? 0.14 : 0.075
+                            tab.id == BrowserStoreSelection.fallbackTabID(in: space) ? 0.14 : 0.075
                         ),
                     in: .rect(cornerRadius: 10, style: .continuous)
                 )

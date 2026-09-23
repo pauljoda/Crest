@@ -122,11 +122,12 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
             accent: .indigo,
             branding: .initial(accent: .indigo, symbol: "books.vertical.fill"),
             folders: [],
-            tabs: [pinned, saved, presented, joiner],
-            selectedTabID: presented.id
+            tabs: [pinned, saved, presented, joiner]
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            session: BrowserSession(spaces: [space]),
+            selection: BrowserStoreSelection(
+                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: presented.id]),
             persistence: InMemoryBrowserSessionPersistence()
         )
         let model = BrowserRootModel(

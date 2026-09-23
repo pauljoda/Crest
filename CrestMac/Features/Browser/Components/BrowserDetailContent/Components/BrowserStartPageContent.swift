@@ -30,7 +30,7 @@ struct BrowserStartPageContent: View {
                 openURL: openStartPageURL,
                 isCommandPaletteObscured: isCommandPalettePresented,
                 layout: .macOSPage,
-                focusRequest: space.id == browser.session.selectedSpaceID && tab?.id == browser.selectedTab?.id
+                focusRequest: space.id == browser.selectedSpaceID && tab?.id == browser.selectedTab?.id
                     ? focusRequest
                     : nil,
                 promotion: tab.map { tab in
@@ -77,7 +77,7 @@ struct BrowserStartPageContent: View {
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
-        pages.select(session: browser.session)
+        pages.select(session: browser.presented)
         return true
     }
 

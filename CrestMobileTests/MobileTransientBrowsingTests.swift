@@ -56,7 +56,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
         let work = try XCTUnwrap(session.spaces.first)
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let url = try XCTUnwrap(URL(string: "about:blank"))
-        pages.select(session: session)
+        pages.select(session: BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session)))
         let lease = try XCTUnwrap(
             pages.makeTransientPageLease(url: url, in: work)
         )
@@ -72,7 +72,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
     }
 
     func testMobileTransientLeaseDoesNotCrashWhenItsPageStoreHasBeenReleased() throws {
-        let space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+        let space = try XCTUnwrap(BrowserSession.preview.spaces.first)
         let url = try XCTUnwrap(URL(string: "about:blank"))
         var pages: MobileBrowserPageStore? = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -95,24 +95,23 @@ final class MobileTransientBrowsingTests: XCTestCase {
     }
 
     func testMobileCrossSpaceMoveRebuildsTheTabWithTheDestinationProfile() throws {
-        var session = BrowserSession.preview
-        let source = try XCTUnwrap(session.spaces.first)
-        let destination = try XCTUnwrap(session.spaces.last)
+        let browser = BrowserStore(session: BrowserSession.preview, persistence: InMemoryBrowserSessionPersistence())
+        let source = try XCTUnwrap(browser.session.spaces.first)
+        let destination = try XCTUnwrap(browser.session.spaces.last)
         let tab = try XCTUnwrap(source.currentTabs.first)
-        session.selectTab(tab.id)
+        browser.presentTab(tab.id, in: source.id)
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
 
-        pages.select(session: session)
+        pages.select(session: browser.presented)
         let sourcePage = try XCTUnwrap(pages.activePage)
         XCTAssertEqual(sourcePage.spaceID, source.id)
 
         XCTAssertTrue(
-            session.moveTab(tab.id, from: source.id, into: destination.id)
+            browser.moveTab(tab.id, from: source.id, into: destination.id)
         )
-        pages.reconcile(session: session)
-        session.selectSpace(destination.id)
-        session.selectTab(tab.id)
-        pages.select(session: session)
+        pages.reconcile(session: browser.session)
+        browser.presentTab(tab.id, in: destination.id)
+        pages.select(session: browser.presented)
 
         let destinationPage = try XCTUnwrap(pages.activePage)
         XCTAssertFalse(sourcePage === destinationPage)

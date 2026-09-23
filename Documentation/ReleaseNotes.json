@@ -2069,6 +2069,10 @@
     "page-security-and-find-counts": {
       "category": "improved",
       "message": "Site Controls now tell certificate errors, mixed content and dangerous sites apart, and Find in Page shows how many matches a page has where the engine can count them."
+    },
+    "core-data-only-selection": {
+      "category": "internal",
+      "message": "Keep the viewed Space and tab as window state, remove the Swift session editing surface and its copies of core rules, and route launch cleanup and retention through core commands."
     }
   }
 }

@@ -3,7 +3,6 @@ import Foundation
 /// Which tab a window shows for a Space after the core repairs it.
 enum BrowserWindowTabSelection: String {
     case window
-    case space
     case first
     case none
 }
@@ -24,7 +23,6 @@ extension BrowserCorePolicy {
         let id: SpaceID
         let hasWindowTab: Bool
         let isCaptured: Bool
-        let hasSpaceSelection: Bool
         let hasTabs: Bool
     }
 
@@ -35,16 +33,15 @@ extension BrowserCorePolicy {
     }
 
     /// Nil when the core cannot answer; the caller keeps its state untouched.
-    static func windowRepair(selectedSpaceID: SpaceID, sessionSelectedSpaceID: SpaceID, capturesSelection: Bool,
+    static func windowRepair(selectedSpaceID: SpaceID, capturesSelection: Bool,
         spaces: [WindowSpaceFacts], splitLayouts: [WindowSplitLayout]) -> BrowserWindowRepair? {
         guard let response = evaluate([
             "version": 1, "operation": "window.repair",
             "selectedSpaceID": selectedSpaceID.rawValue.coreIdentifier,
-            "sessionSelectedSpaceID": sessionSelectedSpaceID.rawValue.coreIdentifier,
             "capturesSelection": capturesSelection,
             "spaces": spaces.map { space -> [String: Any] in
                 ["id": space.id.rawValue.coreIdentifier, "windowTab": space.hasWindowTab, "captured": space.isCaptured,
-                 "spaceSelection": space.hasSpaceSelection, "hasTabs": space.hasTabs]
+                 "hasTabs": space.hasTabs]
             },
             "splitLayouts": splitLayouts.map { layout -> [String: Any] in
                 ["groupID": layout.groupID.rawValue.coreIdentifier, "columns": layout.columns,

@@ -42,14 +42,14 @@ public sealed partial class BrowserContractsTests {
         Assert.False(authority.Engine.Supports("unknown-feature"));
         Assert.Equal(1UL, authority.Revision);
         authority.Commit(1, RenameDelta(session, "Engine-independent tab"));
-        var saved = authority.Checkpoint(2, Selection(session)).Read("core");
+        var saved = authority.Checkpoint(2).Read("core");
         Assert.DoesNotContain("test.webkit", System.Text.Encoding.UTF8.GetString(saved));
         var restored = new NativeSessionAuthority(saved);
         Assert.Null(restored.Engine);
         restored.RegisterEngine(Bytes(EngineDescriptor("test.chromium")));
         Assert.Equal("test.chromium", restored.Engine!.Implementation);
         Assert.Equal("test.webkit", authority.Engine.Implementation);
-        Assert.Equal(saved, restored.Checkpoint(1, Selection(session)).Read("core"));
+        Assert.Equal(saved, restored.Checkpoint(1).Read("core"));
     }
 
     [Fact]

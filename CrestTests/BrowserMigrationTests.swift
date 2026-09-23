@@ -348,7 +348,7 @@ final class BrowserMigrationTests: XCTestCase {
 
         try store.importPortableArchive(imported)
 
-        XCTAssertEqual(store.session.selectedSpace?.name, "Imported Bookmarks")
+        XCTAssertEqual(store.selectedSpace?.name, "Imported Bookmarks")
         XCTAssertEqual(store.selectedTab?.title, "Example")
         XCTAssertEqual(persistence.session, store.session)
     }
@@ -381,9 +381,8 @@ final class BrowserMigrationTests: XCTestCase {
             symbol: "briefcase",
             accent: .indigo,
             folders: [folder],
-            tabs: [pinned, saved, current],
-            selectedTabID: current.id
+            tabs: [pinned, saved, current]
         )
-        return BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        return BrowserSession(spaces: [space])
     }
 }

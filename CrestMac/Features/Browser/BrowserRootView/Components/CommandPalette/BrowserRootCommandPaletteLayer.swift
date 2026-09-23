@@ -59,7 +59,7 @@ struct BrowserRootCommandPaletteLayer: View {
             browser: model.browser,
             accessController: model.spaceAccess,
             didSelectTab: {
-                model.pages.select(session: model.browser.session)
+                model.pages.select(session: model.browser.presented)
                 model.address = model.browser.selectedTab?.url?.absoluteString ?? ""
             }
         )

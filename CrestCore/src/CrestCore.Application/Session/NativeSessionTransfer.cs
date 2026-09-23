@@ -30,8 +30,8 @@ public sealed class NativeSessionTransfer : IDisposable {
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is not null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             try {
-                a = sourceCommand.Reserve(NativeSessionAuthority.TransferSelection(sourceCommand.Document));
-                b = destinationCommand.Reserve(NativeSessionAuthority.TransferSelection(destinationCommand.Document));
+                a = sourceCommand.Reserve();
+                b = destinationCommand.Reserve();
                 if (sync is not null) {
                     if (ReferenceEquals(sync.Owner.Session, source)) a.BindSync(sync);
                     else if (ReferenceEquals(sync.Owner.Session, destination)) b.BindSync(sync);

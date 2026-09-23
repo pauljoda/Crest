@@ -60,7 +60,8 @@ public static class NativeSessionMaintenance {
     public static JsonObject Repair(JsonObject source, double now, JsonObject? emptySpace = null, IIdSource? ids = null) {
         if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         ids ??= new SystemIdSource();
-        var result = source.DeepClone().AsObject();
+        // Selection is window state; a stored document's legacy fields go.
+        var result = LegacySelectionFields.WithoutSelection(source.DeepClone().AsObject());
         var spaces = Items(result, "spaces");
         var pending = (source["spaceDeletions"] as JsonArray ?? new()).Select(n => Id(n!["spaceID"])).ToHashSet();
         var pendingSpaces = spaces.Where(s => pending.Contains(Id(s!["id"]))).ToDictionary(s => Id(s!["id"]), s => s!.DeepClone());
@@ -68,11 +69,9 @@ public static class NativeSessionMaintenance {
             var blank = emptySpace?.DeepClone().AsObject() ?? new JsonObject { ["name"] = "Space 1", ["symbol"] = "square.grid.2x2.fill", ["accent"] = SpaceAccentCodes.Indigo };
             blank["id"] = SwiftId(ids.Next()); blank["profile"] = new JsonObject { ["id"] = ids.Next().ToString("D") };
             var tab = StartTab(now, ids);
-            blank["selectedTabID"] = tab["id"]!.DeepClone();
             blank["tabs"] = new JsonArray(tab); blank["folders"] = new JsonArray();
             blank["archivedTabs"] = new JsonArray(); blank["history"] = new JsonArray();
             if (spaces.Count == 0) { spaces = new JsonArray(blank); result["spaces"] = spaces; } else spaces.Add((JsonNode)blank);
-            result["selectedSpaceID"] = blank["id"]!.DeepClone();
         }
         var spaceIds = new RuntimeIdentityRegistry(ids); var profiles = new RuntimeIdentityRegistry(ids);
         var tabIds = new RuntimeIdentityRegistry(ids); var assets = new JsonArray();
@@ -92,8 +91,7 @@ public static class NativeSessionMaintenance {
                 return (JsonNode)value;
             }).ToArray());
             var folderLocations = folders.ToDictionary(f => f.Id, f => f.Location);
-            var tabs = Items(space, "tabs"); Guid? selected = null;
-            var previousSelection = OptionalId(space["selectedTabID"]); int pinned = 0;
+            var tabs = Items(space, "tabs"); int pinned = 0;
             for (int ti = 0; ti < tabs.Count; ti++) {
                 var tab = tabs[ti]!.AsObject(); var oldId = Id(tab["id"]);
                 var id = tabIds.Claim(oldId); tab["id"] = SwiftId(id);
@@ -104,18 +102,17 @@ public static class NativeSessionMaintenance {
                     ["sourceTabID"] = SwiftId(oldId)
                 });
                 var placement = StoredPlacement(tab);
-                if (placement == TabPlacement.Pinned && ++pinned > 12) placement = TabPlacement.Saved;
+                if (placement == TabPlacement.Pinned && ++pinned > BrowserLimits.PinnedTabs) placement = TabPlacement.Saved;
                 tab["placement"] = TabPlacementCodes.Name(placement);
                 if (placement == TabPlacement.Current) tab.Remove("savedURL");
                 else tab["savedURL"] ??= tab["url"]?.DeepClone();
                 if (placement == TabPlacement.Pinned || OptionalId(tab["folderID"]) is not { } folder
                     || !folderLocations.TryGetValue(folder, out var location) || location != placement) tab.Remove("folderID");
                 NormalizeTab(tab);
-                if (selected is null && previousSelection == oldId) selected = id;
             }
             if (tabs.Count == 0) {
                 var tab = StartTab(now, ids); tab["id"] = SwiftId(tabIds.Claim(Id(tab["id"])));
-                tabs.Add((JsonNode)tab); selected = Id(tab["id"]);
+                tabs.Add((JsonNode)tab);
                 if (space["tabs"] is null) space["tabs"] = tabs;
             }
             var groups = SplitMembershipPolicy.Repair(tabs.Select(t => new SplitMember(OptionalId(t!["splitGroupID"]), StoredPlacement(t),
@@ -130,8 +127,6 @@ public static class NativeSessionMaintenance {
             space["archivedTabs"] = new JsonArray(archive.ToArray());
             space["history"] = Array(Items(space, "history").Take(HistoryPolicy.MaximumEntries).Select(n => n!));
             space["splitGroups"] = NormalizeGroups(Items(space, "splitGroups"));
-            var fallback = tabs[TabSelectionPolicy.Fallback(tabs.Select(t => StoredPlacement(t!)).ToArray()) ?? 0];
-            space["selectedTabID"] = selected is { } chosen ? SwiftId(chosen) : fallback!["id"]!.DeepClone();
         }
         for (int index = 0; index < spaces.Count; index++)
             if (pendingSpaces.TryGetValue(Id(spaces[index]!["id"]), out var original)) {
@@ -140,9 +135,9 @@ public static class NativeSessionMaintenance {
                 spaces[index] = original.DeepClone();
             }
         var activeIds = spaces.Select(s => Id(s!["id"])).ToHashSet();
-        if (OptionalId(result["selectedSpaceID"]) is not { } active || !activeIds.Contains(active) || pending.Contains(active))
-            result["selectedSpaceID"] = spaces.First(s => !pending.Contains(Id(s!["id"])))!["id"]!.DeepClone();
-        if (OptionalId(result["defaultSpaceID"]) is not { } launch || !activeIds.Contains(launch)) result["defaultSpaceID"] = result["selectedSpaceID"]!.DeepClone();
+        // A launch Space that is gone falls back to the first Space that stays.
+        if (OptionalId(result["defaultSpaceID"]) is not { } launch || !activeIds.Contains(launch))
+            result["defaultSpaceID"] = spaces.First(s => !pending.Contains(Id(s!["id"])))!["id"]!.DeepClone();
         return new() { ["session"] = result, ["assets"] = assets };
     }
 
@@ -161,6 +156,7 @@ public static class NativeSessionMaintenance {
         }
         return new(groups.Values.Select(g => (JsonNode)g).ToArray());
     }
+
 
     public static JsonObject Retain(JsonObject source, double now) {
         if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
