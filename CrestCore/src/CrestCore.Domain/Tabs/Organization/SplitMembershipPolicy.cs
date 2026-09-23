@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Repair never reorders tabs or rewrites position clocks. A singleton keeps

@@ -76,7 +76,7 @@ internal enum SessionOperation {
 }
 
 internal static class SessionOperationCodes {
-    #region Actions - Encoding
+    #region Actions - Decoding
 
     public static SessionOperation Parse(string? value) => value switch {
         "archive.restore" => SessionOperation.ArchiveRestore,
@@ -153,75 +153,9 @@ internal static class SessionOperationCodes {
         _ => SessionOperation.Unknown
     };
 
-    public static string Name(SessionOperation operation) => operation switch {
-        SessionOperation.ArchiveRestore => "archive.restore",
-        SessionOperation.FolderCollapse => "folder.collapse",
-        SessionOperation.FolderColor => "folder.color",
-        SessionOperation.FolderCreate => "folder.create",
-        SessionOperation.FolderDelete => "folder.delete",
-        SessionOperation.FolderMove => "folder.move",
-        SessionOperation.FolderRename => "folder.rename",
-        SessionOperation.FolderSymbol => "folder.symbol",
-        SessionOperation.HistoryClear => "history.clear",
-        SessionOperation.HistoryRemoveRange => "history.remove_range",
-        SessionOperation.HistoryRemoveUrl => "history.remove_url",
-        SessionOperation.HistoryVisit => "history.visit",
-        SessionOperation.LaunchPlan => "launch.plan",
-        SessionOperation.PreferencesImport => "preferences.import",
-        SessionOperation.PreferencesSet => "preferences.set",
-        SessionOperation.PreferencesTranslationRule => "preferences.translation_rule",
-        SessionOperation.RecordsCleanup => "records.cleanup",
-        SessionOperation.RecordsSweep => "records.sweep",
-        SessionOperation.SpaceAccess => "space.access",
-        SessionOperation.SpaceBranding => "space.branding",
-        SessionOperation.SpaceBrowsingPreferences => "space.browsing_preferences",
-        SessionOperation.SpaceCreate => "space.create",
-        SessionOperation.SpaceCredentialPreferences => "space.credential_preferences",
-        SessionOperation.SpaceDefault => "space.default",
-        SessionOperation.SpaceDeletionBegin => "space.deletion.begin",
-        SessionOperation.SpaceIdentity => "space.identity",
-        SessionOperation.SpaceRemove => "space.remove",
-        SessionOperation.SpaceReorder => "space.reorder",
-        SessionOperation.SpaceResetPrivate => "space.reset_private",
-        SessionOperation.SpaceSavedExpansion => "space.saved_expansion",
-        SessionOperation.SpaceSearchProviderRemove => "space.search_provider.remove",
-        SessionOperation.SpaceSearchProviderUpsert => "space.search_provider.upsert",
-        SessionOperation.SplitDissolve => "split.dissolve",
-        SessionOperation.SplitIcon => "split.icon",
-        SessionOperation.SplitJoin => "split.join",
-        SessionOperation.SplitJoinInPlace => "split.join_in_place",
-        SessionOperation.SplitLeave => "split.leave",
-        SessionOperation.SplitMove => "split.move",
-        SessionOperation.SplitOpenLink => "split.open_link",
-        SessionOperation.SplitReorder => "split.reorder",
-        SessionOperation.SplitTint => "split.tint",
-        SessionOperation.SplitTitle => "split.title",
-        SessionOperation.TabTouch => "tab.touch",
-        SessionOperation.TabArchiveTransient => "tab.archive_transient",
-        SessionOperation.TabCleanup => "tab.cleanup",
-        SessionOperation.TabClearCurrent => "tab.clear_current",
-        SessionOperation.TabClose => "tab.close",
-        SessionOperation.TabCloseDurable => "tab.close_durable",
-        SessionOperation.TabCopy => "tab.copy",
-        SessionOperation.TabDelete => "tab.delete",
-        SessionOperation.TabFaviconCache => "tab.favicon.cache",
-        SessionOperation.TabIcon => "tab.icon",
-        SessionOperation.TabMove => "tab.move",
-        SessionOperation.TabObserve => "tab.observe",
-        SessionOperation.TabOpen => "tab.open",
-        SessionOperation.TabPromoteTransient => "tab.promote_transient",
-        SessionOperation.TabRename => "tab.rename",
-        SessionOperation.TabResidency => "tab.residency",
-        SessionOperation.TabRestoreArchive => "tab.restore_archive",
-        SessionOperation.TabSavedLocation => "tab.saved_location",
-        SessionOperation.TabTransfer => "tab.transfer",
-        SessionOperation.TabsBatch => "tabs.batch",
-        SessionOperation.TabsFile => "tabs.file",
-        SessionOperation.TransientArchive => "transient.archive",
-        SessionOperation.TransientPromote => "transient.promote",
-        SessionOperation.WorkspaceImport => "workspace.import",
-        _ => throw new ArgumentOutOfRangeException(nameof(operation))
-    };
+    #endregion
+
+    #region Actions - Families
 
     public static bool IsHistory(SessionOperation operation) => operation is
         SessionOperation.UnknownHistory

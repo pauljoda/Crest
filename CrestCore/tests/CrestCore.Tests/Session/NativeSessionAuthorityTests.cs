@@ -175,7 +175,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("https://example.com/live-child", copy["url"]!.GetValue<string>());
         Assert.Equal("current", copy["placement"]!.GetValue<string>());
         Assert.Null(copy["splitGroupID"]); Assert.Null(copy["savedURL"]);
-        Assert.True(JsonNode.DeepEquals(original["futureTabProperty"], copy["futureTabProperty"]));
+        Assert.True(JsonNode.DeepEquals(original["iconAccent"], copy["iconAccent"]));
         Assert.Equal("saved", original["placement"]!.GetValue<string>());
         Assert.Equal("https://example.com/article#one", original["url"]!.GetValue<string>());
         Assert.Single(JsonNode.Parse(accepted.Output)!["copies"]!.AsArray());

@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
@@ -9,7 +11,7 @@ public sealed partial class BrowserTabCollection {
 
     #region Actions - Splits
 
-    private BrowserTab CopyTab(BrowserTab source, Guid id, DateTimeOffset now) => BrowserTab.Restore(source.Capture() with {
+    private BrowserTab CopyTab(BrowserTab source, Guid id, DateTimeOffset now) => BrowserTab.Restore(source.State with {
         Id = id,
         Placement = TabPlacement.Current,
         FolderId = null,
@@ -24,7 +26,6 @@ public sealed partial class BrowserTabCollection {
     public BrowserTab DuplicateTab(Guid sourceId, IIdSource ids, DateTimeOffset now,
         TabPlacement placement = TabPlacement.Current, int? requestedIndex = null) {
         var source = Tab(sourceId);
-        if (source.Phase == TabPhase.Closing) throw new BrowserRuleException(BrowserRuleCodes.PageClosing);
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         var copy = CopyTab(source, ids.Next(), now);
         copy.Place(placement, null, now);
@@ -41,8 +42,6 @@ public sealed partial class BrowserTabCollection {
         var targetMembers = SplitMembers(targetId);
         bool sameGroup = targetMembers.Any(t => t.Id == sourceId);
         if (sameGroup && memberIndex is null) throw new BrowserRuleException(BrowserRuleCodes.AlreadyInSplit);
-        if (source.Phase == TabPhase.Closing || targetMembers.Any(t => t.Phase == TabPhase.Closing))
-            throw new BrowserRuleException(BrowserRuleCodes.PageClosing);
         if (!sameGroup && targetMembers.Count >= MaximumSplitMembers) throw new BrowserRuleException(BrowserRuleCodes.SplitLimit);
         bool copyTarget = target.Placement != TabPlacement.Current && !sameGroup;
         bool copySource = source.Placement != TabPlacement.Current && !sameGroup;

@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Synchronous value edits used by native hosts that still own page lifetimes.
@@ -103,9 +105,9 @@ public sealed partial class BrowserTabCollection {
             throw new BrowserRuleException(BrowserRuleCodes.UnknownCurrentTab);
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
         foreach (var tab in removed.Where(t => !t.Content.IsStartPage)) {
-            var value = tab.Capture() with { SplitGroupId = null };
+            var value = tab.State with { SplitGroupId = null };
             if (resetArchivePlacement) value = value with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null };
-            archive.Add(new(value, now, deleting ? ArchiveReasons.Deleted : ArchiveReasons.Closed));
+            archive.Add(new(value, now, deleting ? ArchiveReason.Deleted : ArchiveReason.Closed));
         }
         tabs.RemoveAll(t => removing.Contains(t.Id));
         folders.Clear(); folders.AddRange(orderedFolders);

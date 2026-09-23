@@ -12,14 +12,4 @@ internal static class SavedLocationActionCodes {
     };
 
     #endregion
-
-    #region Actions - Encoding
-
-    public static string Name(SavedLocationAction action) => action switch {
-        SavedLocationAction.Replace => "replace",
-        SavedLocationAction.Restore => "restore",
-        _ => throw new ArgumentOutOfRangeException(nameof(action))
-    };
-
-    #endregion
 }

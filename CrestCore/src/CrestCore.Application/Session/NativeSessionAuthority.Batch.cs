@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -20,7 +21,7 @@ public sealed partial class NativeSessionAuthority {
             Guid? Tab(JsonNode? value) => value is null ? null : Id(value);
             Guid? Folder(JsonNode? value) => value is null ? null : Id(value);
             TabPlacement Placement(JsonNode? value) => value is null ? TabPlacement.Current
-                : Enum.Parse<TabPlacement>(value.GetValue<string>(), true);
+                : TabPlacementCodes.Parse(value.GetValue<string>()) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
             var captured = new TabBatchSelection(
                 selection["roots"]!.AsArray().Select(r => new BatchItem(Id(r!["id"]), r["folder"]!.GetValue<bool>())).ToArray(),
                 selection["tabs"]!.AsArray().Select(t => new BatchTab(Id(t!["id"]), Placement(t["placement"]),
@@ -37,65 +38,45 @@ public sealed partial class NativeSessionAuthority {
                 if (requested == sourceId) throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
                 destination = TransferSpace(requested, Id(args["destinationProfileId"]));
             }
-            var spaces = new JsonArray(TransferProjection(source));
-            if (destination is not null) spaces.Add((JsonNode)TransferProjection(destination));
-            var legacy = new LegacySessionDocument(new JsonObject {
-                ["session"] = new JsonObject { ["spaces"] = spaces }
-            });
-            var state = legacy.Read(new SystemIdSource());
-            var a = BrowserTabCollection.Restore(state.Spaces[0]);
-            var b = destination is null ? null : BrowserTabCollection.Restore(state.Spaces[1]);
-            var now = new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero).AddSeconds(request["now"]!.GetValue<double>());
-            Guid? destinationId = destination is null ? null : Id(destination.Metadata["id"]);
+            var a = source.Organization();
+            var b = destination?.Organization();
+            var now = Now(request);
             var result = a.ApplyBatch(captured, action, view.Tab(sourceId), Tab(args["fallbackTabId"]),
-                b, destinationId is { } target ? view.Tab(target) : null, new SystemIdSource(), now);
+                b, destination is null ? null : view.Tab(destination.Id), new SystemIdSource(), now);
+            var observations = (args["copyObservations"] as JsonArray ?? []).Select(node => SessionTabObservation.Decode(node!)).ToArray();
             foreach (var pair in result.Copies) {
-                legacy.CopyTabMetadata(pair.Source, pair.Copy);
-                var observation = (args["copyObservations"] as JsonArray)?.FirstOrDefault(o => Id(o!["tabId"]) == pair.Source);
+                var observation = observations.FirstOrDefault(item => item.TabId == pair.Source);
                 if (a.Tab(pair.Copy).Content.IsWebPage && observation is not null)
-                    a.Tab(pair.Copy).Observe(observation["url"]?.GetValue<string>(), observation["title"]!.GetValue<string>(),
-                        false, false, false, null);
+                    a.Tab(pair.Copy).AdoptObservation(observation.Url, observation.Title ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput));
             }
-            if (result.CreatedFolder is { } created && args["folderColor"] is { } color)
-                legacy.SetFolderMetadata(created, "color", color.DeepClone());
-            var capturedSpaces = new List<SpaceState> { a.Capture(state.Spaces[0]) };
-            if (b is not null) capturedSpaces.Add(b.Capture(state.Spaces[1]));
-            var edited = legacy.Write(state with { Spaces = capturedSpaces.ToArray() })["session"]!["spaces"]!.AsArray();
-            var outputSource = edited[0]!;
-            foreach (var pair in result.GroupCopies) {
-                var metadata = (spaces[0]!["splitGroups"] as JsonArray)?.FirstOrDefault(g => Id(g!["id"]) == pair.Source);
-                if (metadata is null) continue;
-                var copy = metadata.DeepClone(); copy["id"] = new JsonObject { ["rawValue"] = pair.Copy.ToString() };
-                foreach (var field in new[] { "titleModifiedAt", "iconModifiedAt", "tintModifiedAt" }) copy[field] = NativeEditTimestamp.Encode(now);
-                if (outputSource["splitGroups"] is not JsonArray) outputSource["splitGroups"] = new JsonArray();
-                outputSource["splitGroups"]!.AsArray().Add(copy);
-            }
+            if (result.CreatedFolder is { } created && args["folderColor"] is JsonObject color)
+                a.SetFolderColor(created, StoredSessionCodec.DecodeColor(color));
+            foreach (var pair in result.GroupCopies) a.CopySplitMetadata(pair.Source, pair.Copy, now);
+            a.PruneSplitMetadata(); b?.PruneSplitMetadata();
+            var organized = new List<(SpaceDocument Space, BrowserTabCollection Edited)> { (source.Organized(a), a) };
+            if (destination is not null && b is not null) organized.Add((destination.Organized(b), b));
             var changes = new JsonArray();
-            foreach (var space in edited) {
-                var groups = space![SpaceSections.TabsSection]!.AsArray().Where(t => t!["splitGroupID"] is not null)
-                    .Select(t => Id(t!["splitGroupID"])).ToHashSet();
-                if (space["splitGroups"] is JsonArray metadata)
-                    for (int i = metadata.Count - 1; i >= 0; i--) if (!groups.Contains(Id(metadata[i]!["id"]))) metadata.RemoveAt(i);
+            foreach (var (space, collection) in organized)
                 changes.Add((JsonNode)new JsonObject {
-                    ["space"] = space.DeepClone(),
+                    ["space"] = StoredSessionCodec.Encode(space with { History = [], ArchivedTabs = collection.Archive }),
                     ["tabId"] = null,
                     ["changed"] = true,
                     ["copies"] = new JsonArray(result.Copies.Select(p => (JsonNode)new JsonObject { ["source"] = p.Source.ToString(), ["copy"] = p.Copy.ToString() }).ToArray())
                 });
-            }
             var hint = new SessionSelectionHint().SelectTab(view, sourceId, result.Selection);
-            if (destinationId is { } moved) {
-                hint.SelectTab(view, moved, result.DestinationSelection);
-                if (action.Follow) hint.SelectSpace(moved);
+            if (destination is not null) {
+                hint.SelectTab(view, destination.Id, result.DestinationSelection);
+                if (action.Follow) hint.SelectSpace(destination.Id);
             }
-            var next = ApplyTransfer(document, edited.Select(s => s!.AsObject()).ToArray());
-            var output = TransferOutput(new JsonObject {
+            var next = Replacing(document, [.. organized.Select(pair => pair.Space)]);
+            Validate(next);
+            var output = Output(new JsonObject {
                 ["changes"] = changes,
                 [SessionSelectionHint.Key] = hint.Encode()
             });
             return new(this, expected, next, output);
         } catch (BrowserRuleException error) {
-            return new(this, expected, document, TransferOutput(new JsonObject { ["error"] = error.Code }), error.Code);
+            return new(this, expected, document, Output(new JsonObject { ["error"] = error.Code }), error.Code);
         }
     }
 

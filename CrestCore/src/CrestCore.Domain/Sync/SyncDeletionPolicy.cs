@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Absence alone is not authority to delete a shared tab. Delivery may be

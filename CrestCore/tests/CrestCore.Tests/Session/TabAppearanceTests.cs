@@ -10,9 +10,6 @@ namespace CrestCore.Tests;
 /// once, here. The image bytes stay in the native cache; these edits only name
 /// the tab whose stored image the platform must replace or drop.
 public sealed partial class BrowserContractsTests {
-    private static JsonNode Edited(JsonNode space, string operation, JsonObject arguments)
-        => JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, operation, arguments)))!;
-
     private static JsonNode Tab(JsonNode result) => result["space"]!["tabs"]![0]!;
 
     [Fact]

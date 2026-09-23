@@ -23,9 +23,9 @@ public sealed partial class NativeSessionAuthority {
         } else {
             var value = args["provider"] as JsonObject ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchProvider);
             var provider = SearchProvider.Custom(Id(value[SearchCodes.Id]),
-                LegacySessionDocument.Text(value[SearchCodes.Name]) ?? "",
-                LegacySessionDocument.Text(value[SearchCodes.SearchTemplate]) ?? "",
-                LegacySessionDocument.Text(value[SearchCodes.SuggestionTemplate]));
+                StoredSessionCodec.Text(value[SearchCodes.Name]) ?? "",
+                StoredSessionCodec.Text(value[SearchCodes.SearchTemplate]) ?? "",
+                StoredSessionCodec.Text(value[SearchCodes.SuggestionTemplate]));
             search = search.Upsert(provider);
             if (args["selects"]?.GetValue<bool>() == true) search = search.Select(provider.Id, search.SuggestionsEnabled);
         }

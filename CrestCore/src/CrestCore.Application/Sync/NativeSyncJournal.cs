@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -174,7 +175,7 @@ public sealed class NativeSyncJournal {
                 var folderRecords = records.Values.Where(r => Kind(r) == SyncRecordKinds.Folder).ToDictionary(r => Id(r["id"]!["value"]));
                 var archiveReasons = session is null
                     ? args["archiveReasons"]!.AsArray().ToDictionary(n => Id(n!["id"]), n => n!["reason"]!.GetValue<string>())
-                    : NativeSyncProjection.Items(session, "spaces").SelectMany(s => NativeSyncProjection.Items(s!, SpaceSections.ArchivedTabsSection))
+                    : NativeSyncProjection.Items(session, "spaces").SelectMany(s => NativeSyncProjection.Items(s!, StoredSessionCodec.Key.ArchivedTabs))
                         .ToDictionary(a => Id(a!["tab"]!["id"]), a => NativeSyncProjection.ArchiveReason(a!));
                 foreach (var (id, payload) in desired.OrderBy(p => p.Key, StringComparer.Ordinal)) {
                     if (next.TryGetValue(id, out var existing) && NativeSyncEvaluator.Equivalent(Payload(existing), payload)) continue;

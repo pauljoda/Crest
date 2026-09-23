@@ -39,7 +39,7 @@ public sealed partial class BrowserContractsTests {
         var copiedId = Guid.Parse(change["copies"]![0]!["copy"]!.GetValue<string>());
         var copy = change["space"]!["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == copiedId)!;
         Assert.Equal("Latest shared name", copy["customTitle"]!.GetValue<string>());
-        Assert.True(JsonNode.DeepEquals(space["tabs"]![0]!["futureTabProperty"], copy["futureTabProperty"]));
+        Assert.True(JsonNode.DeepEquals(space["tabs"]![0]!["iconAccent"], copy["iconAccent"]));
         var before = core.Checkpoint(2).Read("core");
         using (command.Reserve()) { }
         Assert.Equal(before, core.Checkpoint(2).Read("core"));

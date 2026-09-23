@@ -45,7 +45,7 @@ public sealed partial class BrowserContractsTests {
         var promoted = result["space"]!["tabs"]![1]!;
         Assert.Equal("current", promoted["placement"]!.GetValue<string>());
         Assert.Null(promoted["folderID"]); Assert.Null(promoted["savedURL"]);
-        Assert.True(JsonNode.DeepEquals(promoted["futureTabProperty"], session["spaces"]![0]!["tabs"]![0]!["futureTabProperty"]));
+        Assert.True(JsonNode.DeepEquals(promoted["iconAccent"], session["spaces"]![0]!["tabs"]![0]!["iconAccent"]));
         using (command.Reserve()) { }
         Assert.Equal(1UL, owner.Revision);
         using (var accepted = owner.PrepareCommand(1, Bytes(request)).Reserve()) accepted.Commit();

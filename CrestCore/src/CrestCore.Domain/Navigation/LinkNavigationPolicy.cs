@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Semantic link behavior shared by the native engine adapters. Engines keep

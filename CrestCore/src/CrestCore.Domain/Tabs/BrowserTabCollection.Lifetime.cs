@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
@@ -17,13 +19,13 @@ public sealed partial class BrowserTabCollection {
     }
 
     public void ArchiveTransient(TabState source, DateTimeOffset now) {
-        if (tabs.Any(t => t.Id == source.Id) || archive.Any(t => t.Id == source.Id))
+        if (tabs.Any(t => t.Id == source.Id) || archive.Any(archived => archived.Tab.Id == source.Id))
             throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
-        archive.Add(new(TransientState(source, now), now, ArchiveReasons.QuickWindow));
+        archive.Add(new(TransientState(source, now), now, ArchiveReason.QuickWindow));
     }
 
     private static TabState TransientState(TabState source, DateTimeOffset now) {
-        if (!source.Content.IsWebPage || string.IsNullOrEmpty(source.Url))
+        if (!TabContent.FromStored(source.NativeContent?.Kind, source.Url, source.Title).IsWebPage || string.IsNullOrEmpty(source.Url))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidTransientPage);
         return source with {
             Placement = TabPlacement.Current,
@@ -49,7 +51,7 @@ public sealed partial class BrowserTabCollection {
     public Guid? CloseDurable(Guid id, Guid? selected, Guid? fallback, bool returnToSavedUrl) {
         var tab = Tab(id);
         if (tab.Placement == TabPlacement.Current) throw new BrowserRuleException(BrowserRuleCodes.NotDurableTab);
-        tab.Unload(returnToSavedUrl);
+        if (returnToSavedUrl) tab.ReturnToSavedUrl();
         return selected == id ? fallback is { } other && other != id && tabs.Any(t => t.Id == other)
             ? other : null : selected;
     }
@@ -63,7 +65,7 @@ public sealed partial class BrowserTabCollection {
         var ids = expired.Select(t => t.Id).ToHashSet();
         var nextFolders = new FolderTree(folders).PreserveOrder(ids, tabs);
         foreach (var tab in expired)
-            archive.Add(new(tab.Capture() with { SplitGroupId = null }, now, ArchiveReasons.AutoCleanup));
+            archive.Add(new(tab.State with { SplitGroupId = null }, now, ArchiveReason.AutoCleanup));
         tabs.RemoveAll(t => ids.Contains(t.Id));
         folders.Clear(); folders.AddRange(nextFolders);
         // Maintenance preserves an empty selection and does not dissolve a

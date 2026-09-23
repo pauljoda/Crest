@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// What dismissing the selected tab means. Durable tabs keep their record and

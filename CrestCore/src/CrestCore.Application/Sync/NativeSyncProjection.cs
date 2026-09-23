@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -59,7 +60,7 @@ public static class NativeSyncProjection {
         var spaceTokens = Tokens(SyncRecordKinds.Space, spaces);
         for (int i = 0; i < spaces.Length; i++) {
             var space = spaces[i];
-            var portable = Items(space, SpaceSections.TabsSection).Where(t => PortableTab(t!)).Select(t => t!).ToArray();
+            var portable = Items(space, StoredSessionCodec.Key.Tabs).Where(t => PortableTab(t!)).Select(t => t!).ToArray();
             var splitIds = portable.Where(t => t["splitGroupID"] is not null).Select(t => Id(t["splitGroupID"])).ToHashSet();
             var spaceValue = Fields(space, "id", "name", "symbol", "accent", "branding", "browsingPreferences",
                 "accessPolicy", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt");
@@ -70,10 +71,10 @@ public static class NativeSyncProjection {
             Add(SyncRecordKinds.Space, spaceValue);
 
             if (policy.CurrentTabs || policy.SavedStructure) {
-                var folders = Items(space, SpaceSections.FoldersSection).Where(f => policy.Includes(Placement(f!, "location"))).Select(f => f!).ToArray();
-                var tree = new FolderTree(folders.Select(f => new BrowserFolder(Id(f["id"]), Text(f["title"])!,
-                    Placement(f, "location"), f["parentID"] is { } parent ? Id(parent) : null)).ToArray());
-                IReadOnlyList<BrowserFolder> display;
+                var folders = Items(space, StoredSessionCodec.Key.Folders).Where(f => policy.Includes(Placement(f!, "location"))).Select(f => f!).ToArray();
+                var tree = new FolderTree(folders.Select(f => new FolderState(Id(f["id"]), Placement(f, "location"),
+                    Text(f["title"])!, ParentId: f["parentID"] is { } parent ? Id(parent) : null)).ToArray());
+                IReadOnlyList<FolderState> display;
                 try { display = tree.DisplayOrder(); } catch (BrowserRuleException) { throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.InvalidFolderHierarchy, Id(space["id"]).ToString("D")); }
                 var byId = folders.ToDictionary(f => Id(f["id"]));
                 var folderTokens = new Dictionary<Guid, string>();
@@ -95,14 +96,14 @@ public static class NativeSyncProjection {
             var tabTokens = Tokens(SyncRecordKinds.Tab, tabs);
             for (int j = 0; j < tabs.Length; j++) Add(SyncRecordKinds.Tab, Tab(tabs[j], space["id"]!, tabTokens[j], archived: false));
             if (!policy.HistoryAndArchive) continue;
-            foreach (var history in Items(space, SpaceSections.HistorySection).Where(h => SyncContentPolicy.Includes(Text(h!["url"])))) {
+            foreach (var history in Items(space, StoredSessionCodec.Key.History).Where(h => SyncContentPolicy.Includes(Text(h!["url"])))) {
                 var value = Fields(history!, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
                 value["spaceID"] = space["id"]!.DeepClone();
                 Add(SyncRecordKinds.History, value);
             }
             // Archive presentation sorts by date after a merge. That is not a
             // user reorder: keep accepted positions and append new identities.
-            var archive = Items(space, SpaceSections.ArchivedTabsSection).Where(a => PortableTab(a!["tab"]!)).Select(a => a!)
+            var archive = Items(space, StoredSessionCodec.Key.ArchivedTabs).Where(a => PortableTab(a!["tab"]!)).Select(a => a!)
                 .OrderBy(a => existing.GetValueOrDefault(SyncRecordKinds.Archive + ":" + Id(a["tab"]!["id"]).ToString("D")) ?? "~", StringComparer.Ordinal)
                 .ThenBy(a => Id(a["tab"]!["id"]).ToString("D"), StringComparer.Ordinal).ToArray();
             var archiveTokens = Tokens(SyncRecordKinds.Archive, archive, archived: true);

@@ -1,6 +1,6 @@
-using System.Text;
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -10,36 +10,10 @@ public sealed partial class NativeSessionAuthority {
 
     private SpaceDocument TransferSpace(Guid spaceId, Guid profileId) {
         if (PendingDeletion(document.Metadata, spaceId) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-        var space = document.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == spaceId)
+        var space = document.Spaces.SingleOrDefault(s => s.Id == spaceId)
             ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
-        if (Id(space.Metadata["profile"]!["id"]) != profileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
+        if (space.ProfileId != profileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
         return space;
-    }
-
-    private static JsonObject TransferProjection(SpaceDocument space) {
-        var value = space.Metadata.DeepClone().AsObject();
-        foreach (var section in Sections) value[section] = new JsonArray(section is SpaceSections.HistorySection or SpaceSections.ArchivedTabsSection ? [] :
-            space.Sections[section].Select(n => n.DeepClone()).ToArray());
-        return value;
-    }
-
-    private static SessionDocument ApplyTransfer(SessionDocument document, params JsonObject[] edits) {
-        var spaces = document.Spaces.Select(space => {
-            var edited = edits.FirstOrDefault(n => Id(n["id"]) == Id(space.Metadata["id"]));
-            if (edited is null) return space;
-            var sections = space.Sections.ToDictionary(p => p.Key, p => p.Value);
-            foreach (var section in new[] { SpaceSections.TabsSection, SpaceSections.FoldersSection }) sections[section] = edited[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
-            if (edited[SpaceSections.ArchivedTabsSection] is JsonArray archive && archive.Count > 0)
-                sections[SpaceSections.ArchivedTabsSection] = space.ArchivedTabs.Concat(archive.Select(n => n!.DeepClone())).ToArray();
-            return new SpaceDocument(SpaceFields(edited), sections);
-        }).ToArray();
-        var next = new SessionDocument(document.Metadata, spaces); Validate(next); return next;
-    }
-
-    private static byte[] TransferOutput(JsonObject result) {
-        var bytes = Encoding.UTF8.GetBytes(result.ToJsonString());
-        if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
-        return bytes;
     }
 
     private NativeSessionCommand PrepareTabTransfer(ulong expected, JsonObject request) {
@@ -48,13 +22,13 @@ public sealed partial class NativeSessionAuthority {
         var source = TransferSpace(sourceId, Id(request["profileId"]));
         var destination = TransferSpace(destinationId, Id(request["destinationProfileId"]));
         var args = request["arguments"]!.AsObject(); var view = SessionView.Decode(request[SessionView.Key]);
-        var result = NativeTabTransfer.Evaluate(TransferProjection(source), view, TransferProjection(destination), view,
-            args, request["now"]!.GetValue<double>());
-        var next = ApplyTransfer(document, result.Source, result.Destination);
+        var result = NativeTabTransfer.Evaluate(source, view, destination, view, NativeTabTransfer.Arguments.Decode(args), Now(request));
+        var next = Replacing(document, result.Source, result.Destination);
+        Validate(next);
         var hint = new SessionSelectionHint().SelectTab(view, sourceId, result.SourceSelection)
             .SelectTab(view, destinationId, result.DestinationSelection);
         if (args["select"]?.GetValue<bool>() == true) hint.SelectSpace(destinationId);
-        return new(this, expected, next, TransferOutput(result.Encode(hint)));
+        return new(this, expected, next, Output(result.Encode(hint)));
     }
 
     public static NativeSessionTransfer PrepareTransfer(NativeSessionAuthority source, ulong sourceRevision,
@@ -74,26 +48,25 @@ public sealed partial class NativeSessionAuthority {
             var spaceId = Id(request["spaceId"]); var profileId = Id(request["profileId"]);
             source.RequireAccessible(spaceId); destination.RequireAccessible(spaceId);
             var a = source.TransferSpace(spaceId, profileId); var b = destination.TransferSpace(spaceId, profileId);
-            var args = request["arguments"]!.DeepClone().AsObject();
-            var tabId = Id(args["tabId"]);
-            if (destination.document.Spaces.Any(s => s.Tabs.Any(t => Id(t["id"]) == tabId)
-                || s.ArchivedTabs.Any(t => Id(t["tab"]!["id"]) == tabId)))
+            var args = NativeTabTransfer.Arguments.Decode(request["arguments"]!.AsObject());
+            if (destination.document.Spaces.Any(s => s.Tabs.Any(t => t.Id == args.TabId)
+                || s.ArchivedTabs.Any(archived => archived.Tab.Id == args.TabId)))
                 throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
             // A window transfer keeps the exact profile and makes a current tab.
-            args["placement"] = TabPlacementCodes.Current; args["folderId"] = null; args["before"] = null; args["afterSelection"] = true;
+            args = args with { Placement = TabPlacement.Current, FolderId = null, Before = null, AfterSelection = true };
             var sourceView = SessionView.Decode(request["sourceView"]);
             var destinationView = SessionView.Decode(request["destinationView"]);
-            var result = NativeTabTransfer.Evaluate(TransferProjection(a), sourceView,
-                TransferProjection(b), destinationView, args, request["now"]!.GetValue<double>());
+            var result = NativeTabTransfer.Evaluate(a, sourceView, b, destinationView, args, Now(request));
             // Each window gets its own hint: the source shows its fallback, the
             // destination the moved tab when the move selects it.
             var sourceHint = new SessionSelectionHint().SelectTab(sourceView, spaceId, result.SourceSelection);
             var destinationHint = new SessionSelectionHint().SelectTab(destinationView, spaceId, result.DestinationSelection);
-            if (args["select"]?.GetValue<bool>() == true) destinationHint.SelectSpace(spaceId);
-            var nextSource = ApplyTransfer(source.document, result.Source);
-            var nextDestination = ApplyTransfer(destination.document, result.Destination);
+            if (args.Select) destinationHint.SelectSpace(spaceId);
+            var nextSource = Replacing(source.document, result.Source);
+            var nextDestination = Replacing(destination.document, result.Destination);
+            Validate(nextSource); Validate(nextDestination);
             return new(source, new(source, sourceRevision, nextSource, []), destination,
-                new(destination, destinationRevision, nextDestination, []), TransferOutput(result.Encode(sourceHint, destinationHint)));
+                new(destination, destinationRevision, nextDestination, []), Output(result.Encode(sourceHint, destinationHint)));
         }
     }
 

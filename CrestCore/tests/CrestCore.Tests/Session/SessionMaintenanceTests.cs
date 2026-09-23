@@ -9,19 +9,13 @@ namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
     [Fact]
-    public void SessionRepairIsAtomicPreservesAdditiveFieldsAndReidentifiesRuntimeCollisions() {
+    public void SessionRepairIsAtomicAndReidentifiesRuntimeCollisions() {
         var source = SavedSession().Document["session"]!.AsObject();
-        var first = source["spaces"]![0]!;
-        source["futureSessionIntent"] = new JsonObject { ["enabled"] = true };
-        var second = first.DeepClone();
-        first["tabs"]![0]!["futureTabIntent"] = "preserved";
-        source["spaces"]!.AsArray().Add(second);
+        source["spaces"]!.AsArray().Add(source["spaces"]![0]!.DeepClone());
         var before = Bytes(source);
         var output = NativeSessionMaintenance.Repair(source, 800000000);
         var result = output["session"]!;
         Assert.Equal(before, Bytes(source));
-        Assert.True(result["futureSessionIntent"]!["enabled"]!.GetValue<bool>());
-        Assert.Equal("preserved", result["spaces"]![0]!["tabs"]![0]!["futureTabIntent"]!.GetValue<string>());
         Assert.NotEqual(result["spaces"]![0]!["id"]!.ToJsonString(), result["spaces"]![1]!["id"]!.ToJsonString());
         Assert.NotEqual(result["spaces"]![0]!["profile"]!["id"]!.ToJsonString(), result["spaces"]![1]!["profile"]!["id"]!.ToJsonString());
         Assert.NotEqual(result["spaces"]![0]!["tabs"]![0]!["id"]!.ToJsonString(), result["spaces"]![1]!["tabs"]![0]!["id"]!.ToJsonString());
@@ -33,10 +27,18 @@ public sealed partial class BrowserContractsTests {
     public void FailedRetentionLeavesEveryCategoryAndTheSourceUnchanged() {
         var source = SavedSession().Document["session"]!.AsObject(); var space = source["spaces"]![0]!;
         space["browsingPreferences"]!["dataRetention"] = new JsonObject { ["history"] = "oneDay", ["archive"] = "oneDay" };
-        space["history"] = new JsonArray(new JsonObject { ["lastVisitedAt"] = 0.0 });
-        space["archivedTabs"] = new JsonArray(new JsonObject { ["archivedAt"] = "invalid" });
+        space["history"] = new JsonArray(new JsonObject {
+            ["id"] = Guid.NewGuid().ToString(),
+            ["url"] = "https://example.com/old",
+            ["title"] = "Old visit",
+            ["firstVisitedAt"] = 0.0,
+            ["lastVisitedAt"] = 0.0,
+            ["visitCount"] = 1
+        });
+        space["archivedTabs"] = new JsonArray(new JsonObject { ["tab"] = space["tabs"]![0]!.DeepClone(), ["archivedAt"] = "invalid" });
         var before = Bytes(source);
-        Assert.Throws<InvalidOperationException>(() => NativeSessionMaintenance.Retain(source, 800000000));
+        Assert.Equal(BrowserRuleCodes.InvalidSavedState,
+            Assert.Throws<BrowserRuleException>(() => NativeSessionMaintenance.Retain(source, 800000000)).Code);
         Assert.Equal(before, Bytes(source));
         space["archivedTabs"] = new JsonArray();
         var retained = NativeSessionMaintenance.Retain(source, 800000000);

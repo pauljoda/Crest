@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 public static class HistoryPolicy {
@@ -24,13 +26,13 @@ public static class HistoryPolicy {
         return (Normalize(left) ?? left) == (Normalize(right) ?? right);
     }
 
-    public static HistoryVisit Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryVisit? previous) {
+    public static HistoryEntryState Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryEntryState? previous) {
         if (Normalize(normalizedUrl) != normalizedUrl || newId == Guid.Empty
             || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRuleCodes.InvalidHistoryVisit);
         string resolvedTitle = string.IsNullOrEmpty(title) ? new Uri(normalizedUrl).Host : title;
         if (resolvedTitle.Length == 0) resolvedTitle = normalizedUrl;
         return previous is null ? new(newId, normalizedUrl, resolvedTitle, now, now, 1)
-            : previous with { Title = resolvedTitle, VisitedAt = now, VisitCount = checked(previous.VisitCount + 1) };
+            : previous with { Title = resolvedTitle, LastVisitedAt = now, VisitCount = checked(previous.VisitCount + 1) };
     }
 
     #endregion

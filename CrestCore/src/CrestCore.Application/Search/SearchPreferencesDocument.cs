@@ -27,16 +27,16 @@ internal static class SearchPreferencesDocument {
             foreach (var item in custom) {
                 if (item is not JsonObject value) continue;
                 try {
-                    providers.Add(SearchProvider.Custom(LegacySessionDocument.Id(value[SearchCodes.Id]),
-                        LegacySessionDocument.Text(value[SearchCodes.Name]) ?? "",
-                        LegacySessionDocument.Text(value[SearchCodes.SearchTemplate]) ?? "",
-                        LegacySessionDocument.Text(value[SearchCodes.SuggestionTemplate])));
+                    providers.Add(SearchProvider.Custom(StoredSessionCodec.Identity(value[SearchCodes.Id]),
+                        StoredSessionCodec.Text(value[SearchCodes.Name]) ?? "",
+                        StoredSessionCodec.Text(value[SearchCodes.SearchTemplate]) ?? "",
+                        StoredSessionCodec.Text(value[SearchCodes.SuggestionTemplate])));
                 } catch (BrowserRuleException) {
                     // Excluded, never run.
                 }
             }
         return SearchPreferences.Restore(
-            LegacySessionDocument.Text(preferences?[Selected]) ?? LegacySessionDocument.Text(preferences?[LegacySelected]),
+            StoredSessionCodec.Text(preferences?[Selected]) ?? StoredSessionCodec.Text(preferences?[LegacySelected]),
             providers, preferences?[Suggestions]?.GetValue<bool>() ?? false);
     }
 

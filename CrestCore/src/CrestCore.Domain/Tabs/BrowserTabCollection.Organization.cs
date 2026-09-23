@@ -1,6 +1,16 @@
+using System.Text;
+
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
+    #region Variables
+
+    private const int MaximumFolderSymbolBytes = 128;
+
+    #endregion
+
     #region Actions - Organization
 
     public void AddFolder(Guid id, string name, TabPlacement location = TabPlacement.Saved, Guid? parent = null) {
@@ -14,18 +24,37 @@ public sealed partial class BrowserTabCollection {
             location = tree.Folder(p).Location;
             var subtree = tree.Subtree(p); insertion = folders.FindLastIndex(f => subtree.Contains(f.Id)) + 1;
         }
-        folders.Insert(insertion, new(id, FolderName(name), location, parent));
+        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent));
     }
 
     public void RenameFolder(Guid id, string name) {
         var folder = new FolderTree(folders).Folder(id);
-        folders[folders.IndexOf(folder)] = folder with { Name = FolderName(name) };
+        folders[folders.IndexOf(folder)] = folder with { Title = FolderName(name) };
     }
 
     public void CollapseFolder(Guid id, bool collapsed, DateTimeOffset now) {
         var folder = new FolderTree(folders).Folder(id);
         if (folder.IsCollapsed == collapsed) return;
         folders[folders.IndexOf(folder)] = folder with { IsCollapsed = collapsed, CollapseModifiedAt = now };
+    }
+
+    /// Whether the folder's color changed.
+    public bool SetFolderColor(Guid id, BrandColor color) {
+        var folder = new FolderTree(folders).Folder(id);
+        if (folder.Color == color) return false;
+        folders[folders.IndexOf(folder)] = folder with { Color = color };
+        return true;
+    }
+
+    /// Whether the folder's symbol changed. A symbol is an SF Symbol name or an
+    /// emoji spelling, and never empty or longer than 128 UTF-8 bytes.
+    public bool SetFolderSymbol(Guid id, string symbol) {
+        if (symbol.Length == 0 || Encoding.UTF8.GetByteCount(symbol) > MaximumFolderSymbolBytes)
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderSymbol);
+        var folder = new FolderTree(folders).Folder(id);
+        if (folder.Symbol == symbol) return false;
+        folders[folders.IndexOf(folder)] = folder with { Symbol = symbol };
+        return true;
     }
 
     public void DeleteFolder(Guid id, DateTimeOffset now) {

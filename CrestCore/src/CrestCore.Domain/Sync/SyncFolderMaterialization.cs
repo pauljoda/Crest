@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Resolves partial deliveries without confusing an unknown parent with a
@@ -6,7 +8,7 @@ public static class SyncFolderMaterialization {
     #region Actions - Sync
 
     public static bool TryPromote(Guid missing, HashSet<Guid> active,
-        IReadOnlyDictionary<Guid, BrowserFolder> local, HashSet<Guid> deleted,
+        IReadOnlyDictionary<Guid, FolderState> local, HashSet<Guid> deleted,
         out Guid? parent) {
         parent = missing;
         HashSet<Guid> seen = [];
@@ -18,14 +20,14 @@ public static class SyncFolderMaterialization {
         return true;
     }
 
-    public static IReadOnlyList<BrowserFolder> Resolve(Guid space, IReadOnlyList<BrowserFolder> ordered,
-        IReadOnlyDictionary<Guid, Guid> owners, IReadOnlyDictionary<Guid, BrowserFolder> local,
+    public static IReadOnlyList<FolderState> Resolve(Guid space, IReadOnlyList<FolderState> ordered,
+        IReadOnlyDictionary<Guid, Guid> owners, IReadOnlyDictionary<Guid, FolderState> local,
         HashSet<Guid> deleted) {
         if (ordered.Count > FolderTree.MaximumCount || ordered.Select(f => f.Id).Distinct().Count() != ordered.Count)
             throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
         var active = ordered.Select(f => f.Id).ToHashSet();
-        List<BrowserFolder> roots = [];
-        Dictionary<Guid, List<BrowserFolder>> children = [];
+        List<FolderState> roots = [];
+        Dictionary<Guid, List<FolderState>> children = [];
         HashSet<Guid> waiting = [];
         foreach (var source in ordered) {
             var folder = source;
@@ -43,8 +45,8 @@ public static class SyncFolderMaterialization {
             } else roots.Add(folder);
         }
         HashSet<Guid> visited = [];
-        List<BrowserFolder> result = [];
-        void Append(BrowserFolder folder, int depth) {
+        List<FolderState> result = [];
+        void Append(FolderState folder, int depth) {
             if (depth >= FolderTree.MaximumDepth || !visited.Add(folder.Id)) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
             result.Add(folder);
             foreach (var child in children.GetValueOrDefault(folder.Id) ?? []) Append(child, depth + 1);

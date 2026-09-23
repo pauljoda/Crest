@@ -9,15 +9,13 @@ namespace CrestCore.Application;
 internal sealed record SessionEditArguments {
     #region Variables
 
-    private JsonObject? original;
-
-    public SessionTabRecord? Tab { get; init; }
+    public TabState? Tab { get; init; }
     public IReadOnlyList<Guid>? Ids { get; init; }
     public IReadOnlyList<Guid>? TabIds { get; init; }
     public IReadOnlyList<SessionTabObservation>? CopyObservations { get; init; }
-    public JsonNode? IconAccent { get; init; }
-    public JsonObject? Color { get; init; }
-    public JsonObject? FolderColorValue { get; init; }
+    public TabIconAccent? IconAccent { get; init; }
+    public BrandColor? Color { get; init; }
+    public BrandColor? FolderColorValue { get; init; }
 
     public Guid? TabId { get; init; }
     public Guid? TargetId { get; init; }
@@ -55,7 +53,7 @@ internal sealed record SessionEditArguments {
     public Guid RequiredFolderId => FolderId ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
     public Guid RequiredGroupId => GroupId ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
     public TabPlacement RequiredPlacement => Placement ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-    public SessionTabRecord RequiredTab => Tab ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
+    public TabState RequiredTab => Tab ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
     public IReadOnlyList<Guid> RequiredIds => Ids ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
     public IReadOnlyList<Guid> RequiredTabIds => TabIds ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
 
@@ -71,18 +69,17 @@ internal sealed record SessionEditArguments {
         string? Text(string key) => Read(key)?.GetValue<string>();
         IReadOnlyList<Guid>? IdList(string key) => Read(key) is JsonArray ids
             ? ids.Select(node => Guid.Parse(node!.GetValue<string>())).ToArray() : null;
+        BrandColor? Color(string key) => Read(key) is JsonObject color ? StoredSessionCodec.DecodeColor(color) : null;
 
         return new() {
-            original = (JsonObject)value.DeepClone(),
-            Tab = Read("tab") is JsonObject tab ? new(tab) : null,
+            Tab = Read("tab") is JsonObject tab ? StoredSessionCodec.DecodeTab(tab) : null,
             Ids = IdList("ids"),
             TabIds = IdList("tabIds"),
             CopyObservations = Read("copyObservations") is JsonArray observations
                 ? observations.Select(node => SessionTabObservation.Decode(node!)).ToArray() : null,
-            IconAccent = Read("iconAccent")?.DeepClone(),
-            Color = Read("color") is JsonObject color ? (JsonObject)color.DeepClone() : null,
-            FolderColorValue = operation == SessionOperation.FolderColor && Read("value") is JsonObject folderColor
-                ? (JsonObject)folderColor.DeepClone() : null,
+            IconAccent = Read("iconAccent") is JsonObject accent ? StoredSessionCodec.DecodeIconAccent(accent) : null,
+            Color = Color("color"),
+            FolderColorValue = operation == SessionOperation.FolderColor ? Color("value") : null,
             TabId = Id("tabId"),
             TargetId = Id("targetId"),
             FallbackTabId = Id("fallbackTabId"),
@@ -92,7 +89,8 @@ internal sealed record SessionEditArguments {
             Before = Id("before"),
             After = Id("after"),
             GroupId = Id("groupId"),
-            Placement = Text("placement") is { } placement ? Enum.Parse<TabPlacement>(placement, true) : null,
+            Placement = Text("placement") is { } placement
+                ? TabPlacementCodes.Parse(placement) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement) : null,
             Action = Text("action") is { } action ? SavedLocationActionCodes.Parse(action) : null,
             Index = Read("index")?.GetValue<int>(),
             Offset = Read("offset")?.GetValue<int>(),
@@ -146,39 +144,6 @@ internal sealed record SessionEditArguments {
         SessionOperation.TabClearCurrent => ["fallbackTabId", "resetArchivePlacement"],
         _ => []
     };
-
-    #endregion
-
-    #region Actions - Encoding
-
-    public JsonObject Encode() {
-        var value = (JsonObject?)original?.DeepClone() ?? new();
-        void PutId(string key, Guid? id) { if (id is { } present) value[key] = present.ToString("D"); }
-        void PutFlag(string key, bool? flag) { if (flag is { } present) value[key] = present; }
-        void PutText(string key, string? text) { if (text is not null) value[key] = text; }
-        if (Tab is not null) value["tab"] = Tab.Encode();
-        if (Ids is not null) value["ids"] = new JsonArray(Ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
-        if (TabIds is not null) value["tabIds"] = new JsonArray(TabIds.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
-        if (CopyObservations is not null) value["copyObservations"] = new JsonArray(CopyObservations.Select(item => (JsonNode)item.Encode()).ToArray());
-        if (IconAccent is not null) value["iconAccent"] = IconAccent.DeepClone();
-        if (Color is not null) value["color"] = Color.DeepClone();
-        if (FolderColorValue is not null) value["value"] = FolderColorValue.DeepClone();
-        if (FolderSymbolValue is not null) value["value"] = FolderSymbolValue;
-        PutId("tabId", TabId); PutId("targetId", TargetId); PutId("fallbackTabId", FallbackTabId);
-        PutId("folderId", FolderId); PutId("parentId", ParentId); PutId("beforeFolderId", BeforeFolderId);
-        PutId("before", Before); PutId("after", After); PutId("groupId", GroupId);
-        if (Placement is { } placement) value["placement"] = TabPlacementCodes.Name(placement);
-        if (Action is { } action) value["action"] = SavedLocationActionCodes.Name(action);
-        if (Mode is { } mode) value["mode"] = TabIconModeCodes.Name(mode);
-        if (Index is { } index) value["index"] = index;
-        if (Offset is { } offset) value["offset"] = offset;
-        if (Lifetime is { } lifetime) value["lifetime"] = lifetime;
-        PutFlag("select", Select); PutFlag("detach", Detach); PutFlag("returnToSavedURL", ReturnToSavedUrl);
-        PutFlag("keep", Keep); PutFlag("collapsed", Collapsed); PutFlag("resetArchivePlacement", ResetArchivePlacement);
-        PutFlag("faviconChanged", FaviconChanged); PutFlag("hasFavicon", HasFavicon);
-        PutText("title", Title); PutText("url", Url); PutText("emoji", Emoji); PutText("symbol", Symbol);
-        return value;
-    }
 
     #endregion
 }

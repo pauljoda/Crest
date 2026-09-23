@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Which icon a tab shows, and when an observed favicon may take that slot.

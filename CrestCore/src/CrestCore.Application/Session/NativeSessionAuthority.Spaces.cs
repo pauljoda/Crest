@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Domain;
@@ -33,30 +32,26 @@ public sealed partial class NativeSessionAuthority {
         var view = SessionView.Decode(request[SessionView.Key]);
         var hint = new SessionSelectionHint();
         var metadata = document.Metadata.DeepClone().AsObject();
-        var spaces = document.Spaces.Select(s => new SpaceDocument(s.Metadata.DeepClone().AsObject(), s.Sections)).ToList();
+        var spaces = document.Spaces.Select(s => s with { Metadata = s.Metadata.DeepClone().AsObject() }).ToList();
         Guid? created = null;
         if (operation is SessionOperation.SpaceCreate or SessionOperation.SpaceResetPrivate) {
             if (operation == SessionOperation.SpaceResetPrivate) {
                 if (workspaceKind != BrowserWorkspaceKind.Private) throw new BrowserRuleException(BrowserRuleCodes.NotPrivateWorkspace);
                 var fresh = args["template"]!;
-                if (spaces.Any(s => Id(s.Metadata["id"]) == Id(fresh["id"])
-                    || Id(s.Metadata["profile"]!["id"]) == Id(fresh["profile"]!["id"])))
+                if (spaces.Any(s => s.Id == Id(fresh["id"]) || s.ProfileId == Id(fresh["profile"]!["id"])))
                     throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
                 spaces.Clear();
                 metadata.Remove("spaceDeletions"); metadata.Remove("defaultSpaceID");
             }
-            var supplied = args["template"]!.AsObject();
-            var id = Id(supplied["id"]);
-            var profile = Id(supplied["profile"]!["id"]);
-            if (spaces.Any(s => Id(s.Metadata["id"]) == id || Id(s.Metadata["profile"]!["id"]) == profile))
+            var template = StoredSessionCodec.DecodeSpace(args["template"]!.AsObject());
+            var id = template.Id;
+            if (spaces.Any(s => s.Id == id || s.ProfileId == template.ProfileId))
                 throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
-            var fields = LegacySelectionFields.WithoutSpaceSelection(Fields(supplied, Sections));
+            var fields = template.Metadata;
             fields["name"] = operation == SessionOperation.SpaceResetPrivate ? "Private" :
                 (workspaceKind == BrowserWorkspaceKind.Private ? "Private " : "Space ") + (spaces.Count + 1);
-            var sections = Sections.ToDictionary(section => section,
-                section => (IReadOnlyList<JsonNode>)supplied[section]!.AsArray().Select(n => n!.DeepClone()).ToArray());
-            if (sections[SpaceSections.HistorySection].Count != 0 || sections[SpaceSections.ArchivedTabsSection].Count != 0 || sections[SpaceSections.FoldersSection].Count != 0
-                || sections[SpaceSections.TabsSection].Count != 1 || sections[SpaceSections.TabsSection][0]["url"] is not null)
+            if (template.History.Count != 0 || template.ArchivedTabs.Count != 0 || template.Folders.Count != 0
+                || template.Tabs.Count != 1 || template.Tabs[0].Url is not null)
                 throw new BrowserRuleException(BrowserRuleCodes.InvalidNewSpace);
             if (workspaceKind == BrowserWorkspaceKind.Private) {
                 fields["symbol"] = "eyeglasses";
@@ -71,19 +66,19 @@ public sealed partial class NativeSessionAuthority {
                     ["alsoOffersSaveToSystemPasswords"] = false
                 };
             }
-            spaces.Add(new(fields, sections));
+            spaces.Add(template with { Metadata = fields });
             // A new Space is the one its window shows next, on its only tab.
-            hint.SelectSpace(id).SelectTab(view, id, Id(sections[SpaceSections.TabsSection][0]["id"]));
+            hint.SelectSpace(id).SelectTab(view, id, template.Tabs[0].Id);
             created = id;
         } else if (operation == SessionOperation.SpaceReorder) {
             spaces = SpaceOrganizationPolicy.Move(spaces,
                 args["offsets"]!.AsArray().Select(n => n!.GetValue<int>()), args["destination"]!.GetValue<int>()).ToList();
         } else {
             var id = Id(request["spaceId"]);
-            var index = spaces.FindIndex(s => Id(s.Metadata["id"]) == id);
+            var index = spaces.FindIndex(s => s.Id == id);
             if (index < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
             var space = spaces[index];
-            if (Id(request["profileId"]) != Id(space.Metadata["profile"]!["id"]))
+            if (Id(request["profileId"]) != space.ProfileId)
                 throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
             var fields = space.Metadata;
             var pending = PendingDeletion(metadata, id);
@@ -108,7 +103,7 @@ public sealed partial class NativeSessionAuthority {
                     // The window showing a Space that is going away moves to the
                     // first one that stays.
                     if (view.SpaceId == id)
-                        hint.SelectSpace(Id(spaces.First(s => PendingDeletion(metadata, Id(s.Metadata["id"])) is null).Metadata["id"]));
+                        hint.SelectSpace(spaces.First(s => PendingDeletion(metadata, s.Id) is null).Id);
                     break;
                 case SessionOperation.SpaceIdentity:
                     fields["name"] = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>());
@@ -156,30 +151,23 @@ public sealed partial class NativeSessionAuthority {
                     if (Deletions(metadata).Count == 0) metadata.Remove("spaceDeletions");
                     // The Space that takes the removed one's place is where its
                     // window goes and, when it was the launch Space, the new one.
-                    var neighbor = spaces[Math.Min(index, spaces.Count - 1)].Metadata["id"]!;
-                    if (view.SpaceId == id) hint.SelectSpace(Id(neighbor));
+                    var neighbor = spaces[Math.Min(index, spaces.Count - 1)].Id;
+                    if (view.SpaceId == id) hint.SelectSpace(neighbor);
                     if (metadata["defaultSpaceID"] is { } defaultId && Id(defaultId) == id)
-                        metadata["defaultSpaceID"] = neighbor.DeepClone();
+                        metadata["defaultSpaceID"] = StoredSessionCodec.WrappedIdentity(neighbor);
                     break;
                 default: throw new BrowserRuleException(BrowserRuleCodes.UnknownSpaceCommand);
             }
         }
         var next = new SessionDocument(metadata, spaces);
         Validate(next);
-        var projection = metadata.DeepClone().AsObject();
-        projection["spaces"] = new JsonArray(spaces.Select(s => {
-            var value = s.Metadata.DeepClone().AsObject();
-            foreach (var section in Sections)
-                value[section] = new JsonArray(created == Id(s.Metadata["id"])
-                    ? s.Sections[section].Select(n => n.DeepClone()).ToArray() : []);
-            return (JsonNode)value;
-        }).ToArray());
-        var output = Encoding.UTF8.GetBytes(new JsonObject {
+        var projection = StoredSessionCodec.Encode(next with {
+            Spaces = spaces.Select(s => created == s.Id ? s : Settings(s)).ToArray()
+        });
+        return new NativeSessionCommand(this, expected, next, Output(new JsonObject {
             ["session"] = projection,
             [SessionSelectionHint.Key] = hint.Encode()
-        }.ToJsonString());
-        if (output.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
-        return new NativeSessionCommand(this, expected, next, output);
+        }));
     }
 
     #endregion

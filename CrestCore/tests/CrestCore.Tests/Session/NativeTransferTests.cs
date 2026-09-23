@@ -46,7 +46,7 @@ public sealed partial class BrowserContractsTests {
         var inserted = JsonNode.Parse(accepted.DestinationCheckpoint.Read("core"))!["spaces"]![0]!;
         Assert.Empty(removed["tabs"]!.AsArray()); Assert.Empty(removed["archivedTabs"]!.AsArray()); Assert.Null(removed["selectedTabID"]);
         var moved = inserted["tabs"]![0]!;
-        Assert.True(JsonNode.DeepEquals(source["spaces"]![0]!["tabs"]![0]!["futureTabProperty"], moved["futureTabProperty"]));
+        Assert.True(JsonNode.DeepEquals(source["spaces"]![0]!["tabs"]![0]!["iconAccent"], moved["iconAccent"]));
         // Each window gets its own hint: the source shows nothing once its tab
         // left, and the destination shows the tab it received.
         var hints = JsonNode.Parse(accepted.Output)!;

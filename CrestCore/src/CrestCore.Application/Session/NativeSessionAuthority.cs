@@ -3,27 +3,32 @@ using System.Text.Json.Nodes;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
+using Key = CrestCore.Application.StoredSessionCodec.Key;
+
 namespace CrestCore.Application;
 
-/// Owns the native app's durable session during the command-by-command migration.
-/// Native views propose value deltas; only an accepted revision becomes visible.
-/// Published documents are immutable, so storage can serialize an older checkpoint
-/// on its worker while the UI continues editing the current revision. The session
-/// holds browsing data only: which Space and tab a window shows is window state,
-/// so selection fields in an older document are dropped here and never written.
-/// Commands read what the window shows as context and answer with a hint.
+/// Owns the native app's durable session as typed records. Native views propose
+/// value deltas; only an accepted revision becomes visible. Published documents
+/// are immutable, so storage can serialize an older checkpoint on its worker while
+/// the UI continues editing the current revision. The session holds browsing data
+/// only: which Space and tab a window shows is window state, so selection fields in
+/// an older document are dropped here and never written. Commands read what the
+/// window shows as context and answer with a hint.
 public sealed partial class NativeSessionAuthority {
     #region Variables
 
     public const int MaximumBytes = 64 * 1024 * 1024;
+    /// The largest edit request or answer the session exchanges with a window.
+    public const int MaximumEditBytes = 4 * 1024 * 1024;
     internal static readonly object Gate = new();
+    private const string WorkspaceKindField = "coreWorkspaceKind";
+    private const string PrivateBrowsingField = "corePrivateBrowsing";
     private SessionDocument document;
     private NativeSessionReplacement? replacement;
     private readonly BrowserWorkspaceKind workspaceKind;
     private readonly bool privateBrowsing;
     public ulong Revision { get; private set; } = 1;
     public Adapter? Engine { get; private set; }
-    private static readonly IReadOnlyList<string> Sections = SpaceSections.Names;
 
     #endregion
 
@@ -31,17 +36,14 @@ public sealed partial class NativeSessionAuthority {
 
     public NativeSessionAuthority(ReadOnlySpan<byte> bytes) {
         var input = Parse(bytes);
-        workspaceKind = input["coreWorkspaceKind"]?.GetValue<string>() switch {
+        workspaceKind = input[WorkspaceKindField]?.GetValue<string>() switch {
             null or "persistent" => BrowserWorkspaceKind.Persistent,
             "private" => BrowserWorkspaceKind.Private,
             "temporary" => throw new BrowserRuleException(BrowserRuleCodes.BorrowedSourceRequired),
             _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidWorkspaceKind)
         };
-        privateBrowsing = input["corePrivateBrowsing"]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
-        document = new(Fields(input, ["spaces", "coreWorkspaceKind", "corePrivateBrowsing", LegacySelectionFields.SelectedSpace]),
-            input["spaces"]!.AsArray().Select(node =>
-            new SpaceDocument(SpaceFields(node!.AsObject()), Sections.ToDictionary(section => section,
-                section => (IReadOnlyList<JsonNode>)node[section]!.AsArray().Select(item => item!.DeepClone()).ToArray()))).ToArray());
+        privateBrowsing = input[PrivateBrowsingField]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
+        document = StoredSessionCodec.DecodeSession(StoredSessionCodec.Fields(input, [WorkspaceKindField, PrivateBrowsingField]));
         Validate(document);
     }
 
@@ -71,46 +73,46 @@ public sealed partial class NativeSessionAuthority {
     }
 
     internal static Guid Id(JsonNode? value) {
-        if (value is JsonObject obj) value = obj["rawValue"];
+        if (value is JsonObject obj) value = obj[Key.RawValue];
         var id = Guid.Parse(value!.GetValue<string>());
         if (id == Guid.Empty) throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
         return id;
     }
 
-    private static Guid RecordId(JsonNode value, string section) => Id(section == SpaceSections.ArchivedTabsSection ? value["tab"]!["id"] : value["id"]);
-
-    private static JsonObject Fields(JsonObject input, IReadOnlyCollection<string> excluded)
-        => new(input.Where(f => !excluded.Contains(f.Key)).Select(f => new KeyValuePair<string, JsonNode?>(f.Key, f.Value?.DeepClone())));
-
-    /// A Space's metadata without its record collections or a legacy selection.
-    private static JsonObject SpaceFields(JsonObject space)
-        => LegacySelectionFields.WithoutSpaceSelection(Fields(space, Sections));
-
     private static void Validate(SessionDocument value) {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in spaces) {
-            if (!ids.Add(Id(space.Metadata["id"]))) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpace);
+            if (space.Id == Guid.Empty || space.ProfileId == Guid.Empty || space.Tabs.Any(tab => tab.Id == Guid.Empty))
+                throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
+            if (!ids.Add(space.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpace);
             // A Space is exactly one profile and a profile belongs to exactly one
             // Space. Two Spaces sharing a profile would share cookies, credentials
             // and extension access across an isolation boundary the user relies on,
             // and would make "which Space owns this profile" unanswerable.
-            if (!profiles.Add(Id(space.Metadata["profile"]!["id"])))
-                throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
+            if (!profiles.Add(space.ProfileId)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
             foreach (var tab in space.Tabs)
-                if (!tabs.Add(Id(tab!["id"]))) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
+                if (!tabs.Add(tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         }
         var pendingIds = new HashSet<Guid>();
         foreach (var deletion in Deletions(value.Metadata)) {
             var id = Id(deletion!["spaceID"]);
             var profile = Id(deletion["profileID"]);
             _ = Id(deletion["operationID"]);
-            if (!pendingIds.Add(id) || !spaces.Any(s => Id(s.Metadata["id"]) == id && Id(s.Metadata["profile"]!["id"]) == profile))
+            if (!pendingIds.Add(id) || !spaces.Any(s => s.Id == id && s.ProfileId == profile))
                 throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent);
         }
         // An empty temporary workspace and a briefly stale window selection are
         // valid native states. Window reconciliation handles their presentation.
     }
+
+    /// A Space's settings without its records, as settings commands answer them.
+    /// Split metadata stays: windows read it with the settings.
+    private static SpaceDocument Settings(SpaceDocument space) => space with { Tabs = [], Folders = [], ArchivedTabs = [], History = [] };
+
+    private static SessionDocument Replacing(SessionDocument session, params SpaceDocument[] edited) => session with {
+        Spaces = session.Spaces.Select(space => edited.FirstOrDefault(value => value.Id == space.Id) ?? space).ToArray()
+    };
 
     #endregion
 
@@ -123,36 +125,28 @@ public sealed partial class NativeSessionAuthority {
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         var metadata = delta["metadata"] is JsonObject suppliedMetadata
-            ? KeepingPreferences(Fields(suppliedMetadata, ["spaces", LegacySelectionFields.SelectedSpace])) : document.Metadata;
+            ? KeepingPreferences(StoredSessionCodec.Fields(suppliedMetadata, [Key.Spaces, LegacySelectionFields.SelectedSpace]))
+            : document.Metadata;
         if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
             throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
-        var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));
+        var byId = document.Spaces.ToDictionary(s => s.Id);
         var proposed = new List<Guid>();
         foreach (var node in delta["spaces"]!.AsArray()) {
             var change = node!.AsObject(); var id = Id(change["id"]);
             proposed.Add(id);
             byId.TryGetValue(id, out var original);
-            var fields = change["metadata"] is JsonObject supplied ? SpaceFields(supplied) : original?.Metadata;
-            if (fields is null || Id(fields["id"]) != id) throw new BrowserRuleException(BrowserRuleCodes.WrongSpaceIdentity);
-            var sections = Sections.ToDictionary(section => section,
-                section => original?.Sections[section] ?? (IReadOnlyList<JsonNode>)System.Array.Empty<JsonNode>());
-            foreach (var section in Sections) {
-                if (change[section] is not JsonObject edits) continue;
-                if (edits["replace"] is JsonArray replacement) { sections[section] = replacement.Select(item => item!.DeepClone()).ToArray(); continue; }
-                var previous = sections[section];
-                var records = previous.ToDictionary(v => RecordId(v!, section), v => v!);
-                foreach (var removed in edits["remove"]!.AsArray()) records.Remove(Id(removed));
-                foreach (var item in edits["upsert"]!.AsArray()) records[RecordId(item!, section)] = item!.DeepClone();
-                var order = edits["order"] is JsonArray suppliedRecords
-                    ? suppliedRecords.Select(Id).ToArray() : previous.Select(v => RecordId(v!, section)).ToArray();
-                if (order.Length != records.Count || order.Distinct().Count() != order.Length || order.Any(id => !records.ContainsKey(id)))
-                    throw new BrowserRuleException(BrowserRuleCodes.InvalidRecordOrder);
-                sections[section] = order.Select(key => records[key]).ToArray();
-            }
-            byId[id] = new(fields, sections);
+            var supplied = change["metadata"] is JsonObject fields ? StoredSessionCodec.DecodeSpace(fields) : null;
+            if ((supplied ?? original) is not { } settings || settings.Id != id)
+                throw new BrowserRuleException(BrowserRuleCodes.WrongSpaceIdentity);
+            byId[id] = new(settings.Metadata,
+                Edited(original?.Tabs, change[Key.Tabs], StoredSessionCodec.DecodeTab, tab => tab.Id),
+                Edited(original?.Folders, change[Key.Folders], StoredSessionCodec.DecodeFolder, folder => folder.Id),
+                supplied?.SplitGroups ?? original!.SplitGroups,
+                Edited(original?.ArchivedTabs, change[Key.ArchivedTabs], StoredSessionCodec.DecodeArchivedTab, archived => archived.Tab.Id),
+                Edited(original?.History, change[Key.History], StoredSessionCodec.DecodeHistoryEntry, entry => entry.Id));
         }
         var spaceOrder = delta["spaceOrder"] is JsonArray suppliedOrder
-            ? suppliedOrder.Select(Id).ToArray() : document.Spaces.Select(s => Id(s.Metadata["id"])).ToArray();
+            ? suppliedOrder.Select(Id).ToArray() : document.Spaces.Select(s => s.Id).ToArray();
         if (spaceOrder.Distinct().Count() != spaceOrder.Length || spaceOrder.Any(id => !byId.ContainsKey(id)))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidSpaceOrder);
         var next = new SessionDocument(metadata, spaceOrder.Select(id => byId[id]).ToArray());
@@ -161,17 +155,32 @@ public sealed partial class NativeSessionAuthority {
                 throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
         foreach (var deletion in Deletions(metadata)) {
             var id = Id(deletion!["spaceID"]);
-            var original = document.Spaces.Single(s => Id(s.Metadata["id"]) == id);
-            var retained = next.Spaces.SingleOrDefault(s => Id(s.Metadata["id"]) == id);
-            if (retained is null || !JsonNode.DeepEquals(original.Metadata, retained.Metadata)
-                || Sections.Any(section => original.Sections[section].Count != retained.Sections[section].Count
-                    || original.Sections[section].Zip(retained.Sections[section]).Any(pair => !JsonNode.DeepEquals(pair.First, pair.Second))))
+            var original = document.Spaces.Single(s => s.Id == id);
+            var retained = next.Spaces.SingleOrDefault(s => s.Id == id);
+            if (retained is null || !original.Matches(retained))
                 throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
         }
         Validate(next);
         ValidateBorrowedDocument(next);
         if (nativeValueEdit) RequireAccessibleValueEdit(next, proposed);
         return next;
+    }
+
+    /// One record collection after a delta's edit: a whole replacement, or
+    /// removals and upserts by identity in the order it names, else the
+    /// collection's own order.
+    private static IReadOnlyList<T> Edited<T>(IReadOnlyList<T>? original, JsonNode? edit, Func<JsonNode?, T> decode,
+        Func<T, Guid> identity) {
+        var previous = original ?? [];
+        if (edit is not JsonObject edits) return previous;
+        if (edits["replace"] is JsonArray replacement) return replacement.Select(decode).ToArray();
+        var records = previous.ToDictionary(identity);
+        foreach (var removed in edits["remove"]!.AsArray()) records.Remove(Id(removed));
+        foreach (var item in edits["upsert"]!.AsArray()) { var record = decode(item); records[identity(record)] = record; }
+        var order = edits["order"] is JsonArray supplied ? supplied.Select(Id).ToArray() : previous.Select(identity).ToArray();
+        if (order.Length != records.Count || order.Distinct().Count() != order.Length || order.Any(id => !records.ContainsKey(id)))
+            throw new BrowserRuleException(BrowserRuleCodes.InvalidRecordOrder);
+        return order.Select(id => records[id]).ToArray();
     }
 
     private void RequireWritable(bool requireCurrentBorrowedPolicy = true) {

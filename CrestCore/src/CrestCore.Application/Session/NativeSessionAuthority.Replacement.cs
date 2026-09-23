@@ -35,7 +35,7 @@ public sealed partial class NativeSessionAuthority {
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(next);
             // Validate serialization before granting the lease.
-            _ = checkpoint.Read("core");
+            _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
             var reserved = new NativeSessionReplacement(this, next, nextRevision, checkpoint);
             if (transaction is not null) reserved.BindSync(transaction);
             replacement = reserved;
@@ -66,7 +66,7 @@ public sealed partial class NativeSessionAuthority {
                 throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.StaleSessionRevision);
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(command.Document);
-            _ = checkpoint.Read("core");
+            _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
             replacement = new(this, command.Document, nextRevision, checkpoint, command.BorrowedSourceRevision, command.TransientCompletion);
             return replacement;
         }

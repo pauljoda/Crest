@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 public sealed record TabBatchAction(TabBatchKind Kind, TabPlacement Placement = TabPlacement.Current,

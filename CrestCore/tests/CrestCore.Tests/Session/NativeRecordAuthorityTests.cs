@@ -68,7 +68,7 @@ public sealed partial class BrowserContractsTests {
         var restored = result["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == id)!;
         Assert.Equal("current", restored["placement"]!.GetValue<string>());
         Assert.Null(restored["folderID"]); Assert.Null(restored["splitGroupID"]);
-        Assert.True(JsonNode.DeepEquals(tab["futureTabProperty"], restored["futureTabProperty"]));
+        Assert.True(JsonNode.DeepEquals(tab["iconAccent"], restored["iconAccent"]));
         Assert.Empty(JsonNode.Parse(core.Checkpoint(2).Read("core"))!["spaces"]![0]!["archivedTabs"]!.AsArray());
         Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(2, request));
     }
@@ -99,7 +99,14 @@ public sealed partial class BrowserContractsTests {
         space["tabs"]!.AsArray().Add(current);
         space["browsingPreferences"]!["currentTabCleanupPolicy"] = "after12Hours";
         space["browsingPreferences"]!["dataRetention"] = new JsonObject { ["history"] = "oneDay", ["archive"] = "oneDay" };
-        space["history"] = new JsonArray(new JsonObject { ["id"] = Guid.NewGuid().ToString(), ["lastVisitedAt"] = 0.0 });
+        space["history"] = new JsonArray(new JsonObject {
+            ["id"] = Guid.NewGuid().ToString(),
+            ["url"] = "https://example.com/old",
+            ["title"] = "Old visit",
+            ["firstVisitedAt"] = 0.0,
+            ["lastVisitedAt"] = 0.0,
+            ["visitCount"] = 1
+        });
         space["archivedTabs"] = new JsonArray();
         var core = new NativeSessionAuthority(Bytes(session));
         var command = core.PrepareCommand(1, SpaceCommand(session, "records.sweep", new()));

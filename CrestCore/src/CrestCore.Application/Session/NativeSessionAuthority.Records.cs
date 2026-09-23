@@ -1,16 +1,11 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
-    #region Variables
-
-    private static readonly DateTimeOffset RecordEpoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
-
-    #endregion
-
     #region Actions - Records
 
     // The caller sends intent and what its window shows. Existing history and
@@ -29,31 +24,28 @@ public sealed partial class NativeSessionAuthority {
         var hint = new SessionSelectionHint();
         var changes = new JsonArray();
         var spaces = document.Spaces.Select(original => {
-            var spaceId = Id(original.Metadata["id"]);
-            if (target is { } requested && requested != spaceId || PendingDeletion(document.Metadata, spaceId) is not null)
+            if (target is { } requested && requested != original.Id || PendingDeletion(document.Metadata, original.Id) is not null)
                 return original;
-            var fields = original.Metadata.DeepClone().AsObject();
-            var sections = original.Sections.ToDictionary(pair => pair.Key, pair => pair.Value);
             var change = new JsonObject {
-                ["spaceId"] = spaceId.ToString("D"),
-                ["profileId"] = Id(fields["profile"]!["id"]).ToString("D")
+                ["spaceId"] = original.Id.ToString("D"),
+                ["profileId"] = original.ProfileId.ToString("D")
             };
+            var space = original;
             if (SessionOperationCodes.IsHistory(operation))
-                EditHistory(operation, args, now, sections, change);
+                space = EditHistory(operation, args, now, space, change);
             else if (SessionOperationCodes.IsSplitMetadata(operation))
-                EditSplitMetadata(operation, args, now, fields, sections, change);
+                space = EditSplitMetadata(operation, args, StoredSessionCodec.Date(now), space, change);
             else {
                 SessionEditArguments? editArguments = null;
                 if (operation == SessionOperation.ArchiveRestore) {
                     var tabId = Id(args["tabId"]);
-                    var archiveIndex = Array.FindIndex(sections[SpaceSections.ArchivedTabsSection].ToArray(), a => Id(a["tab"]!["id"]) == tabId);
+                    var archiveIndex = space.ArchivedTabs.ToList().FindIndex(archived => archived.Tab.Id == tabId);
                     if (archiveIndex < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownArchivedTab);
-                    var archived = sections[SpaceSections.ArchivedTabsSection][archiveIndex];
-                    editArguments = new() { Tab = new SessionTabRecord(archived["tab"]!.AsObject()) };
-                    sections[SpaceSections.ArchivedTabsSection] = sections[SpaceSections.ArchivedTabsSection].Where((_, index) => index != archiveIndex).ToArray();
+                    editArguments = new() { Tab = space.ArchivedTabs[archiveIndex].Tab };
+                    space = space with { ArchivedTabs = space.ArchivedTabs.Where((_, index) => index != archiveIndex).ToArray() };
                     change["removedArchiveIndices"] = new JsonArray(JsonValue.Create(archiveIndex));
                 } else if (operation is SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup) {
-                    var term = fields["browsingPreferences"]?["currentTabCleanupPolicy"]?.GetValue<string>();
+                    var term = space.Metadata["browsingPreferences"]?["currentTabCleanupPolicy"]?.GetValue<string>();
                     var policy = Enum.TryParse<CurrentTabCleanup>(term, true, out var parsed) && Enum.IsDefined(parsed)
                         ? parsed : CurrentTabCleanup.After12Hours;
                     // Launch sweeps before any window is on screen, so the caller
@@ -62,50 +54,26 @@ public sealed partial class NativeSessionAuthority {
                         editArguments = new() { Lifetime = lifetime.TotalSeconds, TabIds = KeptTabs(args) };
                 } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
-                    var compact = fields.DeepClone().AsObject();
-                    foreach (var section in Sections)
-                        compact[section] = new JsonArray(section is SpaceSections.HistorySection or SpaceSections.ArchivedTabsSection ? []
-                            : sections[section].Select(n => n.DeepClone()).ToArray());
                     // Cleanup keeps the tab this window shows; a restored tab is the
                     // one it should show next.
-                    var editRequest = SessionEditRequest.Create(
+                    var edited = NativeSessionEditor.Evaluate(
                         operation == SessionOperation.ArchiveRestore ? SessionOperation.TabRestoreArchive : SessionOperation.TabCleanup,
-                        compact, editArguments, now, view.Tab(spaceId));
-                    var edited = SessionEditResult.Decode(NativeSessionEditor.Evaluate(editRequest.Encode()));
-                    var result = edited.Space;
-                    if (operation == SessionOperation.ArchiveRestore || !JsonNode.DeepEquals(compact[SpaceSections.TabsSection], result[SpaceSections.TabsSection])) {
-                        foreach (var section in new[] { SpaceSections.TabsSection, SpaceSections.FoldersSection })
-                            sections[section] = result[section]!.AsArray().Select(n => n!.DeepClone()).ToArray();
-                        fields["splitGroups"] = result["splitGroups"]?.DeepClone();
-                        sections[SpaceSections.ArchivedTabsSection] = sections[SpaceSections.ArchivedTabsSection].Concat(result[SpaceSections.ArchivedTabsSection]!.AsArray().Select(n => n!.DeepClone())).ToArray();
-                        var spaceHint = new SessionSelectionHint().SelectTab(view, spaceId, edited.SelectedTabId);
-                        hint.SelectTab(view, spaceId, edited.SelectedTabId);
-                        change["tabEdit"] = JsonNode.Parse(edited.Encode(spaceHint));
+                        space, editArguments, StoredSessionCodec.Date(now), view.Tab(space.Id));
+                    if (operation == SessionOperation.ArchiveRestore || !space.Tabs.SequenceEqual(edited.Edited.TabStates)) {
+                        space = space.Organized(edited.Edited);
+                        var spaceHint = new SessionSelectionHint().SelectTab(view, space.Id, edited.SelectedTabId);
+                        hint.SelectTab(view, space.Id, edited.SelectedTabId);
+                        change["tabEdit"] = edited.Answer(space, spaceHint);
                     }
                 }
-                if (operation == SessionOperation.RecordsSweep) {
-                    foreach (var (section, preference, date, output) in new[] {
-                        (SpaceSections.HistorySection, "history", "lastVisitedAt", "removedHistory"),
-                        (SpaceSections.ArchivedTabsSection, "archive", "archivedAt", "removedArchiveIndices") }) {
-                        var term = fields["browsingPreferences"]?["dataRetention"]?[preference]?.GetValue<string>();
-                        var policy = Enum.TryParse<DataRetention>(term, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : DataRetention.Forever;
-                        if (RetentionPreferences.Lifetime(policy) is not { } lifetime) continue;
-                        var records = sections[section];
-                        var expired = RecordRemovalPolicy.Expired(records.Select(n => n[date]!.GetValue<double>()).ToArray(), now, lifetime.TotalSeconds).ToHashSet();
-                        if (expired.Count == 0) continue;
-                        change[output] = section == SpaceSections.ArchivedTabsSection
-                            ? new JsonArray(expired.Order().Select(i => (JsonNode?)JsonValue.Create(i)).ToArray())
-                            : IDs(records.Where((_, i) => expired.Contains(i)).Select(n => RecordId(n, section)));
-                        sections[section] = records.Where((_, i) => !expired.Contains(i)).ToArray();
-                    }
-                }
+                if (operation == SessionOperation.RecordsSweep) space = SweepRecords(space, now, change);
             }
             if (change.Count > 2) changes.Add((JsonNode)change);
-            return new SpaceDocument(fields, sections);
+            return space;
         }).ToArray();
-        var next = new SessionDocument(document.Metadata, spaces);
+        var next = document with { Spaces = spaces };
         Validate(next); ValidateBorrowedDocument(next);
-        return new(this, expected, next, TransferOutput(new JsonObject {
+        return new(this, expected, next, Output(new JsonObject {
             ["changes"] = changes,
             [SessionSelectionHint.Key] = hint.Encode()
         }));
@@ -114,70 +82,101 @@ public sealed partial class NativeSessionAuthority {
     private static IReadOnlyList<Guid>? KeptTabs(JsonObject args) =>
         args["keepTabIds"] is JsonArray kept ? kept.Select(Id).ToArray() : null;
 
-    private static JsonArray IDs(IEnumerable<Guid> ids) => new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
+    private static JsonArray Identities(IEnumerable<Guid> ids) => new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
 
-    private static void EditHistory(SessionOperation operation, JsonObject args, double now,
-        Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change) {
-        var history = sections[SpaceSections.HistorySection];
+    private static double[] Seconds(IEnumerable<DateTimeOffset> dates) => dates.Select(StoredSessionCodec.Seconds).ToArray();
+
+    /// Removes history and archive records older than the Space keeps them.
+    private static SpaceDocument SweepRecords(SpaceDocument space, double now, JsonObject change) {
+        if (RetentionLifetime(space, "history") is { } historyLifetime) {
+            var expired = RecordRemovalPolicy.Expired(Seconds(space.History.Select(entry => entry.LastVisitedAt)), now, historyLifetime).ToHashSet();
+            if (expired.Count > 0) {
+                change["removedHistory"] = Identities(space.History.Where((_, index) => expired.Contains(index)).Select(entry => entry.Id));
+                space = space with { History = space.History.Where((_, index) => !expired.Contains(index)).ToArray() };
+            }
+        }
+        if (RetentionLifetime(space, "archive") is { } archiveLifetime) {
+            var expired = RecordRemovalPolicy.Expired(Seconds(space.ArchivedTabs.Select(archived => archived.ArchivedAt)), now, archiveLifetime).ToHashSet();
+            if (expired.Count > 0) {
+                change["removedArchiveIndices"] = new JsonArray(expired.Order().Select(index => (JsonNode?)JsonValue.Create(index)).ToArray());
+                space = space with { ArchivedTabs = space.ArchivedTabs.Where((_, index) => !expired.Contains(index)).ToArray() };
+            }
+        }
+        return space;
+    }
+
+    private static double? RetentionLifetime(SpaceDocument space, string records) {
+        var term = space.Metadata["browsingPreferences"]?["dataRetention"]?[records]?.GetValue<string>();
+        var policy = Enum.TryParse<DataRetention>(term, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : DataRetention.Forever;
+        return RetentionPreferences.Lifetime(policy)?.TotalSeconds;
+    }
+
+    private static SpaceDocument EditHistory(SessionOperation operation, JsonObject args, double now, SpaceDocument space,
+        JsonObject change) {
+        var history = space.History;
         if (operation == SessionOperation.HistoryVisit) {
             var url = HistoryPolicy.Normalize(args["url"]!.GetValue<string>());
-            if (url is null) return;
-            var previous = history.FirstOrDefault(h => h["url"]!.GetValue<string>() == url);
-            HistoryVisit? old = previous is null ? null : new(Id(previous["id"]), url, previous["title"]!.GetValue<string>(),
-                RecordEpoch.AddSeconds(previous["firstVisitedAt"]!.GetValue<double>()),
-                RecordEpoch.AddSeconds(previous["lastVisitedAt"]!.GetValue<double>()), previous["visitCount"]!.GetValue<int>());
-            var visit = HistoryPolicy.Record(url, args["title"]?.GetValue<string>(), RecordEpoch.AddSeconds(now), Guid.NewGuid(), old);
-            var entry = previous?.DeepClone().AsObject() ?? new JsonObject { ["id"] = visit.Id.ToString("D"), ["firstVisitedAt"] = now };
-            entry["url"] = visit.Url; entry["title"] = visit.Title; entry["lastVisitedAt"] = now; entry["visitCount"] = visit.VisitCount;
-            var next = new[] { (JsonNode)entry }.Concat(history.Where(h => Id(h["id"]) != visit.Id)).Take(HistoryPolicy.MaximumEntries).ToArray();
-            var retained = next.Select(h => Id(h["id"])).ToHashSet();
-            change["removedHistory"] = IDs(history.Where(h => !retained.Contains(Id(h["id"]))).Select(h => Id(h["id"])));
-            change["historyEntry"] = entry.DeepClone();
-            sections[SpaceSections.HistorySection] = next;
-            return;
+            if (url is null) return space;
+            var previous = history.FirstOrDefault(entry => entry.Url == url);
+            var visit = HistoryPolicy.Record(url, args["title"]?.GetValue<string>(), StoredSessionCodec.Date(now), Guid.NewGuid(), previous);
+            var next = new[] { visit }.Concat(history.Where(entry => entry.Id != visit.Id)).Take(HistoryPolicy.MaximumEntries).ToArray();
+            var retained = next.Select(entry => entry.Id).ToHashSet();
+            change["removedHistory"] = Identities(history.Where(entry => !retained.Contains(entry.Id)).Select(entry => entry.Id));
+            change["historyEntry"] = StoredSessionCodec.Encode(visit);
+            return space with { History = next };
         }
         HashSet<int> removed;
         switch (operation) {
             case SessionOperation.HistoryClear: removed = Enumerable.Range(0, history.Count).ToHashSet(); break;
             case SessionOperation.HistoryRemoveUrl:
                 var url = HistoryPolicy.Normalize(args["url"]!.GetValue<string>());
-                removed = history.Select((h, i) => (h, i)).Where(p => url is not null && p.h["url"]!.GetValue<string>() == url).Select(p => p.i).ToHashSet();
+                removed = history.Select((entry, index) => (entry, index)).Where(pair => url is not null && pair.entry.Url == url)
+                    .Select(pair => pair.index).ToHashSet();
                 break;
             case SessionOperation.HistoryRemoveRange:
-                removed = RecordRemovalPolicy.WithinRange(history.Select(h => h["lastVisitedAt"]!.GetValue<double>()).ToArray(),
+                removed = RecordRemovalPolicy.WithinRange(Seconds(history.Select(entry => entry.LastVisitedAt)),
                     args["start"]!.GetValue<double>(), args["end"]!.GetValue<double>()).ToHashSet();
                 break;
             default: throw new BrowserRuleException(BrowserRuleCodes.UnknownHistoryCommand);
         }
-        if (removed.Count == 0) return;
-        change["removedHistory"] = IDs(history.Where((_, i) => removed.Contains(i)).Select(h => Id(h["id"])));
-        sections[SpaceSections.HistorySection] = history.Where((_, i) => !removed.Contains(i)).ToArray();
+        if (removed.Count == 0) return space;
+        change["removedHistory"] = Identities(history.Where((_, index) => removed.Contains(index)).Select(entry => entry.Id));
+        return space with { History = history.Where((_, index) => !removed.Contains(index)).ToArray() };
     }
 
-    private static void EditSplitMetadata(SessionOperation operation, JsonObject args, double now, JsonObject fields,
-        Dictionary<string, IReadOnlyList<JsonNode>> sections, JsonObject change) {
+    /// A split's name, icon or tint, set only on a split with at least two
+    /// members; a blank name clears it. The field's clock records the edit.
+    private static SpaceDocument EditSplitMetadata(SessionOperation operation, JsonObject args, DateTimeOffset now,
+        SpaceDocument space, JsonObject change) {
         var id = Id(args["groupId"]);
-        var run = sections[SpaceSections.TabsSection].SkipWhile(t => t["splitGroupID"] is null || Id(t["splitGroupID"]) != id)
-            .TakeWhile(t => t["splitGroupID"] is not null && Id(t["splitGroupID"]) == id);
+        var run = space.Tabs.SkipWhile(tab => tab.SplitGroupId != id).TakeWhile(tab => tab.SplitGroupId == id);
         if (run.Take(2).Count() < 2) throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitGroup);
-        var (field, clock) = operation switch {
-            SessionOperation.SplitTitle => ("customTitle", "titleModifiedAt"),
-            SessionOperation.SplitIcon => ("customIconSymbol", "iconModifiedAt"),
-            SessionOperation.SplitTint => ("tint", "tintModifiedAt"),
+        var existing = space.SplitGroups.FirstOrDefault(group => group.Id == id);
+        var group = existing ?? new SplitGroupState(id);
+        var value = args["value"];
+        var changedAt = BrowserEditTimestamp.Normalize(now);
+        var edited = operation switch {
+            SessionOperation.SplitTitle => group with {
+                CustomTitle = string.IsNullOrWhiteSpace(value?.GetValue<string>()) ? null : value!.GetValue<string>().Trim(),
+                TitleModifiedAt = changedAt
+            },
+            SessionOperation.SplitIcon => group with { CustomIconSymbol = value?.GetValue<string>(), IconModifiedAt = changedAt },
+            SessionOperation.SplitTint => group with {
+                Tint = value is JsonObject tint ? StoredSessionCodec.DecodeColor(tint) : null,
+                TintModifiedAt = changedAt
+            },
             _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitCommand)
         };
-        var groups = fields["splitGroups"] as JsonArray ?? new JsonArray();
-        var existing = groups.FirstOrDefault(g => Id(g!["id"]) == id)?.AsObject();
-        var value = args["value"]?.DeepClone();
-        if (operation == SessionOperation.SplitTitle)
-            value = string.IsNullOrWhiteSpace(value?.GetValue<string>()) ? null : JsonValue.Create(value!.GetValue<string>().Trim());
-        if (JsonNode.DeepEquals(existing?[field], value)) return;
-        var group = existing ?? new JsonObject { ["id"] = new JsonObject { ["rawValue"] = id.ToString("D") } };
-        group[field] = value;
-        group[clock] = NativeEditTimestamp.Normalize(now);
-        if (existing is null) groups.Add((JsonNode)group);
-        if (fields["splitGroups"] is null) fields["splitGroups"] = groups;
-        change["splitGroups"] = groups.DeepClone();
+        var unchanged = operation switch {
+            SessionOperation.SplitTitle => existing?.CustomTitle == edited.CustomTitle,
+            SessionOperation.SplitIcon => existing?.CustomIconSymbol == edited.CustomIconSymbol,
+            _ => existing?.Tint == edited.Tint
+        };
+        if (unchanged) return space;
+        IReadOnlyList<SplitGroupState> groups = existing is null ? [.. space.SplitGroups, edited]
+            : space.SplitGroups.Select(candidate => candidate.Id == id ? edited : candidate).ToArray();
+        change["splitGroups"] = new JsonArray(groups.Select(candidate => (JsonNode?)StoredSessionCodec.Encode(candidate)).ToArray());
+        return space with { SplitGroups = groups };
     }
 
     #endregion

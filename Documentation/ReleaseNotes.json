@@ -2117,6 +2117,10 @@
     "download-progress-risk-queries": {
       "category": "internal",
       "message": "Download progress and risk are typed core queries instead of JSON policy operations."
+    },
+    "core-typed-tab-records": {
+      "category": "internal",
+      "message": "The core holds tabs, folders, splits, archive and history as typed records instead of JSON trees, with the stored format unchanged."
     }
   }
 }

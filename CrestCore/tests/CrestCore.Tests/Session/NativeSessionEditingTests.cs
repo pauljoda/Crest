@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
@@ -10,39 +9,48 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
-    private static byte[] EditRequest(JsonNode space, string operation, JsonObject arguments, Guid? viewedTab = null) =>
-        Encoding.UTF8.GetBytes(new JsonObject {
+    /// One edit to a Space in a session of its own, answered the way the native
+    /// caller reads it. The window shows `viewedTab`, if any.
+    private static JsonNode Edited(JsonNode space, string operation, JsonObject arguments, Guid? viewedTab = null) {
+        var authority = new NativeSessionAuthority(Bytes(new JsonObject { ["spaces"] = new JsonArray(space.DeepClone()) }));
+        return JsonNode.Parse(authority.PrepareCommand(1, Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = operation,
-            ["space"] = space.DeepClone(),
+            ["spaceId"] = space["id"]!.DeepClone(),
+            ["profileId"] = space["profile"]!["id"]!.DeepClone(),
             ["arguments"] = arguments,
-            ["now"] = 800000001.0,
-            ["viewedTabId"] = viewedTab?.ToString()
-        }.ToJsonString());
+            ["view"] = new JsonObject {
+                ["spaceId"] = space["id"]!["rawValue"]!.DeepClone(),
+                ["tabs"] = new JsonArray(new JsonObject { ["spaceId"] = space["id"]!["rawValue"]!.DeepClone(), ["tabId"] = viewedTab?.ToString() })
+            },
+            ["now"] = 800000001.0
+        })).Output)!;
+    }
 
     [Theory]
     [InlineData("getting-started")]
     [InlineData("future-native-view")]
     public void NativeContentKindsSurviveDomainRestoreAndSessionWrite(string kind) {
         var fixture = SavedSession();
-        var saved = fixture.Document["session"]!["spaces"]![0]!["tabs"]![0]!.AsObject();
+        var session = fixture.Document["session"]!;
+        var saved = session["spaces"]![0]!["tabs"]![0]!.AsObject();
         saved["url"] = null;
         saved["savedURL"] = null;
         saved["title"] = "Stored native title";
-        saved["nativeContent"] = new JsonObject { ["kind"] = kind, ["resourceID"] = Guid.NewGuid().ToString() };
+        saved["nativeContent"] = new JsonObject { ["kind"] = kind, ["resourceID"] = Guid.NewGuid().ToString().ToUpperInvariant() };
 
-        var document = new LegacySessionDocument(fixture.Document);
-        var state = document.Read(new SystemIdSource());
-        var tab = BrowserTab.Restore(state.Spaces[0].Tabs[0]);
+        var tab = BrowserTab.Restore(new TabState(fixture.Tab, "Stored native title", null, new NativeTabContent(kind), null, "square",
+            null, null, null, TabPlacement.Saved, null, null, DateTimeOffset.UnixEpoch, null, null, null, false));
         Assert.Equal(TabRenderType.UiNative, tab.Content.RenderType);
         Assert.Equal(kind, tab.Content.NativeKind);
         Assert.Equal("Stored native title", tab.Title);
-        Assert.Equal(TabPhase.Ready, tab.Phase);
 
-        var written = document.Write(state);
-        var output = written["session"]!["spaces"]![0]!["tabs"]![0]!;
+        // A rename runs the Space through the domain and back to its stored form.
+        var renamed = Edited(session["spaces"]![0]!, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Renamed" });
+        var output = renamed["space"]!["tabs"]![0]!;
         Assert.True(JsonNode.DeepEquals(saved["nativeContent"], output["nativeContent"]));
         Assert.Equal("Stored native title", output["title"]!.GetValue<string>());
+        Assert.Null(output["url"]);
     }
 
     [Fact]
@@ -54,11 +62,11 @@ public sealed partial class BrowserContractsTests {
         tab["savedURL"] = null;
         tab["nativeContent"] = new JsonObject { ["kind"] = "settings" };
 
-        var result = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.observe", new() {
+        var result = Edited(space, "tab.observe", new() {
             ["tabId"] = fixture.Tab.ToString(),
             ["url"] = "https://example.org/",
             ["title"] = "Example"
-        })))!;
+        });
         var navigated = result["space"]!["tabs"]![0]!;
         Assert.Null(navigated["nativeContent"]);
         Assert.Equal("https://example.org/", navigated["url"]!.GetValue<string>());
@@ -69,7 +77,7 @@ public sealed partial class BrowserContractsTests {
     public void NativeOpenAndClosePreserveDurableTabsAndPublishTheRequestedSelection() {
         var f = SavedSession(); var original = f.Document["session"]!["spaces"]![0]!;
         var newId = Guid.NewGuid();
-        var input = EditRequest(original, "tab.open", new() {
+        var opened = Edited(original, "tab.open", new() {
             ["select"] = true,
             ["tab"] = new JsonObject {
                 ["id"] = SwiftId(newId),
@@ -80,24 +88,21 @@ public sealed partial class BrowserContractsTests {
                 ["lastActivatedAt"] = 800000001.0
             }
         });
-        var bytes = NativeSessionEditor.Evaluate(input);
-        Assert.Equal(bytes, NativeSessionEditor.Evaluate(input)); // ABI size probing must not invent a second identity.
-        var opened = JsonNode.Parse(bytes)!;
         Assert.Equal(newId.ToString(), opened["tabId"]!.GetValue<string>());
-        Assert.Equal(newId.ToString(), opened["selectedTabId"]!.GetValue<string>());
-        Assert.True(opened["selectSpace"]!.GetValue<bool>());
+        Assert.True(HintsTab(opened, f.Space, newId));
+        Assert.Equal(f.Space, HintedSpace(opened));
         var space = opened["space"]!;
         Assert.Equal(2, space["tabs"]!.AsArray().Count);
-        Assert.True(JsonNode.DeepEquals(original["tabs"]![0]!["futureTabProperty"], space["tabs"]![0]!["futureTabProperty"]));
+        Assert.True(JsonNode.DeepEquals(original["tabs"]![0], space["tabs"]![0]));
         Assert.True(JsonNode.DeepEquals(original["branding"], space["branding"]));
         // Closing the tab the window shows suggests its fallback; the Space
         // itself records no selection.
-        var closedResult = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.close",
-            new() { ["tabId"] = newId.ToString(), ["fallbackTabId"] = f.Tab.ToString() }, viewedTab: newId)))!;
+        var closedResult = Edited(space, "tab.close",
+            new() { ["tabId"] = newId.ToString(), ["fallbackTabId"] = f.Tab.ToString() }, viewedTab: newId);
         var closed = closedResult["space"]!;
         Assert.Single(closed["tabs"]!.AsArray());
         Assert.Single(closed["archivedTabs"]!.AsArray());
-        Assert.Equal(f.Tab.ToString(), closedResult["selectedTabId"]!.GetValue<string>());
+        Assert.True(HintsTab(closedResult, f.Space, f.Tab));
         Assert.Null(closed["selectedTabID"]);
         Assert.Equal("closed", closed["archivedTabs"]![0]!["reason"]!.GetValue<string>());
     }
@@ -119,7 +124,7 @@ public sealed partial class BrowserContractsTests {
         };
         space["tabs"]!.AsArray().Add(Current(partner, (JsonObject)group.DeepClone()));
         space["tabs"]!.AsArray().Add(Current(plain, null));
-        Guid[] Order(JsonObject arguments) => JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.open", arguments)))!
+        Guid[] Order(JsonObject arguments) => Edited(space, "tab.open", arguments)
             ["space"]!["tabs"]!.AsArray().Select(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>())).ToArray();
         JsonObject Open(Guid id, Guid? after) => new() {
             ["tab"] = Current(id, null),
@@ -133,33 +138,30 @@ public sealed partial class BrowserContractsTests {
         // An origin outside the Space leaves the tab to its section's default place.
         Assert.Equal([opened, f.Tab, partner, plain], Order(Open(opened, Guid.NewGuid())));
         var both = Open(opened, f.Tab); both["index"] = 0;
-        Assert.Throws<ProtocolException>(() => NativeSessionEditor.Evaluate(EditRequest(space, "tab.open", both)));
+        Assert.Throws<ProtocolException>(() => Edited(space, "tab.open", both));
     }
 
     [Fact]
     public void SessionEditIgnoresFieldsUnrelatedToTheSelectedOperation() {
         var fixture = SavedSession();
         var space = fixture.Document["session"]!["spaces"]![0]!;
-        var output = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(space, "tab.rename", new() {
+        var output = Edited(space, "tab.rename", new() {
             ["tabId"] = fixture.Tab.ToString("D"),
             ["title"] = "Readable name",
             ["ids"] = "unrelated invalid list",
             ["placement"] = new JsonObject { ["unexpected"] = true }
-        })))!;
+        });
 
         Assert.Equal("Readable name", output["space"]!["tabs"]![0]!["customTitle"]!.GetValue<string>());
-        Assert.True(JsonNode.DeepEquals(space["tabs"]![0]!["futureTabProperty"],
-            output["space"]!["tabs"]![0]!["futureTabProperty"]));
     }
 
     [Fact]
     public void NativeCloseCannotRemoveASavedTabAndClearSkipsStartPageArchive() {
         var f = SavedSession(); var original = f.Document["session"]!["spaces"]![0]!;
-        Assert.Throws<BrowserRuleException>(() => NativeSessionEditor.Evaluate(EditRequest(original, "tab.close",
-            new() { ["tabId"] = f.Tab.ToString() })));
+        Assert.Throws<BrowserRuleException>(() => Edited(original, "tab.close", new() { ["tabId"] = f.Tab.ToString() }));
         var tab = original["tabs"]![0]!.AsObject();
         tab["placement"] = "current"; tab["url"] = null; tab["folderID"] = null;
-        var cleared = JsonNode.Parse(NativeSessionEditor.Evaluate(EditRequest(original, "tab.clear_current", new())))!["space"]!;
+        var cleared = Edited(original, "tab.clear_current", new())["space"]!;
         Assert.Empty(cleared["tabs"]!.AsArray());
         Assert.Empty(cleared["archivedTabs"]!.AsArray());
         Assert.Null(cleared["selectedTabID"]);

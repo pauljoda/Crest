@@ -91,40 +91,35 @@ public sealed partial class NativeSessionAuthority {
     /// journal-bound replacement — so background convergence stays unaffected.
     private void RequireAccessibleValueEdit(SessionDocument next, IEnumerable<Guid> proposed) {
         if (access is null) return;
-        var retained = next.Spaces.Select(s => Id(s.Metadata["id"])).ToHashSet();
+        var retained = next.Spaces.Select(s => s.Id).ToHashSet();
         var candidates = new HashSet<Guid>(proposed);
         // Dropping a Space's records is a change even when the delta never
         // named it, so removal is derived rather than declared.
         foreach (var space in document.Spaces)
-            if (!retained.Contains(Id(space.Metadata["id"]))) candidates.Add(Id(space.Metadata["id"]));
+            if (!retained.Contains(space.Id)) candidates.Add(space.Id);
         foreach (var id in candidates) {
-            if (document.Spaces.FirstOrDefault(s => Id(s.Metadata["id"]) == id) is not { } original) continue;
-            var updated = next.Spaces.FirstOrDefault(s => Id(s.Metadata["id"]) == id);
-            if (updated is not null && (Unchanged(original, updated) || OnlyRaisesProtection(original, updated))) continue;
+            if (document.Spaces.FirstOrDefault(s => s.Id == id) is not { } original) continue;
+            var updated = next.Spaces.FirstOrDefault(s => s.Id == id);
+            if (updated is not null && (original.Matches(updated) || OnlyRaisesProtection(original, updated))) continue;
             RequireAccessible(id);
         }
     }
-
-    private static bool Unchanged(SpaceDocument original, SpaceDocument updated)
-        => JsonNode.DeepEquals(original.Metadata, updated.Metadata) && Sections.All(section =>
-            original.Sections[section].Count == updated.Sections[section].Count
-            && original.Sections[section].Zip(updated.Sections[section]).All(pair => JsonNode.DeepEquals(pair.First, pair.Second)));
 
     /// Raising protection is always allowed, exactly as it is for the command
     /// gate. Nothing else may ride along with it.
     private static bool OnlyRaisesProtection(SpaceDocument original, SpaceDocument updated) {
         if (updated.Metadata["accessPolicy"] is not JsonValue policy || !policy.TryGetValue<string>(out var value)
             || value == SpaceAccessPolicyCodes.Open) return false;
-        return Unchanged(new(Fields(original.Metadata, ["accessPolicy"]), original.Sections),
-            new(Fields(updated.Metadata, ["accessPolicy"]), updated.Sections));
+        return (original with { Metadata = StoredSessionCodec.Fields(original.Metadata, ["accessPolicy"]) })
+            .Matches(updated with { Metadata = StoredSessionCodec.Fields(updated.Metadata, ["accessPolicy"]) });
     }
 
     private void RequireAccessible(Guid spaceId) {
         if (access is null) return;
         // An unknown identity is rejected by the command itself, with the error
         // that names the real problem.
-        if (document.Spaces.FirstOrDefault(s => Id(s.Metadata["id"]) == spaceId) is not { } space) return;
-        var assignment = new SpaceAccessAssignment(spaceId, Id(space.Metadata["profile"]!["id"]));
+        if (document.Spaces.FirstOrDefault(s => s.Id == spaceId) is not { } space) return;
+        var assignment = new SpaceAccessAssignment(spaceId, space.ProfileId);
         lock (access) access.RequireAccessible(assignment, RequiresAuthentication(space));
     }
 

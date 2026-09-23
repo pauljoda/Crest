@@ -9,14 +9,4 @@ internal sealed record SessionTabObservation(Guid TabId, string? Url, string? Ti
         Guid.Parse(value["tabId"]!.GetValue<string>()), value["url"]?.GetValue<string>(), value["title"]?.GetValue<string>());
 
     #endregion
-
-    #region Actions - Encoding
-
-    public JsonObject Encode() => new() {
-        ["tabId"] = TabId.ToString("D"),
-        ["url"] = Url,
-        ["title"] = Title
-    };
-
-    #endregion
 }

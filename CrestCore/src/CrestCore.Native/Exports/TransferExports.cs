@@ -35,7 +35,7 @@ public static unsafe partial class Exports {
     public static int SessionReadTransfer(ulong handle, byte* destination, nuint capacity, nuint* length) {
         if (length == null || destination == null && capacity != 0) return CoreStatus.InvalidArgument;
         *length = 0;
-        if (capacity > NativeSessionEditor.MaximumBytes) return CoreStatus.LimitExceeded;
+        if (capacity > NativeSessionAuthority.MaximumEditBytes) return CoreStatus.LimitExceeded;
         if (!SessionTransfers.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
         *length = (nuint)value.Output.Length;
         if (capacity < *length) return CoreStatus.BufferTooSmall;

@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
-using CrestCore.Domain;
 
 using Xunit;
 
@@ -9,7 +8,7 @@ namespace CrestCore.Tests;
 
 /// Selection is window state. Stored documents from earlier releases still carry
 /// a session-level `selectedSpaceID` and per-Space `selectedTabID`; they must
-/// load, fold once into window records that lack their own, and never be written.
+/// load and never be written. Native storage folds them into windows once.
 public sealed partial class BrowserContractsTests {
     [Fact]
     public void ALegacySelectionLoadsButNeverReachesACheckpointOrSurvivesAnEdit() {
@@ -44,30 +43,6 @@ public sealed partial class BrowserContractsTests {
         var touched = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!["spaces"]![0]!;
         Assert.Equal(800000002.0, touched["tabs"]![0]!["lastActivatedAt"]!.GetValue<double>());
         Assert.Null(touched["selectedTabID"]);
-    }
-
-    [Fact]
-    public void ALegacySelectionFoldsIntoAWindowWithoutItsOwnRecordAndIsNotWrittenBack() {
-        var fixture = SavedSession(); var document = fixture.Document.DeepClone().AsObject();
-        var window = document["windows"]![0]!.AsObject();
-        window.Remove("capturedSpaceIDs"); window["selectedTabIDsBySpace"] = new JsonArray();
-
-        var legacy = new LegacySessionDocument(document);
-        var state = legacy.Read(new SystemIdSource());
-        Assert.Equal(fixture.Tab, Assert.Single(state.Windows).Selections[fixture.Space]);
-
-        var written = legacy.Write(state);
-        Assert.Null(written["session"]!["selectedSpaceID"]);
-        Assert.Null(written["session"]!["spaces"]![0]!["selectedTabID"]);
-        var pairs = written["windows"]![0]!["selectedTabIDsBySpace"]!.AsArray();
-        Assert.Equal(fixture.Tab, Guid.Parse(pairs[1]!["rawValue"]!.GetValue<string>()));
-
-        // A window that recorded its own choice keeps it, even an empty one.
-        var captured = new LegacySessionDocument(fixture.Document.DeepClone().AsObject());
-        var emptyFixture = SavedSession(empty: true);
-        var emptyState = new LegacySessionDocument(emptyFixture.Document).Read(new SystemIdSource());
-        Assert.Null(Assert.Single(emptyState.Windows).Selections[emptyFixture.Space]);
-        Assert.Equal(fixture.Tab, captured.Read(new SystemIdSource()).Windows[0].Selections[fixture.Space]);
     }
 
     [Fact]

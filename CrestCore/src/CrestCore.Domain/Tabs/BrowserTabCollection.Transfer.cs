@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
@@ -10,7 +12,7 @@ public sealed partial class BrowserTabCollection {
         bool afterSelection, Guid? destinationSelection, DateTimeOffset now) {
         if (ReferenceEquals(this, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameCollectionTransfer);
         var tab = Tab(id);
-        if (destination.tabs.Any(t => t.Id == id) || destination.archive.Any(t => t.Id == id))
+        if (destination.tabs.Any(t => t.Id == id) || destination.archive.Any(archived => archived.Tab.Id == id))
             throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         if (destination.tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         var placement = requestedPlacement ?? tab.Placement;

@@ -1,7 +1,9 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// The same bounded forest and stable tab-boundary ordering used by Crest's native sidebars.
-public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
+public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     #region Variables
 
     public const int MaximumDepth = 16;
@@ -11,8 +13,8 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
 
     #region Actions - Organization
 
-    public static IReadOnlyList<BrowserFolder> RepairPreorder(IReadOnlyList<BrowserFolder> source) {
-        List<BrowserFolder> accepted = [];
+    public static IReadOnlyList<FolderState> RepairPreorder(IReadOnlyList<FolderState> source) {
+        List<FolderState> accepted = [];
         Dictionary<Guid, (int Depth, TabPlacement Location)> parents = [];
         foreach (var folder in source.Take(MaximumCount)) {
             var parent = folder.ParentId;
@@ -35,8 +37,8 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
         }
     }
 
-    public IReadOnlyList<BrowserFolder> DisplayOrder() {
-        Validate(); List<BrowserFolder> result = [];
+    public IReadOnlyList<FolderState> DisplayOrder() {
+        Validate(); List<FolderState> result = [];
         void Append(Guid? parent) {
             foreach (var folder in Children(parent)) { result.Add(folder); Append(folder.Id); }
         }
@@ -57,7 +59,7 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
         return result;
     }
 
-    public List<BrowserFolder> PreserveOrder(HashSet<Guid> removed, IReadOnlyList<BrowserTab> tabs,
+    public List<FolderState> PreserveOrder(HashSet<Guid> removed, IReadOnlyList<BrowserTab> tabs,
         HashSet<Guid>? excluding = null) => folders.Select(folder => {
             if (excluding?.Contains(folder.Id) == true) return folder;
             var subtree = Subtree(folder.Id);
@@ -78,10 +80,10 @@ public sealed class FolderTree(IReadOnlyList<BrowserFolder> folders) {
 
     #region Mutators
 
-    public BrowserFolder Folder(Guid id) => folders.FirstOrDefault(f => f.Id == id)
+    public FolderState Folder(Guid id) => folders.FirstOrDefault(f => f.Id == id)
         ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownFolder);
 
-    public IEnumerable<BrowserFolder> Children(Guid? id) => folders.Where(f => f.ParentId == id);
+    public IEnumerable<FolderState> Children(Guid? id) => folders.Where(f => f.ParentId == id);
 
     public HashSet<Guid> Subtree(Guid id) {
         _ = Folder(id);
