@@ -77,40 +77,61 @@ for `EnginePage` lists every direct engine call.
 5. A wrapper type is justified only when it carries behavior or an invariant,
    as `SiteOrigin` does with normalization.
 6. The core keeps no JSON in its model. JSON remains only where a stored or
-   synced format already requires it.
+   synced format already requires it, and those formats have hand-written
+   codecs. The generator never defines a stored or synced key, because
+   renaming a contract field must not rewrite anyone's data.
 7. One schema. The C# contract records are the source of truth. The Swift
    models, the C header and the codecs are generated from them, so no model is
    written twice by hand.
 8. Every protocol or interface has at least two real implementations, or it
    stands for an OS seam that cannot be faked. The engine contract has two:
    Chromium and WebKit.
+9. A change is named for the state it changed and carries the resulting
+   values (`TabsChanged`), so a UI never re-applies a rule to work out the
+   result. Events the UI reacts to are named for what happened
+   (`PageRehosted`).
 
 ## The core's model
 
 | Object | Holds | Saved | Synced |
 | --- | --- | --- | --- |
 | `Session` | Spaces, each with its profile, tabs, folders, splits, history and archive | Yes | Yes, as today |
-| `Device` | Windows and what each shows (the Space, and the tab in each Space), engine choices per site, device-local preferences | Yes, in the device store | Never |
+| `Device` | Windows and what each shows (the Space, and the tab in each Space), split column shares, engine choices per site, device-local preferences | Yes, in the device store | Never |
 | `Pages` | Each open page: its tab, its engine, and live state (URL and title before commit, loading, progress, security, media) | Never | Never |
 | `Prompts` | Permission, authentication and other questions waiting on the person | Never | Never |
 | `Engines` | The registered engine bindings and their capabilities | Never | Never |
 | `Downloads`, `Permissions` | The existing ledgers, with the permission records saved as today | As today | Never |
 
-The core publishes typed changes. It batches them once per frame and never
-resends unchanged state. The Apple UIs keep a generated read model that they
-update from those batches, so reading state never calls into the core. The
-Windows UI reads the core's records directly.
+The core publishes typed changes and never resends unchanged state. Changes
+caused by an intent come back with the call, so the caller reads the new
+state straight away. Changes the core starts itself, such as a finished save,
+a sync merge or an engine event, arrive through a wake-up call that the UI
+answers by draining the pending batch, at most once per main-queue turn. The
+Apple UIs keep a generated read model that they update from those changes, so
+reading state never calls into the core. The Windows UI reads the core's
+records directly.
 
-The core runs its model on the UI thread. Storage and sync I/O run on the
-core's own worker, so a durable save never blocks the UI. The core owns the
-SQLite schema and transactions, and the host supplies only a directory.
+Swift and the core always ship in one build, so the binary wire between them
+has no versioning. The app checks a schema fingerprint when it creates the
+core, so a stale prebuilt core fails at launch instead of misreading data.
+
+The core's model changes on the UI thread. Heavy work, such as a sync merge
+or a large import, computes on the core's worker against a snapshot and
+commits on the UI thread with a revision check. The core owns the SQLite
+schema and transactions, and the host supplies only a directory. Saves run on
+the worker after the change is published, except where ordering matters:
+sync commits and Space deletion are saved before the intent returns. The core
+publishes `Saved(revision)`, so the CloudKit transport stores its server
+token only after the merge it covers is on disk.
 
 ## Engines
 
-The engine contract is `crest_engine.h`: a table of commands the core calls
-(`CreatePage`, `LoadPage`, `ClosePage`, `ResolvePermission`, …) and event
-structs the binding reports (`NavigationCommitted`, `PageCrashed`,
-`PermissionRequested`, `ProtectedMediaUnavailable`, …). Chromium implements it
+The engine contract is a set of contract records like intents and changes:
+commands the core issues (`CreatePage`, `LoadPage`, `ClosePage`,
+`ResolvePermission`, …) and events the binding reports (`NavigationCommitted`,
+`PageCrashed`, `PermissionRequested`, `ProtectedMediaUnavailable`, …).
+`crest_engine.h` carries them in the same generated wire format, and the
+generator emits a C++ codec for the Chromium binding. Chromium implements it
 in portable C++ and reports events straight to the core, with no Objective-C
 or Swift in between. The Mac shell around it handles only view embedding,
 popups, menus and web authentication. WebKit implements the same contract in
