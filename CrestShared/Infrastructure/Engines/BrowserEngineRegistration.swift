@@ -24,7 +24,8 @@ enum BrowserEngineRegistration {
         ] + desktopWebKit,
         unavailable: [.extensions],
         limitations: [
-            "A staged Peek navigation replays only a GET link's URL and referrer; WebKit has no public way to carry the initiating frame's origin, user activation or sandbox into another page."
+            "A staged Peek navigation replays only a GET link's URL and referrer; WebKit has no public way to carry the initiating frame's origin, user activation or sandbox into another page.",
+            "Find reports whether a match exists but not how many: WebKit's public find API has no match count.",
         ] + desktopWebKitLimitations,
         archiveFormat: .webKit,
         evidence: "Existing native WebKit services and retained page, popup, profile and navigation contracts")
@@ -41,7 +42,7 @@ enum BrowserEngineRegistration {
         ],
         unavailable: [.reader, .translation, .contentBlocking],
         limitations: [
-            "Find does not honour a non-wrapping search: the host command takes no wrap argument and the engine always wraps.",
+            "A certificate error shows Chromium's own warning page, and proceeding past it happens there: the decision is the engine profile's, not a Crest certificate override.",
             "Extensions cover actions, installation, side panels and per-Space permissions; full API parity and Apple password-helper pairing remain incomplete.",
             "Translation is limited to the selection service; whole-page translation is unavailable.",
             "Site permission decisions reach the engine as content settings for the page's current site; the host has no command to stop live camera, microphone or location use directly, so revocation relies on the engine ending it when the setting blocks.",

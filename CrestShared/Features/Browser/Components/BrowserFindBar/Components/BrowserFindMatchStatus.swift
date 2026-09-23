@@ -6,9 +6,11 @@ import SwiftUI
 /// Both spellings answer the same question with the width each shell can spare:
 /// a floating panel can afford "No match" in words, while a bar that already
 /// spans a phone's chrome spends that width on the query instead. Neither draws
-/// anything before a search has been asked for.
+/// anything before a search has been asked for. An engine that counts its
+/// matches has them shown as "3 of 12" in either spelling.
 struct BrowserFindMatchStatus: View {
     let state: BrowserFindMatchState
+    var matches: BrowserFindMatches?
     let metrics: BrowserFindBarMetrics
 
     @ViewBuilder
@@ -24,7 +26,17 @@ struct BrowserFindMatchStatus: View {
     /// The state in words, red only where the page has nothing to show.
     @ViewBuilder
     private var spelledOut: some View {
-        if let label = state.accessibilityLabel {
+        if let counted {
+            Text("\(counted.active) of \(counted.total)")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(
+                    minWidth: metrics.matchStatusWidth,
+                    alignment: .trailing
+                )
+                .accessibilityLabel(Text("Match \(counted.active) of \(counted.total)"))
+                .accessibilityIdentifier("find-result")
+        } else if let label = state.accessibilityLabel {
             Text(label)
                 .font(.caption)
                 .foregroundStyle(state == .notFound ? .red : .secondary)
@@ -40,7 +52,19 @@ struct BrowserFindMatchStatus: View {
     /// the words as their accessibility label instead.
     @ViewBuilder
     private var drawn: some View {
-        if let label = state.accessibilityLabel {
+        if let counted {
+            Text("\(counted.active)/\(counted.total)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(
+                    width: metrics.matchStatusWidth,
+                    height: metrics.barHeight
+                )
+                .accessibilityLabel(Text("Match \(counted.active) of \(counted.total)"))
+                .accessibilityIdentifier("find-result")
+        } else if let label = state.accessibilityLabel {
             symbol
                 .frame(
                     width: metrics.matchStatusWidth,
@@ -49,6 +73,11 @@ struct BrowserFindMatchStatus: View {
                 .accessibilityLabel(Text(label))
                 .accessibilityIdentifier("find-result")
         }
+    }
+
+    /// The counts, only for a search that found something.
+    private var counted: BrowserFindMatches? {
+        state == .found ? matches : nil
     }
 
     @ViewBuilder
@@ -75,6 +104,8 @@ struct BrowserFindMatchStatus: View {
             HStack {
                 BrowserFindMatchStatus(state: .searching, metrics: .pointer)
                 BrowserFindMatchStatus(state: .found, metrics: .pointer)
+                BrowserFindMatchStatus(
+                    state: .found, matches: BrowserFindMatches(active: 3, total: 12), metrics: .pointer)
                 BrowserFindMatchStatus(state: .notFound, metrics: .pointer)
             }
             HStack {

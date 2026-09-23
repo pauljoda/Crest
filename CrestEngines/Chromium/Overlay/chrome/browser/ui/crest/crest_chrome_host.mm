@@ -156,6 +156,7 @@
 #include "components/security_state/core/security_state.h"
 #include "content/public/browser/ssl_status.h"
 #include "net/base/net_errors.h"
+#include "net/cert/cert_status_flags.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
 #include "components/infobars/content/content_infobar_manager.h"
@@ -1305,6 +1306,21 @@ std::string ContentFrameIdentifier(content::RenderFrameHost* frame, const std::s
          base::NumberToString(id.frame_routing_id) + ":" + doc;
 }
 
+// Crest's vault owns credentials in every window, so the engine's own password
+// manager never saves, offers fills or shows its bubbles — in a private window
+// as much as in a Space, whether or not a credential bridge is installed. A
+// private profile keeps its preferences in memory and a private password
+// store reads its original profile's settings, so both are turned off.
+void DisableEnginePasswordManager(content::WebContents* contents) {
+  auto* profile = contents ? Profile::FromBrowserContext(contents->GetBrowserContext()) : nullptr;
+  if (!profile) return;
+  for (Profile* target : {profile, profile->GetOriginalProfile()}) {
+    auto* prefs = target ? target->GetPrefs() : nullptr;
+    if (prefs && prefs->GetBoolean(password_manager::prefs::kCredentialsEnableService))
+      prefs->SetBoolean(password_manager::prefs::kCredentialsEnableService, false);
+  }
+}
+
 struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
                     favicon::FaviconDriverObserver, infobars::InfoBarManager::Observer,
                     media_session::mojom::MediaSessionObserver {
@@ -1312,6 +1328,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
        Observation observer)
       : content::WebContentsObserver(contents), browser(owner),
         profile(std::move(profile_id)), observation([observer copy]) {
+    DisableEnginePasswordManager(contents);
     find_helper = find_in_page::FindTabHelper::FromWebContents(contents);
     if (find_helper) find_helper->AddObserver(this);
     if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents)) driver->AddObserver(this);
@@ -1359,13 +1376,16 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     PublishFavicon(image);
   }
   find_in_page::FindTabHelper* find_helper = nullptr;
-  void (^find_completion)(BOOL) = nil;
+  void (^find_completion)(NSInteger, NSInteger) = nil;
   void OnFindTabHelperDestroyed(find_in_page::FindTabHelper*) override { find_helper = nullptr; find_completion = nil; }
+  // The final update of a search carries its total and the ordinal of the
+  // match it selected; earlier updates are still counting.
   void OnFindResultAvailable(content::WebContents*) override {
     if (!find_helper || !find_completion || !find_helper->find_result().final_update()) return;
     auto completion = find_completion;
     find_completion = nil;
-    completion(find_helper->find_result().number_of_matches() > 0);
+    const auto& result = find_helper->find_result();
+    completion(std::max(0, result.number_of_matches()), std::max(0, result.active_match_ordinal()));
   }
   Browser* browser;
   std::string profile;
@@ -1601,20 +1621,40 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       @"canGoBack": @(controller.CanGoBack()), @"canGoForward": @(controller.CanGoForward()),
       @"backHistory": History(-1), @"forwardHistory": History(1),
       @"committed": @(committed), @"failure": failure ?: (id)NSNull.null, @"errorCode": @(error_code),
-      @"secure": @(IsSecure()), @"themeColor": ThemeColor() });
+      @"security": SecurityState(), @"themeColor": ThemeColor() });
   }
   // The page's declared theme colour, as 0xAARRGGBB, for Crest's tab accents.
   id ThemeColor() {
     const auto color = web_contents()->GetThemeColor();
     return color ? @(static_cast<uint32_t>(*color)) : (id)NSNull.null;
   }
-  // The engine's own verdict: a secure transport with no mixed content and no
-  // certificate problem. Anything less is not reported as secure.
-  bool IsSecure() {
+  // The engine's own verdict on the visible document's connection, in the
+  // spelling of Crest's `BrowserPageSecurityState`. Only a secure transport
+  // with no mixed content and no certificate problem is reported as secure; a
+  // page the engine flags as malicious outranks everything else, and a
+  // certificate error — the interstitial, or a page reached past it — outranks
+  // mixed content.
+  NSString* SecurityState() {
     auto* helper = web_contents() ? SecurityStateTabHelper::FromWebContents(web_contents()) : nullptr;
-    if (!helper) return false;
+    if (!helper) return @"none";
+    const auto visible = helper->GetVisibleSecurityState();
     const auto level = helper->GetSecurityLevel();
-    return level == security_state::SECURE;
+    if (!visible) return @"none";
+    if (visible->malicious_content_status != security_state::MALICIOUS_CONTENT_STATUS_NONE) return @"dangerous";
+    if (net::IsCertStatusError(visible->cert_status)) return @"certificate_error";
+    // Any other failed load shows Crest's own failure view, not a connection.
+    if (visible->is_error_page) return @"none";
+    if (!security_state::IsSchemeCryptographic(visible->url))
+      return level == security_state::WARNING || level == security_state::DANGEROUS ? @"insecure" : @"none";
+    // An HTTPS entry that has not connected yet has no connection to judge.
+    if (!visible->connection_info_initialized) return @"none";
+    if (level == security_state::SECURE) return @"secure";
+    if (visible->ran_mixed_content || visible->displayed_mixed_content || visible->contained_mixed_form ||
+        visible->ran_content_with_cert_errors || visible->displayed_content_with_cert_errors)
+      return @"mixed_content";
+    if (level == security_state::DANGEROUS) return @"dangerous";
+    // A cryptographic scheme the engine still warns about, such as legacy TLS.
+    return @"insecure";
   }
   // Chrome Web Store support. Regular profiles only: a private window must
   // not change a Space's persistent extension state, so its store pages keep
@@ -3033,11 +3073,6 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   Page* page = FindPage(pageID);
   if (!page || !page->web_contents() || !source.length) return NO;
   page->content_scripts.emplace_back(base::SysNSStringToUTF8(source), mainFrameOnly);
-  // A bridge that can see credentials replaces the engine's own password
-  // manager, which would otherwise save into the engine profile and offer
-  // fills Crest's vault never sees.
-  if (auto* profile = Profile::FromBrowserContext(page->web_contents()->GetBrowserContext()))
-    profile->GetPrefs()->SetBoolean(password_manager::prefs::kCredentialsEnableService, false);
   return YES;
 }
 - (void)evaluateContentScript:(NSString*)source page:(NSString*)pageID frame:(NSString*)frameID
@@ -3080,14 +3115,14 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
           }, reply), base::Value()), crest::kContentWorldID);
 }
 - (BOOL)findInPage:(NSString*)pageID query:(NSString*)query backwards:(BOOL)backwards
-     caseSensitive:(BOOL)caseSensitive completion:(void (^)(BOOL))completion {
+     caseSensitive:(BOOL)caseSensitive completion:(void (^)(NSInteger, NSInteger))completion {
   CHECK(NSThread.isMainThread);
   Page* page = FindPage(pageID);
   if (!page || !page->find_helper) return NO;
   page->find_completion = nil;
   if (!query.length) {
     page->find_helper->StopFinding(find_in_page::SelectionAction::kClear);
-    completion(NO);
+    completion(0, 0);
   } else {
     page->find_completion = [completion copy];
     page->find_helper->StartFinding(base::SysNSStringToUTF16(query), !backwards, caseSensitive, true);

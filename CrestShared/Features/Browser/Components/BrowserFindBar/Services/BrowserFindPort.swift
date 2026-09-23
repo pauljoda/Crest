@@ -29,6 +29,9 @@ struct BrowserFindPort {
     /// What the page can say about the search right now.
     let matchState: () -> BrowserFindMatchState
 
+    /// Which match is selected, out of how many, when the page's engine counts.
+    var matches: () -> BrowserFindMatches? = { nil }
+
     /// How many times the page has been asked for find. Every ask is a request
     /// for the query field, including the ones made while the bar is already
     /// on screen.

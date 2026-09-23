@@ -208,9 +208,10 @@ private final class EnforcingPageEngine: BrowserPageEngine {
     }
     func setZoom(_ zoom: CGFloat) {}
     func performFind(
-        _ query: String, configuration: BrowserFindConfiguration, completion: @escaping @MainActor (Bool) -> Void
+        _ query: String, configuration: BrowserFindConfiguration,
+        completion: @escaping @MainActor (BrowserFindResult) -> Void
     ) {
-        completion(false)
+        completion(.notFound)
     }
 }
 

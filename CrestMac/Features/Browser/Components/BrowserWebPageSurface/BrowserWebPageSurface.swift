@@ -87,6 +87,7 @@ struct BrowserWebPageSurface: View {
             },
             query: { page.findQuery },
             matchState: { page.findMatchState },
+            matches: { page.findMatches },
             focusRequest: { page.findFocusRequest },
             dismiss: page.dismissFind
         )

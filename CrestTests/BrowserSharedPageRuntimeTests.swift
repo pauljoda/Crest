@@ -16,7 +16,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let url = try XCTUnwrap(URL(string: "https://example.com/first"))
         var state = BrowserPageEngineState(
             url: url, title: "First", isLoading: true,
-            hasOnlySecureContent: true, themeColor: nil,
+            security: .secure, themeColor: nil,
             canGoBack: false, canGoForward: false, failure: nil, committed: false)
 
         page.receive(.navigationStarted)

@@ -33,7 +33,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     private(set) var estimatedProgress = 0.0
     private(set) var isLoading = false
     private(set) var isContentFullscreen = false
-    private(set) var hasOnlySecureContent = false
+    /// The engine's judgment of the current document's connection.
+    private(set) var securityState = BrowserPageSecurityState.none
     private(set) var faviconData: Data?
     private(set) var themeColor: NSColor?
     private(set) var canGoBack = false
@@ -48,9 +49,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
     var webContentFailureMessage: String?
+    var hasOnlySecureContent: Bool { securityState.isSecure }
     var isFindPresented: Bool { findSession.isPresented }
     var findQuery: String { findSession.query }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
+    var findMatches: BrowserFindMatches? { findSession.matches }
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     let translation = BrowserPageTranslation()
@@ -78,8 +81,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     @ObservationIgnored private var defaultPageZoom: CGFloat
     @ObservationIgnored private var hasTemporaryPageZoomOverride = false
-    @ObservationIgnored var viewportFitOwner: UUID?
-    @ObservationIgnored var viewportFitGeneration = 0
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored let fileUploadAccess = BrowserFileUploadAccess()
@@ -339,7 +340,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// Replays a request WebKit classified as web-content navigation in this
     /// page without granting it the broader trust of an app-initiated load.
     func loadWebContentRequest(_ request: URLRequest) {
-        if pageEngine.reportsNavigationState { load(request); return }
+        if pageEngine.reportsNavigationState {
+            load(request)
+            return
+        }
         prepareForNavigation(to: request.url)
         pageEngine.load(request)
     }
@@ -779,7 +783,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     func printPage() {
         guard !preparingPrint, printOperation == nil, let service = pageEngine.documentServices,
-            url != nil, let window = nativeView.window else { return }
+            url != nil, let window = nativeView.window
+        else { return }
         let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
         let jobTitle = title.isEmpty ? url?.host() ?? ProductIdentity.name : title
         preparingPrint = true
@@ -803,7 +808,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func pdfData() async throws -> Data {
-        guard url != nil, let service = pageEngine.documentServices else { throw BrowserPageExportError.pageUnavailable }
+        guard url != nil, let service = pageEngine.documentServices else {
+            throw BrowserPageExportError.pageUnavailable
+        }
         return try await service.pdfData()
     }
 
@@ -833,13 +840,16 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func webArchiveData() async throws -> Data {
-        guard url != nil, let service = pageEngine.documentServices else { throw BrowserPageExportError.pageUnavailable }
+        guard url != nil, let service = pageEngine.documentServices else {
+            throw BrowserPageExportError.pageUnavailable
+        }
         return try await service.webArchiveData()
     }
 
     func exportWebArchive() {
         guard let window = nativeView.window, url != nil,
-            let service = pageEngine.documentServices else { return }
+            let service = pageEngine.documentServices
+        else { return }
         let format = service.archiveFormat
         let suggestedFilename = BrowserPageExportPolicy.webArchiveFilename(
             title: title,
@@ -970,8 +980,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         case .loadingChanged(let value):
             isLoading = value
             refreshNavigationState()
-        case .secureContentChanged(let value):
-            hasOnlySecureContent = value
+        case .securityStateChanged(let value):
+            securityState = value
         case .themeColorChanged(let value):
             themeColor = value
         case .historyChanged:
@@ -1032,7 +1042,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             mediaSessionCoordinator?.didFinishNavigation()
         }
         estimatedProgress = isLoading ? 0.5 : 1
-        hasOnlySecureContent = state.hasOnlySecureContent
+        securityState = state.security
         themeColor = state.themeColor
         canGoBack = state.canGoBack
         canGoForward = state.canGoForward
@@ -1067,7 +1077,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             sitePermissionSession.synchronize(for: state.url)
         }
         if !isLoading, hasCommittedNavigationAwaitingCompletion,
-            wasLoading || state.committed {
+            wasLoading || state.committed
+        {
             hasCommittedNavigationAwaitingCompletion = false
             completedNavigationCount += 1
         }
@@ -1141,9 +1152,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// A failed export or print needs nothing from the person, so it is a
     /// notice rather than an alert.
     private static func postFailureNotice(_ summary: String, error: Error) {
-        BrowserNoticeCenter.shared.post(BrowserNotice(
-            message: "\(summary) \(error.localizedDescription)",
-            systemImage: "exclamationmark.triangle"))
+        BrowserNoticeCenter.shared.post(
+            BrowserNotice(
+                message: "\(summary) \(error.localizedDescription)",
+                systemImage: "exclamationmark.triangle"))
     }
 
     // MARK: - Actions - Title and favicon

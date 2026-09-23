@@ -129,8 +129,12 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 - (NSString *)engineVersion;
 - (BOOL)installExtension:(NSString *)extensionID package:(NSString *)path profile:(NSString *)profileID window:(NSString *)windowID
               completion:(void (^)(BOOL installed, NSString *message))completion;
+// Finds the next match, always wrapping at the end of the page. The completion
+// receives the total number of matches and the 1-based ordinal of the selected
+// one; zero matches means nothing was found.
 - (BOOL)findInPage:(NSString *)pageID query:(NSString *)query backwards:(BOOL)backwards
-     caseSensitive:(BOOL)caseSensitive completion:(void (^)(BOOL found))completion;
+     caseSensitive:(BOOL)caseSensitive
+        completion:(void (^)(NSInteger matches, NSInteger activeMatch))completion;
 - (void)disposePages;
 - (void)disposePages:(NSArray<NSString *> *)pageIDs windows:(NSArray<NSString *> *)windowIDs
     releaseProfiles:(NSArray<NSString *> *)profileIDs;

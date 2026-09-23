@@ -15,11 +15,16 @@ final class BrowserFindSessionTests: XCTestCase {
         XCTAssertEqual(session.query, "Crest")
         XCTAssertTrue(request.configuration.backwards)
         XCTAssertFalse(request.configuration.caseSensitive)
-        XCTAssertTrue(request.configuration.wraps)
         XCTAssertEqual(session.matchState, .searching)
 
-        executor.completeRequest(at: 0, matchFound: true)
+        executor.completeRequest(at: 0, result: BrowserFindResult(matchCount: 12, activeMatch: 3))
         XCTAssertEqual(session.matchState, .found)
+        XCTAssertEqual(session.matches, BrowserFindMatches(active: 3, total: 12))
+
+        session.find("Crest!", using: executor)
+        executor.completeRequest(at: 1, result: BrowserFindResult(matchCount: 0, activeMatch: 0))
+        XCTAssertEqual(session.matchState, .notFound)
+        XCTAssertNil(session.matches)
     }
 
     func testNewerSearchSupersedesAnOlderCompletion() {
@@ -29,10 +34,10 @@ final class BrowserFindSessionTests: XCTestCase {
         session.find("first", using: executor)
         session.find("second", using: executor)
 
-        executor.completeRequest(at: 1, matchFound: true)
+        executor.completeRequest(at: 1, result: BrowserFindResult(matchFound: true))
         XCTAssertEqual(session.matchState, .found)
 
-        executor.completeRequest(at: 0, matchFound: false)
+        executor.completeRequest(at: 0, result: .notFound)
         XCTAssertEqual(session.matchState, .found)
     }
 
@@ -63,7 +68,7 @@ private final class BrowserFindExecutorSpy: BrowserFindExecuting {
     struct Request {
         let query: String
         let configuration: BrowserFindConfiguration
-        let completion: @MainActor (Bool) -> Void
+        let completion: @MainActor (BrowserFindResult) -> Void
     }
 
     private(set) var requests: [Request] = []
@@ -71,7 +76,7 @@ private final class BrowserFindExecutorSpy: BrowserFindExecuting {
     func performFind(
         _ query: String,
         configuration: BrowserFindConfiguration,
-        completion: @escaping @MainActor (Bool) -> Void
+        completion: @escaping @MainActor (BrowserFindResult) -> Void
     ) {
         requests.append(
             Request(
@@ -82,7 +87,7 @@ private final class BrowserFindExecutorSpy: BrowserFindExecuting {
         )
     }
 
-    func completeRequest(at index: Int, matchFound: Bool) {
-        requests[index].completion(matchFound)
+    func completeRequest(at index: Int, result: BrowserFindResult) {
+        requests[index].completion(result)
     }
 }

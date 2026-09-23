@@ -28,7 +28,7 @@ struct BrowserFindBar: View {
         HStack(spacing: metrics.itemSpacing) {
             queryField
 
-            BrowserFindMatchStatus(state: port.matchState(), metrics: metrics)
+            BrowserFindMatchStatus(state: port.matchState(), matches: port.matches(), metrics: metrics)
 
             control(
                 "Previous Match",

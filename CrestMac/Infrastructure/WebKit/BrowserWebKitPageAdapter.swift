@@ -293,6 +293,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             Task { @MainActor in
                 guard let self else { return }
                 self.page?.receive(.urlChanged(self.webView.url))
+                self.publishSecurityState()
             }
         }
         .store(in: &observations)
@@ -308,8 +309,12 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             MainActor.assumeIsolated { self?.page?.receive(.loadingChanged(value)) }
         }
         .store(in: &observations)
-        webView.publisher(for: \.hasOnlySecureContent, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.page?.receive(.secureContentChanged(value)) }
+        webView.publisher(for: \.hasOnlySecureContent, options: [.initial, .new]).sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.publishSecurityState() }
+        }
+        .store(in: &observations)
+        webView.publisher(for: \.serverTrust, options: [.new]).sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.publishSecurityState() }
         }
         .store(in: &observations)
         webView.publisher(for: \.themeColor, options: [.initial, .new]).sink { [weak self] value in
@@ -324,5 +329,20 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             MainActor.assumeIsolated { self?.page?.receive(.historyChanged) }
         }
         .store(in: &observations)
+    }
+
+    /// Restates the page's security from the document WebKit is showing, its
+    /// secure-content flag and the trust it kept.
+    private func publishSecurityState() {
+        guard let page else { return }
+        let overrides = page.serverTrustOverrides
+        let profileID = page.profileID
+        page.receive(
+            .securityStateChanged(
+                BrowserPageSecurityState(
+                    webKitURL: webView.url,
+                    hasOnlySecureContent: webView.hasOnlySecureContent,
+                    serverTrust: webView.serverTrust,
+                    isApprovedOverride: { overrides.isApproved($0, for: profileID) })))
     }
 }

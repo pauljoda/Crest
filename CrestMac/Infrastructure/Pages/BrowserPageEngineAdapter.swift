@@ -82,7 +82,7 @@ enum BrowserPageEngineEvent {
     case titleChanged(String?)
     case progressChanged(Double)
     case loadingChanged(Bool)
-    case secureContentChanged(Bool)
+    case securityStateChanged(BrowserPageSecurityState)
     case themeColorChanged(NSColor?)
     case historyChanged
     case infoBarAdded(BrowserEngineInfoBar)
@@ -111,7 +111,7 @@ struct BrowserPageEngineState {
     var url: URL?
     var title: String
     var isLoading: Bool
-    var hasOnlySecureContent: Bool
+    var security: BrowserPageSecurityState
     var themeColor: NSColor?
     var canGoBack: Bool
     var canGoForward: Bool

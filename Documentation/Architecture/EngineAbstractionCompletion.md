@@ -176,10 +176,17 @@ concretely typed.
   engine (done); the page calls it on detach for both engines.
 - Quick Window user-activity monitoring through the channel (2a) so the idle
   timer sees typing.
-- Viewport-fit: host command `engine.viewport_fit(width)`; applies to split
-  cards, Peek and the developer toolbar device widths (M).
-- Find: add `wraps` to the host selector and return active and total match
-  counts (M).
+- Viewport-fit: removed, not ported. Its only caller zoomed a page with an
+  authored CSS minimum width down to the space a WebKit extension side-panel
+  card left in the row; that card was retired with WebKit extensions.
+  Split cards and Peek reflow at the page's own zoom, and the developer
+  toolbar's device widths use `developerViewport`, which never went through
+  it. Chromium side panels narrow the page the way Chrome's do.
+- Find: done. Both engines always wrap, which is all Crest's find asks for,
+  so the configuration carries no wrap option. Chromium's host reports the
+  total and the selected ordinal from `FindTabHelper`'s final update and
+  the find bar shows "n of m"; WebKit's public find reports only whether a
+  match exists, which the WebKit registration declares as a limitation.
 - Focus restoration: verify end to end on Chromium; add `focusPage` if needed.
 - Favicon manual refresh and archived-tab icon pull; `themeColor` in the
   `changed` payload for tab accents.
@@ -236,22 +243,33 @@ notice, media controls and Quick Window activity work on Chromium; both
 
 ### WP3. Security indicator, certificates and HTTP auth
 
-- Server trust: host method returning the page's `SecTrust` and a `security_state`
-  event carrying secure, mixed-content and certificate-error states. Replace
-  `hasOnlySecureContent = scheme == "https"` with the engine's state on both
-  adapters. Restore the certificate sheet and the certificate-error
-  proceed-anyway flow through `BrowserServerTrustOverrideStore`, with the
-  override decision recorded by the core (WP8, permissions aggregate).
-- HTTP auth: host hook `setAuthenticationHandler(page, handler)` with a
-  deferred reply (the modified-link handler is the shape). Drive the existing
-  `BrowserHTTPAuthenticationSession`, including saved HTTP credentials from the
-  vault, on both engines.
-- Downgrade gracefully: if the host cannot supply trust for a page, show
-  "connection details unavailable" rather than "Secure".
+- Security state: done. Each page carries an engine-neutral
+  `BrowserPageSecurityState` (`none`, `insecure`, `secure`, `mixed_content`,
+  `certificate_error`, `dangerous`). Chromium reports it in every `changed`
+  payload as `security`, from `SecurityStateTabHelper`'s level and visible
+  security state (malicious content, certificate status, mixed or
+  cert-error subresources). WebKit derives it from the scheme,
+  `hasOnlySecureContent`, the trust result WebKit left on `serverTrust`, and
+  whether the person accepted that certificate through
+  `BrowserServerTrustOverrideStore`. Site Controls shows each state, keeps
+  `View Certificate` for any page whose engine hands over its trust, and
+  says "Connection Details Unavailable" rather than "Secure" when an HTTPS
+  page has no trust to show.
+- Certificate errors on Chromium stay on Chromium's own interstitial, which
+  explains the error and offers to proceed; that decision belongs to the
+  engine profile rather than `BrowserServerTrustOverrideStore`, and the
+  Chromium registration declares it. Moving it into Crest, with the override
+  recorded by the core (WP8, permissions aggregate), remains open.
+- HTTP auth: done for Basic and Digest. The host's
+  `setHTTPAuthenticationHandler(page:handler:)` defers its reply to the shared
+  `BrowserHTTPAuthenticationSession` and prompt on both engines; proxy
+  challenges and other schemes keep the engine's own handling.
 
-Acceptance: a mixed-content page shows the mixed state; a self-signed site
-offers proceed-anyway and remembers it per the store; a Basic-auth site is
-reachable with Crest's prompt; `View Certificate` works. Effort L.
+Acceptance: a mixed-content page shows the mixed state; a certificate error
+shows its state and can be proceeded past (Crest's store on WebKit,
+Chromium's interstitial on Chromium); a Basic-auth site is reachable with
+Crest's prompt; `View Certificate` works. Remaining: Crest-owned
+proceed-anyway on Chromium. Effort M for the remainder.
 
 ### WP4. Credentials on Chromium
 
@@ -260,8 +278,11 @@ Through 2a, install the credential content bridge and reuse
 `fillGeneratedPassword` execute through the engine port (WebKit
 `evaluateJavaScript` in the bridge world; Chromium isolated-world execution).
 Save-candidate detection, update-versus-new and recency rules move to the core
-(WP8). Chromium's own password bubbles remain suppressed. iCloud Passwords via
-the extension and passkeys via the system sheet stay as they are.
+(WP8). Chromium's own password manager is turned off for every page the host
+creates or adopts, in Space and private profiles alike (a private profile and
+its original profile both), whether or not a credential bridge is installed,
+so its save and fill bubbles never appear. iCloud Passwords via the extension
+and passkeys via the system sheet stay as they are.
 
 Acceptance: fill, save prompt, update prompt and generated password work on a
 test login page in both engines with the same outcomes; no Chromium password

@@ -2065,6 +2065,10 @@
     "engine-owned-site-permissions": {
       "category": "fixed",
       "message": "Permission changes made in Settings or Site Controls now reach open pages without reloading them."
+    },
+    "page-security-and-find-counts": {
+      "category": "improved",
+      "message": "Site Controls now tell certificate errors, mixed content and dangerous sites apart, and Find in Page shows how many matches a page has where the engine can count them."
     }
   }
 }
