@@ -1,0 +1,54 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Crest</title>
+        <item>
+            <title>0.6.133</title>
+            <pubDate>Wed, 23 Sep 2026 14:29:27 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>experimental</sparkle:channel>
+            <sparkle:version>1138</sparkle:version>
+            <sparkle:shortVersionString>0.6.133</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 95 user-facing changes.
+
+### New
+
+- Chromium feature flags open inside Crest Settings.
+
+### Improved
+
+- In the desktop browser, camera, microphone, location and notification requests use Crest's own prompt, are remembered per Space, and can be reviewed and revoked in Site Controls and Privacy.
+- Tab icons in the desktop browser take on a site's theme colour, and refreshing a site's icon works there too.
+- Split cards and Peek in the desktop browser zoom pages with a fixed minimum width to fit, as they do on WebKit.
+- An extension side panel requested from a Quick Window now explains that side panels open in the main window.
+- Crest's link and Space actions appear first in native page menus while browser and extension actions stay available.
+- Page dialogs and website sign-in prompts work across both desktop browser engines.
+- Playing Chromium videos can enter Picture in Picture when switching tabs, with a window that settles into a screen corner.
+
+### Fixed
+
+- Clear Site Data and Reload works in the desktop browser.
+- Extensions that open their side panel themselves, such as ChatGPT, now open it on the first click in the desktop browser.
+- Extensions that work with a companion app, such as ChatGPT, 1Password and Claude, now connect to it in the desktop browser even when the app was only set up for Chrome.
+- Keep unfinished page loads from changing saved tabs or history while preserving completed page titles and icons.
+
+---
+
+Experimental builds are signed and notarized snapshots from the selected branch (chromium-control-plane). They may be less reliable than development or stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/f6dea9d91064bdf84198de6a4764118d798203e5...0c5005611bf7dcf7b1299532149f35083e9a84aa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1138-r1.1/Installer-Crest-0.6.133-experimental-2026-09-23-0c50056-arm64.dmg)
+
+[Browse Experimental releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Experimental+builds%22)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1138-r1.1/Installer-Crest-0.6.133-experimental-2026-09-23-0c50056-arm64.dmg" length="27445583" type="application/octet-stream" sparkle:edSignature="oNmHf/3hNV1OVdroKFZGpb5Ve0DEUQnlgzOhg1DQZlVUqPJICcZ/0PM+WQLUW2fAvg6sNrDVeT43/xDT/daPAA=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: aJ+tGSYE0KMZCGDd8IM3V+19qCtLXNk0mOwtk997dFDQVtWWFxLEgIBfYELFMMSqSNg5C0OAKdZc136pEMhOAg==
+length: 3572
+-->
