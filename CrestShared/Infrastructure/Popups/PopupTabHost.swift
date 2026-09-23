@@ -1,5 +1,4 @@
 import Foundation
-import WebKit
 
 /// Tab-level operations a page pool needs to host adopted popups. Both are
 /// synchronous because WebKit demands the popup's web view before it returns.

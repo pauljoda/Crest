@@ -1,15 +1,14 @@
 import AppKit
-import WebKit
 
 @MainActor
 enum BrowserMacDownloadFeedbackSource {
-    /// Read the pointer only when WebKit hands us a real download. This is
+    /// Read the pointer only when an engine hands us a real download. This is
     /// presentation geometry, never proof of a trusted user gesture.
-    static func capture(in webView: WKWebView) -> BrowserDownloadFeedbackSource? {
-        guard let window = webView.window,
+    static func capture(in pageView: NSView) -> BrowserDownloadFeedbackSource? {
+        guard let window = pageView.window,
             window.isKeyWindow,
             window.isVisible,
-            !webView.isHiddenOrHasHiddenAncestor,
+            !pageView.isHiddenOrHasHiddenAncestor,
             let content = window.contentView
         else { return nil }
         let pointInWindow = window.convertPoint(fromScreen: NSEvent.mouseLocation)

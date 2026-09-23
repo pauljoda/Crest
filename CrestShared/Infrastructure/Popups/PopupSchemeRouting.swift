@@ -1,5 +1,4 @@
 import Foundation
-import WebKit
 
 /// What a new-window request's own URL scheme settles before any pop-up
 /// permission is consulted.

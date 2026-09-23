@@ -49,6 +49,10 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// enforces it itself: true allows, false blocks, nil leaves it to ask.
     /// False when the page enforces the decision through Crest's own bridges.
     func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool
+    /// Ends the page's live capture after Crest withdrew the grant that allowed
+    /// it. An engine that enforces site permissions itself ends capture when
+    /// `applySitePermission` blocks it and needs nothing here.
+    func stopMediaCapture(_ media: BrowserMediaPermission)
     /// Opens the popups the engine's blocker held back, once the person has
     /// allowed them. False when the engine keeps no such list.
     func showBlockedPopups() -> Bool
@@ -89,6 +93,7 @@ extension BrowserPageEngine {
     var contentScripting: (any BrowserPageContentScripting)? { nil }
     func applyAutomaticPopups(_ allowed: Bool) -> Bool { false }
     func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool { false }
+    func stopMediaCapture(_ media: BrowserMediaPermission) {}
     func showBlockedPopups() -> Bool { false }
     func refreshFavicon() {}
     func clearSiteData(for url: URL) async -> Bool { false }
@@ -104,6 +109,18 @@ extension BrowserPageEngine {
     func showInspector() -> Bool { false }
     func toggleInspector(_ panel: BrowserDeveloperPanel, current: BrowserDeveloperPanel?) -> BrowserWebInspectorToggleResult { .unavailable }
     #endif
+}
+
+/// Crest's answer to a site permission request an engine raised itself.
+enum BrowserEnginePermissionResponse: Sendable {
+    /// Allowed, and remembered for the site.
+    case allow
+    /// Allowed for this request only.
+    case allowOnce
+    /// Blocked, and remembered for the site.
+    case block
+    /// Not answered; the site may ask again.
+    case dismiss
 }
 
 struct BrowserEngineNavigation: Equatable, Sendable {

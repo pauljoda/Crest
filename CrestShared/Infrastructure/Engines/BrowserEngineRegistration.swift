@@ -44,6 +44,8 @@ enum BrowserEngineRegistration {
             "Find does not honour a non-wrapping search: the host command takes no wrap argument and the engine always wraps.",
             "Extensions cover actions, installation, side panels and per-Space permissions; full API parity and Apple password-helper pairing remain incomplete.",
             "Translation is limited to the selection service; whole-page translation is unavailable.",
+            "Site permission decisions reach the engine as content settings for the page's current site; the host has no command to stop live camera, microphone or location use directly, so revocation relies on the engine ending it when the setting blocks.",
+            "Web notifications are delivered through the engine's own notification path; Crest's system delivery, activation of the source tab and withdrawal of delivered notifications after revocation need a host notification hook.",
         ],
         archiveFormat: .mhtml,
         evidence: "Native host page, lifecycle, download, permission and compositor ports; isolated app validation")

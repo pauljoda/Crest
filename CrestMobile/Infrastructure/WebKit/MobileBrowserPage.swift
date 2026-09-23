@@ -79,9 +79,16 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     @ObservationIgnored private let openModifiedLink: MobileBrowserPageStore.ModifiedLinkOpener
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
-    @ObservationIgnored lazy var mediaCaptureSession = BrowserMediaCaptureSession(
-        webView: webView, permissionCenter: permissionCenter, spaceID: spaceID
-    )
+    /// Carries Crest's site permission decisions to the page as they change.
+    @ObservationIgnored lazy var sitePermissionSession: BrowserPageSitePermissionSession = {
+        let session = BrowserPageSitePermissionSession(
+            engine: pageEngine, permissionCenter: permissionCenter, spaceID: spaceID)
+        session.siteURL = { [weak self] in self?.pageEngine.currentURL ?? self?.url }
+        session.siteDecisionDidChange = { [weak self] permission in
+            if permission == .popups { self?.synchronizePopupPermission() }
+        }
+        return session
+    }()
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored let serverTrustOverrides: BrowserServerTrustOverrideStore
     @ObservationIgnored let navigationDecider: BrowserNavigationDecider
@@ -367,6 +374,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
             for: .valueChanged
         )
         webView.scrollView.refreshControl = pullToRefreshControl
+        // Observe permission changes from the start, not from the first grant.
+        _ = sitePermissionSession
 
         if loadsInitialURL, let url = tab.url {
             load(url)
@@ -492,12 +501,12 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
 
     func prepareForSpaceDeletion() {
         faviconSession.stop()
-        mediaCaptureSession.reset()
+        sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
         readerModeSession.invalidate()
         mediaSessionCoordinator?.prepareForRemoval()
-        downloadCenter.resetAutomaticDownloadSequence(in: webView)
+        downloadCenter.resetAutomaticDownloadSequence(for: pageEngine)
         webView.stopLoading()
         webView.removeFromSuperview()
         webView.navigationDelegate = nil
@@ -942,7 +951,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     }
 
     func prepareForNavigation(to url: URL?) {
-        mediaCaptureSession.reset()
+        sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         translation.reset()
         readerModeSession.invalidate()

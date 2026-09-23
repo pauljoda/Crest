@@ -12,7 +12,7 @@ extension BrowserPage: WKNavigationDelegate {
         linkHover?.beginNavigation()
         linkDrag?.beginNavigation()
         focusRestoration.invalidate()
-        mediaCaptureSession?.reset()
+        sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         activeNavigation = navigation
         // Reloads and history traversal do not necessarily pass through the
@@ -45,7 +45,7 @@ extension BrowserPage: WKNavigationDelegate {
         // can discard an item that WebKit omits from its public history lists.
         navigationHistory = BrowserPageNavigationHistory()
         refreshNavigationState()
-        downloadCenter.resetAutomaticDownloadSequence(in: webView)
+        downloadCenter.resetAutomaticDownloadSequence(for: pageEngine)
         Task { [weak self] in
             guard let self,
                 self.webKitView?.url?.scheme == "https",

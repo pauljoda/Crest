@@ -150,18 +150,30 @@ observations or a `BrowserPageEngineState` snapshot) and
 `evaluateInMainFrame(_:)` and `clearSiteData(for:)`; WebKit applies automatic
 popups through the port too. Back and forward menus read
 `pageEngine.backHistory/forwardHistory` on both engines, and the failure
-notice's Back leaves a Chromium error page through history. Remaining WebKit
-code in shared paths is WebKit hosting that has no second engine yet:
-`BrowserPagePool` still builds WebKit configurations, ephemeral data stores and
-content rules, adopts WebKit popups and routes `WKScriptMessage`s between pages;
-whole-page translation, hosted notifications and geolocation are WebKit
-bridges. Mobile keeps `MobileBrowserPage` concretely typed.
+notice's Back leaves a Chromium error page through history. WebKit bridges
+that sat in shared infrastructure folders (content blocking, geolocation,
+hosted notifications, media session bridge, reader, whole-page translation,
+popups, user activity, website data, WebKit downloads) now live under
+`CrestShared/Infrastructure/WebKit` or `CrestMac/Infrastructure/WebKit`, and the
+engine-neutral pool, host view, tab-state and reconciliation types moved out
+of the WebKit folders into `Infrastructure/Pages`. `BrowserPagePool` is
+engine-neutral; its WebKit hosting (configurations, private website data
+stores, content rules, WebKit popup adoption, `WKScriptMessage` routing) is
+`BrowserPagePool+WebKit.swift`. `BrowserDownloadCenter` keeps the ledger,
+feedback, data saves and engine-reported transfers; `WKDownload`s run through
+`BrowserWebKitDownloadTransport`, one `BrowserDownloadTransport`. Media Session
+keeps one coordinator over `BrowserMediaSessionTransport`, with the WebKit
+transport in the WebKit folder. Shared code that still names WebKit: the
+credential bridge's WebKit installer (`CredentialContentBridge.swift`), the
+page's `BrowserPopupCoordinator`, `BrowserTransientPageLease`'s content rules
+and the pool's WebKit service defaults. Mobile keeps `MobileBrowserPage`
+concretely typed.
 
 2c. Small port gaps, all S unless noted:
 - Per-Space default zoom applied above the engine fork; Chromium replays zoom
   on `created`.
-- `BrowserDownloadCenter.resetAutomaticDownloadSequence` gets an engine-neutral
-  hook.
+- `BrowserDownloadCenter.resetAutomaticDownloadSequence(for:)` takes the page
+  engine (done); the page calls it on detach for both engines.
 - Quick Window user-activity monitoring through the channel (2a) so the idle
   timer sees typing.
 - Viewport-fit: host command `engine.viewport_fit(width)`; applies to split
@@ -217,8 +229,8 @@ Acceptance for WP2: zero `#if CREST_CHROMIUM_HOST` outside `CrestEngines`
 (met: the composition now selects its entry point, engine registration and
 engine-contributed views by file in `project.yml`, and injects the page
 engine, Site Controls anchor, icon defaults domain and review store); zero
-`webKitView` reads outside the WebKit adapter (met, apart from the pool's
-WebKit hosting noted in 2b); back-forward menus, hover URL, blocked-popup
+`webKitView` reads outside the WebKit adapter (met; the pool's WebKit hosting
+is now its own WebKit extension); back-forward menus, hover URL, blocked-popup
 notice, media controls and Quick Window activity work on Chromium; both
 `Crest` and `CrestChromiumUI` build; retained behavioral tests pass.
 
@@ -259,12 +271,26 @@ bubble appears. Effort M after 2a.
 
 - One source of truth. Permission decisions are core records (WP8). WebKit
   applies them through Crest's prompts as today; Chromium applies them through
-  `HostContentSettingsMap` and reports engine prompts as
-  `permission_requested` events with a reply, so Crest's prompt UI and the
-  Privacy pane list work identically on both engines. Remove the inert
+  `HostContentSettingsMap` and reports engine prompts through its permission
+  handler with a typed `BrowserEnginePermissionResponse`, so Crest's prompt UI
+  and the Privacy pane list work identically on both engines. Remove the inert
   Privacy list state on Chromium.
-- Geolocation and hosted web notifications: through 2a and the permission
-  event, reuse the existing coordinators and `UserNotifications` delivery.
+- Live application (done). Each open page owns one engine-neutral
+  `BrowserPageSitePermissionSession`, a synchronous observer of
+  `BrowserSitePermissionCenter`. A change from a prompt, Site Controls or the
+  Privacy pane that affects the page's site is applied at once through
+  `BrowserPageEngine.applySitePermission` (Chromium content settings), and a
+  withdrawn camera or microphone grant ends capture through
+  `stopMediaCapture` (WebKit capture state). The adapter's
+  `sitePermissionDidChange` refreshes bridges Crest runs in the page (WebKit
+  hosted notifications); WebKit geolocation observes the centre itself.
+- Geolocation and hosted web notifications: WebKit keeps its bridges and
+  coordinators in the WebKit folder. Chromium uses the engine's own location
+  and notification implementations under Crest's decision; Crest's
+  `UserNotifications` delivery, source-tab activation and withdrawal of
+  delivered notifications need a host notification hook, and stopping live
+  capture or location directly needs a host command. Both are declared
+  limitations of the Chromium registration.
 - Clear site data and reload: route to the engine (`WKWebsiteDataStore`
   removal for the origin on WebKit; browsing-data remover on Chromium) or hide
   when unsupported.

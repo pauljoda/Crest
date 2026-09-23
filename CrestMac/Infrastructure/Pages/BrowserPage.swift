@@ -86,6 +86,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored var downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
+    /// Carries Crest's site permission decisions to the engine as they change.
+    @ObservationIgnored let sitePermissionSession: BrowserPageSitePermissionSession
     @ObservationIgnored let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
     @ObservationIgnored let recoverNotificationSystemAuthorization: @MainActor () async -> Void
     @ObservationIgnored let serverTrustOverrides: BrowserServerTrustOverrideStore
@@ -116,8 +118,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored var splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored var linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored var mediaSessionCoordinator: BrowserMediaSessionPageCoordinator?
-    @ObservationIgnored var hostedNotificationIdentifiers: Set<String> = []
-    @ObservationIgnored var hostedNotificationDocumentIdentifier = UUID().uuidString
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
     @ObservationIgnored let credentialSession: BrowserCredentialSession
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
@@ -223,6 +223,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         self.spaceName = spaceName
         self.engineAdapter = engineAdapter
         pageEngine = engineAdapter.engine
+        sitePermissionSession = BrowserPageSitePermissionSession(
+            engine: engineAdapter.engine, permissionCenter: permissionCenter, spaceID: spaceID)
         let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
             defaultPageZoom
         )
@@ -276,6 +278,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             }
         )
         super.init()
+        sitePermissionSession.siteURL = { [weak self] in self?.pageEngine.currentURL ?? self?.url }
+        sitePermissionSession.siteDecisionDidChange = { [weak self] in self?.sitePermissionDidChange($0) }
         // The Space's default zoom; an engine that creates its page later
         // replays it then.
         pageEngine.setZoom(pageZoom)
@@ -424,6 +428,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         fileUploadAccess.invalidate()
         userActivityHandler = nil
         linkContextCapture.clear()
+        sitePermissionSession.resetMediaGrants()
+        downloadCenter.resetAutomaticDownloadSequence(for: pageEngine)
         engineAdapter.detach(from: self)
         mediaSessionCoordinator = nil
     }
@@ -900,6 +906,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         // actually starts provisional navigation.
         linkDrag?.cancel()
         engineAdapter.prepareForNavigation()
+        sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         translation.reset()
         readerModeSession?.invalidate()
@@ -1057,7 +1064,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             committedNavigationCount += 1
             Task { await httpAuthenticationSession.authenticationSucceeded() }
             synchronizePopupPermission(for: state.url)
-            synchronizeEngineSitePermissions(for: state.url)
+            sitePermissionSession.synchronize(for: state.url)
         }
         if !isLoading, hasCommittedNavigationAwaitingCompletion,
             wasLoading || state.committed {
@@ -1066,55 +1073,40 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         }
     }
 
-    // MARK: - Actions - Engine-enforced site permissions
+    // MARK: - Actions - Site permissions
 
-    /// The permissions an engine enforces itself. Crest's per-Space record
-    /// decides them and the engine is told the answer.
-    static let engineEnforcedPermissions: [BrowserSitePermission] = [.camera, .microphone, .location, .notifications]
-
-    /// Applies Crest's record for `url`'s site to an engine that enforces site
-    /// permissions itself, so a revocation in Crest takes effect in the engine.
-    func synchronizeEngineSitePermissions(for url: URL? = nil) {
-        guard let origin = (url ?? displayURL).flatMap(BrowserSiteOrigin.init(url:)) else { return }
-        for permission in Self.engineEnforcedPermissions {
-            var decision = permissionCenter.decision(for: permission, origin: origin, in: spaceID)
-            if decision == .ask, permission == .camera || permission == .microphone {
-                decision = permissionCenter.decision(for: .cameraAndMicrophone, origin: origin, in: spaceID)
-            }
-            let allowed: Bool? = switch decision {
-            case .grantPersistently, .grantForSession: true
-            case .denyPersistently, .denyForSession: false
-            case .ask: nil
-            }
-            _ = pageEngine.applySitePermission(permission, allowed: allowed)
-        }
+    /// Tells the page about a change to one of its site's permissions, after
+    /// the engine applied it: the popup preference and the bridges an engine
+    /// runs inside the page follow the new decision.
+    private func sitePermissionDidChange(_ permission: BrowserSitePermission) {
+        if permission == .popups { synchronizePopupPermission() }
+        engineAdapter.sitePermissionDidChange(permission, on: self)
     }
 
     /// An engine's request for a permission Crest records: a saved decision
     /// answers at once, otherwise Crest's prompt asks and a lasting answer is
-    /// saved for the Space. Replies use the host's codes: 1 allow, 2 allow this
-    /// time, 3 block, 4 dismiss.
+    /// saved for the Space.
     func resolveEngineSitePermission(
         _ permission: BrowserSitePermission,
         origin: BrowserSiteOrigin,
         topLevelOrigin: BrowserSiteOrigin
-    ) async -> Int {
+    ) async -> BrowserEnginePermissionResponse {
         switch permissionCenter.decision(for: permission, origin: origin, in: spaceID) {
-        case .grantPersistently, .grantForSession: return 1
-        case .denyPersistently, .denyForSession: return 3
+        case .grantPersistently, .grantForSession: return .allow
+        case .denyPersistently, .denyForSession: return .block
         case .ask: break
         }
         let response = await sitePermissionRequests.response(
             to: permission, origin: origin, topLevelOrigin: topLevelOrigin, spaceName: spaceName)
         switch response {
-        case .allowOnce: return 2
-        case .denyOnce: return 4
+        case .allowOnce: return .allowOnce
+        case .denyOnce: return .dismiss
         case .grantPersistently:
             permissionCenter.setDecision(.grantPersistently, for: permission, origin: origin, in: spaceID)
-            return 1
+            return .allow
         case .denyPersistently:
             permissionCenter.setDecision(.denyPersistently, for: permission, origin: origin, in: spaceID)
-            return 3
+            return .block
         }
     }
 

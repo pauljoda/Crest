@@ -207,7 +207,8 @@ extension MobileBrowserPage: WKUIDelegate {
             requests: sitePermissionRequests
         ) { [weak self] decision in
             if decision == .grant {
-                self?.mediaCaptureSession.recordGrant(BrowserMediaPermission(type), origin: BrowserSiteOrigin(origin))
+                self?.sitePermissionSession.recordMediaGrant(
+                    BrowserMediaPermission(type), origin: BrowserSiteOrigin(origin))
             }
             decisionHandler(decision)
         }

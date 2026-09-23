@@ -35,6 +35,12 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
     private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
     private var hostedNotificationMessageProxy: BrowserHostedWebNotificationScriptMessageProxy?
+    /// The system notifications the page's current document posted through
+    /// Crest's hosted notification bridge.
+    var hostedNotificationIdentifiers: Set<String> = []
+    /// Names the document the hosted notification bridge answers; a new one
+    /// begins with each navigation.
+    var hostedNotificationDocumentIdentifier = UUID().uuidString
 
     private(set) lazy var pictureInPicture: (any BrowserPagePictureInPictureController)? =
         BrowserPictureInPicturePageController(webView: webView)
@@ -54,9 +60,6 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             policy: .delayedDocumentIcons,
             receive: { [weak self] in self?.page?.receive(.favicon($0, source: nil)) }
         )
-    }
-    private(set) lazy var mediaCaptureSession: BrowserMediaCaptureSession? = page.map {
-        BrowserMediaCaptureSession(webView: webView, permissionCenter: $0.permissionCenter, spaceID: $0.spaceID)
     }
 
     var isContentBlockingActive: Bool { contentRuleSession.isActive }
@@ -177,8 +180,6 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     func detach(from page: BrowserPage) {
         webView.linkHover = nil
         webView.linkDrag = nil
-        mediaCaptureSession?.reset()
-        page.downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
         webView.navigationDelegate = nil
@@ -254,8 +255,13 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         await BrowserVisitedLinkStyler.apply(history: history, to: webView)
     }
 
-    func prepareForNavigation() {
-        mediaCaptureSession?.reset()
+    func prepareForNavigation() {}
+
+    /// WebKit geolocation observes the permission centre itself; the hosted
+    /// notification bridge is told so the document sees the new permission.
+    func sitePermissionDidChange(_ permission: BrowserSitePermission, on page: BrowserPage) {
+        guard permission == .notifications else { return }
+        page.refreshHostedWebNotificationPermission()
     }
 
     /// A private WebKit page is private through its website data store.

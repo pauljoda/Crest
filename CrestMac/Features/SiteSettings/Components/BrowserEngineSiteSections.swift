@@ -10,8 +10,8 @@ import SwiftUI
 // in project.yml.
 
 /// Crest's own per-site permission list. WebKit has no permission UI of its
-/// own, so the decisions come from Crest's permission centre and the page is
-/// told to re-synchronise the ones it enforces itself.
+/// own, so the decisions come from Crest's permission centre; each open page's
+/// `BrowserPageSitePermissionSession` carries a change to the page at once.
 struct BrowserEngineSitePermissionsSection: View {
     let page: BrowserPage
     let origin: BrowserSiteOrigin
@@ -23,18 +23,6 @@ struct BrowserEngineSitePermissionsSection: View {
             origin: origin,
             spaceID: page.spaceID,
             permissionCenter: permissionCenter,
-            didChange: { permission in
-                switch permission {
-                case .notifications:
-                    page.synchronizeHostedWebNotificationPermission()
-                case .location:
-                    page.synchronizeGeolocationPermission()
-                case .popups:
-                    page.synchronizePopupPermission()
-                default:
-                    break
-                }
-            },
             isExpanded: $isExpanded
         )
     }

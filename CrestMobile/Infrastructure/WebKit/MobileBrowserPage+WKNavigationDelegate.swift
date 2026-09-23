@@ -33,7 +33,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
         translation.reset()
-        mediaCaptureSession.reset()
+        sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()
         activeNavigation = navigation
         // Reloads and history traversal do not necessarily pass through the
@@ -62,7 +62,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         // can discard an item that WebKit omits from its public history lists.
         navigationHistory = BrowserPageNavigationHistory()
         refreshNavigationState()
-        downloadCenter.resetAutomaticDownloadSequence(in: webView)
+        downloadCenter.resetAutomaticDownloadSequence(for: pageEngine)
     }
 
     func webView(

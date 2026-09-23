@@ -186,5 +186,15 @@ final class BrowserPageWindowRouting {
 final class BrowserPageProfileDataStores {
     let serverTrustOverrides = BrowserServerTrustOverrideStore()
     var blockedSpaces: Set<SpaceID> = []
+    /// Each private profile's WebKit website data store, by profile.
     var ephemeral: [UUID: WKWebsiteDataStore] = [:]
+
+    /// Drops a private profile's website data along with its store.
+    func releaseEphemeralStore(for profileID: UUID) {
+        ephemeral.removeValue(forKey: profileID)
+    }
+
+    func releaseAllEphemeralStores() {
+        ephemeral.removeAll()
+    }
 }

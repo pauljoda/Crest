@@ -91,7 +91,6 @@ extension BrowserPage {
     }
 
     var geolocationCoordinator: BrowserGeolocationCoordinator? { webKitAdapter?.geolocationCoordinator }
-    var mediaCaptureSession: BrowserMediaCaptureSession? { webKitAdapter?.mediaCaptureSession }
 
     func applyContentBlocking(
         policy: BrowserContentBlockingPolicy,

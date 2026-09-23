@@ -196,8 +196,6 @@ struct MobilePageActionsContent: View {
                         } set: { decision in
                             page.permissionCenter.setDecision(
                                 decision, for: permission, origin: origin, in: page.spaceID)
-                            if permission == .popups { page.synchronizePopupPermission() }
-                            if permission == .location { page.geolocationCoordinator?.synchronizeMainFramePermission() }
                         }
                     ) {
                         Text(permission.defaultDecisionLabel).tag(BrowserSitePermissionDecision.ask)

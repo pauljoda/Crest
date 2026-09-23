@@ -3,8 +3,22 @@ import Foundation
 import WebKit
 
 extension BrowserPage {
-    func synchronizeHostedWebNotificationPermission() {
-        sitePermissionRequests.cancelAll()
+    /// The bridge's per-document state lives with the WebKit adapter; another
+    /// engine never posts through this bridge.
+    var hostedNotificationIdentifiers: Set<String> {
+        get { webKitAdapter?.hostedNotificationIdentifiers ?? [] }
+        set { webKitAdapter?.hostedNotificationIdentifiers = newValue }
+    }
+
+    var hostedNotificationDocumentIdentifier: String {
+        get { webKitAdapter?.hostedNotificationDocumentIdentifier ?? "" }
+        set { webKitAdapter?.hostedNotificationDocumentIdentifier = newValue }
+    }
+
+    /// Follows a change to the site's notification decision: withdrawn
+    /// permission removes what the document posted, and the document is told
+    /// the permission it now has.
+    func refreshHostedWebNotificationPermission() {
         if let url = webKitView?.url, let origin = BrowserSiteOrigin(url: url) {
             let decision = permissionCenter.decision(for: .notifications, origin: origin, in: spaceID)
             if decision != .grantPersistently && decision != .grantForSession {

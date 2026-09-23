@@ -2,7 +2,6 @@ import AppKit
 import Dispatch
 import Foundation
 import Observation
-import WebKit
 import os
 
 @Observable
@@ -92,11 +91,8 @@ final class BrowserPagePool:
         get { runtimeStore.inactiveSinceByTabID }
         set { runtimeStore.inactiveSinceByTabID = newValue }
     }
-    @ObservationIgnored private let profileDataStores: BrowserPageProfileDataStores
-    private var ephemeralDataStores: [UUID: WKWebsiteDataStore] {
-        get { profileDataStores.ephemeral }
-        set { profileDataStores.ephemeral = newValue }
-    }
+    /// Per-profile engine state every window pool of this store family shares.
+    @ObservationIgnored let profileDataStores: BrowserPageProfileDataStores
     @ObservationIgnored private let residencyDecisionProvider: ResidencyDecisionProvider
     private var memoryPressureReleaseTask: Task<Void, Never>? {
         get { runtimeStore.memoryPressureTask }
@@ -105,7 +101,7 @@ final class BrowserPagePool:
     @ObservationIgnored private let monitorsMemoryPressure: Bool
     @ObservationIgnored private let contentRuleListProvider: any BrowserContentRuleListProviding
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
-    @ObservationIgnored private let usesEphemeralWebsiteDataStores: Bool
+    @ObservationIgnored let usesEphemeralWebsiteDataStores: Bool
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
     @ObservationIgnored private let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
@@ -128,7 +124,8 @@ final class BrowserPagePool:
     /// Builds the engine behind each new page. Nil builds a WebKit page from
     /// this pool's own configuration, content rules and website data stores.
     @ObservationIgnored private let makePageEngine: BrowserPageEngineMaker?
-    @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
+    /// Built-in content blocking, which only the WebKit engine applies.
+    @ObservationIgnored let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     private var memoryPressureCoalescer: BrowserMemoryPressureCoalescer {
         get { runtimeStore.memoryPressureCoalescer }
@@ -136,7 +133,7 @@ final class BrowserPagePool:
     }
     @ObservationIgnored private var peekPageLeases:
         [UUID: (request: BrowserPeekRequest, lease: BrowserTransientPageLease)] = [:]
-    @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
+    @ObservationIgnored private(set) var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
     private var spacesReleasingData: Set<SpaceID> {
         get { runtimeStore.spacesReleasingData }
         set { runtimeStore.spacesReleasingData = newValue }
@@ -815,38 +812,6 @@ final class BrowserPagePool:
         presentedTabIDs = []
     }
 
-    func prepareContentBlocking() async {
-        await contentBlocking.prepare()
-    }
-
-    /// Reloads presented pages only when their Space's protection level changes.
-    func reconcileContentBlocking(in session: BrowserSession) async {
-        let update = await contentBlocking.reconcile(in: session)
-        for (tabID, runtime) in tabRuntimes {
-            let page = runtime.page
-            let isPresentedPage = runtimeStore.presentedTabIDs.contains(tabID)
-            page.applyContentBlocking(
-                policy: update.policy(for: page.spaceID),
-                balancedRuleLists: contentBlocking.balancedRuleLists ?? [],
-                activation: update.activation(for: page.spaceID, isPresented: isPresentedPage)
-            )
-        }
-
-        pruneTransientLeases()
-        for lease in transientLeases.values.compactMap(\.value) {
-            lease.applyContentBlocking(
-                policy: update.policy(for: lease.spaceID),
-                balancedRuleLists: contentBlocking.balancedRuleLists ?? []
-            )
-        }
-    }
-
-    /// Refreshes rule lists without reloading unchanged documents.
-    func reloadContentBlocking(in session: BrowserSession) async {
-        contentBlocking.invalidateRuleLists()
-        await reconcileContentBlocking(in: session)
-    }
-
     func reconcile(validTabIDs: Set<TabID>) {
         nativeTabs.reconcile(validTabIDs: validTabIDs)
         tabState.retainCopies(for: validTabIDs)
@@ -1009,7 +974,7 @@ final class BrowserPagePool:
             spaceID: space.id
         )
         if usesEphemeralWebsiteDataStores {
-            ephemeralDataStores.removeValue(forKey: space.profile.id)
+            profileDataStores.releaseEphemeralStore(for: space.profile.id)
         }
     }
 
@@ -1030,7 +995,7 @@ final class BrowserPagePool:
                 )
             }
         }
-        ephemeralDataStores.removeAll()
+        profileDataStores.releaseAllEphemeralStores()
     }
 
     func load(_ url: URL) {
@@ -1234,24 +1199,20 @@ final class BrowserPagePool:
         return true
     }
 
-    /// Adopts the web view WebKit pre-made for a popup as a new selected tab in
-    /// the opener's Space.
+    /// Adopts a page the opener's engine created for a popup as a new tab in
+    /// the opener's Space, selected unless `selecting` is false. `makeEngine`
+    /// builds the popup's engine adapter once the tab exists.
     ///
     /// Declines — leaving the coordinator to route the destination into an
     /// ordinary tab — when the opener is not a resident page of this pool.
     /// Transient openers have already had the opportunity to keep the request in
     /// their lease before this adoption path is reached.
-    ///
-    /// Per-Space isolation needs no work here: WebKit derives the popup's
-    /// configuration from the opener's, so it already carries the opener's
-    /// `websiteDataStore` and web extension controller. The Space lookup only
-    /// confirms the tab landed in the opener's own profile.
-    func adoptPopupWebView(
-        configuration: WKWebViewConfiguration,
+    func adoptPopupPage(
         requestedURL: URL?,
         opener: BrowserPage,
-        selecting: Bool = true
-    ) -> WKWebView? {
+        selecting: Bool,
+        makeEngine: (BrowserSpace) -> any BrowserPageEngineAdapter
+    ) -> BrowserPage? {
         guard tabID(for: opener) != nil,
             !isRuntimeCreationBlocked(in: opener.spaceID),
             let registration = popupTabHost.openTab(requestedURL, opener.spaceID, selecting),
@@ -1262,7 +1223,7 @@ final class BrowserPagePool:
         let page = makePage(
             space: registration.space,
             tabID: registration.tab.id,
-            adoptedConfiguration: configuration
+            engine: makeEngine(registration.space)
         )
         page.markOpenedAsPopup()
         page.updateNavigationContext(
@@ -1277,7 +1238,7 @@ final class BrowserPagePool:
         } else {
             observeBackgroundPage(page, for: registration.tab.id, in: registration.space)
         }
-        return page.webKitView
+        return page
     }
 
     /// Honors `window.close()` by closing the popup's tab through the same store
@@ -1333,34 +1294,8 @@ final class BrowserPagePool:
         activateHostedNotificationSource(page.spaceID, tabID)
     }
 
-    func routeHostedWebNotificationMessage(_ message: WKScriptMessage) {
-        guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
-        else { return }
-        page.receiveHostedWebNotificationMessage(message)
-    }
-
-    func routeGeolocationMessage(_ message: WKScriptMessage) {
-        guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
-        else { return }
-        page.receiveGeolocationMessage(message)
-    }
-
-    func routeBlockedPopupMessage(_ message: WKScriptMessage) {
-        guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
-        else { return }
-        page.receiveBlockedPopupMessage(message)
-    }
-
-    func routeMediaSessionMessage(_ message: WKScriptMessage) {
-        guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
-        else { return }
-        page.receiveMediaSessionMessage(message)
-    }
-
+    /// Every page resident in this pool's tabs.
+    var residentPages: [BrowserPage] { tabRuntimes.values.map(\.page) }
 
     func goBack() { activePage?.goBack() }
     func goForward() { activePage?.goForward() }
@@ -1655,11 +1590,12 @@ final class BrowserPagePool:
         return page
     }
 
-    /// Popups retain WebKit's configuration to preserve their opener and request.
+    /// Builds a page for `space` on `engine`, or on the composition's engine,
+    /// or on WebKit when the composition injected none.
     private func makePage(
         space: BrowserSpace,
         tabID: TabID? = nil,
-        adoptedConfiguration: WKWebViewConfiguration? = nil
+        engine: (any BrowserPageEngineAdapter)? = nil
     ) -> BrowserPage {
         let interval = Self.lifecycleSignposter.beginInterval("Create Browser Page")
         defer {
@@ -1667,22 +1603,7 @@ final class BrowserPagePool:
         }
 
         let routing = BrowserPageWindowRouting(pool: self)
-        let engine: any BrowserPageEngineAdapter
-        if adoptedConfiguration == nil, let makePageEngine {
-            engine = makePageEngine(space.profile.id)
-        } else {
-            let contentRuleLists = contentRuleLists(for: space)
-            engine = BrowserWebKitPageAdapter(
-                configuration: adoptedConfiguration
-                    ?? BrowserPageConfiguration.make(
-                        for: space.profile,
-                        websiteDataStore: websiteDataStore(for: space.profile),
-                        contentRuleLists: contentRuleLists
-                    ),
-                contentRuleLists: contentRuleLists,
-                ownsUserContentController: adoptedConfiguration == nil
-            )
-        }
+        let engine = engine ?? makePageEngine?(space.profile.id) ?? makeWebKitPageEngine(for: space)
         let page = BrowserPage(
             engine: engine,
             dialogPresenter: dialogPresenter,
@@ -1730,20 +1651,6 @@ final class BrowserPagePool:
         } else {
             runtimeStore.install(BrowserTabRuntime(page: page), for: tabID, from: self)
         }
-    }
-
-    private func contentRuleLists(for space: BrowserSpace) -> [WKContentRuleList] {
-        contentBlocking.ruleLists(for: space.browsingPreferences.contentBlockingPolicy)
-    }
-
-    private func websiteDataStore(for profile: BrowsingProfile) -> WKWebsiteDataStore? {
-        guard usesEphemeralWebsiteDataStores else { return nil }
-        if let dataStore = ephemeralDataStores[profile.id] {
-            return dataStore
-        }
-        let dataStore = WKWebsiteDataStore.nonPersistent()
-        ephemeralDataStores[profile.id] = dataStore
-        return dataStore
     }
 
     private func loadInitialURL(for tab: BrowserTab, into page: BrowserPage) {
@@ -2017,7 +1924,7 @@ final class BrowserPagePool:
 
 
 
-    private func pruneTransientLeases() {
+    func pruneTransientLeases() {
         transientLeases = transientLeases.filter { $0.value.value != nil }
     }
 

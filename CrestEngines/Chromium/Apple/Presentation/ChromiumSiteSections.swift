@@ -6,8 +6,9 @@ import SwiftUI
 // compiled into a target, so the shared presentation layer composes these
 // without naming an engine or asking a compile-time condition of its own.
 
-/// Crest's per-Space record decides site permissions on this engine too; a
-/// change is applied to the engine at once rather than on the next page load.
+/// Crest's per-Space record decides site permissions on this engine too. Each
+/// open page's `BrowserPageSitePermissionSession` applies a change to the engine
+/// at once rather than on the next page load.
 struct BrowserEngineSitePermissionsSection: View {
     let page: BrowserPage
     let origin: BrowserSiteOrigin
@@ -19,13 +20,6 @@ struct BrowserEngineSitePermissionsSection: View {
             origin: origin,
             spaceID: page.spaceID,
             permissionCenter: permissionCenter,
-            didChange: { permission in
-                if permission == .popups {
-                    page.synchronizePopupPermission()
-                } else {
-                    page.synchronizeEngineSitePermissions()
-                }
-            },
             isExpanded: $isExpanded
         )
     }

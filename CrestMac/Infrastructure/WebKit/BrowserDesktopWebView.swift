@@ -147,3 +147,10 @@ enum BrowserDesktopWebViewMenuPolicy {
     }
 
 }
+
+// WebKit's hover observer remains with its adapter. Other native engine views
+// use the same host without inheriting WebKit-specific presentation work.
+extension BrowserDesktopWebView: BrowserNativePageSurfaceLifecycle {
+    func didAttach(to host: BrowserWebHostView) { linkHover?.attach(to: host) }
+    func willDetach(from host: BrowserWebHostView) { linkHover?.detach(from: host) }
+}

@@ -44,7 +44,7 @@ final class ChromiumPageAdapter: BrowserPageEngineAdapter {
     func attach(to page: BrowserPage, allowsCredentialAccess: Bool) {
         self.page = page
         native.permissionHandler = { [weak page] permission, origin, topLevelOrigin in
-            await page?.resolveEngineSitePermission(permission, origin: origin, topLevelOrigin: topLevelOrigin) ?? 4
+            await page?.resolveEngineSitePermission(permission, origin: origin, topLevelOrigin: topLevelOrigin) ?? .dismiss
         }
         native.observer = { [weak page] name, values in
             guard let event = ChromiumPageEvent(rawValue: name)?.pageEvent(values) else { return }
@@ -132,6 +132,9 @@ final class ChromiumPageAdapter: BrowserPageEngineAdapter {
     /// Chromium styles visited links from its own history.
     func styleVisitedLinks(history: [BrowserHistoryEntry]) async {}
     func prepareForNavigation() {}
+    /// The engine enforces site permissions itself; the page's permission
+    /// session has already applied the change through `applySitePermission`.
+    func sitePermissionDidChange(_ permission: BrowserSitePermission, on page: BrowserPage) {}
 }
 
 private extension BrowserAuthenticationChallenge {

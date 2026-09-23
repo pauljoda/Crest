@@ -1,7 +1,7 @@
 import Foundation
 import WebKit
 
-extension BrowserDownloadCenter: WKDownloadDelegate {
+extension BrowserWebKitDownloadTransport: WKDownloadDelegate {
     func download(
         _ download: WKDownload,
         decideDestinationUsing response: URLResponse,

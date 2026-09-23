@@ -5,7 +5,6 @@ struct BrowserSitePermissionRow: View {
     let origin: BrowserSiteOrigin
     let spaceID: SpaceID
     let permissionCenter: BrowserSitePermissionCenter
-    var didChange: ((BrowserSitePermission) -> Void)?
 
     var body: some View {
         HStack(spacing: CrestSpacing.small) {
@@ -50,6 +49,5 @@ struct BrowserSitePermissionRow: View {
             origin: origin,
             in: spaceID
         )
-        didChange?(permission)
     }
 }

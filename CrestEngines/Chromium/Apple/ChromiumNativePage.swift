@@ -293,8 +293,9 @@ final class ChromiumNativePage: BrowserPageEngine {
     }
 
     /// Answers the engine's site permission requests from Crest's record and
-    /// prompt; the reply codes are the host's.
-    var permissionHandler: ((BrowserSitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> Int)?
+    /// prompt.
+    var permissionHandler:
+        ((BrowserSitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> BrowserEnginePermissionResponse)?
 
     /// The engine clears the site its page is showing.
     func clearSiteData(for url: URL) async -> Bool {
@@ -496,10 +497,10 @@ final class ChromiumNativePage: BrowserPageEngine {
                     guard let self, let handler = self.permissionHandler,
                         let permission = (request["permission"] as? String).flatMap(BrowserSitePermission.init(rawValue:)),
                         let origin = (request["origin"] as? String).flatMap(URL.init(string:)).flatMap(BrowserSiteOrigin.init(url:))
-                    else { reply(4); return }
+                    else { reply(BrowserEnginePermissionResponse.dismiss.hostCode); return }
                     let topLevel = (request["topLevelOrigin"] as? String).flatMap(URL.init(string:))
                         .flatMap(BrowserSiteOrigin.init(url:)) ?? origin
-                    Task { @MainActor in reply(await handler(permission, origin, topLevel)) }
+                    Task { @MainActor in reply(await handler(permission, origin, topLevel).hostCode) }
                 }
             }
             host?.setLinkHandler(page: id) { [weak self] action, address, label in
@@ -772,5 +773,17 @@ private enum ChromiumPageHostCommand: String, Codable, Sendable {
     case mediaActivate = "engine.media_activate"
     case mediaAction = "engine.media_action"
     case mediaMute = "engine.media_mute"
+}
+
+extension BrowserEnginePermissionResponse {
+    /// The host's reply code for a permission request.
+    fileprivate var hostCode: Int {
+        switch self {
+        case .allow: 1
+        case .allowOnce: 2
+        case .block: 3
+        case .dismiss: 4
+        }
+    }
 }
 #endif

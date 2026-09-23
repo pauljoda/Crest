@@ -2061,6 +2061,10 @@
     "committed-page-session-updates": {
       "category": "fixed",
       "message": "Keep unfinished page loads from changing saved tabs or history while preserving completed page titles and icons."
+    },
+    "engine-owned-site-permissions": {
+      "category": "fixed",
+      "message": "Permission changes made in Settings or Site Controls now reach open pages without reloading them."
     }
   }
 }

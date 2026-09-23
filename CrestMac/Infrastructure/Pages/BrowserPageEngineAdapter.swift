@@ -44,6 +44,9 @@ protocol BrowserPageEngineAdapter: AnyObject {
     func styleVisitedLinks(history: [BrowserHistoryEntry]) async
     /// Runs when Crest prepares a navigation, before the engine starts it.
     func prepareForNavigation()
+    /// Runs after a change to one of the page's site permissions reached the
+    /// engine, so bridges the adapter runs inside the page follow it.
+    func sitePermissionDidChange(_ permission: BrowserSitePermission, on page: BrowserPage)
     func setPrivateBrowsing(_ isPrivate: Bool)
     /// Takes over a page the engine created itself, named by `token`.
     func adoptEngineCreatedPage(_ token: String) -> Bool

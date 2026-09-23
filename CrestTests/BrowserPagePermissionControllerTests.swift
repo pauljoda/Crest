@@ -69,24 +69,43 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         return try XCTUnwrap(controller.current?.id)
     }
 
-    func testMediaRevocationStopsOnlyTheRevokedCapture() async throws {
+    func testMediaRevocationStopsOnlyTheRevokedCapture() {
         let view = RecordingCaptureWebView()
         let center = BrowserSitePermissionCenter()
         let spaceID = SpaceID()
         let origin = BrowserSiteOrigin(scheme: "https", host: "media.example", port: 443)
         center.setDecision(.grantPersistently, for: .camera, origin: origin, in: spaceID)
         center.setDecision(.grantPersistently, for: .microphone, origin: origin, in: spaceID)
-        let session = BrowserMediaCaptureSession(webView: view, permissionCenter: center, spaceID: spaceID)
-        session.recordGrant(.camera, origin: origin)
-        session.recordGrant(.microphone, origin: origin)
+        let session = BrowserPageSitePermissionSession(
+            engine: BrowserWebKitPageEngine(webView: view), permissionCenter: center, spaceID: spaceID)
+        session.recordMediaGrant(.camera, origin: origin)
+        session.recordMediaGrant(.microphone, origin: origin)
         center.setDecision(.denyPersistently, for: .notifications, origin: origin, in: spaceID)
         center.setDecision(.ask, for: .camera, origin: origin, in: spaceID)
-        let deadline = Date().addingTimeInterval(2)
-        while view.cameraStops == 0 && Date() < deadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
         XCTAssertEqual(view.cameraStops, 1)
         XCTAssertEqual(view.microphoneStops, 0)
+    }
+
+    func testDecisionChangedElsewhereReachesAnEngineThatEnforcesItAtOnce() {
+        let engine = EnforcingPageEngine()
+        let center = BrowserSitePermissionCenter()
+        let spaceID = SpaceID()
+        let page = URL(string: "https://maps.example/route")!
+        let origin = BrowserSiteOrigin(scheme: "https", host: "maps.example", port: 443)
+        let other = BrowserSiteOrigin(scheme: "https", host: "other.example", port: 443)
+        let session = BrowserPageSitePermissionSession(engine: engine, permissionCenter: center, spaceID: spaceID)
+        session.siteURL = { page }
+        var refreshed: [BrowserSitePermission] = []
+        session.siteDecisionDidChange = { refreshed.append($0) }
+
+        center.setDecision(.grantPersistently, for: .location, origin: other, in: spaceID)
+        center.setDecision(.grantPersistently, for: .location, origin: origin, in: SpaceID())
+        XCTAssertTrue(engine.applied.isEmpty)
+
+        center.setDecision(.denyPersistently, for: .location, origin: origin, in: spaceID)
+        XCTAssertEqual(engine.applied.map(\.permission), [.location])
+        XCTAssertEqual(engine.applied.map(\.allowed), [false])
+        XCTAssertEqual(refreshed, [.location])
     }
 
     func testMediaDismissalDoesNotPersistAndAnOutstandingRequestCannotOverrideABlock() throws {
@@ -157,6 +176,41 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         controller.resolve(first.id, response: .denyPersistently)
         XCTAssertEqual(controller.current?.origin, top)
         controller.cancelAll()
+    }
+}
+
+/// A page engine that enforces site permissions itself, as Chromium does.
+@MainActor
+private final class EnforcingPageEngine: BrowserPageEngine {
+    var applied: [(permission: BrowserSitePermission, allowed: Bool?)] = []
+
+    let registration = BrowserEngineRegistration.chromium
+    let nativeView = NSView()
+    var backHistory: [BrowserNavigationHistoryItem] { [] }
+    var forwardHistory: [BrowserNavigationHistoryItem] { [] }
+    var currentURL: URL? { nil }
+    var canGoBack: Bool { false }
+    var canGoForward: Bool { false }
+
+    func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool {
+        applied.append((permission, allowed))
+        return true
+    }
+
+    func load(_ request: URLRequest) {}
+    func navigateHistory(by offset: Int) {}
+    func reload(bypassingCache: Bool) {}
+    func stop() {}
+    func mediaActivity() async -> BrowserPageMediaActivity? { nil }
+    func transferOwnership(to windowID: BrowserWindowID) -> Bool { true }
+    func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {
+        completion(nil)
+    }
+    func setZoom(_ zoom: CGFloat) {}
+    func performFind(
+        _ query: String, configuration: BrowserFindConfiguration, completion: @escaping @MainActor (Bool) -> Void
+    ) {
+        completion(false)
     }
 }
 

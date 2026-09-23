@@ -100,6 +100,13 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         return true
     }
 
+    /// WebKit leaves capture running after Crest withdraws a grant; Crest's
+    /// own prompt decided it, so Crest ends it.
+    func stopMediaCapture(_ media: BrowserMediaPermission) {
+        if media != .microphone { webView.setCameraCaptureState(.none, completionHandler: nil) }
+        if media != .camera { webView.setMicrophoneCaptureState(.none, completionHandler: nil) }
+    }
+
     func evaluateInMainFrame(_ body: String) async -> Any? {
         try? await webView.callAsyncJavaScript(body, arguments: [:], contentWorld: .defaultClient)
     }
