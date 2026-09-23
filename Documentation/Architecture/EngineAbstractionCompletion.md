@@ -337,13 +337,13 @@ Stays in Swift by design: heraldry vocabulary and composition, favicon palette
 extraction, sidebar widgets, Peek motion and presentation phases, tear-off
 placement geometry, default-browser prompt cadence.
 
-Page commit ownership still needs a focused pass. The selected-page and Split
-View metadata observers write live URL and title changes to the session before
-their navigation-complete callbacks, and address submission updates the selected
-tab before page commit. Keep the live values in page presentation, then send the
-accepted URL and title to the core on commit while preserving late favicon
-updates and native-tab transitions. This is separate from the release session
-setter guard and needs both engine review.
+Page commit ownership is complete for selected, Split View and background pages.
+Live URL and title observations stay in page presentation; a completed
+navigation sends its URL and document title to the core. WebKit reads the
+finished document title before publishing completion, and Chromium publishes
+completion only for a committed navigation. Late favicons still update the
+matching saved tab, while address submission can convert a native tab into a
+web tab before loading.
 
 Acceptance: `Documentation/Architecture/ControlPlane.md` step 1 acceptance
 ("no parallel domain implementation") becomes literally true; a grep for

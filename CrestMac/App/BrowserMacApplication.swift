@@ -183,21 +183,7 @@ final class BrowserMacApplication {
                 )
             },
             backgroundPageDidUpdate: { update in
-                browser.updateTabFromPage(
-                    url: update.url,
-                    title: update.title,
-                    faviconData: update.faviconData,
-                    iconAccent: update.iconAccent,
-                    for: update.tabID,
-                    matching: update.assignment
-                )
-                if let url = update.completedNavigationURL {
-                    browser.recordVisit(
-                        url: url,
-                        title: update.title,
-                        matching: update.assignment
-                    )
-                }
+                browser.updateBackgroundPage(update)
                 return browser.session
             },
             openPeek: { request in transientBrowsing.presentPeek(request) },
@@ -239,21 +225,7 @@ final class BrowserMacApplication {
                 )
             },
             backgroundPageDidUpdate: { update in
-                privateBrowser.updateTabFromPage(
-                    url: update.url,
-                    title: update.title,
-                    faviconData: update.faviconData,
-                    iconAccent: update.iconAccent,
-                    for: update.tabID,
-                    matching: update.assignment
-                )
-                if let url = update.completedNavigationURL {
-                    privateBrowser.recordVisit(
-                        url: url,
-                        title: update.title,
-                        matching: update.assignment
-                    )
-                }
+                privateBrowser.updateBackgroundPage(update)
                 return privateBrowser.session
             },
             openPeek: { request in privateTransientBrowsing.presentPeek(request) },

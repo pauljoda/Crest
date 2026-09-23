@@ -2057,6 +2057,10 @@
     "core-session-command-cleanup": {
       "category": "internal",
       "message": "Route remaining tab, icon, page and retention changes through the core and remove the obsolete core-backed build switch."
+    },
+    "committed-page-session-updates": {
+      "category": "fixed",
+      "message": "Keep unfinished page loads from changing saved tabs or history while preserving completed page titles and icons."
     }
   }
 }

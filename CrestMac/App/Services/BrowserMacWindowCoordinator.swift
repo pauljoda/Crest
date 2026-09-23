@@ -238,12 +238,6 @@ final class BrowserMacWindowCoordinator {
                 item.tabID, matching: item.spaceAssignment,
                 to: destination.browser, in: item.spaceAssignment)
         else { return false }
-        if let page = source.pages.residentPage(matching: item.runtimeAssignment) {
-            source.browser.updateTabFromPage(
-                url: page.metadata.displayURL, title: page.metadata.displayTitle,
-                faviconData: page.metadata.faviconData, iconAccent: page.metadata.iconAccent,
-                for: item.tabID, matching: item.spaceAssignment)
-        }
         guard
             let tab = source.browser.space(matching: item.spaceAssignment)?.tabs.first(where: { $0.id == item.tabID }),
             destination.pages.canTransferTabRuntime(

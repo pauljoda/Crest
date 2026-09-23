@@ -346,7 +346,18 @@ extension BrowserPage: WKNavigationDelegate {
         clearNavigationFailure()
         processRecovery.recordSuccessfulNavigation()
         webContentFailureMessage = nil
-        completedNavigationCount += 1
+        let completedURL = webView.url
+        let committedNavigation = committedNavigationCount
+        Task { @MainActor [weak self, weak webView] in
+            guard let self, let webView else { return }
+            let documentTitle = try? await webView.evaluateJavaScript("document.title") as? String
+            guard self.activeNavigation == nil,
+                self.committedNavigationCount == committedNavigation,
+                webView.url == completedURL
+            else { return }
+            self.receive(.titleChanged(documentTitle?.isEmpty == false ? documentTitle : webView.title))
+            self.completedNavigationCount += 1
+        }
         updateUnderPageBackground()
         mediaSessionCoordinator?.didFinishNavigation()
         refreshFavicon()

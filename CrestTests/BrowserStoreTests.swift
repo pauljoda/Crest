@@ -360,21 +360,8 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(persistence.session, store.session)
     }
 
-    func testTransientNilPageURLDoesNotEraseTheSelectedTabsCommittedURL() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
-        let tab = try XCTUnwrap(store.selectedSpace?.tabs.first { $0.url != nil })
-        store.selectTab(tab.id)
-
-        store.updateSelectedTabFromPage(url: nil, title: "")
-
-        XCTAssertEqual(store.selectedTab?.url, tab.url)
-        XCTAssertEqual(persistence.session?.selectedTab?.url, tab.url)
-    }
-
-    /// An unfocused Split View card browses on its own, and its sidebar row has to
-    /// follow it. Nothing about the selected tab may move while it does.
-    func testAnUnfocusedCardUpdatesItsOwnTabAndLeavesTheSelectionAlone() throws {
+    /// A completed navigation in an unfocused card updates only its own tab.
+    func testCompletedUnfocusedCardUpdatesItsOwnTabAndLeavesTheSelectionAlone() throws {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: .preview, persistence: persistence)
         let space = try XCTUnwrap(store.selectedSpace)
@@ -384,7 +371,7 @@ final class BrowserStoreTests: XCTestCase {
 
         XCTAssertTrue(
             store.updateTabFromPage(
-                url: url,
+                committedURL: url,
                 title: "Unfocused card",
                 for: member.id,
                 matching: BrowserSpaceRuntimeAssignment(space: space)
@@ -402,9 +389,7 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(persistence.session, store.session)
     }
 
-    /// The same gate the selected-tab path applies: a page that rewrites its title
-    /// to the value already stored must not persist the session again.
-    func testAnUnchangedCardPageWritesNothing() throws {
+    func testLiveCardMetadataWritesNothingBeforeCommit() throws {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: .preview, persistence: persistence)
         let space = try XCTUnwrap(store.selectedSpace)
@@ -412,39 +397,37 @@ final class BrowserStoreTests: XCTestCase {
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         let saveCountBefore = persistence.savedScopes.count
 
-        XCTAssertFalse(
-            store.updateTabFromPage(
-                url: member.url,
-                title: member.title,
-                for: member.id,
-                matching: assignment
-            )
+        store.updateBackgroundPage(
+            BrowserBackgroundPageUpdate(
+                tabID: member.id, assignment: assignment, url: member.url,
+                title: "Uncommitted title", faviconData: nil, iconAccent: nil,
+                estimatedProgress: 0.5, isLoading: true, readerModeState: .unavailable,
+                completedNavigationURL: nil, processTerminationCount: 0)
         )
         XCTAssertEqual(persistence.savedScopes.count, saveCountBefore)
+        XCTAssertEqual(store.session.space(id: space.id)?.tabs.first { $0.id == member.id }?.title, member.title)
     }
 
-    /// Mirrors `testTransientNilPageURLDoesNotEraseTheSelectedTabsCommittedURL`:
-    /// a card whose page reports no URL yet keeps the URL the tab already has.
-    func testATransientNilCardURLDoesNotEraseThatTabsCommittedURL() throws {
+    func testATransientNilCardURLDoesNotWriteItsLiveTitle() throws {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: .preview, persistence: persistence)
         let space = try XCTUnwrap(store.selectedSpace)
         let member = try XCTUnwrap(space.tabs.first { $0.url != nil })
 
-        XCTAssertTrue(
-            store.updateTabFromPage(
-                url: nil,
-                title: "Still loading",
-                for: member.id,
-                matching: BrowserSpaceRuntimeAssignment(space: space)
-            )
+        store.updateBackgroundPage(
+            BrowserBackgroundPageUpdate(
+                tabID: member.id, assignment: BrowserSpaceRuntimeAssignment(space: space),
+                url: nil, title: "Still loading", faviconData: nil, iconAccent: nil,
+                estimatedProgress: 0.5, isLoading: true, readerModeState: .unavailable,
+                completedNavigationURL: nil, processTerminationCount: 0)
         )
 
         let updated = try XCTUnwrap(
             store.selectedSpace?.tabs.first { $0.id == member.id }
         )
         XCTAssertEqual(updated.url, member.url)
-        XCTAssertEqual(updated.title, "Still loading")
+        XCTAssertEqual(updated.title, member.title)
+        XCTAssertTrue(persistence.savedScopes.isEmpty)
     }
 
     /// A card can hold a stale assignment for a frame after a Space switch or a
@@ -459,7 +442,7 @@ final class BrowserStoreTests: XCTestCase {
 
         XCTAssertFalse(
             store.updateTabFromPage(
-                url: url,
+                committedURL: url,
                 title: "Foreign profile",
                 for: member.id,
                 matching: BrowserSpaceRuntimeAssignment(
@@ -470,7 +453,7 @@ final class BrowserStoreTests: XCTestCase {
         )
         XCTAssertFalse(
             store.updateTabFromPage(
-                url: url,
+                committedURL: url,
                 title: "Foreign Space",
                 for: member.id,
                 matching: BrowserSpaceRuntimeAssignment(
@@ -499,7 +482,7 @@ final class BrowserStoreTests: XCTestCase {
 
         XCTAssertTrue(
             store.updateTabFromPage(
-                url: try XCTUnwrap(URL(string: "https://example.com/settled")),
+                committedURL: try XCTUnwrap(URL(string: "https://example.com/settled")),
                 title: "Settled",
                 faviconData: Data("pulled".utf8),
                 iconAccent: BrowserTabIconAccent(red: 0.1, green: 0.2, blue: 0.3),
@@ -1886,16 +1869,74 @@ private final class DelayedBrowserSyncJournalPersistence: BrowserSyncJournalPers
 final class BrowserStoreSaveScopeTests: XCTestCase {
     private typealias Storage = UserDefaultsBrowserSessionPersistence
 
-    func testAPageTitleChangePersistsTheCoreAlone() throws {
+    func testSelectedPageKeepsProvisionalMetadataVisualUntilNavigationCompletes() throws {
+        let originalURL = try XCTUnwrap(URL(string: "https://example.com/old"))
+        let nextURL = try XCTUnwrap(URL(string: "https://example.com/new"))
+        let tab = BrowserTab(title: "Old", url: originalURL, placement: .current)
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle",
+            accent: .indigo, folders: [], tabs: [tab], selectedTabID: tab.id)
         let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
-        let url = try XCTUnwrap(store.selectedTab?.url ?? URL(string: "https://example.com"))
-        store.updateSelectedTabFromPage(url: url, title: "First title")
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: persistence)
+        let synchronizer = BrowserPageSessionSynchronizer(
+            browser: browser, spaceAccess: BrowserSpaceAccessController())
+        let source = BrowserTabRuntimeAssignment(
+            tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
+        let metadata = BrowserPageMetadata(
+            url: nextURL, displayURL: nextURL, title: "New", displayTitle: "New",
+            faviconData: Data("new icon".utf8), iconAccent: nil)
 
-        store.updateSelectedTabFromPage(url: url, title: "A title the page keeps rewriting")
+        browser.navigateSelectedTab(to: nextURL)
+        XCTAssertEqual(synchronizer.synchronize(metadata, matching: source), nextURL.absoluteString)
+        XCTAssertEqual(browser.selectedTab?.url, originalURL)
+        XCTAssertEqual(browser.selectedTab?.title, "Old")
+        XCTAssertTrue(persistence.savedScopes.isEmpty)
 
-        XCTAssertEqual(persistence.savedScopes.last, .core)
-        XCTAssertEqual(store.selectedTab?.title, "A title the page keeps rewriting")
+        XCTAssertNotNil(synchronizer.recordCompletedNavigation(metadata, matching: source))
+        XCTAssertEqual(browser.selectedTab?.url, nextURL)
+        XCTAssertEqual(browser.selectedTab?.title, "New")
+        XCTAssertEqual(browser.selectedSpace?.history.first?.url, nextURL)
+        XCTAssertEqual(browser.selectedTab?.faviconData, metadata.faviconData)
+        XCTAssertEqual(persistence.savedScopes.count, 1)
+    }
+
+    func testBackgroundPageIgnoresProvisionalMetadataAndAcceptsLateCommittedFavicon() throws {
+        let originalURL = try XCTUnwrap(URL(string: "https://example.com/old"))
+        let nextURL = try XCTUnwrap(URL(string: "https://example.com/new"))
+        let tab = BrowserTab(title: "Old", url: originalURL, placement: .current)
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle",
+            accent: .indigo, folders: [], tabs: [tab], selectedTabID: tab.id)
+        let persistence = InMemoryBrowserSessionPersistence()
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: persistence)
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        func update(_ completedURL: URL?, favicon: Data?) -> BrowserBackgroundPageUpdate {
+            BrowserBackgroundPageUpdate(
+                tabID: tab.id, assignment: assignment, url: nextURL, title: "New",
+                faviconData: favicon, iconAccent: nil, estimatedProgress: 1,
+                isLoading: false, readerModeState: .unavailable,
+                completedNavigationURL: completedURL, processTerminationCount: 0)
+        }
+
+        browser.updateBackgroundPage(update(nil, favicon: nil))
+        XCTAssertEqual(browser.selectedTab?.url, originalURL)
+        XCTAssertEqual(browser.selectedTab?.title, "Old")
+        XCTAssertTrue(persistence.savedScopes.isEmpty)
+
+        browser.updateBackgroundPage(update(nextURL, favicon: nil))
+        XCTAssertEqual(browser.selectedTab?.url, nextURL)
+        XCTAssertEqual(browser.selectedTab?.title, "New")
+        XCTAssertEqual(browser.selectedSpace?.history.first?.url, nextURL)
+        XCTAssertEqual(persistence.savedScopes.count, 1)
+
+        let icon = Data("late icon".utf8)
+        browser.updateBackgroundPage(update(nil, favicon: icon))
+        XCTAssertEqual(browser.selectedTab?.faviconData, icon)
+        XCTAssertEqual(persistence.savedScopes.last, .favicon(for: tab.id))
     }
 
     func testCapturingAFaviconPersistsThatTabsIconAndTheCore() throws {

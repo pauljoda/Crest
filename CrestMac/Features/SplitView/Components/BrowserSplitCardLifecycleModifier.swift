@@ -18,7 +18,8 @@ import SwiftUI
 /// The observation set is the metadata half of the root's seven observers. Chrome
 /// concerns are deliberately absent: the address field, the security indicator,
 /// and the extension-activity sweep all speak for the focused card by definition,
-/// and an unfocused card has no business writing to them.
+/// and an unfocused card has no business writing to them. Live page metadata
+/// stays in the page; only a completed navigation changes the saved tab.
 struct BrowserSplitCardLifecycleModifier: ViewModifier {
     let tab: BrowserTab
     let space: BrowserSpace
@@ -28,17 +29,11 @@ struct BrowserSplitCardLifecycleModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: page?.displayURL) {
-                synchronizePageMetadata()
-            }
-            .onChange(of: page?.title) {
-                synchronizePageMetadata()
-            }
             .onChange(of: page?.faviconData) {
-                synchronizePageMetadata()
+                updateCommittedFavicon()
             }
             .onChange(of: page?.themeColor) {
-                synchronizePageMetadata()
+                updateCommittedFavicon()
             }
             .onChange(of: page?.completedNavigationCount) {
                 recordCompletedNavigation()
@@ -55,22 +50,19 @@ struct BrowserSplitCardLifecycleModifier: ViewModifier {
         !pages.publishesPageMetadataCentrally && pages.activeTabID != tab.id
     }
 
-    private func synchronizePageMetadata() {
+    private func updateCommittedFavicon() {
         guard isUnfocusedCard, let page else { return }
-        browser.updateTabFromPage(
-            url: page.displayURL,
-            title: page.navigationFailure?.displayHost ?? page.title,
-            faviconData: page.faviconData,
-            iconAccent: page.siteThemeIconAccent,
-            for: tab.id,
-            matching: assignment
-        )
+        browser.updateCommittedPageFavicon(
+            page.faviconData, iconAccent: page.siteThemeIconAccent,
+            url: page.url, for: tab.id, matching: assignment)
     }
 
     private func recordCompletedNavigation() {
         guard isUnfocusedCard, let page, let url = page.url else { return }
-        synchronizePageMetadata()
-        browser.recordVisit(url: url, title: page.title, matching: assignment)
+        browser.updateTabFromPage(
+            committedURL: url, title: page.title, faviconData: page.faviconData,
+            iconAccent: page.siteThemeIconAccent, for: tab.id,
+            matching: assignment)
         // Re-read the Space so the restyle sees the visit just recorded, and
         // restyle every presented card: the neighbour showing the same link is
         // the card that most needs to know it has now been followed.

@@ -355,6 +355,12 @@ final class BrowserPagePoolTests: XCTestCase {
             responseHTML: "<html><head><title>Background Ready</title></head></html>"
         )
         try await waitForLoad(destinationURL, in: webView)
+        for attempt in 0..<200 {
+            let tab = context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id }
+            if tab?.title == "Background Ready",
+                context.store.selectedSpace?.history.last?.url == destinationURL { break }
+            if attempt < 199 { try await Task.sleep(for: .milliseconds(20)) }
+        }
 
         let updatedTab = try XCTUnwrap(
             context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id }
@@ -383,6 +389,9 @@ final class BrowserPagePoolTests: XCTestCase {
                 profileID: try XCTUnwrap(context.store.session.space(id: context.spaceID)).profile.id))?.webView
         )
         try await waitForLoad(initialURL, in: webView)
+        let acceptedTab = try XCTUnwrap(
+            context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id })
+        let acceptedHistory = context.store.selectedSpace?.history
         let page = try XCTUnwrap(webView.navigationDelegate as? BrowserPage)
         let failureURL = try XCTUnwrap(
             URL(string: "https://failure-background.crest.test/unreachable")
@@ -390,13 +399,20 @@ final class BrowserPagePoolTests: XCTestCase {
 
         page.load(failureURL)
         try await waitForNavigationFailure(in: page)
-        try await waitForTab(backgroundTab.id, toReach: failureURL, in: context.store)
+        for attempt in 0..<200 {
+            if context.updates.values.contains(where: {
+                $0.tabID == backgroundTab.id && $0.url == failureURL
+            }) { break }
+            if attempt < 199 { try await Task.sleep(for: .milliseconds(20)) }
+        }
 
         let failedTab = try XCTUnwrap(
             context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id }
         )
-        XCTAssertEqual(failedTab.url, failureURL)
-        XCTAssertEqual(failedTab.title, "failure-background.crest.test")
+        XCTAssertEqual(page.displayURL, failureURL)
+        XCTAssertEqual(failedTab.url, acceptedTab.url)
+        XCTAssertEqual(failedTab.title, acceptedTab.title)
+        XCTAssertEqual(context.store.selectedSpace?.history, acceptedHistory)
         XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
         XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
     }
@@ -2816,22 +2832,6 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTFail("Timed out waiting for a navigation failure.")
     }
 
-    private func waitForTab(
-        _ tabID: TabID,
-        toReach url: URL,
-        in store: BrowserStore
-    ) async throws {
-        for attempt in 0..<200 {
-            if store.selectedSpace?.tabs.first(where: { $0.id == tabID })?.url == url {
-                return
-            }
-            if attempt < 199 {
-                try await Task.sleep(for: .milliseconds(20))
-            }
-        }
-        XCTFail("Timed out waiting for tab \(tabID) to reach \(url).")
-    }
-
     private func waitForBackgroundUpdate(
         tabID: TabID,
         processTerminationCount: Int,
@@ -2932,21 +2932,7 @@ final class BrowserPagePoolTests: XCTestCase {
             },
             backgroundPageDidUpdate: { update in
                 updates.values.append(update)
-                store.updateTabFromPage(
-                    url: update.url,
-                    title: update.title,
-                    faviconData: update.faviconData,
-                    iconAccent: update.iconAccent,
-                    for: update.tabID,
-                    matching: update.assignment
-                )
-                if let url = update.completedNavigationURL {
-                    store.recordVisit(
-                        url: url,
-                        title: update.title,
-                        matching: update.assignment
-                    )
-                }
+                store.updateBackgroundPage(update)
                 return store.session
             }
         )

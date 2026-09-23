@@ -53,7 +53,7 @@ final class BrowserWindowTitleTests: XCTestCase {
         model.browser.session.spaces[0].tabs[1].splitGroupID = group
         let space = model.browser.selectedSpace!
         model.browser.updateTabFromPage(
-            url: space.tabs[1].url,
+            committedURL: space.tabs[1].url!,
             title: "Background Beta",
             for: space.tabs[1].id,
             matching: BrowserSpaceRuntimeAssignment(space: space)

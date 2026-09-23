@@ -41,6 +41,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var processTerminationCount = 0
     var committedNavigationCount = 0
     var completedNavigationCount = 0
+    private var hasCommittedNavigationAwaitingCompletion = false
     private(set) var navigationFailure: BrowserNavigationFailure?
     var blockedPopupState = BrowserBlockedPopupPageState()
     private(set) var engineInfoBars: [BrowserEngineInfoBar] = []
@@ -939,6 +940,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     func receive(_ event: BrowserPageEngineEvent) {
         switch event {
         case .navigationStarted:
+            hasCommittedNavigationAwaitingCompletion = false
             linkDrag?.beginNavigation()
             linkHover?.beginNavigation()
             credentialState.didStartNavigation()
@@ -1000,6 +1002,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 host?.closeWebContentInitiatedPage(self)
             }
         case .creationFailed(let message):
+            hasCommittedNavigationAwaitingCompletion = false
             isLoading = false
             webContentFailureMessage = message
         case .openRequested(let destination):
@@ -1032,16 +1035,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         // own, and a retry that fails again commits no new error page.
         switch state.failure {
         case .processTerminated:
+            hasCommittedNavigationAwaitingCompletion = false
             webContentFailureMessage = "process_terminated"
             credentialState.webContentProcessDidTerminate()
             mediaSessionCoordinator?.webContentProcessDidTerminate()
         case .navigationFailed(let failure):
+            hasCommittedNavigationAwaitingCompletion = false
             pendingNavigationURL = nil
             navigationFailure = failure
             httpAuthenticationSession.authenticationFailed()
         case nil: break
         }
         if state.committed {
+            hasCommittedNavigationAwaitingCompletion = true
             isContentFullscreen = false
             pendingNavigationURL = nil
             navigationFailure = nil
@@ -1053,7 +1059,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             synchronizePopupPermission(for: state.url)
             synchronizeEngineSitePermissions(for: state.url)
         }
-        if wasLoading, !isLoading, committedNavigationCount > 0 { completedNavigationCount += 1 }
+        if !isLoading, hasCommittedNavigationAwaitingCompletion,
+            wasLoading || state.committed {
+            hasCommittedNavigationAwaitingCompletion = false
+            completedNavigationCount += 1
+        }
     }
 
     // MARK: - Actions - Engine-enforced site permissions

@@ -6,6 +6,42 @@ import XCTest
 
 @MainActor
 final class BrowserSharedPageRuntimeTests: XCTestCase {
+    func testSnapshotEngineCompletesOnlyCommittedNavigations() throws {
+        let tab = BrowserTab.startPage()
+        let space = makeSpace(tabs: [tab])
+        let pool = BrowserPagePool()
+        defer { pool.reconcile(validTabIDs: []) }
+        pool.select(tab: tab, space: space)
+        let page = try XCTUnwrap(pool.activePage)
+        let url = try XCTUnwrap(URL(string: "https://example.com/first"))
+        var state = BrowserPageEngineState(
+            url: url, title: "First", isLoading: true,
+            hasOnlySecureContent: true, themeColor: nil,
+            canGoBack: false, canGoForward: false, failure: nil, committed: false)
+
+        page.receive(.navigationStarted)
+        page.receive(.stateChanged(state))
+        state.committed = true
+        page.receive(.stateChanged(state))
+        XCTAssertEqual(page.completedNavigationCount, 0)
+        state.committed = false
+        state.isLoading = false
+        page.receive(.stateChanged(state))
+        XCTAssertEqual(page.completedNavigationCount, 1)
+
+        page.receive(.navigationStarted)
+        state.isLoading = true
+        page.receive(.stateChanged(state))
+        state.isLoading = false
+        page.receive(.stateChanged(state))
+        XCTAssertEqual(page.completedNavigationCount, 1)
+
+        state.url = try XCTUnwrap(URL(string: "https://example.com/first#section"))
+        state.committed = true
+        page.receive(.stateChanged(state))
+        XCTAssertEqual(page.completedNavigationCount, 2)
+    }
+
     func testNormalWindowsShareLivePagesButKeepIndependentSelections() throws {
         let tabs = [BrowserTab.startPage(), BrowserTab.startPage()]
         let space = makeSpace(tabs: tabs)

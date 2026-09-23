@@ -377,13 +377,17 @@ extension BrowserStore {
     }
 
     func navigateSelectedTab(to url: URL) {
-        guard let space = selectedSpace, let tabID = space.selectedTabID,
+        // An existing web page stays at its accepted location until the engine
+        // reports the new navigation. Native content needs a web tab to host it.
+        guard selectedTab?.isWebPage == false,
+            let space = selectedSpace, let tabID = space.selectedTabID,
             let observation = observeSessionTab(url: url, title: url.host() ?? url.absoluteString,
                 faviconData: nil, iconAccent: nil, tabID: tabID, in: space.id)
         else { return }
         persist(syncUrgency: .coalesced, scope: saveScope(for: observation))
     }
 
+    #if DEBUG
     func updateSelectedTabFromPage(
         url observedURL: URL?,
         title: String?,
@@ -396,48 +400,34 @@ extension BrowserStore {
         else { return }
         persist(syncUrgency: .coalesced, scope: saveScope(for: observation))
     }
+    #endif
 
-    /// The per-tab twin of ``updateSelectedTabFromPage(url:title:faviconData:iconAccent:)``.
-    ///
-    /// A Split View card presents a live page for a tab that may not be the
-    /// selected one, and that page reports the same url, title, and favicon the
-    /// focused card's page does. Without this, an unfocused card would browse
-    /// with a sidebar row frozen at whatever it said when the card appeared.
-    ///
-    /// Everything the selected-tab path decides is decided the same way here —
-    /// the change gate, the automatic-icon identity rules, and the save scope
-    /// that keeps a title rewrite off the favicon store. The one addition is the
-    /// Space assignment: a card binds a tab it did not select, so the write is
-    /// confirmed against the Space and profile the caller is drawing before it
-    /// touches the session. A stale card mid-Space-switch writes nothing.
-    /// A completed navigation records its visit in the same publication. The
-    /// return value reports whether the page metadata changed.
+    /// Accept one completed navigation for an exact tab and Space assignment.
+    /// Page title and address observations before this callback stay visual.
     @discardableResult
     func updateTabFromPage(
-        url observedURL: URL?,
+        committedURL: URL,
         title: String?,
         faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil,
         for tabID: TabID,
-        matching assignment: BrowserSpaceRuntimeAssignment,
-        completedNavigationURL: URL? = nil
+        matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard let space = space(matching: assignment) else { return false }
+        guard let space = space(matching: assignment),
+            space.tabs.contains(where: { $0.id == tabID })
+        else { return false }
         var scope: BrowserSessionSaveScope?
-        if space.tabs.contains(where: { $0.id == tabID }),
-            let observation = observeSessionTab(url: observedURL, title: title,
+        if let observation = observeSessionTab(url: committedURL, title: title,
                 faviconData: faviconData, iconAccent: iconAccent, tabID: tabID, in: assignment.spaceID)
         {
             scope = saveScope(for: observation)
         }
         let changedMetadata = scope != nil
-        if let url = completedNavigationURL {
-            if family.executeRecords("history.visit", in: assignment.spaceID,
-                arguments: ["url": url.absoluteString, "title": title as Any? ?? NSNull()],
-                from: self) {
-                scope = scope ?? .history(in: assignment.spaceID)
-                scope?.history = .only([assignment.spaceID])
-            }
+        if family.executeRecords("history.visit", in: assignment.spaceID,
+            arguments: ["url": committedURL.absoluteString, "title": title as Any? ?? NSNull()],
+            from: self) {
+            scope = scope ?? .history(in: assignment.spaceID)
+            scope?.history = .only([assignment.spaceID])
         }
         guard let scope else { return false }
         persist(syncUrgency: .coalesced, scope: scope)
@@ -445,16 +435,33 @@ extension BrowserStore {
     }
 
     func updateBackgroundPage(_ update: BrowserBackgroundPageUpdate) {
-        updateTabFromPage(
-            url: update.url, title: update.title, faviconData: update.faviconData,
-            iconAccent: update.iconAccent, for: update.tabID, matching: update.assignment,
-            completedNavigationURL: update.completedNavigationURL
-        )
+        if let url = update.completedNavigationURL {
+            updateTabFromPage(
+                committedURL: url, title: update.title, faviconData: update.faviconData,
+                iconAccent: update.iconAccent, for: update.tabID, matching: update.assignment)
+        } else {
+            updateCommittedPageFavicon(
+                update.faviconData, iconAccent: update.iconAccent, url: update.url,
+                for: update.tabID, matching: update.assignment)
+        }
     }
 
-    /// A title rewrite touches only the core; an icon the page replaced also
-    /// reconciles that tab's favicon bytes. Which of those happened is the
-    /// core's answer; turning it into a save scope is this adapter's work.
+    /// A favicon can finish after the navigation that established its URL.
+    /// The core checks that it still belongs to an automatic icon at that page.
+    func updateCommittedPageFavicon(_ data: Data?, iconAccent: BrowserTabIconAccent?,
+        url: URL?, for tabID: TabID, matching assignment: BrowserSpaceRuntimeAssignment) {
+        guard let data, !data.isEmpty, let url,
+            let space = space(matching: assignment),
+            let tab = space.tabs.first(where: { $0.id == tabID }),
+            tab.url == url,
+            tab.faviconData != data || tab.iconAccent != iconAccent
+        else { return }
+        cacheAutomaticTabFavicon(data, iconAccent: iconAccent, url: url,
+            for: tabID, in: assignment.spaceID)
+    }
+
+    /// The core reports whether a completed page changed title or icon bytes;
+    /// this adapter maps that answer to the affected save scope.
     private func saveScope(for observation: BrowserTabObservation) -> BrowserSessionSaveScope {
         observation.changedFavicon ? .favicon(for: observation.tabID) : .core
     }

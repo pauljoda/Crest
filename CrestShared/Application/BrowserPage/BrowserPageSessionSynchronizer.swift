@@ -7,10 +7,10 @@ struct BrowserPageSessionSynchronizer {
 
     func synchronize(_ metadata: BrowserPageMetadata, matching source: BrowserTabRuntimeAssignment) -> String? {
         guard selectedSpace(matching: source) != nil else { return nil }
-        browser.updateSelectedTabFromPage(
-            url: metadata.displayURL, title: metadata.displayTitle,
-            faviconData: metadata.faviconData, iconAccent: metadata.iconAccent
-        )
+        browser.updateCommittedPageFavicon(
+            metadata.faviconData, iconAccent: metadata.iconAccent, url: metadata.url,
+            for: source.tabID, matching: BrowserSpaceRuntimeAssignment(
+                spaceID: source.spaceID, profileID: source.profileID))
         return (metadata.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? ""
     }
 
@@ -18,7 +18,10 @@ struct BrowserPageSessionSynchronizer {
         _ metadata: BrowserPageMetadata, matching source: BrowserTabRuntimeAssignment
     ) -> BrowserSpace? {
         guard let space = selectedSpace(matching: source), let url = metadata.url else { return nil }
-        browser.recordVisit(url: url, title: metadata.title, in: space.id)
+        browser.updateTabFromPage(
+            committedURL: url, title: metadata.title, faviconData: metadata.faviconData,
+            iconAccent: metadata.iconAccent, for: source.tabID,
+            matching: BrowserSpaceRuntimeAssignment(space: space))
         return browser.selectedSpace
     }
 

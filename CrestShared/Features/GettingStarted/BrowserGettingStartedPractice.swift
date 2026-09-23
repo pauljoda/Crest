@@ -90,7 +90,7 @@ final class BrowserGettingStartedPractice {
     func openExampleTab() {
         guard let id = browser.openNewTab(url: URL(string: "https://wikipedia.org")!) else { return }
         _ = browser.updateTabFromPage(
-            url: URL(string: "https://wikipedia.org"), title: "Wikipedia",
+            committedURL: URL(string: "https://wikipedia.org")!, title: "Wikipedia",
             faviconData: BrowserGettingStartedArtwork.favicon("GuideWikipedia"),
             for: id, matching: assignment)
     }
