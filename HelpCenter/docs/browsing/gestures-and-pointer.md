@@ -23,7 +23,7 @@ Many Crest actions stay out of the permanent chrome. This is the practical map f
 - Drag a sidebar tab onto the page to create or extend a Split View.
 - Drag tabs and folders to reorder them, save them in folders, or move them when a destination is shown.
 - Swipe or scroll over the Space picker to change Spaces.
-- Use the normal two-finger Back and Forward gesture inside web content; WebKit owns the page-navigation gesture.
+- Use the normal two-finger Back and Forward gesture inside web content; the page's engine owns the page-navigation gesture.
 
 ## Mouse and trackpad details on Mac
 

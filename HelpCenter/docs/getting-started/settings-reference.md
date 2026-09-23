@@ -29,7 +29,7 @@ Choose what happens to links from other apps, which Space supplies their signed-
 
 ## Shortcuts
 
-Search the complete Mac command catalog, record a replacement, inspect conflicts, clear an assignment, or restore the default. Extension commands are shown separately because they belong to the extension installed in that Space.
+Search the complete Mac command catalog, record a replacement, inspect conflicts, clear an assignment, or restore the default. Extension shortcuts are set on Chromium's extension shortcuts page, opened from **Extensions → Keyboard Shortcuts…**, because they belong to the extension installed in that Space.
 
 ## Spaces
 
@@ -49,14 +49,14 @@ Review Crest Passwords by Space, authenticate to reveal or export sensitive cred
 
 ## Extensions
 
-Available on Mac. Install, enable, remove, pin, inspect, update, and control site access for extensions in the current Space.
+Available in the Chromium build for Mac. Install, enable, remove, pin, copy, and manage site access for extensions in the current Space.
 
 ## Advanced
 
-Import and export browser data, access runtime and diagnostic controls, and manage developer-facing behavior. Change advanced options deliberately; many of them exist to diagnose a specific browser or WebKit condition rather than improve everyday browsing.
+Import and export browser data, access runtime and diagnostic controls, and manage developer-facing behavior. Change advanced options deliberately; many of them exist to diagnose a specific browser or engine condition rather than improve everyday browsing.
 
 Choose **Rerun onboarding** to return to Welcome and go through setup again. Completing setup opens Getting Started in your first Space, reusing its existing guide when available.
 
 ## Feature Flags and About
 
-On Mac, **Feature Flags** exposes WebKit runtime options. **About** shows Crest’s build information and links to updates and the community.
+On Mac, **Feature Flags** exposes the running engine's options: WebKit's runtime options in the WebKit build, and Chromium's feature flags in the Chromium build. **About** shows Crest’s build information and links to updates and the community.

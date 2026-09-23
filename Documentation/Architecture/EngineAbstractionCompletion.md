@@ -1,484 +1,389 @@
-# Engine abstraction completion plan
+# Engine abstraction status
 
-This plan closes the remaining work after the control-plane migration so that
-Crest has one finished engine abstraction with two interchangeable adapters,
-WebKit and Chromium, and all browser logic in the portable core. It is written
-so a new session can execute it without prior context. Read
-[ControlPlane.md](ControlPlane.md) first for the ownership contract this plan
-completes, and follow `AGENTS.md` for versioning, release notes and tests.
+Crest has one engine abstraction with two adapters, WebKit and Chromium, and
+keeps shared browser rules in the portable core. This document records which
+work packages are done and what each still lacks. Read
+[ControlPlane.md](ControlPlane.md) for the ownership contract, and follow
+`AGENTS.md` for versioning, release notes and tests.
 
-## Goal and principles
-
-Ownership after this plan:
+## Ownership
 
 | Layer | Owns | Never owns |
 | --- | --- | --- |
-| Portable core (`CrestCore`) | Every saved or shared rule that must behave identically on both engines and both platforms: Spaces, tabs, folders, splits, history, archive, sync, access, downloads ledger and risk, credential capture and save policy, site permission records, search providers, setup and import plans, shortcut conflicts, launch policy, app-wide behavior preferences, media-session arbitration | Rendering, input, scrolling, compositing, engine handles, image bytes, platform services |
-| Engine adapters (`CrestShared/Infrastructure/WebKit`, `CrestEngines/Chromium`) | Page creation and disposal, loads, navigation history, find, zoom, capture, printing, downloads transport, permission prompts transport, server trust, HTTP auth transport, popups, media observations, user scripts, DevTools, extensions execution | Deciding browser rules; mutating shared state directly |
-| Shared Swift (`CrestShared`, `CrestMac`, `CrestMobile`) | Presentation, the viewed Space and selected tab, native windows and cards, projections, platform services (Keychain, CloudKit transport, notifications delivery, LaunchServices) | Engine-specific types or `#if CREST_CHROMIUM_HOST` outside the adapters; second implementations of core rules |
+| Portable core (`CrestCore`) | Every saved or shared rule that must behave the same on both engines and both platforms: Spaces, tabs, folders, splits, history, archive, sync, access, the downloads ledger and risk, credential capture and save policy, site permission records, search providers, setup and import plans, shortcut conflicts, launch policy, app-wide behavior preferences, media-session arbitration | Rendering, input, scrolling, compositing, engine handles, image bytes, platform services |
+| Engine adapters (`CrestShared/Infrastructure/WebKit`, `CrestMac/Infrastructure/WebKit`, `CrestEngines/Chromium`) | Page creation and disposal, loads, navigation history, find, zoom, capture, printing, download transport, permission prompt transport, server trust, HTTP auth transport, popups, media observations, content scripts, DevTools, extension execution | Deciding browser rules; mutating shared state directly |
+| Shared Swift (`CrestShared`, `CrestMac`, `CrestMobile`) | Presentation, the Space and tab each window shows, native windows and cards, projections, platform services (Keychain, CloudKit transport, notification delivery, LaunchServices) | Engine types or `#if CREST_CHROMIUM_HOST` outside the adapters; second copies of core rules |
 
-Direct native operations such as scrolling, pointer input, compositing, focus
-and page zoom stay inside the adapter and never cross the core boundary. A core
-command owns a saved or shared transition; the adapter reports completion.
-Choosing which Space or tab a window currently displays is visual Swift state.
-Release compositions expose the store's session as a read-only projection.
-Sync replacements use the core's checked transaction; the synthetic session
-setter exists only in Debug for retained test fixtures.
+Scrolling, pointer input, compositing, focus and page zoom stay inside the
+adapter and never cross the core boundary. A core command owns a saved or
+shared transition, and the adapter reports completion. Which Space or tab a
+window shows is window state in Swift. Release builds expose the store's
+session as a read-only projection. Sync replacements go through the core's
+checked transaction, and the session setter that replaces a session directly
+exists only in Debug builds, for test fixtures.
 
-Product rules that constrain every work package:
+Rules every package must keep:
 
-- A Space is one profile. No path may share a profile across Spaces or create
+- A Space is one profile. No path may share a profile across Spaces, or create
   a page, transfer, export or network request for a locked Space without a
-  grant. The core gate covers commands, value edits and replacements; the
-  presentation layer must not build content for locked Spaces.
-- Crest is a single-window app. New windows appear only from user action or an
-  explicit extension `windows.create`. Engine surfaces such as DevTools,
-  popups and side panels dock inside the Crest window.
-- Capability declarations in `BrowserEngineRegistration` must describe the
-  adapter's real behavior, and UI must gate on them rather than on build flags.
+  grant. The core gate covers commands, native value edits and borrowing; the
+  presentation layer must not build content for a locked Space.
+- Crest is a single-window app. New windows appear only from a user action or
+  an explicit extension `windows.create`. DevTools, popups and side panels
+  dock inside the Crest window.
+- Capability declarations in `BrowserEngineRegistration` describe what the
+  adapter really does, and UI gates on them rather than on build flags.
 - Unsupported features have explicit product behavior. Reader, whole-page
   translation and built-in content blocking are unavailable on Chromium by
-  decision; selection translation is supported on both engines.
+  decision. Selection translation works on both engines.
 
 ## Current state
 
-The core owns the session spine on every shipping target. The obsolete
-`CREST_CORE_BACKED` build flag and its conditional Swift branches are gone.
-The Chromium composition is the
-installed desktop product with its own engine directory, keychain item,
-passkeys through the system sheet, docked DevTools, extensions including side
-panels, shortcuts, Space-owned pinned strip and store install. Upgrade from the
-WebKit release is verified.
+The core owns the session on every shipping target, and no Swift file still
+uses the retired `CREST_CORE_BACKED` flag. On macOS the Chromium composition
+(`CrestChromiumUIProduct`, packaged by `package-chromium-host.py --product`)
+is the default download on the experimental update channel. The WebKit `Crest`
+target is published beside it as the alternate desktop build, and
+`CrestMobile` runs WebKit on iPhone and iPad. The Chromium product has its own
+engine directory and Safe Storage keychain item, passkeys through the system
+sheet, docked DevTools, extensions with side panels and shortcuts, a pinned
+strip owned by the Space, and Chrome Web Store installs.
 
 `BrowserPage` (`CrestMac/Infrastructure/Pages`) holds an
-`any BrowserPageEngineAdapter` and its `any BrowserPageEngine`; it names no
-engine type and has no engine `#if`. The WebKit page adapter
+`any BrowserPageEngineAdapter` and its `any BrowserPageEngine`. It names no
+engine type and has no engine `#if`. The WebKit adapter
 (`BrowserWebKitPageAdapter` plus the page's WebKit delegate and bridge
-extensions in `CrestMac/Infrastructure/WebKit`) and the Chromium page adapter
-(`ChromiumPageAdapter` in `CrestEngines/Chromium/Apple`) supply the
-engine-specific wiring. The composition chooses the engine; no Swift outside
-`CrestEngines` asks `CREST_CHROMIUM_HOST`.
+extensions in `CrestMac/Infrastructure/WebKit`) and the Chromium adapter
+(`ChromiumPageAdapter` in `CrestEngines/Chromium/Apple`) supply the engine
+wiring. `project.yml` selects the entry point, engine registration and
+engine-contributed views for each composition by file, and no Swift outside
+`CrestEngines` tests `CREST_CHROMIUM_HOST`.
 
-The page port now carries Crest-first native context menu actions ahead of
-engine and extension items, JavaScript dialogs and before-unload through the
-shared dialog presenter, and Chromium Basic and Digest authentication through
-the shared per-Space credential session. Each engine registration supplies
-its own Feature Flags pane. Chromium's page fullscreen reports presentation
-state to the shared shell, which shows the video without browser chrome and
-restores the shell on Escape. The page-level PiP lifecycle can request
-Chromium's own video PiP when a playing tab leaves view; its floating window
-uses Chromium's video surface with a macOS corner snap after a drag.
+The upgrade path from the WebKit release to the Chromium product is covered by
+a test that carries a real installed session, its per-Space history, favicons
+and sync journal into the checkpoint. Runs on physical devices and against a
+real iCloud account are still outstanding; see WP9.
 
 ## Work packages
 
-Each package lists scope, files, design, acceptance and effort. Packages marked
-independent can run in parallel in file-disjoint slices. Effort: S under a day,
-M a few days, L a week or more.
+### WP0. Manual smoke of Chromium-owned surfaces. Remaining
 
-### WP0. Smoke Chromium-owned surfaces (manual, first)
+Nobody has recorded the checklist yet. Run it in a review package and mark
+each item as works, wrong window or missing: `alert`, `confirm` and `prompt`;
+`<input type=file>` with single and multiple selection; a Basic-auth URL;
+`<input type=color>`; fullscreen video and Escape; a site notification's
+permission and delivery; the PiP button.
 
-Chromium routes JavaScript dialogs, before-unload and HTTP Basic/Digest prompts
-to Crest's shared presenters. Its file chooser, color picker, notification
-delivery and picture-in-picture still use engine surfaces on a real
-`chrome::Browser` while the Crest `BrowserWindow` override is inert. Video
-fullscreen fills the Crest window and Escape restores the browser shell in an
-isolated runtime check. A notification permission grant and successful
-`new Notification(...)` call were observed in the isolated app, but macOS
-delivery and activation of the source page have not yet been established.
+What the code does today:
 
-Checklist in a review package: `alert`, `confirm`, `prompt`; `<input type=file>`
-single and multiple; a Basic-auth URL; `<input type=color>`; fullscreen video
-and Escape; a site notification permission and delivery; PiP button. Record
-each as works, wrong window, or missing. Missing items become host hooks in WP2
-or WP3. Effort S.
+- JavaScript dialogs, before-unload, and HTTP Basic and Digest challenges reach
+  Crest's shared `BrowserDialogPresenter` and `BrowserHTTPAuthenticationSession`.
+- Page fullscreen reports its state to the shared shell, which shows the video
+  without browser chrome and restores the shell on Escape.
+- The host has no hook for the file chooser or the color picker, so both use
+  Chromium's own engine surfaces. Nobody has verified them in a Crest window.
+- Notifications use Chromium's own delivery path.
 
-### WP1. Dead-code sweep (done for the session edit surface)
+### WP1. Dead-code sweep. Done, with two leftovers
 
-The `BrowserSession` value-level edit surface is deleted:
-`BrowserSession+{Tabs,Organization,Folders,History,DurableTabs,SplitCopies}.swift`,
-`applyCoreEdit`, the stateless `crest_core_edit_session`, `crest_session_commit`
-and `crest_session_commit_pair` exports, the `transfer.preview`, `batch.preview`
-and `session.retain` queries and the `records.expired`, `history.visit` and
-`history.remove_range` policy operations. So are `BrowserSyncMaterializer`,
-`BrowserSyncMergeResolver`, `BrowserSyncProjection`, `BrowserSavedSitePolicy`,
-`BrowserExternalLinkLockPolicy`, `BrowserImportDestinationKey`,
-`MobileOnboardingSpaceCarousel` and `MobilePageMenuPrimaryAction`. Launch
-cleanup and retention run as the core `records.sweep` command. The history
-below is kept for context.
+Removed:
 
-The dead `CREST_CORE_BACKED` branches and build settings have been removed;
-no Swift file still contains that conditional. The original sweep covered
-`BrowserSession+Tabs.swift`, `BrowserImportReviewPlan.swift`,
-`BrowserSyncJournal.swift`, `BrowserSession.swift`, `BrowserSyncProjection.swift`,
-`BrowserSession+Folders.swift`, `BrowserSession+TabBatch.swift`,
-`BrowserSyncMergeResolver.swift`, `BrowserStore+Workspaces.swift`,
-`BrowserSyncMaterializer.swift`, `BrowserStore+TabOrganization.swift`,
-`BrowserSession+FolderBatch.swift`, `BrowserManualSetupPlan.swift`,
-`BrowserStore+Spaces.swift`, `BrowserSession+History.swift`,
-`BrowserSession+Organization.swift`, `BrowserSession+SplitCopies.swift`.
-Keep `BrowserSession+FolderMigration.swift`: its custom Codable path still
-loads legacy folder membership and persisted preferences. The unused
-`BrowserSession.setFolderColor/Symbol` mutators were removed. Check whether these
-other `BrowserSession` mutators still have live callers before removing them: `setTabPinned`,
-`setSplitGroupTitle/EmojiIcon/Tint`,
-`setSavedTabsExpanded`, `setDefaultSpace`, `moveSpaces`). Move
-`BrowserShowcaseSessionFactory` and `BrowserPreviewSessionFactory` behind a
-preview-only compilation path. Redirect
-`CrestTests/BrowserTabMultiSelectionTests.swift` from `applyTabBatch` to the
-command path (`prepareTabBatch`/`commitTabBatch`) or delete cases that only
-covered the dead path. Build all schemes and run `CrestCore` tests. Effort M.
-Independent; do before WP8 so the live surface is legible.
+- the `BrowserSession` value-level edit surface
+  (`BrowserSession+{Tabs,Organization,Folders,History,DurableTabs,SplitCopies}.swift`
+  and `applyCoreEdit`);
+- the `crest_core_edit_session`, `crest_session_commit` and
+  `crest_session_commit_pair` exports;
+- the `transfer.preview`, `batch.preview` and `session.retain` queries, and
+  the `records.expired`, `history.visit` and `history.remove_range` policy
+  operations;
+- `BrowserSyncMaterializer`, `BrowserSyncMergeResolver`,
+  `BrowserSyncProjection`, `BrowserSavedSitePolicy`,
+  `BrowserExternalLinkLockPolicy`, `BrowserImportDestinationKey`,
+  `MobileOnboardingSpaceCarousel` and `MobilePageMenuPrimaryAction`;
+- every `CREST_CORE_BACKED` branch and build setting.
 
-### WP2. Finish the page port
+Launch cleanup and retention run as the core `records.sweep` command.
+`BrowserTabMultiSelectionTests` drives the command path
+(`prepareTabBatch` and `commitTabBatch`). `BrowserSession+FolderMigration.swift`
+stays, because its Codable path still loads legacy folder membership and
+persisted preferences.
 
-Goal: `BrowserPage` holds `any BrowserPageEngine` and contains no engine types
-or `#if CREST_CHROMIUM_HOST`. Everything WebKit-specific moves into the WebKit
-adapter; everything Chromium-specific into `CrestEngines/Chromium/Apple`.
+Remaining:
 
-2a. User-script and message channel (do first; unlocks 2c to 2h, WP4, WP5).
-Add to the engine port: `addUserScript(source, world, injectionTime, mainFrameOnly)`
-and `setScriptMessageHandler(name, handler)` per page. WebKit implements them
-with `WKUserContentController`; Chromium implements them in
-`crest_chrome_host.mm` with a `WebContentsObserver` injecting into an isolated
-world at document start and a message channel back to Swift (the Web Store
-injection in the host is the pattern). Then install Crest's existing content
-bridges through the port instead of the WebKit initializer arm: credentials,
-link hover, link context, blocked popups, media session, user activity,
-visited-link styling, geolocation, hosted notifications. Effort L once.
+- `BrowserShowcaseSessionFactory` and `BrowserPreviewSessionFactory`
+  (`CrestShared/Domain/BrowserSession/Fixtures`) have no callers outside their
+  own files. Delete them, or move them behind a preview-only compilation path.
 
-2b. Split `BrowserPage`. Done. The page and its engine-neutral extensions
-live in `CrestMac/Infrastructure/Pages` and the shared page logic in
-`CrestShared/Infrastructure/Pages`. The pool builds each page's adapter through
-an injected `BrowserPageEngineMaker` (nil builds WebKit from the pool's own
-configuration); `BrowserPage.init(engine:)` takes the adapter, and a WebKit
-convenience initializer keeps `configuration:` callers. The adapter owns the
-engine-built controllers (link hover and drag, Picture in Picture, reader,
-favicons, media capture, content rules, focus restoration, user activity,
-visited links) and wires delegates, bridges and observers in `attach(to:)`.
-The engine reports through typed `BrowserPageEngineEvent`s (granular WebKit
-observations or a `BrowserPageEngineState` snapshot) and
-`BrowserEngineLinkAction`s. The port gained `currentURL`, `canGoBack`,
-`canGoForward`, `reportsNavigationState`, `synchronizeHistory()`,
-`evaluateInMainFrame(_:)` and `clearSiteData(for:)`; WebKit applies automatic
-popups through the port too. Back and forward menus read
-`pageEngine.backHistory/forwardHistory` on both engines, and the failure
-notice's Back leaves a Chromium error page through history. WebKit bridges
-that sat in shared infrastructure folders (content blocking, geolocation,
-hosted notifications, media session bridge, reader, whole-page translation,
-popups, user activity, website data, WebKit downloads) now live under
-`CrestShared/Infrastructure/WebKit` or `CrestMac/Infrastructure/WebKit`, and the
-engine-neutral pool, host view, tab-state and reconciliation types moved out
-of the WebKit folders into `Infrastructure/Pages`. `BrowserPagePool` is
-engine-neutral; its WebKit hosting (configurations, private website data
-stores, content rules, WebKit popup adoption, `WKScriptMessage` routing) is
-`BrowserPagePool+WebKit.swift`. `BrowserDownloadCenter` keeps the ledger,
-feedback, data saves and engine-reported transfers; `WKDownload`s run through
-`BrowserWebKitDownloadTransport`, one `BrowserDownloadTransport`. Media Session
-keeps one coordinator over `BrowserMediaSessionTransport`, with the WebKit
-transport in the WebKit folder. Shared code that still names WebKit: the
-credential bridge's WebKit installer (`CredentialContentBridge.swift`), the
-page's `BrowserPopupCoordinator`, `BrowserTransientPageLease`'s content rules
-and the pool's WebKit service defaults. Mobile keeps `MobileBrowserPage`
-concretely typed.
+### WP2. Page port. Done, with small gaps
 
-2c. Small port gaps, all S unless noted:
-- Per-Space default zoom applied above the engine fork; Chromium replays zoom
-  on `created`.
-- `BrowserDownloadCenter.resetAutomaticDownloadSequence(for:)` takes the page
-  engine (done); the page calls it on detach for both engines.
-- Quick Window user-activity monitoring through the channel (2a) so the idle
-  timer sees typing.
-- Viewport-fit: removed, not ported. Its only caller zoomed a page with an
-  authored CSS minimum width down to the space a WebKit extension side-panel
-  card left in the row; that card was retired with WebKit extensions.
-  Split cards and Peek reflow at the page's own zoom, and the developer
-  toolbar's device widths use `developerViewport`, which never went through
-  it. Chromium side panels narrow the page the way Chrome's do.
-- Find: done. Both engines always wrap, which is all Crest's find asks for,
-  so the configuration carries no wrap option. Chromium's host reports the
-  total and the selected ordinal from `FindTabHelper`'s final update and
-  the find bar shows "n of m"; WebKit's public find reports only whether a
-  match exists, which the WebKit registration declares as a limitation.
-- Focus restoration: verify end to end on Chromium; add `focusPage` if needed.
-- Favicon manual refresh and archived-tab icon pull; `themeColor` in the
-  `changed` payload for tab accents.
-- Side panel host for Quick Window and setup windows, or route requests to
-  the requesting page's window.
+Done:
 
-2d. Popups: relay Chromium's blocked-popup observations
-(`blocked_content::PopupBlockerTabHelper`) as a `popup_blocked` engine event
-with origin and count, plus a host command to allow popups for an origin via
-the existing content-settings path. Then declare `popups` supported and remove
-the `unverified` limitation. Effort M.
+- **Content-script channel.** `BrowserPageContentScripting` installs Crest's
+  bridges on Chromium in an isolated world the page cannot reach, and runs
+  script in a named document. WebKit keeps installing its bridges through its
+  own `WKUserContentController`. Link hover, user activity, blocked popups,
+  media sessions and favicons arrive from the Chromium host as typed page
+  events.
+- **Page split.** The page and its engine-neutral extensions live in
+  `CrestMac/Infrastructure/Pages`, with shared page logic in
+  `CrestShared/Infrastructure/Pages`. The pool builds each page's adapter
+  through an injected `BrowserPageEngineMaker`. The adapter owns the
+  engine-built controllers and reports typed `BrowserPageEngineEvent`s and
+  `BrowserEngineLinkAction`s. Back and forward menus read
+  `backHistory`/`forwardHistory` on both engines. The pool's WebKit hosting is
+  `BrowserPagePool+WebKit.swift`. `WKDownload`s run through
+  `BrowserWebKitDownloadTransport`, and Media Session keeps one coordinator
+  over `BrowserMediaSessionTransport`.
+- **Zoom, find and navigation.** The page applies each Space's default zoom
+  above the engine fork. Both engines always wrap find. Chromium reports the
+  match total and the selected ordinal, and the find bar shows "n of m".
+- **Popups.** Chromium relays blocked popups as `popup_blocked`, applies each
+  Space's automatic-popup decision as a content setting, and opens the popups
+  the blocker held back when the person allows the site. The Chromium
+  registration declares `popups` supported.
+- **Media.** Chromium reports media-session metadata and transport through
+  `BrowserMediaSessionTransport`, and the page can ask Chromium to enter its
+  own video Picture in Picture.
+- **Favicons and accents.** Chromium supports a manual favicon refresh, and its
+  `changed` payload carries `themeColor`.
+- **Host commands.** `BrowserEngineHostCommands` gives the Chromium root the
+  same store, page and window operations the WebKit menus run.
+  `CrestChromiumRoot` and `ChromiumNativePage` do not mutate `BrowserStore`.
+  Engine-created pages are adopted through the pool's `adoptEnginePage(_:)`.
+- **Viewport fit** was removed rather than ported. Its only caller served the
+  retired WebKit extension side-panel card.
 
-2e. Media: host events for media session metadata and transport, and a PiP
-toggle command with a `picture_in_picture` event, feeding
-`BrowserMediaSessionStore` and the PiP controller through the port. Chromium's
-video PiP currently embeds a Viz surface in a Views overlay window. On macOS,
-the public system PiP controller takes an `AVPlayerLayer` or
-`AVSampleBufferDisplayLayer`; it cannot adopt that Viz surface directly. A
-system PiP implementation therefore needs a real video-frame bridge, with
-playback control and protected-media behavior defined at the engine adapter.
-An isolated macOS probe confirmed that public AVKit presents a live
-`AVSampleBufferDisplayLayer` in the system Picture in Picture window. The
-unresolved part is supplying that layer with Chromium's video surface frames
-at playback rate, without capturing page chrome or requiring Screen Recording.
-Validate it with clear and protected video, multiple displays and full-screen
-Spaces, plus hands-on dragging and resizing. A window-style change alone does
-not satisfy PiP parity. Do not use macOS's private PIP framework without a
-separate product decision. Effort L.
+Remaining:
 
-2f. Link hover through 2a or a native `link_hovered` event. Effort M.
+- `CredentialContentBridge.swift` in `CrestShared/Infrastructure/Credentials`
+  still imports WebKit to install the WebKit credential bridge. Move it into
+  the WebKit adapter folder.
+- `BrowserPagePool`'s initializer defaults still name WebKit adapter types:
+  `WebKitBrowserWebsiteDataStoreRemover` and
+  `BrowserContentRuleListProvider.shared`.
+- `BrowserPage` builds a `BrowserPopupCoordinator` for every page, and that
+  type imports WebKit. `BrowserTransientPageLease`, which Quick Window uses,
+  carries WebKit content-rule lists.
+- The Chromium extension store and side-panel routing reach
+  `CrestChromiumRoot.engineHost`, `extensions` and `activeNativeWindow`
+  statically. These are engine-host lookups, not store edits.
+- Focus restoration on Chromium relies on the engine's own responder chain.
+  Nobody has verified it end to end.
+- Quick Window and setup windows have no extension side-panel host.
+- `MobileBrowserPage` stays concretely typed over WebKit.
 
-2g. Visited-link styling from Crest history through 2a. Effort S.
+### WP3. Security indicator, certificates and HTTP auth. Done, with one gap
 
-2h. Host commands port for the Chromium root. Done. `BrowserEngineHostCommands`
-(`CrestShared/Infrastructure/Engines`) is implemented by `BrowserMacApplication`
-with the same store, page and window operations the WebKit menus, Settings
-presentation and external-link handler run: extension and external tabs,
-Settings, Getting Started, Extensions settings, Space selection (window state),
-quit persistence flush and private-browsing close. `CrestChromiumRoot` and
-`ChromiumNativePage` no longer mutate `BrowserStore`; the page receives the port
-at creation. Engine-created page adoption is the pool's typed
-`adoptEnginePage(_:)`. Still static: the Chromium extension store and side-panel
-routing reach `CrestChromiumRoot.engineHost`, `extensions` and
-`activeNativeWindow`, which are engine-host lookups rather than store edits.
+Done:
 
-Acceptance for WP2: zero `#if CREST_CHROMIUM_HOST` outside `CrestEngines`
-(met: the composition now selects its entry point, engine registration and
-engine-contributed views by file in `project.yml`, and injects the page
-engine, Site Controls anchor, icon defaults domain and review store); zero
-`webKitView` reads outside the WebKit adapter (met; the pool's WebKit hosting
-is now its own WebKit extension); back-forward menus, hover URL, blocked-popup
-notice, media controls and Quick Window activity work on Chromium; both
-`Crest` and `CrestChromiumUI` build; retained behavioral tests pass.
-
-### WP3. Security indicator, certificates and HTTP auth
-
-- Security state: done. Each page carries an engine-neutral
-  `BrowserPageSecurityState` (`none`, `insecure`, `secure`, `mixed_content`,
-  `certificate_error`, `dangerous`). Chromium reports it in every `changed`
-  payload as `security`, from `SecurityStateTabHelper`'s level and visible
-  security state (malicious content, certificate status, mixed or
-  cert-error subresources). WebKit derives it from the scheme,
-  `hasOnlySecureContent`, the trust result WebKit left on `serverTrust`, and
-  whether the person accepted that certificate through
-  `BrowserServerTrustOverrideStore`. Site Controls shows each state, keeps
-  `View Certificate` for any page whose engine hands over its trust, and
-  says "Connection Details Unavailable" rather than "Secure" when an HTTPS
-  page has no trust to show.
-- Certificate errors on Chromium stay on Chromium's own interstitial, which
-  explains the error and offers to proceed; that decision belongs to the
-  engine profile rather than `BrowserServerTrustOverrideStore`, and the
-  Chromium registration declares it. Moving it into Crest, with the override
-  recorded by the core (WP8, permissions aggregate), remains open.
-- HTTP auth: done for Basic and Digest. The host's
-  `setHTTPAuthenticationHandler(page:handler:)` defers its reply to the shared
-  `BrowserHTTPAuthenticationSession` and prompt on both engines; proxy
+- Each page carries an engine-neutral `BrowserPageSecurityState` (`none`,
+  `insecure`, `secure`, `mixed_content`, `certificate_error`, `dangerous`).
+  Chromium reports it in every `changed` payload from
+  `SecurityStateTabHelper`. WebKit derives it from the scheme,
+  `hasOnlySecureContent`, the trust result on `serverTrust`, and any override
+  in `BrowserServerTrustOverrideStore`. Site Controls shows each state and
+  offers `View Certificate` whenever the engine hands over its trust.
+- Basic and Digest authentication go through the shared
+  `BrowserHTTPAuthenticationSession` and prompt on both engines. Proxy
   challenges and other schemes keep the engine's own handling.
 
-Acceptance: a mixed-content page shows the mixed state; a certificate error
-shows its state and can be proceeded past (Crest's store on WebKit,
-Chromium's interstitial on Chromium); a Basic-auth site is reachable with
-Crest's prompt; `View Certificate` works. Remaining: Crest-owned
-proceed-anyway on Chromium. Effort M for the remainder.
+Remaining:
 
-### WP4. Credentials on Chromium
+- Certificate errors on Chromium show Chromium's own interstitial, and
+  proceeding past it is the engine profile's decision. The Chromium
+  registration declares this. A proceed-anyway owned by Crest, with the
+  override recorded by the core, is not built.
 
-Through 2a, install the credential content bridge and reuse
-`BrowserCredentialFormMessage` verbatim. `fillCredential` and
-`fillGeneratedPassword` execute through the engine port (WebKit
-`evaluateJavaScript` in the bridge world; Chromium isolated-world execution).
-Save-candidate detection, update-versus-new and recency rules move to the core
-(WP8). Chromium's own password manager is turned off for every page the host
-creates or adopts, in Space and private profiles alike (a private profile and
-its original profile both), whether or not a credential bridge is installed,
-so its save and fill bubbles never appear. iCloud Passwords via the extension
-and passkeys via the system sheet stay as they are.
+### WP4. Credentials on Chromium. Done
 
-Acceptance: fill, save prompt, update prompt and generated password work on a
-test login page in both engines with the same outcomes; no Chromium password
-bubble appears. Effort M after 2a.
+The credential bridge runs through the content-script channel on Chromium, and
+fills execute there in Crest's isolated world. Capture, save and recency rules
+are core policy operations (WP8). The host turns Chromium's password manager
+off for every page it creates or adopts, in Space and private profiles alike,
+so Chromium's save and fill bubbles never appear. iCloud Passwords runs through
+its extension, and passkeys go through the system sheet.
 
-### WP5. Site permissions, geolocation, notifications
+### WP5. Site permissions, geolocation and notifications. Done, with gaps
 
-- One source of truth. Permission decisions are core records (WP8). WebKit
-  applies them through Crest's prompts as today; Chromium applies them through
-  `HostContentSettingsMap` and reports engine prompts through its permission
-  handler with a typed `BrowserEnginePermissionResponse`, so Crest's prompt UI
-  and the Privacy pane list work identically on both engines. Remove the inert
-  Privacy list state on Chromium.
-- Live application (done). Each open page owns one engine-neutral
-  `BrowserPageSitePermissionSession`, a synchronous observer of
-  `BrowserSitePermissionCenter`. A change from a prompt, Site Controls or the
-  Privacy pane that affects the page's site is applied at once through
-  `BrowserPageEngine.applySitePermission` (Chromium content settings), and a
-  withdrawn camera or microphone grant ends capture through
-  `stopMediaCapture` (WebKit capture state). The adapter's
-  `sitePermissionDidChange` refreshes bridges Crest runs in the page (WebKit
-  hosted notifications); WebKit geolocation observes the centre itself.
-- Geolocation and hosted web notifications: WebKit keeps its bridges and
-  coordinators in the WebKit folder. Chromium uses the engine's own location
-  and notification implementations under Crest's decision; Crest's
-  `UserNotifications` delivery, source-tab activation and withdrawal of
-  delivered notifications need a host notification hook, and stopping live
-  capture or location directly needs a host command. Both are declared
-  limitations of the Chromium registration.
-- Clear site data and reload: route to the engine (`WKWebsiteDataStore`
-  removal for the origin on WebKit; browsing-data remover on Chromium) or hide
-  when unsupported.
+Done:
 
-Acceptance: camera, microphone, location and notifications prompt once, are
-remembered per site and Space, appear in Privacy, and can be revoked there on
-both engines. Effort L.
+- Permission decisions are records in the core ledger behind
+  `crest_permissions_*`. WebKit applies them through Crest's prompts. Chromium
+  asks Crest through its permission handler, with a typed
+  `BrowserEnginePermissionResponse`, and receives decisions as content
+  settings. The Privacy pane lists the same records on both engines.
+- Each open page owns one `BrowserPageSitePermissionSession`. A change from a
+  prompt, Site Controls or the Privacy pane reaches the page at once through
+  `BrowserPageEngine.applySitePermission`. On WebKit, withdrawing a camera or
+  microphone grant ends capture through `stopMediaCapture`.
+- Clearing site data routes to the engine: `WKWebsiteDataStore` removal on
+  WebKit, and the browsing-data remover on Chromium.
 
-### WP6. Capability truth and UI hygiene
+Remaining. The Chromium registration declares both limits:
 
-- Filter `BrowserCommandActions.paletteCommands` and
-  `BrowserShortcutCommand.userFacingCases` by capability so Reader, Content
-  Blocking and Translation do not appear on an engine that lacks them.
-- Gate the Feature Flags destination on the engine that owns the flag catalog
-  (`isProvidedByCurrentEngine`).
-- Privacy pane: when content blocking is unavailable, show one sentence
-  explaining that blocking comes from extensions on this engine.
-- Archive format: decide whether Crest reads the other engine's archive format
-  (`.webarchive` on Chromium, `.mhtml` on WebKit). If not, the Open File panel
-  already offers only the engine's format; document it in Help.
-- `BrowserCorePolicy.allowsInternalPages` uses the `internal-pages` capability
-  instead of `#if`.
-- Wire or delete the declared capabilities with no `supports` call sites so the
-  registration is a contract, not documentation.
+- The host has no command to stop live camera, microphone or location use.
+  Revocation relies on Chromium ending capture once the content setting
+  blocks it.
+- Chromium delivers web notifications itself. Delivery through Crest's
+  `UserNotifications`, source-tab activation, and withdrawal of delivered
+  notifications after revocation all need a host notification hook.
 
-Effort M. Independent.
+### WP6. Capability truth and UI hygiene. Done
 
-### WP7. WebKit symmetry (done)
+- `BrowserCommandActions.paletteCommands` and
+  `BrowserShortcutCommand.userFacingCases` filter by the current engine's
+  capabilities.
+- Settings destinations filter on `isProvidedByCurrentEngine`, which covers
+  Feature Flags.
+- When content blocking is unavailable, the Privacy pane says that blocking
+  comes from the extensions the person installs.
+- Archives follow the engine: `.webarchive` on WebKit, `.mhtml` on Chromium.
+  Open File offers only the running engine's format, as
+  `BrowserLocalFileOpenPolicy` explains, and the Help Center says so.
+- `BrowserCorePolicy.addressIntent` sends `allowsInternalPages` from the
+  `internal-pages` capability rather than from a build flag.
+- Every declared capability either gates UI or services, or belongs to
+  `EngineCapabilities.Required`, the set (`pages`, `navigation`,
+  `workspace-profiles`, `profile-deletion`) the core requires before it
+  registers an engine.
+
+### WP7. WebKit symmetry. Done
 
 `BrowserWebKitPageEngine` reports its real PiP activity for residency, stages
-Peek navigation with the source request and website data store, and prepares a
-page close through WebKit's before-unload path. The staged request carries the
-URL and referrer; WebKit does not expose the initiating frame's full security
-context to a second page. The registration declares that limit and the desktop
-before-unload SPI dependency.
+Peek navigation with the source request and website data store, and prepares
+a page close through WebKit's before-unload path. The staged request carries
+the URL and referrer only, because WebKit does not expose the initiating
+frame's security context to a second page. The registration declares that
+limit and the desktop before-unload SPI dependency. WebKit extensions are
+retired, and the WebKit registration declares `extensions` unavailable.
 
-### WP8. Core extraction of the remaining rule aggregates
+### WP8. Core extraction of the rule aggregates. Done, with small gaps
 
-Each aggregate becomes core domain and application types with focused tests,
-exposed either as semantic session commands, `crest_core_evaluate_policy`
-operations, or new bounded exports, following the C# library style rules in
-`CrestCore` (regions, centralized codes, `Scripts/control-plane/lint-dotnet.sh`).
-Swift keeps projections and adapters only.
+Each aggregate is core domain and application code with focused tests,
+reached through semantic session commands, `crest_core_evaluate_policy`
+operations or a bounded export. Swift keeps projections and adapters.
 
-| Aggregate | Swift today | Core target | Effort |
-| --- | --- | --- | --- |
-| Downloads (done: `crest_downloads_*` ledger; `downloads.progress`, `downloads.risk`, `downloads.automatic` ops) | `BrowserDownloadLedger`, `BrowserDownloadProgressPolicy`, `BrowserAutomaticDownloadPolicy`, risk assessment | Download ledger aggregate with state machine, ordering, acknowledgement, expiry; progress and ETA policy op; automatic-download risk op. Engines report events; Swift renders | L |
-| Credentials and passkeys (done: `credentials.capture`, `.fill`, `.save_validity`, `.save_match`, `.save_plan`, `.most_recent`, `.password_recipe`, `.system_write_through`, `.system_write_through_offer` and `passkeys.access_status` ops; passwords never cross) | `BrowserCredentialCapturePolicy`, save plan and disposition, recency, `BrowserStrongPasswordGenerator`, passkey access and write-through policies | Capture and save decision op (form message in, disposition out); generator op; passkey write-through policy. Vault storage stays native | M |
-| Site permissions and origins (done: `crest_permissions_*` ledger with `load`, `decision`, `media_decision`, `records`, `set`, `reset_record`, `reset_space`, `reset_session`; `geolocation.origin`, `notifications.origin`, `notifications.permission_request`, `popups.automatic`, `popups.notice`, `external.url`, `external.local_document`, `external.scheme`, `external.consent`, `authentication.handling`, `authentication.source_label`, `authentication.fixture_trust` ops; saved document keeps its format and key, not synced) | `BrowserSitePermission*` policies, blocked-popup notice, geolocation origin policy, hosted notification policies, authentication policies, external scheme and URL policies, local-file policy | Per-Space permission records in the session with persistence and sync rules; origin and scheme policy ops. Adapters transport prompts | L |
-| Search and browsing preferences (done: `SearchProviderCatalog`; `search.url`, `search.custom_provider`, `search.custom_providers`, `translation.*` ops; `space.search_provider.*` commands) | `BrowserSearchProvider` catalog and URL templates, custom-provider upsert and removal, `BrowserAutomaticTranslationRules` | Provider catalog and query construction in the core (`SearchProvider` currently only an enum); custom-provider commands; translation rules op | M |
-| Window state and plans (done: `window.repair`, `window.split_layout`, `window.tear_off`, `tabs.selection_fallback`, `setup.space`, `setup.tab`, `setup.reconcile`, `onboarding.completion` and `onboarding.guide` ops; `workspace.review` query; split-run validation in the workspace import) | `BrowserWindowState.repair`, `repairSplitLayout`, `ensureTabSelection`, `captureSplitLayout`; `BrowserManualSetupPlan`; `BrowserImportReviewPlan`; onboarding completion | Window-state repair op (core `WindowState` is a bare record today); setup and import-review plan operations extending `WorkspaceImportPolicy`; onboarding completion rule | L |
-| Shortcuts, launch, media (done: `shortcuts.bindings`, `.assign`, `.numbered_selection`, `launch.plan`, `media.session_event` and `media.arbitrate` ops; `tab.open` `after` anchor) | Shortcut conflict and numbered selection policies; `BrowserLaunchIsolationPolicy`, startup behavior, tab insertion; `BrowserMediaSessionStore` arbitration | Conflict and selection ops; launch and startup policy op; media-session ownership and eviction op. Section and search grouping stay in Swift | M |
-| Behavior preferences (done: session `appPreferences` record behind `preferences.set`, `preferences.translation_rule` and a one-time `preferences.import` of the legacy defaults; the session's `launch.plan` read applies the saved startup choice; device-local, never synced) | Startup behavior, page translation offer/automatic/rules, WebKit spell checking, automatic Picture in Picture, saved-tab close policy and favicon return, Split View focus-follows-mouse in `@AppStorage` and small defaults stores | Core-owned record persisted with the session checkpoint; `BrowserAppPreferenceStore` is the Swift projection. Appearance preferences, link preferences, shortcut overrides, sync and download settings stay native | M |
+| Aggregate | Core surface |
+| --- | --- |
+| Downloads | `crest_downloads_*` ledger; `downloads.progress`, `downloads.risk` and `downloads.automatic` operations |
+| Credentials and passkeys | `credentials.capture`, `.fill`, `.save_validity`, `.save_match`, `.save_plan`, `.most_recent`, `.password_recipe`, `.system_write_through`, `.system_write_through_offer` and `passkeys.access_status`. Passwords never cross the boundary |
+| Site permissions and origins | `crest_permissions_*` ledger (`load`, `decision`, `media_decision`, `records`, `set`, `reset_record`, `reset_space`, `reset_session`); `geolocation.origin`, `notifications.origin`, `notifications.permission_request`, `popups.automatic`, `popups.notice`, `external.url`, `external.local_document`, `external.scheme`, `external.consent`, `authentication.handling`, `authentication.source_label` and `authentication.fixture_trust` |
+| Search and translation | `SearchProviderCatalog`; `search.url`, `search.custom_provider`, `search.custom_providers` and `translation.*`; the `space.search_provider.*` commands |
+| Window state and plans | `window.repair`, `window.split_layout`, `window.tear_off`, `tabs.selection_fallback`, `setup.space`, `setup.tab`, `setup.reconcile`, `onboarding.completion` and `onboarding.guide`; the `workspace.review` query; split-run validation in the workspace import |
+| Shortcuts, launch and media | `shortcuts.bindings`, `.assign` and `.numbered_selection`; `launch.plan`; `media.session_event` and `media.arbitrate`; the `tab.open` `after` anchor |
+| Behavior preferences | The session's `appPreferences` record behind `preferences.set`, `preferences.translation_rule` and a one-time `preferences.import`. Device-local, never synced |
+| Links, Quick Window, presentation | `links.*`, `quick_window.*`, `workspace.command_route`, `page.presentation`, `content_blocking.rules`, `branding.normalize` and the `space.branding` command |
 
-Selection left the core entirely: the active Space and each Space's shown tab
-are window state (`BrowserStoreSelection`, persisted in `BrowserWindowState`),
-commands read the window's `view` and answer a `selection` hint, `tab.activate`
-became the timestamp-only `tab.touch`, and legacy stored selection loads once
-into window records. Folder depth and count, split eligibility and cross-Space
-move eligibility are core commands prepared and released without committing;
-`limits` reports the capacities native surfaces used to copy; `links.route`
-substitutes a locked Space itself. Link, Quick Window and authentication-label
-fallbacks now fail closed when the core cannot answer.
+Selection left the core. The active Space and each Space's shown tab are
+window state (`BrowserStoreSelection`, persisted in `BrowserWindowState`).
+Commands read the window's `view` and answer a `selection` hint, and
+`tab.touch` records only `lastActivatedAt`. Folder depth and count, split
+eligibility and cross-Space move eligibility are commands the caller prepares
+and releases without committing. `limits` reports every capacity the core
+enforces. `links.route` substitutes for a locked Space itself. Link, Quick
+Window and authentication-label callers fail closed when the core cannot
+answer.
 
-Stragglers, all folded in. `BrowserSession.ensureSelection` and
-`repairRuntimeIntegrity`, `BrowserSplitGroupNormalizer`,
-`normalizeSplitGroupsAfterUserMutation` and tear-off eligibility in
-`BrowserMacWindowCoordinator` went with the window-state aggregate
-(`window.*`, `tabs.selection_fallback`). The borrowed-workspace settings
-fan-out is one core routing rule (`workspace.command_route`, enforced by the
-borrowed authority's Space commands); `BrowserLinkPreferenceStore` route edits,
-the Space-deletion cascade and `BrowserLinkRoutingPolicy` are `links.*`
-operations; Quick Window archive and retargeting are `quick_window.*`
-operations; `BrowserPagePresentationPolicy`, Balanced content-blocking
-composition and branding normalization are `page.presentation`,
-`content_blocking.rules` and `branding.normalize`, and the `space.branding`
-command applies the same branding rules.
+Policy requests are typed on both sides. The core decodes each operation's
+request into a record (`*PolicyRequests.cs`) and keeps its codes in `*Codes.cs`
+files. Swift names each call with `BrowserSessionOperation`,
+`BrowserPolicyOperation` or `BrowserSyncOperation`, sends Codable argument
+models, and reads rule failures as `BrowserCoreErrorCode`.
 
-Stays in Swift by design: heraldry vocabulary and composition, favicon palette
-extraction, sidebar widgets, Peek motion and presentation phases, tear-off
-placement geometry, default-browser prompt cadence.
+Page commits are owned by the core for selected, Split View and background
+pages. Live URL and title observations stay in page presentation, and a
+completed navigation sends its URL and document title to the core.
 
-Page commit ownership is complete for selected, Split View and background pages.
-Live URL and title observations stay in page presentation; a completed
-navigation sends its URL and document title to the core. WebKit reads the
-finished document title before publishing completion, and Chromium publishes
-completion only for a committed navigation. Late favicons still update the
-matching saved tab, while address submission can convert a native tab into a
-web tab before loading.
+These stay in Swift by design: heraldry vocabulary and composition, favicon
+palette extraction, sidebar widgets, Peek motion and presentation phases,
+tear-off placement geometry, and default-browser prompt cadence.
 
-Acceptance: `Documentation/Architecture/ControlPlane.md` step 1 acceptance
-("no parallel domain implementation") becomes literally true; no `BrowserSession`
-mutation exists outside the core authority's command and sync paths; core tests
-cover each aggregate's edge cases.
+Remaining:
 
-### WP9. Verification and release gates
+- `BrowserStoreSelection.fallbackTabID` picks the first current, pinned and
+  saved tab itself before it asks `tabs.selection_fallback`, because the core
+  accepts at most three candidates.
+- `BrowserSidebarReorderTargetResolver` reads `BrowserCoreLimits` for the
+  split member limit instead of asking the core, because it runs on every drag
+  frame. The core still rejects anything past the limit.
+- Some wire formats stay as they are for compatibility. The core parses
+  `TabBatchKind` in PascalCase. Sync document error codes are camelCase while
+  session rule codes are snake_case. Identifier casing differs by path: link
+  routes use lowercase UUID strings, and other paths use the native encoder's
+  spelling.
 
-- Builds: `Crest`, `CrestChromiumUI`, `CrestChromiumUIProduct`, `CrestMobile`;
-  `dotnet test` and `lint-dotnet.sh`; the C ABI harness via
+### WP9. Verification and release gates. Partly done
+
+Done:
+
+- Builds: `Crest`, `CrestChromiumUI`, `CrestChromiumUIProduct` and
+  `CrestMobile`; `dotnet test` and `lint-dotnet.sh`; the C ABI harness through
   `Scripts/control-plane/build-experiment.sh`.
-- Review packaging for runtime checks: `Scripts/control-plane/apply-chromium-host.py`
-  then `build-chromium-baseline.py`, then `package-chromium-host.py` in review
-  mode with a throwaway user-data directory and `--use-mock-keychain`. Never
-  launch the unbranded Chromium build directly; its keychain item prompts.
-- Product packaging: `package-chromium-host.py --product` with
-  `CrestChromiumUIProduct`, the Mac target's resolved entitlements and embedded
-  provisioning profile, signed with the identity the profile authorizes
-  (Developer ID). Never use the review entitlements file for the product; it
-  enables the app sandbox and would strand installed data.
-- Safe-storage keychain item name must not change outside the adoption step;
-  a rename resets Chromium's tracked preferences.
-- Cross-engine sync convergence with an iPhone WebKit client through the
-  isolated CloudKit review zone, verified from records and UI.
+- Review packaging for runtime checks:
+  `Scripts/control-plane/apply-chromium-host.py`, then
+  `build-chromium-baseline.py`, then `package-chromium-host.py` in review mode
+  with a throwaway user-data directory. Never launch the unbranded Chromium
+  build directly, because its keychain item prompts.
+- Product packaging: `.github/workflows/experimental-release.yml` downloads the
+  prebuilt engine, packages `CrestChromiumUIProduct` with
+  `package-chromium-host.py --product --distribution`, signs it with Crest's
+  resolved entitlements and embedded provisioning profile, and notarizes the
+  Chromium and WebKit apps and their disk images. The Chromium build is the
+  default on `appcast-experimental.xml`. The WebKit build is the alternate on
+  `appcast-experimental-webkit.xml`. Never use the review entitlements file for
+  the product: it turns on the app sandbox and would strand installed data.
+- The Safe Storage keychain item name must not change. A rename rotates the
+  encryption key and resets Chromium's tracked preferences.
+
+Remaining:
+
+- The WP0 manual smoke checklist.
+- Cross-engine sync convergence between the Chromium Mac product and an iPhone
+  WebKit client through the isolated CloudKit review zone, verified from
+  records as well as UI.
+- The upgrade on a physical device and a sync run against a real account with
+  installed Spaces.
 - Manual product review of every WP0 to WP7 flow on both engines before early
   user testing.
+
+## Deferred
+
+The product owner has deferred these:
+
+- A Crest color picker for `<input type=color>`. Chromium's own picker is used.
+- A Crest popups UI beyond the blocked-popup relay and Site Controls.
+- A Crest presentation for JavaScript alerts. Both engines already route
+  `alert`, `confirm`, `prompt` and before-unload to `BrowserDialogPresenter`.
+- System Picture in Picture on Chromium. Chromium's video PiP uses its own
+  Views window. After asking it to enter PiP, Crest reads the page's media
+  state to learn the outcome, and no event reports it. The public macOS PiP
+  controller takes an `AVPlayerLayer` or `AVSampleBufferDisplayLayer`, so a
+  system PiP needs a video-frame bridge from Chromium's video surface, with
+  playback control and protected media defined at the adapter. Do not use
+  macOS's private PIP framework without a separate product decision.
+
+## Future merge work
+
+The branch stays on the experimental update channel, and no merge is
+scheduled. When it does merge, `release.yml` must publish the Chromium product
+as the default Mac download with WebKit as the alternate, each with its own
+development and stable feeds, and `project.yml`'s default update channel must
+move from `experimental` to `development`.
 
 ## Ownership decision guide
 
 Use this when a new feature arrives:
 
-1. Does the outcome need to be identical on WebKit and Chromium, or on Mac and
-   iPhone? Then the decision is a core rule. Expose it as a session command
-   when it changes durable state, or a policy operation when it is a pure
-   answer.
-2. Is it rendering, input, scrolling, compositing, an engine handle, or a
-   platform service? Then it is adapter or platform work behind a port on
-   `BrowserPageEngine` or a sibling service protocol, with a capability
-   declared in `BrowserEngineRegistration` if an engine may lack it.
+1. Must the outcome be identical on WebKit and Chromium, or on Mac and iPhone?
+   Then it is a core rule. Make it a session command when it changes durable
+   state, or a policy operation when it is a pure answer.
+2. Is it rendering, input, scrolling, compositing, an engine handle or a
+   platform service? Then it is adapter or platform work behind
+   `BrowserPageEngine` or a sibling service protocol. Declare a capability in
+   `BrowserEngineRegistration` if an engine may lack it.
 3. Is it layout, animation, projection or presentation state? Then it is
-   shared Swift, and it must gate on capabilities, never on `#if` engine flags.
-4. Does it involve a locked Space? The core gate must reject it, and the
+   shared Swift, and it gates on capabilities, never on engine `#if` flags.
+4. Does it touch a locked Space? The core gate must reject it, and the
    presentation layer must not build its content.
 5. Does it open a window? Only from a user action or an explicit extension
-   request; otherwise it reuses the current window or docks inside it.
-
-## Suggested order and parallelization
-
-1. WP0 and WP1 immediately, in parallel; WP1 is mechanical.
-2. WP2a, then WP2b to 2h, WP4 and WP5 in file-disjoint slices; WP3 in
-   parallel since it is host-hook work.
-3. WP6 and WP7 in parallel with 2, both small and independent.
-4. WP8 aggregates in parallel with everything above; downloads and
-   credentials first because WP4 and WP5 consume them.
-5. WP9 gates before early user testing.
-
-## Definition of done
-
-- One `BrowserPage` typed over the engine port; adapters contain all
-  engine-specific code; no engine `#if` or engine types outside adapters.
-- Every capability declared is queried somewhere and matches adapter behavior.
-- No live Swift decides a browser rule that the core also decides; the dead
-  branches are gone.
-- Every gap in the parity table above is either implemented on both engines
-  or declared unavailable with explicit product behavior.
-- The locked-Space, single-profile and single-window rules hold on every path
-  listed here, verified by tests at the owning layer.
-- Both engines pass the manual flow review; the product package installs over
-  an existing session without loss.
+   request. Otherwise it reuses the current window or docks inside it.

@@ -2,29 +2,25 @@
 
 ## Migration completion contract
 
-Finish the original Crest UI on one portable browser core, with Chromium on
-macOS and WebKit on iPhone and iPad. Keep WebKit available as a registered engine.
-Preserve existing browser organization, Space isolation, native interaction and
-customization. Desktop and mobile must converge through the same sync rules even
-when they render pages with different engines. Deliver Crest-branded review
-builds and a reproducible packaging path without replacing the installed app or
-publishing a release as part of this migration.
+Crest runs its original UI on one portable browser core, with Chromium as the
+default engine on macOS and WebKit on iPhone and iPad. WebKit stays a registered
+engine on macOS too, as the alternate desktop build. Existing browser
+organization, Space isolation, native interaction and customization carry over.
+Desktop and mobile converge through the same sync rules even when they render
+pages with different engines.
 
-The working Chromium host establishes that the rendering approach is viable.
-It does not complete core ownership, sync, platform services or shipping
-composition. The normal `Crest` and `CrestMobile` targets now use the same
-core-backed state composition as `CrestChromiumUI`. `CREST_REVIEW_BUILD`
-separately enforces isolated launch for the review targets. The normal Mac
-target still hosts WebKit. The Chromium
-host also builds as `CrestChromiumUIProduct` without `CREST_REVIEW_BUILD`, which
-`package-chromium-host.py --product` assembles into Crest's own desktop identity;
-signing and provisioning that identity is the remaining external requirement for
-distribution. The live native app uses
-`NativeSessionAuthority`. The message-based `BrowserSessionKernel`, `BrowserKernel`
-and `CoreRuntime` protocol runtime has been retired, along with its prototype
-Apple apps, adapters and C lifecycle exports. Browser behavior now has one
-implementation; completion is the remaining ownership, sync and distribution work
-below.
+Every composition uses the same core-backed state: the WebKit `Crest` and
+`CrestMobile` targets, the review targets, and the Chromium frameworks. The
+Chromium host builds as `CrestChromiumUI` for review and as
+`CrestChromiumUIProduct` without `CREST_REVIEW_BUILD`. `package-chromium-host.py
+--product` assembles the product into Crest's own desktop identity, and the
+experimental release workflow signs and notarizes it and publishes it as the
+default download on the experimental channel, with the WebKit build beside it
+as the alternate. `CREST_REVIEW_BUILD` forces isolated launch for the review
+targets. Each store family's session lives in `NativeSessionAuthority`, and
+browser behavior has one implementation. The remaining work is live sync
+convergence and device validation, listed in [Engine abstraction
+status](EngineAbstractionCompletion.md).
 
 ### Ownership after migration
 
@@ -54,8 +50,8 @@ assets and opaque engine data stay outside semantic records.
 
 The Chromium packager includes Crest's default and alternate icon resources and
 Dock tile plug-in. The native root restores the icon preference at startup. The
-preference uses the experimental app's own domain so the Dock plug-in can read it
-outside the browser process. The outer bundle reports Crest's version while the
+preference lives in the app bundle's own defaults domain, or the domain its
+Info.plist names, so the Dock plug-in can read it outside the browser process. The outer bundle reports Crest's version while the
 engine framework retains its Chromium version. The Chromium host installs Crest's
 AppKit menus and About identity. Those menus
 and native keyboard events use the existing command actions and persisted shortcut
@@ -163,8 +159,8 @@ created for a WebKit page. Chromium snapshots come from its compositor, and
 idle-tab decisions use Chromium playback, capture and picture-in-picture state.
 Missing media observations keep the page resident until its engine can answer.
 
-The process composition now registers its native engine with each core session
-using the same versioned descriptor schema as the message adapters. Registration
+The process composition registers its native engine with each core session
+using the v1 capability descriptor. Registration
 is local, immutable for that session, and excluded from persistence and sync.
 A restored session accepts the destination device's engine without changing shared
 browser records. Required page/navigation contracts must be supported at version
@@ -188,8 +184,8 @@ requested panel, except Network, which DevTools only exposes to Chromium's own
 frontend. A docked inspector is mounted inside the page card it inspects, on the
 dock side and at the size its own frontend asks for, so opening it adds no
 window; undocking is a request for a window and Chromium opens one. Closing the
-inspector by any route — its own close button, an undocked window close, the
-page closing — clears the card's panel selection. Local documents now open on both engines: File ▸ Open File… offers the
+inspector by any route (its own close button, an undocked window close, the
+page closing) clears the card's panel selection. Local documents open on both engines. File ▸ Open File… offers the
 document kinds the registered engine reads, including its own archive format, and
 the address route resolves `file://` URLs, absolute paths and home-relative paths
 to the same URL. The core owns that resolution for every composition; the Swift
@@ -198,8 +194,8 @@ host, so the sync projection's scheme filter already keeps them on the device th
 opened them.
 Chromium's page context menu now offers Open Link in Split View through the same
 shared store command the WebKit menu route uses.
-Page creation and lifetime remain owned by the native composition and its engine
-ports. This boundary does not finish the core authority migration.
+Page creation and lifetime belong to the native composition and its engine
+ports.
 
 Space unlocking uses a process-local `SpaceAccessAuthority` in the .NET domain.
 The native access controller presents Apple's authentication prompt and publishes
@@ -221,7 +217,7 @@ them returns its tabs, folders, history or archive; removing protection is the
 decision authentication guards, so it needs the grant like any other command.
 The same rule covers the native value-edit path: a proposed session delta or
 durable replacement that would change a locked Space's metadata, tabs, folders,
-history, archive or splits — or remove it — is rejected with
+history, archive or splits, or remove it, is rejected with
 `space_locked` before the revision is accepted, on the same allowlist. Sync
 staging, merging and materialization commit as journal-bound replacements rather
 than commands or value edits, so background convergence on a locked Space is
@@ -235,25 +231,26 @@ already holds the grant, and the local record wins on the next upload otherwise.
 `CrestNativeCore` and `CrestMobileNativeCore` build the existing platform entry
 points, all original native views, and the current page infrastructure. Each has
 an isolated bundle and profile.
-The active composition routes migrated domain operations through the packaged .NET
-library without changing their callers. Tab opening, activation, duplication,
-closing, deletion, placement, filing, renaming, residency preferences, folders,
-split groups, archive restoration, and automatic tab cleanup execute through the core.
-Address intent, history visits, history-range deletion and history/archive
-retention also use the library, as `history.*` and `records.*` session commands.
+Every composition routes domain operations through the packaged .NET library.
+Tab opening, touching, duplication, closing, deletion, placement, filing,
+renaming, residency preferences, folders, split groups, archive restoration and
+automatic tab cleanup execute through the core. Address intent is a policy
+operation, and history visits, history-range deletion and history and archive
+retention are the `history.*` and `records.*` session commands.
 Each store family has one `BrowserCoreSessionAuthority`. The .NET authority owns
-committed session records and revisions; Swift retains an accepted read projection
-for the existing UI. Native edits cross as changes to individual records and
-collection order, without resending unchanged history or favicon bytes. Revision
-checks reject stale proposals. Transfers between families commit both graphs
-before either native window reconciles its selection.
+committed session records and revisions, and Swift keeps an accepted read
+projection for the existing UI. Commands carry arguments and what the window
+shows, and never resend unchanged history or favicon bytes. Revision checks
+reject stale commands. Transfers between families commit both graphs before either native
+window reconciles its selection.
 
 The core captures immutable checkpoints and encodes the session and per-Space
 history on the native persistence worker. Editing can continue while an older
-checkpoint is being saved. The existing storage adapter retains the established
-UserDefaults keys, load/recovery path, scoped writes and favicon side store.
+checkpoint is being saved. Persistent families store checkpoints through
+`BrowserTransactionalSessionPersistence` in SQLite, after a one-time migration
+from the legacy UserDefaults keys, and keep favicons in their side store.
 Checkpoints hold browsing data only; see "Selection is window state" below.
-Private and temporary families remain backed by memory storage.
+Private and temporary families stay in memory.
 
 ### Selection is window state
 
@@ -283,12 +280,15 @@ window record without captured Spaces), and the native storage reads them once
 adopts them; a record that predates captured Spaces folds them in and captures
 from then on. Sync never carried selection and still does not.
 
-This moves live state ownership and checkpoint serialization into the core.
-Remaining native domain operations still submit prepared value changes; replacing
-those proposals with semantic core commands is a separate part of the migration.
+### Commands and value edits
 
-The store's tab opening, activation, closing, deletion, current-tab clearing,
-renaming and residency actions now send commands directly to that authority.
+Live state ownership and checkpoint serialization belong to the core. Every
+native edit is a semantic command on the family's authority. The only value
+replacements left are incoming sync, which commits as a journal-bound
+replacement, and the Debug-only test session setter.
+
+The store's tab opening, touching, closing, deletion, current-tab clearing,
+renaming and residency actions send commands directly to that authority.
 Folder creation, appearance, renaming, collapse, deletion, moves and tab filing use the same path.
 Requests contain arguments and what the window shows rather than an encoded Space.
 The core prepares the edit against its owned records, the native adapter decodes
@@ -420,7 +420,7 @@ one serial storage queue.
 The upgrade carries exactly two values: the installed release's
 `UserDefaults` session core plus its per-Space history keys, and its sync
 journal. Everything else keeps the identifier it already had and is read in
-place, because the products share one identity — `ProductIdentity` resolves the
+place, because the products share one identity. `ProductIdentity` resolves the
 same `com.pauldavis.crest` defaults domain, the same
 `Application Support/Crest` directory, the same keychain service namespace and
 the same `iCloud.com.pauldavis.crest` container for the WebKit `Crest` target,
@@ -697,22 +697,54 @@ Split View code read; a refused or unanswered edit leaves the value as it was.
 WebKit reads its spelling default once per process, so launch reconciles that
 engine copy with the record. Appearance preferences, link preferences,
 shortcut overrides, sync choices and per-Space download locations stay native.
-The remaining C ABI is the synchronous session, sync, access and policy
-surface described in `CrestContracts/README.md`, exercised end to end by
-`CrestContracts/tests/native_abi.c`.
+The C ABI is synchronous: `crest_session_*`, `crest_sync_*`, `crest_access_*`,
+`crest_downloads_*`, `crest_permissions_*`, `crest_core_evaluate_policy` and
+`crest_core_evaluate_sync`, declared in `CrestContracts/include/crest_core.h`
+and described in `CrestContracts/README.md`.
+`CrestContracts/tests/native_abi.c` exercises the policy, access, downloads,
+permissions and session entry points against the built library.
 
-`NativeSessionAuthority` rejects prepared commands that would read or mutate a
-locked Space once its store family has attached the access authority; the native
-controllers keep their own gates, so the core gate is defence in depth rather
-than the only check. Value deltas committed outside the command API, including
-sync replacement, remain ungated by design.
+Once a store family attaches the access authority, `NativeSessionAuthority`
+rejects a prepared command that would read or mutate a locked Space. It also
+rejects a native value edit, such as the delta `crest_session_reserve_replacement`
+reserves, that would change or remove a locked Space's records. Sync
+replacements bound to a journal transaction are not gated, so background
+convergence continues. `SpaceLockGateTests` covers commands, value edits,
+sync, borrowing and profile sharing. The native controllers keep their own
+gates, so the core gate is defence in depth rather than the only check.
 
-Follow the migration completion contract above for the outstanding ownership,
-engine-service, sync-convergence and distribution work; the remaining packages
-are itemized in [Engine abstraction completion](EngineAbstractionCompletion.md).
-Capability declarations
-must describe the actual native adapter rather than the removed prototype or
-features available in stock Chrome.
+The outstanding packages are itemized in [Engine abstraction
+status](EngineAbstractionCompletion.md). Capability declarations must describe
+the actual native adapter, not features available in stock Chrome.
+
+### Typed Swift boundary
+
+Swift names every core call with a typed operation. `BrowserSessionOperation`
+lists session commands and reads, with the spellings of the core's
+`SessionOperation.cs`. `BrowserPolicyOperation` lists pure policy calls
+(`PolicyOperation.cs`), and `BrowserSyncOperation` lists sync journal
+mutations, queries and evaluations (`NativeSyncOperation.cs`). App-wide
+`preferences.*` commands use their own request model,
+`BrowserAppPreferenceCommand`.
+
+Requests and answers are Codable models. `BrowserSessionArguments` holds each
+command's `arguments` member. `BrowserCoreNullable` encodes an absent value as
+an explicit `null` for members the core always reads, and
+`BrowserCoreOptional` reads a missing or mistyped answer member as `nil`.
+Swift's typed identifiers such as `TabID` and `SpaceID` encode as
+`{"rawValue":…}` records, so argument models carry plain `UUID`s instead.
+
+`BrowserCoreErrorCode` names the rule an answer's `error` member reports. It
+covers `BrowserRuleCodes.cs`, `NativeSyncDocumentErrorCodes.cs` and the
+tab-batch rules. The set stays open: a code this build does not know still
+decodes and falls to the caller's generic failure. On the core side, each
+policy operation decodes its request into a typed record (`*PolicyRequests.cs`),
+and each area keeps its wire codes in one `*Codes.cs` file.
+
+A few spellings stay as they are for compatibility. The core parses
+`TabBatchKind` in PascalCase. Sync document error codes are camelCase while
+session rule codes are snake_case. Link routes carry lowercase UUID strings,
+while other paths use the native encoder's spelling.
 
 ## Build workflow
 
@@ -740,8 +772,7 @@ policy. To review the normal Mac target without registering the installed app's
 identity, set `CREST_MAC_BUNDLE_IDENTIFIER` to a separate identifier and
 `CREST_MAC_ENTITLEMENTS` to its compatible entitlements, then launch with
 `CREST_ISOLATED_SESSION=1` and a unique `CREST_ISOLATED_PERSISTENCE_ID`.
-Normal device provisioning and the remaining physical-device migration validation
-are still required before distribution.
+Physical-device validation of the upgrade is still outstanding.
 
 Build an isolated app into a new absolute path:
 
@@ -761,12 +792,12 @@ For core-only development, run `dotnet test tests/CrestCore.Tests` from
 command or provider. Frequent page observations use incremental tab projections
 and stable observed row objects. Oversized structural snapshots stream in bounded
 chunks and become visible only after complete digest validation. Creation limits
-follow the existing import policy: 64 Spaces and 5,000 tabs per Space. The
-checkpoint remains limited to 16 MB, so large binary metadata must move to a
-separate blob provider before increasing that storage budget. Full UI behavior
-at the import limits still requires validation.
-Physical iOS packaging and runtime validation are required before
-removing the existing shared Swift authority.
+follow the existing import policy: 64 Spaces and 5,000 tabs per Space.
+Session inputs and checkpoint parts are limited to 64 MiB, and pure sync
+evaluation (`crest_core_evaluate_sync`) to 16 MiB. Large binary metadata must
+move to a separate blob provider before either budget grows. Nobody has
+validated full UI behavior at the import limits yet, or run the iOS build on a
+physical device.
 
 For iOS, publish `CrestCore.Native` for `ios-arm64` or `iossimulator-arm64` with
 `-p:PublishAotUsingRuntimePack=true`. Package the resulting dylib using
@@ -831,11 +862,13 @@ The native page adapter propagates card viewport changes to Chromium during
 attachment, navigation and resizing. Keyboard equivalents first reach the page;
 unhandled equivalents then use Crest's AppKit menu and current responder.
 
-Each Space uses a regular Chromium profile under the explicit experimental
-user-data directory. Crest's native session uses its own isolated defaults suite,
-separate from both production and the WebKit review app. Packaging includes the
-original UI resources and Sparkle dependency; isolated startup disables updates
-and CloudKit by default. Chromium quit requests run native before-unload and download checks,
+Each Space uses a regular Chromium profile under the engine's user-data
+directory. The product keeps it in `~/Library/Application Support/Crest/Chromium`
+and uses Crest's installed session, sync and update state. A review package
+requires an explicit `--user-data-dir`, and its native session uses its own
+isolated defaults suite, separate from both production and the WebKit review
+app. Packaging includes the original UI resources and the Sparkle dependency;
+isolated startup disables updates and CloudKit by default. Chromium quit requests run native before-unload and download checks,
 then flush native persistence before disposing pages.
 
 The original private-window composition uses a separate in-memory Chromium
@@ -864,9 +897,9 @@ page's Space, and passes a click to the native review. The extension it can ask
 for is the one the listing's address names, and private windows keep the store's
 own behavior.
 
-Extension action content is hosted in an AppKit popover anchored to the native
-button view. AppKit handles screen-edge placement and movement; Chromium retains
-the popup renderer and extension lifecycle. Internal browser addresses use
+Extension action popups are hosted in a borderless child window of the Crest
+window, placed below the control that opened them and kept on screen at an
+edge. Chromium keeps the popup renderer and extension lifecycle. Internal browser addresses use
 `crest://` in Crest's session and address controls. The Chromium adapter translates
 them to `chrome://` for navigation and translates observations back, preserving
 paths, queries and fragments. Web URLs and `chrome-extension://` security origins
@@ -922,24 +955,17 @@ snapshot, retention, and child-record deletions do not authorize profile cleanup
 Adapter failures retain the intent for the next sync or launch; windows cannot
 reopen that profile while cleanup is pending.
 
-Remaining migration gaps are: whole-page translation and Reader in Chromium
-(explicitly unavailable; selection translation is provided), the locked-Space
-command gate in the core, iCloud Passwords
-authorization with a properly signed Crest identity, and signing and provisioning
-of the product identity. Extension side panels have an adapter: a panel is a card
-in the page row reached from the extension action's context menu, from an icon
-click, and from `chrome.sidePanel.open()` and `close()`. Extension keyboard
-shortcuts are dispatched from the host for key equivalents Crest's own commands
-did not claim, and the Extensions pane links to Chromium's shortcut page.
-Profile capabilities must describe this actual integration
-before features are advertised as supported.
+Whole-page translation and Reader are unavailable in Chromium by decision;
+selection translation works. iCloud Passwords pairing in the signed product has
+not been validated. Extension side panels are cards in the page row, opened from
+the extension action's context menu, from an icon click, and from
+`chrome.sidePanel.open()` and `close()`. The host dispatches extension keyboard
+shortcuts for key equivalents Crest's own commands did not claim, and the
+Extensions pane links to Chromium's shortcut page. Profile capabilities must
+describe this integration before a feature is advertised as supported.
 
 See [Chromium source preparation](../../CrestEngines/Chromium/README.md) for the
 pinned build workflow.
-
-The engineering package is design input, not an implemented SDK. Its suggested
-commit, publication, and report-storage workflow does not override repository
-instructions or authorize external actions.
 
 ## Isolated CloudKit review
 

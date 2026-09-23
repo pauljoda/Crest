@@ -1,53 +1,53 @@
 # Content blocking
 
-Crest’s Balanced protection compiles one bundled ruleset with WebKit’s native
-content-rule-list API. Whether it is active remains an independent choice for
-every Space.
+Crest's Balanced protection is one bundled ruleset that WebKit applies through
+its native content-rule-list API. Each Space turns it on or off independently.
 
 ## Built-in protection
 
 The bundled rules block a deliberately small set of well-known third-party ad
-and analytics hosts. They provide a useful privacy baseline without downloading
-remote rule sources, parsing third-party filter syntax, or placing another
-project’s converter inside Crest’s trusted update path.
+and analytics hosts. They give a privacy baseline without downloading remote
+rule sources, parsing third-party filter syntax, or placing another project's
+converter inside Crest's trusted update path.
 
-The rules are ordinary WebKit JSON generated from
-`BrowserContentBlockingRules`. Crest compiles them once, caches the resulting
-`WKContentRuleList`, and applies that list to pages in Spaces where Balanced
-protection is enabled. Turning protection on or off reloads the visible pages so
-the change takes effect without altering another Space.
+The portable core owns the rules. `BalancedContentBlocking` in `CrestCore`
+holds the blocked host suffixes and a versioned identifier, and the
+`content_blocking.rules` policy operation returns that identifier with the
+WebKit content-rule JSON. The WebKit adapter compiles the source once, caches
+the resulting `WKContentRuleList` under the identifier, and applies it to pages
+in Spaces where Balanced protection is on. If the core cannot answer, nothing
+is compiled. Turning protection on or off reloads the visible pages so the
+change takes effect without touching another Space.
 
 ## Extensions provide broader blocking
 
 Crest does not ship a downloadable filter-list catalog or accept custom
 Adblock-style list URLs. People who want broader coverage, cosmetic filtering,
-regional lists, or project-specific rules can install a compatible content
-blocking extension. Extensions keep their own source, update, and licensing
-decisions at the extension boundary instead of making Crest redistribute or
-convert those lists.
+regional lists or project-specific rules can install a content-blocking
+extension. Extensions keep their own source, update and licensing decisions,
+so Crest never redistributes or converts those lists.
 
-This division is intentional:
+The split is intentional:
 
-- Crest owns a small, reviewable first-party baseline.
-- Extensions own advanced blocking and user-selected list ecosystems.
-- A failed extension cannot change Crest’s bundled rules or another Space’s
+- Crest owns a small first-party baseline that can be reviewed.
+- Extensions own advanced blocking and the list ecosystems people choose.
+- A failed extension cannot change Crest's bundled rules or another Space's
   extension state.
 
 ## Chromium
 
-Crest's built-in protection is a WebKit content-rule list, so it has no effect in
-the Chromium host. Chromium's own subresource filter depends on Safe Browsing
-list distribution that Crest does not run, and Crest does not convert its rules
-into a second format for one engine. The Chromium engine therefore declares
-`content-blocking` unavailable, and every surface that would set the per-Space
-preference is absent rather than dimmed: the Privacy settings section is hidden,
-and the page menu item is not installed. Blocking in Chromium comes from an
-extension — uBlock Origin Lite and its peers — on the same terms as the broader
-blocking described above.
+Crest's built-in protection is a WebKit content-rule list, so it has no effect
+on Chromium. Chromium's own subresource filter depends on Safe Browsing list
+distribution that Crest does not run, and Crest does not convert its rules into
+a second format for one engine. The Chromium registration therefore declares
+`content-blocking` unavailable. The Privacy settings section shows no Balanced
+control and says instead that blocking comes from the extensions the person
+installs, and the page menu item is not installed. Blocking on Chromium comes
+from an extension such as uBlock Origin Lite.
 
 ## Compatibility
 
 Balanced protection can occasionally break a site because it blocks known
-third-party hosts. The page and command menus let the person turn content
-blocking off for the current Space. Installing an extension may add separate
-site controls supplied by that extension.
+third-party hosts. On WebKit, the page and command menus let the person turn
+content blocking off for the current Space. An extension may add its own site
+controls.

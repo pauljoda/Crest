@@ -11,13 +11,13 @@ A Crest Space is not only a group of tabs. It is a separate browsing profile wit
 
 ## What belongs to one Space
 
-- Signed-in website sessions, cookies, caches, local storage, and other WebKit website data
+- Signed-in website sessions, cookies, caches, local storage, and other website data in the Space's engine profile
 - Current, pinned, saved, grouped, and archived tabs
 - Nested folders and saved locations
 - History, Archive, download records, and their retention choices
 - Crest Passwords and optional iCloud Keychain participation
 - Site permissions and content-blocking choices
-- Extensions, actions, permissions, and extension settings on Mac
+- Extensions, actions, permissions, and extension settings in the Chromium build for Mac
 - Name, symbol, gradient or crest, and sidebar appearance
 
 That means the same website can be signed into different accounts in Work and Personal without those sessions meeting.

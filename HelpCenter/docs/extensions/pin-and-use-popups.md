@@ -1,46 +1,40 @@
 ---
 title: Pin extensions and use extension popups
-description: Pin extension actions and use popups, side panels, and options pages in the right Space on Mac.
+description: Pin extension actions and use popups, side panels, and settings pages in the right Space on Mac.
 slug: /pin-extensions-and-popups
 sidebar_label: Pinning & popups
 sidebar_position: 5
-keywords: [pin extension, extension popup, Site Controls, sidebar, side panel, Firefox sidebar, toolbar action]
+keywords: [pin extension, extension popup, Site Controls, side panel, toolbar action]
 ---
 
 # Pin extensions and use extension popups
 
-Extension actions belong to the active Space and current page. Pin the ones you use often; leave occasional tools in Site Controls.
+Extension actions belong to the Space. Pin the ones you use often and leave occasional tools in Site Controls.
 
 ## Open an extension action
 
 1. Select **Site Controls** beside the address field.
-2. Find the extension’s icon in the extension action area.
+2. Find the extension's icon in the extension action area.
 3. Select the icon to run its action or open its popup.
 
-If the extension provides a popup, Crest presents the extension’s real WebExtension UI near the action you selected. Popup behavior still depends on the APIs used by that extension.
+A popup opens below the icon you selected, attached to the Crest window. It closes when you click outside it, press Escape, move or resize the window, or switch to another app.
 
-## Pin an action to the sidebar
+Open the icon's menu for more choices: **Extension Settings…**, **Pin to Toolbar**, **Disable Extension**, **Manage Extension…**, **View on Chrome Web Store** and **Remove Extension…**. In a private window the menu offers only the choices that don't change the Space's installation.
 
-1. Open **Site Controls**.
-2. Point to the extension action.
-3. Select **Pin Extension**.
+## Pin an action
 
-Pinned extension icons appear in their own strip below the address field for that Space. Select a pinned icon to use its action without reopening Site Controls.
+Select the pin button beside the action in Site Controls, or choose **Pin to Toolbar** from its menu. Pinned icons appear in the Space's own strip below the address field. They stay there on the Start Page too, before you open any page in the Space.
 
-To remove it from the strip, point to the action and select **Unpin Extension**. Unpinning does not disable or uninstall the extension.
+To remove an icon from the strip, choose **Unpin from Toolbar**. Unpinning does not disable or uninstall the extension.
 
-## Open an options page
+## Open an extension's settings
 
-If the extension provides an options page, expand it in **Crest Settings → Extensions** and select **Open Options**. Crest presents the extension's own WebExtension settings UI in the Space that owns the installation.
+If the extension has a settings page, choose **Extension Settings…** from its menu, or expand it in **Crest Settings → Extensions** and select **Extension Settings**. The page opens in the Space that owns the installation.
 
-## Use extension side panels
+## Use side panels
 
-Crest supports compatible Chrome side panels and Firefox sidebars on Mac. Open the panel through the extension’s action or menu. A panel can belong to the Space or to a particular tab, depending on how the extension defines it.
-
-Tab-specific panels stay with their pages and return when you select that tab again. An extension badge on the tab’s favicon identifies a tab with its own panel. Switching Spaces keeps the panel and its signed-in session within the owning Space.
-
-Support still depends on the extension’s APIs. Check [compatibility and known limitations](../extension-compatibility/) if a panel does not behave as expected.
+Extensions with a Chrome side panel open it as a card beside the page. Choose **Open Side Panel** from the action's menu, select the icon if the extension opens its panel that way, or let the extension open it itself. The panel belongs to the page it opened beside. Crest does not keep side panels after you quit.
 
 :::note Space-local placement
-Pinning is independent per Space and per device. A Work toolbar can stay focused on work tools while Personal or another device uses a different set.
+Pinning is independent per Space and per device. A Work strip can hold work tools while Personal or another Mac uses a different set.
 :::

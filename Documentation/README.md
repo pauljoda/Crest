@@ -21,7 +21,7 @@ build and release requirements for contributors.
 - [Link opening](LinkOpeningPolicy.md)
 - [Native tab content](NativeTabs.md)
 - [Portable control plane](Architecture/ControlPlane.md)
-- [Engine abstraction completion](Architecture/EngineAbstractionCompletion.md)
+- [Engine abstraction status](Architecture/EngineAbstractionCompletion.md)
 
 ## Project participation
 

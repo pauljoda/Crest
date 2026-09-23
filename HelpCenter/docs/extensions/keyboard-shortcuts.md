@@ -1,35 +1,24 @@
 ---
 title: Set extension keyboard shortcuts
-description: Assign, clear, and reset WebExtension command shortcuts for the selected Crest Space.
+description: Assign and change keyboard shortcuts for extension commands in a Crest Space.
 slug: /extension-keyboard-shortcuts
 sidebar_label: Keyboard shortcuts
 sidebar_position: 6
-keywords: [extension commands, keyboard shortcut, Shortcuts settings, reset shortcut, Space]
+keywords: [extension commands, keyboard shortcut, extension shortcuts, Space]
 ---
 
 # Set extension keyboard shortcuts
 
-Extensions can declare commands that appear alongside Crest’s own keyboard shortcuts. Extension commands apply only to the selected Space and device.
+Extensions can declare keyboard commands, such as opening their popup. Chromium keeps these shortcuts for each Space's installation, so changing one in Work does not change it in Personal.
 
-## Assign or change a shortcut
+## Change a shortcut
 
-1. Open **Crest Settings → Shortcuts**.
-2. If you use more than one Space, choose the **Extension Space** near the search field.
-3. Search for the extension or command.
-4. Select the shortcut recorder beside the command.
-5. Press a supported key with **Command**, **Option**, **Control**, or **Shift**.
+1. Open **Crest Settings → Extensions** and choose the Space.
+2. Select **Keyboard Shortcuts…**. Chromium's extension shortcuts page opens for that Space.
+3. Find the extension's command and set, change or clear its shortcut there.
 
-Crest commands take priority. If the shortcut is already in use, Crest shows the conflicting commands and asks whether you want to **Replace Existing Shortcut**.
+## When a shortcut does nothing
 
-## Clear or restore a command
+Crest's own shortcuts come first. An extension shortcut runs only when no Crest command uses the same keys. Check **Crest Settings → Shortcuts** for a conflict, and pick different keys for one of them.
 
-Open the action menu beside an extension command:
-
-- **Clear Shortcut** removes the current assignment.
-- **Reset to Extension Default** restores the shortcut declared by the extension.
-
-Changing one Space’s extension shortcut does not change the same extension in another Space or on another device.
-
-:::tip Opened from an extension
-If an extension sends you to its shortcut configuration page, Crest routes that request to **Shortcuts**, selects the correct Space, and highlights the requested command.
-:::
+A shortcut that opens an extension's popup shows it beside the extension's pinned icon, or beside the control that opens the window's extension list when the extension is not pinned.

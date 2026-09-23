@@ -126,10 +126,9 @@ Build `CrestChromiumUI` with Xcode and embed that framework plus
 the retained third-party license and sign the resulting development bundle.
 `Scripts/control-plane/package-chromium-host.py` assembles an independent APFS
 clone of the built browser, embeds the two libraries and license, and signs
-the development bundle. It requires a new output path outside `/Applications`
-and the repository, and removes default-browser registration from that copy.
-It does not notarize or publish a distributable release.
-Launch with both `--crest-control-plane` and an explicit, separate
+the bundle. It requires a new output path outside `/Applications` and the
+repository. A review package drops the default-browser registration.
+Launch a review package with both `--crest-control-plane` and an explicit, separate
 `--user-data-dir`. The host rejects startup without that explicit directory.
 
 `--product` packages Crest's own desktop identity instead of that review
@@ -148,15 +147,15 @@ detects the composition from its `Crest-Native-Host` resource and refuses a
 mismatched mode, and the host loads whichever of the two names a bundle
 contains. A product bundle carries a
 `Crest-Native-Host` resource instead of `Crest-Isolated-Experiment`: it hosts the
-native UI for launches that carry no switches — Finder, the default-browser role,
-Dock reopen. Signing and provisioning that identity for distribution remain
-external requirements; the packager still refuses `/Applications` and never
-replaces an installed Crest.
+native UI for launches that carry no switches, such as Finder, the
+default-browser role and Dock reopen. `--distribution` signs the product for
+notarization, as described under Releasing. The packager still refuses
+`/Applications` and never replaces an installed Crest.
 
 A product bundle keeps its engine state in
 `~/Library/Application Support/Crest/Chromium`, not in
 `~/Library/Application Support/Chromium`, which every other Chromium on the
-machine — including Crest's own review and baseline packages — also opens by
+machine, Crest's own review and baseline packages included, also opens by
 default. The browser executable resolves that directory in `main`, before the
 Chromium framework is loaded and therefore before any profile is read, and
 passes it as `--user-data-dir`; an explicit `--user-data-dir` on the command line
@@ -175,21 +174,20 @@ after the user data directory is resolved and before the local-state
 `PrefService` exists, let alone `ProfileManager`. Two things happen there.
 
 First, the entries that name an adopted directory are carried out of the
-previous `Local State` into the new one — its `profile.info_cache` record, its
+previous `Local State` into the new one: its `profile.info_cache` record, its
 place in `profiles_order` and `last_active_profiles`, and `last_used` when it
 names one. Nothing else is copied. Without this an adopted profile is
 unregistered: Crest's core restores its Spaces by path and does not read that
 list, but Chromium's own profile machinery does.
 
 Second, each adopted profile's encrypted tracked-preference validators are
-retired — every `protection.macs.*_encrypted_hash` entry and
+retired. That covers every `protection.macs.*_encrypted_hash` entry and
 `protection.super_encrypted_hash`, in `Secure Preferences` and in `Preferences`.
 Those hashes are encrypted with the OSCrypt key derived from the bundle's
 keychain item, and Chromium treats a stale encrypted hash as a changed
 preference without consulting the legacy HMAC stored beside it: enforced tracked
-preferences, `extensions.settings` among them, are reset on first launch. That
-is what emptied the adopted profiles in 0.6.96, leaving pinned tiles pointing at
-extensions whose directories had been collected. Removing the encrypted
+preferences, `extensions.settings` among them, are reset on first launch, and
+the profile loses its extensions. Removing the encrypted
 validators leaves the legacy HMACs, which validate on their own and which
 Chromium re-encrypts on its next write. This protects the adoption only.
 Renaming a shipped Safe Storage keychain item has no such repair and must not
@@ -197,16 +195,17 @@ happen; `CrestKeychainName` carries that as a comment.
 
 Crest mode never shows Chrome's profile picker. Startup resolves to a browser
 window on the `Default` profile, and `ProfilePicker::Show` returns without
-creating its window, so no route — startup, Dock reopen, a profile menu — can put
+creating its window, so no route (startup, Dock reopen, a profile menu) can put
 a "Welcome to Chromium profiles" window in front of the native UI.
 
 A product bundle is launched with no switches, so the browser process declares
 `--crest-control-plane` on its own command line at
 `ChromeMainDelegate::BasicStartupComplete` when the bundle marker names the
-native host. The Crest gates that test that switch — the iCloud Passwords
-native-messaging fallback, declared-URL extension updates, private profile window
-creation and startup profile selection — are otherwise dead in a product bundle,
-and some of them sit in components that cannot include `//chrome` headers.
+native host. The Crest gates that test that switch would otherwise be dead in a
+product bundle: the iCloud Passwords native-messaging fallback, declared-URL
+extension updates, private profile window creation and startup profile
+selection. Some of them sit in components that cannot include `//chrome`
+headers.
 
 External opens, document opens and reopen reach the native UI through
 `AppController`. `crest::OpenExternalURLs` applies Crest's own external-URL
@@ -235,7 +234,7 @@ Site state reaches Crest through the location bar Chromium already calls.
 back to Crest's Site Controls. Crest's per-Space permission record stays the
 source of truth: each committed page applies its automatic-pop-up decision to
 the engine, and allowing a blocked site opens the pop-ups the blocker kept.
-Chromium's confirm info bars — tab sharing, `chrome.debugger` — have no Views
+Chromium's confirm info bars, such as tab sharing and `chrome.debugger`, have no Views
 container here, so each page observes its `ContentInfoBarManager` and Crest
 shows the bars in the page with the engine's own button labels.
 
@@ -248,13 +247,12 @@ The host keeps Chromium's process and application lifecycle. The Swift framework
 contains no application entry point. `CrestChromiumUI` compiles Crest's existing
 shared and macOS UI, and `CrestChromiumRoot` mounts `BrowserMacApplication` in
 native windows. `ChromiumNativePage` supplies the WebContents view inside the
-existing page card. Complete capability validation and distributable packaging
-remain part of the integration work.
+existing page card.
 
 The pinned toolbar row belongs to the Space rather than to a page. Its actions
 come from the Space's own profile, so a Space showing its Start Page still shows
-the extensions pinned to it; the open page's per-tab state — badge, dynamic icon
-— is overlaid when there is one. Clicking a pinned action without a page open
+the extensions pinned to it. The open page's per-tab state, such as its badge
+and dynamic icon, is overlaid when there is one. Clicking a pinned action without a page open
 opens that action's popup against the Space's browser directly: there is no tab
 to activate, grant host access for or inject into, so an action that has no
 popup of its own, including any page action, reports itself unavailable instead.
@@ -266,9 +264,9 @@ the first Start Page of a launch rather than only once something has been opened
 in the Space. Which Spaces it may prepare is decided by `(spaceID, profileID)`
 against the store family that owns the window it is drawn in, not by identity
 against one application-wide list: a window publishes its own Spaces first, and
-the list would still be empty at that point. A Space belonging to another family
-— a borrowed settings workspace, a private window, which has no persistent
-engine profile of its own — and a locked Space are refused. The preparation is
+the list would still be empty at that point. A Space belonging to another family,
+such as a borrowed settings workspace or a private window with no persistent
+engine profile of its own, is refused, and so is a locked Space. The preparation is
 idempotent, so it can be asked on every appearance and every Space change.
 
 An extension that is still enabled in the registry but whose directory is gone
@@ -280,23 +278,20 @@ change.
 
 Action popups are hosted in a borderless Crest window, not in an `NSPopover`.
 On macOS 27 the popover composites a translucent system material with whatever
-it hosts: a popup painting an opaque `#181A1B` measured `#68555B` on screen,
-which read as a white haze over the extension's own rendering. An opaque page
-base, an opaque browser surface and an opaque view behind the web contents were
-each measured and none removed it — the last occluded the renderer's layer and
-left the popup blank. The popup window is borderless, becomes key so the
-extension's own fields can be typed into, and is a child of the Crest window it
-was opened from. Its content view is a plain layer-backed container — no
-vibrancy, nothing opaque between it and the renderer — carrying the same 12pt
-rounded corners as Crest's controls, with the extension's view as its only
-subview. It has no arrow: a popover's arrow is filled with the popover's own
-background colour, and Crest does not know the colour an extension's document
-paints. The existing anchor logic places it below the control it was opened
-from, flipping above and sliding along the screen at an edge, and Chromium's
-auto-resize keeps following the document. It dismisses on a click outside, on
-Escape, when its window moves, resizes or minimises, when Crest goes to the
-background, and when the extension closes its popup, is unloaded or has its host
-destroyed. An extension painting `#181A1B` now measures `#181A1B` on screen.
+it hosts, which tints the extension's own rendering, and no opaque layer behind
+the web contents removes it without hiding the renderer. The popup window is
+borderless, becomes key so the extension's own fields can be typed into, and is
+a child of the Crest window it was opened from. Its content view is a plain
+layer-backed container with no vibrancy and nothing opaque between it and the
+renderer. It carries the same 12pt rounded corners as Crest's controls, with the
+extension's view as its only subview. It has no arrow, because a popover's
+arrow is filled with the popover's own background colour, and Crest does not
+know the colour an extension's document paints. The anchor logic places it
+below the control it was opened from, flipping above and sliding along the
+screen at an edge, and Chromium's auto-resize keeps following the document. It
+dismisses on a click outside, on Escape, when its window moves, resizes or
+minimises, when Crest goes to the background, and when the extension closes
+its popup, is unloaded or has its host destroyed.
 
 Crest reuses its original extension artwork, badge, pinning, toolbar tiles,
 Site Controls grid, and Space-selection list. `Apple/Extensions/Presentation`
@@ -335,11 +330,13 @@ store's prompts to switch to Chrome. Crest mode also restores
 Chromium's declared-URL extension update requests; signature and permission
 checks remain owned by Chromium.
 
-Apple installs its iCloud Passwords native-messaging manifest in Chrome's system
-directory. In Crest mode only, the host checks that location specifically for
-`com.apple.passwordmanager` when the regular Chromium lookup finds no manifest.
-Chromium still validates the manifest's allowed extension IDs, and Apple's helper
-still controls authentication and access to the password vault. Crest does not
+Companion apps such as Apple's Passwords helper and 1Password register their
+native-messaging hosts for Google Chrome and do not know Crest's directories. In
+Crest mode only, when the regular Chromium lookup finds no manifest, the host
+checks Chrome's per-user `NativeMessagingHosts` directory and then its global
+one. Chromium still validates the manifest and the extension IDs it allows, so a
+host answers only the extensions its app registered, and Apple's helper still
+controls authentication and access to the password vault. Crest does not
 copy Chrome's profile, change Apple's helper, or read passwords itself.
 Apple's signed helper also checks the parent browser's identity. A browser needs
 an Apple-approved identity or the managed
@@ -360,14 +357,14 @@ own nearby-device, QR and security-key fallbacks. Cancelling the system sheet
 returns to Chromium's mechanism list once, so the engine's phone, USB and
 security-key flows stay reachable. Creation defaults to iCloud Keychain rather
 than a browser-owned store, and Chromium's staged rollout features for that
-choice do not apply. A build without the entitlement — the review package — keeps
+choice do not apply. A build without the entitlement, such as the review package, keeps
 Chromium's own sheet, so passkeys there are not a test of Crest's behaviour.
 
 Private windows use separate off-the-record profiles, and extension actions are
 filtered by Chromium's incognito authorization.
 
-A browsing window the engine creates for itself — `chrome.windows.create`, an
-extension app window — routes to a Crest window. Crest reserves the window when
+A browsing window the engine creates for itself, such as one from
+`chrome.windows.create` or an extension app window, routes to a Crest window. Crest reserves the window when
 the Browser is created, maps its profile to a Space, and opens the window when
 the Browser's first tab is offered for adoption; a renderer popup still joins
 its opener's window instead. An off-the-record profile maps only to the private
@@ -381,10 +378,10 @@ its own, and so does a DevTools frontend the user has undocked.
 A docked DevTools frontend is mounted inside the Crest page card it inspects.
 This build never creates Chrome's Views contents container, so the
 `DevtoolsUIController` that normally decides whether docking is possible and
-lays the frontend out does not exist; Crest answers in its place for a
+lays the frontend out does not exist. Crest answers in its place for a
 WebContents one of its pages owns, and applies the frontend's own
-`DevToolsContentsResizingStrategy` — which carries the dock side, splitter
-position and drawer height — to the card interior. The frontend's undock button
+`DevToolsContentsResizingStrategy`, which carries the dock side, splitter
+position and drawer height, to the card interior. The frontend's undock button
 still works and Chromium then opens the window the user asked for; re-docking
 returns it to the card.
 
@@ -434,7 +431,7 @@ host restores its core-managed Spaces directly, without Chrome's profile picker.
 
 ## Releasing
 
-The engine — Chromium with this host's patch and overlay compiled in — cannot
+The engine, Chromium with this host's patch and overlay compiled in, cannot
 be built on a hosted runner, so releases download a prebuilt engine.
 `Scripts/control-plane/chromium_engine.py` names it by a key over every engine
 input: the source lock, the host patch and its input hashes, the overlay, the
@@ -454,9 +451,9 @@ core and `CrestChromiumUIProduct`, and packages the product with
 `package-chromium-host.py --product --distribution`: every executable, library
 and bundle is signed innermost first with the hardened runtime and a secure
 timestamp, the renderer and GPU helpers keep Chromium's JIT entitlement, and
-the app receives Crest's resolved entitlements — taken from the notarized
-WebKit export built in the same run — over Chromium's device entitlements. The
-Chromium build is the default download on `appcast-experimental.xml`; the
+the app receives Crest's resolved entitlements, taken from the notarized
+WebKit export built in the same run, over Chromium's device entitlements. The
+workflow then notarizes the app and its disk image. The Chromium build is the default download on `appcast-experimental.xml`; the
 WebKit build is published beside it as an alternate on
 `appcast-experimental-webkit.xml`, and each follows only its own feed.
 

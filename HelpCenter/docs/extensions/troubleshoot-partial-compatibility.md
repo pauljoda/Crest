@@ -1,44 +1,36 @@
 ---
-title: Troubleshoot partial extension compatibility
-description: Diagnose a Chrome or Firefox extension that installs but reports Needs attention or has a feature limited by WebKit.
+title: Troubleshoot an extension
+description: Steps to try when a Chrome extension installs in Crest but a feature does not work.
 slug: /troubleshoot-extension-compatibility
-sidebar_label: Troubleshoot partial support
+sidebar_label: Troubleshoot an extension
 sidebar_position: 9
-keywords: [partial extension support, experimental, Needs attention, Technical Details, WebKit limitation]
+keywords: [extension not working, extension error, troubleshooting, Chromium extension manager]
 ---
 
-# Troubleshoot partial extension compatibility
+# Troubleshoot an extension
 
-An extension can verify, install, and start while one optional feature reaches a browser-specific API. Crest reports what it can observe without treating one error as proof that every extension feature failed.
+Extensions run on Chromium, so most behave as they do in Chrome. When one doesn't, the cause is usually its Space, its site access, or a browser feature Crest draws differently from Chrome.
 
-## Read the status first
+## Try these first
 
-- **Running** means the enabled WebKit context loaded without an observed runtime error. It does not certify every workflow.
-- **Limited compatibility** means a known package-specific workflow is unavailable even though the extension installed or started.
-- **Needs attention** means the context failed to load or reported a runtime problem. Expand the row for Crest's plain-language explanation.
-- **Blocked** means Crest identified an unsafe or unavailable requirement before installation.
-- **Off** keeps the installation and Space-local configuration but does not run it.
+1. Check that you are in the Space where you installed it. Each Space has its own installations. See [Spaces and profile isolation](../spaces/spaces-and-isolation.md).
+2. In **Crest Settings → Extensions**, choose the Space, then turn the extension off and back on.
+3. Expand its row, select **Manage Permissions in Chromium**, and check whether its site access covers the page you are on.
+4. Open **Extension Settings** if the extension has them, and check its own options.
+5. Remove the extension and install it again from the Chrome Web Store.
 
-## Try the smallest recovery
+## Read the error
 
-1. Open **Crest Settings → Extensions**.
-2. Choose the Space and device where the problem occurs.
-3. Expand the extension and read the status explanation.
-4. Turn the extension off and back on.
-5. Update or reinstall the store-sourced package. Chrome Web Store installations can use **Check for Updates Now**; for a Firefox extension, reopen its Firefox Add-ons listing and install the current version into the same Space.
-6. Review **Permissions** and **Website Access** for a blocked rule.
-7. Open the extension's **Options** page when it provides one and review feature-specific settings.
+Choose **Manage Extension…** from the extension's action menu to open Chromium's extension manager. It lists errors the extension reported. See [Check an extension's status and details](./status-and-technical-details.md).
 
-Reinstalling does not fix an app-signature or managed-entitlement gate. `BrowserSignatureInvalid` needs a production-signed Crest build; iCloud Passwords needs Apple browser approval and a newly provisioned build.
+## In a private window
 
-## Read Technical Details without overgeneralizing
+Private windows run only the extensions you allow there. Allow the extension in private windows from Chromium's extension manager.
 
-Open **Technical Details** to see the JavaScript errors and unsupported APIs reported by WebKit. Include those details, the extension version, Crest build, Space, device, and failing workflow in a bug report.
+## Password managers and companion apps
 
-Common measured limitations include notification-click events, managed storage, isolated scripting execution worlds, and `tabs.onUpdated` registration. Another feature in the same extension may still work.
+If the extension needs a Mac app, such as 1Password or iCloud Passwords, the app decides whether to trust Crest. Use the signed and notarized Crest release, not a development build. See [Native companions](./native-companion-limits.md).
 
-## Check the native-companion boundary
+## Features Crest draws differently
 
-If the extension needs a desktop app, confirm you are using the official Crest for Mac release and a verified Chrome Web Store package. Development-signed builds may be rejected by a companion's signature policy, unpacked extensions are ineligible, and a Safari app's native handler is not portable.
-
-See [Native companions and verified identities](./native-companion-limits.md) and the [current compatibility matrix](./compatibility.md).
+Crest shows popups, side panels, extension windows and keyboard shortcuts in its own interface. An extension that expects part of Chrome's window that Crest does not draw may lose that feature. See [Extension compatibility](./api-compatibility-matrix.md).

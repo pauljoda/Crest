@@ -5,7 +5,9 @@ defines the current JSON contract. It parses bounded UTF-8 JSON directly and
 builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
-The native Crest apps use the `crest_session_*`, sync and policy entry points.
+The native Crest apps use the `crest_session_*`, `crest_sync_*`,
+`crest_access_*`, `crest_downloads_*` and `crest_permissions_*` entry points,
+plus `crest_core_evaluate_policy` and `crest_core_evaluate_sync`.
 The session holds browsing data only; which Space and tab a window shows is
 window state. Session commands take what the requesting window shows as
 read-only `view` context (`{"spaceId", "tabs": [{"spaceId", "tabId"}]}`) and answer
@@ -21,8 +23,11 @@ desktop and mobile access controllers. The platform supplies device-authenticati
 results; the core accepts only the current request for the exact Space/profile
 identity. Relocking invalidates pending results. Grants are never persisted or
 synced. This small synchronous boundary uses 16-byte UUIDs and integer results,
-without message serialization or an executor wait. Native UI, page, credential
-and extension callers continue to consult the same access controller.
+without message serialization or an executor wait. A session attached with
+`crest_session_attach_access` rejects commands and native value edits
+(`crest_session_reserve_replacement`) that would reach a locked Space with
+`space_locked`; journal-bound sync replacements are not gated. Native UI, page,
+credential and extension callers continue to consult the same access controller.
 
 The asynchronous message-based kernel (`crest_core_create` through
 `crest_core_destroy`, envelopes and adapter message routing) has been retired.
@@ -33,7 +38,7 @@ above. `Documentation/Architecture/ControlPlane.md` describes that live path.
 v1 capability descriptor used by `crest_session_register_engine`.
 
 `crest_core_evaluate_policy` is a separate pure-function entry point for the
-existing native store APIs during migration. Requests use `version: 1` and an
+native store APIs. Requests use `version: 1` and an
 `operation`, with a 16 KiB input and 64 KiB output limit. It retains no state or
 executor. Address intent returns domain values. History visits, range removal
 and retention are session commands (`history.*`, `records.sweep`), not policy
@@ -159,6 +164,7 @@ This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 
 `tests/native_abi.c` is a native consumer of the actual shared library. It
-exercises the live policy, access and session entry points, checking buffer
+exercises the policy, access, downloads, permissions and session entry points,
+checking buffer
 ownership, non-consuming size probes, stale revisions and invalid handles. The
 managed suite covers the session, sync and domain rules.
