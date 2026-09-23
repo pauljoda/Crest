@@ -2085,6 +2085,10 @@
     "swift-typed-core-boundary": {
       "category": "internal",
       "message": "Send every core command, policy question and sync operation through typed operation names and Codable models instead of raw strings and dictionaries."
+    },
+    "import-opens-first-tab": {
+      "category": "fixed",
+      "message": "Importing bookmarks or a Crest archive into a new Space opens that Space on its first tab again."
     }
   }
 }

@@ -92,7 +92,12 @@ public sealed class NativeWorkspaceImport {
         JsonNode? affected = null;
         if (mode == WorkspaceImportMode.Portable) {
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Length);
-            foreach (var input in inputs) spaces.Add((JsonNode)input);
+            foreach (var input in inputs) {
+                // A Space the source did not say to show opens on its first tab.
+                if (!shownTabs.ContainsKey(input) && Items(input, SpaceSections.TabsSection).FirstOrDefault() is { } first)
+                    shownTabs[input] = Id(first["id"]);
+                spaces.Add((JsonNode)input);
+            }
             affected = inputs.FirstOrDefault();
         } else if (mode == WorkspaceImportMode.Manual) {
             var drafts = Items(arguments, "drafts");

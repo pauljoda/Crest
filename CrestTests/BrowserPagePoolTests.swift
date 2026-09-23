@@ -393,9 +393,9 @@ final class BrowserPagePoolTests: XCTestCase {
             context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id })
         let acceptedHistory = context.store.selectedSpace?.history
         let page = try XCTUnwrap(webView.navigationDelegate as? BrowserPage)
-        let failureURL = try XCTUnwrap(
-            URL(string: "https://failure-background.crest.test/unreachable")
-        )
+        // A refused loopback connection fails at once; an unresolvable host
+        // waits on the network's DNS and can outlast the wait below.
+        let failureURL = try XCTUnwrap(URL(string: "https://127.0.0.1:1/unreachable"))
 
         page.load(failureURL)
         try await waitForNavigationFailure(in: page)

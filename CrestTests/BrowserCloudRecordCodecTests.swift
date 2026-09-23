@@ -108,8 +108,11 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
                 lastVisitedAt: Date(timeIntervalSince1970: 100)
             )
         )
+        // A web tab: a closed Start Page is local-only and never syncs.
         let closedIndex = try XCTUnwrap(
-            session.spaces[0].tabs.lastIndex { $0.placement == .current && $0.id != renamedID }
+            session.spaces[0].tabs.firstIndex {
+                $0.placement == .current && $0.id != renamedID && $0.url?.scheme == "https"
+            }
         )
         let closed = session.spaces[0].tabs.remove(at: closedIndex)
         session.spaces[0].archivedTabs.append(

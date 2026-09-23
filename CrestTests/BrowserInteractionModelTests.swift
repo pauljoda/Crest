@@ -994,8 +994,12 @@ final class BrowserInteractionModelTests: XCTestCase {
             startupBehavior: .showStartPage,
             persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
         )
+        // Launch shows the Space's first open tab, so show its Start Page.
+        let startPage = try XCTUnwrap(browser.selectedSpace?.currentTabs.first { $0.isStartPage })
+        browser.selectTab(startPage.id)
         let selectedSpaceID = try XCTUnwrap(browser.selectedSpace?.id)
         let selectedTabID = try XCTUnwrap(browser.selectedTab?.id)
+        XCTAssertEqual(selectedTabID, startPage.id)
         let currentTabs = try XCTUnwrap(browser.selectedSpace?.currentTabs.map(\.id))
         let initialFocusRequest = chrome.startPageFocusRequest
 
