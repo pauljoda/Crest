@@ -21,7 +21,9 @@ final class BrowserAutomaticPictureInPictureCoordinator {
     private var reservation: UUID?
 
     init(
-        isEnabled: @escaping @MainActor () -> Bool = { BrowserAutomaticPictureInPicturePreference.isEnabled() },
+        isEnabled: @escaping @MainActor () -> Bool = {
+            BrowserAppPreferenceStore.shared.automaticallyEntersPictureInPicture
+        },
         isSystemOccupied: @escaping @MainActor () -> Bool = { BrowserDesktopPictureInPictureAccess.isSystemOccupied() }
     ) {
         self.isEnabled = isEnabled

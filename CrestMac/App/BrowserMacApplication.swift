@@ -22,7 +22,6 @@ final class BrowserMacApplication {
     let shortcuts: BrowserShortcutStore
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     let windowTransparency: BrowserWindowTransparencyStore
-    let splitFocus: BrowserSplitFocusPreferenceStore
     let softwareUpdates: BrowserSoftwareUpdateService
     let sidebarWidgets: BrowserSidebarWidgetRuntime
     let pagePoolRegistry: BrowserPagePoolRegistry
@@ -61,6 +60,9 @@ final class BrowserMacApplication {
             BrowserLinkPreferenceStore.shared.reset()
         }
         let browser = try BrowserStore.production(launchEnvironment: launchEnvironment)
+        BrowserAppPreferenceStore.shared.bind(
+            to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
+        BrowserAppPreferenceStore.shared.reconcileWebKitSpellChecking()
         let privateBrowser = BrowserStore.privateBrowsing()
         let cloudSync =
             usesIsolatedLaunch
@@ -269,7 +271,7 @@ final class BrowserMacApplication {
             forceSetup: launchEnvironment.forcesMacOnboardingSetup,
             persistentIsolationID: launchEnvironment.persistentIsolationID
         )
-        let startupBehavior = BrowserCorePolicy.startupBehavior(
+        let startupBehavior = browser.startupBehavior(
             for: launchEnvironment,
             hasActiveLaunchGate: onboardingProgress.isLaunchGateActive
         )
@@ -307,9 +309,6 @@ final class BrowserMacApplication {
         )
         self.shortcuts = shortcuts
         self.windowTransparency = BrowserWindowTransparencyStore.launch(
-                usesIsolatedLaunch: usesIsolatedLaunch
-            )
-        self.splitFocus = BrowserSplitFocusPreferenceStore.launch(
                 usesIsolatedLaunch: usesIsolatedLaunch
             )
         self.softwareUpdates = softwareUpdates
@@ -365,7 +364,6 @@ final class BrowserMacApplication {
                     browser: model.browser, pages: model.pages, presentation: model.spaceSettingsPresentation)
             )
             .environment(windowTransparency)
-            .environment(splitFocus)
             .environment(softwareUpdates)
             .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
         } else {
@@ -386,7 +384,6 @@ final class BrowserMacApplication {
         )
         .modifier(BrowserChromeAppearancePersistence())
         .environment(windowTransparency)
-        .environment(splitFocus)
         .environment(softwareUpdates)
         .environment(
             \.browserSidebarWidgetRuntime,

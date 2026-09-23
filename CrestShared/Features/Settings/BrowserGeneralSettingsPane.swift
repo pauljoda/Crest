@@ -9,8 +9,7 @@ struct BrowserGeneralSettingsPane: View {
     @Environment(\.browserSidebarWidgetRuntime) private var sidebarWidgets
     @State private var defaultBrowser = BrowserDefaultBrowserController()
     @State private var isCheckingDefaultBrowser = true
-    @AppStorage(BrowserStartupPreference.key) private var startupBehaviorRawValue =
-        BrowserStartupBehavior.defaultBehavior.rawValue
+    @Bindable private var appPreferences = BrowserAppPreferenceStore.shared
 
     init(
         browser: BrowserStore,
@@ -26,7 +25,7 @@ struct BrowserGeneralSettingsPane: View {
         BrowserSettingsPane(.general) {
             Section("Startup", systemImage: "power") {
                 #if os(macOS)
-                    Picker("When Crest opens", selection: startupBehavior) {
+                    Picker("When Crest opens", selection: $appPreferences.startupBehavior) {
                         ForEach(BrowserStartupBehavior.allCases) { behavior in
                             Text(behavior.title).tag(behavior)
                         }
@@ -47,7 +46,7 @@ struct BrowserGeneralSettingsPane: View {
 
             BrowserNewTabSettingsSection(preferences: linkPreferences)
 
-            BrowserDurableTabSettingsSection(preferences: .shared)
+            BrowserDurableTabSettingsSection(preferences: appPreferences)
 
             if let sidebarWidgets {
                 BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
@@ -187,17 +186,6 @@ struct BrowserGeneralSettingsPane: View {
         default: AnyShapeStyle(.secondary)
         }
     }
-
-    // MARK: - Startup
-
-    private var startupBehavior: Binding<BrowserStartupBehavior> {
-        Binding {
-            BrowserStartupBehavior(rawValue: startupBehaviorRawValue)
-                ?? .defaultBehavior
-        } set: { behavior in
-            startupBehaviorRawValue = behavior.rawValue
-        }
-    }
 }
 
 struct BrowserSidebarWidgetSettingsSection: View {
@@ -271,15 +259,19 @@ struct BrowserNewTabSettingsSection: View {
     struct BrowserSpellCheckingSettingsSection: View {
         static let controlIdentifier = "continuous-spell-checking-toggle"
 
-        @AppStorage(BrowserMacWebTextAssistancePolicy.spellCheckingKey)
-        private var isEnabled =
-            BrowserMacWebTextAssistancePolicy.defaultIsSpellCheckingEnabled
+        private let preferences = BrowserAppPreferenceStore.shared
+
+        /// Read while the body evaluates, so the section follows the core's value.
+        private var isEnabled: Binding<Bool> {
+            let isEnabled = preferences.checksSpelling
+            return Binding { isEnabled } set: { preferences.setChecksSpellingForWebKit($0) }
+        }
 
         var body: some View {
             Section("Typing", systemImage: "keyboard") {
                 Toggle(
                     "Check spelling on webpages",
-                    isOn: $isEnabled
+                    isOn: isEnabled
                 )
                 .accessibilityIdentifier(Self.controlIdentifier)
 

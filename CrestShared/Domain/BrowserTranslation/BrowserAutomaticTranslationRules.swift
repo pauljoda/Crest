@@ -1,8 +1,9 @@
 import Foundation
 
-/// Explicit source-language choices, persisted as this value's JSON. The
+/// Explicit source-language choices, held in the core's app preferences. The
 /// portable core decides which rule applies, which target it yields and how an
-/// edit replaces region aliases; an unavailable core never translates.
+/// edit replaces region aliases (`preferences.translation_rule`); an
+/// unavailable core never translates.
 struct BrowserAutomaticTranslationRules: Codable, Equatable, Sendable {
     struct Rule: Codable, Equatable, Sendable {
         var targetID: String
@@ -32,13 +33,6 @@ struct BrowserAutomaticTranslationRules: Codable, Equatable, Sendable {
 
     func target(for sourceID: String) -> String? {
         BrowserCorePolicy.translationRule(in: self, sourceID: sourceID)?.target
-    }
-
-    mutating func set(sourceID: String, targetID: String, isEnabled: Bool) {
-        guard let updated = BrowserCorePolicy.settingTranslationRule(
-            in: self, sourceID: sourceID, targetID: targetID, isEnabled: isEnabled)
-        else { return }
-        sources = updated
     }
 
     static func matches(_ lhs: String, _ rhs: String) -> Bool {

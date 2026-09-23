@@ -36,23 +36,16 @@ struct BrowserTranslationMenu: View {
 
 struct BrowserTranslationActions: View {
     let translation: BrowserPageTranslation
-    @AppStorage(BrowserTranslationPreference.automaticKey, store: BrowserTranslationPreference.defaults)
-    private var automaticallyTranslates = false
-    @AppStorage(BrowserTranslationPreference.offersKey, store: BrowserTranslationPreference.defaults)
-    private var offersTranslation = true
-
-    @AppStorage(BrowserTranslationPreference.rulesKey, store: BrowserTranslationPreference.defaults)
-    private var rulesRawValue = ""
+    @Bindable private var preferences = BrowserAppPreferenceStore.shared
 
     private var automaticallyTranslatesSource: Binding<Bool> {
         Binding {
-            automaticallyTranslates
-                && BrowserAutomaticTranslationRules(rawValue: rulesRawValue).target(for: translation.sourceID) != nil
+            preferences.automaticallyTranslates
+                && preferences.preferences.translationRules.target(for: translation.sourceID) != nil
         } set: { enabled in
-            var rules = BrowserAutomaticTranslationRules(rawValue: rulesRawValue)
-            rules.set(sourceID: translation.sourceID, targetID: translation.targetID, isEnabled: enabled)
-            rulesRawValue = rules.rawValue
-            if enabled { automaticallyTranslates = true }
+            preferences.setTranslationRule(
+                sourceID: translation.sourceID, targetID: translation.targetID, isEnabled: enabled)
+            if enabled { preferences.automaticallyTranslates = true }
         }
     }
 
@@ -84,7 +77,7 @@ struct BrowserTranslationActions: View {
                 translation.targetID.isEmpty
                     || BrowserAutomaticTranslationRules.matches(translation.sourceID, translation.targetID))
         }
-        Toggle("Offer to Translate", isOn: $offersTranslation)
+        Toggle("Offer to Translate", isOn: $preferences.offersTranslation)
         Button("Download More Languages…", systemImage: "arrow.down.circle") { translation.showsInformation = true }
         Button("About Page Translation", systemImage: "info.circle") { translation.showsInformation = true }
     }

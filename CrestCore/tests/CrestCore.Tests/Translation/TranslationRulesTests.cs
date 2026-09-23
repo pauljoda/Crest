@@ -14,14 +14,20 @@ public sealed class TranslationRulesTests {
         return JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
     }
 
-    private static JsonNode Set(JsonNode rules, string source, string target, bool enabled) =>
-        Evaluate(new() {
-            ["operation"] = "translation.set",
-            ["rules"] = rules.DeepClone(),
-            ["sourceID"] = source,
-            ["targetID"] = target,
-            ["isEnabled"] = enabled
-        })["rules"]!;
+    /// Edits go through the session command that owns the persisted rules.
+    private static JsonNode Set(JsonNode rules, string source, string target, bool enabled) {
+        var session = new JsonObject {
+            ["spaces"] = new JsonArray(),
+            ["appPreferences"] = new JsonObject { ["translationRules"] = rules.DeepClone() }
+        };
+        var authority = new NativeSessionAuthority(Encoding.UTF8.GetBytes(session.ToJsonString()));
+        var command = authority.PrepareCommand(authority.Revision, Encoding.UTF8.GetBytes(new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "preferences.translation_rule",
+            ["arguments"] = new JsonObject { ["sourceID"] = source, ["targetID"] = target, ["isEnabled"] = enabled }
+        }.ToJsonString()));
+        return JsonNode.Parse(command.Output)!["preferences"]!["translationRules"]!;
+    }
 
     private static JsonNode Rule(JsonNode rules, string source) =>
         Evaluate(new() { ["operation"] = "translation.rule", ["rules"] = rules.DeepClone(), ["sourceID"] = source });

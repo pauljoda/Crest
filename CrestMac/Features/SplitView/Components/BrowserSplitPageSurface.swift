@@ -36,11 +36,8 @@ struct BrowserSplitPageSurface: View {
     let tabPromotionNamespace: Namespace.ID
     var appearance = BrowserChromeAppearance()
 
-    /// Optional so a host that renders cards without the app's preference store —
-    /// a preview, a future embedded surface — degrades to click-to-focus only
-    /// rather than trapping.
-    @Environment(BrowserSplitFocusPreferenceStore.self)
-    private var splitFocus: BrowserSplitFocusPreferenceStore?
+    /// The core's app preference; an unbound preview store keeps click-to-focus.
+    private var appPreferences: BrowserAppPreferenceStore { .shared }
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var cardFrames = BrowserSplitCardFrameRegistry()
     /// Where the card-frame space begins in the window, so a pointer measured in
@@ -343,7 +340,7 @@ struct BrowserSplitPageSurface: View {
     private func focusesOnHover(_ tabID: TabID) -> Bool {
         isSelectedSpace
             && BrowserSplitFocusPolicy.focusesOnHover(
-                followsMouse: splitFocus?.followsMouse == true,
+                followsMouse: appPreferences.splitFocusFollowsMouse,
                 isCardFocused: model.pages.activeTabID == tabID,
                 isAddressEditing: model.isAddressEditing,
                 isDraggingSidebarItem: model.sidebarInteraction.sidebarReorderState.isDragging,

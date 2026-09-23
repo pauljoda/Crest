@@ -4,7 +4,7 @@ import Foundation
 struct BrowserDurableTabCloseAction {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
-    var preferences: BrowserDurableTabPreferenceStore = .shared
+    var preferences: BrowserAppPreferenceStore = .shared
     /// Retires only the matching page. False means another runtime owns it.
     let closePage: (BrowserTabRuntimeAssignment, Bool) -> Bool
 
@@ -16,7 +16,7 @@ struct BrowserDurableTabCloseAction {
             ), let tab = space.tabs.first(where: { $0.id == assignment.tabID }),
             tab.placement != .current
         else { return false }
-        let returnsToRoot = preferences.closePolicy == .returnToSavedURL && tab.savedSiteURL != nil
+        let returnsToRoot = preferences.savedTabClosePolicy == .returnToSavedURL && tab.savedSiteURL != nil
         return browser.performPageDismissal(of: [assignment]) {
             guard BrowserSidebarAccessPolicy.selectedUnlockedSpace(
                 matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),

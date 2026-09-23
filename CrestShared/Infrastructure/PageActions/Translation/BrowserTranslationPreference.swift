@@ -1,19 +1,9 @@
 import Foundation
 import Translation
 
-@MainActor
+/// Translation language availability. The translation choices themselves are
+/// core preferences; see `BrowserAppPreferenceStore`.
 enum BrowserTranslationPreference {
-    static let automaticKey = "crest.translation.automaticallyTranslate"
-    static let rulesKey = "crest.translation.languageRules"
-    static let offersKey = "crest.translation.offerToTranslate"
-
-    static let defaults: UserDefaults = {
-        let environment = BrowserLaunchEnvironment.current
-        guard environment.requiresIsolation else { return .standard }
-        let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
-        return UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id))!
-    }()
-
     nonisolated static func languageAvailability() -> LanguageAvailability {
         if #available(iOS 26.4, macOS 26.4, *) {
             return LanguageAvailability(preferredStrategy: .lowLatency)

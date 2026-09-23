@@ -200,6 +200,23 @@ final class BrowserStoreFamily {
         source.cloudSyncChangeHandler?()
     }
 
+    /// App-wide behavior preferences. Only the preference record changes, so
+    /// every window keeps its own selection.
+    func executePreferences(_ request: BrowserAppPreferenceRequest, from source: BrowserStore) -> Bool {
+        let previous = authoritativeSession
+        do {
+            let changed = try core.executePreferences(request)
+            if changed { reconcileStores(after: previous, from: nil) }
+            return changed
+        } catch {
+            source.localSyncErrorDescription = "Core preference command failed: \(error)"
+            return false
+        }
+    }
+
+    /// A core answer read from the owned session without changing it.
+    func readCore(_ request: [String: Any]) -> Data? { try? core.read(request) }
+
     func execute(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
         from source: BrowserStore, at date: Date) -> BrowserCoreSessionEditing.Result? {
         let previous = authoritativeSession

@@ -114,7 +114,8 @@ public sealed partial class NativeSessionAuthority {
         if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
-        var metadata = delta["metadata"] is JsonObject suppliedMetadata ? Fields(suppliedMetadata, ["spaces"]) : document.Metadata;
+        var metadata = delta["metadata"] is JsonObject suppliedMetadata
+            ? KeepingPreferences(Fields(suppliedMetadata, ["spaces"])) : document.Metadata;
         if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
             throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
         var byId = document.Spaces.ToDictionary(s => Id(s.Metadata["id"]));

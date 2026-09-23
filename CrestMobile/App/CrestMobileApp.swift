@@ -64,6 +64,8 @@ private final class BrowserMobileApplication {
             BrowserLinkPreferenceStore.shared.reset()
         }
         let browser = try BrowserStore.production(launchEnvironment: launchEnvironment)
+        BrowserAppPreferenceStore.shared.bind(
+            to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let cloudSync =
             usesIsolatedLaunch
@@ -185,7 +187,7 @@ private final class BrowserMobileApplication {
                 forceOnboarding: forceOnboarding,
                 usesIsolatedLaunch: usesIsolatedLaunch
             )
-        startupBehavior = BrowserCorePolicy.startupBehavior(for: launchEnvironment)
+        startupBehavior = browser.startupBehavior(for: launchEnvironment)
         monitorsMemoryPressure = !usesIsolatedLaunch
         usesEphemeralWebsiteDataStores = usesIsolatedLaunch
     }

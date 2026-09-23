@@ -1,6 +1,6 @@
 import Foundation
 
-enum BrowserDurableTabClosePolicy: String, CaseIterable, Identifiable, Sendable {
+enum BrowserDurableTabClosePolicy: String, CaseIterable, Codable, Identifiable, Sendable {
     case resumeLastLocation
     case returnToSavedURL
 

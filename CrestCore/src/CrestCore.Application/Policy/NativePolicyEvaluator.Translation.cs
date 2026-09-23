@@ -17,6 +17,7 @@ public static partial class NativePolicyEvaluator {
 
     /// Null when the operation is not a translation policy. Rules travel in
     /// their persisted native shape: `{"sources":{"es":{"targetID":"en","isEnabled":true}}}`.
+    /// Rule edits are the session's `preferences.translation_rule` command.
     private static JsonObject? EvaluateTranslation(PolicyOperation operation, JsonElement request) {
         switch (operation) {
             case PolicyOperation.TranslationRule:
@@ -27,13 +28,6 @@ public static partial class NativePolicyEvaluator {
                     ["rule"] = rules.Rule(source) is { } rule ? TranslationRuleValue(rule) : null,
                     ["target"] = rules.Target(source)
                 };
-            case PolicyOperation.TranslationSet:
-                Protocol.Members(request, "version", "operation", "rules", "sourceID", "targetID", "isEnabled");
-                var updated = TranslationRules(request.GetProperty("rules")).Set(Language(request, "sourceID"),
-                    Language(request, "targetID"), request.GetProperty("isEnabled").GetBoolean());
-                var sources = new JsonObject();
-                foreach (var (key, value) in updated.Sources) sources[key] = TranslationRuleValue(value);
-                return new() { ["rules"] = new JsonObject { ["sources"] = sources } };
             case PolicyOperation.TranslationMatches:
                 Protocol.Members(request, "version", "operation", "language", "candidates");
                 var language = Language(request, "language");

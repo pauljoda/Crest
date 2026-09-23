@@ -21,13 +21,12 @@ public sealed class LaunchPolicyTests {
         return value;
     }
 
-    private static JsonNode Plan(JsonObject environment, string platform = "desktop", string? stored = null, bool gate = false) =>
+    private static JsonNode Plan(JsonObject environment, string platform = "desktop", bool gate = false) =>
         JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "launch.plan",
             ["platform"] = platform,
             ["environment"] = environment,
-            ["storedStartupBehavior"] = stored,
             ["hasActiveLaunchGate"] = gate
         }.ToJsonString())))!;
 
@@ -56,20 +55,17 @@ public sealed class LaunchPolicyTests {
     }
 
     [Theory]
-    [InlineData("desktop", null, false, "showStartPage")]
-    [InlineData("desktop", "lastActiveTab", false, "lastActiveTab")]
-    [InlineData("desktop", "showStartPage", true, "lastActiveTab")]
-    [InlineData("mobile", "retiredChoice", false, "showStartPage")]
-    [InlineData("mobile", "", false, "showStartPage")]
-    public void TheSavedStartupChoiceAppliesUnlessSetupOwnsTheFirstWindow(string platform, string? stored, bool gate,
-        string expected) =>
-        Assert.Equal(expected, Plan(Environment(), platform, stored, gate)["startupBehavior"]!.GetValue<string>());
+    [InlineData("desktop", false, "showStartPage")]
+    [InlineData("desktop", true, "lastActiveTab")]
+    [InlineData("mobile", false, "showStartPage")]
+    public void WithoutASessionALaunchOpensTheDefaultUnlessSetupOwnsTheFirstWindow(string platform, bool gate, string expected) =>
+        Assert.Equal(expected, Plan(Environment(), platform, gate)["startupBehavior"]!.GetValue<string>());
 
     [Fact]
     public void IsolatedLaunchesRestoreTheirStagedTabExceptTheMobileShowcase() {
-        Assert.Equal("lastActiveTab", Plan(Environment("resetSession"), "mobile", "showStartPage")["startupBehavior"]!.GetValue<string>());
+        Assert.Equal("lastActiveTab", Plan(Environment("resetSession"), "mobile")["startupBehavior"]!.GetValue<string>());
         Assert.Equal("lastActiveTab", Plan(Environment("showcase"), "desktop")["startupBehavior"]!.GetValue<string>());
-        Assert.Equal("showStartPage", Plan(Environment("showcase"), "mobile", "lastActiveTab")["startupBehavior"]!.GetValue<string>());
+        Assert.Equal("showStartPage", Plan(Environment("showcase"), "mobile")["startupBehavior"]!.GetValue<string>());
         Assert.Equal(StartupBehavior.ShowStartPage, LaunchPolicy.DefaultStartup);
     }
 

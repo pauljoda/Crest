@@ -18,6 +18,7 @@ public sealed partial class NativeSessionAuthority {
             RequireAccessibleCommand(request);
             var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
             if (operation == SessionOperation.WorkspaceImport) return PrepareWorkspaceCommand(expected, request);
+            if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(expected, request, operation);
             if (bytes.Length > NativeSessionEditor.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
             if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(expected, request);
             if (SessionOperationCodes.IsRecord(operation))

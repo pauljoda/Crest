@@ -3,6 +3,7 @@ namespace CrestCore.Application;
 internal enum SessionOperation {
     Unknown,
     UnknownHistory,
+    UnknownPreferences,
     UnknownRecords,
     UnknownSpace,
     UnknownTransient,
@@ -18,6 +19,10 @@ internal enum SessionOperation {
     HistoryRemoveRange,
     HistoryRemoveUrl,
     HistoryVisit,
+    LaunchPlan,
+    PreferencesImport,
+    PreferencesSet,
+    PreferencesTranslationRule,
     RecordsCleanup,
     RecordsSweep,
     SpaceAccess,
@@ -86,6 +91,10 @@ internal static class SessionOperationCodes {
         "history.remove_range" => SessionOperation.HistoryRemoveRange,
         "history.remove_url" => SessionOperation.HistoryRemoveUrl,
         "history.visit" => SessionOperation.HistoryVisit,
+        "launch.plan" => SessionOperation.LaunchPlan,
+        "preferences.import" => SessionOperation.PreferencesImport,
+        "preferences.set" => SessionOperation.PreferencesSet,
+        "preferences.translation_rule" => SessionOperation.PreferencesTranslationRule,
         "records.cleanup" => SessionOperation.RecordsCleanup,
         "records.sweep" => SessionOperation.RecordsSweep,
         "space.access" => SessionOperation.SpaceAccess,
@@ -137,6 +146,7 @@ internal static class SessionOperationCodes {
         "transient.promote" => SessionOperation.TransientPromote,
         "workspace.import" => SessionOperation.WorkspaceImport,
         _ when value?.StartsWith("history.", StringComparison.Ordinal) == true => SessionOperation.UnknownHistory,
+        _ when value?.StartsWith("preferences.", StringComparison.Ordinal) == true => SessionOperation.UnknownPreferences,
         _ when value?.StartsWith("records.", StringComparison.Ordinal) == true => SessionOperation.UnknownRecords,
         _ when value?.StartsWith("space.", StringComparison.Ordinal) == true => SessionOperation.UnknownSpace,
         _ when value?.StartsWith("transient.", StringComparison.Ordinal) == true => SessionOperation.UnknownTransient,
@@ -156,6 +166,10 @@ internal static class SessionOperationCodes {
         SessionOperation.HistoryRemoveRange => "history.remove_range",
         SessionOperation.HistoryRemoveUrl => "history.remove_url",
         SessionOperation.HistoryVisit => "history.visit",
+        SessionOperation.LaunchPlan => "launch.plan",
+        SessionOperation.PreferencesImport => "preferences.import",
+        SessionOperation.PreferencesSet => "preferences.set",
+        SessionOperation.PreferencesTranslationRule => "preferences.translation_rule",
         SessionOperation.RecordsCleanup => "records.cleanup",
         SessionOperation.RecordsSweep => "records.sweep",
         SessionOperation.SpaceAccess => "space.access",
@@ -215,6 +229,14 @@ internal static class SessionOperationCodes {
         or SessionOperation.HistoryRemoveRange
         or SessionOperation.HistoryRemoveUrl
         or SessionOperation.HistoryVisit;
+
+    /// App-wide behavior preferences and the launch plan that reads them.
+    public static bool IsPreferences(SessionOperation operation) => operation is
+        SessionOperation.UnknownPreferences
+        or SessionOperation.LaunchPlan
+        or SessionOperation.PreferencesImport
+        or SessionOperation.PreferencesSet
+        or SessionOperation.PreferencesTranslationRule;
 
     public static bool IsRecord(SessionOperation operation) => operation is
         SessionOperation.UnknownHistory

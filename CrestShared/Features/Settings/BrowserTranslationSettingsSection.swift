@@ -1,18 +1,14 @@
 import SwiftUI
 
 struct BrowserTranslationSettingsSection: View {
-    @AppStorage(BrowserTranslationPreference.automaticKey, store: BrowserTranslationPreference.defaults)
-    private var automaticallyTranslates = false
-    @AppStorage(BrowserTranslationPreference.offersKey, store: BrowserTranslationPreference.defaults)
-    private var offersTranslation = true
-    @AppStorage(BrowserTranslationPreference.rulesKey, store: BrowserTranslationPreference.defaults)
-    private var rulesRawValue = ""
+    @Bindable private var preferences = BrowserAppPreferenceStore.shared
     @State private var catalog = BrowserTranslationLanguageCatalog()
     @State private var couldNotOpenLanguages = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
-    private var rules: BrowserAutomaticTranslationRules { .init(rawValue: rulesRawValue) }
+    private var rules: BrowserAutomaticTranslationRules { preferences.preferences.translationRules }
+    private var automaticallyTranslates: Bool { preferences.automaticallyTranslates }
     private var sourceIDs: [String] {
         let installed = catalog.installedIDs
         let saved = rules.sources.keys.filter { saved in
@@ -26,8 +22,8 @@ struct BrowserTranslationSettingsSection: View {
 
     var body: some View {
         Section("Page Translation", systemImage: "character.bubble") {
-            Toggle("Offer to Translate", isOn: $offersTranslation)
-            Toggle("Automatically Translate", isOn: $automaticallyTranslates)
+            Toggle("Offer to Translate", isOn: $preferences.offersTranslation)
+            Toggle("Automatically Translate", isOn: $preferences.automaticallyTranslates)
                 .accessibilityIdentifier("automatic-translation-toggle")
             CrestFormFootnote(
                 "Translate only the languages you turn on below, using their chosen destination. Other languages stay unchanged. Automatic translation never shows a popup or downloads languages."
@@ -161,8 +157,6 @@ struct BrowserTranslationSettingsSection: View {
     }
 
     private func save(_ source: String, target: String, enabled: Bool) {
-        var updated = rules
-        updated.set(sourceID: source, targetID: target, isEnabled: enabled)
-        rulesRawValue = updated.rawValue
+        preferences.setTranslationRule(sourceID: source, targetID: target, isEnabled: enabled)
     }
 }

@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct BrowserDurableTabSettingsSection: View {
-    @Bindable var preferences: BrowserDurableTabPreferenceStore
+    @Bindable var preferences: BrowserAppPreferenceStore
 
     var body: some View {
         Section {
-            Picker("After closing", selection: $preferences.closePolicy) {
+            Picker("After closing", selection: $preferences.savedTabClosePolicy) {
                 ForEach(BrowserDurableTabClosePolicy.allCases) { policy in
                     Text(policy.title).tag(policy)
                 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
 using CrestCore.Domain;
@@ -10,6 +11,8 @@ namespace CrestCore.Application;
 internal static class LaunchCodes {
     #region Variables
 
+    /// The members of a `launch.plan` request, as a policy operation or a session read.
+    public static readonly string[] RequestMembers = ["version", "operation", "platform", "environment", "hasActiveLaunchGate"];
     private static readonly string[] EnvironmentFields = [
         "testRuntime", "previewRuntime", "isolatedSession", "namedProfile", "isolatedCloudSync", "resetSession",
         "showcase", "inMemoryCredentials", "onboardingWelcome", "desktopSetup", "mobileSetup",
@@ -40,24 +43,22 @@ internal static class LaunchCodes {
         };
     }
 
-    /// A stored value this build does not recognise reads as no preference.
-    public static StartupBehavior? StoredStartup(JsonElement request) {
-        var stored = request.GetProperty("storedStartupBehavior");
-        if (stored.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
-            throw new ProtocolException(ProtocolErrorCodes.InvalidString);
-        return stored.ValueKind == JsonValueKind.Null ? null : stored.GetString() switch {
-            "showStartPage" => StartupBehavior.ShowStartPage,
-            "lastActiveTab" => StartupBehavior.LastActiveTab,
-            _ => null
-        };
-    }
-
     #endregion
 
     #region Actions - Encoding
 
     public static string Startup(StartupBehavior behavior) =>
         behavior == StartupBehavior.LastActiveTab ? "lastActiveTab" : "showStartPage";
+
+    public static JsonObject Plan(LaunchPlan plan) {
+        ArgumentNullException.ThrowIfNull(plan);
+        return new() {
+            ["requiresIsolation"] = plan.RequiresIsolation,
+            ["usesEphemeralProfileStorage"] = plan.UsesEphemeralProfileStorage,
+            ["presentsInstalledApplicationUI"] = plan.PresentsInstalledApplicationUI,
+            ["startupBehavior"] = Startup(plan.Startup)
+        };
+    }
 
     #endregion
 }

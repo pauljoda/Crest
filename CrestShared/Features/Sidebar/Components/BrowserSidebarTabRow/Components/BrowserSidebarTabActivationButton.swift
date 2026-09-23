@@ -68,7 +68,7 @@ struct BrowserSidebarTabActivationButton: View {
 
     private var faviconPrimaryClick: (() -> Void)? {
         #if os(macOS)
-            guard BrowserDurableTabPreferenceStore.shared.returnsToSavedURLOnFaviconClick,
+            guard BrowserAppPreferenceStore.shared.returnsToSavedURLOnFaviconClick,
                 tab.placement == .saved, tab.isAwayFromSavedLocation,
                 let restoreSavedLocation
             else { return nil }

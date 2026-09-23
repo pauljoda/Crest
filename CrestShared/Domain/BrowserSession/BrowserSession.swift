@@ -7,6 +7,9 @@ struct BrowserSession: Codable, Equatable, Sendable {
     var disposableSeedMarker: UUID? = nil
     /// Local cleanup work. These intents never become CloudKit records.
     var spaceDeletions: [BrowserSpaceDeletionIntent]? = nil
+    /// The core's device-local behavior preferences. Nil until the legacy
+    /// settings are imported; only `preferences.*` commands change it.
+    var appPreferences: BrowserAppPreferences? = nil
 }
 
 struct BrowserSpaceDeletionIntent: Codable, Equatable, Sendable {

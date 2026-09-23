@@ -36,9 +36,8 @@ built-in or a `custom:<uuid>` identity with its stored templates; the core owns 
 built-in catalog, template validation and query encoding, and a stored custom
 engine that no longer validates resolves to Google. `search.custom_provider`
 reports the rule a custom engine breaks, and `search.custom_providers` applies the
-restore rule to stored engines. `translation.rule`, `translation.set` and
-`translation.matches` answer automatic page-translation choices in their
-persisted native shape. Custom-engine saves and removals are the
+restore rule to stored engines. `translation.rule` and `translation.matches`
+answer automatic page-translation choices in their persisted native shape. Custom-engine saves and removals are the
 `space.search_provider.upsert` and `space.search_provider.remove` session commands.
 
 `crest_downloads_*` owns one process-local download ledger per native download
@@ -118,9 +117,25 @@ overrides for commands the core does not know are carried through verbatim.
 complete revised overrides, `conflict` with the offered commands already holding
 the chord, or `invalid`. `shortcuts.numbered_selection` maps each numbered
 selection command to the zero-based tab or Space it reaches for the given counts.
-`launch.plan` takes the platform's parsed launch flags, the stored startup raw
-value and whether first-run setup owns the first window, and answers isolation,
-ephemeral profile storage, installed-app presentation and the startup behavior.
+`launch.plan` takes the platform's parsed launch flags and whether first-run
+setup owns the first window, and answers isolation, ephemeral profile storage,
+installed-app presentation and the startup behavior for a person who never
+chose. The same request as a session command reads the saved startup
+preference; the caller releases it without committing.
+
+The persistent session's `appPreferences` record holds the app-wide behavior
+preferences (`startupBehavior`, `offersTranslation`, `automaticallyTranslates`,
+`translationRules`, `checksSpelling`, `automaticallyEntersPictureInPicture`,
+`savedTabClosePolicy`, `savedTabFaviconReturnsToSavedURL`,
+`splitFocusFollowsMouse`), using the raw values the native settings stored.
+`preferences.set` takes `preference` and `value`,
+`preferences.translation_rule` takes `sourceID`, `targetID` and `isEnabled`,
+and `preferences.import` takes `legacy`, the old defaults values (translation
+rules as their stored JSON text), applied only while the session has no record.
+Each answers `{"preferences": record}`. Unknown names and ill-typed values are
+`unknown_preference` and `invalid_preference_value`; private and borrowed
+workspaces refuse the commands. Value deltas and sync replacement never change
+the record, and sync never uploads it.
 `media.session_event` decides what one sequenced page media-session report does
 (ignored, retired, withdrawn or published, with its ordinal, sibling supersession,
 identity-window eviction and dismissal clearing) and `media.arbitrate` orders at

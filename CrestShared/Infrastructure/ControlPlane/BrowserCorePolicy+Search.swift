@@ -89,21 +89,6 @@ extension BrowserCorePolicy {
             response["target"] as? String)
     }
 
-    static func settingTranslationRule(in rules: BrowserAutomaticTranslationRules, sourceID: String,
-        targetID: String, isEnabled: Bool) -> [String: BrowserAutomaticTranslationRules.Rule]? {
-        guard let response = evaluate([
-            "version": 1, "operation": "translation.set", "rules": rules.coreValue, "sourceID": sourceID,
-            "targetID": targetID, "isEnabled": isEnabled,
-        ]), let sources = (response["rules"] as? [String: Any])?["sources"] as? [String: [String: Any]]
-        else { return nil }
-        var result: [String: BrowserAutomaticTranslationRules.Rule] = [:]
-        for (source, value) in sources {
-            guard let rule = BrowserAutomaticTranslationRules.Rule(coreValue: value) else { return nil }
-            result[source] = rule
-        }
-        return result
-    }
-
     /// Whether each candidate names the same translation language as
     /// `language`. Nil when the core cannot answer.
     static func languageMatches(_ language: String, candidates: [String]) -> [Bool]? {

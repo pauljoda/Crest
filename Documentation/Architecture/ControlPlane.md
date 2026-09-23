@@ -566,7 +566,8 @@ built-in engines and their templates, `SearchProvider` validates custom template
 and builds every results and suggestion URL, and custom-engine saves and removals
 are Space commands that rewrite only the search fields of the stored preferences.
 Swift keeps engine titles, icons and the editor's explanations. Automatic
-translation rules are policy operations over the persisted rule set.
+translation rules live in the core's app preferences; `translation.rule` and
+`translation.matches` answer them and `preferences.translation_rule` edits them.
 
 Site permissions follow the same split. The process-local core ledger behind
 `crest_permissions_*` owns every Space's saved and session choices, the
@@ -634,7 +635,9 @@ chord twice. Section grouping and search for the settings list stay in Swift.
 `LaunchPolicy` decides from the platform's parsed launch flags whether a launch
 is isolated, whether its web storage is ephemeral, whether installed-app UI
 shows, and what the first window opens; without an answer a launch stays
-isolated and opens the Start Page. A tab opened from another is placed by the
+isolated and opens the Start Page. Isolation is answered before any session
+exists; the first window's destination is the session's `launch.plan` read,
+which applies the saved startup preference the core owns. A tab opened from another is placed by the
 `tab.open` command's `after` anchor, after the whole split of its origin.
 `MediaSessionPolicy` arbitrates page media sessions identically for the WebKit
 bridge and Chromium's native session: stale and retired reports, sibling
@@ -642,6 +645,24 @@ documents of a tab, the remembered-identity window, dismissal clearing, display
 order and the Now Playing owner. `BrowserMediaSessionStore` keeps endpoints,
 metadata, artwork and observation and applies the decisions; without an answer
 it keeps its current state and order.
+Behavior preferences are core state too. The persistent session carries one
+`appPreferences` record beside its Spaces: the startup behavior, page
+translation (offer, automatic, per-language rules), WebKit spell checking,
+automatic Picture in Picture, what closing a saved tab does, the saved-tab
+favicon return and Split View focus-follows-mouse. It persists with the
+session checkpoint and changes only through `preferences.set`,
+`preferences.translation_rule` and `preferences.import`; value edits and sync
+replacement keep the owned record, private and borrowed workspaces refuse the
+commands, and the first launch without a record imports the values the old
+defaults keys held (the keys stay readable for older builds). The record is
+device-local by design: the CloudKit record model has no app-level record,
+three of these settings exist only on the Mac, and translation depends on the
+language packs installed on each device. `BrowserAppPreferenceStore` is the
+Swift projection that settings, translation, Picture in Picture, saved-tab and
+Split View code read; a refused or unanswered edit leaves the value as it was.
+WebKit reads its spelling default once per process, so launch reconciles that
+engine copy with the record. Appearance preferences, link preferences,
+shortcut overrides, sync choices and per-Space download locations stay native.
 The remaining C ABI is the synchronous session, sync, access and policy
 surface described in `CrestContracts/README.md`, exercised end to end by
 `CrestContracts/tests/native_abi.c`.

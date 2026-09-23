@@ -274,7 +274,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
                 if !self.application.windowCoordinator.activateExistingWindow(for: context.browser) {
                     self.openWindow(.normal(sourceWindowID: request.targetWindowID))
                 }
-            }).environment(application.windowTransparency).environment(application.splitFocus)
+            }).environment(application.windowTransparency)
             .environment(application.softwareUpdates)
             .modifier(QuickWindowTitle(model: model, request: current, window: window)))
         NotificationCenter.default.addObserver(self, selector: #selector(windowClosed(_:)),

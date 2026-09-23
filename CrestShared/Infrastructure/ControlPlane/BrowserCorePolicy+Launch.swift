@@ -49,16 +49,23 @@ extension BrowserCorePolicy {
         #endif
     }
 
-    /// `storedStartupBehavior` is the saved preference's raw value.
+    /// Isolation, profile storage and installed-app presentation, decided
+    /// before any session exists. Its startup answer is the one for a person
+    /// who never chose; `BrowserStore.startupBehavior` reads the saved choice.
+    static func launchPlan(for environment: BrowserLaunchEnvironment) -> BrowserLaunchPlan {
+        plan(from: evaluate(launchRequest(for: environment, hasActiveLaunchGate: false)))
+    }
+
     /// `hasActiveLaunchGate` is true while first-run setup owns the first window.
-    static func launchPlan(for environment: BrowserLaunchEnvironment, storedStartupBehavior: String? = nil,
-        hasActiveLaunchGate: Bool = false) -> BrowserLaunchPlan {
-        guard let response = evaluate([
+    static func launchRequest(for environment: BrowserLaunchEnvironment, hasActiveLaunchGate: Bool) -> [String: Any] {
+        [
             "version": 1, "operation": "launch.plan", "platform": devicePlatform,
-            "environment": environment.coreFacts,
-            "storedStartupBehavior": storedStartupBehavior as Any? ?? NSNull(),
-            "hasActiveLaunchGate": hasActiveLaunchGate,
-        ]), let isolated = response["requiresIsolation"] as? Bool,
+            "environment": environment.coreFacts, "hasActiveLaunchGate": hasActiveLaunchGate,
+        ]
+    }
+
+    static func plan(from response: [String: Any]?) -> BrowserLaunchPlan {
+        guard let response, let isolated = response["requiresIsolation"] as? Bool,
             let ephemeral = response["usesEphemeralProfileStorage"] as? Bool,
             let presents = response["presentsInstalledApplicationUI"] as? Bool,
             let startup = (response["startupBehavior"] as? String).flatMap(BrowserStartupBehavior.init(rawValue:))
@@ -66,14 +73,19 @@ extension BrowserCorePolicy {
         return BrowserLaunchPlan(requiresIsolation: isolated, usesEphemeralProfileStorage: ephemeral,
             presentsInstalledApplicationUI: presents, startupBehavior: startup)
     }
+}
 
-    /// The destination a launch's first window opens, from the saved choice in
-    /// `defaults`, the launch's isolation and any active setup. An isolated
-    /// launch never reads the installed profile's choice.
-    static func startupBehavior(for environment: BrowserLaunchEnvironment, hasActiveLaunchGate: Bool = false,
-        defaults: UserDefaults = .standard) -> BrowserStartupBehavior {
-        let stored = environment.requiresIsolation ? nil : defaults.string(forKey: BrowserStartupPreference.key)
-        return launchPlan(for: environment, storedStartupBehavior: stored,
-            hasActiveLaunchGate: hasActiveLaunchGate).startupBehavior
+extension BrowserStore {
+    /// The destination this launch's first window opens: the session's
+    /// `launch.plan` applies the saved startup preference the core owns, the
+    /// launch's isolation and any active setup. Without an answer the window
+    /// opens the Start Page.
+    func startupBehavior(for environment: BrowserLaunchEnvironment, hasActiveLaunchGate: Bool = false)
+        -> BrowserStartupBehavior {
+        let request = BrowserCorePolicy.launchRequest(for: environment, hasActiveLaunchGate: hasActiveLaunchGate)
+        let response = family.readCore(request).flatMap {
+            try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
+        }
+        return BrowserCorePolicy.plan(from: response).startupBehavior
     }
 }

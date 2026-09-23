@@ -55,7 +55,6 @@ internal enum PolicyOperation {
     TabsSelectionFallback,
     TranslationMatches,
     TranslationRule,
-    TranslationSet,
     // Links, Quick Windows, presentation, branding and workspace routing.
     BrandingNormalize,
     ContentBlockingRules,
@@ -133,7 +132,6 @@ internal static class PolicyOperationCodes {
         "tabs.selection_fallback" => PolicyOperation.TabsSelectionFallback,
         "translation.matches" => PolicyOperation.TranslationMatches,
         "translation.rule" => PolicyOperation.TranslationRule,
-        "translation.set" => PolicyOperation.TranslationSet,
         // Links, Quick Windows, presentation, branding and workspace routing.
         "branding.normalize" => PolicyOperation.BrandingNormalize,
         "content_blocking.rules" => PolicyOperation.ContentBlockingRules,

@@ -156,8 +156,8 @@ final class BrowserPagePoolTests: XCTestCase {
                 interactionState: Data("unrelated archive".utf8), url: child,
                 profileID: space.profile.id, tabID: unrelatedID)
             let unrelatedState = archive.archivedState(profileID: space.profile.id, tabID: unrelatedID)
-            let preferences = BrowserDurableTabPreferenceStore()
-            preferences.closePolicy = policy
+            let preferences = BrowserAppPreferenceStore()
+            preferences.savedTabClosePolicy = policy
             let action = BrowserDurableTabCloseAction(
                 browser: browser, spaceAccess: BrowserSpaceAccessController(), preferences: preferences,
                 closePage: { pool.closeDurablePage($0, discardState: $1) }
@@ -241,8 +241,8 @@ final class BrowserPagePoolTests: XCTestCase {
         pool.select(session: browser.session)
         let page = try XCTUnwrap(pool.activePage)
         page.load(try XCTUnwrap(URL(string: "https://state.crest.test/slow-child")))
-        let preferences = BrowserDurableTabPreferenceStore()
-        preferences.closePolicy = .returnToSavedURL
+        let preferences = BrowserAppPreferenceStore()
+        preferences.savedTabClosePolicy = .returnToSavedURL
         XCTAssertTrue(
             BrowserDurableTabCloseAction(
                 browser: browser, spaceAccess: BrowserSpaceAccessController(), preferences: preferences,

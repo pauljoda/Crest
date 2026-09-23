@@ -133,7 +133,7 @@ static void policy_boundary(void) {
         "\"testRuntime\":false,\"previewRuntime\":false,\"isolatedSession\":false,\"namedProfile\":false,"
         "\"isolatedCloudSync\":false,\"resetSession\":true,\"showcase\":false,\"inMemoryCredentials\":false,"
         "\"onboardingWelcome\":false,\"desktopSetup\":false,\"mobileSetup\":false,\"performanceHarness\":false,"
-        "\"updateTestFeed\":false},\"storedStartupBehavior\":\"showStartPage\",\"hasActiveLaunchGate\":false}";
+        "\"updateTestFeed\":false},\"hasActiveLaunchGate\":false}";
     assert(crest_core_evaluate_policy((const uint8_t*)launch, strlen(launch), (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
     answer[length] = 0;
     assert(strstr(answer, "\"requiresIsolation\":true") && strstr(answer, "\"startupBehavior\":\"lastActiveTab\""));
@@ -258,6 +258,44 @@ static void locked_space_boundary(void) {
     assert(crest_access_destroy(access) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_OK);
 }
+/* App-wide behavior preferences are session state; the launch plan reads the
+ * saved startup choice from the session and is released without committing. */
+static void preferences_boundary(void) {
+    static const char* tab_id = "99999999-9999-4999-8999-999999999999";
+    char json[1024];
+    int size = snprintf(json, sizeof(json),
+        "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},"
+        "\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\","
+        "\"tabs\":[{\"id\":{\"rawValue\":\"%s\"},\"title\":\"Page\",\"url\":\"https://example.com/\","
+        "\"placement\":\"current\",\"lastActivatedAt\":800000000}"
+        "],\"selectedTabID\":{\"rawValue\":\"%s\"},\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}",
+        space_id, space_id, profile_id, tab_id, tab_id);
+    assert(size > 0 && (size_t)size < sizeof(json));
+    uint64_t session = 0, revision = 0, command = 0, accepted = 0;
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK);
+    const char *set = "{\"version\":1,\"operation\":\"preferences.set\","
+        "\"arguments\":{\"preference\":\"startupBehavior\",\"value\":\"lastActiveTab\"}}";
+    assert(crest_session_prepare_command(session, revision, (const uint8_t*)set, strlen(set), &command) == CREST_OK);
+    assert(crest_session_commit_command(command, &accepted) == CREST_OK && accepted == revision + 1);
+    assert(crest_session_release_command(command) == CREST_OK);
+    const char *plan = "{\"version\":1,\"operation\":\"launch.plan\",\"platform\":\"desktop\",\"environment\":{"
+        "\"testRuntime\":false,\"previewRuntime\":false,\"isolatedSession\":false,\"namedProfile\":false,"
+        "\"isolatedCloudSync\":false,\"resetSession\":false,\"showcase\":false,\"inMemoryCredentials\":false,"
+        "\"onboardingWelcome\":false,\"desktopSetup\":false,\"mobileSetup\":false,\"performanceHarness\":false,"
+        "\"updateTestFeed\":false},\"hasActiveLaunchGate\":false}";
+    assert(crest_session_prepare_command(session, accepted, (const uint8_t*)plan, strlen(plan), &command) == CREST_OK);
+    char answer[512]; size_t length = 0;
+    assert(crest_session_read_command(command, (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
+    answer[length] = 0;
+    assert(strstr(answer, "\"requiresIsolation\":false") && strstr(answer, "\"startupBehavior\":\"lastActiveTab\""));
+    assert(crest_session_release_command(command) == CREST_OK);
+    const char *unknown = "{\"version\":1,\"operation\":\"preferences.set\","
+        "\"arguments\":{\"preference\":\"sidebarDensity\",\"value\":1}}";
+    command = 0;
+    assert(crest_session_prepare_command(session, accepted, (const uint8_t*)unknown, strlen(unknown), &command)
+        != CREST_OK && command == 0);
+    assert(crest_session_destroy(session) == CREST_OK);
+}
 /* Link routing and borrowed-workspace command routing are core policy answers. */
 static void links_boundary(void) {
     const char *route = "{\"version\":1,\"operation\":\"links.route\",\"url\":\"https://docs.example.org/crest\","
@@ -284,6 +322,7 @@ int main(void) {
     permissions_boundary();
     session_boundary();
     locked_space_boundary();
+    preferences_boundary();
     puts("Native ABI buffer ownership, size retry, handle, session and lock checks passed.");
     return 0;
 }

@@ -31,6 +31,7 @@ public sealed partial class BrowserContractsTests {
     [InlineData("history.future", BrowserRuleCodes.UnknownHistoryCommand)]
     [InlineData("records.future", BrowserRuleCodes.UnknownRecordCommand)]
     [InlineData("transient.future", BrowserRuleCodes.UnknownTransientCommand)]
+    [InlineData("preferences.future", BrowserRuleCodes.UnknownPreferenceCommand)]
     public void UnknownOperationFamiliesKeepTheirSpecificErrors(string operation, string expectedCode) {
         var fixture = SavedSession();
         var session = fixture.Document["session"]!;

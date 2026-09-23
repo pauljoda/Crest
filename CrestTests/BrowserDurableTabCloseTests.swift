@@ -4,24 +4,12 @@ import XCTest
 
 @MainActor
 final class BrowserDurableTabCloseTests: XCTestCase {
-    func testMissingAndUnknownPreferencesResumeAndChosenPolicyPersists() throws {
-        let name = "crest.tests.durable-close.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
-        XCTAssertEqual(BrowserDurableTabPreferenceStore(defaults: defaults).closePolicy, .resumeLastLocation)
-        defaults.set("unknown-future-policy", forKey: BrowserDurableTabPreferenceStore.key)
-        XCTAssertEqual(BrowserDurableTabPreferenceStore(defaults: defaults).closePolicy, .resumeLastLocation)
-        let preferences = BrowserDurableTabPreferenceStore(defaults: defaults)
-        preferences.closePolicy = .returnToSavedURL
-        XCTAssertEqual(BrowserDurableTabPreferenceStore(defaults: defaults).closePolicy, .returnToSavedURL)
-    }
-
     func testCloseResumesByDefaultAndResetPersistsWithoutChangingDurableIdentity() throws {
         for placement: TabPlacement in [.pinned, .saved] {
             for policy in BrowserDurableTabClosePolicy.allCases {
                 let context = try makeContext(placement: placement)
-                let preferences = BrowserDurableTabPreferenceStore()
-                preferences.closePolicy = policy
+                let preferences = BrowserAppPreferenceStore()
+                preferences.savedTabClosePolicy = policy
                 var discardedState: Bool?
                 let action = BrowserDurableTabCloseAction(
                     browser: context.browser,
@@ -56,7 +44,7 @@ final class BrowserDurableTabCloseTests: XCTestCase {
             let action = BrowserDurableTabCloseAction(
                 browser: context.browser,
                 spaceAccess: BrowserSpaceAccessController(),
-                preferences: BrowserDurableTabPreferenceStore(),
+                preferences: BrowserAppPreferenceStore(),
                 closePage: { _, _ in
                     closeCount += 1
                     return true
@@ -80,8 +68,8 @@ final class BrowserDurableTabCloseTests: XCTestCase {
 
     func testMismatchedResidentPageLeavesTheSessionUntouched() throws {
         let context = try makeContext(placement: .saved)
-        let preferences = BrowserDurableTabPreferenceStore()
-        preferences.closePolicy = .returnToSavedURL
+        let preferences = BrowserAppPreferenceStore()
+        preferences.savedTabClosePolicy = .returnToSavedURL
         let original = context.browser.session
         let action = BrowserDurableTabCloseAction(
             browser: context.browser, spaceAccess: BrowserSpaceAccessController(),
@@ -138,7 +126,7 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         context.browser.family.pageDismissalAuthorizer = gate
         var retired = 0
         let action = BrowserDurableTabCloseAction(browser: context.browser,
-            spaceAccess: BrowserSpaceAccessController(), preferences: BrowserDurableTabPreferenceStore(),
+            spaceAccess: BrowserSpaceAccessController(), preferences: BrowserAppPreferenceStore(),
             closePage: { _, _ in retired += 1; return true })
         let original = context.browser.session
         XCTAssertFalse(action.perform(context.assignment))

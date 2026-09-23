@@ -16,13 +16,10 @@ struct BrowserTranslationHost: ViewModifier {
 
     @State private var hostID = UUID()
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage(BrowserTranslationPreference.automaticKey, store: BrowserTranslationPreference.defaults)
-    private var automaticallyTranslates = false
-    @AppStorage(BrowserTranslationPreference.offersKey, store: BrowserTranslationPreference.defaults)
-    private var offersTranslation = true
-
-    @AppStorage(BrowserTranslationPreference.rulesKey, store: BrowserTranslationPreference.defaults)
-    private var languageRulesRawValue = ""
+    private var preferences: BrowserAppPreferences { BrowserAppPreferenceStore.shared.preferences }
+    private var automaticallyTranslates: Bool { preferences.automaticallyTranslates }
+    private var offersTranslation: Bool { preferences.offersTranslation }
+    private var languageRules: BrowserAutomaticTranslationRules { preferences.translationRules }
 
     private var translationTarget: WKWebView? {
         guard page.pageEngine.registration.supports("translation") else { return nil }
@@ -30,7 +27,7 @@ struct BrowserTranslationHost: ViewModifier {
     }
 
     private var detectionID: String {
-        "\(translation.documentRevision)-\(isActive)-\(isLoading)-\(isReaderActive)-\(scenePhase == .background)-\(automaticallyTranslates)-\(languageRulesRawValue)"
+        "\(translation.documentRevision)-\(isActive)-\(isLoading)-\(isReaderActive)-\(scenePhase == .background)-\(automaticallyTranslates)-\(languageRules.rawValue)"
     }
 
     func body(content: Content) -> some View {
@@ -41,7 +38,7 @@ struct BrowserTranslationHost: ViewModifier {
                 guard !Task.isCancelled, let webView = translationTarget else { return }
                 translation.updatePreferences(
                     automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
-                    languageRules: .init(rawValue: languageRulesRawValue))
+                    languageRules: languageRules)
                 translation.setActive(
                     isActive && !isReaderActive && scenePhase != .background, in: webView, hostID: hostID)
                 guard !isLoading, !isReaderActive, isActive else { return }
@@ -58,7 +55,7 @@ struct BrowserTranslationHost: ViewModifier {
             .onChange(of: offersTranslation) {
                 translation.updatePreferences(
                     automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
-                    languageRules: .init(rawValue: languageRulesRawValue))
+                    languageRules: languageRules)
             }
             .onDisappear {
                 if let webView = translationTarget {

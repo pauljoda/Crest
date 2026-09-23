@@ -208,4 +208,12 @@ public static class BrowserRuleCodes {
     public const string LinkRouteLimit = "link_route_limit";
 
     #endregion
+
+    #region Variables - App preferences
+
+    public const string InvalidPreferenceValue = "invalid_preference_value";
+    public const string UnknownPreference = "unknown_preference";
+    public const string UnknownPreferenceCommand = "unknown_preference_command";
+
+    #endregion
 }

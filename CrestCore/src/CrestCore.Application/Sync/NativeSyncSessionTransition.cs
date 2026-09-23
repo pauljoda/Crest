@@ -78,6 +78,10 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
                 else spaces.Add(original.DeepClone());
             }
         }
+        // The app-wide behavior preferences are device-local. Incoming records
+        // and cloud replacement never carry or replace them.
+        if (local[PreferencesDocument.Field] is { } appPreferences)
+            repaired["session"]![PreferencesDocument.Field] = appPreferences.DeepClone();
         if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? SyncDeletionReasons.Retention : SyncDeletionReasons.Superseded);
         return new(next, repaired);
     }

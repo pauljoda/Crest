@@ -79,7 +79,8 @@ final class BrowserCoreSessionAuthority {
         return changed
     }
 
-    func replace(with next: BrowserSession) throws {
+    func replace(with proposed: BrowserSession) throws {
+        let next = keepingPreferences(proposed)
         if let data = try delta(to: next) {
             var accepted: UInt64 = 0
             let result = data.withUnsafeBytes {
@@ -93,9 +94,10 @@ final class BrowserCoreSessionAuthority {
 
     /// The reservation excludes core writes until storage succeeds. A failed
     /// write releases it without changing the projection or accepted revision.
-    func replaceDurably(with next: BrowserSession,
+    func replaceDurably(with proposed: BrowserSession,
         sync: BrowserCoreSyncTransaction? = nil,
         persist: (any BrowserSessionCheckpoint) throws -> Void) throws {
+        let next = keepingPreferences(proposed)
         let delta = try delta(to: next) ?? Data(#"{"version":1,"spaces":[]}"#.utf8)
         let selection = try JSONSerialization.data(withJSONObject: Self.selection(for: next))
         var replacement: UInt64 = 0, checkpoint: UInt64 = 0
@@ -544,6 +546,37 @@ final class BrowserCoreSessionAuthority {
         let value: UInt64
         init(value: UInt64) { self.value = value }
         deinit { crest_session_destroy(value) }
+    }
+}
+
+// MARK: - App preferences
+
+extension BrowserCoreSessionAuthority {
+    /// Applies one `preferences.*` command. Only the preference record changes,
+    /// so window selection and Space records stay exactly as projected.
+    func executePreferences(_ request: BrowserAppPreferenceRequest) throws -> Bool {
+        try commitCommand(try JSONEncoder().encode(request)) { output in
+            struct Result: Decodable { let preferences: BrowserAppPreferences }
+            var next = self.projection
+            next.appPreferences = try JSONDecoder().decode(Result.self, from: output).preferences
+            return (next, next != self.projection)
+        }
+    }
+
+    /// The core keeps its preference record through value edits and sync
+    /// replacement; the projection follows the same rule.
+    fileprivate func keepingPreferences(_ proposed: BrowserSession) -> BrowserSession {
+        var next = proposed
+        next.appPreferences = projection.appPreferences
+        return next
+    }
+
+    /// Reads a core answer that changes nothing: the command is prepared, read
+    /// and released without committing.
+    func read(_ request: [String: Any]) throws -> Data {
+        let command = try prepareCommand(try JSONSerialization.data(withJSONObject: request))
+        defer { crest_session_release_command(command) }
+        return try readCommand(command)
     }
 }
 

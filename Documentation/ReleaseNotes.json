@@ -2025,6 +2025,10 @@
     "core-shortcuts-launch-media": {
       "category": "internal",
       "message": "Move keyboard shortcut defaults and conflicts, numbered tab and Space selection, launch isolation and startup behavior, tab insertion and media session arbitration into the portable core."
+    },
+    "core-app-preferences": {
+      "category": "internal",
+      "message": "Keep startup, translation, spell checking, automatic Picture in Picture, pinned-tab close, saved-tab favicon and Split View focus preferences in the portable core, importing existing settings once."
     }
   }
 }

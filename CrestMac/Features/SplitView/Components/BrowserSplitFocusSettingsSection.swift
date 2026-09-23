@@ -2,14 +2,13 @@ import SwiftUI
 
 /// The Split View focus preference, in the General settings pane.
 struct BrowserSplitFocusSettingsSection: View {
-    @Environment(BrowserSplitFocusPreferenceStore.self) private var splitFocus
+    @Bindable private var preferences = BrowserAppPreferenceStore.shared
 
     var body: some View {
-        @Bindable var splitFocus = splitFocus
         Section("Split View", systemImage: "rectangle.split.2x1") {
             Toggle(
                 "Focus Follows Mouse in Split View",
-                isOn: $splitFocus.followsMouse
+                isOn: $preferences.splitFocusFollowsMouse
             )
 
             CrestFormFootnote(

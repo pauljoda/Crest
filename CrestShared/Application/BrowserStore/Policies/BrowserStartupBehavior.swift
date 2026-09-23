@@ -1,6 +1,6 @@
 import Foundation
 
-enum BrowserStartupBehavior: String, CaseIterable, Identifiable, Sendable {
+enum BrowserStartupBehavior: String, CaseIterable, Codable, Identifiable, Sendable {
     case lastActiveTab
     case showStartPage
 
