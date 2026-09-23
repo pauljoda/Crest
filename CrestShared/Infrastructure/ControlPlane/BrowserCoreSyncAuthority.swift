@@ -22,13 +22,21 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
     func advance(to revision: BrowserStoreSyncRevision) {
         precondition(crest_sync_authority_advance(handle, revision.value) == CREST_OK)
     }
-    func prepare(_ request: [String: Any], revision: BrowserStoreSyncRevision?,
-        session: BrowserSession? = nil) throws -> BrowserCoreSyncTransaction? {
-        let data = try JSONSerialization.data(withJSONObject: request)
+    /// Prepares one journal mutation or session materialization: `request` is a
+    /// `BrowserCoreSync.Mutation`, or a `BrowserCoreSync.Request` carrying a
+    /// `SessionPreparation`.
+    func prepare<Request: Encodable>(
+        _ request: Request, revision: BrowserStoreSyncRevision?,
+        session: BrowserSession? = nil
+    ) throws -> BrowserCoreSyncTransaction? {
+        let data = try JSONEncoder().encode(request)
         guard data.count <= 64 * 1024 * 1024 else { throw CoreError.tooLarge }
-        var transaction: UInt64 = 0, journalHandle: UInt64 = 0, query: UInt64 = 0
+        var transaction: UInt64 = 0
+        var journalHandle: UInt64 = 0
+        var query: UInt64 = 0
         let result = data.withUnsafeBytes {
-            crest_sync_authority_prepare(handle, revision == nil ? 0 : 1, revision?.value ?? 0,
+            crest_sync_authority_prepare(
+                handle, revision == nil ? 0 : 1, revision?.value ?? 0,
                 $0.bindMemory(to: UInt8.self).baseAddress, data.count, &transaction, &journalHandle, &query)
         }
         guard result == CREST_OK else {
@@ -42,7 +50,10 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
         // The query is consumed even if decoding the journal fails.
         var materialized: BrowserSession?
         if query != 0 {
-            guard let session else { crest_sync_query_release(query); throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
+            guard let session else {
+                crest_sync_query_release(query)
+                throw CoreError.rejected(CREST_INVALID_ARGUMENT)
+            }
             materialized = try BrowserCoreSync.consumeMaterializedSession(query, from: session)
         }
         let next = try BrowserSyncJournal.acceptingCoreSnapshot(snapshot)
@@ -52,7 +63,10 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
         return value
     }
     fileprivate func publish(_ journal: BrowserSyncJournal) { lock.withLock { projection = journal } }
-    enum CoreError: Error { case tooLarge, rejected(Int32) }
+    enum CoreError: Error {
+        case tooLarge
+        case rejected(Int32)
+    }
 }
 
 final class BrowserCoreSyncTransaction {
@@ -60,7 +74,10 @@ final class BrowserCoreSyncTransaction {
     private let owner: BrowserCoreSyncAuthority
     fileprivate(set) var journal: BrowserSyncJournal!
     fileprivate(set) var session: BrowserSession?
-    fileprivate init(handle: UInt64, owner: BrowserCoreSyncAuthority) { self.handle = handle; self.owner = owner }
+    fileprivate init(handle: UInt64, owner: BrowserCoreSyncAuthority) {
+        self.handle = handle
+        self.owner = owner
+    }
     deinit { crest_sync_transaction_release(handle) }
     func seal() throws -> Bool {
         var accepted: Int32 = 0

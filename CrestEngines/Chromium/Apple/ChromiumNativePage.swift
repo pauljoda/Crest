@@ -106,14 +106,14 @@
         }
         var interactionState: Data? {
             guard created, !disposed, let host, let state = host.interactionState(forPage: id) else { return nil }
-            return BrowserEngineInteractionState(engine: "chromium", version: host.engineVersion(), payload: state)
+            return BrowserEngineInteractionState(engine: .chromium, version: host.engineVersion(), payload: state)
                 .encoded()
         }
 
         func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
             guard !disposed, let host = host ?? CrestChromiumRoot.engineHost,
                 let payload = BrowserEngineInteractionState.payload(
-                    state, engine: "chromium", version: host.engineVersion())
+                    state, engine: .chromium, version: host.engineVersion())
             else { return false }
             if created {
                 return host.restorePage(

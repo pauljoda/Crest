@@ -78,7 +78,7 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
             let state = webView.interactionState as? Data
         else { return nil }
         return BrowserEngineInteractionState(
-            engine: "webkit",
+            engine: .webKit,
             version: BrowserTabStateEnvelope.currentOSBuild, payload: state
         ).encoded()
     }
@@ -88,7 +88,7 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         history = BrowserPageNavigationHistory()
         guard
             let payload = BrowserEngineInteractionState.payload(
-                state, engine: "webkit",
+                state, engine: .webKit,
                 version: BrowserTabStateEnvelope.currentOSBuild)
         else { return false }
         webView.interactionState = payload

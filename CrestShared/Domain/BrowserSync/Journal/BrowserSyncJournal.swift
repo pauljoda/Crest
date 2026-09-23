@@ -50,11 +50,14 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     /// Existing versions and pending uploads remain unchanged.
     func recoveredForNewDevice() throws -> Self {
         let owner = try core ?? BrowserCoreSyncJournal(self)
-        return try Self.acceptingCoreSnapshot(owner.applying("recover", preferences: preferences,
-            arguments: ["deviceID": UUID().uuidString]))
+        return try Self.acceptingCoreSnapshot(
+            owner.applying(
+                .recover, preferences: preferences, arguments: BrowserCoreSync.RecoveryArguments(deviceID: UUID())))
     }
 
-    private mutating func applyCore(_ operation: String, arguments: [String: Any]) throws {
+    private mutating func applyCore<Arguments: Encodable>(_ operation: BrowserSyncOperation, arguments: Arguments)
+        throws
+    {
         let owner = try core ?? BrowserCoreSyncJournal(self)
         let prepared = try owner.applying(operation, preferences: preferences, arguments: arguments)
         try adopt(prepared)
@@ -160,15 +163,14 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         deletionReason: BrowserSyncTombstoneReason = .explicitDelete,
         at date: Date = .now
     ) throws {
-        try applyCore("stage", arguments: [
-            "session": try BrowserCoreSync.value(BrowserCoreSessionAuthority.compact(session)),
-            "deletionReason": deletionReason.rawValue, "now": date.timeIntervalSinceReferenceDate
-        ])
+        try applyCore(
+            .stage,
+            arguments: BrowserCoreSync.StageArguments(session: session, deletionReason: deletionReason, at: date))
     }
 
     mutating func merge(_ remoteRecords: [BrowserSyncRecord]) throws {
         try validateIncoming(remoteRecords, checksSpace: true)
-        try applyCore("merge", arguments: ["records": try BrowserCoreSync.value(remoteRecords)])
+        try applyCore(.merge, arguments: BrowserCoreSync.RecordsArguments(records: remoteRecords))
     }
 
     mutating func prepareToOverwriteCloud(
@@ -177,23 +179,21 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         at date: Date = .now
     ) throws {
         try validateIncoming(remoteRecords, checksSpace: false)
-        try applyCore("overwrite", arguments: ["records": try BrowserCoreSync.value(remoteRecords),
-            "session": try BrowserCoreSync.value(BrowserCoreSessionAuthority.compact(session)), "now": date.timeIntervalSinceReferenceDate])
+        try applyCore(
+            .overwrite, arguments: BrowserCoreSync.OverwriteArguments(session: session, records: remoteRecords, at: date))
     }
 
     mutating func replaceWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
         try validateIncoming(remoteRecords, checksSpace: false)
-        try applyCore("replace", arguments: ["records": try BrowserCoreSync.value(remoteRecords)])
+        try applyCore(.replace, arguments: BrowserCoreSync.RecordsArguments(records: remoteRecords))
     }
 
     mutating func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) throws {
-        try applyCore("acknowledge", arguments: ["acknowledgements": try recordIDs.map { ["id": try BrowserCoreSync.value($0)] }])
+        try applyCore(.acknowledge, arguments: BrowserCoreSync.AcknowledgementArguments(recordIDs))
     }
 
     mutating func markUploaded(_ acknowledgedVersions: [BrowserSyncRecordID: BrowserSyncVersion]) throws {
-        try applyCore("acknowledge", arguments: ["acknowledgements": try acknowledgedVersions.map {
-            ["id": try BrowserCoreSync.value($0.key), "version": try BrowserCoreSync.value($0.value)]
-        }])
+        try applyCore(.acknowledge, arguments: BrowserCoreSync.AcknowledgementArguments(acknowledgedVersions))
     }
 
     func materializedSession(applyingTo localSession: BrowserSession) throws -> BrowserSession {

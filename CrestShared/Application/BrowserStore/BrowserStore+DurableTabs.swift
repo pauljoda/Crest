@@ -24,11 +24,10 @@ extension BrowserStore {
         let fallbackID = tabSelectionHistory.fallbackTabID(
             afterDismissing: tab.id, in: space.id, availableTabIDs: availableIDs
         )
-        guard family.execute("tab.close_durable", in: space.id, arguments: [
-            "tabId": tab.id.rawValue.uuidString,
-            "fallbackTabId": fallbackID?.rawValue.uuidString as Any? ?? NSNull(),
-            "returnToSavedURL": returningToSavedURL
-        ], from: self, at: .now) != nil else { return false }
+        let arguments = BrowserSessionArguments.TabCloseDurable(
+            tabId: tab.id.rawValue, fallbackTabId: fallbackID?.rawValue, returnToSavedURL: returningToSavedURL)
+        guard family.execute(.tabCloseDurable, in: space.id, arguments: arguments, from: self, at: .now) != nil
+        else { return false }
         persist(scope: .core)
         return true
     }

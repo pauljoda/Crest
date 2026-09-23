@@ -22,7 +22,7 @@ final class BrowserEngineDownloadTests: XCTestCase {
     func testProfileAndSpaceOwnershipCannotBeReassignedByAnUpdate() {
         let center = BrowserDownloadCenter(), controller = Controller()
         let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let id = BrowserEngineDownloadID(engine: "test", profileID: assignment.profileID, value: "one")
+        let id = BrowserEngineDownloadID(engine: .chromium, profileID: assignment.profileID, value: "one")
         center.receiveEngineDownload(update(id), assignment: assignment, controller: controller)
         center.receiveEngineDownload(update(id, state: .finished, bytes: 100),
             assignment: BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: assignment.profileID), controller: controller)
@@ -36,8 +36,8 @@ final class BrowserEngineDownloadTests: XCTestCase {
     func testRestoredRecordsKeepRetentionDateWithoutAcknowledgingNewTransfers() {
         let center = BrowserDownloadCenter(), controller = Controller()
         let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let liveID = BrowserEngineDownloadID(engine: "test", profileID: assignment.profileID, value: "new")
-        let restoredID = BrowserEngineDownloadID(engine: "test", profileID: assignment.profileID, value: "restored")
+        let liveID = BrowserEngineDownloadID(engine: .chromium, profileID: assignment.profileID, value: "new")
+        let restoredID = BrowserEngineDownloadID(engine: .chromium, profileID: assignment.profileID, value: "restored")
         center.receiveEngineDownload(update(liveID), assignment: assignment, controller: controller)
         let originalDate = Date(timeIntervalSince1970: 1_000_000)
         var restored = update(restoredID, state: .finished, bytes: 100)
@@ -53,7 +53,7 @@ final class BrowserEngineDownloadTests: XCTestCase {
     func testCancelAndClearIgnoreLateEngineProgressAndCompletion() throws {
         let center = BrowserDownloadCenter(), controller = Controller()
         let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let id = BrowserEngineDownloadID(engine: "test", profileID: assignment.profileID, value: "one")
+        let id = BrowserEngineDownloadID(engine: .chromium, profileID: assignment.profileID, value: "one")
         center.receiveEngineDownload(update(id), assignment: assignment, controller: controller)
         let item = try XCTUnwrap(center.items.first)
         center.clear(item.id)
@@ -73,8 +73,8 @@ final class BrowserEngineDownloadTests: XCTestCase {
         let center = BrowserDownloadCenter(), controller = Controller()
         let first = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
         let second = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let firstID = BrowserEngineDownloadID(engine: "test", profileID: first.profileID, value: "one")
-        let secondID = BrowserEngineDownloadID(engine: "test", profileID: second.profileID, value: "one")
+        let firstID = BrowserEngineDownloadID(engine: .chromium, profileID: first.profileID, value: "one")
+        let secondID = BrowserEngineDownloadID(engine: .chromium, profileID: second.profileID, value: "one")
         center.receiveEngineDownload(update(firstID), assignment: first, controller: controller)
         center.receiveEngineDownload(update(secondID), assignment: second, controller: controller)
         center.deleteRecords(profileID: first.profileID, spaceID: first.spaceID)
@@ -92,7 +92,7 @@ final class BrowserEngineDownloadTests: XCTestCase {
         })
         let controller = Controller()
         let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let id = BrowserEngineDownloadID(engine: "test", profileID: assignment.profileID, value: "one")
+        let id = BrowserEngineDownloadID(engine: .chromium, profileID: assignment.profileID, value: "one")
         center.receiveEngineDownload(update(id), assignment: assignment, controller: controller)
         let task = Task { await center.resolveEngineDownloadDestination(id, suggestedFilename: "report.txt", forcesPrompt: true) }
         await fulfillment(of: [entered], timeout: 2)
@@ -111,7 +111,7 @@ final class BrowserEngineDownloadTests: XCTestCase {
         })
         let controller = Controller()
         let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let id = BrowserEngineDownloadID(engine: "test", profileID: assignment.profileID, value: "one")
+        let id = BrowserEngineDownloadID(engine: .chromium, profileID: assignment.profileID, value: "one")
         center.receiveEngineDownload(update(id, state: .awaitingApproval(token: "warning", message: "Uncommon file")),
             assignment: assignment, controller: controller)
         await fulfillment(of: [entered], timeout: 2)

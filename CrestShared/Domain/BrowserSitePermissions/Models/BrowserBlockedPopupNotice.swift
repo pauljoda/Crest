@@ -1,7 +1,8 @@
 import Foundation
 
 struct BrowserBlockedPopupNotice: Equatable, Sendable {
-    enum Status: Equatable, Sendable {
+    /// Raw values are the core's `popups.notice` spellings.
+    enum Status: String, Codable, Equatable, Sendable {
         case blocked
         case allowedAwaitingRetry
     }

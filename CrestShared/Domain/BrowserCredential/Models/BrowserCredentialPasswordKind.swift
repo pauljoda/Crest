@@ -1,6 +1,6 @@
 import Foundation
 
-enum BrowserCredentialPasswordKind: String, Equatable, Sendable {
+enum BrowserCredentialPasswordKind: String, Encodable, Equatable, Sendable {
     case current
     case new
 }

@@ -23,7 +23,6 @@
         case storeRemove = "store_remove"
         case closeCanceled = "close_canceled"
         case closed
-        case openRequested = "open_requested"
     }
 
     /// One observation of a page, decoded once where the host delivers it.

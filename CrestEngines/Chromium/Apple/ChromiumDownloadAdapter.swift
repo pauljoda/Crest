@@ -46,7 +46,7 @@
             guard let profileID = (values["profileId"] as? String).flatMap(UUID.init(uuidString:)),
                 let value = values["downloadId"] as? String
             else { return nil }
-            let id = BrowserEngineDownloadID(engine: "chromium", profileID: profileID, value: value)
+            let id = BrowserEngineDownloadID(engine: .chromium, profileID: profileID, value: value)
             let target: Destination?
             if let cached = destinations[id] {
                 target = cached.center.map { Destination(center: $0, assignment: cached.assignment) }
@@ -92,15 +92,15 @@
         }
 
         func cancelDownload(_ id: BrowserEngineDownloadID) {
-            guard id.engine == "chromium" else { return }
+            guard id.engine == .chromium else { return }
             host.cancelDownload(id.value, profile: id.profileID.uuidString)
         }
         func removeDownload(_ id: BrowserEngineDownloadID) {
-            guard id.engine == "chromium" else { return }
+            guard id.engine == .chromium else { return }
             host.removeDownload(id.value, profile: id.profileID.uuidString)
         }
         func approveDownload(_ id: BrowserEngineDownloadID, warningToken: String) {
-            guard id.engine == "chromium" else { return }
+            guard id.engine == .chromium else { return }
             host.approveDownload(id.value, profile: id.profileID.uuidString, warning: warningToken)
         }
     }

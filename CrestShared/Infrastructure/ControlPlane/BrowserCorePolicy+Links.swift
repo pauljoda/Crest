@@ -1,33 +1,49 @@
 import Foundation
 
-extension BrowserLinkRoute {
-    var coreRecord: [String: Any] {
-        [
-            "id": id.uuidString.lowercased(), "isEnabled": isEnabled, "match": match.rawValue,
-            "pattern": pattern, "destinationSpaceID": destinationSpaceID.rawValue.uuidString.lowercased(),
-        ]
+/// A link route as the core's route operations spell it: identities in their
+/// lowercase core spelling.
+struct BrowserCoreLinkRouteRecord: Codable, Sendable {
+    // MARK: - Variables
+
+    let id: UUID
+    let isEnabled: Bool
+    let match: BrowserLinkRouteMatch
+    let pattern: String
+    let destinationSpaceID: UUID
+
+    var route: BrowserLinkRoute {
+        BrowserLinkRoute(
+            id: id, isEnabled: isEnabled, match: match, pattern: pattern,
+            destinationSpaceID: SpaceID(rawValue: destinationSpaceID))
     }
 
-    init?(coreRecord: [String: Any]) {
-        guard let id = (coreRecord["id"] as? String).flatMap(UUID.init(uuidString:)),
-            let isEnabled = coreRecord["isEnabled"] as? Bool,
-            let match = (coreRecord["match"] as? String).flatMap(BrowserLinkRouteMatch.init(rawValue:)),
-            let pattern = coreRecord["pattern"] as? String,
-            let destination = (coreRecord["destinationSpaceID"] as? String).flatMap(UUID.init(uuidString:))
-        else { return nil }
-        self.init(id: id, isEnabled: isEnabled, match: match, pattern: pattern,
-            destinationSpaceID: SpaceID(rawValue: destination))
+    // MARK: - Initializers
+
+    init(_ route: BrowserLinkRoute) {
+        id = route.id
+        isEnabled = route.isEnabled
+        match = route.match
+        pattern = route.pattern
+        destinationSpaceID = route.destinationSpaceID.rawValue
     }
 }
 
-extension BrowserLinkRouteFieldUpdate {
-    fileprivate var coreField: [String: Any] {
-        switch self {
-        case .isEnabled(let value): ["isEnabled": value]
-        case .match(let value): ["match": value.rawValue]
-        case .pattern(let value): ["pattern": value]
-        case .destinationSpaceID(let value): ["destinationSpaceID": value.rawValue.uuidString.lowercased()]
-        }
+extension BrowserCoreLinkRouteRecord {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case isEnabled
+        case match
+        case pattern
+        case destinationSpaceID
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id.coreIdentifier, forKey: .id)
+        try container.encode(isEnabled, forKey: .isEnabled)
+        try container.encode(match, forKey: .match)
+        try container.encode(pattern, forKey: .pattern)
+        try container.encode(destinationSpaceID.coreIdentifier, forKey: .destinationSpaceID)
     }
 }
 
@@ -35,131 +51,280 @@ extension BrowserLinkRouteFieldUpdate {
 /// portable core. The native store keeps the preferences and persists what the
 /// core decides.
 extension BrowserCorePolicy {
+    // MARK: - Types
+
+    /// One changed route field, as the only member of the core's `field`.
+    private struct RouteField: Encodable {
+        private enum CodingKeys: String, CodingKey {
+            case isEnabled
+            case match
+            case pattern
+            case destinationSpaceID
+        }
+
+        let update: BrowserLinkRouteFieldUpdate
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            switch update {
+            case .isEnabled(let value): try container.encode(value, forKey: .isEnabled)
+            case .match(let value): try container.encode(value, forKey: .match)
+            case .pattern(let value): try container.encode(value, forKey: .pattern)
+            case .destinationSpaceID(let value):
+                try container.encode(value.rawValue.coreIdentifier, forKey: .destinationSpaceID)
+            }
+        }
+    }
+
+    private struct RouteRequest: Encodable {
+        let url: String
+        let routes: [BrowserCoreLinkRouteRecord]
+        let destination: BrowserExternalLinkDestination
+        @BrowserCoreNullable var chosenSpaceID: String?
+        let remembersSpaceBySite: Bool
+        @BrowserCoreNullable var rememberedSpaceID: String?
+        let spaces: [String]
+        @BrowserCoreNullable var selectedSpaceID: String?
+        let unavailableSpaceIDs: [String]
+        let lockedSpaceIDs: [String]
+    }
+
+    private struct RouteAnswer: Decodable {
+        let quickWindow: Bool
+        let spaceID: UUID
+    }
+
+    private struct SiteRequest: Encodable {
+        let url: String
+        let remembersSpaceBySite: Bool
+    }
+
+    private struct SiteAnswer: Decodable {
+        @BrowserCoreOptional var site: String?
+    }
+
+    private struct RouteCreateRequest: Encodable {
+        let existing: [String]
+        let id: String
+        let destinationSpaceID: String
+    }
+
+    private struct RouteUpdateRequest: Encodable {
+        let route: BrowserCoreLinkRouteRecord
+        let field: RouteField
+    }
+
+    private struct RouteRecordAnswer: Decodable {
+        @BrowserCoreOptional var route: BrowserCoreLinkRouteRecord?
+    }
+
+    private struct RouteMoveRequest: Encodable {
+        let order: [String]
+        let id: String
+        var offset: Int?
+    }
+
+    private struct RouteOrderAnswer: Decodable {
+        @BrowserCoreOptional var order: [String]?
+    }
+
+    private struct SpaceRemovedRequest: Encodable {
+        struct Route: Encodable {
+            let id: String
+            let destinationSpaceID: String
+        }
+
+        let spaceID: String
+        let routes: [Route]
+        @BrowserCoreNullable var chosenSpaceID: String?
+        let rememberedSpaceIDs: [String]
+    }
+
+    private struct SpaceRemovedAnswer: Decodable {
+        @BrowserCoreOptional var retainedRouteIDs: [String]?
+        let clearsChosenSpace: Bool
+        let forgetsRememberedSites: Bool
+    }
+
+    private struct ArchiveLifetimeRequest: Encodable {
+        let policy: BrowserQuickWindowArchivePolicy
+    }
+
+    private struct ArchiveLifetimeAnswer: Decodable {
+        @BrowserCoreOptional var lifetime: TimeInterval?
+    }
+
+    private struct QuickWindowDismissalRequest: Encodable {
+        let wasArchived: Bool
+        let wasPromoted: Bool
+        let hasPage: Bool
+    }
+
+    private struct QuickWindowDismissalAnswer: Decodable {
+        @BrowserCoreOptional var archives: Bool?
+    }
+
+    private struct RetargetRequest: Encodable {
+        struct Placement: Encodable {
+            let url: String
+            let spaceID: String
+            let profileID: String
+
+            init(_ url: URL, _ assignment: BrowserSpaceRuntimeAssignment) {
+                self.url = url.absoluteString
+                spaceID = assignment.spaceID.rawValue.coreIdentifier
+                profileID = assignment.profileID.coreIdentifier
+            }
+        }
+
+        let current: Placement
+        let next: Placement
+        @BrowserCoreNullable var pageURL: String?
+    }
+
+    private struct RetargetAnswer: Decodable {
+        let revises: Bool
+        let remembersSpace: Bool
+    }
+
+    // MARK: - Actions - Link routing
+
     /// Where an external link opens. A link routed to a Space in
     /// `lockedSpaceIDs` never raises a prompt for another process: the core
     /// substitutes a Quick Window on an unlocked Space. Nil when no Space may
     /// take the link, or when the core cannot answer — the link is then not
     /// opened rather than landing somewhere the rules did not choose.
-    static func linkRoutingDecision(for url: URL, preferences: BrowserLinkPreferences, session: BrowserPresentedSession,
-        unavailableSpaceIDs: Set<SpaceID>, lockedSpaceIDs: Set<SpaceID> = []) -> BrowserLinkRoutingDecision? {
+    static func linkRoutingDecision(
+        for url: URL, preferences: BrowserLinkPreferences, session: BrowserPresentedSession,
+        unavailableSpaceIDs: Set<SpaceID>, lockedSpaceIDs: Set<SpaceID> = []
+    ) -> BrowserLinkRoutingDecision? {
         let remembered = linkSite(for: url, remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite)
             .flatMap { preferences.rememberedQuickWindowSpacesBySite[$0] }
-        func text(_ id: SpaceID?) -> Any { id.map { $0.rawValue.uuidString.lowercased() } ?? NSNull() }
-        guard let response = evaluate([
-            "version": 1, "operation": "links.route", "url": url.absoluteString,
-            "routes": preferences.routes.map(\.coreRecord),
-            "destination": preferences.externalLinkDestination.rawValue,
-            "chosenSpaceID": text(preferences.externalLinkSpaceID),
-            "remembersSpaceBySite": preferences.remembersQuickWindowSpaceBySite,
-            "rememberedSpaceID": text(remembered),
-            "spaces": session.spaces.map { $0.id.rawValue.uuidString.lowercased() },
-            "selectedSpaceID": text(session.selectedSpaceID),
-            "unavailableSpaceIDs": unavailableSpaceIDs.map { $0.rawValue.uuidString.lowercased() },
-            "lockedSpaceIDs": lockedSpaceIDs.map { $0.rawValue.uuidString.lowercased() },
-        ]), let quickWindow = response["quickWindow"] as? Bool,
-            let space = (response["spaceID"] as? String).flatMap(UUID.init(uuidString:))
-        else { return nil }
-        let spaceID = SpaceID(rawValue: space)
-        return quickWindow ? .quickWindow(spaceID: spaceID) : .space(spaceID)
+        let request = RouteRequest(
+            url: url.absoluteString, routes: preferences.routes.map(BrowserCoreLinkRouteRecord.init),
+            destination: preferences.externalLinkDestination,
+            chosenSpaceID: preferences.externalLinkSpaceID?.rawValue.coreIdentifier,
+            remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite,
+            rememberedSpaceID: remembered?.rawValue.coreIdentifier,
+            spaces: session.spaces.map { $0.id.rawValue.coreIdentifier },
+            selectedSpaceID: session.selectedSpaceID.rawValue.coreIdentifier,
+            unavailableSpaceIDs: unavailableSpaceIDs.map { $0.rawValue.coreIdentifier },
+            lockedSpaceIDs: lockedSpaceIDs.map { $0.rawValue.coreIdentifier })
+        guard let answer = evaluate(.linksRoute, request, answer: RouteAnswer.self) else { return nil }
+        let spaceID = SpaceID(rawValue: answer.spaceID)
+        return answer.quickWindow ? .quickWindow(spaceID: spaceID) : .space(spaceID)
     }
 
     /// The site key a Quick Window remembers its Space under, or nil when the
     /// preference is off, the address has no host, or the core cannot answer.
     static func linkSite(for url: URL, remembersSpaceBySite: Bool) -> String? {
-        evaluate(["version": 1, "operation": "links.site", "url": url.absoluteString,
-            "remembersSpaceBySite": remembersSpaceBySite])?["site"] as? String
+        let request = SiteRequest(url: url.absoluteString, remembersSpaceBySite: remembersSpaceBySite)
+        return evaluate(.linksSite, request, answer: SiteAnswer.self)?.site
     }
+
+    // MARK: - Actions - Route editing
 
     /// A new route for the settings list. Nil at the route limit or when the
     /// core cannot answer, so nothing is added.
     static func createdLinkRoute(existing: [BrowserLinkRoute], destinationSpaceID: SpaceID) -> BrowserLinkRoute? {
-        (evaluate([
-            "version": 1, "operation": "links.route_create",
-            "existing": existing.map { $0.id.uuidString.lowercased() },
-            "id": UUID().uuidString.lowercased(), "destinationSpaceID": destinationSpaceID.rawValue.uuidString.lowercased(),
-        ])?["route"] as? [String: Any]).flatMap(BrowserLinkRoute.init(coreRecord:))
+        let request = RouteCreateRequest(
+            existing: existing.map { $0.id.coreIdentifier }, id: UUID().coreIdentifier,
+            destinationSpaceID: destinationSpaceID.rawValue.coreIdentifier)
+        return evaluate(.linksRouteCreate, request, answer: RouteRecordAnswer.self)?.route?.route
     }
 
     /// The route with one field changed. Nil keeps the route as it was.
     static func updatedLinkRoute(_ route: BrowserLinkRoute, field: BrowserLinkRouteFieldUpdate) -> BrowserLinkRoute? {
-        guard let updated = (evaluate(["version": 1, "operation": "links.route_update", "route": route.coreRecord,
-            "field": field.coreField])?["route"] as? [String: Any]).flatMap(BrowserLinkRoute.init(coreRecord:)),
-            updated.id == route.id else { return nil }
+        let request = RouteUpdateRequest(route: BrowserCoreLinkRouteRecord(route), field: RouteField(update: field))
+        guard let updated = evaluate(.linksRouteUpdate, request, answer: RouteRecordAnswer.self)?.route?.route,
+            updated.id == route.id
+        else { return nil }
         return updated
     }
 
     /// Routes after moving one by an offset. Nil keeps the current order.
     static func movingLinkRoute(_ id: UUID, by offset: Int, in routes: [BrowserLinkRoute]) -> [BrowserLinkRoute]? {
-        linkRoutes(routes, retaining: evaluate(["version": 1, "operation": "links.route_move",
-            "order": routes.map { $0.id.uuidString.lowercased() }, "id": id.uuidString.lowercased(), "offset": offset])?["order"])
+        let request = RouteMoveRequest(
+            order: routes.map { $0.id.coreIdentifier }, id: id.coreIdentifier, offset: offset)
+        return linkRoutes(routes, retaining: evaluate(.linksRouteMove, request, answer: RouteOrderAnswer.self)?.order)
     }
 
     /// Routes without one route. Nil keeps the routes unchanged.
     static func removingLinkRoute(_ id: UUID, from routes: [BrowserLinkRoute]) -> [BrowserLinkRoute]? {
-        linkRoutes(routes, retaining: evaluate(["version": 1, "operation": "links.route_remove",
-            "order": routes.map { $0.id.uuidString.lowercased() }, "id": id.uuidString.lowercased()])?["order"])
+        let request = RouteMoveRequest(order: routes.map { $0.id.coreIdentifier }, id: id.coreIdentifier)
+        return linkRoutes(routes, retaining: evaluate(.linksRouteRemove, request, answer: RouteOrderAnswer.self)?.order)
     }
 
     /// The preferences once a Space is deleted: its routes removed, the chosen
     /// Space cleared, and sites that remembered it forgotten. Nil keeps them;
     /// routing already skips a Space that no longer exists.
-    static func linkPreferences(_ preferences: BrowserLinkPreferences, removingSpace spaceID: SpaceID) -> BrowserLinkPreferences? {
-        guard let response = evaluate([
-            "version": 1, "operation": "links.space_removed", "spaceID": spaceID.rawValue.uuidString.lowercased(),
-            "routes": preferences.routes.map {
-                ["id": $0.id.uuidString.lowercased(), "destinationSpaceID": $0.destinationSpaceID.rawValue.uuidString.lowercased()]
+    static func linkPreferences(_ preferences: BrowserLinkPreferences, removingSpace spaceID: SpaceID)
+        -> BrowserLinkPreferences?
+    {
+        let request = SpaceRemovedRequest(
+            spaceID: spaceID.rawValue.coreIdentifier,
+            routes: preferences.routes.map {
+                SpaceRemovedRequest.Route(
+                    id: $0.id.coreIdentifier, destinationSpaceID: $0.destinationSpaceID.rawValue.coreIdentifier)
             },
-            "chosenSpaceID": preferences.externalLinkSpaceID.map { $0.rawValue.uuidString.lowercased() } as Any? ?? NSNull(),
-            "rememberedSpaceIDs": Set(preferences.rememberedQuickWindowSpacesBySite.values).map { $0.rawValue.uuidString.lowercased() },
-        ]), let routes = linkRoutes(preferences.routes, retaining: response["retainedRouteIDs"]),
-            let clearsChosenSpace = response["clearsChosenSpace"] as? Bool,
-            let forgetsSites = response["forgetsRememberedSites"] as? Bool
+            chosenSpaceID: preferences.externalLinkSpaceID?.rawValue.coreIdentifier,
+            rememberedSpaceIDs: Set(preferences.rememberedQuickWindowSpacesBySite.values).map {
+                $0.rawValue.coreIdentifier
+            })
+        guard let answer = evaluate(.linksSpaceRemoved, request, answer: SpaceRemovedAnswer.self),
+            let routes = linkRoutes(preferences.routes, retaining: answer.retainedRouteIDs)
         else { return nil }
         var revised = preferences
         revised.routes = routes
-        if clearsChosenSpace { revised.externalLinkSpaceID = nil }
-        if forgetsSites { revised.rememberedQuickWindowSpacesBySite = revised.rememberedQuickWindowSpacesBySite.filter { $0.value != spaceID } }
+        if answer.clearsChosenSpace { revised.externalLinkSpaceID = nil }
+        if answer.forgetsRememberedSites {
+            revised.rememberedQuickWindowSpacesBySite = revised.rememberedQuickWindowSpacesBySite.filter {
+                $0.value != spaceID
+            }
+        }
         return revised
     }
+
+    // MARK: - Actions - Quick Windows
 
     /// Seconds before an inactive Quick Window archives itself. Nil never
     /// archives, which is also the answer when the core cannot decide.
     static func quickWindowArchiveLifetime(_ policy: BrowserQuickWindowArchivePolicy) -> TimeInterval? {
-        (evaluate(["version": 1, "operation": "quick_window.archive_lifetime", "policy": policy.rawValue])?["lifetime"]
-            as? NSNumber)?.doubleValue
+        evaluate(
+            .quickWindowArchiveLifetime, ArchiveLifetimeRequest(policy: policy), answer: ArchiveLifetimeAnswer.self)?
+            .lifetime
     }
 
     /// Whether dismissing a Quick Window files its page in the archive. A core
     /// that cannot answer archives nothing: no durable record is written
     /// without the core's rule, and the archive command would refuse anyway.
     static func quickWindowArchivesOnDismissal(wasArchived: Bool, wasPromoted: Bool, hasPage: Bool) -> Bool {
-        evaluate(["version": 1, "operation": "quick_window.dismissal", "wasArchived": wasArchived,
-            "wasPromoted": wasPromoted, "hasPage": hasPage])?["archives"] as? Bool ?? false
+        let request = QuickWindowDismissalRequest(wasArchived: wasArchived, wasPromoted: wasPromoted, hasPage: hasPage)
+        return evaluate(.quickWindowDismissal, request, answer: QuickWindowDismissalAnswer.self)?.archives ?? false
     }
 
     /// Whether moving a Quick Window to `url` in `assignment` revises its
     /// request, and whether the move remembers the Space for the page's site.
     /// `pageURL` is nil for an empty lookup. A core that cannot answer leaves
     /// the request as it was and remembers nothing.
-    static func quickWindowRetarget(_ request: BrowserQuickWindowRequest, to url: URL,
-        assignment: BrowserSpaceRuntimeAssignment, pageURL: URL?) -> (revises: Bool, remembersSpace: Bool) {
-        func placement(_ url: URL, _ assignment: BrowserSpaceRuntimeAssignment) -> [String: Any] {
-            ["url": url.absoluteString, "spaceID": assignment.spaceID.rawValue.uuidString.lowercased(),
-             "profileID": assignment.profileID.uuidString.lowercased()]
+    static func quickWindowRetarget(
+        _ request: BrowserQuickWindowRequest, to url: URL,
+        assignment: BrowserSpaceRuntimeAssignment, pageURL: URL?
+    ) -> (revises: Bool, remembersSpace: Bool) {
+        let retarget = RetargetRequest(
+            current: RetargetRequest.Placement(request.url, request.assignment),
+            next: RetargetRequest.Placement(url, assignment), pageURL: pageURL?.absoluteString)
+        guard let answer = evaluate(.quickWindowRetarget, retarget, answer: RetargetAnswer.self) else {
+            return (false, false)
         }
-        guard let response = evaluate([
-            "version": 1, "operation": "quick_window.retarget",
-            "current": placement(request.url, request.assignment), "next": placement(url, assignment),
-            "pageURL": pageURL?.absoluteString as Any? ?? NSNull(),
-        ]), let revises = response["revises"] as? Bool, let remembers = response["remembersSpace"] as? Bool
-        else { return (false, false) }
-        return (revises, remembers)
+        return (answer.revises, answer.remembersSpace)
     }
 
     /// The routes named by the core's identities, in its order. Nil when an
     /// identity is not one of the routes supplied.
-    private static func linkRoutes(_ routes: [BrowserLinkRoute], retaining value: Any?) -> [BrowserLinkRoute]? {
-        guard let identities = value as? [String] else { return nil }
+    private static func linkRoutes(_ routes: [BrowserLinkRoute], retaining identities: [String]?) -> [BrowserLinkRoute]?
+    {
+        guard let identities else { return nil }
         let byID = Dictionary(routes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let ordered = identities.compactMap { UUID(uuidString: $0).flatMap { byID[$0] } }
         return ordered.count == identities.count ? ordered : nil

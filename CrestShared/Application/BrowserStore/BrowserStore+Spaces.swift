@@ -10,7 +10,7 @@ extension BrowserStore {
     }
 
     func addSpace() {
-        guard spaceCommandOwner("space.create") === self else { return }
+        guard spaceCommandOwner(.spaceCreate) === self else { return }
         guard createCoreSpace() else { return }
         persist(scope: .core)
     }
@@ -19,7 +19,7 @@ extension BrowserStore {
         _ id: SpaceID,
         dataDeleter: any BrowserSpaceDataDeleting
     ) async throws {
-        guard spaceCommandOwner("space.deletion.begin", in: id) === self else {
+        guard spaceCommandOwner(.spaceDeletionBegin, in: id) === self else {
             throw BrowserSpaceDeletionError.borrowedProfile
         }
         guard session.spaces.count > 1 else {
@@ -34,8 +34,9 @@ extension BrowserStore {
         defer { family.finishDeletingSpace(id) }
 
         let operationID = session.spaceDeletions?.first(where: { $0.spaceID == id })?.operationID ?? UUID()
-        try family.executeSpaceDurably("space.deletion.begin", in: id,
-            arguments: ["operationID": operationID.uuidString], from: self)
+        try family.executeSpaceDurably(
+            .spaceDeletionBegin, in: id, arguments: BrowserSessionArguments.SpaceDeletion(operationID: operationID),
+            from: self)
 
         try await dataDeleter.deleteData(for: space)
         try await credentialVault.deleteAll(in: id)
@@ -46,8 +47,9 @@ extension BrowserStore {
         guard currentSpace.profile.id == space.profile.id else {
             throw BrowserSpaceDeletionError.spaceChangedDuringDeletion
         }
-        try family.executeSpaceDurably("space.remove", in: id,
-            arguments: ["operationID": operationID.uuidString], deletionReason: .explicitDelete, from: self)
+        try family.executeSpaceDurably(
+            .spaceRemove, in: id, arguments: BrowserSessionArguments.SpaceDeletion(operationID: operationID),
+            deletionReason: .explicitDelete, from: self)
         BrowserLinkPreferenceStore.shared.removeReferences(to: id)
     }
 
@@ -81,10 +83,14 @@ extension BrowserStore {
         symbol: String,
         accent: SpaceAccent
     ) {
-        guard let owner = spaceCommandOwner("space.identity", in: spaceID),
+        guard let owner = spaceCommandOwner(.spaceIdentity, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
-        guard owner.family.executeSpace("space.identity", in: spaceID,
-            arguments: ["name": name, "symbol": symbol, "accent": accent.rawValue], from: owner) else { return }
+        guard
+            owner.family.executeSpace(
+                .spaceIdentity, in: spaceID,
+                arguments: BrowserSessionArguments.SpaceIdentity(name: name, symbol: symbol, accent: accent),
+                from: owner)
+        else { return }
         owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -92,17 +98,18 @@ extension BrowserStore {
         _ branding: BrowserSpaceBranding,
         in spaceID: SpaceID
     ) {
-        guard let owner = spaceCommandOwner("space.branding", in: spaceID),
+        guard let owner = spaceCommandOwner(.spaceBranding, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
         // The command applies the core's branding rules to the stored record.
-        guard owner.setCoreSpaceValue("space.branding", branding, in: spaceID) else { return }
+        guard owner.setCoreSpaceValue(.spaceBranding, branding, in: spaceID) else { return }
         owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
     func setDefaultSpace(_ spaceID: SpaceID) {
-        guard let owner = spaceCommandOwner("space.default", in: spaceID),
+        guard let owner = spaceCommandOwner(.spaceDefault, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
-        guard owner.family.executeSpace("space.default", in: spaceID, arguments: [:], from: owner) else { return }
+        guard owner.family.executeSpace(.spaceDefault, in: spaceID, arguments: BrowserCoreNoArguments(), from: owner)
+        else { return }
         owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -110,16 +117,20 @@ extension BrowserStore {
         _ accessPolicy: BrowserSpaceAccessPolicy,
         in spaceID: SpaceID
     ) {
-        guard let owner = spaceCommandOwner("space.access", in: spaceID),
+        guard let owner = spaceCommandOwner(.spaceAccess, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
-        guard owner.setCoreSpaceValue("space.access", accessPolicy, in: spaceID) else { return }
+        guard owner.setCoreSpaceValue(.spaceAccess, accessPolicy, in: spaceID) else { return }
         owner.persist(syncUrgency: .immediate, scope: .core)
     }
 
     func moveSpaces(from source: IndexSet, to destination: Int) {
-        guard spaceCommandOwner("space.reorder") === self else { return }
-        guard family.executeSpace("space.reorder", arguments: ["offsets": Array(source), "destination": destination],
-            from: self) else { return }
+        guard spaceCommandOwner(.spaceReorder) === self else { return }
+        guard
+            family.executeSpace(
+                .spaceReorder,
+                arguments: BrowserSessionArguments.SpaceReorder(offsets: Array(source), destination: destination),
+                from: self)
+        else { return }
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -127,9 +138,9 @@ extension BrowserStore {
         _ preferences: BrowserSpaceBrowsingPreferences,
         in spaceID: SpaceID
     ) {
-        guard let owner = spaceCommandOwner("space.browsing_preferences", in: spaceID),
+        guard let owner = spaceCommandOwner(.spaceBrowsingPreferences, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
-        guard owner.setCoreSpaceValue("space.browsing_preferences", preferences, in: spaceID) else { return }
+        guard owner.setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
         owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -141,24 +152,31 @@ extension BrowserStore {
         selects: Bool,
         in spaceID: SpaceID
     ) throws {
-        guard let owner = spaceCommandOwner("space.search_provider.upsert", in: spaceID),
+        guard let owner = spaceCommandOwner(.spaceSearchProviderUpsert, in: spaceID),
             let space = owner.session.space(id: spaceID) else { return }
         let admitted = try BrowserCorePolicy.admittedCustomSearchProvider(
             provider, existing: space.browsingPreferences.customSearchProviders)
         // The command re-applies the same rule against the accepted record; an
         // unchanged save reports no change rather than an error.
-        guard owner.family.executeSpace("space.search_provider.upsert", in: spaceID,
-            arguments: ["provider": admitted.coreRecord, "selects": selects], from: owner)
+        guard
+            owner.family.executeSpace(
+                .spaceSearchProviderUpsert, in: spaceID,
+                arguments: BrowserSessionArguments.SearchProviderUpsert(
+                    provider: BrowserCoreSearchProviderRecord(admitted), selects: selects),
+                from: owner)
         else { return }
         owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
     /// Removes a custom search engine; the core selects Google if it was chosen.
     func removeCustomSearchProvider(id: UUID, in spaceID: SpaceID) {
-        guard let owner = spaceCommandOwner("space.search_provider.remove", in: spaceID),
+        guard let owner = spaceCommandOwner(.spaceSearchProviderRemove, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
-        guard owner.family.executeSpace("space.search_provider.remove", in: spaceID,
-            arguments: ["id": id.uuidString.lowercased()], from: owner) else { return }
+        guard
+            owner.family.executeSpace(
+                .spaceSearchProviderRemove, in: spaceID,
+                arguments: BrowserSessionArguments.SearchProviderRemove(id: id.coreIdentifier), from: owner)
+        else { return }
         owner.persist(syncUrgency: .coalesced, scope: .core)
     }
 
@@ -172,8 +190,8 @@ extension BrowserStore {
         _ isExpanded: Bool,
         in spaceID: SpaceID
     ) -> Bool {
-        guard let owner = spaceCommandOwner("space.saved_expansion", in: spaceID),
-            owner.setCoreSpaceValue("space.saved_expansion", isExpanded, in: spaceID) else { return false }
+        guard let owner = spaceCommandOwner(.spaceSavedExpansion, in: spaceID),
+            owner.setCoreSpaceValue(.spaceSavedExpansion, isExpanded, in: spaceID) else { return false }
         owner.persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -195,14 +213,10 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) -> FolderID? {
         let folderID = FolderID()
-        do {
-            guard family.execute("folder.create", in: spaceID, arguments: [
-                "folderId": folderID.rawValue.uuidString, "title": title, "placement": "saved",
-                "parentId": parentID?.rawValue.uuidString as Any? ?? NSNull(),
-                "color": try JSONSerialization.jsonObject(with: JSONEncoder().encode(color)), "symbol": "folder"
-            ], from: self, at: .now) != nil else { return nil }
-        } catch {
-            localSyncErrorDescription = "New folder could not be encoded: \(error)"
+        let arguments = BrowserSessionArguments.FolderCreate(
+            folderId: folderID.rawValue, title: title, placement: .saved, parentId: parentID?.rawValue, color: color,
+            symbol: "folder")
+        guard family.execute(.folderCreate, in: spaceID, arguments: arguments, from: self, at: .now) != nil else {
             return nil
         }
         persist(scope: .core)
@@ -213,10 +227,11 @@ extension BrowserStore {
     /// with its folder count and depth limits.
     func canAddFolder(inside parentID: FolderID, matching assignment: BrowserSpaceRuntimeAssignment) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        return family.accepts("folder.create", in: assignment.spaceID, arguments: [
-            "folderId": UUID().uuidString, "title": NSNull(), "placement": "saved",
-            "parentId": parentID.rawValue.uuidString
-        ], from: self)
+        return family.accepts(
+            .folderCreate, in: assignment.spaceID,
+            arguments: BrowserSessionArguments.FolderCreate(
+                folderId: UUID(), title: nil, placement: .saved, parentId: parentID.rawValue),
+            from: self)
     }
 
     @discardableResult
@@ -260,14 +275,12 @@ extension BrowserStore {
         in spaceID: SpaceID,
         color: BrowserSpaceBrandColor
     ) -> Bool {
-        do {
-            guard family.execute("folder.color", in: spaceID, arguments: [
-                "folderId": folderID.rawValue.uuidString, "value": try JSONSerialization.jsonObject(with: JSONEncoder().encode(color))
-            ], from: self, at: .now)?.changed == true else { return false }
-        } catch {
-            localSyncErrorDescription = "Folder color could not be encoded: \(error)"
-            return false
-        }
+        guard
+            family.execute(
+                .folderColor, in: spaceID,
+                arguments: BrowserSessionArguments.FolderValue(folderId: folderID.rawValue, value: color),
+                from: self, at: .now)?.changed == true
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -294,9 +307,12 @@ extension BrowserStore {
         in spaceID: SpaceID,
         symbol: String
     ) -> Bool {
-        guard family.execute("folder.symbol", in: spaceID, arguments: [
-            "folderId": folderID.rawValue.uuidString, "value": symbol
-        ], from: self, at: .now)?.changed == true else { return false }
+        guard
+            family.execute(
+                .folderSymbol, in: spaceID,
+                arguments: BrowserSessionArguments.FolderValue(folderId: folderID.rawValue, value: symbol),
+                from: self, at: .now)?.changed == true
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -358,10 +374,12 @@ extension BrowserStore {
         into parentID: FolderID?
     ) -> Bool {
         guard !deletingSpaceIDs.contains(spaceID) else { return false }
-        return family.accepts("folder.move", in: spaceID, arguments: [
-            "folderId": folderID.rawValue.uuidString, "parentId": parentID?.rawValue.uuidString as Any? ?? NSNull(),
-            "beforeFolderId": NSNull(), "before": NSNull(), "placement": NSNull()
-        ], from: self)
+        return family.accepts(
+            .folderMove, in: spaceID,
+            arguments: BrowserSessionArguments.FolderMove(
+                folderId: folderID.rawValue, parentId: parentID?.rawValue, beforeFolderId: nil, before: nil,
+                placement: nil),
+            from: self)
     }
 
     func canMoveFolder(

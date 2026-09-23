@@ -21,7 +21,7 @@ enum BrowserPeekPolicy {
 
 /// Engine-neutral policy result. Native views only construct the presentation
 /// after the core has selected the destination's browsing behavior.
-enum BrowserLinkNavigationDecision: String {
+enum BrowserLinkNavigationDecision: String, Decodable {
     case navigate, peekModifier, peekSavedSite, backgroundTab, foregroundTab
 
     static func classifyModifiedLink(destinationURL: URL?, context: BrowserPageNavigationContext?,

@@ -12,7 +12,8 @@ enum BrowserExternalSchemeDisposition: Equatable, Sendable {
 
 /// What Crest does about one external-scheme hand-off once consent is known.
 /// The core decides it from the saved choice.
-enum BrowserExternalSchemeConsent: Equatable, Sendable {
+/// Raw values are the core's `external.consent` spellings.
+enum BrowserExternalSchemeConsent: String, Decodable, Equatable, Sendable {
     case open
     case prompt
     case block

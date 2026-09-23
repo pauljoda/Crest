@@ -249,7 +249,7 @@ struct BrowserSidebarWidgetCarouselCardInsets: Equatable, Sendable {
     static let zero = Self(leading: 0, trailing: 0)
 }
 
-enum BrowserMediaSessionPlaybackState: String, Equatable, Sendable {
+enum BrowserMediaSessionPlaybackState: String, Encodable, Equatable, Sendable {
     case none
     case paused
     case playing

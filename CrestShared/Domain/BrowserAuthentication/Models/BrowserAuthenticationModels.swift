@@ -7,13 +7,15 @@ struct BrowserAuthenticationChallenge: Equatable, Sendable {
     let proposedUsername: String?
 }
 
-enum BrowserAuthenticationHandling: Equatable {
+/// Raw values are the core's `authentication.handling` spellings.
+enum BrowserAuthenticationHandling: String, Decodable, Equatable {
     case promptForCredentials
     case performDefaultHandling
     case cancel
 }
 
-enum BrowserAuthenticationMethod: Equatable, Sendable {
+/// Raw values are the core's `authentication.handling` method spellings.
+enum BrowserAuthenticationMethod: String, Encodable, Equatable, Sendable {
     case httpBasic
     case httpDigest
     case other

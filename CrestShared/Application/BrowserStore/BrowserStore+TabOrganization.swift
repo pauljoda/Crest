@@ -262,7 +262,8 @@ extension BrowserStore {
         do {
             try family.moveTab(id, source: BrowserSpaceRuntimeAssignment(space: source),
                 destination: BrowserSpaceRuntimeAssignment(space: destination),
-                arguments: BrowserCoreTabTransfer.arguments(tabID: id, placement: placement, folderID: folderID,
+                arguments: BrowserCoreTabTransfer.Arguments(
+                    tabID: id, placement: placement, folderID: folderID,
                     before: destinationTabID, fallback: fallbackID, selecting: follows), from: self, at: .now)
         } catch { localSyncErrorDescription = "Core tab move failed: \(error)"; return false }
         if follows {
@@ -311,10 +312,12 @@ extension BrowserStore {
     @discardableResult
     func duplicateTab(_ id: TabID, in spaceID: SpaceID) -> TabID? {
         guard let space = session.space(id: spaceID),
-            let result = family.execute("tab.copy", in: spaceID, arguments: [
-                "tabId": id.rawValue.uuidString, "ids": [UUID().uuidString],
-                "copyObservations": copyObservations(for: [id], in: space)
-            ], from: self, at: .now), let rawID = result.tabId else { return nil }
+            let result = family.execute(
+                .tabCopy, in: spaceID,
+                arguments: BrowserSessionArguments.TabCopy(
+                    tabId: id.rawValue, ids: [UUID()], copyObservations: copyObservations(for: [id], in: space)),
+                from: self, at: .now), let rawID = result.tabId
+        else { return nil }
         let duplicateID = TabID(rawValue: rawID)
         prepareAcceptedCopies(result, from: space)
         persist(scope: .favicon(for: duplicateID))
@@ -363,11 +366,12 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == item.tabID }),
             space.tabs.contains(where: { $0.id == targetTabID })
         else { return false }
-        guard let result = family.execute("split.join", in: space.id, arguments: [
-            "tabId": item.tabID.rawValue.uuidString, "targetId": targetTabID.rawValue.uuidString,
-            "index": memberIndex as Any? ?? NSNull(), "ids": (0..<6).map { _ in UUID().uuidString },
-            "copyObservations": splitCopyObservations(source: item.tabID, target: targetTabID, in: space)
-        ], from: self, at: .now) else { return false }
+        let arguments = BrowserSessionArguments.SplitJoin(
+            tabId: item.tabID.rawValue, targetId: targetTabID.rawValue, index: memberIndex,
+            ids: (0..<6).map { _ in UUID() },
+            copyObservations: splitCopyObservations(source: item.tabID, target: targetTabID, in: space))
+        guard let result = family.execute(.splitJoin, in: space.id, arguments: arguments, from: self, at: .now)
+        else { return false }
         persistSplitCommand(result, from: space)
         return true
     }
@@ -383,8 +387,11 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.tabs.contains(where: { $0.id == tabID })
         else { return false }
-        guard family.execute("split.leave", in: space.id, arguments: ["tabId": tabID.rawValue.uuidString],
-            from: self, at: .now)?.changed == true else { return false }
+        guard
+            family.execute(
+                .splitLeave, in: space.id, arguments: BrowserSessionArguments.Tab(tabId: tabID.rawValue),
+                from: self, at: .now)?.changed == true
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -403,9 +410,12 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.tabs.contains(where: { $0.id == tabID })
         else { return false }
-        guard family.execute("split.reorder", in: space.id,
-            arguments: ["tabId": tabID.rawValue.uuidString, "index": memberIndex],
-            from: self, at: .now)?.changed == true else { return false }
+        guard
+            family.execute(
+                .splitReorder, in: space.id,
+                arguments: BrowserSessionArguments.SplitReorder(tabId: tabID.rawValue, index: memberIndex),
+                from: self, at: .now)?.changed == true
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -422,9 +432,12 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.tabs.contains(where: { $0.id == tabID })
         else { return false }
-        guard family.execute("split.reorder", in: space.id,
-            arguments: ["tabId": tabID.rawValue.uuidString, "offset": offset],
-            from: self, at: .now)?.changed == true else { return false }
+        guard
+            family.execute(
+                .splitReorder, in: space.id,
+                arguments: BrowserSessionArguments.SplitReorder(tabId: tabID.rawValue, offset: offset),
+                from: self, at: .now)?.changed == true
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -460,8 +473,11 @@ extension BrowserStore {
         guard let space = space(matching: assignment),
             let groupID = space.tabs.first(where: { $0.id == tabID })?.splitGroupID
         else { return false }
-        guard family.execute("split.dissolve", in: space.id, arguments: ["groupId": groupID.rawValue.uuidString],
-            from: self, at: .now)?.changed == true else { return false }
+        guard
+            family.execute(
+                .splitDissolve, in: space.id, arguments: BrowserSessionArguments.SplitGroup(groupId: groupID.rawValue),
+                from: self, at: .now)?.changed == true
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -473,9 +489,10 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil,
-            family.executeRecords("split.title", in: assignment.spaceID, arguments: [
-                "groupId": groupID.rawValue.uuidString, "value": title as Any? ?? NSNull()
-            ], from: self) else { return false }
+            family.executeRecords(
+                .splitTitle, in: assignment.spaceID,
+                arguments: BrowserSessionArguments.SplitMetadata(groupId: groupID.rawValue, value: title), from: self)
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -488,10 +505,12 @@ extension BrowserStore {
     ) -> Bool {
         let normalized = emoji.flatMap(BrowserIconSymbol.normalizedEmoji)
         guard emoji == nil || normalized != nil, space(matching: assignment) != nil,
-            family.executeRecords("split.icon", in: assignment.spaceID, arguments: [
-                "groupId": groupID.rawValue.uuidString,
-                "value": normalized.map(BrowserIconSymbol.symbol(forEmoji:)) as Any? ?? NSNull()
-            ], from: self) else { return false }
+            family.executeRecords(
+                .splitIcon, in: assignment.spaceID,
+                arguments: BrowserSessionArguments.SplitMetadata(
+                    groupId: groupID.rawValue, value: normalized.map(BrowserIconSymbol.symbol(forEmoji:))),
+                from: self)
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -502,12 +521,11 @@ extension BrowserStore {
         groupID: SplitGroupID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard space(matching: assignment) != nil else { return false }
-        let value: Any
-        do { value = try tint.map { try JSONSerialization.jsonObject(with: JSONEncoder().encode($0)) } ?? NSNull() }
-        catch { return false }
-        guard family.executeRecords("split.tint", in: assignment.spaceID,
-            arguments: ["groupId": groupID.rawValue.uuidString, "value": value], from: self) else { return false }
+        guard space(matching: assignment) != nil,
+            family.executeRecords(
+                .splitTint, in: assignment.spaceID,
+                arguments: BrowserSessionArguments.SplitMetadata(groupId: groupID.rawValue, value: tint), from: self)
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }
@@ -516,10 +534,12 @@ extension BrowserStore {
     /// Start Page on either side, not already one group, and room for another
     /// card. Asked without committing, so menus reflect the core's own rule.
     private func acceptsSplitJoin(_ tabID: TabID, joining targetTabID: TabID, in space: BrowserSpace) -> Bool {
-        family.accepts("split.join", in: space.id, arguments: [
-            "tabId": tabID.rawValue.uuidString, "targetId": targetTabID.rawValue.uuidString,
-            "index": NSNull(), "ids": (0..<6).map { _ in UUID().uuidString }, "copyObservations": [] as [Any]
-        ], from: self)
+        family.accepts(
+            .splitJoin, in: space.id,
+            arguments: BrowserSessionArguments.SplitJoin(
+                tabId: tabID.rawValue, targetId: targetTabID.rawValue, index: nil, ids: (0..<6).map { _ in UUID() },
+                copyObservations: []),
+            from: self)
     }
 
     /// The tab "Split With Next Tab" would add: the first tab after the
@@ -594,13 +614,13 @@ extension BrowserStore {
             let space = space(matching: assignment)
         else { return nil }
         let date = Date.now
-        guard let tab = BrowserCoreSessionEditing.tabValue(BrowserTab(title: url.host() ?? url.absoluteString,
-            url: url, placement: .current, lastActivatedAt: date)),
-            let result = family.execute("split.open_link", in: space.id, arguments: [
-                "tab": tab, "targetId": targetTabID.rawValue.uuidString,
-                "ids": (0..<6).map { _ in UUID().uuidString },
-                "copyObservations": splitCopyObservations(source: nil, target: targetTabID, in: space)
-            ], from: self, at: date), let rawID = result.tabId else { return nil }
+        let arguments = BrowserSessionArguments.SplitOpenLink(
+            tab: BrowserTab(title: url.host() ?? url.absoluteString, url: url, placement: .current, lastActivatedAt: date),
+            targetId: targetTabID.rawValue, ids: (0..<6).map { _ in UUID() },
+            copyObservations: splitCopyObservations(source: nil, target: targetTabID, in: space))
+        guard let result = family.execute(.splitOpenLink, in: space.id, arguments: arguments, from: self, at: date),
+            let rawID = result.tabId
+        else { return nil }
         let openedID = TabID(rawValue: rawID)
         persistSplitCommand(result, from: space)
         return openedID
@@ -621,14 +641,14 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             space.id == selectedSpaceID,
-            space.contains(tabID),
-            let probe = BrowserCoreSessionEditing.tabValue(BrowserTab(title: "", url: URL(string: "about:blank"),
-                placement: .current, lastActivatedAt: .now))
+            space.contains(tabID)
         else { return false }
-        return family.accepts("split.open_link", in: space.id, arguments: [
-            "tab": probe, "targetId": tabID.rawValue.uuidString,
-            "ids": (0..<6).map { _ in UUID().uuidString }, "copyObservations": [] as [Any]
-        ], from: self)
+        let probe = BrowserTab(title: "", url: URL(string: "about:blank"), placement: .current, lastActivatedAt: .now)
+        return family.accepts(
+            .splitOpenLink, in: space.id,
+            arguments: BrowserSessionArguments.SplitOpenLink(
+                tab: probe, targetId: tabID.rawValue, ids: (0..<6).map { _ in UUID() }, copyObservations: []),
+            from: self)
     }
 
     /// Split-level link operations for a page pool. The macOS web-content
@@ -671,11 +691,11 @@ extension BrowserStore {
                         && $0.folderID == folderID
                 })
         else { return false }
-        guard family.execute("split.move", in: space.id, arguments: [
-            "groupId": groupID.rawValue.uuidString, "placement": placement.rawValue,
-            "folderId": folderID?.rawValue.uuidString as Any? ?? NSNull(),
-            "before": destinationTabID?.rawValue.uuidString as Any? ?? NSNull()
-        ], from: self, at: .now)?.changed == true else { return false }
+        let arguments = BrowserSessionArguments.SplitMove(
+            groupId: groupID.rawValue, placement: placement, folderId: folderID?.rawValue,
+            before: destinationTabID?.rawValue)
+        guard family.execute(.splitMove, in: space.id, arguments: arguments, from: self, at: .now)?.changed == true
+        else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
     }

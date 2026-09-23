@@ -1,6 +1,12 @@
 import Foundation
 
 enum BrowserSyncOrderTokenAllocator {
+    /// The `order.allocate` request: each position's current token, or `null`
+    /// where one must be allocated.
+    private struct AllocationRequest: Encodable {
+        let tokens: [String?]
+    }
+
     static let encodedWidth = 16
     static let maximumEncodedLength = encodedWidth
 
@@ -8,10 +14,8 @@ enum BrowserSyncOrderTokenAllocator {
         ids: [ID],
         existingTokens: [ID: String]
     ) throws -> [ID: String] {
-        let tokens: [String] = try BrowserCoreSync.evaluate([
-            "version": 1, "operation": "order.allocate",
-            "tokens": ids.map { existingTokens[$0] as Any? ?? NSNull() }
-        ])
+        let tokens: [String] = try BrowserCoreSync.evaluate(
+            .orderAllocate, AllocationRequest(tokens: ids.map { existingTokens[$0] }))
         guard tokens.count == ids.count else { throw BrowserSyncError.invalidField("orderTokens") }
         // Projection validates record identities and reports the offending ID.
         // Avoid trapping here before that validation can reject a duplicate.

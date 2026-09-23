@@ -6,10 +6,16 @@ import Foundation
 /// records stay out of synchronous calls.
 enum BrowserCoreSessionEditing {
     struct Result: Decodable {
-        struct Copy: Decodable { var source: UUID; var copy: UUID }
+        struct Copy: Decodable {
+            var source: UUID
+            var copy: UUID
+        }
         /// The core decides which tab wears which image; the bytes never cross
         /// the boundary, so it names the tab whose stored image must change.
-        struct FaviconAssignment: Decodable { var tabId: UUID; var adopts: Bool }
+        struct FaviconAssignment: Decodable {
+            var tabId: UUID
+            var adopts: Bool
+        }
         var space: BrowserSpace
         var tabId: UUID?
         var copies: [Copy]
@@ -26,7 +32,8 @@ enum BrowserCoreSessionEditing {
             throw EditError.wrongIdentity
         }
         let originals = Dictionary(uniqueKeysWithValues: space.tabs.map { ($0.id, $0) })
-        let copies = Dictionary(uniqueKeysWithValues: result.copies.map { (TabID(rawValue: $0.copy), TabID(rawValue: $0.source)) })
+        let copies = Dictionary(
+            uniqueKeysWithValues: result.copies.map { (TabID(rawValue: $0.copy), TabID(rawValue: $0.source)) })
         for index in result.space.tabs.indices {
             let id = result.space.tabs[index].id
             if let original = originals[copies[id] ?? id] {
@@ -47,8 +54,10 @@ enum BrowserCoreSessionEditing {
 
     /// The core named the tab whose stored image must change. Applying those
     /// bytes here is projection work: no image ever entered a semantic command.
-    static func applyFavicon(_ assignment: Result.FaviconAssignment?, bytes: Data?,
-        to session: inout BrowserSession, at spaceIndex: Int) -> TabID? {
+    static func applyFavicon(
+        _ assignment: Result.FaviconAssignment?, bytes: Data?,
+        to session: inout BrowserSession, at spaceIndex: Int
+    ) -> TabID? {
         guard let assignment,
             let tabIndex = session.spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == assignment.tabId })
         else { return nil }
@@ -56,16 +65,5 @@ enum BrowserCoreSessionEditing {
         return session.spaces[spaceIndex].tabs[tabIndex].id
     }
 
-    /// Encodes a native presentation value as a command argument. Used for
-    /// palette colors and icon accents, which are assets rather than records.
-    static func value(_ source: (some Encodable)?) -> Any? {
-        guard let source else { return nil }
-        return try? JSONSerialization.jsonObject(with: JSONEncoder().encode(source), options: [.fragmentsAllowed])
-    }
-
-    static func tabValue(_ source: BrowserTab) -> Any? {
-        var tab = source; tab.faviconData = nil
-        return try? JSONSerialization.jsonObject(with: JSONEncoder().encode(tab))
-    }
     private enum EditError: Error { case wrongIdentity }
 }

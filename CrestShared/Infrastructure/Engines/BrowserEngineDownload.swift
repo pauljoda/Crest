@@ -3,7 +3,7 @@ import Foundation
 /// Native transfers stay in their engine. Crest owns the destination, record and
 /// user decisions; UI code never needs a Chromium or WebKit download object.
 struct BrowserEngineDownloadID: Hashable {
-    let engine: String
+    let engine: BrowserEngineImplementation.Family
     let profileID: UUID
     let value: String
 }

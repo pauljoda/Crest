@@ -385,8 +385,10 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         original.spaces[0].history.append(visit("https://example.org/direct", title: "Visit"))
         let core = BrowserCoreSessionAuthority(session: original)
         let view = BrowserStoreSelection(selectedSpaceID: original.spaces[1].id)
-        _ = try core.execute("tab.rename", in: spaceID,
-            arguments: ["tabId": tabID.rawValue.uuidString, "title": "Core command"], view: view, at: .now)
+        _ = try core.execute(
+            .tabRename, in: spaceID,
+            arguments: BrowserSessionArguments.TabRename(tabId: tabID.rawValue, title: "Core command"), view: view,
+            at: .now)
         XCTAssertEqual(core.projection.spaces[0].tabs[0].faviconData, icon)
         XCTAssertEqual(core.projection.spaces[0].history, original.spaces[0].history)
         let checkpoint = try core.checkpoint()

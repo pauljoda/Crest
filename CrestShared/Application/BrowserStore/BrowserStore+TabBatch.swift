@@ -23,7 +23,8 @@ extension BrowserStore {
                 observedIDs.formUnion(source.splitGroupMembers(of: group).map(\.id))
             }
         }
-        let arguments = try BrowserCoreTabBatch.arguments(request, action: action, fallback: fallback,
+        let arguments = BrowserCoreTabBatch.Arguments(
+            request: request, action: action, fallback: fallback,
             follow: linkPreferences.followsTabsMovedToAnotherSpace,
             observations: copyObservations(for: observedIDs, in: source))
         return try family.prepareTabBatch(request, arguments: arguments, from: self, at: date)

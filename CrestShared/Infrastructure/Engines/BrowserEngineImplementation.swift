@@ -9,8 +9,10 @@ enum BrowserEngineImplementation: String, Codable, Sendable {
 
     // MARK: - Types
 
-    enum Family: Sendable {
-        case webKit
+    /// The engine an identity, download or saved page state belongs to. Raw
+    /// values are the engine tags persisted interaction state carries.
+    enum Family: String, Codable, Hashable, Sendable {
+        case webKit = "webkit"
         case chromium
     }
 

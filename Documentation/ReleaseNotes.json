@@ -2081,6 +2081,10 @@
     "mobile-completed-page-titles": {
       "category": "fixed",
       "message": "Background tabs on iPhone keep the page's real title instead of its site name."
+    },
+    "swift-typed-core-boundary": {
+      "category": "internal",
+      "message": "Send every core command, policy question and sync operation through typed operation names and Codable models instead of raw strings and dictionaries."
     }
   }
 }

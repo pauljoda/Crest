@@ -29,16 +29,17 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
     }
     deinit { crest_sync_journal_release(handle) }
 
-    func applying(_ operation: String, preferences: BrowserSyncPreferences, arguments: [String: Any]) throws -> BrowserCoreSyncJournal {
-        let data = try JSONSerialization.data(withJSONObject: [
-            "version": 1, "operation": operation, "preferences": try BrowserCoreSync.value(preferences),
-            "arguments": arguments
-        ])
+    func applying<Arguments: Encodable>(
+        _ operation: BrowserSyncOperation, preferences: BrowserSyncPreferences, arguments: Arguments
+    ) throws -> BrowserCoreSyncJournal {
+        let data = try JSONEncoder().encode(
+            BrowserCoreSync.Mutation(operation: operation, preferences: preferences, arguments: arguments))
         guard data.count <= Self.byteLimit else { throw JournalError.tooLarge }
         var next: UInt64 = 0
         var errorQuery: UInt64 = 0
         let result = data.withUnsafeBytes {
-            crest_sync_journal_apply_checked(handle, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &next, &errorQuery)
+            crest_sync_journal_apply_checked(
+                handle, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &next, &errorQuery)
         }
         if errorQuery != 0 { let _: Bool = try BrowserCoreSync.readQuery(errorQuery) }
         if result == CREST_INVALID_STATE { throw BrowserSyncError.logicalClockExhausted }
@@ -48,23 +49,25 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
 
     func read(preferences: BrowserSyncPreferences) throws -> Data {
         if preferences == self.preferences { return try read() }
-        return try applying("preferences", preferences: preferences, arguments: [:]).read()
+        return try applying(.preferences, preferences: preferences, arguments: BrowserCoreNoArguments()).read()
     }
 
-    func preparingSession(_ session: BrowserSession, records: [BrowserSyncRecord], preferences: BrowserSyncPreferences,
-                          replacing: Bool, emptySpace: BrowserSpace?, at date: Date) throws -> (journal: BrowserCoreSyncJournal, session: BrowserSession) {
-        var request: [String: Any] = [
-            "version": 1, "operation": replacing ? "replace" : "merge", "now": date.timeIntervalSinceReferenceDate,
-            "session": try BrowserCoreSync.value(BrowserCoreSessionAuthority.compact(session)),
-            "records": try BrowserCoreSync.value(records), "preferences": try BrowserCoreSync.value(preferences)
-        ]
-        if let emptySpace { request["emptySpace"] = try BrowserCoreSync.value(emptySpace) }
-        else if session.spaces.isEmpty { request["emptySpace"] = try BrowserCoreSync.value(BrowserSession.makeBlankSpace(number: 1)) }
-        let data = try JSONSerialization.data(withJSONObject: request)
+    func preparingSession(
+        _ session: BrowserSession, records: [BrowserSyncRecord], preferences: BrowserSyncPreferences,
+        replacing: Bool, emptySpace: BrowserSpace?, at date: Date
+    ) throws -> (journal: BrowserCoreSyncJournal, session: BrowserSession) {
+        let preparation = BrowserCoreSync.SessionPreparation(
+            session: BrowserCoreSessionAuthority.compact(session), records: records, preferences: preferences,
+            now: date.timeIntervalSinceReferenceDate,
+            emptySpace: emptySpace ?? (session.spaces.isEmpty ? BrowserSession.makeBlankSpace(number: 1) : nil))
+        let data = try JSONEncoder().encode(
+            BrowserCoreSync.Request(operation: replacing ? .replace : .merge, arguments: preparation))
         guard data.count <= Self.byteLimit else { throw JournalError.tooLarge }
-        var journalHandle: UInt64 = 0, queryHandle: UInt64 = 0
+        var journalHandle: UInt64 = 0
+        var queryHandle: UInt64 = 0
         let result = data.withUnsafeBytes {
-            crest_sync_session_prepare(handle, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &journalHandle, &queryHandle)
+            crest_sync_session_prepare(
+                handle, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &journalHandle, &queryHandle)
         }
         guard result == CREST_OK else {
             if queryHandle != 0 { let _: Bool = try BrowserCoreSync.readQuery(queryHandle) }
@@ -91,5 +94,8 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
         return data.prefix(length)
     }
 
-    private enum JournalError: Error { case tooLarge, rejected(Int32) }
+    private enum JournalError: Error {
+        case tooLarge
+        case rejected(Int32)
+    }
 }

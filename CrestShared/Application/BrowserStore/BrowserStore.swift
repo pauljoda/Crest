@@ -175,10 +175,8 @@ extension BrowserStore {
         credentialSaveOperations.removeAll()
         family.resetDeletionState()
         interactionObserver?.browserWillResetSession()
-        do {
-            let template = try BrowserCoreSync.value(BrowserSession.privateBrowsing().spaces[0])
-            guard family.executeSpace("space.reset_private", arguments: ["template": template], from: self) else { return }
-        } catch { localSyncErrorDescription = String(describing: error); return }
+        let template = BrowserSessionArguments.SpaceTemplate(template: BrowserSession.privateBrowsing().spaces[0])
+        guard family.executeSpace(.spaceResetPrivate, arguments: template, from: self) else { return }
         localSyncErrorDescription = nil
         let revision = family.publish(session, from: self)
         syncCoordinator?.advanceStoreRevision(to: revision)

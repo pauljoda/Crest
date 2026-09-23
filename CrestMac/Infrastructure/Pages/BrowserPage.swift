@@ -1022,8 +1022,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             hasCommittedNavigationAwaitingCompletion = false
             isLoading = false
             webContentFailureMessage = message
-        case .openRequested(let destination):
-            openModifiedLink(URLRequest(url: destination), spaceID, true)
         }
     }
 

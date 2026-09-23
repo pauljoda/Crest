@@ -31,9 +31,9 @@ extension BrowserStore {
     }
 
     private func recordSessionVisit(url: URL, title: String?, in spaceID: SpaceID) -> Bool {
-        family.executeRecords("history.visit", in: spaceID, arguments: [
-            "url": url.absoluteString, "title": title as Any? ?? NSNull()
-        ], from: self)
+        family.executeRecords(
+            .historyVisit, in: spaceID,
+            arguments: BrowserSessionArguments.HistoryVisit(url: url.absoluteString, title: title), from: self)
     }
 
     func archiveTransientPage(url: URL, title: String?, in spaceID: SpaceID) {
@@ -52,9 +52,11 @@ extension BrowserStore {
         let date = Date.now
         let tab = BrowserTab(title: title.flatMap { $0.isEmpty ? nil : $0 } ?? url.host() ?? url.absoluteString,
             url: url, placement: .current, lastActivatedAt: date)
-        guard let value = BrowserCoreSessionEditing.tabValue(tab),
-            family.execute("transient.archive", in: assignment.spaceID,
-                arguments: ["requestId": requestID.uuidString, "tab": value], from: self, at: date) != nil
+        guard
+            family.execute(
+                .transientArchive, in: assignment.spaceID,
+                arguments: BrowserSessionArguments.TransientArchive(requestId: requestID, tab: tab),
+                from: self, at: date) != nil
         else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
@@ -66,7 +68,7 @@ extension BrowserStore {
     }
 
     func clearHistory(in spaceID: SpaceID) {
-        guard family.executeRecords("history.clear", in: spaceID, from: self) else { return }
+        guard family.executeRecords(.historyClear, in: spaceID, from: self) else { return }
         persist(deletionReason: .explicitDelete, scope: .history(in: spaceID))
     }
 
@@ -75,7 +77,7 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        guard family.executeRecords("history.clear", in: assignment.spaceID, from: self) else { return false }
+        guard family.executeRecords(.historyClear, in: assignment.spaceID, from: self) else { return false }
         persist(
             deletionReason: .explicitDelete,
             scope: .history(in: assignment.spaceID)
@@ -84,7 +86,7 @@ extension BrowserStore {
     }
 
     func cleanupCurrentTabs() {
-        guard family.executeRecords("records.cleanup", from: self) else { return }
+        guard family.executeRecords(.recordsCleanup, from: self) else { return }
         persist(deletionReason: .retention, scope: .core)
     }
 
@@ -99,7 +101,7 @@ extension BrowserStore {
     @discardableResult
     func sweepExpiredBrowsingData(now: Date = .now) -> Bool {
         guard family.beginCleanupSweep(at: now) else { return false }
-        guard family.executeRecords("records.sweep", from: self, at: now) else { return true }
+        guard family.executeRecords(.recordsSweep, from: self, at: now) else { return true }
         persist(deletionReason: .retention, scope: .everything)
         return true
     }
@@ -135,14 +137,17 @@ extension BrowserStore {
 
     func cleanupCurrentTabs(in spaceID: SpaceID) {
         guard session.space(id: spaceID) != nil else { return }
-        guard family.executeRecords("records.cleanup", in: spaceID, from: self) else { return }
+        guard family.executeRecords(.recordsCleanup, in: spaceID, from: self) else { return }
         persist(deletionReason: .retention, scope: .core)
     }
 
     func restoreArchivedTab(_ id: TabID) {
         guard selectedSpace != nil else { return }
-        guard family.executeRecords("archive.restore", in: selectedSpaceID,
-            arguments: ["tabId": id.rawValue.uuidString], from: self) else { return }
+        guard
+            family.executeRecords(
+                .archiveRestore, in: selectedSpaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
+                from: self)
+        else { return }
         persist(deletionReason: .superseded, scope: .core)
     }
 
@@ -155,8 +160,11 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.archivedTabs.contains(where: { $0.id == id })
         else { return false }
-        guard family.executeRecords("archive.restore", in: assignment.spaceID,
-            arguments: ["tabId": id.rawValue.uuidString], from: self) else { return false }
+        guard
+            family.executeRecords(
+                .archiveRestore, in: assignment.spaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
+                from: self)
+        else { return false }
         persist(deletionReason: .superseded, scope: .core)
         return true
     }
@@ -177,8 +185,11 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        guard family.executeRecords("history.remove_url", in: assignment.spaceID,
-            arguments: ["url": url.absoluteString], from: self) else { return false }
+        guard
+            family.executeRecords(
+                .historyRemoveURL, in: assignment.spaceID,
+                arguments: BrowserSessionArguments.HistoryRemoveURL(url: url.absoluteString), from: self)
+        else { return false }
         persist(
             deletionReason: .explicitDelete,
             scope: .history(in: assignment.spaceID)
@@ -193,9 +204,13 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        guard family.executeRecords("history.remove_range", in: assignment.spaceID, arguments: [
-            "start": startDate.timeIntervalSinceReferenceDate, "end": endDate.timeIntervalSinceReferenceDate
-        ], from: self) else { return false }
+        guard
+            family.executeRecords(
+                .historyRemoveRange, in: assignment.spaceID,
+                arguments: BrowserSessionArguments.HistoryRemoveRange(
+                    start: startDate.timeIntervalSinceReferenceDate, end: endDate.timeIntervalSinceReferenceDate),
+                from: self)
+        else { return false }
         persist(
             deletionReason: .explicitDelete,
             scope: .history(in: assignment.spaceID)
@@ -221,8 +236,8 @@ extension BrowserStore {
         // Retention is one field of the same Space preferences record every
         // other settings surface writes, so it takes the same core command, and
         // the core's own sweep then applies it.
-        guard setCoreSpaceValue("space.browsing_preferences", preferences, in: spaceID) else { return }
-        let removedRecords = family.executeRecords("records.sweep", in: spaceID, from: self, at: now)
+        guard setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
+        let removedRecords = family.executeRecords(.recordsSweep, in: spaceID, from: self, at: now)
         persist(
             deletionReason: removedRecords ? .retention : .superseded,
             scope: removedRecords ? .everything : .core

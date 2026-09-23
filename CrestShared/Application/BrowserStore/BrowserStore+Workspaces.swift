@@ -31,7 +31,7 @@ extension BrowserStore {
     /// core's routing rule sends a borrowed workspace's profile settings to the
     /// Space it borrows from and refuses Space organization there; nil when
     /// nobody may apply the command, including when the core cannot answer.
-    func spaceCommandOwner(_ command: String, in spaceID: SpaceID? = nil) -> BrowserStore? {
+    func spaceCommandOwner(_ command: BrowserSessionOperation, in spaceID: SpaceID? = nil) -> BrowserStore? {
         switch BrowserCorePolicy.workspaceCommandRoute(command, borrowed: isTemporaryWorkspace) {
         case .local: return self
         case .source:

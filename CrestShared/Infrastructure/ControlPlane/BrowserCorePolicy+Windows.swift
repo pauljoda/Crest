@@ -1,7 +1,7 @@
 import Foundation
 
 /// Which tab a window shows for a Space after the core repairs it.
-enum BrowserWindowTabSelection: String {
+enum BrowserWindowTabSelection: String, Decodable {
     case window
     case first
     case none
@@ -19,6 +19,8 @@ struct BrowserWindowRepair {
 /// Window state is device-local: requests carry identities and presence facts,
 /// never tab contents.
 extension BrowserCorePolicy {
+    // MARK: - Types
+
     struct WindowSpaceFacts {
         let id: SpaceID
         let hasWindowTab: Bool
@@ -32,62 +34,120 @@ extension BrowserCorePolicy {
         let liveMembers: Int?
     }
 
+    private struct RepairRequest: Encodable {
+        struct Space: Encodable {
+            let id: String
+            let windowTab: Bool
+            let captured: Bool
+            let hasTabs: Bool
+        }
+
+        struct SplitLayout: Encodable {
+            let groupID: String
+            let columns: Int
+            @BrowserCoreNullable var liveMembers: Int?
+        }
+
+        let selectedSpaceID: String
+        let capturesSelection: Bool
+        let spaces: [Space]
+        let splitLayouts: [SplitLayout]
+    }
+
+    private struct RepairAnswer: Decodable {
+        let selectedSpaceID: UUID
+        let selections: [BrowserWindowTabSelection]
+        let splitLayouts: BrowserCoreKnownValues<UUID>
+        @BrowserCoreOptional var capturedSpaceIDs: BrowserCoreKnownValues<UUID>?
+    }
+
+    private struct SplitFractionsRequest: Encodable {
+        let fractions: [Double]
+    }
+
+    private struct SplitFractionsAnswer: Decodable {
+        let fractions: [Double]
+    }
+
+    private struct TearOffRequest: Encodable {
+        let spaceMatches: Bool
+        let spaceLocked: Bool
+        let containsTab: Bool
+        @BrowserCoreNullable var selectionCount: Int?
+        let selectionIncludesTab: Bool
+    }
+
+    private struct TearOffAnswer: Decodable {
+        @BrowserCoreOptional var allowed: Bool?
+    }
+
+    private struct SelectionFallbackRequest: Encodable {
+        let placements: [TabPlacement]
+    }
+
+    private struct SelectionFallbackAnswer: Decodable {
+        let index: Int
+    }
+
+    // MARK: - Actions - Windows
+
     /// Nil when the core cannot answer; the caller keeps its state untouched.
-    static func windowRepair(selectedSpaceID: SpaceID, capturesSelection: Bool,
-        spaces: [WindowSpaceFacts], splitLayouts: [WindowSplitLayout]) -> BrowserWindowRepair? {
-        guard let response = evaluate([
-            "version": 1, "operation": "window.repair",
-            "selectedSpaceID": selectedSpaceID.rawValue.coreIdentifier,
-            "capturesSelection": capturesSelection,
-            "spaces": spaces.map { space -> [String: Any] in
-                ["id": space.id.rawValue.coreIdentifier, "windowTab": space.hasWindowTab, "captured": space.isCaptured,
-                 "hasTabs": space.hasTabs]
+    static func windowRepair(
+        selectedSpaceID: SpaceID, capturesSelection: Bool,
+        spaces: [WindowSpaceFacts], splitLayouts: [WindowSplitLayout]
+    ) -> BrowserWindowRepair? {
+        let request = RepairRequest(
+            selectedSpaceID: selectedSpaceID.rawValue.coreIdentifier,
+            capturesSelection: capturesSelection,
+            spaces: spaces.map { space in
+                RepairRequest.Space(
+                    id: space.id.rawValue.coreIdentifier, windowTab: space.hasWindowTab, captured: space.isCaptured,
+                    hasTabs: space.hasTabs)
             },
-            "splitLayouts": splitLayouts.map { layout -> [String: Any] in
-                ["groupID": layout.groupID.rawValue.coreIdentifier, "columns": layout.columns,
-                 "liveMembers": layout.liveMembers as Any? ?? NSNull()]
-            },
-        ]), let selected = (response["selectedSpaceID"] as? String).flatMap(UUID.init(uuidString:)),
-            let names = response["selections"] as? [String], names.count == spaces.count,
-            let layouts = response["splitLayouts"] as? [String]
+            splitLayouts: splitLayouts.map { layout in
+                RepairRequest.SplitLayout(
+                    groupID: layout.groupID.rawValue.coreIdentifier, columns: layout.columns,
+                    liveMembers: layout.liveMembers)
+            })
+        guard let answer = evaluate(.windowRepair, request, answer: RepairAnswer.self),
+            answer.selections.count == spaces.count
         else { return nil }
-        let selections = names.compactMap(BrowserWindowTabSelection.init(rawValue:))
-        guard selections.count == names.count else { return nil }
-        let captured = response["capturedSpaceIDs"] as? [String]
-        return BrowserWindowRepair(selectedSpaceID: selected, selections: selections,
-            splitLayoutGroupIDs: Set(layouts.compactMap(UUID.init(uuidString:))),
-            capturedSpaceIDs: captured?.compactMap(UUID.init(uuidString:)))
+        return BrowserWindowRepair(
+            selectedSpaceID: answer.selectedSpaceID, selections: answer.selections,
+            splitLayoutGroupIDs: Set(answer.splitLayouts.values),
+            capturedSpaceIDs: answer.capturedSpaceIDs?.values)
     }
 
     /// The column shares to store for one split group, or nil when they cannot
     /// describe columns or the core cannot answer.
     static func splitColumnFractions(_ fractions: [Double]) -> [Double]? {
         guard fractions.allSatisfy(\.isFinite) else { return nil }
-        return evaluate(["version": 1, "operation": "window.split_layout", "fractions": fractions])?["fractions"] as? [Double]
+        return evaluate(
+            .windowSplitLayout, SplitFractionsRequest(fractions: fractions), answer: SplitFractionsAnswer.self)?
+            .fractions
     }
 
     /// Whether a dragged tab may leave its window. An unavailable core keeps
     /// the tab where it is.
-    static func allowsTearOff(spaceMatches: Bool, spaceLocked: Bool, containsTab: Bool,
-        selection: [TabID]?, tabID: TabID) -> Bool {
-        evaluate([
-            "version": 1, "operation": "window.tear_off", "spaceMatches": spaceMatches, "spaceLocked": spaceLocked,
-            "containsTab": containsTab, "selectionCount": selection?.count as Any? ?? NSNull(),
-            "selectionIncludesTab": selection?.contains(tabID) == true,
-        ])?["allowed"] as? Bool ?? false
+    static func allowsTearOff(
+        spaceMatches: Bool, spaceLocked: Bool, containsTab: Bool,
+        selection: [TabID]?, tabID: TabID
+    ) -> Bool {
+        let request = TearOffRequest(
+            spaceMatches: spaceMatches, spaceLocked: spaceLocked, containsTab: containsTab,
+            selectionCount: selection?.count, selectionIncludesTab: selection?.contains(tabID) == true)
+        return evaluate(.windowTearOff, request, answer: TearOffAnswer.self)?.allowed ?? false
     }
 
     /// Index into `placements` of the tab a Space selects when its selection is
     /// gone. Nil when the core cannot answer or there is no candidate.
     static func selectionFallback(placements: [TabPlacement]) -> Int? {
-        guard let index = evaluate(["version": 1, "operation": "tabs.selection_fallback",
-            "placements": placements.map(\.rawValue)])?["index"] as? Int,
-            placements.indices.contains(index) else { return nil }
+        guard
+            let index = evaluate(
+                .tabsSelectionFallback, SelectionFallbackRequest(placements: placements),
+                answer: SelectionFallbackAnswer.self)?.index,
+            placements.indices.contains(index)
+        else { return nil }
         return index
     }
-}
-
-extension UUID {
-    /// The spelling core policy requests require for identities.
-    var coreIdentifier: String { uuidString.lowercased() }
 }

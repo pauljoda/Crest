@@ -98,7 +98,6 @@ enum BrowserPageEngineEvent {
     case developerPanelClosed
     case closeRequested
     case creationFailed(message: String)
-    case openRequested(URL)
 }
 
 /// One report of a page's navigation state from an engine that keeps it.

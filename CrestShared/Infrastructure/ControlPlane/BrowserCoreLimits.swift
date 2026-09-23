@@ -21,9 +21,7 @@ struct BrowserCoreLimits: Decodable, Equatable, Sendable {
     /// The packaged core's limits. The core ships inside every composition, so
     /// a missing answer is a broken build rather than a state to recover from.
     static let current: BrowserCoreLimits = {
-        guard let response = BrowserCorePolicy.evaluate(["version": 1, "operation": "limits"]),
-            let data = try? JSONSerialization.data(withJSONObject: response),
-            let limits = try? JSONDecoder().decode(BrowserCoreLimits.self, from: data)
+        guard let limits = BrowserCorePolicy.evaluate(.limits, answer: BrowserCoreLimits.self)
         else { preconditionFailure("The core did not report its limits") }
         return limits
     }()

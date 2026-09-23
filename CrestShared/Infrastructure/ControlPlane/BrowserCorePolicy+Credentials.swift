@@ -9,11 +9,13 @@ import Foundation
 /// Every call has a fail-safe outcome: without an answer nothing is captured,
 /// offered, saved or filled.
 extension BrowserCorePolicy {
-    enum CredentialCaptureAction: String {
+    // MARK: - Types
+
+    enum CredentialCaptureAction: String, Decodable {
         case ignore, rememberUsername, dismissFill, offerFill, captureCandidate, offerSave, keepPending, discardPending
     }
 
-    enum CredentialUsernameSource: String {
+    enum CredentialUsernameSource: String, Decodable {
         case none, explicit, hint
     }
 
@@ -27,17 +29,162 @@ extension BrowserCorePolicy {
         let usernameHintLifetime: TimeInterval
     }
 
-    enum CredentialCaptureEvent: String {
+    enum CredentialCaptureEvent: String, Encodable {
         case username, focus, submit, documentState, filled
     }
 
-    enum CredentialSaveValidity: String {
+    enum CredentialSaveValidity: String, Decodable {
         case accepted, insecureOrigin, stale
     }
 
-    enum CredentialSavePlanKind: String {
+    enum CredentialSavePlanKind: String, Decodable {
         case create, update, alreadyStored
     }
+
+    /// Where a fill's secret comes from, in the core's spelling.
+    private enum CredentialFillSource: String, Encodable {
+        case generated
+        case saved
+    }
+
+    private struct CaptureRequest: Encodable {
+        struct UsernameHint: Encodable {
+            let origin: CredentialOrigin
+            let topLevelOrigin: CredentialOrigin
+            let capturedAt: TimeInterval
+        }
+
+        struct PendingCandidate: Encodable {
+            let origin: CredentialOrigin
+            let submittedAt: TimeInterval
+        }
+
+        let event: CredentialCaptureEvent
+        let frameOrigin: CredentialOrigin
+        let topLevelOrigin: CredentialOrigin
+        let isMainFrame: Bool
+        let hasFormID: Bool
+        let hasUsername: Bool
+        let hasPassword: Bool
+        @BrowserCoreNullable var passwordKind: BrowserCredentialPasswordKind?
+        @BrowserCoreNullable var hasVisiblePasswordField: Bool?
+        let hasFillTarget: Bool
+        let now: TimeInterval
+        @BrowserCoreNullable var usernameHint: UsernameHint?
+        @BrowserCoreNullable var pendingCandidate: PendingCandidate?
+    }
+
+    private struct CaptureAnswer: Decodable {
+        let action: CredentialCaptureAction
+        let usernameSource: CredentialUsernameSource
+        let clearsUsernameHint: Bool
+        let isCrossOriginFrame: Bool
+        let anchorsToField: Bool
+        let candidateLifetime: TimeInterval
+        let usernameHintLifetime: TimeInterval
+    }
+
+    private struct FillRequest: Encodable {
+        let passwordKind: BrowserCredentialPasswordKind
+        let source: CredentialFillSource
+    }
+
+    private struct AllowedCredentialAnswer: Decodable {
+        @BrowserCoreOptional var allowed: Bool?
+    }
+
+    private struct SaveValidityRequest: Encodable {
+        let origin: CredentialOrigin
+        let topLevelOrigin: CredentialOrigin
+        let submittedAt: TimeInterval
+        let now: TimeInterval
+    }
+
+    private struct SaveValidityAnswer: Decodable {
+        @BrowserCoreOptional var verdict: CredentialSaveValidity?
+    }
+
+    /// One stored credential's identity and dates; a username only where an
+    /// account is matched.
+    private struct CredentialRecord: Encodable {
+        let id: String
+        let updatedAt: TimeInterval
+        @BrowserCoreNullable var lastUsedAt: TimeInterval?
+        var username: String?
+
+        init(_ descriptor: CredentialDescriptor, includesUsername: Bool) {
+            id = BrowserCorePolicy.coreID(descriptor.id)
+            updatedAt = descriptor.updatedAt.timeIntervalSince1970
+            lastUsedAt = descriptor.lastUsedAt?.timeIntervalSince1970
+            username = includesUsername ? descriptor.username : nil
+        }
+    }
+
+    private struct CredentialBatchRequest: Encodable {
+        var username: String?
+        let records: [CredentialRecord]
+    }
+
+    private struct CredentialWinnerAnswer: Decodable {
+        @BrowserCoreOptional var id: String?
+    }
+
+    private struct SavePlanRequest: Encodable {
+        struct Stored: Encodable {
+            let id: String
+            let passwordMatches: Bool
+        }
+
+        @BrowserCoreNullable var matchID: String?
+        @BrowserCoreNullable var stored: Stored?
+    }
+
+    private struct SavePlanAnswer: Decodable {
+        let plan: CredentialSavePlanKind
+        @BrowserCoreOptional var id: String?
+    }
+
+    private struct PasswordRecipeRequest: Encodable {
+        @BrowserCoreNullable var length: Int?
+    }
+
+    private struct PasswordRecipeAnswer: Decodable {
+        let length: Int
+        let groups: [String]
+    }
+
+    private struct PasskeyAccessRequest: Encodable {
+        let hasManagedCapability: Bool
+        let deviceConfiguration: BrowserPasskeyDeviceConfiguration
+        let authorizationState: BrowserPasskeyAuthorizationState
+    }
+
+    private struct PasskeyAccessAnswer: Decodable {
+        @BrowserCoreOptional var status: BrowserPasskeyAccessStatus?
+    }
+
+    private struct WriteThroughRequest: Encodable {
+        let isMobilePlatform: Bool
+        let supportsSystemAPI: Bool
+        let hasManagedBrowserCapability: Bool
+        let isLaunchIsolated: Bool
+    }
+
+    private struct WriteThroughAnswer: Decodable {
+        @BrowserCoreOptional var availability: BrowserSystemPasswordWriteThroughAvailability?
+    }
+
+    private struct WriteThroughOfferRequest: Encodable {
+        let offersSaveToSystemPasswords: Bool
+        let availability: BrowserSystemPasswordWriteThroughAvailability
+        let isPrivateBrowsing: Bool
+    }
+
+    private struct WriteThroughOfferAnswer: Decodable {
+        @BrowserCoreOptional var offers: Bool?
+    }
+
+    // MARK: - Actions - Capture and fill
 
     /// What one form observation does to the page's credential state. Nil
     /// when the core cannot answer; the caller then captures and offers nothing.
@@ -56,35 +203,28 @@ extension BrowserCorePolicy {
         pendingCandidate: BrowserCredentialSaveCandidate?,
         now: Date
     ) -> CredentialCaptureDecision? {
-        guard let response = evaluate([
-            "version": 1, "operation": "credentials.capture", "event": event.rawValue,
-            "frameOrigin": coreOrigin(frameOrigin), "topLevelOrigin": coreOrigin(topLevelOrigin),
-            "isMainFrame": isMainFrame, "hasFormID": hasFormID, "hasUsername": hasUsername,
-            "hasPassword": hasPassword, "passwordKind": passwordKind?.rawValue as Any? ?? NSNull(),
-            "hasVisiblePasswordField": hasVisiblePasswordField as Any? ?? NSNull(),
-            "hasFillTarget": hasFillTarget, "now": now.timeIntervalSince1970,
-            "usernameHint": usernameHint.map { hint in
-                ["origin": coreOrigin(hint.origin), "topLevelOrigin": coreOrigin(hint.topLevelOrigin),
-                 "capturedAt": hint.capturedAt.timeIntervalSince1970] as [String: Any]
-            } as Any? ?? NSNull(),
-            "pendingCandidate": pendingCandidate.map { candidate in
-                ["origin": coreOrigin(candidate.origin),
-                 "submittedAt": candidate.submittedAt.timeIntervalSince1970] as [String: Any]
-            } as Any? ?? NSNull()
-        ]),
-            let action = (response["action"] as? String).flatMap(CredentialCaptureAction.init(rawValue:)),
-            let source = (response["usernameSource"] as? String).flatMap(CredentialUsernameSource.init(rawValue:)),
-            let clearsHint = response["clearsUsernameHint"] as? Bool,
-            let crossOrigin = response["isCrossOriginFrame"] as? Bool,
-            let anchors = response["anchorsToField"] as? Bool,
-            let candidateLifetime = (response["candidateLifetime"] as? NSNumber)?.doubleValue,
-            let hintLifetime = (response["usernameHintLifetime"] as? NSNumber)?.doubleValue,
-            candidateLifetime > 0, hintLifetime > 0
+        let request = CaptureRequest(
+            event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame,
+            hasFormID: hasFormID, hasUsername: hasUsername, hasPassword: hasPassword, passwordKind: passwordKind,
+            hasVisiblePasswordField: hasVisiblePasswordField, hasFillTarget: hasFillTarget,
+            now: now.timeIntervalSince1970,
+            usernameHint: usernameHint.map { hint in
+                CaptureRequest.UsernameHint(
+                    origin: hint.origin, topLevelOrigin: hint.topLevelOrigin,
+                    capturedAt: hint.capturedAt.timeIntervalSince1970)
+            },
+            pendingCandidate: pendingCandidate.map { candidate in
+                CaptureRequest.PendingCandidate(
+                    origin: candidate.origin, submittedAt: candidate.submittedAt.timeIntervalSince1970)
+            })
+        guard let answer = evaluate(.credentialsCapture, request, answer: CaptureAnswer.self),
+            answer.candidateLifetime > 0, answer.usernameHintLifetime > 0
         else { return nil }
         return CredentialCaptureDecision(
-            action: action, usernameSource: source, clearsUsernameHint: clearsHint,
-            isCrossOriginFrame: crossOrigin, anchorsToField: anchors,
-            candidateLifetime: candidateLifetime, usernameHintLifetime: hintLifetime)
+            action: answer.action, usernameSource: answer.usernameSource,
+            clearsUsernameHint: answer.clearsUsernameHint, isCrossOriginFrame: answer.isCrossOriginFrame,
+            anchorsToField: answer.anchorsToField, candidateLifetime: answer.candidateLifetime,
+            usernameHintLifetime: answer.usernameHintLifetime)
     }
 
     /// Whether a fill request for this field may take a saved credential or a
@@ -93,11 +233,11 @@ extension BrowserCorePolicy {
         passwordKind: BrowserCredentialPasswordKind,
         generated: Bool
     ) -> Bool {
-        evaluate([
-            "version": 1, "operation": "credentials.fill", "passwordKind": passwordKind.rawValue,
-            "source": generated ? "generated" : "saved"
-        ])?["allowed"] as? Bool ?? false
+        let request = FillRequest(passwordKind: passwordKind, source: generated ? .generated : .saved)
+        return evaluate(.credentialsFill, request, answer: AllowedCredentialAnswer.self)?.allowed ?? false
     }
+
+    // MARK: - Actions - Saving
 
     /// Whether a save candidate may still be planned or committed. Nil when
     /// the core cannot answer.
@@ -105,11 +245,10 @@ extension BrowserCorePolicy {
         for candidate: BrowserCredentialSaveCandidate,
         now: Date
     ) -> CredentialSaveValidity? {
-        (evaluate([
-            "version": 1, "operation": "credentials.save_validity",
-            "origin": coreOrigin(candidate.origin), "topLevelOrigin": coreOrigin(candidate.topLevelOrigin),
-            "submittedAt": candidate.submittedAt.timeIntervalSince1970, "now": now.timeIntervalSince1970
-        ])?["verdict"] as? String).flatMap(CredentialSaveValidity.init(rawValue:))
+        let request = SaveValidityRequest(
+            origin: candidate.origin, topLevelOrigin: candidate.topLevelOrigin,
+            submittedAt: candidate.submittedAt.timeIntervalSince1970, now: now.timeIntervalSince1970)
+        return evaluate(.credentialsSaveValidity, request, answer: SaveValidityAnswer.self)?.verdict
     }
 
     /// The most recent descriptor, or nil for an empty list. Throws when the
@@ -117,9 +256,8 @@ extension BrowserCorePolicy {
     static func mostRecentCredential(
         _ descriptors: [CredentialDescriptor]
     ) throws -> CredentialDescriptor? {
-        try reduceCredentials(descriptors, batchSize: 64) { batch in
-            ["version": 1, "operation": "credentials.most_recent",
-             "records": batch.map { coreRecord($0, includesUsername: false) }]
+        try reduceCredentials(descriptors, batchSize: 64, operation: .credentialsMostRecent) { batch in
+            CredentialBatchRequest(records: batch.map { CredentialRecord($0, includesUsername: false) })
         }
     }
 
@@ -131,9 +269,9 @@ extension BrowserCorePolicy {
     ) throws -> CredentialDescriptor? {
         // Usernames make these records larger; smaller batches stay inside the
         // policy input limit.
-        try reduceCredentials(descriptors, batchSize: 8) { batch in
-            ["version": 1, "operation": "credentials.save_match", "username": username,
-             "records": batch.map { coreRecord($0, includesUsername: true) }]
+        try reduceCredentials(descriptors, batchSize: 8, operation: .credentialsSaveMatch) { batch in
+            CredentialBatchRequest(
+                username: username, records: batch.map { CredentialRecord($0, includesUsername: true) })
         }
     }
 
@@ -143,30 +281,29 @@ extension BrowserCorePolicy {
         match: CredentialID?,
         storedPasswordMatches: Bool?
     ) throws -> CredentialSavePlanKind {
-        let stored: Any = match.flatMap { id in
-            storedPasswordMatches.map { ["id": coreID(id), "passwordMatches": $0] as [String: Any] }
-        } ?? NSNull()
-        guard let response = evaluate([
-            "version": 1, "operation": "credentials.save_plan",
-            "matchID": match.map(coreID) as Any? ?? NSNull(), "stored": stored
-        ]), let plan = (response["plan"] as? String).flatMap(CredentialSavePlanKind.init(rawValue:)),
-            plan == .create || (response["id"] as? String) == match.map(coreID)
+        let stored = match.flatMap { id in
+            storedPasswordMatches.map { SavePlanRequest.Stored(id: coreID(id), passwordMatches: $0) }
+        }
+        let request = SavePlanRequest(matchID: match.map(coreID), stored: stored)
+        guard let answer = evaluate(.credentialsSavePlan, request, answer: SavePlanAnswer.self),
+            answer.plan == .create || answer.id == match.map(coreID)
         else { throw CredentialVaultError.saveDecisionUnavailable }
-        return plan
+        return answer.plan
     }
 
     /// The composition of a generated password. The password itself is drawn
     /// natively, so it never enters the core.
     static func strongPasswordRecipe(length: Int?) -> (length: Int, groups: [[Character]])? {
-        guard let response = evaluate([
-            "version": 1, "operation": "credentials.password_recipe",
-            "length": length as Any? ?? NSNull()
-        ]), let resolved = response["length"] as? Int,
-            let groups = (response["groups"] as? [String])?.map(Array.init),
-            !groups.isEmpty, groups.allSatisfy({ !$0.isEmpty }), resolved >= groups.count
+        guard
+            let answer = evaluate(
+                .credentialsPasswordRecipe, PasswordRecipeRequest(length: length), answer: PasswordRecipeAnswer.self)
         else { return nil }
-        return (resolved, groups)
+        let groups = answer.groups.map(Array.init)
+        guard !groups.isEmpty, groups.allSatisfy({ !$0.isEmpty }), answer.length >= groups.count else { return nil }
+        return (answer.length, groups)
     }
+
+    // MARK: - Actions - Passkeys and system passwords
 
     /// Passkey access for websites. An unavailable core keeps checking, which
     /// never requests system consent.
@@ -175,12 +312,10 @@ extension BrowserCorePolicy {
         deviceConfiguration: BrowserPasskeyDeviceConfiguration,
         authorizationState: BrowserPasskeyAuthorizationState
     ) -> BrowserPasskeyAccessStatus {
-        (evaluate([
-            "version": 1, "operation": "passkeys.access_status",
-            "hasManagedCapability": hasManagedCapability,
-            "deviceConfiguration": deviceConfiguration.rawValue,
-            "authorizationState": authorizationState.rawValue
-        ])?["status"] as? String).flatMap(BrowserPasskeyAccessStatus.init(rawValue:)) ?? .checking
+        let request = PasskeyAccessRequest(
+            hasManagedCapability: hasManagedCapability, deviceConfiguration: deviceConfiguration,
+            authorizationState: authorizationState)
+        return evaluate(.passkeysAccessStatus, request, answer: PasskeyAccessAnswer.self)?.status ?? .checking
     }
 
     /// Whether this build can offer saved passwords to the system's Passwords
@@ -191,11 +326,10 @@ extension BrowserCorePolicy {
         hasManagedBrowserCapability: Bool,
         isLaunchIsolated: Bool
     ) -> BrowserSystemPasswordWriteThroughAvailability {
-        (evaluate([
-            "version": 1, "operation": "credentials.system_write_through",
-            "isMobilePlatform": isMobilePlatform, "supportsSystemAPI": supportsSystemAPI,
-            "hasManagedBrowserCapability": hasManagedBrowserCapability, "isLaunchIsolated": isLaunchIsolated
-        ])?["availability"] as? String).flatMap(BrowserSystemPasswordWriteThroughAvailability.init(rawValue:))
+        let request = WriteThroughRequest(
+            isMobilePlatform: isMobilePlatform, supportsSystemAPI: supportsSystemAPI,
+            hasManagedBrowserCapability: hasManagedBrowserCapability, isLaunchIsolated: isLaunchIsolated)
+        return evaluate(.credentialsSystemWriteThrough, request, answer: WriteThroughAnswer.self)?.availability
             ?? .unsupportedPlatform
     }
 
@@ -206,25 +340,28 @@ extension BrowserCorePolicy {
         availability: BrowserSystemPasswordWriteThroughAvailability,
         isPrivateBrowsing: Bool
     ) -> Bool {
-        evaluate([
-            "version": 1, "operation": "credentials.system_write_through_offer",
-            "offersSaveToSystemPasswords": preferences.alsoOffersSaveToSystemPasswords,
-            "availability": availability.rawValue, "isPrivateBrowsing": isPrivateBrowsing
-        ])?["offers"] as? Bool ?? false
+        let request = WriteThroughOfferRequest(
+            offersSaveToSystemPasswords: preferences.alsoOffersSaveToSystemPasswords, availability: availability,
+            isPrivateBrowsing: isPrivateBrowsing)
+        return evaluate(.credentialsSystemWriteThroughOffer, request, answer: WriteThroughOfferAnswer.self)?.offers
+            ?? false
     }
+
+    // MARK: - Actions - Batching
 
     /// Reduces a list in core-sized batches. The core's winner of winners is
     /// its winner of the whole list, so batching does not change the answer.
     private static func reduceCredentials(
         _ descriptors: [CredentialDescriptor],
         batchSize: Int,
-        request: ([CredentialDescriptor]) -> [String: Any]
+        operation: BrowserPolicyOperation,
+        request: ([CredentialDescriptor]) -> CredentialBatchRequest
     ) throws -> CredentialDescriptor? {
         func winner(of batch: [CredentialDescriptor]) throws -> CredentialDescriptor? {
-            guard let response = evaluate(request(batch)) else {
+            guard let answer = evaluate(operation, request(batch), answer: CredentialWinnerAnswer.self) else {
                 throw CredentialVaultError.saveDecisionUnavailable
             }
-            guard let id = response["id"] as? String else { return nil }
+            guard let id = answer.id else { return nil }
             guard let descriptor = batch.first(where: { coreID($0.id) == id }) else {
                 throw CredentialVaultError.saveDecisionUnavailable
             }
@@ -239,20 +376,7 @@ extension BrowserCorePolicy {
         return try winner(of: remaining)
     }
 
-    private static func coreOrigin(_ origin: CredentialOrigin) -> [String: Any] {
-        ["scheme": origin.scheme, "host": origin.host, "port": origin.port]
-    }
-
     private static func coreID(_ id: CredentialID) -> String {
-        id.rawValue.uuidString.lowercased()
-    }
-
-    private static func coreRecord(_ descriptor: CredentialDescriptor, includesUsername: Bool) -> [String: Any] {
-        var record: [String: Any] = [
-            "id": coreID(descriptor.id), "updatedAt": descriptor.updatedAt.timeIntervalSince1970,
-            "lastUsedAt": descriptor.lastUsedAt?.timeIntervalSince1970 as Any? ?? NSNull()
-        ]
-        if includesUsername { record["username"] = descriptor.username }
-        return record
+        id.rawValue.coreIdentifier
     }
 }

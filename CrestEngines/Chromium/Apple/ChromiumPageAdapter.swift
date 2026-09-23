@@ -194,7 +194,6 @@
             case .closed: return .closeRequested
             case .creationFailed:
                 return .creationFailed(message: String(localized: "Chromium couldn’t create this page."))
-            case .openRequested: return url.map { .openRequested($0) }
             case .created, .contentMessage, .storeInstall, .storeRemove, .closeCanceled: return nil
             }
         }

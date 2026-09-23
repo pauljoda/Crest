@@ -4,7 +4,7 @@ import Foundation
 /// document. A renderer must never receive another engine's serialized state.
 struct BrowserEngineInteractionState: Codable, Equatable {
     private static let magic = Data("CRESTPAGE1\0".utf8)
-    let engine: String
+    let engine: BrowserEngineImplementation.Family
     let version: String
     let payload: Data
 
@@ -13,14 +13,15 @@ struct BrowserEngineInteractionState: Codable, Equatable {
         return Self.magic + body
     }
 
-    static func payload(_ data: Data, engine: String, version: String) -> Data? {
+    static func payload(_ data: Data, engine: BrowserEngineImplementation.Family, version: String) -> Data? {
         if data.starts(with: magic) {
             guard let state = try? JSONDecoder().decode(Self.self, from: data.dropFirst(magic.count)),
-                state.engine == engine, state.version == version, !state.payload.isEmpty else { return nil }
+                state.engine == engine, state.version == version, !state.payload.isEmpty
+            else { return nil }
             return state.payload
         }
         // Existing archives predate engine tagging and contain only WebKit data.
         // The outer archive has already checked its OS build and destination.
-        return engine == "webkit" && !data.isEmpty ? data : nil
+        return engine == .webKit && !data.isEmpty ? data : nil
     }
 }

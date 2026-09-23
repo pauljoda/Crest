@@ -1,6 +1,6 @@
 /// Ordered by severity, so an escalation is `critical > warning`. The raw
 /// values are the control-plane wire vocabulary for residency policy.
-enum BrowserMemoryPressureLevel: String, Comparable, Sendable {
+enum BrowserMemoryPressureLevel: String, Comparable, Encodable, Sendable {
     case warning
     case critical
 

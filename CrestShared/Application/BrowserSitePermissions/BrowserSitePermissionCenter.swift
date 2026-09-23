@@ -33,8 +33,60 @@ protocol BrowserSitePermissionObserver: AnyObject {
 @Observable
 @MainActor
 final class BrowserSitePermissionCenter {
+    // MARK: - Types
+
     private struct Observer {
         weak var value: (any BrowserSitePermissionObserver)?
+    }
+
+    /// `load`: the saved document, or null when nothing was saved.
+    private struct Load: Encodable {
+        @BrowserCoreNullable var document: String?
+    }
+
+    /// `decision`.
+    private struct Decision: Encodable {
+        let spaceID: String
+        let origin: BrowserSiteOrigin
+        let permission: BrowserSitePermission
+        @BrowserCoreNullable var detail: String?
+        let locked: Bool
+    }
+
+    /// `media_decision`.
+    private struct MediaDecision: Encodable {
+        let spaceID: String
+        let origin: BrowserSiteOrigin
+        let media: BrowserMediaPermission
+        let locked: Bool
+    }
+
+    /// `records`.
+    private struct Records: Encodable {
+        let spaceID: String
+        let locked: Bool
+    }
+
+    /// `set`.
+    private struct SetDecision: Encodable {
+        let spaceID: String
+        let origin: BrowserSiteOrigin
+        let permission: BrowserSitePermission
+        @BrowserCoreNullable var detail: String?
+        let decision: BrowserSitePermissionDecision
+        let recordID: String
+        let now: TimeInterval
+        let locked: Bool
+    }
+
+    /// `reset_record`.
+    private struct ResetRecord: Encodable {
+        let id: String
+    }
+
+    /// `reset_space`.
+    private struct ResetSpace: Encodable {
+        let spaceID: String
     }
 
     private struct DecisionAnswer: Decodable {
@@ -59,6 +111,8 @@ final class BrowserSitePermissionCenter {
         let changes: [Change]
     }
 
+    // MARK: - Variables
+
     private(set) var revision: UInt64 = 0
 
     @ObservationIgnored private let persistence: any BrowserSitePermissionPersisting
@@ -66,11 +120,15 @@ final class BrowserSitePermissionCenter {
     @ObservationIgnored private var observers: [Observer] = []
     @ObservationIgnored private var isSpaceLocked: @MainActor (SpaceID) -> Bool = { _ in false }
 
+    // MARK: - Initializers
+
     init(persistence: any BrowserSitePermissionPersisting) {
         self.persistence = persistence
         let document = persistence.loadDocument().flatMap { String(data: $0, encoding: .utf8) }
-        _ = core.apply("load", ["document": document as Any? ?? NSNull()])
+        _ = core.apply(.load, Load(document: document))
     }
+
+    // MARK: - Actions - Lock state
 
     /// Composition supplies the lock state of every Space it owns. Until then
     /// no Space is locked, as in previews and practice pages that own none.
@@ -78,6 +136,8 @@ final class BrowserSitePermissionCenter {
         isSpaceLocked = isLocked
         revision &+= 1
     }
+
+    // MARK: - Actions - Decisions
 
     /// The choice that applies to one request. `detail` narrows a capability a
     /// site can ask for more than one way.
@@ -88,10 +148,10 @@ final class BrowserSitePermissionCenter {
         in spaceID: SpaceID
     ) -> BrowserSitePermissionDecision {
         _ = revision
-        return answer(DecisionAnswer.self, "decision", [
-            "spaceID": Self.text(spaceID), "origin": origin.coreValue, "permission": permission.rawValue,
-            "detail": detail as Any? ?? NSNull(), "locked": isSpaceLocked(spaceID),
-        ])?.decision ?? .ask
+        let request = Decision(
+            spaceID: spaceID.rawValue.coreIdentifier, origin: origin, permission: permission, detail: detail,
+            locked: isSpaceLocked(spaceID))
+        return answer(DecisionAnswer.self, .decision, request)?.decision ?? .ask
     }
 
     /// Combined capture must respect a block on either device.
@@ -101,18 +161,18 @@ final class BrowserSitePermissionCenter {
         in spaceID: SpaceID
     ) -> BrowserSitePermissionDecision {
         _ = revision
-        return answer(DecisionAnswer.self, "media_decision", [
-            "spaceID": Self.text(spaceID), "origin": origin.coreValue, "media": media.rawValue,
-            "locked": isSpaceLocked(spaceID),
-        ])?.decision ?? .ask
+        let request = MediaDecision(
+            spaceID: spaceID.rawValue.coreIdentifier, origin: origin, media: media, locked: isSpaceLocked(spaceID))
+        return answer(DecisionAnswer.self, .mediaDecision, request)?.decision ?? .ask
     }
 
     func records(in spaceID: SpaceID) -> [BrowserSitePermissionRecord] {
         _ = revision
-        return answer(RecordsAnswer.self, "records", [
-            "spaceID": Self.text(spaceID), "locked": isSpaceLocked(spaceID),
-        ])?.records ?? []
+        let request = Records(spaceID: spaceID.rawValue.coreIdentifier, locked: isSpaceLocked(spaceID))
+        return answer(RecordsAnswer.self, .records, request)?.records ?? []
     }
+
+    // MARK: - Actions - Observers
 
     /// Authorization withdrawal must be synchronous: observation can coalesce
     /// a reset followed by a new grant, leaving old requests authorized.
@@ -120,6 +180,8 @@ final class BrowserSitePermissionCenter {
         observers.removeAll { $0.value == nil || $0.value === observer }
         observers.append(Observer(value: observer))
     }
+
+    // MARK: - Actions - Changes
 
     func setDecision(
         _ decision: BrowserSitePermissionDecision,
@@ -129,28 +191,30 @@ final class BrowserSitePermissionCenter {
         in spaceID: SpaceID,
         at date: Date = .now
     ) {
-        command("set", [
-            "spaceID": Self.text(spaceID), "origin": origin.coreValue, "permission": permission.rawValue,
-            "detail": detail as Any? ?? NSNull(), "decision": decision.rawValue,
-            "recordID": UUID().uuidString.lowercased(), "now": date.timeIntervalSinceReferenceDate,
-            "locked": isSpaceLocked(spaceID),
-        ])
+        command(
+            .set,
+            SetDecision(
+                spaceID: spaceID.rawValue.coreIdentifier, origin: origin, permission: permission, detail: detail,
+                decision: decision, recordID: UUID().coreIdentifier, now: date.timeIntervalSinceReferenceDate,
+                locked: isSpaceLocked(spaceID)))
     }
 
     func reset(recordID: BrowserSitePermissionRecord.ID) {
-        command("reset_record", ["id": recordID.uuidString.lowercased()])
+        command(.resetRecord, ResetRecord(id: recordID.coreIdentifier))
     }
 
     func reset(spaceID: SpaceID) {
-        command("reset_space", ["spaceID": Self.text(spaceID)])
+        command(.resetSpace, ResetSpace(spaceID: spaceID.rawValue.coreIdentifier))
     }
 
     func resetSession() {
-        command("reset_session", [:])
+        command(.resetSession, BrowserCoreNoArguments())
     }
 
-    private func command(_ name: String, _ arguments: [String: Any]) {
-        guard let answer = answer(CommandAnswer.self, name, arguments), answer.applied else { return }
+    private func command<Arguments: Encodable>(
+        _ command: BrowserCoreSitePermissionLedger.Command, _ arguments: Arguments
+    ) {
+        guard let answer = answer(CommandAnswer.self, command, arguments), answer.applied else { return }
         revision &+= 1
         if let document = answer.document {
             persistence.saveDocument(Data(document.utf8))
@@ -166,10 +230,10 @@ final class BrowserSitePermissionCenter {
         }
     }
 
-    private func answer<Answer: Decodable>(_ type: Answer.Type, _ command: String, _ arguments: [String: Any]) -> Answer? {
+    private func answer<Answer: Decodable, Arguments: Encodable>(
+        _ type: Answer.Type, _ command: BrowserCoreSitePermissionLedger.Command, _ arguments: Arguments
+    ) -> Answer? {
         guard let data = core.apply(command, arguments) else { return nil }
         return try? JSONDecoder().decode(type, from: data)
     }
-
-    private static func text(_ spaceID: SpaceID) -> String { spaceID.rawValue.uuidString.lowercased() }
 }

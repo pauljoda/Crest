@@ -915,20 +915,20 @@ final class BrowserTabStateArchiveTests: XCTestCase {
     func testEngineStateRejectsOtherEnginesAndVersionsWhileKeepingLegacyWebKitArchives() throws {
         let payload = Data("opaque engine history".utf8)
         let chromium = try XCTUnwrap(BrowserEngineInteractionState(
-            engine: "chromium", version: "1", payload: payload).encoded())
+            engine: .chromium, version: "1", payload: payload).encoded())
         let webkit = try XCTUnwrap(BrowserEngineInteractionState(
-            engine: "webkit", version: "os-1", payload: payload).encoded())
+            engine: .webKit, version: "os-1", payload: payload).encoded())
 
-        XCTAssertEqual(BrowserEngineInteractionState.payload(chromium, engine: "chromium", version: "1"), payload)
-        XCTAssertEqual(BrowserEngineInteractionState.payload(webkit, engine: "webkit", version: "os-1"), payload)
-        XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: "webkit", version: "1"))
-        XCTAssertNil(BrowserEngineInteractionState.payload(webkit, engine: "chromium", version: "os-1"))
-        XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: "chromium", version: "2"))
-        XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: "chromium", version: "1"))
-        XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: "webkit", version: "1"))
-        XCTAssertEqual(BrowserEngineInteractionState.payload(payload, engine: "webkit", version: "os-1"), payload)
-        XCTAssertNil(BrowserEngineInteractionState.payload(payload, engine: "chromium", version: "1"))
-        XCTAssertNil(BrowserEngineInteractionState(engine: "chromium", version: "1", payload: Data()).encoded())
+        XCTAssertEqual(BrowserEngineInteractionState.payload(chromium, engine: .chromium, version: "1"), payload)
+        XCTAssertEqual(BrowserEngineInteractionState.payload(webkit, engine: .webKit, version: "os-1"), payload)
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: .webKit, version: "1"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(webkit, engine: .chromium, version: "os-1"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: .chromium, version: "2"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: .chromium, version: "1"))
+        XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: .webKit, version: "1"))
+        XCTAssertEqual(BrowserEngineInteractionState.payload(payload, engine: .webKit, version: "os-1"), payload)
+        XCTAssertNil(BrowserEngineInteractionState.payload(payload, engine: .chromium, version: "1"))
+        XCTAssertNil(BrowserEngineInteractionState(engine: .chromium, version: "1", payload: Data()).encoded())
     }
 
     func testNamedReviewArchivesStaySeparateFromProductionAndEphemeralLaunches() throws {

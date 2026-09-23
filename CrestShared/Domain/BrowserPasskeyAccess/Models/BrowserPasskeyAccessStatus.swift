@@ -1,6 +1,6 @@
 import Foundation
 
-enum BrowserPasskeyAccessStatus: String, Equatable, Sendable {
+enum BrowserPasskeyAccessStatus: String, Decodable, Equatable, Sendable {
     case checking
     case managedCapabilityRequired
     case deviceNotConfigured
@@ -74,7 +74,7 @@ enum BrowserPasskeyAccessStatus: String, Equatable, Sendable {
     }
 }
 
-enum BrowserPasskeyAuthorizationState: String, Equatable, Sendable {
+enum BrowserPasskeyAuthorizationState: String, Encodable, Equatable, Sendable {
     case authorized
     case denied
     case notDetermined
@@ -84,7 +84,7 @@ enum BrowserPasskeyCredentialAccessScope: Equatable, Sendable {
     case applicationWideSystemProvider
 }
 
-enum BrowserPasskeyDeviceConfiguration: String, Equatable, Sendable {
+enum BrowserPasskeyDeviceConfiguration: String, Encodable, Equatable, Sendable {
     case configured
     case notConfigured
     case unknown

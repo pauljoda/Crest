@@ -18,7 +18,7 @@ final class BrowserDataRetentionTests: XCTestCase {
 
         XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
         XCTAssertEqual(browser.session.spaces[0].history.map(\.title), ["0", "511", "512", "1024"])
-        XCTAssertFalse(browser.family.executeRecords("records.sweep", from: browser, at: now))
+        XCTAssertFalse(browser.family.executeRecords(.recordsSweep, from: browser, at: now))
     }
 
     func testHistoryRangeDeletionUsesLastVisitAndHalfOpenBoundsWithinItsSpace() throws {

@@ -63,9 +63,11 @@ extension BrowserStore {
         guard family.beginCleanupSweep(at: now) else { return }
         let kept = Set(windows.flatMap { $0.selection.tabSelections.values })
             .union(selection.tabSelections.values)
-        guard family.executeRecords("records.sweep", arguments: [
-            "keepTabIds": kept.map(\.rawValue.uuidString)
-        ], from: self, at: now) else { return }
+        guard
+            family.executeRecords(
+                .recordsSweep, arguments: BrowserSessionArguments.RecordsSweep(keepTabIds: kept.map(\.rawValue)),
+                from: self, at: now)
+        else { return }
         persist(deletionReason: .retention, scope: .everything)
     }
 

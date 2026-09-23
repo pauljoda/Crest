@@ -34,7 +34,7 @@ final class BrowserStoreFamily {
     ) {
         precondition(temporarySourceAssignment == nil, "Borrowed workspaces must be created by their core owner")
         core = BrowserCoreSessionAuthority(session: session,
-            workspaceKind: browsingMode.isPrivate ? "private" : "persistent",
+            workspaceKind: browsingMode.isPrivate ? .private : .persistent,
             privateBrowsing: browsingMode.isPrivate)
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
@@ -136,8 +136,8 @@ final class BrowserStoreFamily {
         scheduleSpaceDataCleanup()
     }
 
-    func executeSpace(_ operation: String, in spaceID: SpaceID? = nil, arguments: [String: Any],
-        from source: BrowserStore, at date: Date = .now) -> Bool {
+    func executeSpace<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
+        arguments: Arguments, from source: BrowserStore, at date: Date = .now) -> Bool {
         let previous = authoritativeSession
         do {
             let result = try core.executeSpace(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
@@ -149,8 +149,9 @@ final class BrowserStoreFamily {
         }
     }
 
-    func executeSpaceDurably(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
-        deletionReason: BrowserSyncTombstoneReason = .superseded, from source: BrowserStore, at date: Date = .now) throws {
+    func executeSpaceDurably<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
+        arguments: Arguments, deletionReason: BrowserSyncTombstoneReason = .superseded, from source: BrowserStore,
+        at date: Date = .now) throws {
         let previous = authoritativeSession
         let command = try core.prepareSpace(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
         try commitPreparedChange(command, previous: previous, deletionReason: deletionReason, from: source, at: date)
@@ -162,7 +163,7 @@ final class BrowserStoreFamily {
         try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: source, at: .now)
     }
 
-    func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: [String: Any], from store: BrowserStore,
+    func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: BrowserCoreTabBatch.Arguments, from store: BrowserStore,
         at date: Date) throws -> (command: BrowserCoreSessionAuthority.PreparedChange, result: BrowserTabBatchResult) {
         try core.prepareTabBatch(request, arguments: arguments, view: store.selection, at: date)
     }
@@ -217,10 +218,10 @@ final class BrowserStoreFamily {
     }
 
     /// A core answer read from the owned session without changing it.
-    func readCore(_ request: [String: Any]) -> Data? { try? core.read(request) }
+    func readCore<Request: Encodable>(_ request: Request) -> Data? { try? core.read(request) }
 
-    func execute(_ operation: String, in spaceID: SpaceID, arguments: [String: Any],
-        from source: BrowserStore, at date: Date) -> BrowserCoreSessionEditing.Result? {
+    func execute<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
+        arguments: Arguments, from source: BrowserStore, at date: Date) -> BrowserCoreSessionEditing.Result? {
         let previous = authoritativeSession
         do {
             let result = try core.execute(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
@@ -240,8 +241,14 @@ final class BrowserStoreFamily {
         return tabID
     }
 
-    func executeRecords(_ operation: String, in spaceID: SpaceID? = nil, arguments: [String: Any] = [:],
+    /// A record command without arguments of its own.
+    func executeRecords(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
         from source: BrowserStore, at date: Date = .now) -> Bool {
+        executeRecords(operation, in: spaceID, arguments: BrowserCoreNoArguments(), from: source, at: date)
+    }
+
+    func executeRecords<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
+        arguments: Arguments, from source: BrowserStore, at date: Date = .now) -> Bool {
         let previous = authoritativeSession
         do {
             let result = try core.executeRecords(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
@@ -254,7 +261,7 @@ final class BrowserStoreFamily {
     }
 
     func moveTab(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment, destination: BrowserSpaceRuntimeAssignment,
-        arguments: [String: Any], from store: BrowserStore, at date: Date) throws {
+        arguments: BrowserCoreTabTransfer.Arguments, from store: BrowserStore, at date: Date) throws {
         let previous = authoritativeSession
         let command = try core.prepareTabMove(tabID, source: source, destination: destination,
             arguments: arguments, view: store.selection, at: date)
@@ -315,7 +322,8 @@ final class BrowserStoreFamily {
 
     /// Whether the core would accept a command in one Space, asked without
     /// committing anything.
-    func accepts(_ operation: String, in spaceID: SpaceID, arguments: [String: Any], from store: BrowserStore) -> Bool {
+    func accepts<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
+        arguments: Arguments, from store: BrowserStore) -> Bool {
         core.accepts(operation, in: spaceID, arguments: arguments, view: store.selection)
     }
 

@@ -1,4 +1,5 @@
-struct BrowserPagePresentationInput: Hashable, Sendable {
+/// Encodes as the core's `page.presentation` request members.
+struct BrowserPagePresentationInput: Encodable, Hashable, Sendable {
     let selection: BrowserPagePresentationSelection
     let hasActivePage: Bool
     let hasNavigationFailure: Bool

@@ -261,7 +261,7 @@ extension BrowserStore {
 
     func setTabEmojiIcon(_ emoji: String, for id: TabID, in spaceID: SpaceID) {
         guard let normalized = BrowserIconSymbol.normalizedEmoji(emoji),
-            setSessionTabIcon("emoji", emoji: normalized, tabID: id, in: spaceID)
+            setSessionTabIcon(.emoji, emoji: normalized, tabID: id, in: spaceID)
         else { return }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
     }
@@ -275,7 +275,7 @@ extension BrowserStore {
         guard let space = space(matching: assignment),
             space.tabs.contains(where: { $0.id == id }),
             let normalized = BrowserIconSymbol.normalizedEmoji(emoji),
-            setSessionTabIcon("emoji", emoji: normalized, tabID: id, in: assignment.spaceID)
+            setSessionTabIcon(.emoji, emoji: normalized, tabID: id, in: assignment.spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
         return true
@@ -288,7 +288,7 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) {
         guard
-            setSessionTabIcon("pulled", faviconData: faviconData,
+            setSessionTabIcon(.pulled, faviconData: faviconData,
                 iconAccent: iconAccent, tabID: id, in: spaceID)
         else { return }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
@@ -303,7 +303,7 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             space.tabs.contains(where: { $0.id == id }),
-            setSessionTabIcon("pulled", faviconData: faviconData,
+            setSessionTabIcon(.pulled, faviconData: faviconData,
                 iconAccent: iconAccent, tabID: id, in: assignment.spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
@@ -325,7 +325,7 @@ extension BrowserStore {
     }
 
     func clearTabIcon(for id: TabID, in spaceID: SpaceID) {
-        guard setSessionTabIcon("automatic", tabID: id, in: spaceID) else { return }
+        guard setSessionTabIcon(.automatic, tabID: id, in: spaceID) else { return }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
     }
 
@@ -336,7 +336,7 @@ extension BrowserStore {
     ) -> Bool {
         guard let space = space(matching: assignment),
             space.tabs.contains(where: { $0.id == id }),
-            setSessionTabIcon("automatic", tabID: id, in: assignment.spaceID)
+            setSessionTabIcon(.automatic, tabID: id, in: assignment.spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .favicon(for: id))
         return true
@@ -348,7 +348,7 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) -> Bool {
         guard
-            setSessionSavedLocation("replace", tabID: id, in: spaceID)
+            setSessionSavedLocation(.replace, tabID: id, in: spaceID)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
@@ -359,7 +359,7 @@ extension BrowserStore {
         _ id: TabID,
         in spaceID: SpaceID
     ) -> URL? {
-        guard setSessionSavedLocation("restore", tabID: id, in: spaceID),
+        guard setSessionSavedLocation(.restore, tabID: id, in: spaceID),
             let url = session.space(id: spaceID)?.tabs.first(where: { $0.id == id })?.url
         else { return nil }
         persist(syncUrgency: .coalesced, scope: .core)
@@ -423,9 +423,11 @@ extension BrowserStore {
             scope = saveScope(for: observation)
         }
         let changedMetadata = scope != nil
-        if family.executeRecords("history.visit", in: assignment.spaceID,
-            arguments: ["url": committedURL.absoluteString, "title": title as Any? ?? NSNull()],
-            from: self) {
+        if family.executeRecords(
+            .historyVisit, in: assignment.spaceID,
+            arguments: BrowserSessionArguments.HistoryVisit(url: committedURL.absoluteString, title: title),
+            from: self)
+        {
             scope = scope ?? .history(in: assignment.spaceID)
             scope?.history = .only([assignment.spaceID])
         }
