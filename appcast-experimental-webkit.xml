@@ -1,0 +1,40 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Crest</title>
+        <item>
+            <title>0.6.133</title>
+            <pubDate>Wed, 23 Sep 2026 15:04:41 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>experimental</sparkle:channel>
+            <sparkle:version>1139</sparkle:version>
+            <sparkle:shortVersionString>0.6.133</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### Maintenance
+
+- Reliability and internal improvements.
+
+---
+
+Experimental builds are signed and notarized snapshots from the selected branch (chromium-control-plane). They may be less reliable than development or stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/0c5005611bf7dcf7b1299532149f35083e9a84aa...d293aa8a864ecc1a302a27f849a6467190172331) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1139-r4.1/Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64.dmg)
+
+[Browse Experimental releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Experimental+builds%22)
+
+### Downloads
+
+- **Crest** (Chromium engine, recommended): `Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64.dmg`
+- **Crest WebKit** (alternate, WebKit engine, updates on its own feed): `Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64-WebKit.dmg`
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/experimental-0.6.133-chromium-control-plane-2026-09-23-1139-r4.1/Installer-Crest-0.6.133-experimental-2026-09-23-d293aa8-arm64-WebKit.dmg" length="27446618" type="application/octet-stream" sparkle:edSignature="EO4+9G+39YGtq20zqSLKrt1kQYRGpfTgl462PdGroOPasJzFI6WvOC3fAd8A6MW7toCoHNRK9iqpybjsM3hTAQ=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: 5fq1cJr5lVLw2m1Qdlp28BP7CKCeISk5aDEnRm8k3mUE9l/khesRBr7CQEPJlHDx/3ivFZ6v3ZRuzSTA+SYtDA==
+length: 2427
+-->
