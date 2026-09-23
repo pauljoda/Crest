@@ -857,9 +857,28 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         processRecovery.recordSuccessfulNavigation()
         showsProcessFailure = false
         needsWebContentRestore = false
-        completedNavigationCount &+= 1
-        updateUnderPageBackground()
         refreshFavicon()
+        publishCompletedNavigation()
+    }
+
+    /// The session keeps only the metadata a completed navigation reports, and
+    /// `webView.title` can still be empty when WebKit finishes a new document.
+    /// Read the settled document title first, then count the completion unless
+    /// another navigation has replaced this document meanwhile.
+    private func publishCompletedNavigation() {
+        let completedURL = webView.url
+        let committedNavigation = committedNavigationCount
+        Task { @MainActor [weak self, weak webView] in
+            guard let self, let webView else { return }
+            let documentTitle = try? await webView.evaluateJavaScript("document.title") as? String
+            guard activeNavigation == nil,
+                committedNavigationCount == committedNavigation,
+                webView.url == completedURL
+            else { return }
+            recordObservedTitle(documentTitle?.isEmpty == false ? documentTitle : webView.title)
+            completedNavigationCount &+= 1
+            updateUnderPageBackground()
+        }
     }
 
     private func recordObservedTitle(_ observedTitle: String?) {

@@ -23687,119 +23687,119 @@
 			path = MobileBrowserSettingsView;
 			sourceTree = "<group>";
 		};
-		"TEMP_22E1A353-4FE6-4793-9345-FDEC01EE90C7" /* BrowserExtensions */ = {
+		"TEMP_0CC0BD3C-0AF6-4939-83F6-0C7B8ADC4874" /* BrowserExtensions */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserExtensions;
 			sourceTree = "<group>";
 		};
-		"TEMP_25E54974-0ECB-4E59-BD98-1E192A3E4C8A" /* Components */ = {
+		"TEMP_1F4E857F-8BA5-44CA-AC7C-FCDBE90E9903" /* BrowserExtensionServices */ = {
 			isa = PBXGroup;
 			children = (
 			);
-			path = Components;
+			path = BrowserExtensionServices;
 			sourceTree = "<group>";
 		};
-		"TEMP_29DEA9A3-A194-4DD8-B590-062EC79EBDD7" /* Crest */ = {
+		"TEMP_24D683E7-0396-4568-9A90-63D9A292D9BD" /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_454352A8-A79D-4A31-A552-F26C2245D600" /* Crest */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = Crest;
 			sourceTree = "<group>";
 		};
-		"TEMP_324E5525-272A-43A2-8886-B56A6C1E74AC" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_366189ED-7944-40A0-A5A6-13F776659174" /* BrowserChromeWebStoreInstallView */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserChromeWebStoreInstallView;
-			sourceTree = "<group>";
-		};
-		"TEMP_4A0FC05B-5A73-44F7-B8FD-A0D9C5B5AAF1" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_6A6CA103-D992-4649-9DB7-96785764E8A3" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_7C73750E-8638-48C2-AFC0-CDA24929DED9" /* BrowserExtensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserExtensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_9C41B499-3D6E-4AE8-967F-D241FAE72514" /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Extensions;
-			sourceTree = "<group>";
-		};
-		"TEMP_A17106B6-C957-48F4-B0DC-D9FA3765F816" /* BrowserMozillaAddonsInstallView */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserMozillaAddonsInstallView;
-			sourceTree = "<group>";
-		};
-		"TEMP_A272FEA8-C18D-4465-87DB-00D9CD0C68CB" /* ExtensionSidebar */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = ExtensionSidebar;
-			sourceTree = "<group>";
-		};
-		"TEMP_BDB03A08-9F74-4D4B-B85B-B4E29A63DB19" /* BrowserExtensionSettingsPane */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserExtensionSettingsPane;
-			sourceTree = "<group>";
-		};
-		"TEMP_D62D0BC3-728F-47B5-B6FA-F4E7628224D9" /* BrowserPinnedExtensionStrip */ = {
+		"TEMP_5120133A-19CD-431F-8728-35D58F5B75AA" /* BrowserPinnedExtensionStrip */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserPinnedExtensionStrip;
 			sourceTree = "<group>";
 		};
-		"TEMP_D728FD19-5547-4916-8774-7E9E1ABC7E81" /* BrowserExtensionServices */ = {
+		"TEMP_518C4628-1668-4532-8F05-055B09B8F814" /* BrowserExtensions */ = {
 			isa = PBXGroup;
 			children = (
 			);
-			path = BrowserExtensionServices;
+			path = BrowserExtensions;
 			sourceTree = "<group>";
 		};
-		"TEMP_D73BD14C-7F99-4D4C-9F34-33EE47ACE285" /* BrowserExtensionsView */ = {
+		"TEMP_63A555BF-0B23-4A87-BBB0-86A801403014" /* ExtensionSidebar */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ExtensionSidebar;
+			sourceTree = "<group>";
+		};
+		"TEMP_647BE919-06AF-46B3-8E2A-E52502F85BF7" /* BrowserChromeWebStoreInstallView */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserChromeWebStoreInstallView;
+			sourceTree = "<group>";
+		};
+		"TEMP_89316080-35B5-4A9D-A974-926620ACB456" /* BrowserExtensionsView */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserExtensionsView;
 			sourceTree = "<group>";
 		};
-		"TEMP_F752E247-8B97-46DB-B5D1-3735EDC45DBC" /* BrowserExtensionServices */ = {
+		"TEMP_8ED768F3-66AD-4BF5-8F14-84340AD21A28" /* Components */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		"TEMP_9158A4ED-F7EA-403F-A3F7-CC49D6107627" /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_B6AED472-6ED2-44EB-9512-B2E7F8FA33D9" /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_B8CB3BBD-236A-43A3-BDD8-7D3B0DD57B53" /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		"TEMP_BFFE05B6-1C30-452B-BD16-AD70F0AAC76F" /* BrowserExtensionServices */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = BrowserExtensionServices;
 			sourceTree = "<group>";
 		};
-		"TEMP_FC800D79-01A1-4074-9BD8-9F9855F889FD" /* Extensions */ = {
+		"TEMP_D65CE6DA-FCA2-47B9-9ED2-E6C93B6382E0" /* BrowserExtensionSettingsPane */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserExtensionSettingsPane;
+			sourceTree = "<group>";
+		};
+		"TEMP_EB984A99-6297-47C8-AA0C-A09FAB097E5C" /* BrowserMozillaAddonsInstallView */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = BrowserMozillaAddonsInstallView;
+			sourceTree = "<group>";
+		};
+		"TEMP_FF8B457D-67D6-47D6-BC6C-B953CC0272D6" /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
 			);

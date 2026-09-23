@@ -2077,6 +2077,10 @@
     "core-typed-policy-requests": {
       "category": "internal",
       "message": "Decode every core policy request into typed records and keep all rule codes, section names and mode values in their central definitions."
+    },
+    "mobile-completed-page-titles": {
+      "category": "fixed",
+      "message": "Background tabs on iPhone keep the page's real title instead of its site name."
     }
   }
 }

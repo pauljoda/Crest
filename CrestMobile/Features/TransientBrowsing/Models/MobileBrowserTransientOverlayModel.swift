@@ -197,13 +197,15 @@ final class MobileBrowserTransientOverlayModel {
             pageIdentity != lastRecordedNavigationPageIdentity
                 || completedNavigationCount != lastRecordedCompletedNavigationCount
         else { return }
-        guard
-            browser.recordVisit(
-                url: url,
-                title: page.title,
-                matching: pageLease.assignment
-            )
-        else { return }
+        // A missing Space leaves the completion unreconciled so a later call
+        // can record it. History declining the URL itself (a non-web page) is
+        // final for this completion, so it still counts as reconciled.
+        guard browser.space(matching: pageLease.assignment) != nil else { return }
+        browser.recordVisit(
+            url: url,
+            title: page.title,
+            matching: pageLease.assignment
+        )
         lastRecordedNavigationPageIdentity = pageIdentity
         lastRecordedCompletedNavigationCount = completedNavigationCount
         activityClock.recordActivity(restartsTimerImmediately: true)
