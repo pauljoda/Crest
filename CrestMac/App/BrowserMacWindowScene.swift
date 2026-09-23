@@ -188,7 +188,13 @@ struct BrowserMacWindowScene: View {
             } ?? NSEvent.mouseLocation
         return BrowserMacWindowDropAction(
             coordinator: coordinator, sourceWindowID: id,
-            open: { openWindow(id: BrowserSceneID.blankWindow.rawValue, value: $0) }
+            open: { request in
+                if let host = BrowserMacWindowPresentation.host {
+                    host.openWindow(request)
+                } else {
+                    openWindow(id: BrowserSceneID.blankWindow.rawValue, value: request)
+                }
+            }
         ).perform(lift.item, at: point, grabFraction: lift.anchorFraction)
     }
 

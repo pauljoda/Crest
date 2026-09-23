@@ -2093,6 +2093,10 @@
     "compact-sidebar-hover-sync": {
       "category": "fixed",
       "message": "In compact mode the sidebar opens and closes reliably on hover again."
+    },
+    "tab-tear-off-new-window": {
+      "category": "fixed",
+      "message": "Dragging a tab out of a window opens it in a new window again."
     }
   }
 }
