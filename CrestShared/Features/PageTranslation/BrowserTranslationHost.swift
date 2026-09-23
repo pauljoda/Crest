@@ -1,6 +1,5 @@
 import SwiftUI
 import Translation
-import WebKit
 
 struct BrowserTranslationHost: ViewModifier {
     @Bindable var translation: BrowserPageTranslation
@@ -21,9 +20,8 @@ struct BrowserTranslationHost: ViewModifier {
     private var offersTranslation: Bool { preferences.offersTranslation }
     private var languageRules: BrowserAutomaticTranslationRules { preferences.translationRules }
 
-    private var translationTarget: WKWebView? {
-        guard page.pageEngine.registration.supports("translation") else { return nil }
-        return page.webKitView
+    private var translationTarget: (any BrowserPageEngine)? {
+        page.pageEngine.registration.supports("translation") ? page.pageEngine : nil
     }
 
     private var detectionID: String {
@@ -35,14 +33,14 @@ struct BrowserTranslationHost: ViewModifier {
         return
             content
             .task(id: detectionID) {
-                guard !Task.isCancelled, let webView = translationTarget else { return }
+                guard !Task.isCancelled, let engine = translationTarget else { return }
                 translation.updatePreferences(
                     automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
                     languageRules: languageRules)
                 translation.setActive(
-                    isActive && !isReaderActive && scenePhase != .background, in: webView, hostID: hostID)
+                    isActive && !isReaderActive && scenePhase != .background, in: engine, hostID: hostID)
                 guard !isLoading, !isReaderActive, isActive else { return }
-                await translation.detect(in: webView)
+                await translation.detect(in: engine)
                 await translation.automaticallyTranslateIfAvailable(enabled: automaticallyTranslates)
             }
             .task(id: "\(translation.languageStatusID)-\(translation.isOffered)-\(isActive)-\(scenePhase)") {
@@ -58,8 +56,8 @@ struct BrowserTranslationHost: ViewModifier {
                     languageRules: languageRules)
             }
             .onDisappear {
-                if let webView = translationTarget {
-                    translation.setActive(false, in: webView, hostID: hostID)
+                if let engine = translationTarget {
+                    translation.setActive(false, in: engine, hostID: hostID)
                 }
             }
             .sheet(isPresented: $translation.showsInformation) {

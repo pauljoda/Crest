@@ -1,5 +1,4 @@
 import AppKit
-import WebKit
 
 /// Native presentation operations used by Crest's existing views. Engine
 /// objects and snapshot configuration stay behind the page boundary.

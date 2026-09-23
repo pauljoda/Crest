@@ -1,4 +1,4 @@
-import WebKit
+import Foundation
 
 extension BrowserPlatformPage {
     func residencyDecision(isSelected: Bool) async -> BrowserPageResidencyDecision {

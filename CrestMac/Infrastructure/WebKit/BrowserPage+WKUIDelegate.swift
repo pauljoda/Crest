@@ -19,7 +19,7 @@ extension BrowserPage: WKUIDelegate {
         mimeType: String,
         originatingURL: URL
     ) {
-        guard webView === self.webView else { return }
+        guard webView === self.webKitView else { return }
         let assignment = BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
         let feedbackSource = BrowserMacDownloadFeedbackSource.capture(in: webView)
         Task { [downloadCenter, spaceName] in
@@ -61,7 +61,7 @@ extension BrowserPage: WKUIDelegate {
     /// uses it, so only a still-valid PiP source may change tab selection.
     @objc(_webViewFullscreenMayReturnToInline:)
     func webViewFullscreenMayReturnToInline(_ webView: WKWebView) {
-        guard webView === self.webView, pictureInPicture?.canRestoreSource == true else { return }
+        guard webView === self.webKitView, pictureInPicture?.canRestoreSource == true else { return }
         host?.restorePictureInPictureSourcePage(self)
     }
 
@@ -186,7 +186,7 @@ extension BrowserPage: WKUIDelegate {
         type: WKMediaCaptureType,
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
-        guard webView === self.webView,
+        guard webView === self.webKitView,
             let topLevelOrigin = webView.url.flatMap(BrowserSiteOrigin.init(url:))
         else {
             decisionHandler(.deny)

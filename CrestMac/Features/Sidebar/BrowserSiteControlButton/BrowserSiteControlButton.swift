@@ -4,6 +4,7 @@ struct BrowserSiteControlButton: View {
     let configuration: BrowserSiteControlConfiguration
 
     @State private var isPresented = false
+    @Environment(\.browserSiteControlAnchor) private var anchor
 
     var body: some View {
         BrowserSiteControlTrigger(
@@ -30,9 +31,7 @@ struct BrowserSiteControlButton: View {
         // extension popup goes when the keyboard asked for one and the
         // extension has no pinned tile to anchor to.
         .background {
-            #if CREST_CHROMIUM_HOST
-                BrowserExtensionPopupAnchorReader(site: .menu)
-            #endif
+            if let anchor { BrowserSiteControlAnchorHost(anchor: anchor) }
         }
         .pagePermissionHost(configuration.page.sitePermissionRequests)
         .onChange(of: configuration.page.sitePermissionRequests.current?.id) {

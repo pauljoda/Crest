@@ -12,6 +12,9 @@ final class ChromiumNativePage: BrowserPageEngine {
     let surface = ChromiumNativePageView()
     var isPrivateBrowsing = false
     private let profileID: UUID
+    /// The browser operations this page may ask for, such as the Space a
+    /// Chrome Web Store listing installs into. Weak: the composition owns it.
+    private weak var hostCommands: (any BrowserEngineHostCommands)?
     var observer: (String, [String: Any]) -> Void
     var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
     var protectedLinkHandler: (URL) -> (() -> Void)? = { _ in nil }
@@ -36,8 +39,10 @@ final class ChromiumNativePage: BrowserPageEngine {
         return page.disposed ? nil : page
     }
 
-    init(profileID: UUID, observer: @escaping (String, [String: Any]) -> Void = { _, _ in }) {
+    init(profileID: UUID, hostCommands: (any BrowserEngineHostCommands)? = nil,
+        observer: @escaping (String, [String: Any]) -> Void = { _, _ in }) {
         self.profileID = profileID
+        self.hostCommands = hostCommands
         self.observer = observer
         surface.page = self
         let reference = Reference()
@@ -96,6 +101,12 @@ final class ChromiumNativePage: BrowserPageEngine {
     }
     private(set) var backHistory: [BrowserNavigationHistoryItem] = []
     private(set) var forwardHistory: [BrowserNavigationHistoryItem] = []
+    private(set) var currentURL: URL?
+    private(set) var canGoBack = false
+    private(set) var canGoForward = false
+    /// Every `changed` report carries the page's history, loading and failure
+    /// state, so the page reads them from it.
+    var reportsNavigationState: Bool { true }
     func mediaActivity() async -> BrowserPageMediaActivity? {
         guard created, !disposed, let values = host?.mediaActivity(forPage: id) else { return nil }
         return BrowserPageMediaActivity(isPlaying: values["playing"] as? Bool == true,
@@ -272,7 +283,8 @@ final class ChromiumNativePage: BrowserPageEngine {
     /// prompt; the reply codes are the host's.
     var permissionHandler: ((BrowserSitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> Int)?
 
-    func clearSiteData() async -> Bool {
+    /// The engine clears the site its page is showing.
+    func clearSiteData(for url: URL) async -> Bool {
         guard created, !disposed, let host else { return false }
         return await withCheckedContinuation { continuation in
             host.clearSiteData(page: id) { cleared in continuation.resume(returning: cleared) }
@@ -362,7 +374,7 @@ final class ChromiumNativePage: BrowserPageEngine {
     private func performStoreRequest(_ event: String, _ values: [String: Any]) {
         let store = CrestChromiumRoot.extensions
         guard !isPrivateBrowsing, let id = values["id"] as? String,
-            let space = CrestChromiumRoot.extensionSpaces.first(where: { $0.profile.id == profileID })
+            let space = hostCommands?.extensionSpace(forProfile: profileID)
         else { refreshStoreState(); return }
         let refresh: @MainActor () -> Void = { [weak self] in self?.refreshStoreState() }
         if event == "store_remove" {
@@ -453,6 +465,9 @@ final class ChromiumNativePage: BrowserPageEngine {
         if event == "changed" {
             backHistory = history(values["backHistory"])
             forwardHistory = history(values["forwardHistory"])
+            canGoBack = values["canGoBack"] as? Bool ?? false
+            canGoForward = values["canGoForward"] as? Bool ?? false
+            currentURL = (values["url"] as? String).map(ChromiumInternalURL.presented).flatMap(URL.init(string:))
             if values["committed"] as? Bool == true { surface.layoutEngineView() }
             pageHost = (values["url"] as? String).flatMap(URL.init(string:))?.host()
             mediaSessionLocation = values["url"] as? String

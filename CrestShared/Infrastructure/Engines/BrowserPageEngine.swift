@@ -16,6 +16,18 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     var nativeView: BrowserEngineView { get }
     var backHistory: [BrowserNavigationHistoryItem] { get }
     var forwardHistory: [BrowserNavigationHistoryItem] { get }
+    /// The engine's own document URL, which can run ahead of the URL the page
+    /// last observed; nil before anything loaded.
+    var currentURL: URL? { get }
+    var canGoBack: Bool { get }
+    var canGoForward: Bool { get }
+    /// True when the engine reports each navigation's state itself, so the page
+    /// takes history availability and failures from those reports instead of
+    /// deriving them from navigation callbacks.
+    var reportsNavigationState: Bool { get }
+    /// Brings supplemental history up to date with the engine's own list and
+    /// answers the URL of its current entry.
+    @discardableResult func synchronizeHistory() -> URL?
     func load(_ request: URLRequest)
     /// One-shot, engine-owned request metadata for a newly created native page.
     /// Tokens never enter the core session, persistence or sync.
@@ -29,9 +41,9 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// Content bridges run by the engine itself, or nil when the page installs
     /// them through the engine's own API.
     var contentScripting: (any BrowserPageContentScripting)? { get }
-    /// Applies Crest's automatic-popup decision for the current site to an
-    /// engine that runs its own popup blocker; false when the page applies it
-    /// through the engine's own preferences instead.
+    /// Applies Crest's automatic-popup decision for the current site, either to
+    /// the engine's own popup blocker or to its page preferences; false when the
+    /// engine has nowhere to apply it.
     func applyAutomaticPopups(_ allowed: Bool) -> Bool
     /// Applies Crest's decision for one site permission to an engine that
     /// enforces it itself: true allows, false blocks, nil leaves it to ask.
@@ -42,9 +54,10 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     func showBlockedPopups() -> Bool
     /// Asks an engine that owns its favicon pipeline to fetch the icon again.
     func refreshFavicon()
-    /// Removes the current site's cookies, storage and cache from an engine
-    /// that keeps its own website data; false when it keeps none.
-    func clearSiteData() async -> Bool
+    /// Removes the site's cookies, storage and cache. `url` names the site the
+    /// page is showing, which an engine that tracks its own site may ignore;
+    /// false when nothing was cleared.
+    func clearSiteData(for url: URL) async -> Bool
     /// Answers a bar the engine raised for the page; false when there is no
     /// such bar.
     func respondToInfoBar(_ id: Int, response: String) -> Bool
@@ -54,6 +67,9 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// An engine that reports its own Media Session and runs its commands;
     /// nil when Crest's bridge runs in the page instead.
     var mediaSessionTransport: (any BrowserMediaSessionTransport)? { get }
+    /// Runs `body` as an async function in a world of the main frame's current
+    /// document that the page cannot see; nil when it produced no value.
+    func evaluateInMainFrame(_ body: String) async -> Any?
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { get }
     func showInspector() -> Bool
@@ -66,6 +82,8 @@ protocol BrowserPageEngine: BrowserFindExecuting {
 }
 
 extension BrowserPageEngine {
+    var reportsNavigationState: Bool { false }
+    @discardableResult func synchronizeHistory() -> URL? { nil }
     func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool { false }
     var interactionState: Data? { nil }
     var contentScripting: (any BrowserPageContentScripting)? { nil }
@@ -73,10 +91,13 @@ extension BrowserPageEngine {
     func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool { false }
     func showBlockedPopups() -> Bool { false }
     func refreshFavicon() {}
-    func clearSiteData() async -> Bool { false }
+    func clearSiteData(for url: URL) async -> Bool { false }
     func respondToInfoBar(_ id: Int, response: String) -> Bool { false }
     var serverTrust: SecTrust? { nil }
     var mediaSessionTransport: (any BrowserMediaSessionTransport)? { nil }
+    func evaluateInMainFrame(_ body: String) async -> Any? {
+        await contentScripting?.callAsyncJavaScriptInMainFrame(body)
+    }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool { false }
     #if os(macOS)
     var documentServices: (any BrowserPageDocumentServices)? { nil }

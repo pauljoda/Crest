@@ -22,6 +22,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
     }
     static var engineHost: (any CrestChromiumEngineHost)? { instance?.host }
+    /// The browser operations engine requests run through.
+    static var hostCommands: (any BrowserEngineHostCommands)? { instance?.application }
+    private var commands: any BrowserEngineHostCommands { application }
     /// External URLs delivered before the root owns a window. Chromium hands
     /// them over during startup, which can be while session recovery is still
     /// on screen; they open once the first window exists.
@@ -75,6 +78,10 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     @objc(startWithHost:)
     static func start(host: any CrestChromiumEngineHost) {
         guard instance == nil, launch == nil else { return }
+        // The Dock plug-in runs outside the browser process, including after quit.
+        // App artwork uses the isolated app's domain, not an environment-only
+        // browsing profile name that the Dock cannot discover.
+        BrowserMacAppIconPreference.defaults = .standard
         let launch = BrowserApplicationLaunch { try CrestChromiumRoot(host: host) }
         Self.launch = launch
         if let root = launch.value { finishStart(root); return }
@@ -134,8 +141,19 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     private init(host: any CrestChromiumEngineHost) throws {
         self.host = host
+        let pageEngines = ChromiumPageEngines()
         application = try BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
-            profileRemover: ChromiumProfileRemover(host: host))
+            profileRemover: ChromiumProfileRemover(host: host),
+            makePageEngine: { pageEngines.make(profileID: $0) },
+            // Site Controls is where a keyboard-triggered extension popup opens
+            // when the extension has no pinned tile to anchor to.
+            siteControlAnchor: BrowserSiteControlAnchor {
+                let anchor = BrowserExtensionPopupAnchorView()
+                anchor.site = .menu
+                return anchor
+            },
+            reviewPersistenceID: "chromium-native-ui-review")
+        pageEngines.hostCommands = application
         restorationDefaults = Self.restorationDefaults()
         restorableWindowIDs = Self.storedRestorableWindowIDs(in: restorationDefaults)
         super.init()
@@ -149,7 +167,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             for (browser, pages) in contexts {
                 let assignment: BrowserSpaceRuntimeAssignment?
                 if let pageID = values["sourcePageId"] as? String {
-                    assignment = pages.chromiumDownloadAssignment(pageID: pageID, profileID: profileID)
+                    assignment = pages.engineDownloadAssignment(pageID: pageID, profileID: profileID)
                 } else {
                     // Background extension downloads have no page. Only route a
                     // uniquely owned profile; never borrow the selected Space.
@@ -175,21 +193,20 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
                 }
                 if values["extensionsChanged"] as? Bool == true { Self.extensions.refresh(); return }
                 guard let self, let token = values["adoptionId"] as? String else { return }
-                for id in self.windows.keys {
-                    if self.application.windowCoordinator.existingModel(for: id)?.pages.adoptChromiumPage(values) == true { return }
+                guard let adoption = BrowserEnginePageAdoption(chromiumValues: values) else {
+                    host.rejectAdoption(token)
+                    return
                 }
-                if self.privateWindow != nil, self.application.privatePages.adoptChromiumPage(values) { return }
+                for id in self.windows.keys {
+                    if self.application.windowCoordinator.existingModel(for: id)?.pages.adoptEnginePage(adoption) == true { return }
+                }
+                if self.privateWindow != nil, self.application.privatePages.adoptEnginePage(adoption) { return }
                 host.rejectAdoption(token)
             }
         }
     }
 
-    static var extensionSpaces: [BrowserSpace] {
-        guard let instance else { return [] }
-        return instance.application.browser.session.spaces.filter {
-            !instance.application.browser.deletingSpaceIDs.contains($0.id) && !instance.application.spaceAccess.isLocked($0)
-        }
-    }
+    static var extensionSpaces: [BrowserSpace] { hostCommands?.extensionSpaces ?? [] }
     /// Whether this store is one of the persistent Spaces' own stores.
     ///
     /// Engine extension profiles belong to the application's persistent store
@@ -213,24 +230,16 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     }
     static func openExtensionURL(_ url: URL, in space: BrowserSpace, window: NSWindow) -> Bool {
         guard let instance, let id = instance.windows.first(where: { $0.value === window })?.key,
-              let model = instance.application.windowCoordinator.existingModel(for: id),
-              model.browser.space(matching: BrowserSpaceRuntimeAssignment(space: space)) != nil,
-              !instance.application.spaceAccess.isLocked(space) else { return false }
+              let destination = URL(string: ChromiumInternalURL.presented(url.absoluteString)) else { return false }
         // Settings and extension options are core-owned tabs even when no web
         // page is active. Do not fabricate an opener or borrow another Space.
-        model.browser.selectSpace(space.id)
-        guard let destination = URL(string: ChromiumInternalURL.presented(url.absoluteString)),
-              model.browser.openNewTab(url: destination, matching: BrowserSpaceRuntimeAssignment(space: space)) != nil else { return false }
-        model.pages.select(session: model.browser.session)
-        return true
+        return instance.commands.openTab(destination, in: BrowserSpaceRuntimeAssignment(space: space), window: id)
     }
 
     static func openExtensionSettings() {
         guard let instance, let model = instance.activeModel, let space = model.browser.selectedSpace,
               !instance.application.spaceAccess.isLocked(space) else { return }
-        model.spaceSettingsPresentation.present(.extensions, assignment: BrowserSpaceRuntimeAssignment(space: space))
-        model.browser.openSettings()
-        model.pages.select(session: model.browser.session)
+        instance.commands.openExtensionSettings(for: BrowserSpaceRuntimeAssignment(space: space), in: model.id)
     }
 
     func openQuickWindow(_ request: BrowserQuickWindowRequest) {
@@ -496,10 +505,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         case .quickWindow:
             openQuickWindow(BrowserQuickWindowRequest(url: url, spaceAssignment: assignment, targetWindowID: model.id))
         case .space:
-            guard browser.openNewTab(url: url, matching: assignment) != nil else { return }
-            model.pages.select(session: browser.session)
-            model.pages.load(url)
-            model.chrome.dismissCommandPalette()
+            guard commands.openExternalLink(url, in: assignment, window: model.id) else { return }
             windows[model.id]?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
@@ -638,7 +644,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             for quick in Array(quickWindows.values) where quick.model.browser.isPrivateBrowsing { quick.window.closeAfterApproval() }
             let profiles = application.privateBrowser.session.spaces.map { $0.profile.id.uuidString }
             application.pagePoolRegistry.unregister(application.privatePages, for: application.privatePages.windowID)
-            application.closePrivateBrowsingWindow()
+            commands.closePrivateBrowsing()
             host.disposePages([], windows: [application.privatePages.windowID.rawValue.uuidString], releaseProfiles: profiles)
             privateWindow = nil
             privateSourceProfile = nil
@@ -707,9 +713,8 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
         let id = BrowserWindowID(rawValue: identifier)
         if instance.windows[id] == nil { instance.openWindow(BrowserMacWindowRequest(id: id, kind: .normal)) }
-        guard let window = instance.windows[id],
-            let model = instance.application.windowCoordinator.existingModel(for: id) else { return }
-        model.browser.selectSpace(space)
+        guard let window = instance.windows[id] else { return }
+        instance.commands.selectSpace(space, in: id)
         if focused {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -735,10 +740,10 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private static func sidePanelHost(for window: NSWindow) -> BrowserExtensionSidePanelHost? {
         guard let instance else { return nil }
         if let id = instance.windows.first(where: { $0.value === window })?.key {
-            return ChromiumExtensionSidePanelHosts.host(for: id)
+            return BrowserExtensionSidePanelHosts.host(for: id)
         }
         guard instance.privateWindow === window else { return nil }
-        return ChromiumExtensionSidePanelHosts.host(for: instance.application.privatePages.windowID)
+        return BrowserExtensionSidePanelHosts.host(for: instance.application.privatePages.windowID)
     }
 
     /// The engine asked for a side-panel card: `chrome.sidePanel.open()`,
@@ -789,11 +794,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
                 Task { @MainActor in
                     for quick in Array(instance.quickWindows.values) { quick.window.closeAfterApproval() }
                     for id in Array(instance.windows.keys) {
-                        guard let model = instance.application.windowCoordinator.existingModel(for: id) else { continue }
-                        model.pages.archiveResidentTabStates()
-                        await model.browser.flushPendingSyncPersistence()
-                        await model.windowState.flushPendingPersistence()
-                        await model.pages.flushPendingTabStateWrites()
+                        await instance.commands.flushPendingPersistence(in: id)
                     }
                     instance.host.disposePages()
                     instance.hasStopped = true
@@ -876,9 +877,8 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         case .settings, .gettingStarted:
             if activeContext == nil { openWindow(.normal(sourceWindowID: nil)) }
             guard let context = activeContext else { return }
-            if action == .settings { context.browser.openSettings() }
-            else { context.browser.openGettingStarted() }
-            context.pages.select(session: context.browser.session)
+            if action == .settings { commands.openSettings(in: context.id) }
+            else { commands.openGettingStarted(in: context.id) }
         }
     }
 

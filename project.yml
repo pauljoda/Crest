@@ -108,11 +108,18 @@ targetTemplates:
     sources:
       - path: Documentation/ReleaseNotes.json
         buildPhase: resources
+      # The WebKit composition's entry point, engine selection and
+      # engine-contributed views; the Chromium sources supply their own.
       - path: CrestShared
         excludes:
           - Resources/CrestIcon/Sources
           - Resources/CrestIcon/Validation
+          - Infrastructure/Engines/BrowserEngineRegistration+Composition.swift
+          - Features/Settings/Components/BrowserEngineExtensionSettingsPane.swift
       - path: CrestMac
+        excludes:
+          - App/CrestApp.swift
+          - Features/SiteSettings/Components/BrowserEngineSiteSections.swift
       - path: CrestEngines/Chromium/Apple
         excludes:
           - CrestChromiumHost.h
@@ -262,6 +269,7 @@ targets:
       - path: CrestTests/BrowserPortableArchiveTests.swift
       - path: CrestTests/BrowserSyncTests.swift
       - path: CrestTests/SuspendingBrowserSpaceDataDeleter.swift
+      - path: CrestTests/Support/BrowserPage+WebKitTestAccess.swift
     dependencies:
       - target: CrestNativeCore
     settings:

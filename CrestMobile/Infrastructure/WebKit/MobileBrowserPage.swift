@@ -18,6 +18,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     let spaceID: SpaceID
     let profileID: UUID
     let webView: WKWebView
+    var webKitView: WKWebView? { webView }
     // iOS composes one engine. Naming its type here keeps the page port in
     // play everywhere it is used while removing the force-cast the history
     // accessor needed to reach a WebKit-only service.
@@ -421,7 +422,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         self.url = url
         appInitiatedURL = url
         prepareForNavigation(to: url)
-        navigationHistory = BrowserPageNavigationHistory()
         guard pageEngine.restoreInteractionState(state, expecting: url) else {
             pendingNavigationURL = nil
             return false

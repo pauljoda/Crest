@@ -76,10 +76,37 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     }
 
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
+        // Supplements describe the list being replaced.
+        history = BrowserPageNavigationHistory()
         guard let payload = BrowserEngineInteractionState.payload(state, engine: "webkit",
             version: BrowserTabStateEnvelope.currentOSBuild) else { return false }
         webView.interactionState = payload
         return webView.backForwardList.currentItem != nil
+    }
+
+    var currentURL: URL? { webView.url }
+    var canGoBack: Bool { webView.canGoBack }
+    var canGoForward: Bool { webView.canGoForward }
+
+    @discardableResult
+    func synchronizeHistory() -> URL? {
+        history.synchronize(with: webView.backForwardList)
+        return webView.backForwardList.currentItem?.url
+    }
+
+    /// WebKit has no popup blocker to tell; the page's preferences carry it.
+    func applyAutomaticPopups(_ allowed: Bool) -> Bool {
+        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically = allowed
+        return true
+    }
+
+    func evaluateInMainFrame(_ body: String) async -> Any? {
+        try? await webView.callAsyncJavaScript(body, arguments: [:], contentWorld: .defaultClient)
+    }
+
+    func clearSiteData(for url: URL) async -> Bool {
+        await BrowserWebsiteDataStore.clearSiteData(for: url, in: webView.configuration.websiteDataStore)
+        return true
     }
 
     var backHistory: [BrowserNavigationHistoryItem] {

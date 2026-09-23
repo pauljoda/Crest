@@ -1,5 +1,4 @@
 import AppKit
-import WebKit
 
 extension BrowserPage {
     // Only an authored minimum width triggers fitting. Tables, carousels, and
@@ -12,31 +11,19 @@ extension BrowserPage {
         """
 
     func fitViewport(width: CGFloat, owner: UUID) async {
-        guard width.isFinite, width > 0, developerViewport == nil,
-            webKitView != nil || pageEngine.contentScripting != nil
-        else { return }
+        guard width.isFinite, width > 0, developerViewport == nil else { return }
         viewportFitOwner = owner
         viewportFitGeneration &+= 1
         let generation = viewportFitGeneration
         let requestedZoom = pageZoom
-        let value: Any?
-        if let webView = webKitView {
-            value = try? await webView.callAsyncJavaScript(
-                Self.authoredMinimumWidthScript, arguments: [:], contentWorld: .defaultClient)
-        } else {
-            value = await pageEngine.contentScripting?.callAsyncJavaScriptInMainFrame(Self.authoredMinimumWidthScript)
-        }
+        let value = await pageEngine.evaluateInMainFrame(Self.authoredMinimumWidthScript)
         guard !Task.isCancelled, viewportFitOwner == owner, viewportFitGeneration == generation,
             pageZoom == requestedZoom, developerViewport == nil, let minimum = (value as? NSNumber)?.doubleValue
         else { return }
         let zoom = BrowserPageViewportFitPolicy.zoom(
             requested: requestedZoom, viewportWidth: width, minimumContentWidth: CGFloat(minimum)
         )
-        if let webView = webKitView {
-            webView.pageZoom = zoom
-        } else {
-            pageEngine.setZoom(zoom)
-        }
+        pageEngine.setZoom(zoom)
     }
 
     func releaseViewportFit(owner: UUID) {

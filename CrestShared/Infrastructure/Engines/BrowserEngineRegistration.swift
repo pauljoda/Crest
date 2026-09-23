@@ -54,15 +54,6 @@ enum BrowserEngineRegistration {
     static let platform = "ios"
     #endif
 
-    /// Selected by the process composition, never by synced Space records.
-    static var current: BrowserAdapterRegistration {
-        #if CREST_CHROMIUM_HOST
-        chromium
-        #else
-        webKit
-        #endif
-    }
-
     static let webKit = BrowserAdapterRegistration(
         id: "engine", role: "engine", implementation: "crest.webkit.\(platform)",
         scope: "Native \(platform) page and profile ports",

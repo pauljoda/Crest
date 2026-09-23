@@ -125,6 +125,9 @@ final class BrowserPagePool:
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
     @ObservationIgnored private let profileRemover: any BrowserEngineProfileRemoving
+    /// Builds the engine behind each new page. Nil builds a WebKit page from
+    /// this pool's own configuration, content rules and website data stores.
+    @ObservationIgnored private let makePageEngine: BrowserPageEngineMaker?
     @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     private var memoryPressureCoalescer: BrowserMemoryPressureCoalescer {
@@ -169,6 +172,7 @@ final class BrowserPagePool:
             @escaping HTTPAuthenticationCredentialSaver = { _, _ in },
         profileRemover:
             any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
+        makePageEngine: BrowserPageEngineMaker? = nil,
         contentRuleListProvider:
             any BrowserContentRuleListProviding = BrowserContentRuleListProvider.shared,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
@@ -213,6 +217,7 @@ final class BrowserPagePool:
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
         self.profileRemover = profileRemover
+        self.makePageEngine = makePageEngine
         contentBlocking = BrowserContentBlockingController(provider: contentRuleListProvider)
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
@@ -382,9 +387,7 @@ final class BrowserPagePool:
 
     func bindRuntimeRouting(_ runtime: BrowserTabRuntime, tabID: TabID) {
         for page in runtime.allPages {
-            #if CREST_CHROMIUM_HOST
-            page.chromiumPage?.isPrivateBrowsing = browsingMode.isPrivate
-            #endif
+            page.engineAdapter.setPrivateBrowsing(browsingMode.isPrivate)
             page.host = self
             page.windowRouting?.pool = self
             page.downloadCenter = downloadCenter
@@ -438,7 +441,8 @@ final class BrowserPagePool:
                     username: request.username, password: request.password, protectionSpace: request.protectionSpace,
                     in: spaceID, replacing: request.replacing)
             },
-            profileRemover: profileRemover, contentRuleListProvider: contentRuleListProvider,
+            profileRemover: profileRemover, makePageEngine: makePageEngine,
+            contentRuleListProvider: contentRuleListProvider,
             popupTabHost: browser.popupTabHost,
             openNewTab: { [weak browser] url in browser?.openNewTab(url: url) },
             openModifiedLink: { [weak browser] url, spaceID, selecting in
@@ -1182,6 +1186,52 @@ final class BrowserPagePool:
         return true
     }
 
+    /// The Space a download belongs to when the engine names its source page.
+    func engineDownloadAssignment(pageID: String, profileID: UUID) -> BrowserSpaceRuntimeAssignment? {
+        let pages = tabRuntimes.values.flatMap(\.allPages) + transientLeases.values.compactMap { $0.value?.page }
+        guard let page = pages.first(where: { $0.engineAdapter.engineIdentifier == pageID }),
+            page.profileID == profileID, !isRuntimeCreationBlocked(in: page.spaceID) else { return nil }
+        return BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
+    }
+
+    /// Retains a page the engine created itself — its opener, history,
+    /// JavaScript state and extension tab identity — in the shared tab runtime.
+    func adoptEnginePage(_ adoption: BrowserEnginePageAdoption) -> Bool {
+        let profile = adoption.profileID
+        let destination: SpaceID
+        if let sourceID = adoption.sourcePageID {
+            guard let opener = tabRuntimes.values.compactMap(\.page)
+                .first(where: { $0.engineAdapter.engineIdentifier == sourceID }),
+                opener.profileID == profile else { return false }
+            destination = opener.spaceID
+        } else {
+            guard adoption.windowID == windowID else { return false }
+            // A window Crest opened for an engine-created window names the
+            // Space it was opened for: it has no page yet to treat as opener.
+            if let target = adoption.spaceID {
+                destination = target
+            } else if let opener = activePage, opener.profileID == profile {
+                destination = opener.spaceID
+            } else { return false }
+        }
+        guard !isRuntimeCreationBlocked(in: destination),
+            let registration = popupTabHost.openTab(adoption.url, destination, adoption.foreground),
+            registration.space.profile.id == profile else { return false }
+        let page = makePage(space: registration.space, tabID: registration.tab.id)
+        page.markOpenedAsPopup()
+        page.updateNavigationContext(tab: registration.tab, automaticallyOpensPeek: false)
+        guard page.engineAdapter.adoptEngineCreatedPage(adoption.token) else {
+            page.prepareForSpaceDeletion()
+            popupTabHost.closeTab(registration.tab.id, registration.space.id)
+            return false
+        }
+        retainResidentPage(page, for: registration.tab.id)
+        residencyRevision &+= 1
+        if adoption.foreground { activate(registration.tab.id, at: .now) }
+        else { observeBackgroundPage(page, for: registration.tab.id, in: registration.space) }
+        return true
+    }
+
     /// Adopts the web view WebKit pre-made for a popup as a new selected tab in
     /// the opener's Space.
     ///
@@ -1194,59 +1244,6 @@ final class BrowserPagePool:
     /// configuration from the opener's, so it already carries the opener's
     /// `websiteDataStore` and web extension controller. The Space lookup only
     /// confirms the tab landed in the opener's own profile.
-    #if CREST_CHROMIUM_HOST
-    func chromiumDownloadAssignment(pageID: String, profileID: UUID) -> BrowserSpaceRuntimeAssignment? {
-        let pages = tabRuntimes.values.flatMap(\.allPages) + transientLeases.values.compactMap { $0.value?.page }
-        guard let page = pages.first(where: { $0.chromiumPage?.id == pageID }),
-            page.profileID == profileID, !isRuntimeCreationBlocked(in: page.spaceID) else { return nil }
-        return BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
-    }
-
-    /// Retain Chromium's original WebContents, including its opener, history,
-    /// JavaScript state and extension tab identity, in the shared tab runtime.
-    func adoptChromiumPage(_ values: [String: Any]) -> Bool {
-        guard let token = values["adoptionId"] as? String,
-            let profile = (values["profileId"] as? String)
-                .flatMap(UUID.init(uuidString:)) else { return false }
-        let destination: SpaceID
-        if let sourceID = values["sourcePageId"] as? String {
-            guard let opener = tabRuntimes.values.compactMap(\.page)
-                .first(where: { $0.chromiumPage?.id == sourceID }),
-                opener.profileID == profile else { return false }
-            destination = opener.spaceID
-        } else {
-            guard values["windowId"] as? String == windowID.rawValue.uuidString else { return false }
-            // A window Crest opened for an engine-created window names the
-            // Space it was opened for: it has no page yet to treat as opener.
-            let target = (values["spaceId"] as? String)
-                .flatMap(UUID.init(uuidString:)).map(SpaceID.init(rawValue:))
-            if let target {
-                destination = target
-            } else if let opener = activePage, opener.profileID == profile {
-                destination = opener.spaceID
-            } else { return false }
-        }
-        guard !isRuntimeCreationBlocked(in: destination),
-            let registration = popupTabHost.openTab(
-                (values["url"] as? String).flatMap(URL.init(string:)), destination,
-                values["foreground"] as? Bool ?? true),
-            registration.space.profile.id == profile else { return false }
-        let page = makePage(space: registration.space, tabID: registration.tab.id)
-        page.markOpenedAsPopup()
-        page.updateNavigationContext(tab: registration.tab, automaticallyOpensPeek: false)
-        guard page.chromiumPage?.adopt(token) == true else {
-            page.prepareForSpaceDeletion()
-            popupTabHost.closeTab(registration.tab.id, registration.space.id)
-            return false
-        }
-        retainResidentPage(page, for: registration.tab.id)
-        residencyRevision &+= 1
-        if values["foreground"] as? Bool ?? true { activate(registration.tab.id, at: .now) }
-        else { observeBackgroundPage(page, for: registration.tab.id, in: registration.space) }
-        return true
-    }
-    #endif
-
     func adoptPopupWebView(
         configuration: WKWebViewConfiguration,
         requestedURL: URL?,
@@ -1278,7 +1275,7 @@ final class BrowserPagePool:
         } else {
             observeBackgroundPage(page, for: registration.tab.id, in: registration.space)
         }
-        return page.webView
+        return page.webKitView
     }
 
     /// Honors `window.close()` by closing the popup's tab through the same store
@@ -1336,28 +1333,28 @@ final class BrowserPagePool:
 
     func routeHostedWebNotificationMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
+            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
         else { return }
         page.receiveHostedWebNotificationMessage(message)
     }
 
     func routeGeolocationMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
+            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
         else { return }
         page.receiveGeolocationMessage(message)
     }
 
     func routeBlockedPopupMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
+            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
         else { return }
         page.receiveBlockedPopupMessage(message)
     }
 
     func routeMediaSessionMessage(_ message: WKScriptMessage) {
         guard let sourceWebView = message.webView,
-            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webView === sourceWebView })
+            let page = tabRuntimes.values.lazy.map(\.page).first(where: { $0.webKitView === sourceWebView })
         else { return }
         page.receiveMediaSessionMessage(message)
     }
@@ -1667,15 +1664,25 @@ final class BrowserPagePool:
             Self.lifecycleSignposter.endInterval("Create Browser Page", interval)
         }
 
-        let contentRuleLists = contentRuleLists(for: space)
         let routing = BrowserPageWindowRouting(pool: self)
+        let engine: any BrowserPageEngineAdapter
+        if adoptedConfiguration == nil, let makePageEngine {
+            engine = makePageEngine(space.profile.id)
+        } else {
+            let contentRuleLists = contentRuleLists(for: space)
+            engine = BrowserWebKitPageAdapter(
+                configuration: adoptedConfiguration
+                    ?? BrowserPageConfiguration.make(
+                        for: space.profile,
+                        websiteDataStore: websiteDataStore(for: space.profile),
+                        contentRuleLists: contentRuleLists
+                    ),
+                contentRuleLists: contentRuleLists,
+                ownsUserContentController: adoptedConfiguration == nil
+            )
+        }
         let page = BrowserPage(
-            configuration: adoptedConfiguration
-                ?? BrowserPageConfiguration.make(
-                    for: space.profile,
-                    websiteDataStore: websiteDataStore(for: space.profile),
-                    contentRuleLists: contentRuleLists
-                ),
+            engine: engine,
             dialogPresenter: dialogPresenter,
             downloadCenter: downloadCenter,
             permissionCenter: permissionCenter,
@@ -1685,8 +1692,6 @@ final class BrowserPagePool:
             spaceID: space.id,
             profileID: space.profile.id,
             spaceName: space.name,
-            contentRuleLists: contentRuleLists,
-            ownsUserContentController: adoptedConfiguration == nil,
             allowsCredentialAccess: !browsingMode.isPrivate,
             isCredentialAccessEnabled:
                 space.credentialPreferences.isEnabled,
@@ -1706,9 +1711,7 @@ final class BrowserPagePool:
             splitLinkHost: splitLinkHost,
             linkDestinationHost: linkDestinationHost
         )
-        #if CREST_CHROMIUM_HOST
-        page.chromiumPage?.isPrivateBrowsing = browsingMode.isPrivate
-        #endif
+        page.engineAdapter.setPrivateBrowsing(browsingMode.isPrivate)
         page.host = self
         page.windowRouting = routing
         return page

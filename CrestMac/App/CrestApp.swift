@@ -1,8 +1,8 @@
 import SwiftUI
 
-#if !CREST_CHROMIUM_HOST
+/// The WebKit composition's entry point. The Chromium framework is entered
+/// through `CrestChromiumRoot` and excludes this file.
 @main
-#endif
 struct CrestApp: App {
     @State private var launch = BrowserApplicationLaunch {
         try BrowserMacApplication(pageClosePreparation: BrowserWebKitPageClosePreparer())
@@ -120,6 +120,8 @@ struct CrestApp: App {
         Window("Private Browsing", id: BrowserSceneID.privateBrowser.rawValue) {
             if let application = launch.value, application.presentsInstalledApplicationUI {
                 application.privateWindowContent
+                    // Closing the scene's window is what ends private browsing.
+                    .onDisappear { application.closePrivateBrowsingWindow() }
             } else {
                 EmptyView()
             }

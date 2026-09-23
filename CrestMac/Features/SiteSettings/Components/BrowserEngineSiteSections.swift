@@ -6,9 +6,8 @@ import SwiftUI
 // these names and never mentions an engine's types; each engine's module
 // supplies its own implementation of them. The declarations below are the
 // WebKit composition — the Chromium framework has its own file, and neither is
-// compiled into the other's target.
-
-#if !CREST_CHROMIUM_HOST
+// compiled into the other's target: the Chromium framework excludes this file
+// in project.yml.
 
 /// Crest's own per-site permission list. WebKit has no permission UI of its
 /// own, so the decisions come from Crest's permission centre and the page is
@@ -59,5 +58,3 @@ struct BrowserEngineSidebarAccessory: View {
 
     var body: some View { EmptyView() }
 }
-
-#endif

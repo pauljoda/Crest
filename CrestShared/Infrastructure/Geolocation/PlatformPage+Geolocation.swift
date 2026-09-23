@@ -2,7 +2,7 @@ import WebKit
 
 extension BrowserPlatformPage {
     func receiveGeolocationMessage(_ message: WKScriptMessage) {
-        if let sourceWebView = message.webView, sourceWebView !== webView {
+        if let sourceWebView = message.webView, sourceWebView !== webKitView {
             host?.routeGeolocationMessage(message)
             return
         }

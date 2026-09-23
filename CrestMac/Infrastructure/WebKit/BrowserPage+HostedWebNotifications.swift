@@ -29,12 +29,12 @@ extension BrowserPage {
     }
 
     func receiveHostedWebNotificationMessage(_ message: WKScriptMessage) {
-        if let sourceWebView = message.webView, sourceWebView !== webView {
+        if let sourceWebView = message.webView, sourceWebView !== webKitView {
             host?.routeHostedWebNotificationMessage(message)
             return
         }
         guard hostedNotificationCenter != nil,
-            message.webView === webView,
+            message.webView === webKitView,
             message.frameInfo.isMainFrame,
             let requestURL = message.frameInfo.request.url,
             let origin = BrowserSiteOrigin(url: requestURL),
@@ -518,6 +518,7 @@ extension BrowserPage {
                 origin: origin
             )
         else { return }
+        let webView = webKitView
         Task { @MainActor [weak self, weak webView] in
             guard let self,
                 isCurrentHostedNotificationDocument(

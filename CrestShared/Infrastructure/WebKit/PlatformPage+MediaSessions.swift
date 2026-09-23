@@ -2,7 +2,7 @@ import WebKit
 
 extension BrowserPlatformPage {
     func receiveMediaSessionMessage(_ message: WKScriptMessage) {
-        guard message.webView === webView else {
+        guard message.webView === webKitView else {
             host?.routeMediaSessionMessage(message)
             return
         }

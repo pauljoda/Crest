@@ -2029,6 +2029,10 @@
     "core-app-preferences": {
       "category": "internal",
       "message": "Keep startup, translation, spell checking, automatic Picture in Picture, pinned-tab close, saved-tab favicon and Split View focus preferences in the portable core, importing existing settings once."
+    },
+    "engine-neutral-page": {
+      "category": "internal",
+      "message": "Split the shared page model from the WebKit adapter and give the Chromium composition a host-commands port instead of direct store edits."
     }
   }
 }

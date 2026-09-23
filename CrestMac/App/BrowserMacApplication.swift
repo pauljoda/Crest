@@ -28,16 +28,24 @@ final class BrowserMacApplication {
     let systemNowPlaying: BrowserSystemNowPlayingCoordinator?
     let startupBehavior: BrowserStartupBehavior
     let presentsInstalledApplicationUI: Bool
+    /// The view an engine anchors its popups to behind Site Controls.
+    let siteControlAnchor: BrowserSiteControlAnchor?
 
+    /// - Parameters:
+    ///   - makePageEngine: The engine behind each page; nil composes WebKit.
+    ///   - siteControlAnchor: A view an engine anchors its popups to behind
+    ///     each window's Site Controls button.
+    ///   - reviewPersistenceID: The isolated store a review build of this
+    ///     composition keeps, so each engine's review app has its own.
     init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil,
-        profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover()) throws {
+        profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
+        makePageEngine: BrowserPageEngineMaker? = nil,
+        siteControlAnchor: BrowserSiteControlAnchor? = nil,
+        reviewPersistenceID: String = "core-native-ui-review") throws {
+        self.siteControlAnchor = siteControlAnchor
         #if CREST_REVIEW_BUILD
         setenv("CREST_ISOLATED_SESSION", "1", 1)
-        #if CREST_CHROMIUM_HOST
-        setenv("CREST_ISOLATED_PERSISTENCE_ID", "chromium-native-ui-review", 0)
-        #else
-        setenv("CREST_ISOLATED_PERSISTENCE_ID", "core-native-ui-review", 0)
-        #endif
+        setenv("CREST_ISOLATED_PERSISTENCE_ID", reviewPersistenceID, 0)
         #endif
         let launchEnvironment = BrowserLaunchEnvironment.current
         let shouldReset = launchEnvironment.resetsSession
@@ -154,6 +162,7 @@ final class BrowserMacApplication {
                 )
             },
             profileRemover: profileRemover,
+            makePageEngine: makePageEngine,
             tabStateArchive: tabStateArchive,
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in browser.openNewTab(url: url) },
@@ -208,6 +217,7 @@ final class BrowserMacApplication {
             browsingMode: .privateBrowsing,
             permissionCenter: BrowserSitePermissionCenter(),
             profileRemover: profileRemover,
+            makePageEngine: makePageEngine,
             // The private pool answers to the private store, so a popup from a
             // private page can only ever land in a private tab.
             popupTabHost: privateBrowser.popupTabHost,
@@ -366,6 +376,7 @@ final class BrowserMacApplication {
             .environment(windowTransparency)
             .environment(softwareUpdates)
             .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
+            .environment(\.browserSiteControlAnchor, siteControlAnchor)
         } else {
             Color.clear.background(
                 BrowserMacWindowAttachment(
@@ -394,6 +405,7 @@ final class BrowserMacApplication {
         .environment(
             \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
         )
+        .environment(\.browserSiteControlAnchor, siteControlAnchor)
         .background(
             BrowserMacWindowAttachment(
                 attach: { window in
@@ -407,11 +419,6 @@ final class BrowserMacApplication {
                 }
             )
         )
-        .onDisappear {
-            #if !CREST_CHROMIUM_HOST
-            self.closePrivateBrowsingWindow()
-            #endif
-        }
     }
 
     func closePrivateBrowsingWindow() {

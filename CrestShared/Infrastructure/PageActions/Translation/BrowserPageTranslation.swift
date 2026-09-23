@@ -81,6 +81,19 @@ final class BrowserPageTranslation {
         return Locale.current.localizedString(forIdentifier: identifier) ?? identifier
     }
 
+    /// Whole-page translation rewrites a live DOM through Apple's Translation
+    /// session, which only the WebKit port exposes; another engine's page
+    /// leaves the translation inert.
+    func setActive(_ active: Bool, in engine: any BrowserPageEngine, hostID: UUID? = nil) {
+        guard let webView = (engine as? BrowserWebKitPageEngine)?.webView else { return }
+        setActive(active, in: webView, hostID: hostID)
+    }
+
+    func detect(in engine: any BrowserPageEngine) async {
+        guard let webView = (engine as? BrowserWebKitPageEngine)?.webView else { return }
+        await detect(in: webView)
+    }
+
     func setActive(_ active: Bool, in webView: WKWebView, hostID: UUID? = nil) {
         // Reparenting a live page can mount its next host before the previous
         // host disappears. Only the current host may end that presentation.

@@ -499,7 +499,7 @@ compositions of that UI, not separate browser interfaces.
 | `CrestCore.Contracts` | Strict JSON parsing, adapter descriptors and protocol validation |
 | `CrestCore.Native` | Exception-contained NativeAOT C exports and numeric handles |
 | `CrestShared/Infrastructure/ControlPlane` | Original UI adapters, accepted session projections and checkpoint handles |
-| `CrestShared/Infrastructure/Engines` | Registered native page and service contracts, including the WebKit page implementation |
+| `CrestShared/Infrastructure/Engines` | Registered native page, host-command and service contracts |
 | `CrestNative/Apple/Composition` | Entitlements for isolated CloudKit review builds |
 | `CrestEngines/Chromium/Apple` | Native SwiftUI composition and Objective-C engine port |
 | `CrestEngines/Chromium/Overlay` | Chromium BrowserWindow, profiles, TabStripModel adoption and native observations |

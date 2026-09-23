@@ -50,13 +50,6 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
         return menuContext
     }
 
-    func openLinkInSplitView(_ url: URL) {
-        guard let context = navigationContext,
-            BrowserCorePolicy.acceptsExternalURL(url)
-        else { return }
-        splitLinkHost.openLink(url, context.tabID, context.assignment)
-    }
-
     func openLink(
         _ url: URL,
         from source: BrowserTabRuntimeAssignment,
@@ -93,6 +86,4 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
     func discardSplitViewLinkCapture() {
         linkContextCapture.clear()
     }
-
-
 }

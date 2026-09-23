@@ -1,51 +1,29 @@
-import WebKit
+import Foundation
 
 extension BrowserPlatformPage {
+    /// Applies Crest's popup decision for the page's site to its engine.
+    func synchronizePopupPermission(for url: URL? = nil) {
+        let origin = (url ?? displayURL ?? pageEngine.currentURL)
+            .flatMap(BrowserSiteOrigin.init(url:))
+        let decision =
+            origin.map {
+                permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
+            } ?? .ask
+        let allowsAutomaticPopups =
+            BrowserCorePolicy.allowsAutomaticPopups(decision: decision)
+        _ = pageEngine.applyAutomaticPopups(allowsAutomaticPopups)
+        recordPopupPermissionSynchronized(
+            allowsAutomaticPopups: allowsAutomaticPopups,
+            origin: origin
+        )
+    }
+
     /// The notice the Site Controls affordance draws, or nil when the running
-    /// engine cannot report a blocked popup at all. Only the WebKit port relays
-    /// its blocker's observations, so an engine that does not declare `popups`
-    /// must not present a control that can never populate.
+    /// engine cannot report a blocked popup at all. An engine that does not
+    /// declare `popups` must not present a control that can never populate.
     var blockedPopupNotice: BrowserBlockedPopupNotice? {
         guard pageEngine.registration.supports("popups") else { return nil }
         return blockedPopupState.notice
-    }
-
-    func receiveBlockedPopupMessage(_ message: WKScriptMessage) {
-        if let sourceWebView = message.webView, sourceWebView !== webView {
-            host?.routeBlockedPopupMessage(message)
-            return
-        }
-        guard message.webView === webView,
-            message.name == BrowserBlockedPopupContentBridge.messageHandlerName,
-            message.frameInfo.isMainFrame,
-            let body = message.body as? [String: Any],
-            (body["version"] as? NSNumber)?.intValue == 1,
-            body["event"] as? String == "blocked",
-            body["userActivated"] as? Bool == false,
-            let documentIdentifier = body["documentIdentifier"] as? String,
-            !documentIdentifier.isEmpty,
-            documentIdentifier.count <= 128,
-            let frameURL = message.frameInfo.request.url,
-            let origin = BrowserSiteOrigin(url: frameURL),
-            let currentURL = webKitView?.url,
-            BrowserSiteOrigin(url: currentURL) == origin,
-            !BrowserCorePolicy.allowsAutomaticPopups(
-                decision: permissionCenter.decision(
-                    for: .popups,
-                    origin: origin,
-                    in: spaceID
-                )
-            )
-        else { return }
-
-        var nextState = blockedPopupState
-        guard
-            nextState.recordBlockedAttempt(
-                documentIdentifier: documentIdentifier,
-                origin: origin
-            )
-        else { return }
-        blockedPopupState = nextState
     }
 
     /// A popup the engine's own blocker held back in the current document.
@@ -75,7 +53,7 @@ extension BrowserPlatformPage {
     func allowAutomaticPopupsForBlockedSite() {
         guard let notice = blockedPopupState.notice,
             notice.status == .blocked,
-            let currentURL = displayURL ?? webKitView?.url,
+            let currentURL = displayURL ?? pageEngine.currentURL,
             BrowserSiteOrigin(url: currentURL) == notice.origin
         else { return }
 

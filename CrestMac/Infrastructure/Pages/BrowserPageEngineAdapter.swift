@@ -1,0 +1,97 @@
+import AppKit
+import Foundation
+
+/// Builds the engine adapter behind a new page for a profile. The composition
+/// chooses the engine; the pool and its pages never name one.
+typealias BrowserPageEngineMaker = @MainActor (_ profileID: UUID) -> any BrowserPageEngineAdapter
+
+/// The desktop half of an engine adapter for one page: the wiring the engine
+/// needs into the page it hosts, and the page controllers only that engine can
+/// build. `BrowserPage` holds one and reaches its engine only through it and
+/// the `BrowserPageEngine` port.
+@MainActor
+protocol BrowserPageEngineAdapter: AnyObject {
+    var engine: any BrowserPageEngine { get }
+    /// The name the engine uses for this page in its own requests, when it
+    /// addresses pages by name.
+    var engineIdentifier: String? { get }
+
+    var linkHover: BrowserLinkHoverController? { get }
+    var linkDrag: BrowserLinkDragController? { get }
+    var pictureInPicture: BrowserPictureInPicturePageController? { get }
+    var readerModeSession: BrowserReaderModeSession? { get }
+    var faviconSession: BrowserFaviconSession? { get }
+    var isContentBlockingActive: Bool { get }
+    /// Evaluates a credential fill in the document that asked for it, for an
+    /// engine whose bridges are not installed through `contentScripting`.
+    var credentialEvaluator: BrowserCredentialSession.Evaluate? { get }
+
+    /// Builds the Media Session coordinator for an engine whose own bridge
+    /// reports it; nil when the engine reports it through `mediaSessionTransport`.
+    func makeMediaSessionCoordinator(
+        for page: BrowserPage,
+        store: BrowserMediaSessionStore
+    ) -> BrowserMediaSessionPageCoordinator?
+    /// Wires the engine's delegates, bridges and observers to `page`, once.
+    func attach(to page: BrowserPage, allowsCredentialAccess: Bool)
+    /// Releases everything `attach` installed. The page is going away.
+    func detach(from page: BrowserPage)
+
+    /// Lets the engine view take part in restoring the page's editing focus.
+    func install(_ focusRestoration: BrowserWebFocusRestorationController)
+    /// Starts reporting the person's input in the page as `.userActivity`.
+    func monitorUserActivity(for page: BrowserPage)
+    func styleVisitedLinks(history: [BrowserHistoryEntry]) async
+    /// Runs when Crest prepares a navigation, before the engine starts it.
+    func prepareForNavigation()
+    func setPrivateBrowsing(_ isPrivate: Bool)
+    /// Takes over a page the engine created itself, named by `token`.
+    func adoptEngineCreatedPage(_ token: String) -> Bool
+}
+
+/// Something the engine observed about its page. The WebKit adapter reports
+/// individual property changes; an engine that reports a navigation snapshot
+/// delivers `.stateChanged`.
+enum BrowserPageEngineEvent {
+    case navigationStarted
+    case stateChanged(BrowserPageEngineState)
+    case urlChanged(URL?)
+    case titleChanged(String?)
+    case progressChanged(Double)
+    case loadingChanged(Bool)
+    case secureContentChanged(Bool)
+    case themeColorChanged(NSColor?)
+    case historyChanged
+    case infoBarAdded(BrowserEngineInfoBar)
+    case infoBarRemoved(id: Int?)
+    case mediaSession(body: Any)
+    case userActivity
+    case linkHovered(URL?)
+    case popupBlocked(pageURL: URL)
+    /// An icon the engine fetched. `source` names the document it belongs
+    /// to; nil means the current one.
+    case favicon(Data?, source: URL?)
+    case developerPanelClosed
+    case closeRequested
+    case creationFailed(message: String)
+    case openRequested(URL)
+}
+
+/// One report of a page's navigation state from an engine that keeps it.
+struct BrowserPageEngineState {
+    enum Failure {
+        case processTerminated
+        case navigationFailed(BrowserNavigationFailure)
+    }
+
+    var url: URL?
+    var title: String
+    var isLoading: Bool
+    var hasOnlySecureContent: Bool
+    var themeColor: NSColor?
+    var canGoBack: Bool
+    var canGoForward: Bool
+    var failure: Failure?
+    /// True when this report ends a navigation that committed a document.
+    var committed: Bool
+}

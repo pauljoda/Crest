@@ -46,11 +46,14 @@ passkeys through the system sheet, docked DevTools, extensions including side
 panels, shortcuts, Space-owned pinned strip and store install. Upgrade from the
 WebKit release is verified.
 
-The largest remaining fork is `CrestMac/Infrastructure/WebKit/BrowserPage.swift`.
-Under `CREST_CHROMIUM_HOST` its `webView` is nil, so every
-`guard let webView = webKitView` site (19 across 8 files) silently no-ops, and
-the WebKit initializer arm that installs Crest's in-page bridges never runs.
-This one fork explains most user-visible gaps on Chromium.
+`BrowserPage` (`CrestMac/Infrastructure/Pages`) holds an
+`any BrowserPageEngineAdapter` and its `any BrowserPageEngine`; it names no
+engine type and has no engine `#if`. The WebKit page adapter
+(`BrowserWebKitPageAdapter` plus the page's WebKit delegate and bridge
+extensions in `CrestMac/Infrastructure/WebKit`) and the Chromium page adapter
+(`ChromiumPageAdapter` in `CrestEngines/Chromium/Apple`) supply the
+engine-specific wiring. The composition chooses the engine; no Swift outside
+`CrestEngines` asks `CREST_CHROMIUM_HOST`.
 
 ## Work packages
 
@@ -112,18 +115,28 @@ bridges through the port instead of the WebKit initializer arm: credentials,
 link hover, link context, blocked popups, media session, user activity,
 visited-link styling, geolocation, hosted notifications. Effort L once.
 
-2b. Split `BrowserPage`. Move `BrowserPage.swift` lines that construct
-WebKit-only controllers into a `BrowserWebKitPageEngine` extension or a
-WebKit page adapter; replace `webKitView` reads (19 sites across 8 files:
-`PlatformPage+Navigation`, `+ContentPolicy`, `+BlockedPopups`, `+Geolocation`,
-`+MediaSessions`, `+Residency`, `BrowserPage+ViewportFit`,
-`BrowserPage+NativePresentation`, `BrowserPage+WKNavigationDelegate`) with
-engine-port calls. Remove the `navigationHistory` discard stub at
-`BrowserPage.swift` and bridge `pageEngine.backHistory/forwardHistory` into it
-so back and forward long-press menus work on Chromium. Remove the
-`(webView as? BrowserDesktopWebView)` back-references. Mobile: `MobileBrowserPage`
-already types its engine concretely; keep it protocol-typed where shared code
-requires. Effort L.
+2b. Split `BrowserPage`. Done. The page and its engine-neutral extensions
+live in `CrestMac/Infrastructure/Pages` and the shared page logic in
+`CrestShared/Infrastructure/Pages`. The pool builds each page's adapter through
+an injected `BrowserPageEngineMaker` (nil builds WebKit from the pool's own
+configuration); `BrowserPage.init(engine:)` takes the adapter, and a WebKit
+convenience initializer keeps `configuration:` callers. The adapter owns the
+engine-built controllers (link hover and drag, Picture in Picture, reader,
+favicons, media capture, content rules, focus restoration, user activity,
+visited links) and wires delegates, bridges and observers in `attach(to:)`.
+The engine reports through typed `BrowserPageEngineEvent`s (granular WebKit
+observations or a `BrowserPageEngineState` snapshot) and
+`BrowserEngineLinkAction`s. The port gained `currentURL`, `canGoBack`,
+`canGoForward`, `reportsNavigationState`, `synchronizeHistory()`,
+`evaluateInMainFrame(_:)` and `clearSiteData(for:)`; WebKit applies automatic
+popups through the port too. Back and forward menus read
+`pageEngine.backHistory/forwardHistory` on both engines, and the failure
+notice's Back leaves a Chromium error page through history. Remaining WebKit
+code in shared paths is WebKit hosting that has no second engine yet:
+`BrowserPagePool` still builds WebKit configurations, ephemeral data stores and
+content rules, adopts WebKit popups and routes `WKScriptMessage`s between pages;
+whole-page translation, hosted notifications and geolocation are WebKit
+bridges. Mobile keeps `MobileBrowserPage` concretely typed.
 
 2c. Small port gaps, all S unless noted:
 - Per-Space default zoom applied above the engine fork; Chromium replays zoom
@@ -156,15 +169,24 @@ toggle command with a `picture_in_picture` event, feeding
 
 2g. Visited-link styling from Crest history through 2a. Effort S.
 
-2h. Host commands port for the Chromium root: replace the direct `BrowserStore`
-mutations in `CrestChromiumRoot` (Space select, new tab, page select, settings,
-sync flush, private window close) and the `ChromiumNativePage` reach into
-`CrestChromiumRoot.extensionSpaces` with a `BrowserEngineHostCommands` port
-owned by the shared layer and implemented by the composition. Effort L.
+2h. Host commands port for the Chromium root. Done. `BrowserEngineHostCommands`
+(`CrestShared/Infrastructure/Engines`) is implemented by `BrowserMacApplication`
+with the same store, page and window operations the WebKit menus, Settings
+presentation and external-link handler run: extension and external tabs,
+Settings, Getting Started, Extensions settings, Space selection (window state),
+quit persistence flush and private-browsing close. `CrestChromiumRoot` and
+`ChromiumNativePage` no longer mutate `BrowserStore`; the page receives the port
+at creation. Engine-created page adoption is the pool's typed
+`adoptEnginePage(_:)`. Still static: the Chromium extension store and side-panel
+routing reach `CrestChromiumRoot.engineHost`, `extensions` and
+`activeNativeWindow`, which are engine-host lookups rather than store edits.
 
 Acceptance for WP2: zero `#if CREST_CHROMIUM_HOST` outside `CrestEngines`
-(currently 24 across 11 files, 10 in `BrowserPage.swift`); zero `webKitView`
-reads outside the WebKit adapter; back-forward menus, hover URL, blocked-popup
+(met: the composition now selects its entry point, engine registration and
+engine-contributed views by file in `project.yml`, and injects the page
+engine, Site Controls anchor, icon defaults domain and review store); zero
+`webKitView` reads outside the WebKit adapter (met, apart from the pool's
+WebKit hosting noted in 2b); back-forward menus, hover URL, blocked-popup
 notice, media controls and Quick Window activity work on Chromium; both
 `Crest` and `CrestChromiumUI` build; retained behavioral tests pass.
 
