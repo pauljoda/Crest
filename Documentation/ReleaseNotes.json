@@ -2101,6 +2101,10 @@
     "update-whats-new-window": {
       "category": "fixed",
       "message": "What's New on the sidebar's update card opens the full release notes again."
+    },
+    "store-first-presentation-state": {
+      "category": "internal",
+      "message": "Store window presentation, find, peek and Space lock state before announcing a change, so a render SwiftUI performs during the announcement never keeps a stale value."
     }
   }
 }

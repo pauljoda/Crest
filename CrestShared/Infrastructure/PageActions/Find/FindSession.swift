@@ -3,7 +3,11 @@ import Observation
 @Observable
 @MainActor
 final class BrowserFindSession {
-    private(set) var isPresented = false
+    private(set) var isPresented: Bool {
+        get { observed(\.isPresentedStorage, as: \.isPresented) }
+        set { publish(newValue, into: \.isPresentedStorage, as: \.isPresented) }
+    }
+    @ObservationIgnored private var isPresentedStorage = false
     private(set) var matchState = BrowserFindMatchState.idle
     /// Which match the last completed search selected, out of how many; nil
     /// when nothing was found or the engine cannot count.
@@ -76,3 +80,5 @@ final class BrowserFindSession {
         return configuration
     }
 }
+
+extension BrowserFindSession: BrowserStoreFirstObservable {}

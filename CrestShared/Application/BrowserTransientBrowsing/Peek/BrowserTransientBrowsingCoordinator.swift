@@ -4,13 +4,17 @@ import Observation
 @Observable
 @MainActor
 final class BrowserTransientBrowsingCoordinator {
-    private struct PeekPresentation {
+    private struct PeekPresentation: Equatable {
         let request: BrowserPeekRequest
         var phase: BrowserPeekPresentationPhase
         var motion: BrowserPeekMotionState?
     }
 
-    private var peeks: [PeekPresentation] = []
+    private var peeks: [PeekPresentation] {
+        get { observed(\.peeksStorage, as: \.peeks) }
+        set { publish(newValue, into: \.peeksStorage, as: \.peeks) }
+    }
+    @ObservationIgnored private var peeksStorage = [PeekPresentation]()
     var peekRequests: [BrowserPeekRequest] { peeks.map(\.request) }
     var peekRequest: BrowserPeekRequest? { peeks.last?.request }
     var peekPresentationPhase: BrowserPeekPresentationPhase? { peeks.last?.phase }
@@ -108,3 +112,5 @@ final class BrowserTransientBrowsingCoordinator {
         return true
     }
 }
+
+extension BrowserTransientBrowsingCoordinator: BrowserStoreFirstObservable {}

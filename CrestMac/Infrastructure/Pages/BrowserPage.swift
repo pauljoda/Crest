@@ -32,7 +32,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     private(set) var title = ""
     private(set) var estimatedProgress = 0.0
     private(set) var isLoading = false
-    private(set) var isContentFullscreen = false
+    private(set) var isContentFullscreen: Bool {
+        get { observed(\.isContentFullscreenStorage, as: \.isContentFullscreen) }
+        set { publish(newValue, into: \.isContentFullscreenStorage, as: \.isContentFullscreen) }
+    }
+    @ObservationIgnored private var isContentFullscreenStorage = false
     /// The engine's judgment of the current document's connection.
     private(set) var securityState = BrowserPageSecurityState.none
     private(set) var faviconData: Data?
@@ -1181,3 +1185,5 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         return faviconData
     }
 }
+
+extension BrowserPage: BrowserStoreFirstObservable {}

@@ -13,7 +13,11 @@ final class BrowserSpaceAccessController {
     /// The core session authority gates its commands on these same grants.
     var coreAccess: BrowserCoreSpaceAccess { core }
     @ObservationIgnored private var activeRequest: UInt64?
-    private var accessRevision: UInt = 0
+    private var accessRevision: UInt {
+        get { observed(\.accessRevisionStorage, as: \.accessRevision) }
+        set { publish(newValue, into: \.accessRevisionStorage, as: \.accessRevision) }
+    }
+    @ObservationIgnored private var accessRevisionStorage = UInt(0)
     init(
         authenticator: any BrowserDeviceAuthenticating = SystemBrowserDeviceAuthenticator()
     ) {
@@ -116,3 +120,5 @@ final class BrowserSpaceAccessController {
         authenticatingAssignment = nil
     }
 }
+
+extension BrowserSpaceAccessController: BrowserStoreFirstObservable {}

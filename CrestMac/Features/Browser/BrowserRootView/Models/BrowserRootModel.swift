@@ -39,27 +39,23 @@ final class BrowserRootModel {
     var isPrepared = false
     @ObservationIgnored private var isPreparingBrowser = false
     var visibleNotice: BrowserNotice?
-    /// Stored before observers hear about the change. The hover trackers set
-    /// this from AppKit enter/exit events, and in the Chromium host SwiftUI can
-    /// render the window while the change is still being announced. A render
-    /// there must read the new value: one that reads the old value also
-    /// consumes the change, leaving the sidebar stuck open or unable to open.
     var isFloatingSidebarPresented: Bool {
-        get {
-            access(keyPath: \.isFloatingSidebarPresented)
-            return floatingSidebarPresented
-        }
-        set {
-            guard newValue != floatingSidebarPresented else { return }
-            floatingSidebarPresented = newValue
-            withMutation(keyPath: \.isFloatingSidebarPresented) {}
-        }
+        get { observed(\.isFloatingSidebarPresentedStorage, as: \.isFloatingSidebarPresented) }
+        set { publish(newValue, into: \.isFloatingSidebarPresentedStorage, as: \.isFloatingSidebarPresented) }
     }
-    @ObservationIgnored private var floatingSidebarPresented = false
-    private(set) var isSidebarMorphing = false
+    @ObservationIgnored private var isFloatingSidebarPresentedStorage = false
+    private(set) var isSidebarMorphing: Bool {
+        get { observed(\.isSidebarMorphingStorage, as: \.isSidebarMorphing) }
+        set { publish(newValue, into: \.isSidebarMorphingStorage, as: \.isSidebarMorphing) }
+    }
+    @ObservationIgnored private var isSidebarMorphingStorage = false
     /// True while the page row is making the sidebar's dock available, before
     /// the persistent floating card adopts its docked appearance.
-    private(set) var isSidebarApproachingDock = false
+    private(set) var isSidebarApproachingDock: Bool {
+        get { observed(\.isSidebarApproachingDockStorage, as: \.isSidebarApproachingDock) }
+        set { publish(newValue, into: \.isSidebarApproachingDockStorage, as: \.isSidebarApproachingDock) }
+    }
+    @ObservationIgnored private var isSidebarApproachingDockStorage = false
     private(set) var isSidebarSurfaceHovered = false
     private var sidebarMorphRevision = 0
     /// Cancels or awaits the current sidebar transition.
@@ -67,7 +63,11 @@ final class BrowserRootModel {
     /// Injectable phase timing for sidebar transitions.
     @ObservationIgnored
     var sidebarMorphWait: SidebarMorphWait = { try await Task.sleep(for: $0) }
-    var isWindowFocused = true
+    var isWindowFocused: Bool {
+        get { observed(\.isWindowFocusedStorage, as: \.isWindowFocused) }
+        set { publish(newValue, into: \.isWindowFocusedStorage, as: \.isWindowFocused) }
+    }
+    @ObservationIgnored private var isWindowFocusedStorage = true
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
     /// Live widths stay local until the divider drag commits.
     var splitWidthTransaction = BrowserSplitWidthTransaction(
@@ -738,3 +738,5 @@ extension BrowserRootModel {
         return pages.downloadCenter.unacknowledgedItems(for: profileID)
     }
 }
+
+extension BrowserRootModel: BrowserStoreFirstObservable {}
