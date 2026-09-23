@@ -2097,6 +2097,10 @@
     "tab-tear-off-new-window": {
       "category": "fixed",
       "message": "Dragging a tab out of a window opens it in a new window again."
+    },
+    "update-whats-new-window": {
+      "category": "fixed",
+      "message": "What's New on the sidebar's update card opens the full release notes again."
     }
   }
 }

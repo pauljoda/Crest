@@ -7,6 +7,7 @@ protocol BrowserMacWindowPresenting: AnyObject {
     func openOnboardingWindow(_ request: BrowserOnboardingRequest)
     func openPrivateWindow()
     func openQuickWindow(_ request: BrowserQuickWindowRequest)
+    func openSoftwareUpdateDetails()
 }
 
 @MainActor

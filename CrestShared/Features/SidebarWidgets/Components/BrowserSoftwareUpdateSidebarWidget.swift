@@ -5,7 +5,7 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
     let update: BrowserSoftwareUpdateWidgetSnapshot
     let perform: (BrowserSidebarWidgetAction, BrowserSidebarWidgetID) -> Void
 
-    @Environment(\.openWindow) private var openWindow
+    @Environment(\.browserSoftwareUpdateDetails) private var showDetails
 
     var body: some View {
         VStack(alignment: .leading, spacing: BrowserSidebarWidgetDeckStyle.contentSpacing) {
@@ -50,15 +50,13 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
                         .lineLimit(1)
                 }
 
-                if hasDetails {
-                    Button("What's New") {
-                        openWindow(id: BrowserSoftwareUpdateSceneID.details)
-                    }
-                    .buttonStyle(.plain)
-                    .font(CrestTypography.metadata.weight(.medium))
-                    .foregroundStyle(CrestBrandTheme.accent)
-                    .accessibilityLabel("Review update details")
-                    .help("Review update details")
+                if hasDetails, let showDetails {
+                    Button("What's New", action: showDetails)
+                        .buttonStyle(.plain)
+                        .font(CrestTypography.metadata.weight(.medium))
+                        .foregroundStyle(CrestBrandTheme.accent)
+                        .accessibilityLabel("Review update details")
+                        .help("Review update details")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -285,4 +283,10 @@ private struct BrowserSoftwareUpdateApplicationIcon: View {
                 height: BrowserSidebarWidgetDeckStyle.headerTileSize
             )
     }
+}
+
+extension EnvironmentValues {
+    /// Opens the full release notes for the update a card presents. Nil where
+    /// the shell has no window to show them in, which leaves out What's New.
+    @Entry var browserSoftwareUpdateDetails: (@MainActor () -> Void)? = nil
 }

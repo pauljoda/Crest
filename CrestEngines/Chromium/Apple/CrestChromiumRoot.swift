@@ -59,6 +59,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
     }
     private var onboardingWindow: NSWindow?
+    private var softwareUpdateDetailsWindow: NSWindow?
     private var privateWindow: NSWindow?
     private var privateSourceProfile: UUID?
     static var privateSourceProfileID: UUID? { instance?.privateSourceProfile }
@@ -367,6 +368,32 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         window.makeKeyAndOrderFront(nil)
     }
 
+    /// The release notes for the update the sidebar card presents. One window,
+    /// brought forward when asked again, and never restored at launch.
+    func openSoftwareUpdateDetails() {
+        if let softwareUpdateDetailsWindow { softwareUpdateDetailsWindow.makeKeyAndOrderFront(nil); return }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 520),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window.identifier = NSUserInterfaceItemIdentifier(BrowserSceneID.softwareUpdateDetails.rawValue)
+        window.title = String(localized: "What's New in Crest")
+        window.isReleasedWhenClosed = false
+        window.isRestorable = false
+        softwareUpdateDetailsWindow = window
+        let content = NSHostingController(rootView: BrowserSoftwareUpdateDetailsView(
+            model: application.softwareUpdates.model,
+            hostClose: { [weak window] in window?.close() }
+        ).tint(CrestBrandTheme.accent))
+        // Keep the content's minimum as the window's, as the scene does, but
+        // open at the scene's default size rather than the content's ideal one.
+        content.sizingOptions = [.minSize]
+        window.contentViewController = content
+        window.setContentSize(NSSize(width: 620, height: 520))
+        NotificationCenter.default.addObserver(self, selector: #selector(windowClosed(_:)),
+            name: NSWindow.willCloseNotification, object: window)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+    }
+
     // MARK: - Restoration
 
     /// The defaults domain this launch persists window state into. It mirrors
@@ -625,6 +652,12 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         guard let window = notification.object as? NSWindow else { return }
         if window === onboardingWindow {
             onboardingWindow = nil
+            window.contentViewController = nil
+            NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
+            return
+        }
+        if window === softwareUpdateDetailsWindow {
+            softwareUpdateDetailsWindow = nil
             window.contentViewController = nil
             NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
             return

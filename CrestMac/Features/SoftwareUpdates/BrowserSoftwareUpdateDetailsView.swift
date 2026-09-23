@@ -6,6 +6,9 @@ import SwiftUI
 /// pending choice, and only the sidebar's explicit What's New control opens it.
 struct BrowserSoftwareUpdateDetailsView: View {
     let model: BrowserSoftwareUpdateModel
+    /// Closes the window a process host built for this view. Scenes close
+    /// themselves through the environment instead.
+    var hostClose: (() -> Void)? = nil
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
@@ -37,7 +40,27 @@ struct BrowserSoftwareUpdateDetailsView: View {
         .background(CrestBrandTheme.canvas)
         .onChange(of: model.phase, initial: true) { _, phase in
             guard phase == .idle else { return }
-            dismissWindow(id: BrowserSoftwareUpdateSceneID.details)
+            if let hostClose {
+                hostClose()
+            } else {
+                dismissWindow(id: BrowserSceneID.softwareUpdateDetails.rawValue)
+            }
+        }
+    }
+}
+
+/// Gives the sidebar's update card the window that shows full release notes:
+/// the process host's when one presents windows, the SwiftUI scene otherwise.
+struct BrowserSoftwareUpdateDetailsPresentation: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+
+    func body(content: Content) -> some View {
+        content.environment(\.browserSoftwareUpdateDetails) {
+            if let host = BrowserMacWindowPresentation.host {
+                host.openSoftwareUpdateDetails()
+            } else {
+                openWindow(id: BrowserSceneID.softwareUpdateDetails.rawValue)
+            }
         }
     }
 }

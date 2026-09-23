@@ -354,6 +354,7 @@ final class BrowserMacApplication {
             .environment(softwareUpdates)
             .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
             .environment(\.browserSiteControlAnchor, siteControlAnchor)
+            .modifier(BrowserSoftwareUpdateDetailsPresentation())
         } else {
             Color.clear.background(
                 BrowserMacWindowAttachment(
@@ -383,6 +384,7 @@ final class BrowserMacApplication {
             \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
         )
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
+        .modifier(BrowserSoftwareUpdateDetailsPresentation())
         .background(
             BrowserMacWindowAttachment(
                 attach: { window in

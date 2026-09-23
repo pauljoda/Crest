@@ -7,10 +7,6 @@ struct BrowserSidebarWidgetKindID: RawRepresentable, Hashable, Sendable {
     static let softwareUpdate = Self(rawValue: "crest.software-update")
 }
 
-enum BrowserSoftwareUpdateSceneID {
-    static let details = "software-update-details"
-}
-
 struct BrowserSidebarWidgetID: Hashable, Identifiable, Sendable {
     let kindID: BrowserSidebarWidgetKindID
     let instanceID: String
