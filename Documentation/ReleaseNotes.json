@@ -2113,6 +2113,10 @@
     "downloads-typed-core-contract": {
       "category": "internal",
       "message": "Downloads run through the typed core contract, with one core per process and one download center per browsing mode across windows."
+    },
+    "download-progress-risk-queries": {
+      "category": "internal",
+      "message": "Download progress and risk are typed core queries instead of JSON policy operations."
     }
   }
 }

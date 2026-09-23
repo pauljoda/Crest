@@ -23,7 +23,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
     private var downloads: [ObjectIdentifier: WKDownload] = [:]
     private var itemIDs: [ObjectIdentifier: UUID] = [:]
     private var progressObservations: [ObjectIdentifier: AnyCancellable] = [:]
-    private var transferEstimators: [ObjectIdentifier: BrowserDownloadTransferEstimator] = [:]
+    private var transferEstimators: [ObjectIdentifier: DownloadTransferEstimator] = [:]
     private var stagingURLs: [ObjectIdentifier: URL] = [:]
     private var destinationURLs: [ObjectIdentifier: URL] = [:]
     private var securityScopedResources: [ObjectIdentifier: URL] = [:]
@@ -346,7 +346,6 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         authenticationSessions[key] = center.makeAuthenticationSession(in: spaceID)
         download.delegate = self
         let progress = download.progress
-        transferEstimators[key] = BrowserDownloadTransferEstimator()
         progressObservations[key] = Publishers.CombineLatest4(
             progress.publisher(
                 for: \.completedUnitCount,
@@ -376,10 +375,10 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         )
         .sink { [weak self] completed, total, fraction, isPaused in
             MainActor.assumeIsolated {
-                guard let self,
-                    var estimator = self.transferEstimators[key]
-                else { return }
-                let update = estimator.sample(
+                guard let self, self.itemIDs[key] != nil else { return }
+                var estimator = self.transferEstimators[key]
+                let update = self.center.sampleProgress(
+                    &estimator,
                     completedUnitCount: completed,
                     totalUnitCount: total,
                     fractionCompleted: fraction,
@@ -421,7 +420,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         let isUserInitiated =
             download.isUserInitiated
             || userInitiatedOverrideKeys.contains(key)
-        let verdict = BrowserDownloadRiskVerdict.assess(
+        let verdict = center.riskVerdict(
             suggestedFilename: effectiveSuggestedFilename,
             mimeType: response.mimeType,
             isUserInitiated: isUserInitiated

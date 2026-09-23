@@ -40,7 +40,12 @@ public sealed class CrestApp {
     public TAnswer Query<TAnswer>(Query<TAnswer> query) {
         ArgumentNullException.ThrowIfNull(query);
         lock (gate) {
-            throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.");
+            object answer = query switch {
+                DownloadProgress progress => downloads.Answer(progress),
+                DownloadRisk risk => downloads.Answer(risk),
+                _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
+            };
+            return (TAnswer)answer;
         }
     }
 

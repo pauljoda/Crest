@@ -132,36 +132,6 @@ enum BrowserCorePolicy {
         @BrowserCoreOptional var action: BrowserTabDismissalAction?
     }
 
-    private struct DownloadRiskRequest: Encodable {
-        let suggestedFilename: String
-        let sanitizedFilename: String
-        @BrowserCoreNullable var mimeType: String?
-        let extensionRunsCode: Bool
-        let mimeTypeRunsCode: Bool
-        @BrowserCoreNullable var typesRelated: Bool?
-        let userInitiated: Bool
-    }
-
-    private struct DownloadRiskAnswer: Decodable {
-        /// The core's risk reason spellings.
-        enum Reason: String, Decodable {
-            case executableOrInstaller
-            case deceptiveFilename
-            case dangerousTypeMismatch
-
-            var reason: DownloadRiskReason {
-                switch self {
-                case .executableOrInstaller: .executableOrInstaller
-                case .deceptiveFilename: .deceptiveFilename
-                case .dangerousTypeMismatch: .dangerousTypeMismatch
-                }
-            }
-        }
-
-        @BrowserCoreOptional var reasons: BrowserCoreKnownValues<Reason>?
-        @BrowserCoreOptional var requiresConfirmation: Bool?
-    }
-
     private struct AutomaticDownloadRequest: Encodable {
         let userInitiated: Bool
         let userApprovedRetry: Bool
@@ -172,35 +142,6 @@ enum BrowserCorePolicy {
     private struct AutomaticDownloadAnswer: Decodable {
         let hasAllowedAutomaticDownload: Bool
         @BrowserCoreOptional var action: BrowserAutomaticDownloadAction?
-    }
-
-    private struct DownloadProgressRequest: Encodable {
-        @BrowserCoreNullable var estimator: BrowserCoreOpaqueValue?
-        let completedUnitCount: Int64
-        let totalUnitCount: Int64
-        let fractionCompleted: Double
-        let isPaused: Bool
-        let uptime: TimeInterval
-    }
-
-    private struct DownloadProgressAnswer: Decodable {
-        struct Telemetry: Decodable {
-            let bytesReceived: Int64
-            @BrowserCoreOptional var totalBytes: Int64?
-            @BrowserCoreOptional var bytesPerSecond: Double?
-            @BrowserCoreOptional var estimatedTimeRemaining: Double?
-            let isPaused: Bool
-
-            var telemetry: DownloadTelemetry {
-                DownloadTelemetry(
-                    bytesReceived: bytesReceived, totalBytes: totalBytes, bytesPerSecond: bytesPerSecond,
-                    estimatedTimeRemaining: estimatedTimeRemaining, isPaused: isPaused)
-            }
-        }
-
-        let estimator: BrowserCoreOpaqueValue
-        let telemetry: Telemetry
-        let progress: Double
     }
 
     // MARK: - Variables
@@ -339,24 +280,6 @@ enum BrowserCorePolicy {
 
     // MARK: - Actions - Downloads
 
-    /// Risk reasons and the confirmation rule for one download. An unavailable
-    /// core asks the person before saving rather than guessing the file is safe.
-    static func downloadRisk(
-        suggestedFilename: String, sanitizedFilename: String, mimeType: String?,
-        extensionRunsCode: Bool, mimeTypeRunsCode: Bool, typesRelated: Bool?,
-        isUserInitiated: Bool
-    ) -> BrowserDownloadRiskVerdict {
-        let request = DownloadRiskRequest(
-            suggestedFilename: suggestedFilename, sanitizedFilename: sanitizedFilename, mimeType: mimeType,
-            extensionRunsCode: extensionRunsCode, mimeTypeRunsCode: mimeTypeRunsCode, typesRelated: typesRelated,
-            userInitiated: isUserInitiated)
-        let answer = evaluate(.downloadsRisk, request, answer: DownloadRiskAnswer.self)
-        return BrowserDownloadRiskVerdict(
-            assessment: DownloadRiskAssessment(
-                sanitizedFilename: sanitizedFilename, reasons: answer?.reasons?.values.map(\.reason) ?? []),
-            requiresConfirmation: answer?.requiresConfirmation ?? true)
-    }
-
     /// The automatic-download action and the page/origin throttle state to
     /// keep. An unavailable core asks the person instead of deciding silently.
     static func automaticDownload(
@@ -370,25 +293,6 @@ enum BrowserCorePolicy {
             return (.requestPermission, hasAllowedAutomaticDownload)
         }
         return (answer.action ?? .requestPermission, answer.hasAllowedAutomaticDownload)
-    }
-
-    /// One progress reading. `estimator` is the core's opaque per-transfer
-    /// state; pass back what the previous reading returned.
-    static func downloadProgress(
-        estimator: BrowserCoreOpaqueValue?, completedUnitCount: Int64, totalUnitCount: Int64,
-        fractionCompleted: Double, isPaused: Bool, uptime: TimeInterval
-    ) -> (estimator: BrowserCoreOpaqueValue, update: BrowserDownloadTransferUpdate)? {
-        let request = DownloadProgressRequest(
-            estimator: estimator, completedUnitCount: completedUnitCount, totalUnitCount: totalUnitCount,
-            fractionCompleted: fractionCompleted.isFinite ? fractionCompleted : 0, isPaused: isPaused,
-            uptime: uptime)
-        guard let answer = evaluate(.downloadsProgress, request, answer: DownloadProgressAnswer.self),
-            case .object = answer.estimator
-        else { return nil }
-        return (
-            answer.estimator,
-            BrowserDownloadTransferUpdate(telemetry: answer.telemetry.telemetry, progress: answer.progress)
-        )
     }
 
     // MARK: - Actions - Evaluation

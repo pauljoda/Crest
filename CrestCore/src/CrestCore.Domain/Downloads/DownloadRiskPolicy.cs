@@ -28,9 +28,17 @@ public static class DownloadRiskPolicy {
 
     #region Actions - Risk
 
+    public const int MaximumMimeTypeLength = 255;
+
+    /// The platform's suggested name may be longer than the name it saves under.
+    public const int MaximumSuggestedFilenameLength = DownloadLedger.MaximumFilenameLength * 4;
+
     public static DownloadRiskAssessment Assess(DownloadRiskFacts facts) {
         ArgumentNullException.ThrowIfNull(facts);
-        if (string.IsNullOrEmpty(facts.SanitizedFilename)) throw new Rejected(new InvalidDownloadText(DownloadTextField.Filename));
+        if (string.IsNullOrEmpty(facts.SanitizedFilename) || facts.SanitizedFilename.Length > DownloadLedger.MaximumFilenameLength
+            || facts.SuggestedFilename.Length > MaximumSuggestedFilenameLength)
+            throw new Rejected(new InvalidDownloadText(DownloadTextField.Filename));
+        if (facts.MimeType?.Length > MaximumMimeTypeLength) throw new Rejected(new InvalidDownloadText(DownloadTextField.MimeType));
         bool extensionIsDangerous = facts.ExtensionRunsCode || DangerousExtensions.Contains(Extension(facts.SanitizedFilename));
         bool mimeIsDangerous = facts.MimeTypeRunsCode
             || facts.MimeType is { } mime && DangerousMimeTypes.Contains(mime.ToLowerInvariant());

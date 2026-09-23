@@ -42,7 +42,6 @@ public static class BrowserRuleCodes {
     public const string InvalidDate = "invalid_date";
     public const string InvalidDeletionIntent = "invalid_deletion_intent";
     public const string InvalidDestination = "invalid_destination";
-    public const string InvalidDownloadSample = "invalid_download_sample";
     public const string InvalidEngineRegistration = "invalid_engine_registration";
     public const string InvalidFocusedIndex = "invalid_focused_index";
     public const string InvalidFolderAnchor = "invalid_folder_anchor";

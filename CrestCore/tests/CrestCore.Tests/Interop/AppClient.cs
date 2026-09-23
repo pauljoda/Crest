@@ -58,6 +58,26 @@ internal sealed unsafe class AppClient : IDisposable {
         return rejection;
     }
 
+    /// A query's answer, read with `read`; fails the test on any other answer.
+    public TAnswer Ask<TAnswer>(Query<TAnswer> query, Func<WireReader, TAnswer> read) {
+        var (status, bytes) = Ask(Encode(writer => ContractCodec.WriteQuery(writer, query)));
+        Assert.Equal(CoreStatus.Ok, status);
+        var reader = new WireReader(bytes);
+        var answer = read(reader);
+        reader.EnsureEnd();
+        return answer;
+    }
+
+    /// The rule that refused a query; fails the test on any other answer.
+    public Rejection Refuse<TAnswer>(Query<TAnswer> query) {
+        var (status, bytes) = Ask(Encode(writer => ContractCodec.WriteQuery(writer, query)));
+        Assert.Equal(CoreStatus.Rejected, status);
+        var reader = new WireReader(bytes);
+        var rejection = ContractCodec.ReadRejection(reader);
+        reader.EnsureEnd();
+        return rejection;
+    }
+
     public (int Status, byte[] Bytes) Dispatch(ReadOnlySpan<byte> intent) =>
         Call((delegate* unmanaged[Cdecl]<ulong, byte*, nuint, CrestBuffer*, int>)&Exports.AppDispatch, intent);
 

@@ -77,11 +77,13 @@ retention expiry (the shortest retention among Spaces sharing a profile). It is
 never persisted or synced. Each download intent answers `DownloadUpdated` with
 the record and its newest-first position, or `DownloadsRemoved`; an event that
 does not apply to a record's phase answers no changes. Engines keep reporting
-download events and the native center forwards them as intents. The pure `downloads.progress`,
-`downloads.risk` and `downloads.automatic` policy operations answer transfer
-telemetry and ETA, risk reasons and confirmation, and the automatic-download
-throttle. The platform supplies only its file-system-safe filename and type
-registry facts for risk.
+download events and the native center forwards them as intents. The
+`DownloadProgress` query answers transfer telemetry and ETA with the estimator
+state to send with the next sample, and `DownloadRisk` answers risk reasons and
+whether the person must confirm; the platform supplies only its
+file-system-safe filename and type registry facts. The `downloads.automatic`
+policy operation still answers the automatic-download throttle, because it
+reads a site-permission decision.
 
 The `credentials.*` and `passkeys.access_status` policy operations carry no
 credential values. Form observations arrive as event, origins and presence

@@ -29,6 +29,7 @@ enum Rejection: Equatable, Error, Sendable {
     case duplicateDownload(DuplicateDownload)
     case invalidDownloadIdentity(InvalidDownloadIdentity)
     case invalidDownloadProgress(InvalidDownloadProgress)
+    case invalidDownloadSample(InvalidDownloadSample)
     case invalidDownloadText(InvalidDownloadText)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
 }
@@ -79,14 +80,52 @@ struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
+struct DownloadProgress: Query, Equatable, Sendable {
+    typealias Answer = DownloadProgressReading
+
+    let estimator: DownloadTransferEstimator?
+    let completedUnitCount: Int64
+    let totalUnitCount: Int64
+    let fractionCompleted: Double
+    let isPaused: Bool
+    let uptime: Double
+}
+
+struct DownloadProgressReading: Equatable, Sendable {
+    let estimator: DownloadTransferEstimator
+    let telemetry: DownloadTelemetry
+    let progress: Double
+}
+
 struct DownloadRetention: Equatable, Sendable {
     let profileID: UUID
     let lifetime: TimeInterval?
 }
 
+struct DownloadRisk: Query, Equatable, Sendable {
+    typealias Answer = DownloadRiskVerdict
+
+    let facts: DownloadRiskFacts
+    let isUserInitiated: Bool
+}
+
 struct DownloadRiskAssessment: Equatable, Sendable {
     let sanitizedFilename: String
     let reasons: [DownloadRiskReason]
+}
+
+struct DownloadRiskFacts: Equatable, Sendable {
+    let suggestedFilename: String
+    let sanitizedFilename: String
+    let mimeType: String?
+    let extensionRunsCode: Bool
+    let mimeTypeRunsCode: Bool
+    let typesRelated: Bool?
+}
+
+struct DownloadRiskVerdict: Equatable, Sendable {
+    let assessment: DownloadRiskAssessment
+    let requiresConfirmation: Bool
 }
 
 struct DownloadState: Equatable, Sendable, Identifiable {
@@ -109,6 +148,15 @@ struct DownloadTelemetry: Equatable, Sendable {
     let bytesPerSecond: Double?
     let estimatedTimeRemaining: Double?
     let isPaused: Bool
+}
+
+struct DownloadTransferEstimator: Equatable, Sendable {
+    let publishedBytes: Int64
+    let knownTotalBytes: Int64?
+    let totalIsUnreliable: Bool
+    let measurementBytes: Int64?
+    let measurementUptime: Double?
+    let smoothedBytesPerSecond: Double?
 }
 
 struct DownloadUpdated: Equatable, Sendable {
@@ -142,6 +190,9 @@ struct InvalidDownloadIdentity: Equatable, Sendable {
 }
 
 struct InvalidDownloadProgress: Equatable, Sendable {
+}
+
+struct InvalidDownloadSample: Equatable, Sendable {
 }
 
 struct InvalidDownloadText: Equatable, Sendable {
@@ -197,4 +248,5 @@ enum DownloadTextField: Int, CaseIterable, Sendable {
     case filename = 0
     case destination = 1
     case message = 2
+    case mimeType = 3
 }

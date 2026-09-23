@@ -51,7 +51,7 @@ final class BrowserDownloadCenter: NSObject {
         let itemID: UUID
         let assignment: BrowserSpaceRuntimeAssignment
         var controller: (any BrowserEngineDownloadControlling)?
-        var estimator = BrowserDownloadTransferEstimator()
+        var estimator: DownloadTransferEstimator?
         var securityScopedURL: URL?
         var warningToken: String?
         var resolvingDestination = false
@@ -233,6 +233,38 @@ final class BrowserDownloadCenter: NSObject {
                 downloadID: itemID, destination: destination.absoluteString, filename: destination.lastPathComponent))
     }
 
+    /// One progress reading for a transfer. `estimator` is the state the
+    /// caller keeps for that transfer; the reading replaces it. Nil when the
+    /// core refuses the sample, and the caller keeps its last reading.
+    func sampleProgress(
+        _ estimator: inout DownloadTransferEstimator?,
+        completedUnitCount: Int64,
+        totalUnitCount: Int64,
+        fractionCompleted: Double,
+        isPaused: Bool,
+        uptime: TimeInterval = ProcessInfo.processInfo.systemUptime
+    ) -> DownloadProgressReading? {
+        let sample = DownloadProgress(
+            estimator: estimator, completedUnitCount: completedUnitCount, totalUnitCount: totalUnitCount,
+            fractionCompleted: fractionCompleted.isFinite ? fractionCompleted : 0, isPaused: isPaused, uptime: uptime)
+        guard let reading = try? core.query(sample) else { return nil }
+        estimator = reading.estimator
+        return reading
+    }
+
+    /// The core's risk verdict for a download. A download the core cannot
+    /// judge asks the person first rather than passing as safe.
+    func riskVerdict(suggestedFilename: String, mimeType: String?, isUserInitiated: Bool) -> DownloadRiskVerdict {
+        let facts = DownloadRiskFacts(suggestedFilename: suggestedFilename, mimeType: mimeType)
+        do {
+            return try core.query(DownloadRisk(facts: facts, isUserInitiated: isUserInitiated))
+        } catch {
+            return DownloadRiskVerdict(
+                assessment: DownloadRiskAssessment(sanitizedFilename: facts.sanitizedFilename, reasons: []),
+                requiresConfirmation: true)
+        }
+    }
+
     @discardableResult
     func acknowledgeItems(for profileID: UUID) -> Int {
         (try? core.send(AcknowledgeDownloads(profileID: profileID)))?.count ?? 0
@@ -357,8 +389,8 @@ final class BrowserDownloadCenter: NSObject {
         if let destination = update.destination {
             setDestination(destination, for: transfer.itemID)
         }
-        if let reading = transfer.estimator.sample(
-            completedUnitCount: update.bytesReceived, totalUnitCount: update.totalBytes,
+        if let reading = sampleProgress(
+            &transfer.estimator, completedUnitCount: update.bytesReceived, totalUnitCount: update.totalBytes,
             fractionCompleted: update.totalBytes > 0 ? Double(update.bytesReceived) / Double(update.totalBytes) : 0,
             isPaused: update.isPaused)
         {
@@ -452,8 +484,7 @@ final class BrowserDownloadCenter: NSObject {
         spaceName: String,
         feedbackSource: BrowserDownloadFeedbackSource? = nil
     ) async -> UUID {
-        let verdict = BrowserDownloadRiskVerdict.assess(
-            suggestedFilename: suggestedFilename, mimeType: mimeType, isUserInitiated: true)
+        let verdict = riskVerdict(suggestedFilename: suggestedFilename, mimeType: mimeType, isUserInitiated: true)
         let assessment = verdict.assessment
         let itemID = begin(profileID: assignment.profileID, filename: assessment.sanitizedFilename)
         send(AssessDownloadRisk(downloadID: itemID, assessment: assessment))
@@ -473,7 +504,7 @@ final class BrowserDownloadCenter: NSObject {
     private func finishSavingData(
         _ data: Data,
         itemID: UUID,
-        verdict: BrowserDownloadRiskVerdict,
+        verdict: DownloadRiskVerdict,
         originatingURL: URL,
         assignment: BrowserSpaceRuntimeAssignment,
         spaceName: String

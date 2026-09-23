@@ -1,5 +1,6 @@
 using CrestCore.Application;
 using CrestCore.Contracts;
+using CrestCore.Native;
 
 using Xunit;
 
@@ -54,6 +55,23 @@ public sealed class AppDownloadTests {
 
         Assert.Equal([id], Assert.IsType<DownloadsRemoved>(Assert.Single(app.Send(new RemoveDownload(id)))).DownloadIds);
         Assert.Empty(app.Send(new RemoveDownload(id)));
+    }
+
+    [Fact]
+    public void QueriesAnswerThroughTheBoundaryWithoutChangingRecords() {
+        using var app = new AppClient();
+        var verdict = app.Ask(new DownloadRisk(new("photo.jpg\u202Egpj.command", "photo.jpggpj.command",
+            "application/octet-stream", true, false, null), true), ContractCodec.ReadDownloadRiskVerdict);
+        Assert.Equal([DownloadRiskReason.ExecutableOrInstaller, DownloadRiskReason.DeceptiveFilename], verdict.Assessment.Reasons);
+        Assert.True(verdict.RequiresConfirmation);
+
+        var first = app.Ask(new DownloadProgress(null, 0, 10_000, 0, false, 0), ContractCodec.ReadDownloadProgressReading);
+        var second = app.Ask(new DownloadProgress(first.Estimator, 1_000, 10_000, 0.1, false, 1),
+            ContractCodec.ReadDownloadProgressReading);
+        Assert.Equal(1_000, second.Telemetry.BytesPerSecond!.Value, 3);
+        Assert.Equal(0.1, second.Progress, 3);
+        Assert.Equal(new InvalidDownloadSample(), app.Refuse(new DownloadProgress(first.Estimator, 1, 1, 0, false, double.NaN)));
+        Assert.Empty(app.Send(new AcknowledgeDownloads(Profile)));
     }
 
     [Fact]

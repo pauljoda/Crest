@@ -121,9 +121,10 @@ public sealed unsafe class ContractCodecTests {
 
     [Fact]
     public void EachRootTagsItsTypesUniquelyInNameOrder() {
-        foreach (var root in Roots) {
-            var write = typeof(ContractCodec).GetMethod($"Write{root.Name}")!;
-            var read = typeof(ContractCodec).GetMethod($"Read{root.Name}")!;
+        foreach (var root in Roots.Append(typeof(Query<>))) {
+            string name = root == typeof(Query<>) ? "Query" : root.Name;
+            var write = typeof(ContractCodec).GetMethod($"Write{name}")!;
+            var read = typeof(ContractCodec).GetMethod($"Read{name}")!;
             var tags = new List<ulong>();
             foreach (var member in RootMembers(root)) {
                 var value = Sample(member, null, optionals: true);

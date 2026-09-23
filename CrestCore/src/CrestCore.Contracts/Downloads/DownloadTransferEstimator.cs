@@ -1,6 +1,4 @@
-using CrestCore.Contracts;
-
-namespace CrestCore.Domain;
+namespace CrestCore.Contracts;
 
 /// Turns event-driven engine progress samples into stable row telemetry.
 ///
@@ -8,9 +6,9 @@ namespace CrestCore.Domain;
 /// is then smoothed with an exponential moving average. Reported byte counts
 /// never move backwards. A total that received bytes disprove is discarded for
 /// the rest of the transfer instead of producing a count larger than its total.
-/// The default value is the state before the first sample; callers keep the
-/// returned state per transfer and pass it back with the next sample.
-public readonly record struct DownloadTransferEstimator(long PublishedBytes, long? KnownTotalBytes, bool TotalIsUnreliable,
+/// `Initial` is the state before the first sample; callers keep the returned
+/// state per transfer and pass it back with the next sample.
+public sealed record DownloadTransferEstimator(long PublishedBytes, long? KnownTotalBytes, bool TotalIsUnreliable,
     long? MeasurementBytes, double? MeasurementUptime, double? SmoothedBytesPerSecond) {
     #region Variables
 
@@ -18,6 +16,8 @@ public readonly record struct DownloadTransferEstimator(long PublishedBytes, lon
     public const double SmoothingWeight = 0.25;
     public const double MinimumUsefulEstimate = 0.5;
     public const double MaximumUsefulEstimate = 7 * 24 * 60 * 60;
+
+    public static DownloadTransferEstimator Initial { get; } = new(0, null, false, null, null, null);
 
     public bool IsValid => PublishedBytes >= 0 && (KnownTotalBytes ?? 1) > 0 && (MeasurementBytes ?? 0) >= 0
         && MeasurementBytes.HasValue == MeasurementUptime.HasValue
@@ -30,9 +30,9 @@ public readonly record struct DownloadTransferEstimator(long PublishedBytes, lon
 
     /// `uptime` is a monotonic clock in seconds; `fractionCompleted` is used only
     /// while no total is known.
-    public (DownloadTransferEstimator Next, DownloadTransferSample Sample) Sample(long completedUnitCount,
-        long totalUnitCount, double fractionCompleted, bool isPaused, double uptime) {
-        if (!IsValid || !double.IsFinite(uptime)) throw new BrowserRuleException(BrowserRuleCodes.InvalidDownloadSample);
+    public DownloadProgressReading Sample(long completedUnitCount, long totalUnitCount, double fractionCompleted,
+        bool isPaused, double uptime) {
+        if (!IsValid || !double.IsFinite(uptime)) throw new Rejected(new InvalidDownloadSample());
         long published = Math.Max(PublishedBytes, Math.Max(completedUnitCount, 0));
         var next = (this with { PublishedBytes = published }).WithReportedTotal(totalUnitCount);
         next = isPaused
@@ -44,7 +44,7 @@ public readonly record struct DownloadTransferEstimator(long PublishedBytes, lon
             : Normalized(fractionCompleted);
         double? rate = isPaused ? null : next.SmoothedBytesPerSecond;
         var telemetry = new DownloadTelemetry(published, next.KnownTotalBytes, rate, next.EstimatedTimeRemaining(rate), isPaused);
-        return (next, new(telemetry, progress));
+        return new(next, telemetry, progress);
     }
 
     /// Progress is always published within [0, 1]; an unreadable value is 0.

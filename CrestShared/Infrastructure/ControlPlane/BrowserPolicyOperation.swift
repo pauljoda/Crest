@@ -17,8 +17,6 @@ enum BrowserPolicyOperation: String, Codable, Sendable {
     case credentialsSystemWriteThrough = "credentials.system_write_through"
     case credentialsSystemWriteThroughOffer = "credentials.system_write_through_offer"
     case downloadsAutomatic = "downloads.automatic"
-    case downloadsProgress = "downloads.progress"
-    case downloadsRisk = "downloads.risk"
     case externalConsent = "external.consent"
     case externalLocalDocument = "external.local_document"
     case externalScheme = "external.scheme"

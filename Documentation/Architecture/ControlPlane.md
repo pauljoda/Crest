@@ -575,8 +575,10 @@ a tab means, and when a terminated renderer stops reloading. The adapter keeps
 the per-page veto for media playback, capture and Picture in Picture.
 Downloads follow the same split on both engines: the process's one `CrestCore`
 owns the download ledger behind `crest_app_*` (record phases, ordering,
-acknowledgement and retention expiry), and policy operations answer progress
-and ETA, risk reasons and the automatic-download throttle.
+acknowledgement and retention expiry), the `DownloadProgress` and
+`DownloadRisk` queries answer progress and ETA and risk reasons, and the
+`downloads.automatic` policy operation answers the automatic-download
+throttle.
 `BrowserDownloadCenter` sends engine download events as typed intents, owns
 files, prompts and notices, and renders the records in `core.state`. Each
 browsing mode shares one center across its windows. The ledger is not

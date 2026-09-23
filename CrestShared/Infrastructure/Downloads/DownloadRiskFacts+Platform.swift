@@ -1,16 +1,13 @@
 import Foundation
 import UniformTypeIdentifiers
 
-extension BrowserDownloadRiskVerdict {
-    /// Supplies the platform's file-system-safe name and type-registry facts;
-    /// the core decides the risk reasons and whether confirmation is needed.
-    static func assess(
-        suggestedFilename: String,
-        mimeType: String?,
-        isUserInitiated: Bool
-    ) -> BrowserDownloadRiskVerdict {
+extension DownloadRiskFacts {
+    /// The platform's file-system-safe name and type-registry facts for a
+    /// download. The core decides the risk reasons and whether confirmation
+    /// is needed.
+    init(suggestedFilename: String, mimeType: String?) {
         let sanitizedFilename = BrowserDownloadDestination.safeFilename(from: suggestedFilename)
-        let extensionType = contentType(forFilename: sanitizedFilename)
+        let extensionType = Self.contentType(forFilename: sanitizedFilename)
         let declaredMIMEType = mimeType?.lowercased()
         let mimeContentType = declaredMIMEType.flatMap {
             UTType(tag: $0, tagClass: .mimeType, conformingTo: nil)
@@ -20,14 +17,13 @@ extension BrowserDownloadRiskVerdict {
                 extensionType.conforms(to: $0) || $0.conforms(to: extensionType)
             }
         }
-        return BrowserCorePolicy.downloadRisk(
+        self.init(
             suggestedFilename: suggestedFilename,
             sanitizedFilename: sanitizedFilename,
             mimeType: declaredMIMEType,
-            extensionRunsCode: runsCode(extensionType),
-            mimeTypeRunsCode: runsCode(mimeContentType),
-            typesRelated: typesRelated,
-            isUserInitiated: isUserInitiated
+            extensionRunsCode: Self.runsCode(extensionType),
+            mimeTypeRunsCode: Self.runsCode(mimeContentType),
+            typesRelated: typesRelated
         )
     }
 

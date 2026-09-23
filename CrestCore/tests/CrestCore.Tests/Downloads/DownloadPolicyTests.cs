@@ -101,11 +101,10 @@ public sealed class DownloadPolicyTests {
 
     [Fact]
     public void EstimatorKeepsBytesMonotonicAndSmoothsRateAndEstimate() {
-        var estimator = default(DownloadTransferEstimator);
-        (estimator, _) = estimator.Sample(0, 10_000, 0, false, 0);
-        (estimator, var first) = estimator.Sample(1_000, 10_000, 0.1, false, 1);
-        (estimator, var noisy) = estimator.Sample(3_000, 10_000, 0.3, false, 2);
-        (_, var regressed) = estimator.Sample(2_500, 10_000, 0.25, false, 3);
+        var start = DownloadTransferEstimator.Initial.Sample(0, 10_000, 0, false, 0);
+        var first = start.Estimator.Sample(1_000, 10_000, 0.1, false, 1);
+        var noisy = first.Estimator.Sample(3_000, 10_000, 0.3, false, 2);
+        var regressed = noisy.Estimator.Sample(2_500, 10_000, 0.25, false, 3);
 
         Assert.Equal(1_000, first.Telemetry.BytesPerSecond!.Value, 3);
         Assert.Equal(9, first.Telemetry.EstimatedTimeRemaining!.Value, 3);
@@ -117,33 +116,38 @@ public sealed class DownloadPolicyTests {
 
     [Fact]
     public void EstimatorWaitsForAUsefulIntervalAndPausingClearsTheRate() {
-        var estimator = default(DownloadTransferEstimator);
-        (estimator, _) = estimator.Sample(0, 1_000, 0, false, 0);
-        (estimator, var early) = estimator.Sample(100, 1_000, 0.1, false, 0.1);
+        var start = DownloadTransferEstimator.Initial.Sample(0, 1_000, 0, false, 0);
+        var early = start.Estimator.Sample(100, 1_000, 0.1, false, 0.1);
         Assert.Null(early.Telemetry.BytesPerSecond);
-        (estimator, var paused) = estimator.Sample(200, 1_000, 0.2, true, 1);
+        var paused = early.Estimator.Sample(200, 1_000, 0.2, true, 1);
         Assert.True(paused.Telemetry.IsPaused);
         Assert.Null(paused.Telemetry.BytesPerSecond);
         Assert.Null(paused.Telemetry.EstimatedTimeRemaining);
-        (_, var resumed) = estimator.Sample(400, 1_000, 0.4, false, 2);
+        var resumed = paused.Estimator.Sample(400, 1_000, 0.4, false, 2);
         Assert.Equal(200, resumed.Telemetry.BytesPerSecond!.Value, 3);
     }
 
     [Fact]
     public void ADisprovedTotalIsDiscardedAndUselessEstimatesAreHidden() {
-        var estimator = default(DownloadTransferEstimator);
-        (estimator, _) = estimator.Sample(0, 100, 0, false, 0);
-        (estimator, var disproved) = estimator.Sample(500, 100, 0.5, false, 1);
+        var start = DownloadTransferEstimator.Initial.Sample(0, 100, 0, false, 0);
+        var disproved = start.Estimator.Sample(500, 100, 0.5, false, 1);
         Assert.Null(disproved.Telemetry.TotalBytes);
         Assert.Null(disproved.Telemetry.EstimatedTimeRemaining);
         Assert.Equal(0.5, disproved.Progress);
-        (_, var later) = estimator.Sample(600, 10_000, 0.06, false, 2);
+        var later = disproved.Estimator.Sample(600, 10_000, 0.06, false, 2);
         Assert.Null(later.Telemetry.TotalBytes);
 
-        var slow = default(DownloadTransferEstimator);
-        (slow, _) = slow.Sample(0, long.MaxValue / 2, 0, false, 0);
-        (_, var glacial) = slow.Sample(1, long.MaxValue / 2, 0, false, 1);
+        var slow = DownloadTransferEstimator.Initial.Sample(0, long.MaxValue / 2, 0, false, 0).Estimator;
+        var glacial = slow.Sample(1, long.MaxValue / 2, 0, false, 1);
         Assert.Null(glacial.Telemetry.EstimatedTimeRemaining);
-        Assert.Throws<BrowserRuleException>(() => slow.Sample(1, 1, 0, false, double.NaN));
+        Assert.IsType<InvalidDownloadSample>(Assert.Throws<Rejected>(() => slow.Sample(1, 1, 0, false, double.NaN)).Rejection);
+    }
+
+    [Fact]
+    public void RiskFactsTheLedgerCouldNotRecordAreRefused() {
+        Assert.Equal(new InvalidDownloadText(DownloadTextField.Filename),
+            Assert.Throws<Rejected>(() => Assess("report.pdf", null, sanitized: "")).Rejection);
+        Assert.Equal(new InvalidDownloadText(DownloadTextField.MimeType),
+            Assert.Throws<Rejected>(() => Assess("report.pdf", new string('x', 256))).Rejection);
     }
 }

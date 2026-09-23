@@ -75,4 +75,20 @@ public sealed class Downloads {
     }
 
     #endregion
+
+    #region Actions - Queries
+
+    public DownloadProgressReading Answer(DownloadProgress query) {
+        ArgumentNullException.ThrowIfNull(query);
+        return (query.Estimator ?? DownloadTransferEstimator.Initial).Sample(query.CompletedUnitCount, query.TotalUnitCount,
+            query.FractionCompleted, query.IsPaused, query.Uptime);
+    }
+
+    public DownloadRiskVerdict Answer(DownloadRisk query) {
+        ArgumentNullException.ThrowIfNull(query);
+        var assessment = DownloadRiskPolicy.Assess(query.Facts);
+        return new(assessment, DownloadRiskPolicy.RequiresConfirmation(assessment, query.IsUserInitiated));
+    }
+
+    #endregion
 }

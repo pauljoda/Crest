@@ -5,9 +5,10 @@ import XCTest
 
 /// The core owns the risk rules; this covers the platform facts the Swift
 /// adapter supplies from the system type registry.
+@MainActor
 final class BrowserDownloadRiskAssessmentTests: XCTestCase {
     func testDangerousMIMEAndBenignExtensionMismatchIsExplicit() {
-        let verdict = BrowserDownloadRiskVerdict.assess(
+        let verdict = BrowserDownloadCenter().riskVerdict(
             suggestedFilename: "holiday.jpg",
             mimeType: "application/x-mach-binary",
             isUserInitiated: true
@@ -18,7 +19,7 @@ final class BrowserDownloadRiskAssessmentTests: XCTestCase {
     }
 
     func testRegisteredScriptTypesRunCodeWithoutBeingListedByExtension() {
-        let verdict = BrowserDownloadRiskVerdict.assess(
+        let verdict = BrowserDownloadCenter().riskVerdict(
             suggestedFilename: "../../install.py",
             mimeType: "text/x-python-script",
             isUserInitiated: false

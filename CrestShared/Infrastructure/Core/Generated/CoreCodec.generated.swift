@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x4e, 0xcb, 0x22, 0x57, 0x23, 0x5b, 0x5b, 0x5f, 0x7b, 0xb3, 0xf7, 0x98, 0x91, 0xac, 0x71, 0xa3, 0x17, 0xff, 0x6f, 0x7e, 0xa8, 0x08, 0x22, 0x10, 0xcd, 0x76, 0xc0, 0xc2, 0x2d, 0xce, 0x9c, 0x79
+        0x65, 0x29, 0x7c, 0x99, 0x50, 0xe9, 0x0d, 0xfd, 0xd1, 0x54, 0xa4, 0xd8, 0xb9, 0x36, 0xec, 0x38, 0x24, 0x82, 0x1e, 0x17, 0x4f, 0x57, 0x67, 0x67, 0x49, 0xfd, 0x46, 0xfe, 0xe6, 0x9a, 0x46, 0x2c
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -34,6 +34,8 @@ enum CoreCodec {
     static func decodeQuery(from reader: inout WireReader) throws(WireError) -> any Query {
         let tag = try reader.readTag()
         switch tag {
+        case 0: return try DownloadProgress(from: &reader)
+        case 1: return try DownloadRisk(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -69,8 +71,9 @@ extension Rejection {
         case 1: self = .duplicateDownload(try DuplicateDownload(from: &reader))
         case 2: self = .invalidDownloadIdentity(try InvalidDownloadIdentity(from: &reader))
         case 3: self = .invalidDownloadProgress(try InvalidDownloadProgress(from: &reader))
-        case 4: self = .invalidDownloadText(try InvalidDownloadText(from: &reader))
-        case 5: self = .invalidRetentionLifetime(try InvalidRetentionLifetime(from: &reader))
+        case 4: self = .invalidDownloadSample(try InvalidDownloadSample(from: &reader))
+        case 5: self = .invalidDownloadText(try InvalidDownloadText(from: &reader))
+        case 6: self = .invalidRetentionLifetime(try InvalidRetentionLifetime(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
@@ -89,11 +92,14 @@ extension Rejection {
         case .invalidDownloadProgress(let value):
             writer.writeTag(3)
             value.encode(into: &writer)
-        case .invalidDownloadText(let value):
+        case .invalidDownloadSample(let value):
             writer.writeTag(4)
             value.encode(into: &writer)
-        case .invalidRetentionLifetime(let value):
+        case .invalidDownloadText(let value):
             writer.writeTag(5)
+            value.encode(into: &writer)
+        case .invalidRetentionLifetime(let value):
+            writer.writeTag(6)
             value.encode(into: &writer)
         }
     }
@@ -218,6 +224,63 @@ extension DownloadLimitReached {
     }
 }
 
+extension DownloadProgress {
+    init(from reader: inout WireReader) throws(WireError) {
+        let estimator: DownloadTransferEstimator?
+        if try reader.readPresence() {
+            let estimatorValue = try DownloadTransferEstimator(from: &reader)
+            estimator = estimatorValue
+        } else {
+            estimator = nil
+        }
+        let completedUnitCount = try reader.readInt64()
+        let totalUnitCount = try reader.readInt64()
+        let fractionCompleted = try reader.readDouble()
+        let isPaused = try reader.readBool()
+        let uptime = try reader.readDouble()
+        self.init(estimator: estimator, completedUnitCount: completedUnitCount, totalUnitCount: totalUnitCount, fractionCompleted: fractionCompleted, isPaused: isPaused, uptime: uptime)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = estimator {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeInt64(completedUnitCount)
+        writer.writeInt64(totalUnitCount)
+        writer.writeDouble(fractionCompleted)
+        writer.writeBool(isPaused)
+        writer.writeDouble(uptime)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(0)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> DownloadProgressReading {
+        let answer = try DownloadProgressReading(from: &reader)
+        return answer
+    }
+}
+
+extension DownloadProgressReading {
+    init(from reader: inout WireReader) throws(WireError) {
+        let estimator = try DownloadTransferEstimator(from: &reader)
+        let telemetry = try DownloadTelemetry(from: &reader)
+        let progress = try reader.readDouble()
+        self.init(estimator: estimator, telemetry: telemetry, progress: progress)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        estimator.encode(into: &writer)
+        telemetry.encode(into: &writer)
+        writer.writeDouble(progress)
+    }
+}
+
 extension DownloadRetention {
     init(from reader: inout WireReader) throws(WireError) {
         let profileID = try reader.readUUID()
@@ -242,6 +305,29 @@ extension DownloadRetention {
     }
 }
 
+extension DownloadRisk {
+    init(from reader: inout WireReader) throws(WireError) {
+        let facts = try DownloadRiskFacts(from: &reader)
+        let isUserInitiated = try reader.readBool()
+        self.init(facts: facts, isUserInitiated: isUserInitiated)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        facts.encode(into: &writer)
+        writer.writeBool(isUserInitiated)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(1)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> DownloadRiskVerdict {
+        let answer = try DownloadRiskVerdict(from: &reader)
+        return answer
+    }
+}
+
 extension DownloadRiskAssessment {
     init(from reader: inout WireReader) throws(WireError) {
         let sanitizedFilename = try reader.readString()
@@ -261,6 +347,62 @@ extension DownloadRiskAssessment {
         for element0 in reasons {
             element0.encode(into: &writer)
         }
+    }
+}
+
+extension DownloadRiskFacts {
+    init(from reader: inout WireReader) throws(WireError) {
+        let suggestedFilename = try reader.readString()
+        let sanitizedFilename = try reader.readString()
+        let mimeType: String?
+        if try reader.readPresence() {
+            let mimeTypeValue = try reader.readString()
+            mimeType = mimeTypeValue
+        } else {
+            mimeType = nil
+        }
+        let extensionRunsCode = try reader.readBool()
+        let mimeTypeRunsCode = try reader.readBool()
+        let typesRelated: Bool?
+        if try reader.readPresence() {
+            let typesRelatedValue = try reader.readBool()
+            typesRelated = typesRelatedValue
+        } else {
+            typesRelated = nil
+        }
+        self.init(suggestedFilename: suggestedFilename, sanitizedFilename: sanitizedFilename, mimeType: mimeType, extensionRunsCode: extensionRunsCode, mimeTypeRunsCode: mimeTypeRunsCode, typesRelated: typesRelated)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(suggestedFilename)
+        writer.writeString(sanitizedFilename)
+        if let present0 = mimeType {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeBool(extensionRunsCode)
+        writer.writeBool(mimeTypeRunsCode)
+        if let present0 = typesRelated {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
+extension DownloadRiskVerdict {
+    init(from reader: inout WireReader) throws(WireError) {
+        let assessment = try DownloadRiskAssessment(from: &reader)
+        let requiresConfirmation = try reader.readBool()
+        self.init(assessment: assessment, requiresConfirmation: requiresConfirmation)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        assessment.encode(into: &writer)
+        writer.writeBool(requiresConfirmation)
     }
 }
 
@@ -377,6 +519,71 @@ extension DownloadTelemetry {
             writer.writePresence(false)
         }
         writer.writeBool(isPaused)
+    }
+}
+
+extension DownloadTransferEstimator {
+    init(from reader: inout WireReader) throws(WireError) {
+        let publishedBytes = try reader.readInt64()
+        let knownTotalBytes: Int64?
+        if try reader.readPresence() {
+            let knownTotalBytesValue = try reader.readInt64()
+            knownTotalBytes = knownTotalBytesValue
+        } else {
+            knownTotalBytes = nil
+        }
+        let totalIsUnreliable = try reader.readBool()
+        let measurementBytes: Int64?
+        if try reader.readPresence() {
+            let measurementBytesValue = try reader.readInt64()
+            measurementBytes = measurementBytesValue
+        } else {
+            measurementBytes = nil
+        }
+        let measurementUptime: Double?
+        if try reader.readPresence() {
+            let measurementUptimeValue = try reader.readDouble()
+            measurementUptime = measurementUptimeValue
+        } else {
+            measurementUptime = nil
+        }
+        let smoothedBytesPerSecond: Double?
+        if try reader.readPresence() {
+            let smoothedBytesPerSecondValue = try reader.readDouble()
+            smoothedBytesPerSecond = smoothedBytesPerSecondValue
+        } else {
+            smoothedBytesPerSecond = nil
+        }
+        self.init(publishedBytes: publishedBytes, knownTotalBytes: knownTotalBytes, totalIsUnreliable: totalIsUnreliable, measurementBytes: measurementBytes, measurementUptime: measurementUptime, smoothedBytesPerSecond: smoothedBytesPerSecond)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt64(publishedBytes)
+        if let present0 = knownTotalBytes {
+            writer.writePresence(true)
+            writer.writeInt64(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeBool(totalIsUnreliable)
+        if let present0 = measurementBytes {
+            writer.writePresence(true)
+            writer.writeInt64(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = measurementUptime {
+            writer.writePresence(true)
+            writer.writeDouble(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = smoothedBytesPerSecond {
+            writer.writePresence(true)
+            writer.writeDouble(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -506,6 +713,15 @@ extension InvalidDownloadIdentity {
 }
 
 extension InvalidDownloadProgress {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension InvalidDownloadSample {
     init(from reader: inout WireReader) throws(WireError) {
         self.init()
     }

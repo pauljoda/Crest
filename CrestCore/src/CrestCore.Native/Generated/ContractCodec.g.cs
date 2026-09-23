@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x4e, 0xcb, 0x22, 0x57, 0x23, 0x5b, 0x5b, 0x5f, 0x7b, 0xb3, 0xf7, 0x98, 0x91, 0xac, 0x71, 0xa3, 0x17, 0xff, 0x6f, 0x7e, 0xa8, 0x08, 0x22, 0x10, 0xcd, 0x76, 0xc0, 0xc2, 0x2d, 0xce, 0x9c, 0x79
+        0x65, 0x29, 0x7c, 0x99, 0x50, 0xe9, 0x0d, 0xfd, 0xd1, 0x54, 0xa4, 0xd8, 0xb9, 0x36, 0xec, 0x38, 0x24, 0x82, 0x1e, 0x17, 0x4f, 0x57, 0x67, 0x67, 0x49, 0xfd, 0x46, 0xfe, 0xe6, 0x9a, 0x46, 0x2c
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -134,8 +134,9 @@ public static class ContractCodec {
             case 1: return ReadDuplicateDownload(reader);
             case 2: return ReadInvalidDownloadIdentity(reader);
             case 3: return ReadInvalidDownloadProgress(reader);
-            case 4: return ReadInvalidDownloadText(reader);
-            case 5: return ReadInvalidRetentionLifetime(reader);
+            case 4: return ReadInvalidDownloadSample(reader);
+            case 5: return ReadInvalidDownloadText(reader);
+            case 6: return ReadInvalidRetentionLifetime(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -160,12 +161,16 @@ public static class ContractCodec {
                 writer.WriteTag(3);
                 WriteInvalidDownloadProgress(writer, member);
                 break;
-            case InvalidDownloadText member:
+            case InvalidDownloadSample member:
                 writer.WriteTag(4);
+                WriteInvalidDownloadSample(writer, member);
+                break;
+            case InvalidDownloadText member:
+                writer.WriteTag(5);
                 WriteInvalidDownloadText(writer, member);
                 break;
             case InvalidRetentionLifetime member:
-                writer.WriteTag(5);
+                writer.WriteTag(6);
                 WriteInvalidRetentionLifetime(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -175,6 +180,8 @@ public static class ContractCodec {
     public static object ReadQuery(WireReader reader) {
         int tag = reader.ReadTag();
         switch (tag) {
+            case 0: return ReadDownloadProgress(reader);
+            case 1: return ReadDownloadRisk(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -183,6 +190,14 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         switch (value) {
+            case DownloadProgress member:
+                writer.WriteTag(0);
+                WriteDownloadProgress(writer, member);
+                break;
+            case DownloadRisk member:
+                writer.WriteTag(1);
+                WriteDownloadRisk(writer, member);
+                break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
         }
     }
@@ -191,6 +206,14 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(query);
         switch (query) {
+            case DownloadProgress question:
+                var answer0 = app.Query(question);
+                WriteDownloadProgressReading(writer, answer0);
+                break;
+            case DownloadRisk question:
+                var answer1 = app.Query(question);
+                WriteDownloadRiskVerdict(writer, answer1);
+                break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
     }
@@ -291,6 +314,49 @@ public static class ContractCodec {
         writer.WriteInt32(value.Limit);
     }
 
+    public static DownloadProgress ReadDownloadProgress(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DownloadProgress(
+            reader.ReadPresence() ? (DownloadTransferEstimator?)ReadDownloadTransferEstimator(reader) : null,
+            reader.ReadInt64(),
+            reader.ReadInt64(),
+            reader.ReadDouble(),
+            reader.ReadBool(),
+            reader.ReadDouble());
+    }
+
+    public static void WriteDownloadProgress(WireWriter writer, DownloadProgress value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Estimator is { } presentEstimator) {
+            writer.WritePresence(true);
+            WriteDownloadTransferEstimator(writer, presentEstimator);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteInt64(value.CompletedUnitCount);
+        writer.WriteInt64(value.TotalUnitCount);
+        writer.WriteDouble(value.FractionCompleted);
+        writer.WriteBool(value.IsPaused);
+        writer.WriteDouble(value.Uptime);
+    }
+
+    public static DownloadProgressReading ReadDownloadProgressReading(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DownloadProgressReading(
+            ReadDownloadTransferEstimator(reader),
+            ReadDownloadTelemetry(reader),
+            reader.ReadDouble());
+    }
+
+    public static void WriteDownloadProgressReading(WireWriter writer, DownloadProgressReading value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteDownloadTransferEstimator(writer, value.Estimator);
+        WriteDownloadTelemetry(writer, value.Telemetry);
+        writer.WriteDouble(value.Progress);
+    }
+
     public static DownloadRetention ReadDownloadRetention(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new DownloadRetention(
@@ -310,6 +376,20 @@ public static class ContractCodec {
         }
     }
 
+    public static DownloadRisk ReadDownloadRisk(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DownloadRisk(
+            ReadDownloadRiskFacts(reader),
+            reader.ReadBool());
+    }
+
+    public static void WriteDownloadRisk(WireWriter writer, DownloadRisk value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteDownloadRiskFacts(writer, value.Facts);
+        writer.WriteBool(value.IsUserInitiated);
+    }
+
     public static DownloadRiskAssessment ReadDownloadRiskAssessment(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new DownloadRiskAssessment(
@@ -325,6 +405,52 @@ public static class ContractCodec {
         foreach (var itemReasons in value.Reasons) {
             WriteDownloadRiskReason(writer, itemReasons);
         }
+    }
+
+    public static DownloadRiskFacts ReadDownloadRiskFacts(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DownloadRiskFacts(
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadPresence() ? (bool?)reader.ReadBool() : null);
+    }
+
+    public static void WriteDownloadRiskFacts(WireWriter writer, DownloadRiskFacts value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.SuggestedFilename);
+        writer.WriteString(value.SanitizedFilename);
+        if (value.MimeType is { } presentMimeType) {
+            writer.WritePresence(true);
+            writer.WriteString(presentMimeType);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.ExtensionRunsCode);
+        writer.WriteBool(value.MimeTypeRunsCode);
+        if (value.TypesRelated is { } presentTypesRelated) {
+            writer.WritePresence(true);
+            writer.WriteBool(presentTypesRelated);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static DownloadRiskVerdict ReadDownloadRiskVerdict(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DownloadRiskVerdict(
+            ReadDownloadRiskAssessment(reader),
+            reader.ReadBool());
+    }
+
+    public static void WriteDownloadRiskVerdict(WireWriter writer, DownloadRiskVerdict value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteDownloadRiskAssessment(writer, value.Assessment);
+        writer.WriteBool(value.RequiresConfirmation);
     }
 
     public static DownloadState ReadDownloadState(WireReader reader) {
@@ -407,6 +533,48 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.IsPaused);
+    }
+
+    public static DownloadTransferEstimator ReadDownloadTransferEstimator(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DownloadTransferEstimator(
+            reader.ReadInt64(),
+            reader.ReadPresence() ? (long?)reader.ReadInt64() : null,
+            reader.ReadBool(),
+            reader.ReadPresence() ? (long?)reader.ReadInt64() : null,
+            reader.ReadPresence() ? (double?)reader.ReadDouble() : null,
+            reader.ReadPresence() ? (double?)reader.ReadDouble() : null);
+    }
+
+    public static void WriteDownloadTransferEstimator(WireWriter writer, DownloadTransferEstimator value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteInt64(value.PublishedBytes);
+        if (value.KnownTotalBytes is { } presentKnownTotalBytes) {
+            writer.WritePresence(true);
+            writer.WriteInt64(presentKnownTotalBytes);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.TotalIsUnreliable);
+        if (value.MeasurementBytes is { } presentMeasurementBytes) {
+            writer.WritePresence(true);
+            writer.WriteInt64(presentMeasurementBytes);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.MeasurementUptime is { } presentMeasurementUptime) {
+            writer.WritePresence(true);
+            writer.WriteDouble(presentMeasurementUptime);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SmoothedBytesPerSecond is { } presentSmoothedBytesPerSecond) {
+            writer.WritePresence(true);
+            writer.WriteDouble(presentSmoothedBytesPerSecond);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static DownloadUpdated ReadDownloadUpdated(WireReader reader) {
@@ -514,6 +682,16 @@ public static class ContractCodec {
     }
 
     public static void WriteInvalidDownloadProgress(WireWriter writer, InvalidDownloadProgress value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static InvalidDownloadSample ReadInvalidDownloadSample(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidDownloadSample();
+    }
+
+    public static void WriteInvalidDownloadSample(WireWriter writer, InvalidDownloadSample value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
     }
@@ -630,7 +808,7 @@ public static class ContractCodec {
 
     public static DownloadTextField ReadDownloadTextField(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return (DownloadTextField)reader.ReadEnum(3);
+        return (DownloadTextField)reader.ReadEnum(4);
     }
 
     public static void WriteDownloadTextField(WireWriter writer, DownloadTextField value) {

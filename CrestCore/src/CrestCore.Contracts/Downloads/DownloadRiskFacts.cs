@@ -1,4 +1,4 @@
-namespace CrestCore.Domain;
+namespace CrestCore.Contracts;
 
 /// What the platform knows about a download before its risk is judged.
 ///
