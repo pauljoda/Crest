@@ -224,7 +224,9 @@ jobs:
     runs-on: xcode-27
     # Two apps and two disk images are notarized.
     timeout-minutes: 180
-    environment: production
+    # Separate from `production`, which only admits main and release tags, so
+    # experimental builds can come from any branch.
+    environment: experimental
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
