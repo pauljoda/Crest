@@ -18,15 +18,16 @@ extension CrestCore {
     // MARK: - Actions - Saves
 
     /// Returns once every edit the core accepted before the call is on disk,
-    /// or once a save the core started itself has failed. Drains keep running
-    /// while it waits, so the main actor stays free.
+    /// what its saved windows show included, or once a save the core started
+    /// itself has failed. Drains keep running while it waits, so the main
+    /// actor stays free.
     func flushPendingSaves() async {
         guard let revision = try? query(PendingSave()).revision else { return }
         await saved(through: revision)
     }
 
-    /// Returns once `revision` or a newer one is on disk, or once a save the
-    /// core started itself has failed.
+    /// Returns once file revision `revision` or a newer one is on disk, or
+    /// once a save the core started itself has failed.
     func saved(through revision: Int64) async {
         guard state.savedRevision < revision else { return }
         await withCheckedContinuation { continuation in

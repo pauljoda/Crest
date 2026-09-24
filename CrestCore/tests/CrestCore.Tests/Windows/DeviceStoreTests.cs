@@ -142,6 +142,32 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void AWindowOnlyChangeIsPendingUntilItIsWritten() {
+        using var directory = new StorageDirectory();
+        var (app, workspace, spaces) = DeviceApp(directory);
+        using var disposal = app;
+        var (window, second) = (Guid.NewGuid(), SpaceId(spaces[1]!));
+        Assert.NotEqual(second, Shown(app.Send(new OpenWindow(window, workspace, Saved: true, null, null, [], true))).ShownSpaceId);
+        _ = DrainUntil(app, _ => app.Query(new PendingSave()).Revision is null);
+        Assert.Null(app.Query(new PendingSave()).Revision);
+        var revision = app.Session!.Revision;
+
+        // Another writer holds the file, so the device store cannot write behind yet.
+        using var holder = SqliteConnection.Open(directory.File, Sqlite.OpenReadWrite);
+        holder.Execute("BEGIN IMMEDIATE");
+        Assert.Equal(second, Shown(app.Send(new ShowSpace(window, second))).ShownSpaceId);
+        Assert.Equal(revision, app.Session!.Revision);
+        var pending = Assert.NotNull(app.Query(new PendingSave()).Revision);
+        Assert.NotEqual(second, holder.ReadDevice("window-records").Windows.Single(record => record.Id == window).ShownSpaceId);
+        holder.Execute("ROLLBACK");
+
+        var announced = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision >= pending));
+        Assert.Contains(announced, change => change is Saved saved && saved.Revision >= pending);
+        Assert.Null(app.Query(new PendingSave()).Revision);
+        Assert.Equal(second, holder.ReadDevice("window-records").Windows.Single(record => record.Id == window).ShownSpaceId);
+    }
+
+    [Fact]
     public void TheWindowRecordsAnInstalledReleaseKeptAreCarriedOnceWithTheirLayouts() {
         using var directory = new StorageDirectory();
         var (core, _, _) = InstalledDefaults();

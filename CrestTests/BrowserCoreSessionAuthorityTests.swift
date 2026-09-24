@@ -299,15 +299,20 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         try journal.stage(session: .preview)
         let harness = try BrowserStoredSessionHarness(session: .preview, journal: journal)
         let store = harness.store
+        let window = store.makeWindowStore(BrowserWindowOpening(saved: true))
         let coordinator = try XCTUnwrap(store.syncCoordinator)
         await store.flushPendingSyncPersistence()
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         XCTAssertEqual(try harness.stored().journal?.pendingRecordIDs, [])
+        XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), window.selectedSpaceID.rawValue)
 
         let space = store.session.spaces[0]
         store.updateSpaceIdentity(space.id, name: "Renamed before quit", symbol: "book", accent: .teal)
         let url = try XCTUnwrap(URL(string: "https://example.org/opened-before-quit"))
         let opened = try XCTUnwrap(store.openNewTab(url: url, in: space.id, selecting: true))
+        // Showing another Space changes only the window's record, never the session.
+        let shown = try XCTUnwrap(store.session.spaces.first { $0.id != window.selectedSpaceID })
+        window.selectPresentedSpace(shown.id)
         await store.flushPendingSyncPersistence()
 
         let stored = try harness.stored()
@@ -316,6 +321,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let staged = try XCTUnwrap(stored.journal).pendingRecordIDs
         XCTAssertTrue(staged.contains(BrowserSyncRecordID(kind: .space, value: space.id.rawValue)))
         XCTAssertTrue(staged.contains(BrowserSyncRecordID(kind: .tab, value: opened.rawValue)))
+        XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), shown.id.rawValue)
     }
 
     func testCoreRepairPreservesAssetOwnershipWhenIdentitiesCollide() throws {

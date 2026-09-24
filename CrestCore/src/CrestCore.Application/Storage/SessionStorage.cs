@@ -14,9 +14,37 @@ namespace CrestCore.Application;
 /// journal is never ahead of the session on disk. Parts whose bytes did not
 /// change are not rewritten.
 ///
+/// Everything the file is handed to write takes the next file revision: each
+/// accepted session revision and each change to this device's saved windows.
+/// `PendingRevision` answers the newest one not on disk yet, and `Saved`
+/// announces each newer revision up to which everything is on disk.
+///
 /// The writer lock is never taken while the session gate is held, and changes
 /// are announced only after every storage lock is released.
 internal sealed class SessionStorage : IDisposable {
+    #region Types
+
+    /// The newest value of one kind the file was handed and has not written.
+    /// It supersedes every earlier one, so writing it writes them all:
+    /// `Revision` is the file revision it was handed at, and `Since` the
+    /// oldest file revision of its kind still unwritten.
+    private sealed record Unwritten<T>(T Value, ulong Revision, ulong Since) {
+        #region Actions - Revisions
+
+        /// `value`, handed at `revision`, in place of `earlier`.
+        public static Unwritten<T> Replacing(Unwritten<T>? earlier, T value, ulong revision) =>
+            new(value, revision, earlier?.Since ?? revision);
+
+        /// What stays unwritten once the value handed at `written` is on disk:
+        /// nothing when that was this one, or this newer one.
+        public Unwritten<T>? After(ulong written) =>
+            Revision <= written ? null : this with { Since = Math.Max(Since, written + 1) };
+
+        #endregion
+    }
+
+    #endregion
+
     #region Variables
 
     public const string FileName = "session.sqlite";
@@ -40,7 +68,8 @@ internal sealed class SessionStorage : IDisposable {
     private readonly SqliteConnection connection;
     private readonly Action<Change> announce;
     private readonly Thread worker;
-    /// Guards the pending revision and the worker's wake-up; the worker waits on it.
+    /// Guards what is unwritten, the revisions handed out and the worker's
+    /// wake-up; the worker waits on it.
     private readonly object queue = new();
     /// One writer at a time, and the only owner of the connection.
     private readonly Lock writing = new();
@@ -48,11 +77,16 @@ internal sealed class SessionStorage : IDisposable {
     private readonly Dictionary<string, byte[]> written;
     private SessionState? writtenSession;
     private NativeSyncJournal? writtenJournal;
-    private (SessionState Session, ulong Revision)? pending;
+    /// The newest accepted session revision not yet written.
+    private Unwritten<(SessionState Session, ulong Revision)>? pending;
     /// The newest device records not yet written, and those the file holds.
-    private DeviceRecords? pendingDevice;
+    private Unwritten<DeviceRecords>? pendingDevice;
     private DeviceRecords writtenDevice;
-    private ulong writtenRevision;
+    /// The newest session revision handed to the file or saved durably, and
+    /// the newest one the file holds.
+    private ulong handedRevision, writtenRevision;
+    /// The newest file revision handed out, and the newest one `Saved` named.
+    private ulong fileRevision, savedRevision;
     private bool pendingIsNew, stopping, closed;
 
     public string Directory { get; }
@@ -60,10 +94,10 @@ internal sealed class SessionStorage : IDisposable {
     /// What the device store held when the file was opened.
     public DeviceRecords Device { get; }
 
-    /// The newest revision handed to the worker and not yet on disk, or null.
+    /// The newest file revision handed to the file and not yet on disk, or null.
     public ulong? PendingRevision {
         get {
-            lock (queue) return pending?.Revision;
+            lock (queue) return WrittenThrough < fileRevision ? fileRevision : null;
         }
     }
 
@@ -73,6 +107,10 @@ internal sealed class SessionStorage : IDisposable {
             lock (writing) return written.ContainsKey(StoragePart.Core.Name);
         }
     }
+
+    /// The newest file revision up to which everything is on disk. The caller
+    /// holds the queue lock.
+    private ulong WrittenThrough => Math.Min(pending?.Since ?? fileRevision + 1, pendingDevice?.Since ?? fileRevision + 1) - 1;
 
     #endregion
 
@@ -180,13 +218,15 @@ internal sealed class SessionStorage : IDisposable {
 
     #region Actions - Saving
 
-    /// Hands the worker a published revision to save behind. A revision no
-    /// newer than the one already pending or written is ignored.
+    /// Hands the worker a published revision to save behind, at the next file
+    /// revision. A revision no newer than one already handed or saved durably
+    /// is ignored.
     public void Enqueue(SessionState session, ulong revision) {
         ArgumentNullException.ThrowIfNull(session);
         lock (queue) {
-            if (stopping || pending is { } current && current.Revision >= revision) return;
-            pending = (session, revision);
+            if (stopping || revision <= handedRevision) return;
+            handedRevision = revision;
+            pending = Unwritten<(SessionState, ulong)>.Replacing(pending, (session, revision), ++fileRevision);
             pendingIsNew = true;
             Monitor.Pulse(queue);
         }
@@ -219,13 +259,13 @@ internal sealed class SessionStorage : IDisposable {
         }
     }
 
-    /// Hands the worker the device records to save behind. The newest
-    /// records replace any that are still pending.
+    /// Hands the worker the device records to save behind, at the next file
+    /// revision. The newest records replace any that are still pending.
     public void EnqueueDevice(DeviceRecords records) {
         ArgumentNullException.ThrowIfNull(records);
         lock (queue) {
             if (stopping) return;
-            pendingDevice = records;
+            pendingDevice = Unwritten<DeviceRecords>.Replacing(pendingDevice, records, ++fileRevision);
             pendingIsNew = true;
             Monitor.Pulse(queue);
         }
@@ -235,14 +275,17 @@ internal sealed class SessionStorage : IDisposable {
     /// and leaves the file as it was when the write fails.
     public void SaveDevice(DeviceRecords records) {
         ArgumentNullException.ThrowIfNull(records);
+        Saved? saved;
         lock (writing) {
             RequireOpen();
             connection.InTransaction(() => connection.WriteDevice(records, WindowRecordsMarker));
             writtenDevice = records;
             lock (queue) {
-                if (ReferenceEquals(pendingDevice, records)) pendingDevice = null;
+                if (ReferenceEquals(pendingDevice?.Value, records)) pendingDevice = null;
+                saved = Advance();
             }
         }
+        Announce(saved);
     }
 
     private void Run() {
@@ -252,30 +295,29 @@ internal sealed class SessionStorage : IDisposable {
                 if (!pendingIsNew) return;
                 pendingIsNew = false;
             }
-            // The window records a revision moved are queued just after it, so a
-            // revision is announced as saved once they are written too.
-            var saved = WriteBehind();
+            Announce(WriteBehind());
             Announce(WriteDeviceBehind());
-            Announce(saved);
         }
     }
 
-    /// Saves the newest pending device records. A failure is published, and
-    /// the records stay pending for the next attempt.
+    /// Saves the newest pending device records, answering `Saved` when the
+    /// file now holds a newer file revision. A failure is published, and the
+    /// records stay pending for the next attempt.
     private Change? WriteDeviceBehind() {
-        DeviceRecords? records;
-        lock (queue) records = pendingDevice;
-        if (records is null) return null;
+        Unwritten<DeviceRecords>? owed;
+        lock (queue) owed = pendingDevice;
+        if (owed is null) return null;
+        var records = owed.Value;
         try {
             lock (writing) {
                 RequireOpen();
                 if (!records.Equals(writtenDevice)) connection.InTransaction(() => connection.WriteDevice(records, WindowRecordsMarker));
                 writtenDevice = records;
+                lock (queue) {
+                    pendingDevice = pendingDevice?.After(owed.Revision);
+                    return Advance();
+                }
             }
-            lock (queue) {
-                if (ReferenceEquals(pendingDevice, records)) pendingDevice = null;
-            }
-            return null;
         } catch (Exception error) {
             return new StorageFailed(error is StorageException storage ? storage.Reason : StorageFailure.Unavailable);
         }
@@ -292,15 +334,20 @@ internal sealed class SessionStorage : IDisposable {
     }
 
     /// Writes one transaction under the writer lock: `session` or, without
-    /// one, the newest pending revision, and `journal`. Answers `Saved` when
-    /// the file now holds a newer revision.
+    /// one, the newest pending revision, and `journal`. A durable `session`
+    /// takes the next file revision once it is written. Answers `Saved` when
+    /// the file now holds a newer file revision.
     private Saved? Write(SessionState? session, ulong revision, NativeSyncJournal? journal,
         NativeSessionCheckpoint? encoded = null) {
         lock (writing) {
             RequireOpen();
+            Unwritten<(SessionState Session, ulong Revision)>? owed = null;
             if (session is null) {
                 lock (queue) {
-                    if (pending is { } next && next.Revision > writtenRevision) (session, revision) = next;
+                    if (pending is { } next && next.Value.Revision > writtenRevision) {
+                        owed = next;
+                        (session, revision) = next.Value;
+                    }
                 }
             } else if (revision <= writtenRevision) {
                 throw new InvalidOperationException("A durable save must be newer than the file.");
@@ -310,10 +357,25 @@ internal sealed class SessionStorage : IDisposable {
             if (session is null) return null;
             writtenRevision = revision;
             lock (queue) {
-                if (pending is { } saved && saved.Revision <= revision) pending = null;
+                if (owed is not null) {
+                    pending = pending?.After(owed.Revision);
+                } else {
+                    handedRevision = Math.Max(handedRevision, revision);
+                    fileRevision++;
+                    if (pending is { } superseded && superseded.Value.Revision <= revision) pending = null;
+                }
+                return Advance();
             }
-            return new Saved(checked((long)revision));
         }
+    }
+
+    /// `Saved` for the newest file revision up to which everything is on
+    /// disk, when `Saved` has not named it yet. The caller holds the queue lock.
+    private Saved? Advance() {
+        var through = WrittenThrough;
+        if (through <= savedRevision) return null;
+        savedRevision = through;
+        return new Saved(checked((long)through));
     }
 
     /// Writes every part of `session` and `journal` whose bytes changed, in

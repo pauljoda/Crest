@@ -66,13 +66,17 @@ public sealed partial class CrestApp {
     /// batch goes from empty to not empty; a drain is already due otherwise.
     /// A change announced while this thread holds the lock owes the wake to
     /// the call that holds it: an intent drains the batch before it returns,
-    /// and a report wakes the host once it lets go. A newer save replaces an
-    /// undrained older one.
+    /// and a report wakes the host once it lets go. An undrained save gives way
+    /// to a newer one and outlasts an older one, which a writer on another
+    /// thread can announce after it.
     private void Announce(Change change) {
         bool wakes;
         lock (pendingGate) {
-            if (change is Saved && pending.Count > 0 && pending[^1] is Saved) pending[^1] = change;
-            else pending.Add(change);
+            if (change is Saved saved && pending.Count > 0 && pending[^1] is Saved earlier) {
+                if (saved.Revision > earlier.Revision) pending[^1] = saved;
+            } else {
+                pending.Add(change);
+            }
             wakes = pending.Count == 1;
         }
         if (!wakes) return;

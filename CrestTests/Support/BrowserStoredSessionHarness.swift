@@ -98,6 +98,26 @@ final class BrowserStoredSessionHarness {
         try withConnection { try Self.read(part, in: $0) }
     }
 
+    /// The Space the device table the file holds records `window` showing,
+    /// or nil when it keeps no record of that window.
+    func storedShownSpace(of window: BrowserWindowID) throws -> UUID? {
+        try withConnection { connection in
+            var statement: OpaquePointer?
+            let prepared = sqlite3_prepare_v2(
+                connection, "SELECT shown_space FROM device_window WHERE id=?", -1, &statement, nil)
+            guard prepared == SQLITE_OK, let statement else { throw HarnessError.sqlite(prepared) }
+            defer { sqlite3_finalize(statement) }
+            sqlite3_bind_text(
+                statement, 1, window.rawValue.uuidString, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            let result = sqlite3_step(statement)
+            if result == SQLITE_DONE { return nil }
+            guard result == SQLITE_ROW, let shown = sqlite3_column_text(statement, 0) else {
+                throw HarnessError.sqlite(result)
+            }
+            return UUID(uuidString: String(cString: shown))
+        }
+    }
+
     // MARK: - Actions - Faults
 
     /// Makes the file refuse every write to `part`, as a full disk or a failing
