@@ -35,7 +35,7 @@ enum BrowserSearchProviderIdentityLabelLayout: Equatable {
 }
 
 struct BrowserSearchProviderIdentityLabel: View {
-    let provider: BrowserSearchProvider
+    let provider: SearchProvider
     var profileID: UUID? = nil
     var title: String? = nil
     var layout: BrowserSearchProviderIdentityLabelLayout = .platformDefault

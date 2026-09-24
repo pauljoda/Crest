@@ -25,7 +25,7 @@ struct BrowserCommandPaletteResult: Identifiable, Equatable, Sendable {
     let title: String
     let subtitle: String
     let symbol: String
-    let searchProvider: BrowserSearchProvider?
+    let searchProvider: SearchProvider?
     let trailing: String
     let target: BrowserCommandPaletteTarget
 
@@ -35,7 +35,7 @@ struct BrowserCommandPaletteResult: Identifiable, Equatable, Sendable {
         title: String,
         subtitle: String,
         symbol: String,
-        searchProvider: BrowserSearchProvider? = nil,
+        searchProvider: SearchProvider? = nil,
         trailing: String,
         target: BrowserCommandPaletteTarget
     ) {

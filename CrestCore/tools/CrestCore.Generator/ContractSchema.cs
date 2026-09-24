@@ -60,11 +60,16 @@ internal sealed record ContractEnum(Type Type, bool IsFlags, IReadOnlyList<KeyVa
 /// instances are its members. A member's wire tag is its index in the set's
 /// `All`, so `All` is append-only. Each member carries the values of the set's
 /// data properties into Swift; delegate members are the core's behavior and
-/// stay there.
+/// stay there. An open set also has members made at runtime, so it has no wire
+/// tags and never crosses the wire. A set's public constants reach Swift as
+/// static values, so a rule both languages follow is written once.
 internal sealed record ContractSet(Type Type, IReadOnlyList<ContractField> Properties, IReadOnlyList<ContractSetMember> Members,
-    IReadOnlyList<string> CoreOnly) {
+    IReadOnlyList<string> CoreOnly, bool IsOpen, IReadOnlyList<ContractConstant> Constants) {
     public string Name => Type.Name;
 }
+
+/// A fixed set's public constant: its name, its primitive type and its value.
+internal sealed record ContractConstant(string Name, FieldType Type, object Value);
 
 /// One member of a fixed set: the name of its static field, its wire tag, and
 /// its value for each of the set's properties, in property order. A value is a
@@ -232,7 +237,12 @@ internal sealed class ContractSchema {
         if (type.IsEnum) return DescribeEnum(type, where);
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IReadOnlyList<>))
             return new ListField(Resolve(type.GetGenericArguments()[0], info?.GenericTypeArguments.FirstOrDefault(), $"{where}[]"));
-        if (IsFixedSet(type)) return DescribeSet(type, where);
+        if (IsFixedSet(type)) {
+            var set = DescribeSet(type, where);
+            return sets[type].IsOpen
+                ? throw new ContractSchemaException($"{where}: open set {type.Name} has members made at runtime, which no wire tag names.")
+                : set;
+        }
         if (type.IsClass && !type.IsAbstract && type.Assembly == typeof(Intent).Assembly) {
             DescribeRecord(type);
             return new RecordField(type);
@@ -285,8 +295,15 @@ internal sealed class ContractSchema {
         var properties = new List<ContractField>();
         var members = new List<ContractSetMember>();
         var coreOnly = new List<string>();
+        var constants = new List<ContractConstant>();
         // Register before resolving properties so a data member may name this set or one that names it.
-        sets[type] = new ContractSet(type, properties, members, coreOnly);
+        sets[type] = new ContractSet(type, properties, members, coreOnly, type.IsDefined(typeof(OpenSetAttribute), false), constants);
+        foreach (var constant in type.GetFields(BindingFlags.Public | BindingFlags.Static).Where(field => field.IsLiteral)) {
+            string at = $"{name}.{constant.Name}";
+            if (ResolveSetData(constant.FieldType, null, at, type) is not PrimitiveField primitive)
+                throw new ContractSchemaException($"{at}: a fixed set's constants are bool, int, long, double or string.");
+            constants.Add(new ContractConstant(constant.Name, primitive, constant.GetRawConstantValue()!));
+        }
         if (type.GetFields(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault() is { } exposed)
             throw new ContractSchemaException($"{name}.{exposed.Name}: a fixed set exposes its data as get-only properties, not fields.");
         coreOnly.AddRange(type.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
@@ -541,7 +558,7 @@ internal sealed class ContractSchema {
             text.Append(item.IsFlags ? "flags " : "enum ").Append(item.Name)
                 .Append(string.Concat(item.Members.Select(member => $" {member.Key}={member.Value}"))).Append('\n');
         foreach (var set in Sets)
-            text.Append("set ").Append(set.Name).Append('(')
+            text.Append(set.IsOpen ? "open set " : "set ").Append(set.Name).Append('(')
                 .Append(string.Join(", ", set.Properties.Select(property => $"{property.Name}: {Describe(property.Type)}"))).Append(')')
                 .Append(string.Concat(set.Members.Select(member =>
                     $" {member.Name}={member.Tag}({string.Join(", ", member.Values.Select(DescribeValue))})"))).Append('\n');

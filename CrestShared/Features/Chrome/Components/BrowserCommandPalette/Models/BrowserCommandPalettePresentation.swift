@@ -10,7 +10,7 @@ struct BrowserCommandPalettePresentationIdentity: Hashable {
     let focusRequest: Int?
     let source: BrowserTabRuntimeAssignment?
     let spaceAssignment: BrowserSpaceRuntimeAssignment?
-    let searchProvider: BrowserSearchProvider?
+    let searchProvider: SearchProvider?
     let searchSuggestionsEnabled: Bool?
 
     init(

@@ -36,8 +36,9 @@ internal static class CSharpCodecEmitter {
         EmitAnswers(code, schema);
         foreach (var record in schema.Records) EmitRecord(code, record);
         foreach (var item in schema.Enums) EmitEnum(code, item);
-        foreach (var set in schema.Sets) EmitSet(code, set);
-        if (schema.Sets.Count > 0) EmitTagOf(code);
+        var tagged = schema.Sets.Where(set => !set.IsOpen).ToList();
+        foreach (var set in tagged) EmitSet(code, set);
+        if (tagged.Count > 0) EmitTagOf(code);
         code.Append("}\n");
         return code.ToString();
     }

@@ -66,6 +66,6 @@ struct BrowserLinkDestinationHost {
 
 struct BrowserSelectionSearchDestination: Equatable, Sendable {
     let url: URL
-    let provider: BrowserSearchProvider
+    let provider: SearchProvider
     let source: BrowserTabRuntimeAssignment
 }

@@ -24,7 +24,7 @@ struct BrowserSearchEngineManager: View {
         NavigationStack {
             List {
                 Section("Built-In", systemImage: "magnifyingglass") {
-                    ForEach(BrowserSearchProvider.allCases) { provider in
+                    ForEach(SearchProvider.all) { provider in
                         providerRow(provider)
                     }
                 }
@@ -100,7 +100,7 @@ struct BrowserSearchEngineManager: View {
         } message: { custom in
             Text(
                 verbatim:
-                    preferences.searchProvider.id == .custom(custom.id)
+                    preferences.searchProvider == custom.provider
                     ? String(localized: "Google will become this Space’s search engine.")
                     : String(
                         localized: "This removes \(custom.name) from this Space."
@@ -113,13 +113,13 @@ struct BrowserSearchEngineManager: View {
         browser.liveSpace(space).browsingPreferences
     }
 
-    private func providerRow(_ provider: BrowserSearchProvider) -> some View {
+    private func providerRow(_ provider: SearchProvider) -> some View {
         Button {
             select(provider)
         } label: {
             BrowserSearchEngineProviderLabel(
                 provider: provider, profileID: space.profile.id,
-                isSelected: preferences.searchProvider.id == provider.id)
+                isSelected: preferences.searchProvider == provider)
         }
         .buttonStyle(.plain)
     }
@@ -133,7 +133,7 @@ struct BrowserSearchEngineManager: View {
             } label: {
                 BrowserSearchEngineProviderLabel(
                     provider: custom.provider, profileID: space.profile.id,
-                    isSelected: preferences.searchProvider.id == .custom(custom.id)
+                    isSelected: preferences.searchProvider == custom.provider
                 )
                 .contentShape(.rect)
             }
@@ -152,7 +152,7 @@ struct BrowserSearchEngineManager: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func select(_ provider: BrowserSearchProvider) {
+    private func select(_ provider: SearchProvider) {
         var updated = preferences
         updated.searchProvider = provider
         browser.updateBrowsingPreferences(updated, in: space.id)

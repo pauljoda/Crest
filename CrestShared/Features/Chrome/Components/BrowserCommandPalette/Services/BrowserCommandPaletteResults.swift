@@ -57,7 +57,7 @@ extension BrowserCommandPaletteResults {
     static func insertingRemoteSuggestions(
         _ suggestions: [String],
         query: String,
-        provider: BrowserSearchProvider,
+        provider: SearchProvider,
         into localResults: [BrowserCommandPaletteResult]
     ) -> [BrowserCommandPaletteResult] {
         let normalizedQuery = normalizedSuggestion(query)
@@ -83,7 +83,7 @@ extension BrowserCommandPaletteResults {
             remoteResults.append(
                 BrowserCommandPaletteResult(
                     section: .searchSuggestions,
-                    id: "search-suggestion-\(provider.id.rawValue)-\(key)",
+                    id: "search-suggestion-\(provider.name)-\(key)",
                     title: suggestion,
                     subtitle: "Search with \(provider.title)",
                     symbol: "magnifyingglass",
@@ -113,7 +113,7 @@ extension BrowserCommandPaletteResults {
 extension BrowserCommandPaletteResults {
     static func intentResult(
         query: BrowserCommandPaletteQuery,
-        searchProvider: BrowserSearchProvider
+        searchProvider: SearchProvider
     ) -> BrowserCommandPaletteIntentResult? {
         guard
             !query.isEmpty,

@@ -1446,6 +1446,77 @@ struct NumberedSelectionTarget: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SearchProvider`, which also makes members at runtime. Members are equal when their names are.
+struct SearchProvider: Hashable, Sendable {
+    static let customPrefix = "custom:"
+    static let maximumNameLength = 64
+    static let maximumTemplateLength = 2048
+
+    let name: String
+    let title: String
+    let logo: String?
+    let searchTemplate: String
+    let suggestionTemplate: String?
+
+    init(name: String, title: String, logo: String?, searchTemplate: String, suggestionTemplate: String?) {
+        self.name = name
+        self.title = title
+        self.logo = logo
+        self.searchTemplate = searchTemplate
+        self.suggestionTemplate = suggestionTemplate
+    }
+
+    static let google = SearchProvider(
+        name: "google",
+        title: "Google",
+        logo: "SearchProviderGoogle",
+        searchTemplate: "https://www.google.com/search?q=%s",
+        suggestionTemplate: "https://www.google.com/complete/search?client=chrome&q=%s"
+    )
+    static let duckDuckGo = SearchProvider(
+        name: "duckDuckGo",
+        title: "DuckDuckGo",
+        logo: "SearchProviderDuckDuckGo",
+        searchTemplate: "https://duckduckgo.com/?q=%s",
+        suggestionTemplate: "https://duckduckgo.com/ac/?q=%s&type=list"
+    )
+    static let bing = SearchProvider(
+        name: "bing",
+        title: "Bing",
+        logo: "SearchProviderBing",
+        searchTemplate: "https://www.bing.com/search?q=%s",
+        suggestionTemplate: "https://www.bing.com/osjson.aspx?query=%s"
+    )
+    static let ecosia = SearchProvider(
+        name: "ecosia",
+        title: "Ecosia",
+        logo: "SearchProviderEcosia",
+        searchTemplate: "https://www.ecosia.org/search?q=%s",
+        suggestionTemplate: "https://ac.ecosia.org/autocomplete?q=%s&type=list"
+    )
+    static let brave = SearchProvider(
+        name: "brave",
+        title: "Brave Search",
+        logo: "SearchProviderBrave",
+        searchTemplate: "https://search.brave.com/search?q=%s",
+        suggestionTemplate: "https://search.brave.com/api/suggest?q=%s"
+    )
+
+    static let all: [SearchProvider] = [google, duckDuckGo, bing, ecosia, brave]
+
+    static func named(_ name: String?) -> SearchProvider? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SearchProvider, rhs: SearchProvider) -> Bool {
+        lhs.name == rhs.name
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
+}
+
 /// The members of the core's `ShortcutCommand`. A member's wire tag is its index in `all`.
 struct ShortcutCommand: Hashable, Sendable {
     enum Kinds: Sendable {

@@ -29,19 +29,19 @@ internal static class SearchCodes {
         string id = Protocol.Text(value, Id, 64);
         if (!id.StartsWith(SearchProvider.CustomPrefix, StringComparison.Ordinal)) {
             Protocol.Members(value, Id);
-            return SearchProviderCatalog.BuiltIn(id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownSearchProvider);
+            return SearchProvider.Named(id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownSearchProvider);
         }
         string identity = id[SearchProvider.CustomPrefix.Length..];
         if (!Guid.TryParseExact(identity, "D", out var guid) || identity != guid.ToString("D"))
             throw new ProtocolException(ProtocolErrorCodes.InvalidUuid);
-        return SearchProviderCatalog.CustomOrDefault(guid, Edited(value, Name), Edited(value, SearchTemplate),
+        return SearchProvider.CustomOrDefault(guid, Edited(value, Name), Edited(value, SearchTemplate),
             OptionalEdited(value, SuggestionTemplate));
     }
 
     /// A custom engine as the person typed it, validated by the domain.
     public static SearchProvider Custom(JsonElement value) {
         Protocol.Members(value, Id, Name, SearchTemplate, SuggestionTemplate);
-        return SearchProvider.Custom(Protocol.Id(value, Id), Edited(value, Name), Edited(value, SearchTemplate),
+        return SearchPreferences.Custom(Protocol.Id(value, Id), Edited(value, Name), Edited(value, SearchTemplate),
             OptionalEdited(value, SuggestionTemplate));
     }
 

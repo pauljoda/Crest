@@ -11,13 +11,12 @@ public sealed class SearchPreferences {
 
     public const int MaximumCustomProviders = 32;
 
-    public static IReadOnlyList<SearchProvider> BuiltIns => SearchProviderCatalog.BuiltIns;
-    public static SearchPreferences Default { get; } = new(SearchProviderCatalog.GoogleId, [], false);
+    public static SearchPreferences Default { get; } = new(SearchProvider.Google.Name, [], false);
     public string SelectedId { get; }
     public IReadOnlyList<SearchProvider> CustomProviders { get; }
     public bool SuggestionsEnabled { get; }
-    public IEnumerable<SearchProvider> Providers => BuiltIns.Concat(CustomProviders);
-    public SearchProvider Selected => Providers.Single(p => p.Id == SelectedId);
+    public IEnumerable<SearchProvider> Providers => SearchProvider.All.Concat(CustomProviders);
+    public SearchProvider Selected => Providers.Single(p => p.Name == SelectedId);
 
     #endregion
 
@@ -32,8 +31,8 @@ public sealed class SearchPreferences {
     /// Restores stored preferences: the first provider for each identity, at
     /// most the custom limit, and Google when the selection is not available.
     public static SearchPreferences Restore(string? selected, IEnumerable<SearchProvider> custom, bool suggestions) {
-        var providers = custom.GroupBy(p => p.Id).Select(g => g.First()).Take(MaximumCustomProviders).ToArray();
-        if (!BuiltIns.Concat(providers).Any(p => p.Id == selected)) selected = SearchProviderCatalog.GoogleId;
+        var providers = custom.GroupBy(p => p.Name).Select(g => g.First()).Take(MaximumCustomProviders).ToArray();
+        if (!SearchProvider.All.Concat(providers).Any(p => p.Name == selected)) selected = SearchProvider.Google.Name;
         return new(selected!, Array.AsReadOnly(providers), suggestions);
     }
 
@@ -44,7 +43,7 @@ public sealed class SearchPreferences {
         var providers = new List<SearchProvider>();
         foreach (var custom in browsing.CustomSearchProviders) {
             try {
-                providers.Add(SearchProvider.Custom(custom.Id, custom.Name, custom.SearchUrlTemplate, custom.SuggestionUrlTemplate));
+                providers.Add(Custom(custom.Id, custom.Name, custom.SearchUrlTemplate, custom.SuggestionUrlTemplate));
             } catch (BrowserRuleException) {
                 // Excluded, never run.
             }
@@ -56,26 +55,37 @@ public sealed class SearchPreferences {
     public BrowsingPreferences Applied(BrowsingPreferences browsing) => browsing with {
         SelectedSearchProviderId = SelectedId,
         CustomSearchProviders = CustomProviders.Select(provider => new CustomSearchProvider(
-            Guid.Parse(provider.Id[SearchProvider.CustomPrefix.Length..]), provider.Name, provider.SearchTemplate,
+            Guid.Parse(provider.Name[SearchProvider.CustomPrefix.Length..]), provider.Title, provider.SearchTemplate,
             provider.SuggestionTemplate)).ToArray(),
         SearchSuggestionsEnabled = SuggestionsEnabled
     };
 
-    /// Refuses an already validated custom engine whose name another custom
+    /// `SearchProvider.Admit` for session commands and stored preferences,
+    /// which report a flaw as its rule code.
+    public static SearchProvider Custom(Guid id, string name, string search, string? suggestions) {
+        try {
+            return SearchProvider.Admit(id, name, search, suggestions);
+        } catch (Rejected rejected) {
+            throw new BrowserRuleException(BrowserRuleCodes.SearchEngine(rejected.Rejection));
+        }
+    }
+
+    /// Refuses an already validated custom engine whose title another custom
     /// engine uses (ignoring case and diacritics), or that would exceed the
-    /// limit. Throws `Rejected` naming the rule.
-    public static void Admit(SearchProvider provider, IReadOnlyCollection<(string Id, string Name)> existing) {
+    /// limit. `existing` holds each custom engine's name and title. Throws
+    /// `Rejected` naming the rule.
+    public static void Admit(SearchProvider provider, IReadOnlyCollection<(string Name, string Title)> existing) {
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(existing);
-        if (!provider.IsCustom) throw new Rejected(new InvalidSearchEngine(SearchEngineFlaw.InvalidIdentity));
-        string name = Fold(provider.Name);
-        if (existing.Any(p => p.Id != provider.Id && Fold(p.Name) == name)) throw new Rejected(new DuplicateSearchEngineName());
-        if (existing.All(p => p.Id != provider.Id) && existing.Count >= MaximumCustomProviders)
+        if (!provider.IsCustom()) throw new Rejected(new InvalidSearchEngine(SearchEngineFlaw.InvalidIdentity));
+        string title = Fold(provider.Title);
+        if (existing.Any(p => p.Name != provider.Name && Fold(p.Title) == title)) throw new Rejected(new DuplicateSearchEngineName());
+        if (existing.All(p => p.Name != provider.Name) && existing.Count >= MaximumCustomProviders)
             throw new Rejected(new SearchEngineLimitReached(MaximumCustomProviders));
     }
 
     /// `Admit` for session commands, which report the rule as its code.
-    public static void RequireAdmissible(SearchProvider provider, IReadOnlyCollection<(string Id, string Name)> existing) {
+    public static void RequireAdmissible(SearchProvider provider, IReadOnlyCollection<(string Name, string Title)> existing) {
         try {
             Admit(provider, existing);
         } catch (Rejected rejected) {
@@ -91,18 +101,18 @@ public sealed class SearchPreferences {
     #region Mutators
 
     public SearchPreferences Select(string id, bool suggestions) {
-        if (!Providers.Any(p => p.Id == id)) throw new BrowserRuleException(BrowserRuleCodes.UnknownSearchProvider);
+        if (!Providers.Any(p => p.Name == id)) throw new BrowserRuleException(BrowserRuleCodes.UnknownSearchProvider);
         return new(id, CustomProviders, suggestions);
     }
 
     /// Adds or replaces a custom engine by identity, keeping its position.
     public SearchPreferences Upsert(SearchProvider provider) {
         ArgumentNullException.ThrowIfNull(provider);
-        if (!provider.IsCustom || !Guid.TryParseExact(provider.Id[SearchProvider.CustomPrefix.Length..], "D", out var id))
+        if (!provider.IsCustom() || !Guid.TryParseExact(provider.Name[SearchProvider.CustomPrefix.Length..], "D", out var id))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchProvider);
-        var validated = SearchProvider.Custom(id, provider.Name, provider.SearchTemplate, provider.SuggestionTemplate);
-        RequireAdmissible(validated, CustomProviders.Select(p => (p.Id, p.Name)).ToArray());
-        var values = CustomProviders.ToList(); int index = values.FindIndex(p => p.Id == validated.Id);
+        var validated = Custom(id, provider.Title, provider.SearchTemplate, provider.SuggestionTemplate);
+        RequireAdmissible(validated, CustomProviders.Select(p => (p.Name, p.Title)).ToArray());
+        var values = CustomProviders.ToList(); int index = values.FindIndex(p => p.Name == validated.Name);
         if (index < 0) values.Add(validated); else values[index] = validated;
         return new(SelectedId, values.AsReadOnly(), SuggestionsEnabled);
     }
@@ -110,8 +120,8 @@ public sealed class SearchPreferences {
     /// Removes a custom engine; removing the selected one selects Google.
     public SearchPreferences Remove(Guid id) {
         string key = SearchProvider.CustomId(id);
-        return new(SelectedId == key ? SearchProviderCatalog.GoogleId : SelectedId,
-            CustomProviders.Where(p => p.Id != key).ToList().AsReadOnly(), SuggestionsEnabled);
+        return new(SelectedId == key ? SearchProvider.Google.Name : SelectedId,
+            CustomProviders.Where(p => p.Name != key).ToList().AsReadOnly(), SuggestionsEnabled);
     }
 
     public string Resolve(string input, bool allowsInternalPages) {

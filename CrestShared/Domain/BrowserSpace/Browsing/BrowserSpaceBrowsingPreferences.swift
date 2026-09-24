@@ -1,49 +1,47 @@
 import Foundation
 
 struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
-    private var selectedSearchProviderID: BrowserSearchProviderID
+    /// The selected engine's name, as Spaces store and sync it.
+    private var selectedSearchProviderID: String
     private(set) var customSearchProviders: [BrowserCustomSearchProvider]
     var searchSuggestionsEnabled: Bool
     var currentTabCleanupPolicy: BrowserCurrentTabCleanupPolicy
     var contentBlockingPolicy: BrowserContentBlockingPolicy
     var dataRetention: BrowserSpaceDataRetentionPreferences
 
-    var searchProvider: BrowserSearchProvider {
+    var searchProvider: SearchProvider {
         get {
-            if let builtIn = BrowserSearchProvider.provider(with: selectedSearchProviderID) {
-                return builtIn
-            }
-            return customSearchProviders.first { .custom($0.id) == selectedSearchProviderID }?.provider ?? .google
+            availableSearchProviders.first { $0.name == selectedSearchProviderID } ?? .google
         }
         set {
-            guard availableSearchProviders.contains(where: { $0.id == newValue.id }) else {
-                selectedSearchProviderID = .google
+            guard availableSearchProviders.contains(newValue) else {
+                selectedSearchProviderID = SearchProvider.google.name
                 return
             }
-            selectedSearchProviderID = newValue.id
+            selectedSearchProviderID = newValue.name
         }
     }
 
-    var availableSearchProviders: [BrowserSearchProvider] {
-        BrowserSearchProvider.allCases + customSearchProviders.map(\.provider)
+    var availableSearchProviders: [SearchProvider] {
+        SearchProvider.all + customSearchProviders.map(\.provider)
     }
 
     init(
-        searchProvider: BrowserSearchProvider,
+        searchProvider: SearchProvider,
         currentTabCleanupPolicy: BrowserCurrentTabCleanupPolicy,
         contentBlockingPolicy: BrowserContentBlockingPolicy = .balanced,
         dataRetention: BrowserSpaceDataRetentionPreferences = .default,
         customSearchProviders: [BrowserCustomSearchProvider] = [],
         searchSuggestionsEnabled: Bool = false
     ) {
-        selectedSearchProviderID = searchProvider.id
+        selectedSearchProviderID = searchProvider.name
         self.customSearchProviders = customSearchProviders
         self.searchSuggestionsEnabled = searchSuggestionsEnabled
         self.currentTabCleanupPolicy = currentTabCleanupPolicy
         self.contentBlockingPolicy = contentBlockingPolicy
         self.dataRetention = dataRetention
-        if !availableSearchProviders.contains(where: { $0.id == selectedSearchProviderID }) {
-            selectedSearchProviderID = .google
+        if !availableSearchProviders.contains(where: { $0.name == selectedSearchProviderID }) {
+            selectedSearchProviderID = SearchProvider.google.name
         }
     }
 
@@ -65,15 +63,10 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let legacyRaw =
-            try container.decodeIfPresent(String.self, forKey: .searchProvider)
-            ?? BrowserSearchProviderID.google.rawValue
-        let legacyID = BrowserSearchProviderID(rawValue: legacyRaw) ?? .google
+        let legacyID =
+            try container.decodeIfPresent(String.self, forKey: .searchProvider) ?? SearchProvider.google.name
         selectedSearchProviderID =
-            (try? container.decodeIfPresent(
-                BrowserSearchProviderID.self,
-                forKey: .selectedSearchProviderID
-            )) ?? legacyID
+            (try? container.decodeIfPresent(String.self, forKey: .selectedSearchProviderID)) ?? legacyID
         customSearchProviders =
             (try? container.decodeIfPresent(
                 [BrowserCustomSearchProvider].self,
@@ -104,17 +97,15 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
         {
             customSearchProviders = restored.providers
             selectedSearchProviderID = restored.selectedID
-        } else if !availableSearchProviders.contains(where: { $0.id == selectedSearchProviderID }) {
-            selectedSearchProviderID = .google
+        } else if !availableSearchProviders.contains(where: { $0.name == selectedSearchProviderID }) {
+            selectedSearchProviderID = SearchProvider.google.name
         }
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        let legacyFallback =
-            selectedSearchProviderID.isCustom
-            ? BrowserSearchProviderID.google.rawValue
-            : selectedSearchProviderID.rawValue
+        // The legacy key names a built-in only.
+        let legacyFallback = SearchProvider.named(selectedSearchProviderID)?.name ?? SearchProvider.google.name
         try container.encode(legacyFallback, forKey: .searchProvider)
         try container.encode(selectedSearchProviderID, forKey: .selectedSearchProviderID)
         try container.encode(customSearchProviders, forKey: .customSearchProviders)

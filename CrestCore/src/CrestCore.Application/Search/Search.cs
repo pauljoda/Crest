@@ -16,7 +16,7 @@ public sealed class Search {
         var engine = query.Engine;
         var provider = SearchProvider.Admit(engine.Id, engine.Name, engine.SearchTemplate, engine.SuggestionTemplate);
         SearchPreferences.Admit(provider, [.. query.Existing.Select(existing => (SearchProvider.CustomId(existing.Id), existing.Name))]);
-        return new(engine.Id, provider.Name, provider.SearchTemplate, provider.SuggestionTemplate);
+        return new(engine.Id, provider.Title, provider.SearchTemplate, provider.SuggestionTemplate);
     }
 
     #endregion

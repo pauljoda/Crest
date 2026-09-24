@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserSearchProviderIcon: View {
-    let provider: BrowserSearchProvider
+    let provider: SearchProvider
     var profileID: UUID? = nil
     var size: CGFloat = 20
 
@@ -9,8 +9,8 @@ struct BrowserSearchProviderIcon: View {
 
     var body: some View {
         Group {
-            if let logoAssetName = provider.logoAssetName {
-                Image(logoAssetName)
+            if let logo = provider.logo {
+                Image(logo)
                     .resizable()
                     .renderingMode(.original)
                     .scaledToFit()
@@ -34,12 +34,12 @@ struct BrowserSearchProviderIcon: View {
     }
 
     private var taskIdentity: String {
-        "\(provider.id.rawValue)-\(profileID?.uuidString ?? "none")"
+        "\(provider.name)-\(profileID?.uuidString ?? "none")"
     }
 
     private func loadCustomIcon() async {
         guard
-            provider.builtIn == nil,
+            provider.isCustom,
             let profileID,
             let pageURL = provider.iconPageURL
         else {

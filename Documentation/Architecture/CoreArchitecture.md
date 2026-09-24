@@ -91,6 +91,11 @@ for `EnginePage` lists every direct engine call.
      beside the set, or a list of these; Swift receives each as a literal.
      Every fixed set in the contracts reaches Swift, whether or not a record
      names it.
+   - A set that also has members made at runtime, such as a Space's custom
+     search engines beside the built-ins, is marked `[OpenSet]`. A runtime
+     member has no index in `All`, so an open set never crosses the wire;
+     Swift receives a struct with a memberwise initializer whose values are
+     equal when their names are.
 
    A nested `Kinds` enum is used only where a switch cannot be avoided. Plain
    enums remain only for sets whose members carry nothing. Unions of message

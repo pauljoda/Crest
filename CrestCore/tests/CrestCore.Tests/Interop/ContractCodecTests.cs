@@ -162,7 +162,7 @@ public sealed unsafe class ContractCodecTests {
 
     [Fact]
     public void EveryFixedSetMemberTravelsAsItsIndexInAll() {
-        var sets = Sets().ToList();
+        var sets = Sets().Where(type => !type.IsDefined(typeof(OpenSetAttribute), false)).ToList();
         Assert.Contains(typeof(DownloadPhase), sets);
         foreach (var type in sets) {
             var members = SetMembers(type)!;
@@ -206,7 +206,23 @@ public sealed unsafe class ContractCodecTests {
         Assert.Contains("struct Binding: Equatable, Sendable {", swift, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AnOpenSetStaysOffTheWireAndSwiftCanMakeItsMembers() {
+        var schema = ContractSchema.Load([typeof(Opened.Engine)]);
+        string swift = SwiftEmitter.EmitContracts(schema);
+
+        Assert.True(schema.Sets.Single().IsOpen);
+        Assert.Contains("    init(name: String, title: String) {", swift, StringComparison.Ordinal);
+        Assert.Contains("static let built = Engine(name: \"built\", title: \"Built In\")", swift, StringComparison.Ordinal);
+        Assert.Contains("lhs.name == rhs.name", swift, StringComparison.Ordinal);
+        Assert.Contains("static let madePrefix = \"made:\"", swift, StringComparison.Ordinal);
+        Assert.DoesNotContain("tag", swift, StringComparison.Ordinal);
+        Assert.DoesNotContain("extension Engine", SwiftEmitter.EmitCodec(schema), StringComparison.Ordinal);
+        Assert.DoesNotContain("ReadEngine", CSharpCodecEmitter.Emit(schema), StringComparison.Ordinal);
+    }
+
     [Theory]
+    [InlineData(typeof(Opened.SendEngine), "SendEngine.Value:")]
     [InlineData(typeof(Malformed.SendUnlisted), "Unlisted.Hidden:")]
     [InlineData(typeof(Malformed.SendConstructible), "Constructible:")]
     [InlineData(typeof(Malformed.SendDated), "Dated.When:")]

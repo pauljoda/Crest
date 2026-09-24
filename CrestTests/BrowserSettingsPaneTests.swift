@@ -146,7 +146,7 @@ final class BrowserSettingsPaneTests: XCTestCase {
         XCTAssertEqual(name.wrappedValue, "Renamed")
 
         let provider = browser.browsingPreferenceBinding(\.searchProvider, in: space)
-        let otherProvider = BrowserSearchProvider.allCases.first {
+        let otherProvider = SearchProvider.all.first {
             $0 != provider.wrappedValue
         }!
         provider.wrappedValue = otherProvider

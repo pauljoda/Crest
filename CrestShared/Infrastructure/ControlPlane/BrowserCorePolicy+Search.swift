@@ -61,19 +61,19 @@ extension BrowserCorePolicy {
             case suggestionURLTemplate
         }
 
-        let provider: BrowserSearchProvider
+        let provider: SearchProvider
 
-        init(_ provider: BrowserSearchProvider) {
+        init(_ provider: SearchProvider) {
             self.provider = provider
         }
 
         func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(provider.id, forKey: .id)
-            guard provider.builtIn == nil else { return }
+            try container.encode(provider.name, forKey: .id)
+            guard provider.isCustom else { return }
             try container.encode(provider.title, forKey: .name)
-            try container.encode(provider.customSearchURLTemplate ?? "", forKey: .searchURLTemplate)
-            try container.encode(provider.customSuggestionURLTemplate, forKey: .suggestionURLTemplate)
+            try container.encode(provider.searchTemplate, forKey: .searchURLTemplate)
+            try container.encode(provider.suggestionTemplate, forKey: .suggestionURLTemplate)
         }
     }
 }
@@ -93,13 +93,13 @@ extension BrowserCorePolicy {
     }
 
     private struct CustomProvidersRequest: Encodable {
-        let selectedID: BrowserSearchProviderID
+        let selectedID: String
         let providers: [BrowserCoreSearchProviderRecord]
     }
 
     private struct CustomProvidersAnswer: Decodable {
         let indices: [Int]
-        let selectedID: BrowserSearchProviderID
+        let selectedID: String
     }
 
     private struct TranslationRuleRequest: Encodable {
@@ -126,7 +126,7 @@ extension BrowserCorePolicy {
     /// The results or suggestion URL for a query. Nil when the engine has no
     /// suggestion endpoint or the core cannot answer.
     static func searchURL(
-        provider: BrowserSearchProvider, query: String,
+        provider: SearchProvider, query: String,
         purpose: BrowserSearchQueryPurpose
     ) -> URL? {
         let request = SearchURLRequest(
@@ -140,8 +140,8 @@ extension BrowserCorePolicy {
     /// stored rather than discarding it.
     static func restoredCustomSearchProviders(
         _ providers: [BrowserCustomSearchProvider],
-        selectedID: BrowserSearchProviderID
-    ) -> (providers: [BrowserCustomSearchProvider], selectedID: BrowserSearchProviderID)? {
+        selectedID: String
+    ) -> (providers: [BrowserCustomSearchProvider], selectedID: String)? {
         let request = CustomProvidersRequest(
             selectedID: selectedID, providers: providers.map(BrowserCoreSearchProviderRecord.init))
         guard let answer = evaluate(.searchCustomProviders, request, answer: CustomProvidersAnswer.self),

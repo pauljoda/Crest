@@ -573,7 +573,7 @@ and `BrowserWindow` aggregates have been removed. Their former rules now belong 
 | Session, window, Space, tab, folder and split editing | `NativeSessionAuthority` commands and `BrowserTabCollection` |
 | One Space's tab, folder and split edit | `NativeSessionEditor`, called by the session commands |
 | History, archive and retention sweeps | `NativeSessionMaintenance` and `NativeSessionAuthority.Records` |
-| Address, search and link decisions | `SearchProviderCatalog`, `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
+| Address, search and link decisions | `SearchProvider`, `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
 | Space locking and device authentication | `SpaceAccessAuthority` behind `crest_access_*` |
 | Cross-workspace transfer and borrowed workspaces | `NativeTabTransfer` and `NativeSessionAuthority.Borrowing`/`Transfer` |
 | Sync projection, ordering, conflict and deletion | `NativeSyncAuthority` and the `crest_sync_*` entry points |
@@ -610,11 +610,13 @@ query returns a recipe, and the native layer draws the password from the
 system's secure random source. Keychain storage, secrets and prompts stay
 native; without a core answer nothing is captured, saved or filled.
 
-Search follows the same split: the core's `SearchProviderCatalog` holds the
-built-in engines and their templates, `SearchProvider` validates custom templates
-and builds every results and suggestion URL, and custom-engine saves and removals
-are Space commands that rewrite only the search fields of the stored preferences.
-Swift keeps engine titles, icons and the editor's explanations. Automatic
+Search follows the same split: `SearchProvider` is an open set whose static
+instances are the built-in engines with their titles, logos and templates; it
+validates custom templates, makes a Space's custom engines at runtime and builds
+every results and suggestion URL. Custom-engine saves and removals are Space
+commands that rewrite only the search fields of the stored preferences. Swift
+receives the generated `SearchProvider` and describes a stored custom engine
+with it; the editor's explanations stay in Swift. Automatic
 translation rules live in the core's app preferences; `translation.rule` and
 `translation.matches` answer them and `preferences.translation_rule` edits them.
 

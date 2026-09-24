@@ -99,10 +99,14 @@ internal static class SwiftEmitter {
 
     /// A fixed set becomes a struct with one `static let` per member, built
     /// from the member's wire tag and the literal values of its data. Two
-    /// values are equal when they are the same member.
+    /// values are equal when they are the same member. An open set's struct has
+    /// no tag and a memberwise initializer, and two values are equal when their
+    /// names are.
     private static void EmitSet(StringBuilder code, ContractSet set) {
         var properties = set.Properties.Select(property => (Name: Local(property.Name), property.Type)).ToList();
-        code.Append('\n').Append($"/// The members of the core's `{set.Name}`. A member's wire tag is its index in `all`.\n");
+        code.Append('\n').Append(set.IsOpen
+            ? $"/// The members of the core's `{set.Name}`, which also makes members at runtime. Members are equal when their names are.\n"
+            : $"/// The members of the core's `{set.Name}`. A member's wire tag is its index in `all`.\n");
         if (set.CoreOnly.Count > 0)
             code.Append($"/// Core-only behavior, not emitted: {string.Join(", ", set.CoreOnly.Select(name => $"`{name}`"))}.\n");
         code.Append($"struct {set.Name}: Hashable, Sendable {{\n");
@@ -111,23 +115,31 @@ internal static class SwiftEmitter {
             foreach (string kind in Enum.GetNames(kinds.Type)) code.Append($"        case {Local(kind)}\n");
             code.Append("    }\n\n");
         }
-        code.Append("    let tag: Int\n");
+        foreach (var constant in set.Constants)
+            code.Append($"    static let {Local(constant.Name)} = {Literal(constant.Type, constant.Value, MemberIndent)}\n");
+        if (set.Constants.Count > 0) code.Append('\n');
+        if (!set.IsOpen) code.Append("    let tag: Int\n");
         foreach (var property in properties) code.Append($"    let {property.Name}: {TypeName(property.Type)}\n");
-        code.Append('\n').Append(Wrapped("    private init(", ")", [
-            "tag: Int", .. properties.Select(property => $"{property.Name}: {TypeName(property.Type)}")]));
-        code.Append(" {\n        self.tag = tag\n");
+        string[] tag = set.IsOpen ? [] : ["tag: Int"];
+        code.Append('\n').Append(Wrapped(set.IsOpen ? "    init(" : "    private init(", ")", [
+            .. tag, .. properties.Select(property => $"{property.Name}: {TypeName(property.Type)}")]));
+        code.Append(" {\n");
+        if (!set.IsOpen) code.Append("        self.tag = tag\n");
         foreach (var property in properties) code.Append($"        self.{property.Name} = {property.Name}\n");
         code.Append("    }\n\n");
-        foreach (var member in set.Members)
+        foreach (var member in set.Members) {
+            string[] memberTag = set.IsOpen ? [] : [$"tag: {member.Tag}"];
             code.Append(Wrapped($"    static let {Local(member.Name)} = {set.Name}(", ")", [
-                $"tag: {member.Tag}",
+                .. memberTag,
                 .. properties.Select((property, index) =>
                     $"{property.Name}: {Literal(property.Type, member.Values[index], MemberIndent)}")])).Append('\n');
+        }
         code.Append('\n').Append(Wrapped($"    static let all: [{set.Name}] = [", "]", [.. set.Members.Select(member => Local(member.Name))]))
             .Append('\n');
         code.Append('\n').Append($"    static func named(_ name: String?) -> {set.Name}? {{\n        all.first {{ $0.name == name }}\n    }}\n");
-        code.Append('\n').Append($"    static func == (lhs: {set.Name}, rhs: {set.Name}) -> Bool {{\n        lhs.tag == rhs.tag\n    }}\n");
-        code.Append('\n').Append("    func hash(into hasher: inout Hasher) {\n        hasher.combine(tag)\n    }\n}\n");
+        string identity = set.IsOpen ? "name" : "tag";
+        code.Append('\n').Append($"    static func == (lhs: {set.Name}, rhs: {set.Name}) -> Bool {{\n        lhs.{identity} == rhs.{identity}\n    }}\n");
+        code.Append('\n').Append($"    func hash(into hasher: inout Hasher) {{\n        hasher.combine({identity})\n    }}\n}}\n");
     }
 
     private static void EmitUnion(StringBuilder code, ContractSchema schema, ContractRoot root, string documentation,
@@ -246,7 +258,7 @@ internal static class SwiftEmitter {
             code.Append("    }\n\n    func encode(into writer: inout WireWriter) {\n        writer.writeEnum(rawValue)\n    }\n}\n");
         }
 
-        foreach (var set in schema.Sets) {
+        foreach (var set in schema.Sets.Where(set => !set.IsOpen)) {
             code.Append('\n').Append($"extension {set.Name} {{\n");
             code.Append("    init(from reader: inout WireReader) throws(WireError) {\n");
             code.Append("        let tag = try reader.readEnum()\n");

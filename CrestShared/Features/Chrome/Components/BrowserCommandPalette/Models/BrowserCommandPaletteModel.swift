@@ -79,7 +79,7 @@ final class BrowserCommandPaletteModel {
 
     private let isPrivateBrowsing: Bool
     private let suggestionDebounce: Duration
-    private let fetchSuggestions: @Sendable (String, BrowserSearchProvider) async throws -> [String]
+    private let fetchSuggestions: @Sendable (String, SearchProvider) async throws -> [String]
 
     private let isSourceAvailableAction: (BrowserTabRuntimeAssignment) -> Bool
     private let selectTabAction:
@@ -101,7 +101,7 @@ final class BrowserCommandPaletteModel {
         fetchSuggestions:
             @escaping @Sendable (
                 String,
-                BrowserSearchProvider
+                SearchProvider
             ) async throws -> [String] = { query, provider in
                 try await BrowserSearchSuggestionClient.shared.suggestions(
                     for: query,
@@ -368,7 +368,7 @@ actor BrowserSearchSuggestionClient {
 
     func suggestions(
         for query: String,
-        provider: BrowserSearchProvider
+        provider: SearchProvider
     ) async throws -> [String] {
         guard query.count <= 256, let url = provider.suggestionURL(for: query) else {
             return []

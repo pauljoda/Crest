@@ -44,7 +44,7 @@ final class AddressResolverTests: XCTestCase {
     }
 
     func testEachSpaceCanResolveTheSameQueryWithItsOwnSearchProvider() throws {
-        let expectedHosts: [BrowserSearchProvider: String] = [
+        let expectedHosts: [SearchProvider: String] = [
             .google: "www.google.com",
             .duckDuckGo: "duckduckgo.com",
             .bing: "www.bing.com",
@@ -52,7 +52,7 @@ final class AddressResolverTests: XCTestCase {
             .brave: "search.brave.com",
         ]
 
-        for provider in BrowserSearchProvider.allCases {
+        for provider in SearchProvider.all {
             let resolved = try XCTUnwrap(
                 AddressResolver.resolve(
                     "space private search",
@@ -82,7 +82,7 @@ final class AddressResolverTests: XCTestCase {
         )
 
         XCTAssertEqual(decoded.searchProvider, .duckDuckGo)
-        XCTAssertEqual(decoded.availableSearchProviders, BrowserSearchProvider.allCases)
+        XCTAssertEqual(decoded.availableSearchProviders, SearchProvider.all)
         XCTAssertTrue(decoded.customSearchProviders.isEmpty)
         XCTAssertFalse(decoded.searchSuggestionsEnabled)
     }
@@ -108,10 +108,13 @@ final class AddressResolverTests: XCTestCase {
         )
 
         XCTAssertEqual(decoded, preferences)
-        XCTAssertEqual(decoded.searchProvider.id, .custom(id))
+        XCTAssertEqual(decoded.searchProvider, custom.provider)
         let object = try XCTUnwrap(
             JSONSerialization.jsonObject(with: encoded) as? [String: Any]
         )
+        // A custom engine is stored and synced as `custom:` and its lowercase identity.
+        XCTAssertEqual(
+            object["selectedSearchProviderID"] as? String, "custom:00000000-0000-0000-0000-000000000253")
         XCTAssertEqual(
             object["searchProvider"] as? String,
             "google",

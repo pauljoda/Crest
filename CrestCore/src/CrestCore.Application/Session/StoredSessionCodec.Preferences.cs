@@ -29,7 +29,7 @@ internal static partial class StoredSessionCodec {
     ]);
 
     /// What a Space that stored no browsing preferences searches and keeps.
-    internal static BrowsingPreferences DefaultBrowsingPreferences { get; } = new(SearchProviderCatalog.GoogleId, [], false,
+    internal static BrowsingPreferences DefaultBrowsingPreferences { get; } = new(SearchProvider.Google.Name, [], false,
         CurrentTabCleanup.After12Hours, ContentBlockingPolicy.Balanced,
         new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever));
 
@@ -50,7 +50,7 @@ internal static partial class StoredSessionCodec {
         var cleanup = value[Key.CurrentTabCleanupPolicy] is { } stored
             ? CurrentTabCleanups.Parse(TolerantText(stored)) ?? CurrentTabCleanup.Never : CurrentTabCleanup.After12Hours;
         return new(TolerantText(value[Key.SelectedSearchProviderId]) ?? TolerantText(value[Key.LegacySearchProvider])
-                ?? SearchProviderCatalog.GoogleId,
+                ?? SearchProvider.Google.Name,
             Items(value[Key.CustomSearchProviders]).OfType<JsonObject>().Select(CustomSearchProvider).OfType<CustomSearchProvider>().ToArray(),
             TolerantFlag(value[Key.SearchSuggestionsEnabled]) ?? false, cleanup,
             ContentBlockingPolicies.Parse(TolerantText(value[Key.ContentBlockingPolicy])) ?? ContentBlockingPolicy.Balanced,
@@ -61,7 +61,7 @@ internal static partial class StoredSessionCodec {
     /// keeps Google there as their safe fallback.
     internal static JsonObject Encode(BrowsingPreferences preferences) => new() {
         [Key.LegacySearchProvider] = preferences.SelectedSearchProviderId.StartsWith(SearchProvider.CustomPrefix, StringComparison.Ordinal)
-            ? SearchProviderCatalog.GoogleId : preferences.SelectedSearchProviderId,
+            ? SearchProvider.Google.Name : preferences.SelectedSearchProviderId,
         [Key.SelectedSearchProviderId] = preferences.SelectedSearchProviderId,
         [Key.CustomSearchProviders] = new JsonArray(preferences.CustomSearchProviders.Select(provider => {
             var value = new JsonObject {

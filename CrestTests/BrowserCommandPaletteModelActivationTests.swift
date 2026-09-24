@@ -222,7 +222,7 @@ private actor SuggestionRecorder {
 
     func suggestions(
         query: String,
-        provider: BrowserSearchProvider
+        provider: SearchProvider
     ) async -> [String] {
         queries.append(query)
         if let delay = delayByQuery[query] {

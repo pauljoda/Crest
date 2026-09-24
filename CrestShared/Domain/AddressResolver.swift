@@ -3,7 +3,7 @@ import Foundation
 enum AddressResolver {
     static func resolve(
         _ input: String,
-        searchProvider: BrowserSearchProvider = .google
+        searchProvider: SearchProvider = .google
     ) -> URL? {
         intent(input, searchProvider: searchProvider)?.url
     }
@@ -13,7 +13,7 @@ enum AddressResolver {
     /// that branch called.
     static func intent(
         _ input: String,
-        searchProvider: BrowserSearchProvider = .google
+        searchProvider: SearchProvider = .google
     ) -> BrowserAddressIntent? {
         BrowserCorePolicy.addressIntent(input, provider: searchProvider)
     }

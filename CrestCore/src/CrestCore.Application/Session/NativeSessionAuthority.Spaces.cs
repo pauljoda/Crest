@@ -62,7 +62,7 @@ public sealed partial class NativeSessionAuthority {
                     Symbol = PrivateSpaceSymbol,
                     Accent = SpaceAccent.Indigo,
                     BrowsingPreferences = space.BrowsingPreferences with {
-                        SelectedSearchProviderId = SearchProviderCatalog.DuckDuckGoId,
+                        SelectedSearchProviderId = SearchProvider.DuckDuckGo.Name,
                         CurrentTabCleanup = CurrentTabCleanup.Never
                     },
                     CredentialPreferences = PrivateCredentialPreferences

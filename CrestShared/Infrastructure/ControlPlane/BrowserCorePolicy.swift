@@ -199,7 +199,7 @@ enum BrowserCorePolicy {
         return answer.decision
     }
 
-    static func addressIntent(_ input: String, provider: BrowserSearchProvider) -> BrowserAddressIntent? {
+    static func addressIntent(_ input: String, provider: SearchProvider) -> BrowserAddressIntent? {
         let request = AddressIntentRequest(
             input: input, allowsInternalPages: BrowserEngineRegistration.current.supports(.internalPages),
             searchProvider: SearchProviderDescriptor(provider))

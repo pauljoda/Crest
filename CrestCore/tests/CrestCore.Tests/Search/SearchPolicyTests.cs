@@ -68,7 +68,7 @@ public sealed class SearchPolicyTests {
             ["ecosia"] = ("https://www.ecosia.org/search?q=a%20b", "https://ac.ecosia.org/autocomplete?q=a%20b&type=list"),
             ["brave"] = ("https://search.brave.com/search?q=a%20b", "https://search.brave.com/api/suggest?q=a%20b")
         };
-        Assert.Equal(expected.Keys, SearchProviderCatalog.BuiltIns.Select(p => p.Id));
+        Assert.Equal(expected.Keys, SearchProvider.All.Select(p => p.Name));
         foreach (var (id, urls) in expected) {
             Assert.Equal(urls.Search, Url(new() { ["id"] = id }, "a b"));
             Assert.Equal(urls.Suggestions, Url(new() { ["id"] = id }, "a b", "suggestions"));
@@ -144,7 +144,7 @@ public sealed class SearchPolicyTests {
         // Session commands still report the same rules as their codes.
         Assert.Equal(BrowserRuleCodes.SearchProviderLimit, BrowserRuleCodes.SearchEngine(new SearchEngineLimitReached(32)));
         Assert.Equal(BrowserRuleCodes.SearchTemplatePort,
-            Assert.Throws<BrowserRuleException>(() => SearchProvider.Custom(Guid.NewGuid(), "Port", "https://a.example:8443/?q=%s", null)).Code);
+            Assert.Throws<BrowserRuleException>(() => SearchPreferences.Custom(Guid.NewGuid(), "Port", "https://a.example:8443/?q=%s", null)).Code);
     }
 
     [Fact]

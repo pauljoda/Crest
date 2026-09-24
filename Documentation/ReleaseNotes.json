@@ -2189,6 +2189,10 @@
     "link-sets-self-describing": {
       "category": "internal",
       "message": "Link route matches, external link destinations and the Peek key describe themselves."
+    },
+    "search-provider-set": {
+      "category": "internal",
+      "message": "Search providers are one set of built-in and custom engines."
     }
   }
 }

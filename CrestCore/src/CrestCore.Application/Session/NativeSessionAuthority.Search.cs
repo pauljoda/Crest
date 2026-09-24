@@ -18,12 +18,12 @@ public sealed partial class NativeSessionAuthority {
             search = search.Remove(Id(args[SearchCodes.Id]));
         } else {
             var value = args["provider"] as JsonObject ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchProvider);
-            var provider = SearchProvider.Custom(Id(value[SearchCodes.Id]),
+            var provider = SearchPreferences.Custom(Id(value[SearchCodes.Id]),
                 StoredSessionCodec.Text(value[SearchCodes.Name]) ?? "",
                 StoredSessionCodec.Text(value[SearchCodes.SearchTemplate]) ?? "",
                 StoredSessionCodec.Text(value[SearchCodes.SuggestionTemplate]));
             search = search.Upsert(provider);
-            if (args["selects"]?.GetValue<bool>() == true) search = search.Select(provider.Id, search.SuggestionsEnabled);
+            if (args["selects"]?.GetValue<bool>() == true) search = search.Select(provider.Name, search.SuggestionsEnabled);
         }
         return search.Applied(preferences);
     }

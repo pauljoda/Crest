@@ -1,14 +1,18 @@
 using System.Globalization;
 using System.Net;
 
-using CrestCore.Contracts;
+namespace CrestCore.Contracts;
 
-namespace CrestCore.Domain;
-
-/// One search engine: a built-in from `SearchProviderCatalog` or a Space's
-/// custom engine. Templates hold exactly one `%s` or `{searchTerms}` query
-/// placeholder; both engines and both platforms build their URLs here.
-public sealed record SearchProvider(string Id, string Name, string SearchTemplate, string? SuggestionTemplate = null) {
+/// One search engine: a built-in every Space offers, or a Space's custom
+/// engine, which `Admit` makes. Templates hold exactly one `%s` or
+/// `{searchTerms}` query placeholder; both engines and both platforms build
+/// their URLs here.
+///
+/// A Space stores and syncs its engine as the engine's `Name`: a built-in's
+/// spelling, or `custom:` and the custom engine's identity, so a name never
+/// changes.
+[OpenSet]
+public sealed class SearchProvider {
     #region Variables
 
     public const string CustomPrefix = "custom:";
@@ -21,7 +25,59 @@ public sealed record SearchProvider(string Id, string Name, string SearchTemplat
     private static readonly string[] SecretParameters =
         ["token", "key", "apikey", "api_key", "access_token", "password", "credential", "credentials", "auth", "authorization"];
 
-    public bool IsCustom => Id.StartsWith(CustomPrefix, StringComparison.Ordinal);
+    public static readonly SearchProvider Google = new(name: "google", title: "Google", logo: "SearchProviderGoogle",
+        searchTemplate: "https://www.google.com/search?q=%s",
+        suggestionTemplate: "https://www.google.com/complete/search?client=chrome&q=%s");
+    public static readonly SearchProvider DuckDuckGo = new(name: "duckDuckGo", title: "DuckDuckGo", logo: "SearchProviderDuckDuckGo",
+        searchTemplate: "https://duckduckgo.com/?q=%s", suggestionTemplate: "https://duckduckgo.com/ac/?q=%s&type=list");
+    public static readonly SearchProvider Bing = new(name: "bing", title: "Bing", logo: "SearchProviderBing",
+        searchTemplate: "https://www.bing.com/search?q=%s", suggestionTemplate: "https://www.bing.com/osjson.aspx?query=%s");
+    public static readonly SearchProvider Ecosia = new(name: "ecosia", title: "Ecosia", logo: "SearchProviderEcosia",
+        searchTemplate: "https://www.ecosia.org/search?q=%s", suggestionTemplate: "https://ac.ecosia.org/autocomplete?q=%s&type=list");
+    public static readonly SearchProvider Brave = new(name: "brave", title: "Brave Search", logo: "SearchProviderBrave",
+        searchTemplate: "https://search.brave.com/search?q=%s", suggestionTemplate: "https://search.brave.com/api/suggest?q=%s");
+
+    /// The built-in engines, in the order the settings offer them.
+    public static IReadOnlyList<SearchProvider> All { get; } = [Google, DuckDuckGo, Bing, Ecosia, Brave];
+
+    public string Name { get; }
+
+    /// The engine's name as a person reads it: a built-in's brand, or what
+    /// the person called a custom engine.
+    public string Title { get; }
+
+    /// The asset catalog image that stands for a built-in engine. A custom
+    /// engine has none; its site's icon stands for it.
+    public string? Logo { get; }
+
+    public string SearchTemplate { get; }
+
+    public string? SuggestionTemplate { get; }
+
+    #endregion
+
+    #region Constructors
+
+    private SearchProvider(string name, string title, string? logo, string searchTemplate, string? suggestionTemplate) {
+        Name = name;
+        Title = title;
+        Logo = logo;
+        SearchTemplate = searchTemplate;
+        SuggestionTemplate = suggestionTemplate;
+    }
+
+    #endregion
+
+    #region Actions - Lookup
+
+    /// The built-in engine with this name. A custom engine is found among its
+    /// Space's engines.
+    public static SearchProvider? Named(string? name) => All.FirstOrDefault(provider => provider.Name == name);
+
+    /// Whether this is a Space's own engine rather than a built-in.
+    public bool IsCustom() => !All.Contains(this);
+
+    public static string CustomId(Guid id) => CustomPrefix + id.ToString("D");
 
     #endregion
 
@@ -34,8 +90,6 @@ public sealed record SearchProvider(string Id, string Name, string SearchTemplat
 
     /// The suggestion endpoint for a query, or null when the engine has none.
     public string? Suggest(string query) => SuggestionTemplate is { } template ? Render(template, query) : null;
-
-    public static string CustomId(Guid id) => CustomPrefix + id.ToString("D");
 
     private static string Render(string template, string query) {
         ArgumentNullException.ThrowIfNull(query);
@@ -60,17 +114,17 @@ public sealed record SearchProvider(string Id, string Name, string SearchTemplat
         name = name.Trim();
         if (name.Length == 0) throw Flawed(SearchEngineFlaw.EmptyName);
         if (new StringInfo(name).LengthInTextElements > MaximumNameLength) throw Flawed(SearchEngineFlaw.NameTooLong);
-        return new(CustomId(id), name, ValidateTemplate(search),
+        return new(CustomId(id), name, logo: null, ValidateTemplate(search),
             string.IsNullOrWhiteSpace(suggestions) ? null : ValidateTemplate(suggestions));
     }
 
-    /// `Admit` for session commands and stored preferences, which report a
-    /// flaw as its rule code.
-    public static SearchProvider Custom(Guid id, string name, string search, string? suggestions) {
+    /// A stored custom engine that no longer validates never runs its own
+    /// template: queries go to Google, as the selection fallback does.
+    public static SearchProvider CustomOrDefault(Guid id, string name, string search, string? suggestions) {
         try {
             return Admit(id, name, search, suggestions);
-        } catch (Rejected rejected) {
-            throw new BrowserRuleException(BrowserRuleCodes.SearchEngine(rejected.Rejection));
+        } catch (Rejected) {
+            return Google;
         }
     }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserSearchEngineProviderLabel: View {
-    let provider: BrowserSearchProvider
+    let provider: SearchProvider
     let profileID: UUID
     let isSelected: Bool
 

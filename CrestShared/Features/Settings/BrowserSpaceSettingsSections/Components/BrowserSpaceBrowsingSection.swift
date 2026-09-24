@@ -90,7 +90,7 @@ struct BrowserSpaceBrowsingSection: View {
         currentSpace.browsingPreferences
     }
 
-    private var searchProviderBinding: Binding<BrowserSearchProvider> {
+    private var searchProviderBinding: Binding<SearchProvider> {
         browser.browsingPreferenceBinding(\.searchProvider, in: space)
     }
 
