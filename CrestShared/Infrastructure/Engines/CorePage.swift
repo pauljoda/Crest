@@ -17,6 +17,8 @@ final class CorePage {
     let id: UUID
     private weak var core: CrestCore?
     private(set) var isReleased = false
+    /// The owner kept what it needs to bring the page back when it released it.
+    private var keptState = false
     /// TRANSITIONAL until the WebKit binding builds its own pages: the app's
     /// own load of an address in the platform's page, which WebKit runs when
     /// the core asks it to load one. Set by the page's owner.
@@ -59,12 +61,16 @@ final class CorePage {
     }
 
     /// Tells the core the page is gone. `keepingState` says its owner kept what
-    /// it needs to bring the page back. Only the first call counts.
+    /// it needs to bring the page back. A page unloaded that way may be
+    /// released again for good, so the core forgets what it showed; any other
+    /// call after the first changes nothing.
     func release(keepingState: Bool) {
-        guard !isReleased else { return }
+        guard !isReleased || (keptState && !keepingState) else { return }
+        let isFirst = !isReleased
         isReleased = true
+        keptState = keepingState
         _ = try? core?.send(ReleasePage(pageID: id, keepsState: keepingState))
-        core?.engines.forget(id)
+        if isFirst { core?.engines.forget(id) }
     }
 
     // MARK: - Actions - Navigation

@@ -307,7 +307,7 @@ extension BrowserStore {
             let copy = sendCopying(
                 DuplicateTab(
                     workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
-                    tabID: id.rawValue, placement: nil, shows: true, source: sourcePages(for: [id], in: space).first),
+                    tabID: id.rawValue, placement: nil, shows: true),
                 in: space)?.first
         else { return nil }
         return TabID(rawValue: copy.copyTabID)

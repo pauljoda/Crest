@@ -34,11 +34,17 @@
         }
 
         /// Reports that `page` loaded a new document at `url`, found `icon`
-        /// for it and finished titled `title`, then applies what the core
-        /// recorded.
+        /// for it and finished titled `title`, showing it all the while, then
+        /// applies what the core recorded.
         func finishNavigation(of page: CorePage, to url: URL, titled title: String, icon: Data? = nil) {
             page.report(NavigationStarted(pageID: page.id, url: url.absoluteString, sameDocument: false))
             page.report(NavigationCommitted(pageID: page.id, url: url.absoluteString, sameDocument: false))
+            page.report(
+                PageStateChanged(
+                    pageID: page.id,
+                    snapshot: PageSnapshot(
+                        url: url.absoluteString, pendingURL: nil, title: title, isLoading: false, canGoBack: false,
+                        canGoForward: false, security: url.scheme == "https" ? .secure : .insecure, media: [])))
             if let icon {
                 page.report(PageIconChanged(pageID: page.id, url: url.absoluteString, accent: nil), icon: icon)
             }

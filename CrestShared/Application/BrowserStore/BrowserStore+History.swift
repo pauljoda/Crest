@@ -4,18 +4,14 @@ import Foundation
 
 extension BrowserStore {
     /// Keeps a Quick Window's page, `pageID`, in the archive of the Space it
-    /// lived in, and answers whether the core kept it. The page may already
-    /// be gone, as one memory pressure took back is; the core names a page it
-    /// is given no title for.
+    /// lived in, at the address and title the core holds for it, and answers
+    /// whether the core kept it. The page may already be gone, as one memory
+    /// pressure took back is; the core keeps what it showed last.
     @discardableResult
-    func archiveTransientPage(
-        _ pageID: UUID, url: URL, title: String?, matching assignment: BrowserSpaceRuntimeAssignment
-    ) -> Bool {
+    func archiveTransientPage(_ pageID: UUID, matching assignment: BrowserSpaceRuntimeAssignment) -> Bool {
         guard space(matching: assignment) != nil else { return false }
         return family.perform(
-            ArchiveTransientPage(
-                workspaceID: family.workspaceID, pageID: pageID, spaceID: assignment.spaceID.rawValue,
-                address: url.absoluteString, title: title),
+            ArchiveTransientPage(workspaceID: family.workspaceID, pageID: pageID, spaceID: assignment.spaceID.rawValue),
             from: self) != nil
     }
 

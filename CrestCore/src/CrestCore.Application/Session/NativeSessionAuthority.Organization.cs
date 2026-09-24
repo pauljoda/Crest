@@ -77,22 +77,16 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// Joins `tabId` to the split of `targetId` in `edited`, the organization
-    /// of `space`, and shows the joined tab in the issuing window. A copy of a
-    /// web page starts from the address and title its source's page shows
-    /// now, preferring the page the issuing window hosts, since the page can
-    /// move on before its navigation is recorded; a source without a page
-    /// keeps what the session holds. A durable target's split copied into new
-    /// tabs keeps its name, icon and tint.
+    /// of `space`, and shows the joined tab in the issuing window. A copy
+    /// starts from where its source's page is now; see `StartFromSourcePage`.
+    /// A durable target's split copied into new tabs keeps its name, icon and
+    /// tint.
     private SessionEdit Joining(SessionState basis, SpaceState space, BrowserTabCollection edited, Guid windowId, Guid tabId, Guid targetId,
         int? index, Pages? pages, DateTimeOffset now, IIdSource ids) {
         var target = edited.Tab(targetId);
         var durableGroup = target.Placement.IsDurable ? target.SplitGroupId : null;
         var joined = edited.JoinSplit(tabId, targetId, index, ids, now);
-        foreach (var (source, copyId) in joined.Copies) {
-            var tab = edited.Tab(copyId);
-            if (tab.Content.IsWebPage && pages?.Showing(workspaceId, windowId, source) is { } shown)
-                tab.ObserveAppearance(shown.Address, shown.Title);
-        }
+        foreach (var (source, copyId) in joined.Copies) StartFromSourcePage(edited.Tab(copyId), source, windowId, pages);
         if (durableGroup is { } copied && joined.Copies.Any(pair => pair.Source == targetId)
             && edited.Tab(joined.SelectedTab).SplitGroupId is { } copy)
             edited.CopySplitMetadata(copied, copy, now);

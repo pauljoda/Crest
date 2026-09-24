@@ -12,6 +12,9 @@ final class BrowserQuickWindowModel {
     private(set) var wasArchived = false
     let activityClock: BrowserTransientActivityClock
 
+    /// The core page the released snapshot names, unloaded with its state
+    /// kept so the core still knows what it showed until the snapshot goes.
+    @ObservationIgnored private var unloadedPage: CorePage?
     @ObservationIgnored let browser: BrowserStore
     @ObservationIgnored let pages: BrowserPagePool?
     @ObservationIgnored private let spaceAccess: BrowserSpaceAccessController
@@ -125,7 +128,7 @@ final class BrowserQuickWindowModel {
             onUserActivity: recordUserActivity
         )
         if pageLease != nil {
-            releasedPageSnapshot = nil
+            forgetReleasedSnapshot()
         }
         pageLease?.setActive(isActive)
     }
@@ -155,7 +158,7 @@ final class BrowserQuickWindowModel {
             onUserActivity: recordUserActivity
         )
         if pageLease != nil {
-            releasedPageSnapshot = nil
+            forgetReleasedSnapshot()
         }
         pageLease?.setActive(isActive)
     }
@@ -179,7 +182,7 @@ final class BrowserQuickWindowModel {
         else { return }
         pageLease?.release()
         pageLease = nil
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
         selectedAssignment = assignment
         if retarget.remembersSpace, let currentURL {
             preferences.rememberSpace(candidate.id, for: currentURL)
@@ -238,19 +241,14 @@ final class BrowserQuickWindowModel {
             let snapshot
         else { return false }
         guard
-            browser.archiveTransientPage(
-                snapshot.pageID, url: snapshot.url, title: snapshot.title, matching: snapshot.assignment)
+            browser.archiveTransientPage(snapshot.pageID, matching: snapshot.assignment)
         else { return false }
         wasArchived = true
         return true
     }
 
     func releaseForUnavailableSpace() {
-        if let pageLease {
-            releasedPageSnapshot = snapshot(pageLease)
-        }
-        pageLease?.release()
-        pageLease = nil
+        releasePageRetainingSnapshot()
     }
 
     func releaseForDismissal() {
@@ -259,7 +257,7 @@ final class BrowserQuickWindowModel {
         }
         pageLease?.release()
         pageLease = nil
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
     }
 
     func restorePage() {
@@ -318,7 +316,7 @@ final class BrowserQuickWindowModel {
         }
         pageLease.release()
         self.pageLease = nil
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
     }
 
     @discardableResult
@@ -363,11 +361,23 @@ final class BrowserQuickWindowModel {
         )
     }
 
+    /// Lets the page go but keeps what it shows: the snapshot the window
+    /// archives on dismissal, and the core's memory of the page, both until
+    /// the snapshot goes.
     private func releasePageRetainingSnapshot() {
-        if let pageLease {
-            releasedPageSnapshot = snapshot(pageLease)
-        }
-        pageLease?.release()
-        pageLease = nil
+        guard let pageLease else { return }
+        let retained = snapshot(pageLease)
+        forgetReleasedSnapshot()
+        releasedPageSnapshot = retained
+        unloadedPage = pageLease.unload()
+        self.pageLease = nil
+    }
+
+    /// Drops the released page's snapshot, and releases its page for good so
+    /// the core forgets what it showed too.
+    private func forgetReleasedSnapshot() {
+        releasedPageSnapshot = nil
+        unloadedPage?.release(keepingState: false)
+        unloadedPage = nil
     }
 }

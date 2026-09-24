@@ -98,6 +98,16 @@ public sealed partial class NativeSessionAuthority {
         return new(Replacing(basis, space with { Tabs = [.. tabs] }), SyncStaging.PageReport);
     }
 
+    /// Starts `copy`, a new copy of `sourceId`, from the address and title
+    /// the source's page shows now, preferring the page `windowId` hosts,
+    /// since a page can move on before its navigation is recorded. A copy of
+    /// a source without a page, or of one that is not a web page, keeps what
+    /// the session holds.
+    private void StartFromSourcePage(BrowserTab copy, Guid sourceId, Guid windowId, Pages? pages) {
+        if (copy.Content.IsWebPage && pages?.Showing(workspaceId, windowId, sourceId) is { } shown)
+            copy.ObserveAppearance(shown.Address, shown.Title);
+    }
+
     /// Accepts `edit` and answers the states it went between, or null when it
     /// no longer applies. An edit that changes nothing is still taken: the
     /// state stays as it was. The caller holds the gate.

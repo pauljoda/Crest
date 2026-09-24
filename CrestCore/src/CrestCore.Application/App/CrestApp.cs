@@ -102,6 +102,8 @@ public sealed partial class CrestApp : IDisposable {
                     break;
                 case SessionIntent session:
                     device.Workspace(session.WorkspaceId).Handle(session, clock.Now, ids, pages);
+                    if (session is PromoteTransientPage promoted) pages.Completed(promoted.PageId);
+                    else if (session is ArchiveTransientPage archived) pages.Completed(archived.PageId);
                     break;
                 case SpaceAccessIntent grant:
                     access.Handle(grant, changes);

@@ -120,14 +120,14 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Copying and moving
 
-    /// Copies the tab, starting from what its page shows now. The issuing
-    /// window shows the copy when the intent asks.
-    private SessionEdit DuplicatingTab(SessionState basis, DuplicateTab intent, DateTimeOffset now, IIdSource ids) {
+    /// Copies the tab, starting from where its page is now; see
+    /// `StartFromSourcePage`. The issuing window shows the copy when the
+    /// intent asks.
+    private SessionEdit DuplicatingTab(SessionState basis, DuplicateTab intent, DateTimeOffset now, IIdSource ids, Pages? pages) {
         var space = Editable(basis, intent.SpaceId);
         var edited = BrowserTabCollection.Restore(space);
         var copy = edited.DuplicateTab(intent.TabId, ids, now, intent.Placement ?? TabPlacement.Current);
-        if (copy.Content.IsWebPage && intent.Source is { } source && source.TabId == intent.TabId)
-            copy.AdoptObservation(source.Address, source.Title);
+        StartFromSourcePage(copy, intent.TabId, intent.WindowId, pages);
         var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId));
         if (intent.Shows) followUp.ShowTab(space.Id, copy.Id).ShowSpace(space.Id);
         return new(Replacing(basis, edited.Capture(space)), SyncStaging.Creation, followUp,

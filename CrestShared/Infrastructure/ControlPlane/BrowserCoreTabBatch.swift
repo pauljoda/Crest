@@ -36,12 +36,6 @@ enum BrowserCoreTabBatch {
         let tabId: UUID
         let title: String
         @BrowserCoreNullable var url: String?
-
-        init(_ page: SourcePage) {
-            tabId = page.tabID
-            title = page.title
-            url = page.address
-        }
     }
 
     struct Response: Decodable {

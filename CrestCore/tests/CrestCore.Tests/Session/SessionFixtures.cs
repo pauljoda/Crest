@@ -42,7 +42,7 @@ public sealed partial class BrowserContractsTests {
 
         /// Registers the default engine, which supports `capabilities` beside
         /// the ones every engine must, and does what the core asks.
-        public Engine Register(params EngineCapability[] capabilities) => app.RegisterEngine(
+        public Engine Register(params EngineCapability[] capabilities) => engine = app.RegisterEngine(
             new EngineRegistration(EngineKind.WebKit, [.. EngineCapability.Required, .. capabilities], IsDefault: true), _ => { });
 
         /// A window on the first session showing `space`, and `tabs` in the Spaces they name.
@@ -66,10 +66,10 @@ public sealed partial class BrowserContractsTests {
 
         public TAnswer Query<TAnswer>(Query<TAnswer> query) => app.Query(query);
 
-        /// A live page `window` hosts for `tab` in `space`, whose engine shows
-        /// `snapshot`.
-        public Guid ShowPage(Guid window, Guid space, Guid tab, PageSnapshot snapshot) {
-            engine ??= app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, IsDefault: true), _ => { });
+        /// A live page `window` hosts for `tab` in `space`, or for a Quick
+        /// Window or Peek when `tab` is null, whose engine shows `snapshot`.
+        public Guid ShowPage(Guid window, Guid space, Guid? tab, PageSnapshot snapshot) {
+            engine ??= Register();
             var page = Guid.NewGuid();
             Send(new OpenPage(page, Workspace, space, tab, window));
             app.Report(engine, new PageCreated(page));

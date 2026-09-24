@@ -6,6 +6,7 @@ import Foundation
 struct BrowserTransientPagePromotion {
     /// The transient page, or nil when there is none to keep.
     let page: CorePage?
+    /// Where the page is, or nil when it has not been anywhere worth keeping.
     let url: URL?
     let destinationAssignment: BrowserSpaceRuntimeAssignment
     /// Whether this platform can move the live page into the tab's window.
@@ -31,7 +32,7 @@ struct BrowserTransientPagePromotion {
             browser.selectSpace(destination.id)
             return .selectedSpace
         }
-        guard let page, let promoted = browser.promoteTransientPage(page, url: url, into: destination.id),
+        guard let page, let promoted = browser.promoteTransientPage(page, into: destination.id),
             let currentDestination = browser.space(matching: destinationAssignment)
         else { return nil }
         let adoptedLivePage =

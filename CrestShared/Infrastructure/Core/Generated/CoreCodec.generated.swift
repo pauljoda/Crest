@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x70, 0x98, 0xfd, 0x13, 0xeb, 0x88, 0x62, 0xff, 0x6d, 0x59, 0x3c, 0xeb, 0xe4, 0x65, 0xfc, 0xdc, 0xab, 0x96, 0x73, 0xfc, 0x1f, 0xf1, 0x5a, 0x13, 0x7a, 0x09, 0x7a, 0x93, 0xba, 0xbe, 0x14, 0x69
+        0xaa, 0xa1, 0x2d, 0xd6, 0xfa, 0xb8, 0xbe, 0x5e, 0x96, 0xb9, 0xdc, 0x6d, 0x85, 0x85, 0xd6, 0x06, 0x5f, 0x9f, 0x18, 0x5a, 0x05, 0x23, 0x8f, 0x60, 0x53, 0x42, 0xb7, 0xa9, 0x37, 0xd3, 0xdb, 0x39
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -886,28 +886,13 @@ extension ArchiveTransientPage {
         let workspaceID = try reader.readUUID()
         let pageID = try reader.readUUID()
         let spaceID = try reader.readUUID()
-        let address = try reader.readString()
-        let title: String?
-        if try reader.readPresence() {
-            let titleValue = try reader.readString()
-            title = titleValue
-        } else {
-            title = nil
-        }
-        self.init(workspaceID: workspaceID, pageID: pageID, spaceID: spaceID, address: address, title: title)
+        self.init(workspaceID: workspaceID, pageID: pageID, spaceID: spaceID)
     }
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(workspaceID)
         writer.writeUUID(pageID)
         writer.writeUUID(spaceID)
-        writer.writeString(address)
-        if let present0 = title {
-            writer.writePresence(true)
-            writer.writeString(present0)
-        } else {
-            writer.writePresence(false)
-        }
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -2758,14 +2743,7 @@ extension DuplicateTab {
             placement = nil
         }
         let shows = try reader.readBool()
-        let source: SourcePage?
-        if try reader.readPresence() {
-            let sourceValue = try SourcePage(from: &reader)
-            source = sourceValue
-        } else {
-            source = nil
-        }
-        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, placement: placement, shows: shows, source: source)
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID, placement: placement, shows: shows)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -2780,12 +2758,6 @@ extension DuplicateTab {
             writer.writePresence(false)
         }
         writer.writeBool(shows)
-        if let present0 = source {
-            writer.writePresence(true)
-            present0.encode(into: &writer)
-        } else {
-            writer.writePresence(false)
-        }
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -5286,8 +5258,7 @@ extension PromoteTransientPage {
         let pageID = try reader.readUUID()
         let spaceID = try reader.readUUID()
         let placement = try TabPlacement(from: &reader)
-        let address = try reader.readString()
-        self.init(workspaceID: workspaceID, windowID: windowID, pageID: pageID, spaceID: spaceID, placement: placement, address: address)
+        self.init(workspaceID: workspaceID, windowID: windowID, pageID: pageID, spaceID: spaceID, placement: placement)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -5296,7 +5267,6 @@ extension PromoteTransientPage {
         writer.writeUUID(pageID)
         writer.writeUUID(spaceID)
         placement.encode(into: &writer)
-        writer.writeString(address)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
@@ -6250,32 +6220,6 @@ extension ShownTab {
         } else {
             writer.writePresence(false)
         }
-    }
-}
-
-extension SourcePage {
-    init(from reader: inout WireReader) throws(WireError) {
-        let tabID = try reader.readUUID()
-        let address: String?
-        if try reader.readPresence() {
-            let addressValue = try reader.readString()
-            address = addressValue
-        } else {
-            address = nil
-        }
-        let title = try reader.readString()
-        self.init(tabID: tabID, address: address, title: title)
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeUUID(tabID)
-        if let present0 = address {
-            writer.writePresence(true)
-            writer.writeString(present0)
-        } else {
-            writer.writePresence(false)
-        }
-        writer.writeString(title)
     }
 }
 

@@ -252,8 +252,6 @@ struct ArchiveTransientPage: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let pageID: UUID
     let spaceID: UUID
-    let address: String
-    let title: String?
 }
 
 struct ArchivedTabState: Equatable, Sendable {
@@ -736,7 +734,6 @@ struct DuplicateTab: Intent, Equatable, Sendable {
     let tabID: UUID
     let placement: TabPlacement?
     let shows: Bool
-    let source: SourcePage?
 }
 
 struct EngineAlreadyRegistered: Equatable, Sendable {
@@ -1354,7 +1351,6 @@ struct PromoteTransientPage: Intent, Equatable, Sendable {
     let pageID: UUID
     let spaceID: UUID
     let placement: TabPlacement
-    let address: String
 }
 
 struct QuickWindowSite: Query, Equatable, Sendable {
@@ -1605,12 +1601,6 @@ struct ShowTab: Intent, Equatable, Sendable {
 struct ShownTab: Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID?
-}
-
-struct SourcePage: Equatable, Sendable {
-    let tabID: UUID
-    let address: String?
-    let title: String
 }
 
 struct SpaceAlreadyExists: Equatable, Sendable {

@@ -15,12 +15,13 @@ extension BrowserStore {
             from: self)
     }
 
-    /// What the pages of the tabs `ids` names show now, which copies of them
-    /// start from.
-    func sourcePages(for ids: Set<TabID>, in space: BrowserSpace) -> [SourcePage] {
+    /// What the pages of the tabs `ids` names show now, which a tab batch's
+    /// copies of them start from.
+    func copyObservations(for ids: Set<TabID>, in space: BrowserSpace) -> [BrowserCoreTabBatch.CopyObservation] {
         space.tabs.filter { ids.contains($0.id) }.map { source in
             let observed = tabCopying?.sourceForTabCopy(source, in: space) ?? source
-            return SourcePage(tabID: source.id.rawValue, address: observed.url?.absoluteString, title: observed.title)
+            return BrowserCoreTabBatch.CopyObservation(
+                tabId: source.id.rawValue, title: observed.title, url: observed.url?.absoluteString)
         }
     }
 

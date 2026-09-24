@@ -10,6 +10,9 @@ final class MobileBrowserTransientOverlayModel {
     private(set) var wasPromoted = false
     private(set) var wasArchived = false
 
+    /// The core page the released snapshot names, unloaded with its state
+    /// kept so the core still knows what it showed until the snapshot goes.
+    @ObservationIgnored private var unloadedPage: CorePage?
     @ObservationIgnored let browser: BrowserStore
     @ObservationIgnored private let pages: MobileBrowserPageStore?
     @ObservationIgnored private let coordinator: BrowserTransientBrowsingCoordinator
@@ -141,7 +144,7 @@ final class MobileBrowserTransientOverlayModel {
             dismissUnavailableRequest()
             return false
         }
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
         pageLease.setActive(isActive && isSelected)
         return true
     }
@@ -267,7 +270,7 @@ final class MobileBrowserTransientOverlayModel {
         guard isCurrentRequest else { return }
         pageLease?.release()
         pageLease = nil
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
         switch request {
         case .peek(let peekRequest):
             coordinator.dismissPeek(peekRequest)
@@ -285,7 +288,7 @@ final class MobileBrowserTransientOverlayModel {
             pageLease?.release()
         }
         pageLease = nil
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
     }
 
     func autoArchiveAfterInactivity() async {
@@ -310,7 +313,7 @@ final class MobileBrowserTransientOverlayModel {
 
     private func dismissDownloadOnlyNavigation() {
         guard isCurrentRequest else { return }
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
         switch request {
         case .peek(let peekRequest):
             coordinator.dismissPeek(peekRequest)
@@ -325,8 +328,7 @@ final class MobileBrowserTransientOverlayModel {
             BrowserCorePolicy.quickWindowArchivesOnDismissal(
                 wasArchived: wasArchived, wasPromoted: wasPromoted, hasPage: snapshot != nil),
             let snapshot,
-            browser.archiveTransientPage(
-                snapshot.pageID, url: snapshot.url, title: snapshot.title, matching: snapshot.assignment)
+            browser.archiveTransientPage(snapshot.pageID, matching: snapshot.assignment)
         else { return }
         wasArchived = true
     }
@@ -350,7 +352,7 @@ final class MobileBrowserTransientOverlayModel {
         }
         pageLease?.release()
         pageLease = nil
-        releasedPageSnapshot = nil
+        forgetReleasedSnapshot()
         coordinator.presentQuickWindow(
             quickWindowRequest.retargeted(
                 to: currentURL,
@@ -382,12 +384,28 @@ final class MobileBrowserTransientOverlayModel {
         )
     }
 
+    /// Lets the page go; a Quick Window keeps what it shows: the snapshot it
+    /// archives on dismissal, and the core's memory of the page, both until
+    /// the snapshot goes.
     private func releasePageRetainingQuickWindowSnapshot() {
-        if request.isQuickWindow, let pageLease {
-            releasedPageSnapshot = snapshot(pageLease)
+        guard let pageLease else { return }
+        if request.isQuickWindow {
+            let retained = snapshot(pageLease)
+            forgetReleasedSnapshot()
+            releasedPageSnapshot = retained
+            unloadedPage = pageLease.unload()
+        } else {
+            pageLease.release()
         }
-        pageLease?.release()
-        pageLease = nil
+        self.pageLease = nil
+    }
+
+    /// Drops the released page's snapshot, and releases its page for good so
+    /// the core forgets what it showed too.
+    private func forgetReleasedSnapshot() {
+        releasedPageSnapshot = nil
+        unloadedPage?.release(keepingState: false)
+        unloadedPage = nil
     }
 
     private var currentSnapshot: BrowserTransientPageSnapshot? {

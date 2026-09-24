@@ -95,7 +95,7 @@ public sealed partial class NativeSessionAuthority {
             CloseTab closing => ClosingTab(basis, closing, now),
             DeleteTab deletion => DeletingTab(basis, deletion, now),
             ClearCurrentTabs clearing => ClearingCurrentTabs(basis, clearing, now),
-            DuplicateTab copy => DuplicatingTab(basis, copy, now, ids),
+            DuplicateTab copy => DuplicatingTab(basis, copy, now, ids, pages),
             MoveTab move => MovingTab(basis, move, now),
             PromoteTransientPage promotion => PromotingTransientPage(basis, promotion, now, ids, pages),
             ArchiveTransientPage archive => ArchivingTransientPage(basis, archive, now, ids, pages),

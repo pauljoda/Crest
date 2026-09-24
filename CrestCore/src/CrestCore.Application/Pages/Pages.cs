@@ -21,6 +21,13 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
 
     private readonly Dictionary<Guid, Page> open = [];
 
+    /// What each Quick Window or Peek page its owner unloaded showed last, by
+    /// page, so its window can still keep or archive it. A page is remembered
+    /// until the session keeps or archives it, its owner releases it for good
+    /// or its workspace closes, so the list holds no more than the transient
+    /// windows still open.
+    private readonly Dictionary<Guid, TransientPage> unloaded = [];
+
     /// Whether the engine new pages open on shows internal pages, such as an
     /// engine's settings.
     public bool OpensInternalPages => engines.Default?.Supports(EngineCapability.InternalPages) == true;
@@ -72,10 +79,20 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     }
 
     /// The page is gone at once, so its tab may open another straight away;
-    /// the engine closes what it still holds afterwards.
+    /// the engine closes what it still holds afterwards. A Quick Window's or
+    /// Peek's page its owner unloaded, keeping what it needs to bring it back,
+    /// leaves what it showed last; releasing it again for good forgets that.
     private void Release(ReleasePage intent, ChangeFeed changes, Action<Engine, EngineCommand> issue) {
-        var page = Known(intent.PageId);
-        open.Remove(page.Id);
+        if (!open.Remove(intent.PageId, out var page)) {
+            if (!unloaded.ContainsKey(intent.PageId)) throw new Rejected(new UnknownPage(intent.PageId));
+            if (!intent.KeepsState) unloaded.Remove(intent.PageId);
+            return;
+        }
+        if (page.TabId is null && intent.KeepsState) {
+            foreach (var gone in unloaded.Values.Where(remembered => device.Attached(remembered.WorkspaceId) is null).ToArray())
+                unloaded.Remove(gone.Id);
+            unloaded[page.Id] = Transient(page) with { MovesBetweenWindows = false };
+        }
         changes.Publish(new PageRemoved(page.Id));
         if (page.Phase.HoldsEnginePage) issue(page.Engine, new ClosePage(page.Id, intent.KeepsState));
     }
@@ -207,11 +224,20 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
 
     private Page Known(Guid pageId) => open.TryGetValue(pageId, out var page) ? page : throw new Rejected(new UnknownPage(pageId));
 
-    /// The Quick Window or Peek page `pageId` names, or null when this device
-    /// hosts no such page.
-    public TransientPage? Transient(Guid pageId) => open.TryGetValue(pageId, out var page) && page.TabId is null
-        ? new(page.Id, page.WorkspaceId, page.SpaceId, page.ProfileId, page.Engine.Supports(EngineCapability.WorkspaceTransfer))
-        : null;
+    /// The Quick Window or Peek page `pageId` names, as it is or as it was
+    /// when its owner unloaded it, or null when this device hosts no such page
+    /// and remembers none. An unloaded page cannot move to a tab's window, and
+    /// one of a workspace that closed is not remembered.
+    public TransientPage? Transient(Guid pageId) => open.TryGetValue(pageId, out var page)
+        ? page.TabId is null ? Transient(page) : null
+        : unloaded.GetValueOrDefault(pageId) is { } remembered && device.Attached(remembered.WorkspaceId) is not null ? remembered : null;
+
+    /// Forgets an unloaded Quick Window or Peek page the session kept or
+    /// archived.
+    public void Completed(Guid pageId) => unloaded.Remove(pageId);
+
+    private static TransientPage Transient(Page page) => new(page.Id, page.WorkspaceId, page.SpaceId, page.ProfileId,
+        page.Engine.Supports(EngineCapability.WorkspaceTransfer), page.Live.Address, page.Live.Title);
 
     /// The Space a page may live in: one the workspace holds, that is not
     /// being deleted, here or in the workspace a borrowed one borrows from, and

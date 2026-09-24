@@ -47,14 +47,15 @@ extension BrowserStore {
             from: self) != nil
     }
 
-    /// Keeps a Quick Window's or Peek's page as a new tab of `spaceID`, which
-    /// this window then shows, and answers the core's promotion: the tab's
-    /// identity and whether the tab may take the live page. Nil when a rule
-    /// refused it, such as a locked Space or a page already kept.
-    func promoteTransientPage(_ page: CorePage, url: URL, into spaceID: SpaceID) -> TransientPagePromoted? {
+    /// Keeps a Quick Window's or Peek's page as a new tab of `spaceID` at the
+    /// address the page shows, which this window then shows, and answers the
+    /// core's promotion: the tab's identity and whether the tab may take the
+    /// live page. Nil when a rule refused it, such as a locked Space or a page
+    /// already kept.
+    func promoteTransientPage(_ page: CorePage, into spaceID: SpaceID) -> TransientPagePromoted? {
         let promotion = PromoteTransientPage(
             workspaceID: family.workspaceID, windowID: windowID.rawValue, pageID: page.id, spaceID: spaceID.rawValue,
-            placement: .current, address: url.absoluteString)
+            placement: .current)
         return family.perform(promotion, from: self)?.changes.lazy.compactMap {
             guard case .transientPagePromoted(let promoted) = $0, promoted.pageID == page.id else { return nil }
             return promoted

@@ -2349,6 +2349,10 @@
     "saved-address-return-query": {
       "category": "internal",
       "message": "The core answers whether a pinned tab can return to its saved address."
+    },
+    "page-copies-from-core": {
+      "category": "internal",
+      "message": "Copies of a tab, and Quick Window or Peek pages that are kept or archived, start from what the core says the page shows."
     }
   }
 }

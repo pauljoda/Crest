@@ -93,7 +93,7 @@ public sealed partial class BrowserContractsTests {
         Refused(new OpenTab(device.Workspace, window, f.Space, Guid.NewGuid(), Page("https://one-more.example/"), TabPlacement.Pinned,
             null, true));
         Refused(new MoveTab(device.Workspace, f.Space, f.Tab, TabPlacement.Pinned, null, null, LeavesSplit: true));
-        Refused(new DuplicateTab(device.Workspace, window, f.Space, f.Tab, TabPlacement.Pinned, true, null));
+        Refused(new DuplicateTab(device.Workspace, window, f.Space, f.Tab, TabPlacement.Pinned, true));
         Assert.IsType<PinnedTabsFull>(device.Query(new CanSend(new MoveTab(device.Workspace, f.Space, f.Tab, TabPlacement.Pinned, null,
             null, LeavesSplit: true))).Refusal);
         Assert.Same(full, core.Current);
@@ -185,11 +185,12 @@ public sealed partial class BrowserContractsTests {
         var core = new NativeSessionAuthority(Bytes(session));
         using var device = new TestDevice(core);
         var window = device.Open(f.Space, (f.Space, f.Tab));
+        device.ShowPage(window, f.Space, f.Tab, PageSnapshot.Blank with { Url = "https://example.com/live-child", Title = "Live title" });
         var copy = Guid.NewGuid();
         device.Ids.Supply([copy]);
 
-        var copied = Assert.Single(device.Send(new DuplicateTab(device.Workspace, window, f.Space, f.Tab, null, true,
-            new SourcePage(f.Tab, "https://example.com/live-child", "Live title"))).OfType<TabCopied>());
+        var copied = Assert.Single(device.Send(new DuplicateTab(device.Workspace, window, f.Space, f.Tab, null, true))
+            .OfType<TabCopied>());
         Assert.Equal((device.Workspace, f.Tab, copy), (copied.WorkspaceId, copied.SourceTabId, copied.CopyTabId));
         var tabs = core.Current.Spaces[0].Tabs;
         var original = tabs.Single(tab => tab.Id == f.Tab); var duplicate = tabs.Single(tab => tab.Id == copy);

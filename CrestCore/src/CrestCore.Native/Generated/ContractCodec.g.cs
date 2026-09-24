@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x70, 0x98, 0xfd, 0x13, 0xeb, 0x88, 0x62, 0xff, 0x6d, 0x59, 0x3c, 0xeb, 0xe4, 0x65, 0xfc, 0xdc, 0xab, 0x96, 0x73, 0xfc, 0x1f, 0xf1, 0x5a, 0x13, 0x7a, 0x09, 0x7a, 0x93, 0xba, 0xbe, 0x14, 0x69
+        0xaa, 0xa1, 0x2d, 0xd6, 0xfa, 0xb8, 0xbe, 0x5e, 0x96, 0xb9, 0xdc, 0x6d, 0x85, 0x85, 0xd6, 0x06, 0x5f, 0x9f, 0x18, 0x5a, 0x05, 0x23, 0x8f, 0x60, 0x53, 0x42, 0xb7, 0xa9, 0x37, 0xd3, 0xdb, 0x39
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -1554,9 +1554,7 @@ public static class ContractCodec {
         return new ArchiveTransientPage(
             reader.ReadGuid(),
             reader.ReadGuid(),
-            reader.ReadGuid(),
-            reader.ReadString(),
-            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+            reader.ReadGuid());
     }
 
     public static void WriteArchiveTransientPage(WireWriter writer, ArchiveTransientPage value) {
@@ -1565,13 +1563,6 @@ public static class ContractCodec {
         writer.WriteGuid(value.WorkspaceId);
         writer.WriteGuid(value.PageId);
         writer.WriteGuid(value.SpaceId);
-        writer.WriteString(value.Address);
-        if (value.Title is { } presentTitle) {
-            writer.WritePresence(true);
-            writer.WriteString(presentTitle);
-        } else {
-            writer.WritePresence(false);
-        }
     }
 
     public static ArchivedTabState ReadArchivedTabState(WireReader reader) {
@@ -2993,8 +2984,7 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadPresence() ? (TabPlacement?)ReadTabPlacement(reader) : null,
-            reader.ReadBool(),
-            reader.ReadPresence() ? (SourcePage?)ReadSourcePage(reader) : null);
+            reader.ReadBool());
     }
 
     public static void WriteDuplicateTab(WireWriter writer, DuplicateTab value) {
@@ -3011,12 +3001,6 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.Shows);
-        if (value.Source is { } presentSource) {
-            writer.WritePresence(true);
-            WriteSourcePage(writer, presentSource);
-        } else {
-            writer.WritePresence(false);
-        }
     }
 
     public static EngineAlreadyRegistered ReadEngineAlreadyRegistered(WireReader reader) {
@@ -4954,8 +4938,7 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadGuid(),
-            ReadTabPlacement(reader),
-            reader.ReadString());
+            ReadTabPlacement(reader));
     }
 
     public static void WritePromoteTransientPage(WireWriter writer, PromoteTransientPage value) {
@@ -4966,7 +4949,6 @@ public static class ContractCodec {
         writer.WriteGuid(value.PageId);
         writer.WriteGuid(value.SpaceId);
         WriteTabPlacement(writer, value.Placement);
-        writer.WriteString(value.Address);
     }
 
     public static QuickWindowSite ReadQuickWindowSite(WireReader reader) {
@@ -5697,27 +5679,6 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
-    }
-
-    public static SourcePage ReadSourcePage(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return new SourcePage(
-            reader.ReadGuid(),
-            reader.ReadPresence() ? (string?)reader.ReadString() : null,
-            reader.ReadString());
-    }
-
-    public static void WriteSourcePage(WireWriter writer, SourcePage value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(value);
-        writer.WriteGuid(value.TabId);
-        if (value.Address is { } presentAddress) {
-            writer.WritePresence(true);
-            writer.WriteString(presentAddress);
-        } else {
-            writer.WritePresence(false);
-        }
-        writer.WriteString(value.Title);
     }
 
     public static SpaceAlreadyExists ReadSpaceAlreadyExists(WireReader reader) {

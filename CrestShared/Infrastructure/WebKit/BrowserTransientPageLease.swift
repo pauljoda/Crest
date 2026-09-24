@@ -31,6 +31,9 @@ final class BrowserTransientPageLease {
     @ObservationIgnored private var contentBlockingPolicy: ContentBlockingPolicy
     @ObservationIgnored private var balancedContentRuleLists: [WKContentRuleList]
     @ObservationIgnored private var isInvalidated = false
+    /// The core page memory pressure unloaded, which the core remembers until
+    /// the lease brings the page back or lets it go and releases it for good.
+    @ObservationIgnored private var unloaded: CorePage?
 
     init(
         page: BrowserPlatformPage,
@@ -70,12 +73,17 @@ final class BrowserTransientPageLease {
         self.page = page
         pageID = page.corePage.id
         wasReleasedForMemoryPressure = false
+        unloaded?.release(keepingState: false)
+        unloaded = nil
     }
 
+    /// Unloads the page, keeping what the lease needs to bring it back, so the
+    /// core still knows what it showed when its window keeps or archives it.
     func releaseForMemoryPressure() {
         guard let page else { return }
         reloadURL = page.live.documentURL ?? reloadURL
-        page.release(keepingState: false)
+        unloaded = page.corePage
+        page.release(keepingState: true)
         self.page = nil
         wasReleasedForMemoryPressure = true
     }
@@ -84,6 +92,23 @@ final class BrowserTransientPageLease {
         isInvalidated = true
         page?.release(keepingState: false)
         page = nil
+        unloaded?.release(keepingState: false)
+        unloaded = nil
+    }
+
+    /// Lets the page go for good as far as this lease goes, but unloads it
+    /// with its state kept, so the core still knows what it showed, and hands
+    /// its owner the core page to release for good once nothing will keep or
+    /// archive it.
+    func unload() -> CorePage? {
+        isInvalidated = true
+        if let page {
+            unloaded = page.corePage
+            page.release(keepingState: true)
+            self.page = nil
+        }
+        defer { unloaded = nil }
+        return unloaded
     }
 
     @discardableResult
