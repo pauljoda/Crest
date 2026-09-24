@@ -2137,6 +2137,10 @@
     "link-routing-typed-queries": {
       "category": "internal",
       "message": "External link routing and Quick Window site keys are typed core queries."
+    },
+    "generator-fixed-sets": {
+      "category": "internal",
+      "message": "The contract generator emits self-describing fixed sets from their C# instances."
     }
   }
 }

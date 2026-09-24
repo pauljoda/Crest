@@ -6,4 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/CrestCore.Contracts/CrestCore.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestCore.Tests" />
+  </ItemGroup>
 </Project>

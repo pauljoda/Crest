@@ -33,6 +33,8 @@ internal static class CSharpCodecEmitter {
         EmitAnswers(code, schema);
         foreach (var record in schema.Records) EmitRecord(code, record);
         foreach (var item in schema.Enums) EmitEnum(code, item);
+        foreach (var set in schema.Sets) EmitSet(code, set);
+        if (schema.Sets.Count > 0) EmitTagOf(code);
         code.Append("}\n");
         return code.ToString();
     }
@@ -99,6 +101,27 @@ internal static class CSharpCodecEmitter {
         code.Append("        writer.WriteEnum((int)value);\n    }\n");
     }
 
+    /// A fixed set member travels as its index in the set's `All`.
+    private static void EmitSet(StringBuilder code, ContractSet set) {
+        code.Append('\n').Append($"    public static {set.Name} Read{set.Name}(WireReader reader) {{\n");
+        code.Append("        ArgumentNullException.ThrowIfNull(reader);\n");
+        code.Append($"        return {set.Name}.All[reader.ReadEnum({set.Name}.All.Count)];\n    }}\n");
+        code.Append('\n').Append($"    public static void Write{set.Name}(WireWriter writer, {set.Name} value) {{\n");
+        code.Append("        ArgumentNullException.ThrowIfNull(writer);\n        ArgumentNullException.ThrowIfNull(value);\n");
+        code.Append($"        writer.WriteEnum(TagOf({set.Name}.All, value));\n    }}\n");
+    }
+
+    private static void EmitTagOf(StringBuilder code) => code.Append("""
+
+            /// <summary>A fixed set member's wire tag: its index in the set's <c>All</c>.</summary>
+            private static int TagOf<T>(IReadOnlyList<T> all, T value) where T : class {
+                for (int tag = 0; tag < all.Count; tag++)
+                    if (ReferenceEquals(all[tag], value)) return tag;
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Not a member of its fixed set.");
+            }
+
+        """);
+
     #endregion
 
     #region Actions - Fields
@@ -106,6 +129,7 @@ internal static class CSharpCodecEmitter {
     private static string Read(FieldType type) => type switch {
         PrimitiveField primitive => $"reader.Read{Method(primitive.Kind)}()",
         EnumField item => $"Read{item.Type.Name}(reader)",
+        SetField set => $"Read{set.Type.Name}(reader)",
         RecordField record => $"Read{record.Type.Name}(reader)",
         RootField root => $"Read{root.Root}(reader)",
         ListField list => $"reader.ReadList(() => {Read(list.Element)})",
@@ -118,6 +142,7 @@ internal static class CSharpCodecEmitter {
     private static string Write(FieldType type, string value, string indent, string scope) => type switch {
         PrimitiveField primitive => $"{indent}writer.Write{Method(primitive.Kind)}({value});\n",
         EnumField item => $"{indent}Write{item.Type.Name}(writer, {value});\n",
+        SetField set => $"{indent}Write{set.Type.Name}(writer, {value});\n",
         RecordField record => $"{indent}Write{record.Type.Name}(writer, {value});\n",
         RootField root => $"{indent}Write{root.Root}(writer, {value});\n",
         ListField list => $"{indent}writer.WriteCount({value}.Count);\n"
@@ -147,6 +172,7 @@ internal static class CSharpCodecEmitter {
         PrimitiveField { Kind: Primitive.Date } => "DateTimeOffset",
         PrimitiveField { Kind: Primitive.Duration } => "TimeSpan",
         EnumField item => item.Type.Name,
+        SetField set => set.Type.Name,
         RecordField record => record.Type.Name,
         RootField root => root.Root.ToString(),
         ListField list => $"IReadOnlyList<{TypeName(list.Element)}>",

@@ -3,6 +3,7 @@ using System.Reflection;
 
 using CrestCore.Application;
 using CrestCore.Contracts;
+using CrestCore.Generator;
 using CrestCore.Native;
 
 using Xunit;
@@ -136,6 +137,25 @@ public sealed unsafe class ContractCodecTests {
             }
             Assert.Equal(Enumerable.Range(0, tags.Count).Select(tag => (ulong)tag), tags);
         }
+    }
+
+    [Fact]
+    public void AFixedSetsOrderIsPartOfTheFingerprint() {
+        var ordered = ContractSchema.Load([typeof(Ordered.ShowSignal)]);
+        var reordered = ContractSchema.Load([typeof(Reordered.ShowSignal)]);
+
+        Assert.Equal([("Stop", 0), ("Go", 1)], ordered.Sets.Single().Members.Select(member => (member.Name, member.Tag)));
+        Assert.Equal([("Go", 0), ("Stop", 1)], reordered.Sets.Single().Members.Select(member => (member.Name, member.Tag)));
+        Assert.NotEqual(ordered.Fingerprint, reordered.Fingerprint);
+    }
+
+    [Theory]
+    [InlineData(typeof(Malformed.SendUnlisted), "Unlisted.Hidden:")]
+    [InlineData(typeof(Malformed.SendConstructible), "Constructible:")]
+    [InlineData(typeof(Malformed.SendListed), "Listed.Parts:")]
+    public void TheGeneratorRefusesAFixedSetItCannotTagOrSpell(Type intent, string culprit) {
+        var error = Assert.Throws<ContractSchemaException>(() => ContractSchema.Load([intent]));
+        Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

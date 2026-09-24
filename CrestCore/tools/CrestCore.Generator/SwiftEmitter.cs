@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Text;
 
 namespace CrestCore.Generator;
 
 /// Emits the Swift read model and its codec. Records become structs, enums
-/// become `Int` enums or option sets, intents and queries conform to the
+/// become `Int` enums or option sets, fixed sets become structs of `static let`
+/// members, intents and queries conform to the
 /// `Intent` and `Query` protocols, and changes and rejections become the cases
 /// of `Change` and `Rejection`.
 internal static class SwiftEmitter {
@@ -89,7 +91,37 @@ internal static class SwiftEmitter {
             }
             code.Append("}\n");
         }
+
+        if (schema.Sets.Count > 0) code.Append("\n// MARK: - Fixed sets\n");
+        foreach (var set in schema.Sets) EmitSet(code, set);
         return code.ToString();
+    }
+
+    /// A fixed set becomes a struct with one `static let` per member, built
+    /// from the member's wire tag and the literal values of its data. Two
+    /// values are equal when they are the same member.
+    private static void EmitSet(StringBuilder code, ContractSet set) {
+        var properties = set.Properties.Select(property => (Name: Local(property.Name), property.Type)).ToList();
+        code.Append('\n').Append($"/// The members of the core's `{set.Name}`. A member's wire tag is its index in `all`.\n");
+        if (set.CoreOnly.Count > 0)
+            code.Append($"/// Core-only behavior, not emitted: {string.Join(", ", set.CoreOnly.Select(name => $"`{name}`"))}.\n");
+        code.Append($"struct {set.Name}: Hashable, Sendable {{\n    let tag: Int\n");
+        foreach (var property in properties) code.Append($"    let {property.Name}: {TypeName(property.Type)}\n");
+        code.Append('\n').Append("    private init(tag: Int");
+        foreach (var property in properties) code.Append($", {property.Name}: {TypeName(property.Type)}");
+        code.Append(") {\n        self.tag = tag\n");
+        foreach (var property in properties) code.Append($"        self.{property.Name} = {property.Name}\n");
+        code.Append("    }\n\n");
+        foreach (var member in set.Members) {
+            code.Append($"    static let {Local(member.Name)} = {set.Name}(tag: {member.Tag}");
+            for (int index = 0; index < properties.Count; index++)
+                code.Append($", {properties[index].Name}: {Literal(properties[index].Type, member.Values[index])}");
+            code.Append(")\n");
+        }
+        code.Append('\n').Append($"    static let all: [{set.Name}] = [{string.Join(", ", set.Members.Select(member => Local(member.Name)))}]\n");
+        code.Append('\n').Append($"    static func named(_ name: String?) -> {set.Name}? {{\n        all.first {{ $0.name == name }}\n    }}\n");
+        code.Append('\n').Append($"    static func == (lhs: {set.Name}, rhs: {set.Name}) -> Bool {{\n        lhs.tag == rhs.tag\n    }}\n");
+        code.Append('\n').Append("    func hash(into hasher: inout Hasher) {\n        hasher.combine(tag)\n    }\n}\n");
     }
 
     private static void EmitUnion(StringBuilder code, ContractSchema schema, ContractRoot root, string documentation,
@@ -207,6 +239,15 @@ internal static class SwiftEmitter {
             }
             code.Append("    }\n\n    func encode(into writer: inout WireWriter) {\n        writer.writeEnum(rawValue)\n    }\n}\n");
         }
+
+        foreach (var set in schema.Sets) {
+            code.Append('\n').Append($"extension {set.Name} {{\n");
+            code.Append("    init(from reader: inout WireReader) throws(WireError) {\n");
+            code.Append("        let tag = try reader.readEnum()\n");
+            code.Append($"        guard Self.all.indices.contains(tag) else {{\n            throw WireError.malformed(\"Unknown {set.Name} \\(tag)\")\n        }}\n");
+            code.Append("        self = Self.all[tag]\n");
+            code.Append("    }\n\n    func encode(into writer: inout WireWriter) {\n        writer.writeEnum(tag)\n    }\n}\n");
+        }
         return code.ToString();
     }
 
@@ -223,7 +264,7 @@ internal static class SwiftEmitter {
             case PrimitiveField primitive:
                 lines.Add($"{indent}let {name} = try reader.read{Method(primitive.Kind)}()");
                 break;
-            case EnumField or RecordField:
+            case EnumField or SetField or RecordField:
                 lines.Add($"{indent}let {name} = try {TypeName(type)}(from: &reader)");
                 break;
             case RootField { Root: ContractRoot.Intent or ContractRoot.Query } root:
@@ -258,7 +299,7 @@ internal static class SwiftEmitter {
     private static string Encode(FieldType type, string value, string indent, int depth) => type switch {
         PrimitiveField primitive => $"{indent}writer.write{Method(primitive.Kind)}({value})\n",
         RootField { Root: ContractRoot.Intent or ContractRoot.Query } root => $"{indent}{value}.encode{root.Root}(into: &writer)\n",
-        EnumField or RecordField or RootField => $"{indent}{value}.encode(into: &writer)\n",
+        EnumField or SetField or RecordField or RootField => $"{indent}{value}.encode(into: &writer)\n",
         ListField list => $"{indent}writer.writeCount({value}.count)\n"
             + $"{indent}for element{depth} in {value} {{\n"
             + Encode(list.Element, $"element{depth}", indent + "    ", depth + 1)
@@ -285,6 +326,7 @@ internal static class SwiftEmitter {
     private static string TypeName(FieldType type) => type switch {
         PrimitiveField primitive => Method(primitive.Kind),
         EnumField item => item.Type.Name,
+        SetField set => set.Type.Name,
         RecordField record => record.Type.Name,
         RootField { Root: ContractRoot.Intent or ContractRoot.Query } root => $"any {root.Root}",
         RootField root => root.Root.ToString(),
@@ -293,6 +335,45 @@ internal static class SwiftEmitter {
         OptionalField optional => $"{TypeName(optional.Value)}?",
         _ => throw new ContractSchemaException($"Unknown field type {type}.")
     };
+
+    #endregion
+
+    #region Actions - Literals
+
+    /// A fixed set member's data value as a Swift literal.
+    private static string Literal(FieldType type, object? value) => (type, value) switch {
+        (OptionalField, null) => "nil",
+        (OptionalField optional, _) => Literal(optional.Value, value),
+        (PrimitiveField, bool flag) => flag ? "true" : "false",
+        (PrimitiveField, int or long) => Convert.ToString(value, CultureInfo.InvariantCulture)!,
+        (PrimitiveField, double number) => DoubleLiteral(number),
+        (PrimitiveField, TimeSpan duration) => DoubleLiteral(duration.TotalSeconds),
+        (PrimitiveField, string text) => StringLiteral(text),
+        (SetField, SetMemberReference reference) => $"{reference.Set.Name}.{Local(reference.Member)}",
+        _ => throw new ContractSchemaException($"Cannot spell {value} as a Swift {TypeName(type)}.")
+    };
+
+    private static string DoubleLiteral(double number) => number switch {
+        double.NaN => ".nan",
+        double.PositiveInfinity => ".infinity",
+        double.NegativeInfinity => "-.infinity",
+        _ => number.ToString("R", CultureInfo.InvariantCulture)
+    };
+
+    private static string StringLiteral(string text) {
+        var literal = new StringBuilder("\"");
+        foreach (var rune in text.EnumerateRunes())
+            literal.Append(rune.Value switch {
+                '\\' => "\\\\",
+                '"' => "\\\"",
+                '\n' => "\\n",
+                '\r' => "\\r",
+                '\t' => "\\t",
+                < 0x20 or 0x7f => $"\\u{{{rune.Value:x}}}",
+                _ => rune.ToString()
+            });
+        return literal.Append('"').ToString();
+    }
 
     #endregion
 }
