@@ -346,6 +346,22 @@ static size_t put_bytes(uint8_t* output, size_t at, size_t capacity, const char*
     memcpy(output + at, bytes, length);
     return at + length;
 }
+/* Saved(Revision: 1): its tag, then the file revision as a little-endian
+ * int64. An adoption hands the file its first revision. The storage worker
+ * announces the save on its own thread, so the Saved lands in whichever
+ * answer or drain collects the pending changes next. */
+static const uint8_t first_save[9] = { CREST_CHANGE_SAVED, 1 };
+static int is_first_save(const crest_buffer_t* buffer, size_t at) {
+    return at + sizeof(first_save) <= buffer->length && memcmp(buffer->bytes + at, first_save, sizeof(first_save)) == 0;
+}
+/* The number of changes in a change list that holds only Saved(Revision: 1). */
+static int first_saves(const crest_buffer_t* buffer) {
+    assert(buffer->length >= 1 && buffer->bytes[0] < 0x80);
+    size_t count = buffer->bytes[0];
+    assert(buffer->length == 1 + count * sizeof(first_save));
+    for (size_t index = 0; index < count; index++) assert(is_first_save(buffer, 1 + index * sizeof(first_save)));
+    return (int)count;
+}
 /* The core opens and owns session.sqlite: an empty file answers EMPTY, the
  * first session is adopted once, and the save it starts wakes the host. A
  * directory without a recovery checkpoint cannot be restored. */
@@ -379,14 +395,30 @@ static void storage_boundary(void) {
     adoption[adopted++] = 0;
     adopted = put_bytes(adoption, adopted, sizeof(adoption), json, (size_t)size);
     assert(crest_app_dispatch(app, adoption, adopted, &buffer) == CREST_OK);
-    /* Two changes: WorkspaceOpened for the session the file now holds, then
-     * SessionAdopted, carrying no images. */
-    assert(buffer.bytes[0] == 2 && buffer.bytes[1] == CREST_CHANGE_WORKSPACE_OPENED);
-    assert(buffer.bytes[buffer.length - 2] == CREST_CHANGE_SESSION_ADOPTED && buffer.bytes[buffer.length - 1] == 0);
+    /* WorkspaceOpened for the session the file now holds, then SessionAdopted,
+     * carrying no images. The answer starts with the changes the core
+     * announced while the adoption ran, so the adoption's Saved comes before
+     * or after WorkspaceOpened when the save finished in time. The count says
+     * which: a Saved not at the front sits just before SessionAdopted. */
+    assert(buffer.length > 2 && buffer.bytes[0] < 0x80);
+    size_t changes = buffer.bytes[0], opened = 1, adopted_at = buffer.length - 2;
+    int saves = 0;
+    if (is_first_save(&buffer, opened)) { opened += sizeof(first_save); saves++; }
+    assert(buffer.bytes[opened] == CREST_CHANGE_WORKSPACE_OPENED);
+    assert(buffer.bytes[adopted_at] == CREST_CHANGE_SESSION_ADOPTED && buffer.bytes[adopted_at + 1] == 0);
+    if (changes == 3 && saves == 0) {
+        adopted_at -= sizeof(first_save);
+        assert(is_first_save(&buffer, adopted_at));
+        saves++;
+    }
+    assert(changes == 2 + (size_t)saves);
+    /* WorkspaceOpened carries at least its workspace identity. */
+    assert(adopted_at > opened + 16);
     crest_buffer_free(&buffer);
-    /* The file holds a session now: a second adoption changes nothing. */
+    /* The file holds a session now: a second adoption changes nothing. Only
+     * the first adoption's save can still arrive with its answer. */
     assert(crest_app_dispatch(app, adoption, adopted, &buffer) == CREST_OK);
-    assert(buffer.length == 1 && buffer.bytes[0] == 0);
+    saves += first_saves(&buffer);
     crest_buffer_free(&buffer);
     for (int attempt = 0; attempt < 1000 && storage_wakes == 0; attempt++) {
         struct timespec pause = { 0, 5000000 };
@@ -395,17 +427,15 @@ static void storage_boundary(void) {
     /* The core wakes the host for the save and for a turn: the launch stage
      * of the adopted session waits for the host to end its turn. */
     assert(storage_wakes >= 1);
-    /* One change: Saved(Revision: 1), a tag and a little-endian int64. */
-    int saved = 0;
-    for (int attempt = 0; attempt < 1000 && !saved; attempt++) {
+    /* The save is announced once, in an answer above or in a drain. */
+    for (int attempt = 0; attempt < 1000 && saves == 0; attempt++) {
         assert(crest_app_drain(app, &buffer) == CREST_OK);
-        saved = buffer.length == 10 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SAVED && buffer.bytes[2] == 1;
-        assert(saved || (buffer.length == 1 && buffer.bytes[0] == 0));
+        saves += first_saves(&buffer);
         crest_buffer_free(&buffer);
         struct timespec pause = { 0, 5000000 };
-        if (!saved) nanosleep(&pause, NULL);
+        if (saves == 0) nanosleep(&pause, NULL);
     }
-    assert(saved);
+    assert(saves == 1);
     /* Ending the turn starts the launch stage, which the host hears about. */
     assert(crest_app_end_turn(app) == CREST_OK);
     int staged = 0;
