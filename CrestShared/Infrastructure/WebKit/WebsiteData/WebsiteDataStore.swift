@@ -12,11 +12,16 @@ enum BrowserWebsiteDataStore {
         else {
             return .nonPersistent()
         }
-        return persistent(for: profile)
+        return persistent(for: profile, environment: environment)
     }
 
-    static func persistent(for profile: BrowsingProfile) -> WKWebsiteDataStore {
-        WKWebsiteDataStore(forIdentifier: profile.id)
+    /// The profile's persistent store, which a named isolated launch keeps
+    /// apart from the installed app's.
+    static func persistent(
+        for profile: BrowsingProfile,
+        environment: BrowserLaunchEnvironment = .current
+    ) -> WKWebsiteDataStore {
+        WKWebsiteDataStore(forIdentifier: environment.websiteDataStoreIdentifier(forProfileID: profile.id))
     }
 
     static func clearSiteData(

@@ -8,6 +8,7 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserEngineProfileRemoving {
     typealias Sleep = @MainActor (Duration) async throws -> Void
     typealias ClearDataStore = @MainActor (UUID) async throws -> Void
     typealias CleanupMarker = @MainActor (UUID) -> Void
+    typealias StoreIdentifier = @MainActor (UUID) -> UUID
 
     static let defaultRetryDelays: [Duration] = [
         .milliseconds(125),
@@ -25,6 +26,7 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserEngineProfileRemoving {
     private let clearDataStore: ClearDataStore
     private let recordDeferredCleanup: CleanupMarker
     private let completeCleanup: CleanupMarker
+    private let storeIdentifier: StoreIdentifier
     private let acceptsClearedStoreFallback: Bool
 
     init(
@@ -47,6 +49,11 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserEngineProfileRemoving {
         completeCleanup: @escaping CleanupMarker = { identifier in
             BrowserDeferredWebsiteDataStoreCleanup.markRemoved(identifier)
         },
+        // Read when a profile is removed, not here: a review composition
+        // names its isolation after its default remover already exists.
+        storeIdentifier: @escaping StoreIdentifier = { profileID in
+            BrowserLaunchEnvironment.current.websiteDataStoreIdentifier(forProfileID: profileID)
+        },
         acceptsClearedStoreFallback: Bool = true
     ) {
         self.retryDelays = retryDelays
@@ -56,6 +63,7 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserEngineProfileRemoving {
         self.clearDataStore = clearDataStore
         self.recordDeferredCleanup = recordDeferredCleanup
         self.completeCleanup = completeCleanup
+        self.storeIdentifier = storeIdentifier
         self.acceptsClearedStoreFallback = acceptsClearedStoreFallback
     }
 
@@ -64,10 +72,13 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserEngineProfileRemoving {
         try await removePersistentDataStore(for: profile)
     }
 
+    /// Removes the stores this launch opens for `profile`, which in a named
+    /// isolated launch are never the installed app's.
     func removePersistentDataStore(for profile: BrowsingProfile) async throws {
-        try await removePersistentDataStore(identifier: profile.id)
+        let identifier = storeIdentifier(profile.id)
+        try await removePersistentDataStore(identifier: identifier)
         try await removePersistentDataStore(
-            identifier: BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile.id))
+            identifier: BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: identifier))
     }
 
     private func removePersistentDataStore(identifier: UUID) async throws {
