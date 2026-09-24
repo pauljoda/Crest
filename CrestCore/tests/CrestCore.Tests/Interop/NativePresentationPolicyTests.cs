@@ -148,7 +148,6 @@ public sealed class NativePresentationPolicyTests {
         foreach (var command in new[] { "space.create", "space.remove", "space.reorder", "space.deletion.begin", "workspace.import" })
             Assert.Equal("rejected", Route(command, true));
         Assert.Equal("local", Route("tab.open", true));
-        Assert.Equal("local", Route("folder.create", true));
     }
 
     private static JsonObject Color(double red, double green, double blue) =>

@@ -35,6 +35,14 @@ public sealed partial class NativeSessionAuthority {
         Commit(command);
     }
 
+    /// Throws the `Rejected` that would refuse `intent` at `now`, and changes
+    /// nothing. New identities come from `ids`, and are never used.
+    internal void Check(SessionIntent intent, DateTimeOffset now, IIdSource ids) {
+        ArgumentNullException.ThrowIfNull(intent);
+        ArgumentNullException.ThrowIfNull(ids);
+        lock (Gate) _ = Edit(intent, Stamp(now), ids);
+    }
+
     /// The edit an intent makes to the accepted session, validated, or null
     /// for a sweep the last one makes unnecessary. The caller holds the gate.
     private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids) {
@@ -46,6 +54,24 @@ public sealed partial class NativeSessionAuthority {
             SweepExpiredRecords => Sweeping(basis, now),
             CleanUpCurrentTabs cleanup => CleaningUp(basis, cleanup, now),
             RestoreArchivedTab restore => Restoring(basis, restore, now),
+            CreateFolder creation => CreatingFolder(basis, creation, now),
+            RenameFolder rename => RenamingFolder(basis, rename),
+            CollapseFolder collapse => CollapsingFolder(basis, collapse, now),
+            SetFolderColor color => ColoringFolder(basis, color),
+            SetFolderSymbol symbol => SymbolizingFolder(basis, symbol),
+            MoveFolder move => MovingFolder(basis, move, now),
+            DeleteFolder deletion => DeletingFolder(basis, deletion, now),
+            FileTabs filing => Filing(basis, filing, now),
+            JoinSplit join => JoiningSplit(basis, join, now, ids),
+            OpenLinkInSplit link => OpeningLinkInSplit(basis, link, now, ids),
+            LeaveSplit leave => LeavingSplit(basis, leave, now),
+            MoveSplitMember move => MovingSplitMember(basis, move, now),
+            StepSplitMember step => SteppingSplitMember(basis, step, now),
+            DissolveSplit dissolve => DissolvingSplit(basis, dissolve, now),
+            MoveSplit move => MovingSplit(basis, move, now),
+            NameSplit name => NamingSplit(basis, name, now),
+            SetSplitIcon icon => SettingSplitIcon(basis, icon, now),
+            TintSplit tint => TintingSplit(basis, tint, now),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;

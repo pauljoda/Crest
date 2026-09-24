@@ -54,6 +54,7 @@ enum Change: Equatable, Sendable {
 
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
+    case alreadyInSplit(AlreadyInSplit)
     case credentialRecordLimitReached(CredentialRecordLimitReached)
     case defaultEngineAlreadyRegistered(DefaultEngineAlreadyRegistered)
     case downloadLimitReached(DownloadLimitReached)
@@ -61,10 +62,13 @@ enum Rejection: Equatable, Error, Sendable {
     case duplicateDownload(DuplicateDownload)
     case duplicatePage(DuplicatePage)
     case duplicateSearchEngineName(DuplicateSearchEngineName)
-    case duplicateTab(DuplicateTab)
     case engineAlreadyRegistered(EngineAlreadyRegistered)
     case engineLacksCapability(EngineLacksCapability)
     case engineNotRegistered(EngineNotRegistered)
+    case folderAlreadyExists(FolderAlreadyExists)
+    case folderCycle(FolderCycle)
+    case folderDepthLimitReached(FolderDepthLimitReached)
+    case folderLimitReached(FolderLimitReached)
     case invalidCredentialDate(InvalidCredentialDate)
     case invalidCredentialOrigin(InvalidCredentialOrigin)
     case invalidCredentialRecord(InvalidCredentialRecord)
@@ -74,6 +78,9 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidDownloadProgress(InvalidDownloadProgress)
     case invalidDownloadSample(InvalidDownloadSample)
     case invalidDownloadText(InvalidDownloadText)
+    case invalidFolderPlacement(InvalidFolderPlacement)
+    case invalidFolderSymbol(InvalidFolderSymbol)
+    case invalidName(InvalidName)
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
@@ -84,19 +91,26 @@ enum Rejection: Equatable, Error, Sendable {
     case searchEngineLimitReached(SearchEngineLimitReached)
     case spaceBeingDeleted(SpaceBeingDeleted)
     case spaceLocked(SpaceLocked)
+    case splitBoundary(SplitBoundary)
+    case splitLimitReached(SplitLimitReached)
     case staleCommand(StaleCommand)
     case staleCredentialComparison(StaleCredentialComparison)
     case storageFromNewerApp(StorageFromNewerApp)
     case storageRestoreInterrupted(StorageRestoreInterrupted)
     case storageUnreadable(StorageUnreadable)
     case syncStagingRefused(SyncStagingRefused)
+    case tabAlreadyExists(TabAlreadyExists)
     case tabAlreadyHasPage(TabAlreadyHasPage)
     case tabLimitReached(TabLimitReached)
     case unknownArchivedTab(UnknownArchivedTab)
+    case unknownFolder(UnknownFolder)
     case unknownPage(UnknownPage)
     case unknownSpace(UnknownSpace)
+    case unknownSplitGroup(UnknownSplitGroup)
+    case unknownTab(UnknownTab)
     case unknownWorkspace(UnknownWorkspace)
     case unsavedWorkspace(UnsavedWorkspace)
+    case webPagesOnly(WebPagesOnly)
     case windowNotOpen(WindowNotOpen)
     case workspaceBusy(WorkspaceBusy)
 }
@@ -154,6 +168,10 @@ struct AdoptLegacySession: Intent, Equatable, Sendable {
 
 struct AdoptWindowRecords: Intent, Equatable, Sendable {
     let records: Data?
+}
+
+struct AlreadyInSplit: Equatable, Sendable {
+    let tabID: UUID
 }
 
 struct AppConfiguration: Equatable, Sendable {
@@ -233,6 +251,12 @@ struct BrowsingPreferences: Equatable, Sendable {
     let dataRetention: DataRetentionPreferences
 }
 
+struct CanSend: Query, Sendable {
+    typealias Answer = SendPermission
+
+    let intent: any Intent
+}
+
 struct CanTearOff: Query, Equatable, Sendable {
     typealias Answer = TearOffPermission
 
@@ -267,6 +291,13 @@ struct CloseWindow: Intent, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct CollapseFolder: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let collapsed: Bool
+}
+
 struct ColorPalette: Equatable, Sendable {
     let colors: [BrandColor]
 }
@@ -274,6 +305,19 @@ struct ColorPalette: Equatable, Sendable {
 struct ContentRuleList: Equatable, Sendable {
     let identifier: String
     let source: String
+}
+
+struct CreateFolder: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let placement: TabPlacement
+    let parentID: UUID?
+    let title: String?
+    let color: BrandColor?
+    let symbol: String?
+    let tabIDs: [UUID]
+    let leavesSplits: Bool
 }
 
 struct CreatePage: Equatable, Sendable {
@@ -438,10 +482,22 @@ struct DefaultEngineAlreadyRegistered: Equatable, Sendable {
     let current: EngineKind
 }
 
+struct DeleteFolder: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+}
+
 struct DismissShownTab: Intent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
+}
+
+struct DissolveSplit: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
 }
 
 struct DownloadLimitReached: Equatable, Sendable {
@@ -549,10 +605,6 @@ struct DuplicatePage: Equatable, Sendable {
 struct DuplicateSearchEngineName: Equatable, Sendable {
 }
 
-struct DuplicateTab: Equatable, Sendable {
-    let tabID: UUID
-}
-
 struct EngineAlreadyRegistered: Equatable, Sendable {
     let kind: EngineKind
 }
@@ -606,9 +658,36 @@ struct FallbackTabIndex: Equatable, Sendable {
     let index: Int?
 }
 
+struct FileTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabIDs: [UUID]
+    let placement: TabPlacement
+    let folderID: UUID?
+    let beforeTabID: UUID?
+    let beforeFolderID: UUID?
+    let leavesSplits: Bool
+}
+
 struct FinishDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let finalByteCount: Int64?
+}
+
+struct FolderAlreadyExists: Equatable, Sendable {
+    let folderID: UUID
+}
+
+struct FolderCycle: Equatable, Sendable {
+    let folderID: UUID
+}
+
+struct FolderDepthLimitReached: Equatable, Sendable {
+    let limit: Int
+}
+
+struct FolderLimitReached: Equatable, Sendable {
+    let limit: Int
 }
 
 struct FolderState: Equatable, Sendable, Identifiable {
@@ -676,6 +755,17 @@ struct InvalidDownloadText: Equatable, Sendable {
     let field: DownloadTextField
 }
 
+struct InvalidFolderPlacement: Equatable, Sendable {
+}
+
+struct InvalidFolderSymbol: Equatable, Sendable {
+    let maximumBytes: Int
+}
+
+struct InvalidName: Equatable, Sendable {
+    let limit: Int
+}
+
 struct InvalidPasswordLength: Equatable, Sendable {
     let minimum: Int
     let maximum: Int
@@ -691,10 +781,26 @@ struct InvalidSearchEngine: Equatable, Sendable {
 struct InvalidSplitColumnShares: Equatable, Sendable {
 }
 
+struct JoinSplit: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let targetTabID: UUID
+    let index: Int?
+    let sourcePages: [SourcePage]
+}
+
 struct KeyCombination: Equatable, Sendable {
     let key: String
     let isSpecialKey: Bool
     let modifiers: ShortcutModifiers
+}
+
+struct LeaveSplit: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
 }
 
 struct LegacyHistory: Equatable, Sendable {
@@ -737,6 +843,16 @@ struct MostRecentCredential: Query, Equatable, Sendable {
     let records: [CredentialRecord]
 }
 
+struct MoveFolder: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let placement: TabPlacement?
+    let parentID: UUID?
+    let beforeFolderID: UUID?
+    let beforeTabID: UUID?
+}
+
 struct MovePage: Intent, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
@@ -745,9 +861,43 @@ struct MovePage: Intent, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct MoveSplit: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let placement: TabPlacement
+    let folderID: UUID?
+    let beforeTabID: UUID?
+}
+
+struct MoveSplitMember: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let index: Int
+}
+
+struct NameSplit: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let name: String?
+}
+
 struct NativeTabContent: Equatable, Sendable {
     let kind: String
     let resourceID: UUID?
+}
+
+struct OpenLinkInSplit: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let targetTabID: UUID
+    let address: String
+    let title: String
+    let sourcePages: [SourcePage]
 }
 
 struct OpenPage: Intent, Equatable, Sendable {
@@ -874,6 +1024,13 @@ struct RemoveProfileDownloads: Intent, Equatable, Sendable {
     let profileID: UUID
 }
 
+struct RenameFolder: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let title: String
+}
+
 struct ResizeSplitColumns: Intent, Equatable, Sendable {
     let windowID: UUID
     let groupID: UUID
@@ -903,6 +1060,10 @@ struct SearchEngineLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
+struct SendPermission: Equatable, Sendable {
+    let refusal: Rejection?
+}
+
 struct SessionAdopted: Equatable, Sendable {
     let favicons: [TabFavicon]
 }
@@ -919,6 +1080,27 @@ struct SetDownloadDestination: Intent, Equatable, Sendable {
     let downloadID: UUID
     let destination: String
     let filename: String
+}
+
+struct SetFolderColor: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let color: BrandColor
+}
+
+struct SetFolderSymbol: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let symbol: String
+}
+
+struct SetSplitIcon: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let symbol: String?
 }
 
 struct ShortcutDefault: Equatable, Sendable {
@@ -941,6 +1123,12 @@ struct ShowTab: Intent, Equatable, Sendable {
 struct ShownTab: Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID?
+}
+
+struct SourcePage: Equatable, Sendable {
+    let tabID: UUID
+    let address: String?
+    let title: String
 }
 
 struct SpaceBeingDeleted: Equatable, Sendable {
@@ -1043,6 +1231,9 @@ struct SpacesChanged: Equatable, Sendable {
     let order: [UUID]?
 }
 
+struct SplitBoundary: Equatable, Sendable {
+}
+
 struct SplitColumnShares: Equatable, Sendable {
     let groupID: UUID
     let shares: [Double]
@@ -1064,10 +1255,21 @@ struct SplitGroupsChanged: Equatable, Sendable {
     let groups: [SplitGroupState]
 }
 
+struct SplitLimitReached: Equatable, Sendable {
+    let limit: Int
+}
+
 struct StaleCommand: Equatable, Sendable {
 }
 
 struct StaleCredentialComparison: Equatable, Sendable {
+}
+
+struct StepSplitMember: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let offset: Int
 }
 
 struct StorageFailed: Equatable, Sendable {
@@ -1138,6 +1340,10 @@ struct SystemPasswordWriteThroughSupport: Equatable, Sendable {
     let availability: SystemPasswordWriteThroughAvailability
 }
 
+struct TabAlreadyExists: Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct TabAlreadyHasPage: Equatable, Sendable {
     let tabID: UUID
     let pageID: UUID
@@ -1203,6 +1409,13 @@ struct TearOffPermission: Equatable, Sendable {
     let reason: TearOffRefusal?
 }
 
+struct TintSplit: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let tint: BrandColor?
+}
+
 struct TranslationRule: Equatable, Sendable {
     let sourceLanguage: String
     let targetID: String
@@ -1213,6 +1426,10 @@ struct UnknownArchivedTab: Equatable, Sendable {
     let tabID: UUID
 }
 
+struct UnknownFolder: Equatable, Sendable {
+    let folderID: UUID
+}
+
 struct UnknownPage: Equatable, Sendable {
     let pageID: UUID
 }
@@ -1221,12 +1438,24 @@ struct UnknownSpace: Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct UnknownSplitGroup: Equatable, Sendable {
+    let groupID: UUID
+}
+
+struct UnknownTab: Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct UnknownWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
 
 struct UnsavedWorkspace: Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct WebPagesOnly: Equatable, Sendable {
+    let tabID: UUID
 }
 
 struct WindowChanged: Equatable, Sendable {

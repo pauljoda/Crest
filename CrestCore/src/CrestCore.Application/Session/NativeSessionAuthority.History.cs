@@ -128,8 +128,7 @@ public sealed partial class NativeSessionAuthority {
         var index = space.ArchivedTabs.ToList().FindIndex(archived => archived.Tab.Id == intent.TabId);
         if (index < 0) throw new Rejected(new UnknownArchivedTab(intent.TabId));
         if (basis.Spaces.Any(candidate => candidate.Tabs.Any(tab => tab.Id == intent.TabId)))
-            throw new Rejected(new DuplicateTab(intent.TabId));
-        if (space.Tabs.Count >= BrowserTabCollection.MaximumTabs) throw new Rejected(new TabLimitReached(BrowserTabCollection.MaximumTabs));
+            throw new Rejected(new TabAlreadyExists(intent.TabId));
         var remaining = space with { ArchivedTabs = [.. space.ArchivedTabs.Where((_, position) => position != index)] };
         var edited = BrowserTabCollection.Restore(remaining);
         var restored = edited.RestoreArchived(space.ArchivedTabs[index].Tab, now);

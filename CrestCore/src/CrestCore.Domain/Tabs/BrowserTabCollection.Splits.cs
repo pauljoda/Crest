@@ -26,7 +26,7 @@ public sealed partial class BrowserTabCollection {
     public BrowserTab DuplicateTab(Guid sourceId, IIdSource ids, DateTimeOffset now,
         TabPlacement? placement = null, int? requestedIndex = null) {
         var source = Tab(sourceId);
-        if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
+        if (tabs.Count >= MaximumTabs) throw new Rejected(new TabLimitReached(MaximumTabs));
         var copy = CopyTab(source, ids.Next(), now);
         copy.Place(placement ?? TabPlacement.Current, null, now);
         InsertTab(copy, requestedIndex, duplicate: true);
@@ -37,16 +37,17 @@ public sealed partial class BrowserTabCollection {
     // current copies; the entire join is validated before changing either run.
     public SplitJoin JoinSplit(Guid sourceId, Guid targetId, int? memberIndex, IIdSource ids, DateTimeOffset now) {
         var source = Tab(sourceId); var target = Tab(targetId);
-        if (sourceId == targetId || source.Content.IsStartPage || target.Content.IsStartPage)
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
+        if (sourceId == targetId) throw new Rejected(new AlreadyInSplit(sourceId));
+        if (source.Content.IsStartPage || target.Content.IsStartPage)
+            throw new Rejected(new WebPagesOnly(source.Content.IsStartPage ? sourceId : targetId));
         var targetMembers = SplitMembers(targetId);
         bool sameGroup = targetMembers.Any(t => t.Id == sourceId);
-        if (sameGroup && memberIndex is null) throw new BrowserRuleException(BrowserRuleCodes.AlreadyInSplit);
-        if (!sameGroup && targetMembers.Count >= MaximumSplitMembers) throw new BrowserRuleException(BrowserRuleCodes.SplitLimit);
+        if (sameGroup && memberIndex is null) throw new Rejected(new AlreadyInSplit(sourceId));
+        if (!sameGroup && targetMembers.Count >= MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
         bool copyTarget = target.Placement.IsDurable && !sameGroup;
         bool copySource = source.Placement.IsDurable && !sameGroup;
         int copyCount = (copyTarget ? targetMembers.Count : 0) + (copySource ? 1 : 0);
-        if (tabs.Count + copyCount > MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
+        if (tabs.Count + copyCount > MaximumTabs) throw new Rejected(new TabLimitReached(MaximumTabs));
 
         var copies = new List<(Guid Source, Guid Copy)>();
         var members = new List<BrowserTab>();
@@ -114,7 +115,7 @@ public sealed partial class BrowserTabCollection {
 
     public void MoveSplitGroup(Guid id, TabPlacement placement, Guid? folder, Guid? before, DateTimeOffset now) {
         var members = tabs.Where(t => t.SplitGroupId == id).Select(t => t.Id).ToArray();
-        if (members.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitGroup);
+        if (members.Length == 0) throw new Rejected(new UnknownSplitGroup(id));
         FileTabs(members, placement, folder, now, before);
     }
 

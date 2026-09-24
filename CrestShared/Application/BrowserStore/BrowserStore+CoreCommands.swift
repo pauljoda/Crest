@@ -9,12 +9,11 @@ extension BrowserStore {
     ) -> FolderID? {
         guard !tabIDs.isEmpty else { return nil }
         let id = FolderID()
-        let arguments = BrowserSessionArguments.FolderCreate(
-            folderId: id.rawValue, title: nil, placement: .current, parentId: nil, color: .folderDefault,
-            symbol: "folder", tabIds: tabIDs.map(\.rawValue), detach: detachesSplitMembers)
-        guard family.execute(.folderCreate, in: spaceID, arguments: arguments, from: self, at: .now) != nil else {
-            return nil
-        }
+        let creation = CreateFolder(
+            workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue, placement: .current,
+            parentID: nil, title: nil, color: BrowserSpaceBrandColor.folderDefault.core, symbol: "folder",
+            tabIDs: tabIDs.map(\.rawValue), leavesSplits: detachesSplitMembers)
+        guard family.send(creation, from: self) else { return nil }
         return session.space(id: spaceID)?.folders.contains(where: { $0.id == id }) == true ? id : nil
     }
 
@@ -141,33 +140,36 @@ extension BrowserStore {
     }
 
     func renameSessionFolder(_ id: FolderID, in spaceID: SpaceID, title: String) -> Bool {
-        family.execute(
-            .folderRename, in: spaceID,
-            arguments: BrowserSessionArguments.FolderRename(folderId: id.rawValue, title: title),
-            from: self, at: .now)?.changed ?? false
+        family.send(
+            RenameFolder(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue, title: title),
+            from: self)
     }
 
     func collapseSessionFolder(_ id: FolderID, in spaceID: SpaceID, isCollapsed: Bool) -> Bool {
-        family.execute(
-            .folderCollapse, in: spaceID,
-            arguments: BrowserSessionArguments.FolderCollapse(folderId: id.rawValue, collapsed: isCollapsed),
-            from: self, at: .now)?.changed ?? false
+        family.send(
+            CollapseFolder(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue,
+                collapsed: isCollapsed),
+            from: self)
     }
 
     func deleteSessionFolder(_ id: FolderID, in spaceID: SpaceID) -> Bool {
-        family.execute(
-            .folderDelete, in: spaceID, arguments: BrowserSessionArguments.Folder(folderId: id.rawValue),
-            from: self, at: .now)?.changed ?? false
+        family.send(
+            DeleteFolder(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue),
+            from: self)
     }
 
     func moveSessionFolder(
         _ id: FolderID, in spaceID: SpaceID, into parentID: FolderID?,
         before siblingID: FolderID? = nil, location: BrowserFolderLocation? = nil, beforeTabID: TabID? = nil
     ) -> Bool {
-        let arguments = BrowserSessionArguments.FolderMove(
-            folderId: id.rawValue, parentId: parentID?.rawValue, beforeFolderId: siblingID?.rawValue,
-            before: beforeTabID?.rawValue, placement: location)
-        return family.execute(.folderMove, in: spaceID, arguments: arguments, from: self, at: .now)?.changed ?? false
+        family.send(
+            MoveFolder(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue,
+                placement: location?.tabPlacement, parentID: parentID?.rawValue, beforeFolderID: siblingID?.rawValue,
+                beforeTabID: beforeTabID?.rawValue),
+            from: self)
     }
 
     func fileSessionTabs(
@@ -175,9 +177,11 @@ extension BrowserStore {
         location: BrowserFolderLocation, before anchor: TabID? = nil, beforeFolderID: FolderID? = nil,
         detachesSplitMembers: Bool = false
     ) -> Bool {
-        let arguments = BrowserSessionArguments.TabsFile(
-            tabIds: ids.map(\.rawValue), placement: location, folderId: folderID?.rawValue, before: anchor?.rawValue,
-            beforeFolderId: beforeFolderID?.rawValue, detach: detachesSplitMembers)
-        return family.execute(.tabsFile, in: spaceID, arguments: arguments, from: self, at: .now)?.changed ?? false
+        family.send(
+            FileTabs(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabIDs: ids.map(\.rawValue),
+                placement: location.tabPlacement, folderID: folderID?.rawValue, beforeTabID: anchor?.rawValue,
+                beforeFolderID: beforeFolderID?.rawValue, leavesSplits: detachesSplitMembers),
+            from: self)
     }
 }

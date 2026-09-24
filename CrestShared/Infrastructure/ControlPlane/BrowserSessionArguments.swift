@@ -15,7 +15,7 @@ enum BrowserSavedLocationAction: String, Encodable, Sendable {
 enum BrowserSessionArguments {
     // MARK: - Tabs
 
-    /// Commands that name one tab: `tab.delete`, `split.leave`.
+    /// Commands that name one tab: `tab.delete`.
     struct Tab: Encodable, Sendable {
         let tabId: UUID
     }
@@ -109,16 +109,6 @@ enum BrowserSessionArguments {
         let copyObservations: [CopyObservation]
     }
 
-    /// `tabs.file`.
-    struct TabsFile: Encodable, Sendable {
-        let tabIds: [UUID]
-        let placement: BrowserFolderLocation
-        @BrowserCoreNullable var folderId: UUID?
-        @BrowserCoreNullable var before: UUID?
-        @BrowserCoreNullable var beforeFolderId: UUID?
-        let detach: Bool
-    }
-
     // MARK: - Transient pages
 
     /// `transient.promote`.
@@ -138,98 +128,6 @@ enum BrowserSessionArguments {
     struct TransientArchive: Encodable {
         let requestId: UUID
         let tab: BrowserTab
-    }
-
-    // MARK: - Folders
-
-    /// `folder.create`. Only the members a caller sets cross; `title` and
-    /// `parentId` always do.
-    struct FolderCreate: Encodable, Sendable {
-        let folderId: UUID
-        @BrowserCoreNullable var title: String?
-        let placement: BrowserFolderLocation
-        @BrowserCoreNullable var parentId: UUID?
-        var color: BrowserSpaceBrandColor?
-        var symbol: String?
-        var tabIds: [UUID]?
-        var detach: Bool?
-    }
-
-    /// `folder.delete`.
-    struct Folder: Encodable, Sendable {
-        let folderId: UUID
-    }
-
-    /// `folder.rename`.
-    struct FolderRename: Encodable, Sendable {
-        let folderId: UUID
-        let title: String
-    }
-
-    /// `folder.collapse`.
-    struct FolderCollapse: Encodable, Sendable {
-        let folderId: UUID
-        let collapsed: Bool
-    }
-
-    /// `folder.move`.
-    struct FolderMove: Encodable, Sendable {
-        let folderId: UUID
-        @BrowserCoreNullable var parentId: UUID?
-        @BrowserCoreNullable var beforeFolderId: UUID?
-        @BrowserCoreNullable var before: UUID?
-        @BrowserCoreNullable var placement: BrowserFolderLocation?
-    }
-
-    /// `folder.color` and `folder.symbol`.
-    struct FolderValue<Value: Encodable>: Encodable {
-        let folderId: UUID
-        let value: Value
-    }
-
-    // MARK: - Splits
-
-    /// `split.join`.
-    struct SplitJoin: Encodable, Sendable {
-        let tabId: UUID
-        let targetId: UUID
-        @BrowserCoreNullable var index: Int?
-        let ids: [UUID]
-        let copyObservations: [CopyObservation]
-    }
-
-    /// `split.reorder`: an explicit slot, or a step along the run.
-    struct SplitReorder: Encodable, Sendable {
-        let tabId: UUID
-        var index: Int?
-        var offset: Int?
-    }
-
-    /// `split.dissolve`.
-    struct SplitGroup: Encodable, Sendable {
-        let groupId: UUID
-    }
-
-    /// `split.move`.
-    struct SplitMove: Encodable, Sendable {
-        let groupId: UUID
-        let placement: TabPlacement
-        @BrowserCoreNullable var folderId: UUID?
-        @BrowserCoreNullable var before: UUID?
-    }
-
-    /// `split.open_link`.
-    struct SplitOpenLink: Encodable {
-        let tab: BrowserTab
-        let targetId: UUID
-        let ids: [UUID]
-        let copyObservations: [CopyObservation]
-    }
-
-    /// `split.title`, `split.icon` and `split.tint`; a `null` value clears it.
-    struct SplitMetadata<Value: Encodable>: Encodable {
-        let groupId: UUID
-        @BrowserCoreNullable var value: Value?
     }
 
     // MARK: - History

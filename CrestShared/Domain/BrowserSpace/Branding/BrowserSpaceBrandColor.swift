@@ -13,6 +13,9 @@ struct BrowserSpaceBrandColor: Codable, Equatable, Hashable, Sendable {
         self.alpha = min(max(alpha, 0), 1)
     }
 
+    /// The color as the core's intents carry it.
+    var core: BrandColor { BrandColor(red: red, green: green, blue: blue, alpha: alpha) }
+
     static let ink = BrowserSpaceBrandColor(red: 0.08, green: 0.15, blue: 0.23)
     static let indigo = BrowserSpaceBrandColor(red: 0.29, green: 0.25, blue: 0.58)
     static let ocean = BrowserSpaceBrandColor(red: 0.22, green: 0.42, blue: 0.64)

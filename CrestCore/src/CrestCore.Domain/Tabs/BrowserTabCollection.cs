@@ -73,7 +73,10 @@ public sealed partial class BrowserTabCollection {
 
     #region Mutators
 
-    public BrowserTab Tab(Guid id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);
+    public BrowserTab Tab(Guid id) => tabs.Find(t => t.Id == id) ?? throw new Rejected(new UnknownTab(id));
+
+    /// The folder with this identity, or `UnknownFolder`.
+    private FolderState KnownFolder(Guid id) => folders.Find(f => f.Id == id) ?? throw new Rejected(new UnknownFolder(id));
 
     #endregion
 }

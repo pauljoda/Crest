@@ -29,8 +29,6 @@ public sealed partial class NativeSessionAuthority {
             var space = original;
             if (SessionOperationCodes.IsHistory(operation))
                 space = EditHistory(operation, args, now, space, change);
-            else if (SessionOperationCodes.IsSplitMetadata(operation))
-                space = EditSplitMetadata(operation, args, StoredSessionCodec.Date(now), space, change);
             else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
             if (change.Count > 2) changes.Add((JsonNode)change);
             return space;
@@ -59,41 +57,6 @@ public sealed partial class NativeSessionAuthority {
             return space with { History = next };
         }
         throw new BrowserRuleException(BrowserRuleCodes.UnknownHistoryCommand);
-    }
-
-    /// A split's name, icon or tint, set only on a split with at least two
-    /// members; a blank name clears it. The field's clock records the edit.
-    private static SpaceState EditSplitMetadata(SessionOperation operation, JsonObject args, DateTimeOffset now,
-        SpaceState space, JsonObject change) {
-        var id = Id(args["groupId"]);
-        var run = space.Tabs.SkipWhile(tab => tab.SplitGroupId != id).TakeWhile(tab => tab.SplitGroupId == id);
-        if (run.Take(2).Count() < 2) throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitGroup);
-        var existing = space.SplitGroups.FirstOrDefault(group => group.Id == id);
-        var group = existing ?? new SplitGroupState(id);
-        var value = args["value"];
-        var changedAt = BrowserEditTimestamp.Normalize(now);
-        var edited = operation switch {
-            SessionOperation.SplitTitle => group with {
-                CustomTitle = string.IsNullOrWhiteSpace(value?.GetValue<string>()) ? null : value!.GetValue<string>().Trim(),
-                TitleModifiedAt = changedAt
-            },
-            SessionOperation.SplitIcon => group with { CustomIconSymbol = value?.GetValue<string>(), IconModifiedAt = changedAt },
-            SessionOperation.SplitTint => group with {
-                Tint = value is JsonObject tint ? StoredSessionCodec.DecodeColor(tint) : null,
-                TintModifiedAt = changedAt
-            },
-            _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitCommand)
-        };
-        var unchanged = operation switch {
-            SessionOperation.SplitTitle => existing?.CustomTitle == edited.CustomTitle,
-            SessionOperation.SplitIcon => existing?.CustomIconSymbol == edited.CustomIconSymbol,
-            _ => existing?.Tint == edited.Tint
-        };
-        if (unchanged) return space;
-        IReadOnlyList<SplitGroupState> groups = existing is null ? [.. space.SplitGroups, edited]
-            : space.SplitGroups.Select(candidate => candidate.Id == id ? edited : candidate).ToArray();
-        change["splitGroups"] = new JsonArray(groups.Select(candidate => (JsonNode?)StoredSessionCodec.Encode(candidate)).ToArray());
-        return space with { SplitGroups = groups };
     }
 
     #endregion

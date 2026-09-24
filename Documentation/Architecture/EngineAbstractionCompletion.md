@@ -277,9 +277,10 @@ operations or a bounded export. Swift keeps projections and adapters.
 What each window shows is the core device's, saved beside the session and
 never in it. Commands name the window that issued them, the device moves that
 window when they commit and repairs the others, and showing a tab records its
-`lastActivatedAt` as a revision of its own. Folder depth and count, split
-eligibility and cross-Space move eligibility are commands the caller prepares
-and releases without committing. `limits` reports every capacity the core
+`lastActivatedAt` as a revision of its own. Folder depth and count and split
+eligibility are the `CanSend` query over the folder or split intent;
+cross-Space move eligibility is a command the caller prepares and releases
+without committing. `limits` reports every capacity the core
 enforces. The `ExternalLinkRoute` query substitutes for a locked Space itself. Link, Quick
 Window and authentication-label callers fail closed when the core cannot
 answer.

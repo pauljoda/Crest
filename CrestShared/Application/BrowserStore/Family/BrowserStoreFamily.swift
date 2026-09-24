@@ -235,7 +235,7 @@ final class BrowserStoreFamily {
     /// A core answer read from the owned session without changing it.
     func readCore<Request: Encodable>(_ request: Request) -> Data? { try? core.read(request) }
 
-    /// Runs a tab, folder or split command. `image` is the image a page
+    /// Runs a tab command. `image` is the image a page
     /// reported, which the tab the core assigns it to wears.
     func execute<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
         arguments: Arguments, from source: BrowserStore, at date: Date, image: Data? = nil)
@@ -259,16 +259,35 @@ final class BrowserStoreFamily {
     /// status reports it after `failure`.
     @discardableResult
     func send(_ intent: some Intent, from source: BrowserStore, failure: String = "Core command failed") -> Bool {
+        perform(intent, from: source, failure: failure)?.changed ?? false
+    }
+
+    /// Runs one session intent as `send` does, and answers the changes the
+    /// core published with it and whether the session changed, or nil when a
+    /// rule refused it.
+    func perform(_ intent: some Intent, from source: BrowserStore, failure: String = "Core command failed")
+        -> (changes: [Change], changed: Bool)?
+    {
         let previous = authoritativeSession
+        let changes: [Change]
         do {
-            try source.core.send(intent)
+            changes = try source.core.send(intent)
         } catch {
             source.localSyncErrorDescription = "\(failure): \(error)"
-            return false
+            return nil
         }
-        guard authoritativeSession != previous else { return false }
+        guard authoritativeSession != previous else { return (changes, false) }
         reconcileStores(after: previous, from: source)
-        return true
+        return (changes, true)
+    }
+
+    /// Whether the core would accept a session intent `source`'s window
+    /// issues, asked without changing anything. This is how menus ask the
+    /// core's rules, such as a folder's depth or a split's size, instead of
+    /// keeping copies of them.
+    func canSend(_ intent: some Intent, from source: BrowserStore) -> Bool {
+        guard let permission = try? source.core.query(CanSend(intent: intent)) else { return false }
+        return permission.refusal == nil
     }
 
     /// A record command without arguments of its own.
@@ -362,13 +381,6 @@ final class BrowserStoreFamily {
                 return left == right || memcmp(left, right, a.count) == 0
             }
         }
-    }
-
-    /// Whether the core would accept a command in one Space, asked without
-    /// committing anything.
-    func accepts<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
-        arguments: Arguments, from store: BrowserStore) -> Bool {
-        core.accepts(operation, in: spaceID, arguments: arguments, window: store.windowID.rawValue)
     }
 
     /// Whether the core would accept moving a tab between two Spaces of this

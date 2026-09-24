@@ -50,11 +50,12 @@ public sealed class OrganizationContractsTests {
         space.AddFolder(root, "Root"); space.AddFolder(child, "Child", parent: root);
         space.FileTabs([tab.Id], TabPlacement.Saved, child, Now);
         var original = space.Folders.ToArray(); var tabState = space.Tab(tab.Id).State;
-        Assert.Equal("folder_cycle", Assert.Throws<BrowserRuleException>(() => space.MoveFolder(root, null, child, Now)).Code);
+        Assert.Equal(root, Assert.IsType<FolderCycle>(Assert.Throws<Rejected>(() => space.MoveFolder(root, null, child, Now)).Rejection).FolderId);
         Assert.Equal(original, space.Folders); Assert.Equal(tabState, space.Tab(tab.Id).State);
         var deepest = child;
         for (int depth = 2; depth < FolderTree.MaximumDepth; depth++) { var next = NewFolderId(); space.AddFolder(next, depth.ToString(), parent: deepest); deepest = next; }
-        Assert.Equal("folder_depth_limit", Assert.Throws<BrowserRuleException>(() => space.AddFolder(NewFolderId(), "Too deep", parent: deepest)).Code);
+        Assert.Equal(FolderTree.MaximumDepth, Assert.IsType<FolderDepthLimitReached>(Assert.Throws<Rejected>(() =>
+            space.AddFolder(NewFolderId(), "Too deep", parent: deepest)).Rejection).Limit);
         Assert.Equal(FolderTree.MaximumDepth, space.Folders.Count);
     }
 
@@ -62,8 +63,8 @@ public sealed class OrganizationContractsTests {
     public void InsertionCannotSplitAnExistingPairAndExplicitDetachRepairsTheSurvivor() {
         var split = Guid.NewGuid(); var first = Tab("first", split); var second = Tab("second", split); var third = Tab("third");
         var space = Space(first, second, third); var folder = NewFolderId(); space.AddFolder(folder, "Destination", TabPlacement.Current);
-        Assert.Equal("split_boundary", Assert.Throws<BrowserRuleException>(() =>
-            space.FileTabs([third.Id], TabPlacement.Current, null, Now, before: second.Id)).Code);
+        Assert.IsType<SplitBoundary>(Assert.Throws<Rejected>(() =>
+            space.FileTabs([third.Id], TabPlacement.Current, null, Now, before: second.Id)).Rejection);
         Assert.Equal(new[] { first.Id, second.Id, third.Id }, space.Tabs.Select(t => t.Id));
         space.FileTabs([first.Id], TabPlacement.Current, folder, Now, detachSplitMembers: true);
         Assert.Null(space.Tab(first.Id).SplitGroupId); Assert.Null(space.Tab(second.Id).SplitGroupId);

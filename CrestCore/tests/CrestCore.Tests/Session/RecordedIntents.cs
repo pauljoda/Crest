@@ -43,14 +43,33 @@ internal static class RecordedIntents {
     /// The intent a recorded request became, issued in `workspace` from
     /// `window`, or null for a request that is still a session command.
     public static SessionIntent? Typed(JsonObject request, Guid workspace, Guid? window) {
+        var arguments = request["arguments"] as JsonObject ?? [];
         Guid Id(string key) => Guid.Parse(request[key]!.GetValue<string>());
-        Guid Argument(string key) => Guid.Parse(request["arguments"]![key]!.GetValue<string>());
+        Guid Argument(string key) => Guid.Parse(arguments[key]!.GetValue<string>());
+        Guid? Optional(string key) => arguments[key] is { } value ? Guid.Parse(value.GetValue<string>()) : null;
+        BrandColor? Color(JsonNode? value) => value is JsonObject color ? StoredSessionCodec.DecodeColor(color) : null;
         return request["operation"]!.GetValue<string>() switch {
             "archive.restore" => new RestoreArchivedTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId")),
             "records.sweep" => new SweepExpiredRecords(workspace),
+            "folder.create" => new CreateFolder(workspace, Id("spaceId"), Argument("folderId"),
+                TabPlacement.Named(arguments["placement"]!.GetValue<string>())!, Optional("parentId"), arguments["title"]?.GetValue<string>(),
+                Color(arguments["color"]), arguments["symbol"]?.GetValue<string>(),
+                [.. (arguments["tabIds"] as JsonArray ?? []).Select(id => Guid.Parse(id!.GetValue<string>()))],
+                arguments["detach"]?.GetValue<bool>() == true),
+            "split.join" => new JoinSplit(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"), Argument("targetId"),
+                arguments["index"]?.GetValue<int>(), [.. (arguments["copyObservations"] as JsonArray ?? []).Select(page =>
+                    new SourcePage(Guid.Parse(page!["tabId"]!.GetValue<string>()), page["url"]?.GetValue<string>(),
+                        page["title"]!.GetValue<string>()))]),
+            "split.title" => new NameSplit(workspace, Id("spaceId"), Argument("groupId"), arguments["value"]?.GetValue<string>()),
+            "split.tint" => new TintSplit(workspace, Id("spaceId"), Argument("groupId"), Color(arguments["value"])),
             _ => null
         };
     }
+
+    /// The identities a recorded request gave the records it made, which the
+    /// core now gives them itself.
+    public static IEnumerable<Guid> Identities(JsonObject request) =>
+        (request["arguments"]?["ids"] as JsonArray ?? []).Select(id => Guid.Parse(id!.GetValue<string>()));
 
     /// When a recorded request ran.
     public static DateTimeOffset Time(JsonObject request) => StoredSessionCodec.Date(request["now"]!.GetValue<double>());

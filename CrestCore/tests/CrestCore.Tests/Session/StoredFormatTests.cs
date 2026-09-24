@@ -15,8 +15,9 @@ namespace CrestCore.Tests;
 /// the upgrade test carries. Command answers were recorded from the core before
 /// it held typed records, for the same inputs, each issued from a window that
 /// showed what the step's `window` names. A step whose command is a typed
-/// intent now runs as that intent at the time it recorded, and the answers of
-/// the steps after it and the saved session still match.
+/// intent now runs as that intent at the time it recorded, with the identities
+/// it recorded, and the answers of the steps after it and the saved session
+/// still match.
 public sealed class StoredFormatTests {
     private static JsonObject Fixture(string name) =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Session", "Fixtures", name)))!.AsObject();
@@ -99,6 +100,7 @@ public sealed class StoredFormatTests {
             }
             if (RecordedIntents.Typed(request, workspace, window) is { } intent) {
                 clock.Now = RecordedIntents.Time(request);
+                ids.Supply(RecordedIntents.Identities(request));
                 app.Send(intent);
             } else {
                 var command = authority.PrepareCommand(Bytes(request));

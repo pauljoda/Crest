@@ -159,7 +159,7 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void OwnedSplitLinkCopiesMetadataAndMovesOrDissolvesTheAcceptedGroupAtomically() {
+    public void ALinkOpenedInADurableSplitCopiesItsMetadataAndTheSplitMovesOrDissolvesWhole() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         var space = session["spaces"]![0]!; var original = space["tabs"]![0]!;
         var peer = original.DeepClone(); peer["id"] = SwiftId(Guid.NewGuid());
@@ -169,38 +169,35 @@ public sealed partial class BrowserContractsTests {
             ["customTitle"] = "Saved pair",
             ["titleModifiedAt"] = 800000000.0
         });
+        var savedGroup = Guid.Parse(original["splitGroupID"]!["rawValue"]!.GetValue<string>());
+        var folder = Guid.Parse(original["folderID"]!["rawValue"]!.GetValue<string>());
         var core = new NativeSessionAuthority(Bytes(session));
-        JsonObject LinkArgs(Guid id) => new() {
-            ["targetId"] = fixture.Tab.ToString(),
-            ["ids"] = new JsonArray(Enumerable.Range(0, 6).Select(_ => (JsonNode)JsonValue.Create(Guid.NewGuid().ToString())!).ToArray()),
-            ["tab"] = new JsonObject {
-                ["id"] = SwiftId(id),
-                ["title"] = "Link",
-                ["url"] = "https://example.org/link",
-                ["placement"] = "current",
-                ["lastActivatedAt"] = 800000002.0
-            }
-        };
+        using var device = new TestDevice(core);
+        var window = device.Showing(session);
         var linked = Guid.NewGuid();
-        var command = core.PrepareCommand(SpaceCommand(session, "split.open_link", LinkArgs(linked)));
-        command.Commit();
-        var output = JsonNode.Parse(command.Output)!; var updated = output["space"]!;
-        Assert.Equal(5, updated["tabs"]!.AsArray().Count);
-        Assert.Equal(2, output["copies"]!.AsArray().Count);
-        var group = updated["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == linked)!["splitGroupID"]!;
-        Assert.NotEqual(original["splitGroupID"]!.ToJsonString(), group.ToJsonString());
-        var groupId = Guid.Parse(group["rawValue"]!.GetValue<string>());
-        Assert.Equal("Saved pair", updated["splitGroups"]!.AsArray().Single(g => Guid.Parse(g!["id"]!["rawValue"]!.GetValue<string>()) == groupId)!["customTitle"]!.GetValue<string>());
-        var before = core.Checkpoint().Read("core");
-        Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(SpaceCommand(session, "split.move", new() { ["groupId"] = groupId.ToString(), ["placement"] = "pinned" })));
-        Assert.Equal(before, core.Checkpoint().Read("core"));
-        core.PrepareCommand(SpaceCommand(session, "split.move", new() { ["groupId"] = groupId.ToString(), ["placement"] = "saved", ["folderId"] = original["folderID"]!["rawValue"]!.DeepClone() })).Commit();
-        core.PrepareCommand(SpaceCommand(session, "split.dissolve", new() { ["groupId"] = groupId.ToString() })).Commit();
-        var final = JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!;
-        Assert.Equal(5, final["tabs"]!.AsArray().Count);
-        Assert.All(final["tabs"]!.AsArray(), t => Assert.Equal("saved", t!["placement"]!.GetValue<string>()));
-        Assert.Single(final["splitGroups"]!.AsArray());
-        Assert.Equal(2, final["tabs"]!.AsArray().Count(t => t!["splitGroupID"] is not null));
+
+        var changes = device.Send(new OpenLinkInSplit(device.Workspace, window, fixture.Space, linked, fixture.Tab,
+            "https://example.org/link", "Link", []));
+
+        // The saved pair stays; open copies of it and the link make the split.
+        Assert.Equal(2, changes.OfType<TabCopied>().Count());
+        var updated = core.Current.Spaces[0];
+        Assert.Equal(5, updated.Tabs.Count);
+        var group = updated.Tabs.Single(tab => tab.Id == linked).SplitGroupId!.Value;
+        Assert.NotEqual(savedGroup, group);
+        Assert.Equal("Saved pair", updated.SplitGroups.Single(metadata => metadata.Id == group).CustomTitle);
+        Assert.Equal(linked, device.Tab(window, fixture.Space));
+        var before = core.Current;
+        Assert.IsType<InvalidFolderPlacement>(Assert.Throws<Rejected>(() =>
+            device.Send(new MoveSplit(device.Workspace, fixture.Space, group, TabPlacement.Pinned, null, null))).Rejection);
+        Assert.Same(before, core.Current);
+        device.Send(new MoveSplit(device.Workspace, fixture.Space, group, TabPlacement.Saved, folder, null));
+        device.Send(new DissolveSplit(device.Workspace, fixture.Space, group));
+        var final = core.Current.Spaces[0];
+        Assert.Equal(5, final.Tabs.Count);
+        Assert.All(final.Tabs, tab => Assert.Equal(TabPlacement.Saved, tab.Placement));
+        Assert.Equal(savedGroup, Assert.Single(final.SplitGroups).Id);
+        Assert.Equal(2, final.Tabs.Count(tab => tab.SplitGroupId is not null));
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 
 using Xunit;
 
@@ -156,20 +157,24 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void CreatingAFolderAroundTabsFilesThemInTheSameTransaction() {
-        var fixture = SavedSession();
-        var space = fixture.Document["session"]!["spaces"]![0]!.DeepClone();
+    public void CreatingAFolderAroundTabsFilesThemInTheSameEdit() {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!;
+        var space = session["spaces"]![0]!;
         space["tabs"]![0]!["folderID"] = null;
         space["tabs"]![0]!["splitGroupID"] = null;
-        var folderId = Guid.NewGuid();
-        var result = Edited(space, "folder.create", new JsonObject {
-            ["folderId"] = folderId.ToString(),
-            ["placement"] = "saved",
-            ["tabIds"] = new JsonArray(fixture.Tab.ToString()),
-            ["detach"] = false
-        });
-        var created = result["space"]!["folders"]!.AsArray().Single(f => Guid.Parse(f!["id"]!["rawValue"]!.GetValue<string>()) == folderId);
-        Assert.Equal("New Folder", created!["title"]!.GetValue<string>());
-        Assert.Equal(folderId, Guid.Parse(Tab(result)["folderID"]!["rawValue"]!.GetValue<string>()));
+        var core = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(core);
+        var folder = Guid.NewGuid();
+
+        var changes = device.Send(new CreateFolder(device.Workspace, fixture.Space, folder, TabPlacement.Saved, null, null, null, null,
+            [fixture.Tab], LeavesSplits: false));
+
+        var edited = core.Current.Spaces[0];
+        Assert.Equal("New Folder", edited.Folders.Single(candidate => candidate.Id == folder).Title);
+        Assert.Equal(folder, edited.Tabs.Single(tab => tab.Id == fixture.Tab).FolderId);
+        // One edit, so no reader ever sees the folder empty.
+        Assert.Single(changes.OfType<FoldersChanged>());
+        Assert.Single(changes.OfType<TabsChanged>());
     }
+
 }

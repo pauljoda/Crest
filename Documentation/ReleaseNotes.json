@@ -2285,6 +2285,10 @@
     "history-archive-intents": {
       "category": "internal",
       "message": "Clearing and removing history, restoring archived tabs and sweeping old records are typed core intents, and the core keeps its own clock."
+    },
+    "folder-split-intents": {
+      "category": "internal",
+      "message": "Every folder and split-view command is a typed core intent, and a reversed history range is refused instead of doing nothing."
     }
   }
 }

@@ -304,7 +304,11 @@ extension BrowserStore {
                 from: self, at: .now), let rawID = result.tabId
         else { return nil }
         let duplicateID = TabID(rawValue: rawID)
-        prepareAcceptedCopies(result, from: space)
+        prepareAcceptedCopies(
+            result.copies.map {
+                TabCopied(workspaceID: family.workspaceID, sourceTabID: $0.source, copyTabID: $0.copy)
+            },
+            from: space)
         return duplicateID
     }
 
@@ -350,14 +354,12 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == item.tabID }),
             space.tabs.contains(where: { $0.id == targetTabID })
         else { return false }
-        let arguments = BrowserSessionArguments.SplitJoin(
-            tabId: item.tabID.rawValue, targetId: targetTabID.rawValue, index: memberIndex,
-            ids: (0..<6).map { _ in UUID() },
-            copyObservations: splitCopyObservations(source: item.tabID, target: targetTabID, in: space))
-        guard let result = family.execute(.splitJoin, in: space.id, arguments: arguments, from: self, at: .now)
-        else { return false }
-        persistSplitCommand(result, from: space)
-        return true
+        return sendSplitJoin(
+            JoinSplit(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
+                tabID: item.tabID.rawValue, targetTabID: targetTabID.rawValue, index: memberIndex,
+                sourcePages: splitSourcePages(source: item.tabID, target: targetTabID, in: space)),
+            in: space)
     }
 
     /// Removal relocates the departing tab past its run, so it goes through the
@@ -371,12 +373,8 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.tabs.contains(where: { $0.id == tabID })
         else { return false }
-        guard
-            family.execute(
-                .splitLeave, in: space.id, arguments: BrowserSessionArguments.Tab(tabId: tabID.rawValue),
-                from: self, at: .now)?.changed == true
-        else { return false }
-        return true
+        return family.send(
+            LeaveSplit(workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue), from: self)
     }
 
     /// Drops a card into an explicit slot of its own split run.
@@ -393,13 +391,10 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.tabs.contains(where: { $0.id == tabID })
         else { return false }
-        guard
-            family.execute(
-                .splitReorder, in: space.id,
-                arguments: BrowserSessionArguments.SplitReorder(tabId: tabID.rawValue, index: memberIndex),
-                from: self, at: .now)?.changed == true
-        else { return false }
-        return true
+        return family.send(
+            MoveSplitMember(
+                workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue, index: memberIndex),
+            from: self)
     }
 
     /// Steps a card one or more slots along its run. Selection is untouched:
@@ -414,13 +409,10 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.tabs.contains(where: { $0.id == tabID })
         else { return false }
-        guard
-            family.execute(
-                .splitReorder, in: space.id,
-                arguments: BrowserSessionArguments.SplitReorder(tabId: tabID.rawValue, offset: offset),
-                from: self, at: .now)?.changed == true
-        else { return false }
-        return true
+        return family.send(
+            StepSplitMember(
+                workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue, offset: offset),
+            from: self)
     }
 
     /// Whether stepping `tabID` `offset` slots would move anything.
@@ -454,12 +446,9 @@ extension BrowserStore {
         guard let space = space(matching: assignment),
             let groupID = space.tabs.first(where: { $0.id == tabID })?.splitGroupID
         else { return false }
-        guard
-            family.execute(
-                .splitDissolve, in: space.id, arguments: BrowserSessionArguments.SplitGroup(groupId: groupID.rawValue),
-                from: self, at: .now)?.changed == true
-        else { return false }
-        return true
+        return family.send(
+            DissolveSplit(workspaceID: family.workspaceID, spaceID: space.id.rawValue, groupID: groupID.rawValue),
+            from: self)
     }
 
     @discardableResult
@@ -468,12 +457,12 @@ extension BrowserStore {
         groupID: SplitGroupID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard space(matching: assignment) != nil,
-            family.executeRecords(
-                .splitTitle, in: assignment.spaceID,
-                arguments: BrowserSessionArguments.SplitMetadata(groupId: groupID.rawValue, value: title), from: self)
-        else { return false }
-        return true
+        guard space(matching: assignment) != nil else { return false }
+        return family.send(
+            NameSplit(
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, groupID: groupID.rawValue,
+                name: title),
+            from: self, failure: "Core record command failed")
     }
 
     @discardableResult
@@ -483,14 +472,12 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         let normalized = emoji.flatMap(BrowserIconSymbol.normalizedEmoji)
-        guard emoji == nil || normalized != nil, space(matching: assignment) != nil,
-            family.executeRecords(
-                .splitIcon, in: assignment.spaceID,
-                arguments: BrowserSessionArguments.SplitMetadata(
-                    groupId: groupID.rawValue, value: normalized.map(BrowserIconSymbol.symbol(forEmoji:))),
-                from: self)
-        else { return false }
-        return true
+        guard emoji == nil || normalized != nil, space(matching: assignment) != nil else { return false }
+        return family.send(
+            SetSplitIcon(
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, groupID: groupID.rawValue,
+                symbol: normalized.map(BrowserIconSymbol.symbol(forEmoji:))),
+            from: self, failure: "Core record command failed")
     }
 
     @discardableResult
@@ -499,23 +486,22 @@ extension BrowserStore {
         groupID: SplitGroupID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard space(matching: assignment) != nil,
-            family.executeRecords(
-                .splitTint, in: assignment.spaceID,
-                arguments: BrowserSessionArguments.SplitMetadata(groupId: groupID.rawValue, value: tint), from: self)
-        else { return false }
-        return true
+        guard space(matching: assignment) != nil else { return false }
+        return family.send(
+            TintSplit(
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, groupID: groupID.rawValue,
+                tint: tint?.core),
+            from: self, failure: "Core record command failed")
     }
 
     /// Whether the core would join `tabID` to the split of `targetTabID`: no
     /// Start Page on either side, not already one group, and room for another
     /// card. Asked without committing, so menus reflect the core's own rule.
     private func acceptsSplitJoin(_ tabID: TabID, joining targetTabID: TabID, in space: BrowserSpace) -> Bool {
-        family.accepts(
-            .splitJoin, in: space.id,
-            arguments: BrowserSessionArguments.SplitJoin(
-                tabId: tabID.rawValue, targetId: targetTabID.rawValue, index: nil, ids: (0..<6).map { _ in UUID() },
-                copyObservations: []),
+        family.canSend(
+            JoinSplit(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
+                tabID: tabID.rawValue, targetTabID: targetTabID.rawValue, index: nil, sourcePages: []),
             from: self)
     }
 
@@ -590,16 +576,16 @@ extension BrowserStore {
         guard canOpenLinkInSplit(joining: targetTabID, matching: assignment),
             let space = space(matching: assignment)
         else { return nil }
-        let date = Date.now
-        let arguments = BrowserSessionArguments.SplitOpenLink(
-            tab: BrowserTab(title: url.host() ?? url.absoluteString, url: url, placement: .current, lastActivatedAt: date),
-            targetId: targetTabID.rawValue, ids: (0..<6).map { _ in UUID() },
-            copyObservations: splitCopyObservations(source: nil, target: targetTabID, in: space))
-        guard let result = family.execute(.splitOpenLink, in: space.id, arguments: arguments, from: self, at: date),
-            let rawID = result.tabId
+        let openedID = TabID()
+        guard
+            sendSplitJoin(
+                OpenLinkInSplit(
+                    workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
+                    tabID: openedID.rawValue, targetTabID: targetTabID.rawValue, address: url.absoluteString,
+                    title: url.host() ?? url.absoluteString,
+                    sourcePages: splitSourcePages(source: nil, target: targetTabID, in: space)),
+                in: space)
         else { return nil }
-        let openedID = TabID(rawValue: rawID)
-        persistSplitCommand(result, from: space)
         return openedID
     }
 
@@ -620,11 +606,10 @@ extension BrowserStore {
             space.id == selectedSpaceID,
             space.contains(tabID)
         else { return false }
-        let probe = BrowserTab(title: "", url: URL(string: "about:blank"), placement: .current, lastActivatedAt: .now)
-        return family.accepts(
-            .splitOpenLink, in: space.id,
-            arguments: BrowserSessionArguments.SplitOpenLink(
-                tab: probe, targetId: tabID.rawValue, ids: (0..<6).map { _ in UUID() }, copyObservations: []),
+        return family.canSend(
+            OpenLinkInSplit(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue, tabID: UUID(),
+                targetTabID: tabID.rawValue, address: "about:blank", title: "", sourcePages: []),
             from: self)
     }
 
@@ -668,12 +653,11 @@ extension BrowserStore {
                         && $0.folderID == folderID
                 })
         else { return false }
-        let arguments = BrowserSessionArguments.SplitMove(
-            groupId: groupID.rawValue, placement: placement, folderId: folderID?.rawValue,
-            before: destinationTabID?.rawValue)
-        guard family.execute(.splitMove, in: space.id, arguments: arguments, from: self, at: .now)?.changed == true
-        else { return false }
-        return true
+        return family.send(
+            MoveSplit(
+                workspaceID: family.workspaceID, spaceID: space.id.rawValue, groupID: groupID.rawValue,
+                placement: placement, folderID: folderID?.rawValue, beforeTabID: destinationTabID?.rawValue),
+            from: self)
     }
 }
 

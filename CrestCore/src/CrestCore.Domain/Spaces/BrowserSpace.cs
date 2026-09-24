@@ -5,6 +5,8 @@ public static class BrowserSpace {
     #region Variables
 
     public const int MaximumTabs = 5000;
+    /// The most characters a Space or folder name holds.
+    public const int MaximumNameLength = 200;
 
     #endregion
 
@@ -12,7 +14,7 @@ public static class BrowserSpace {
 
     public static string ValidName(string name) {
         name = name.Trim();
-        if (name.Length is 0 or > 200) throw new BrowserRuleException(BrowserRuleCodes.InvalidName);
+        if (name.Length is 0 or > MaximumNameLength) throw new BrowserRuleException(BrowserRuleCodes.InvalidName);
         return name;
     }
 

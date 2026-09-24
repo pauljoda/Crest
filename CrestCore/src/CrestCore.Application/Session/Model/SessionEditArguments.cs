@@ -11,32 +11,23 @@ internal sealed record SessionEditArguments {
 
     public TabState? Tab { get; init; }
     public IReadOnlyList<Guid>? Ids { get; init; }
-    public IReadOnlyList<Guid>? TabIds { get; init; }
     public IReadOnlyList<SessionTabObservation>? CopyObservations { get; init; }
     public TabIconAccent? IconAccent { get; init; }
-    public BrandColor? Color { get; init; }
-    public BrandColor? FolderColorValue { get; init; }
 
     public Guid? TabId { get; init; }
-    public Guid? TargetId { get; init; }
     public Guid? FallbackTabId { get; init; }
     public Guid? FolderId { get; init; }
-    public Guid? ParentId { get; init; }
-    public Guid? BeforeFolderId { get; init; }
     public Guid? Before { get; init; }
     /// The tab a new tab opens after; the core keeps it outside that tab's split.
     public Guid? After { get; init; }
-    public Guid? GroupId { get; init; }
     public TabPlacement? Placement { get; init; }
     public SavedLocationAction? Action { get; init; }
 
     public int? Index { get; init; }
-    public int? Offset { get; init; }
     public bool? Select { get; init; }
     public bool? Detach { get; init; }
     public bool? ReturnToSavedUrl { get; init; }
     public bool? Keep { get; init; }
-    public bool? Collapsed { get; init; }
     public bool? ResetArchivePlacement { get; init; }
     public bool? FaviconChanged { get; init; }
     public bool? HasFavicon { get; init; }
@@ -44,17 +35,11 @@ internal sealed record SessionEditArguments {
     public string? Url { get; init; }
     public TabIconMode? Mode { get; init; }
     public string? Emoji { get; init; }
-    public string? Symbol { get; init; }
-    public string? FolderSymbolValue { get; init; }
 
     public Guid RequiredTabId => TabId ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-    public Guid RequiredTargetId => TargetId ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-    public Guid RequiredFolderId => FolderId ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-    public Guid RequiredGroupId => GroupId ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
     public TabPlacement RequiredPlacement => Placement ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
     public TabState RequiredTab => Tab ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
     public IReadOnlyList<Guid> RequiredIds => Ids ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-    public IReadOnlyList<Guid> RequiredTabIds => TabIds ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
 
     #endregion
 
@@ -68,35 +53,25 @@ internal sealed record SessionEditArguments {
         string? Text(string key) => Read(key)?.GetValue<string>();
         IReadOnlyList<Guid>? IdList(string key) => Read(key) is JsonArray ids
             ? ids.Select(node => Guid.Parse(node!.GetValue<string>())).ToArray() : null;
-        BrandColor? Color(string key) => Read(key) is JsonObject color ? StoredSessionCodec.DecodeColor(color) : null;
 
         return new() {
             Tab = Read("tab") is JsonObject tab ? StoredSessionCodec.DecodeTab(tab) : null,
             Ids = IdList("ids"),
-            TabIds = IdList("tabIds"),
             CopyObservations = Read("copyObservations") is JsonArray observations
                 ? observations.Select(node => SessionTabObservation.Decode(node!)).ToArray() : null,
             IconAccent = Read("iconAccent") is JsonObject accent ? StoredSessionCodec.DecodeIconAccent(accent) : null,
-            Color = Color("color"),
-            FolderColorValue = operation == SessionOperation.FolderColor ? Color("value") : null,
             TabId = Id("tabId"),
-            TargetId = Id("targetId"),
             FolderId = Id("folderId"),
-            ParentId = Id("parentId"),
-            BeforeFolderId = Id("beforeFolderId"),
             Before = Id("before"),
             After = Id("after"),
-            GroupId = Id("groupId"),
             Placement = Text("placement") is { } placement
                 ? TabPlacement.Named(placement) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement) : null,
             Action = Text("action") is { } action ? SavedLocationActionCodes.Parse(action) : null,
             Index = Read("index")?.GetValue<int>(),
-            Offset = Read("offset")?.GetValue<int>(),
             Select = Flag("select"),
             Detach = Flag("detach"),
             ReturnToSavedUrl = Flag("returnToSavedURL"),
             Keep = Flag("keep"),
-            Collapsed = Flag("collapsed"),
             ResetArchivePlacement = Flag("resetArchivePlacement"),
             FaviconChanged = Flag("faviconChanged"),
             HasFavicon = Flag("hasFavicon"),
@@ -104,8 +79,6 @@ internal sealed record SessionEditArguments {
             Url = Text("url"),
             Mode = TabIconMode.Named(Text("mode")),
             Emoji = Text("emoji"),
-            Symbol = Text("symbol"),
-            FolderSymbolValue = operation == SessionOperation.FolderSymbol ? Text("value") : null
         };
     }
 
@@ -121,20 +94,6 @@ internal sealed record SessionEditArguments {
         SessionOperation.TabSavedLocation => ["tabId", "action"],
         SessionOperation.TabResidency => ["tabId", "keep"],
         SessionOperation.TabMove => ["tabId", "placement", "folderId", "before", "detach"],
-        SessionOperation.SplitOpenLink => ["tab", "targetId", "index", "ids", "copyObservations"],
-        SessionOperation.SplitJoin => ["tabId", "targetId", "index", "ids", "copyObservations"],
-        SessionOperation.SplitJoinInPlace => ["tabId", "targetId", "index", "groupId"],
-        SessionOperation.SplitLeave => ["tabId"],
-        SessionOperation.SplitReorder => ["tabId", "index", "offset"],
-        SessionOperation.SplitDissolve => ["groupId"],
-        SessionOperation.SplitMove => ["groupId", "placement", "folderId", "before"],
-        SessionOperation.FolderCreate => ["folderId", "title", "placement", "parentId", "color", "symbol", "tabIds", "detach"],
-        SessionOperation.FolderColor or SessionOperation.FolderSymbol => ["folderId", "value"],
-        SessionOperation.FolderRename => ["folderId", "title"],
-        SessionOperation.FolderCollapse => ["folderId", "collapsed"],
-        SessionOperation.FolderDelete => ["folderId"],
-        SessionOperation.FolderMove => ["folderId", "placement", "parentId", "beforeFolderId", "before"],
-        SessionOperation.TabsFile => ["tabIds", "placement", "folderId", "before", "beforeFolderId", "detach"],
         SessionOperation.TabClose or SessionOperation.TabDelete => ["tabId", "resetArchivePlacement"],
         SessionOperation.TabClearCurrent => ["resetArchivePlacement"],
         _ => []

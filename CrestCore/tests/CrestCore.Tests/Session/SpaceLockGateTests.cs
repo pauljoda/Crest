@@ -30,11 +30,14 @@ public sealed partial class BrowserContractsTests {
         core.AttachAccess(access);
         var identity = Identity(session);
         var rename = SpaceCommand(session, "tab.rename", new() { ["tabId"] = session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
-        var folder = SpaceCommand(session, "folder.rename", new() { ["folderId"] = session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
         var visit = SpaceCommand(session, "history.visit",
             new() { ["url"] = "https://example.com/secret", ["title"] = "Secret" });
-        foreach (var request in new[] { rename, folder, visit })
+        foreach (var request in new[] { rename, visit })
             Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(request)).Code);
+        using var device = new TestDevice(core);
+        var folder = Guid.Parse(session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.GetValue<string>());
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
+            device.Send(new RenameFolder(device.Workspace, identity.Space, folder, "Leaked"))).Rejection);
         Assert.Equal(1UL, core.Revision);
         // A locked Space must not even be named as an import destination.
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(Bytes(new JsonObject {
@@ -74,7 +77,6 @@ public sealed partial class BrowserContractsTests {
         // history is an edit the grant guards.
         core.PrepareCommand(SpaceCommand(current, "space.access",
             new() { ["value"] = "deviceOwnerAuthentication" })).Commit();
-        using var device = new TestDevice(core);
         Assert.Equal(identity.Space, Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new ClearHistory(device.Workspace, identity.Space))).Rejection).SpaceId);
         device.Send(new SweepExpiredRecords(device.Workspace));

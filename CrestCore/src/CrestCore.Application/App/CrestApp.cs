@@ -134,9 +134,23 @@ public sealed partial class CrestApp : IDisposable {
                 CanTearOff tearOff => device.Answer(tearOff),
                 FallbackTab fallback => Window.Answer(fallback),
                 PendingSave => new PendingSaveRevision(storage?.PendingRevision is { } revision ? checked((long)revision) : null),
+                CanSend check => Permission(check.Intent),
                 _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
             };
             return (TAnswer)answer;
+        }
+    }
+
+    /// Whether the core would accept a session intent now: the rule that would
+    /// refuse it, or none. The identities a check draws are never used.
+    private SendPermission Permission(Intent intent) {
+        if (intent is not SessionIntent session)
+            throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "Only a session intent can be checked.");
+        try {
+            device.Workspace(session.WorkspaceId).Check(session, clock.Now, new SystemIdSource());
+            return new(Refusal: null);
+        } catch (Rejected refused) {
+            return new(refused.Rejection);
         }
     }
 

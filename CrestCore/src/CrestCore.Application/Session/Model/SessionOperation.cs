@@ -11,13 +11,6 @@ internal enum SessionOperation {
     UnknownPreferences,
     UnknownSpace,
     UnknownTransient,
-    FolderCollapse,
-    FolderColor,
-    FolderCreate,
-    FolderDelete,
-    FolderMove,
-    FolderRename,
-    FolderSymbol,
     HistoryVisit,
     LaunchPlan,
     PreferencesImport,
@@ -37,16 +30,6 @@ internal enum SessionOperation {
     SpaceSavedExpansion,
     SpaceSearchProviderRemove,
     SpaceSearchProviderUpsert,
-    SplitDissolve,
-    SplitIcon,
-    SplitJoin,
-    SplitJoinInPlace,
-    SplitLeave,
-    SplitMove,
-    SplitOpenLink,
-    SplitReorder,
-    SplitTint,
-    SplitTitle,
     TabArchiveTransient,
     TabClearCurrent,
     TabClose,
@@ -64,7 +47,6 @@ internal enum SessionOperation {
     TabSavedLocation,
     TabTransfer,
     TabsBatch,
-    TabsFile,
     TransientArchive,
     TransientPromote,
     WorkspaceImport,
@@ -74,13 +56,6 @@ internal static class SessionOperationCodes {
     #region Actions - Decoding
 
     public static SessionOperation Parse(string? value) => value switch {
-        "folder.collapse" => SessionOperation.FolderCollapse,
-        "folder.color" => SessionOperation.FolderColor,
-        "folder.create" => SessionOperation.FolderCreate,
-        "folder.delete" => SessionOperation.FolderDelete,
-        "folder.move" => SessionOperation.FolderMove,
-        "folder.rename" => SessionOperation.FolderRename,
-        "folder.symbol" => SessionOperation.FolderSymbol,
         "history.visit" => SessionOperation.HistoryVisit,
         "launch.plan" => SessionOperation.LaunchPlan,
         "preferences.import" => SessionOperation.PreferencesImport,
@@ -100,16 +75,6 @@ internal static class SessionOperationCodes {
         "space.saved_expansion" => SessionOperation.SpaceSavedExpansion,
         "space.search_provider.remove" => SessionOperation.SpaceSearchProviderRemove,
         "space.search_provider.upsert" => SessionOperation.SpaceSearchProviderUpsert,
-        "split.dissolve" => SessionOperation.SplitDissolve,
-        "split.icon" => SessionOperation.SplitIcon,
-        "split.join" => SessionOperation.SplitJoin,
-        "split.join_in_place" => SessionOperation.SplitJoinInPlace,
-        "split.leave" => SessionOperation.SplitLeave,
-        "split.move" => SessionOperation.SplitMove,
-        "split.open_link" => SessionOperation.SplitOpenLink,
-        "split.reorder" => SessionOperation.SplitReorder,
-        "split.tint" => SessionOperation.SplitTint,
-        "split.title" => SessionOperation.SplitTitle,
         "tab.archive_transient" => SessionOperation.TabArchiveTransient,
         "tab.clear_current" => SessionOperation.TabClearCurrent,
         "tab.close" => SessionOperation.TabClose,
@@ -127,7 +92,6 @@ internal static class SessionOperationCodes {
         "tab.saved_location" => SessionOperation.TabSavedLocation,
         "tab.transfer" => SessionOperation.TabTransfer,
         "tabs.batch" => SessionOperation.TabsBatch,
-        "tabs.file" => SessionOperation.TabsFile,
         "transient.archive" => SessionOperation.TransientArchive,
         "transient.promote" => SessionOperation.TransientPromote,
         "workspace.import" => SessionOperation.WorkspaceImport,
@@ -153,10 +117,10 @@ internal static class SessionOperationCodes {
         var explicitDelete = SyncDeletionReason.ExplicitDelete;
         var superseded = SyncDeletionReason.Superseded;
         return operation switch {
-            SessionOperation.TabDelete or SessionOperation.FolderDelete => new(explicitDelete, SyncUrgency.Immediate),
+            SessionOperation.TabDelete => new(explicitDelete, SyncUrgency.Immediate),
             SessionOperation.TabOpen or SessionOperation.TabCopy or SessionOperation.TabClose or SessionOperation.TabClearCurrent
                 or SessionOperation.TabCloseDurable or SessionOperation.TransientPromote
-                or SessionOperation.FolderCreate or SessionOperation.SpaceCreate or SessionOperation.SpaceAccess
+                or SessionOperation.SpaceCreate or SessionOperation.SpaceAccess
                 or SessionOperation.SpaceCredentialPreferences => new(superseded, SyncUrgency.Immediate),
             SessionOperation.SpaceRemove => new(explicitDelete, SyncUrgency.WithSave),
             SessionOperation.SpaceDeletionBegin or SessionOperation.WorkspaceImport or SessionOperation.TabTransfer =>
@@ -186,15 +150,7 @@ internal static class SessionOperationCodes {
 
     public static bool IsRecord(SessionOperation operation) => operation is
         SessionOperation.UnknownHistory
-        or SessionOperation.HistoryVisit
-        or SessionOperation.SplitIcon
-        or SessionOperation.SplitTint
-        or SessionOperation.SplitTitle;
-
-    public static bool IsSplitMetadata(SessionOperation operation) => operation is
-        SessionOperation.SplitTitle
-        or SessionOperation.SplitIcon
-        or SessionOperation.SplitTint;
+        or SessionOperation.HistoryVisit;
 
     public static bool IsTransient(SessionOperation operation) => operation is
         SessionOperation.UnknownTransient

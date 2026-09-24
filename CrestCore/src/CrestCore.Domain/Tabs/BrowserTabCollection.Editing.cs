@@ -40,7 +40,7 @@ public sealed partial class BrowserTabCollection {
         if (!target.Placement.HoldsSplits) throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
         var run = SplitMembers(targetId);
         var members = run.Where(t => t.Id != id).ToArray();
-        if (members.Length >= MaximumSplitMembers) throw new BrowserRuleException(BrowserRuleCodes.SplitLimit);
+        if (members.Length >= MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
         int slot = Math.Clamp(memberIndex ?? members.Length, 0, members.Length);
         Guid? anchor = slot < members.Length ? members[slot].Id
             : tabs.Skip(tabs.IndexOf(run[^1]) + 1).FirstOrDefault(t => t.Id != id)?.Id;
@@ -74,7 +74,7 @@ public sealed partial class BrowserTabCollection {
     public void InsertTab(BrowserTab tab, int? requestedIndex, bool duplicate = false) {
         if (!tab.Placement.Holds(tabs.Count(t => t.Placement == tab.Placement) + 1))
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
-        if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
+        if (tabs.Count >= MaximumTabs) throw new Rejected(new TabLimitReached(MaximumTabs));
         if (tabs.Any(t => t.Id == tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         int lower = tabs.FindIndex(t => t.Placement.Rank >= tab.Placement.Rank);
         if (lower < 0) lower = tabs.Count;

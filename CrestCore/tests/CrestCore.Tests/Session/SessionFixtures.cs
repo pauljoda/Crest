@@ -57,6 +57,8 @@ public sealed partial class BrowserContractsTests {
             [.. session["spaces"]!.AsArray().Where(item => item!["selectedTabID"] is not null)
                 .Select(item => (SpaceId(item!), (Guid?)Guid.Parse(item!["selectedTabID"]!["rawValue"]!.GetValue<string>())))]);
 
+        public TAnswer Query<TAnswer>(Query<TAnswer> query) => app.Query(query);
+
         public IReadOnlyList<Change> Send(Intent intent) {
             var changes = app.Send(intent);
             Record(changes);

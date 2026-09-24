@@ -188,12 +188,15 @@ public sealed partial class BrowserContractsTests {
         var second = first.DeepClone(); second["id"] = SwiftId(Guid.NewGuid()); space["tabs"]!.AsArray().Add(second);
         space["splitGroups"] = new JsonArray(new JsonObject { ["id"] = SwiftId(group), ["customIconSymbol"] = "crest.emoji:🌊", ["iconModifiedAt"] = 123.0 });
         var core = new NativeSessionAuthority(Bytes(session));
-        core.PrepareCommand(SpaceCommand(session, "split.title", new() { ["groupId"] = group.ToString(), ["value"] = "  Research  " })).Commit();
+        using var device = new TestDevice(core);
+        device.Send(new NameSplit(device.Workspace, f.Space, group, "  Research  "));
         var metadata = JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!["splitGroups"]![0]!;
         Assert.Equal("Research", metadata["customTitle"]!.GetValue<string>());
         Assert.Equal(123.0, metadata["iconModifiedAt"]!.GetValue<double>());
         Assert.Equal("crest.emoji:🌊", metadata["customIconSymbol"]!.GetValue<string>());
-        Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(SpaceCommand(session, "split.title",
-            new() { ["groupId"] = Guid.NewGuid().ToString(), ["value"] = "Invalid" })));
+        var missing = Guid.NewGuid();
+        Assert.Equal(missing, Assert.IsType<UnknownSplitGroup>(Assert.Throws<Rejected>(() =>
+            device.Send(new NameSplit(device.Workspace, f.Space, missing, "Invalid"))).Rejection).GroupId);
     }
+
 }

@@ -81,8 +81,32 @@ public sealed partial class NativeSessionAuthority {
                 events: new([.. result.Copies.Select(pair => new SessionTabCopy(pair.Source, pair.Copy))], null));
         } catch (BrowserRuleException error) {
             return new(this, session, session, Output(new JsonObject { ["error"] = error.Code }), error.Code);
+        } catch (Rejected refused) when (BatchCode(refused.Rejection) is { } code) {
+            return new(this, session, session, Output(new JsonObject { ["error"] = code }), code);
         }
     }
+
+    /// TRANSITIONAL until tab batches are typed intents (S5.8): the code a
+    /// batch answers for an organizing rule the tab collection refuses with a
+    /// typed rejection, so a batch reports it as it always has.
+    private static string? BatchCode(Rejection rejection) => rejection switch {
+        UnknownTab => BrowserRuleCodes.UnknownTab,
+        UnknownFolder => BrowserRuleCodes.UnknownFolder,
+        FolderLimitReached => BrowserRuleCodes.FolderLimit,
+        FolderAlreadyExists => BrowserRuleCodes.DuplicateFolder,
+        FolderDepthLimitReached => BrowserRuleCodes.FolderDepthLimit,
+        FolderCycle => BrowserRuleCodes.FolderCycle,
+        InvalidFolderPlacement => BrowserRuleCodes.InvalidFolderPlacement,
+        InvalidFolderSymbol => BrowserRuleCodes.InvalidFolderSymbol,
+        InvalidName => BrowserRuleCodes.InvalidName,
+        SplitBoundary => BrowserRuleCodes.SplitBoundary,
+        SplitLimitReached => BrowserRuleCodes.SplitLimit,
+        AlreadyInSplit => BrowserRuleCodes.AlreadyInSplit,
+        WebPagesOnly => BrowserRuleCodes.WebPagesOnly,
+        UnknownSplitGroup => BrowserRuleCodes.UnknownSplitGroup,
+        TabLimitReached => BrowserRuleCodes.TabLimit,
+        _ => null
+    };
 
     #endregion
 }

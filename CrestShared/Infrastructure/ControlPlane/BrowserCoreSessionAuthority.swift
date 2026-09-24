@@ -418,27 +418,7 @@ final class BrowserCoreSessionAuthority {
 
     // MARK: - Actions - Commands
 
-    /// Whether the core would accept a tab, folder or split command: it is
-    /// prepared against the owned records and released without committing.
-    /// This is how native menus ask the core's rules (folder depth, split
-    /// capacity) instead of keeping copies of them.
-    func accepts<Arguments: Encodable>(
-        _ operation: BrowserSessionOperation, in spaceID: SpaceID, arguments: Arguments,
-        window: UUID?
-    ) -> Bool {
-        guard let space = projection.space(id: spaceID),
-            let data = try? JSONEncoder().encode(
-                Command(
-                    operation: operation, spaceId: spaceID.rawValue, profileId: space.profile.id,
-                    arguments: arguments, windowId: window,
-                    now: Date.now.timeIntervalSinceReferenceDate)),
-            let handle = try? prepareCommand(data)
-        else { return false }
-        crest_session_release_command(handle)
-        return true
-    }
-
-    /// Runs a tab, folder or split command. `image` is the image a page
+    /// Runs a tab command. `image` is the image a page
     /// reported, which the tab the core assigns it to wears.
     func execute<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID, arguments: Arguments,
@@ -466,7 +446,7 @@ final class BrowserCoreSessionAuthority {
         try commitCommand(data) { _ in }
     }
 
-    /// Runs a history, archive, retention or split metadata command, and
+    /// Runs a history command, and
     /// answers whether it changed anything.
     func executeRecords<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,

@@ -209,12 +209,14 @@ extension BrowserStore {
         in spaceID: SpaceID
     ) -> FolderID? {
         let folderID = FolderID()
-        let arguments = BrowserSessionArguments.FolderCreate(
-            folderId: folderID.rawValue, title: title, placement: .saved, parentId: parentID?.rawValue, color: color,
-            symbol: "folder")
-        guard family.execute(.folderCreate, in: spaceID, arguments: arguments, from: self, at: .now) != nil else {
-            return nil
-        }
+        guard
+            family.send(
+                CreateFolder(
+                    workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue,
+                    placement: .saved, parentID: parentID?.rawValue, title: title, color: color.core, symbol: "folder",
+                    tabIDs: [], leavesSplits: false),
+                from: self)
+        else { return nil }
         return folderID
     }
 
@@ -222,10 +224,11 @@ extension BrowserStore {
     /// with its folder count and depth limits.
     func canAddFolder(inside parentID: FolderID, matching assignment: BrowserSpaceRuntimeAssignment) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        return family.accepts(
-            .folderCreate, in: assignment.spaceID,
-            arguments: BrowserSessionArguments.FolderCreate(
-                folderId: UUID(), title: nil, placement: .saved, parentId: parentID.rawValue),
+        return family.canSend(
+            CreateFolder(
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, folderID: UUID(),
+                placement: .saved, parentID: parentID.rawValue, title: nil, color: nil, symbol: nil, tabIDs: [],
+                leavesSplits: false),
             from: self)
     }
 
@@ -269,13 +272,11 @@ extension BrowserStore {
         in spaceID: SpaceID,
         color: BrowserSpaceBrandColor
     ) -> Bool {
-        guard
-            family.execute(
-                .folderColor, in: spaceID,
-                arguments: BrowserSessionArguments.FolderValue(folderId: folderID.rawValue, value: color),
-                from: self, at: .now)?.changed == true
-        else { return false }
-        return true
+        family.send(
+            SetFolderColor(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue,
+                color: color.core),
+            from: self)
     }
 
     @discardableResult
@@ -300,13 +301,11 @@ extension BrowserStore {
         in spaceID: SpaceID,
         symbol: String
     ) -> Bool {
-        guard
-            family.execute(
-                .folderSymbol, in: spaceID,
-                arguments: BrowserSessionArguments.FolderValue(folderId: folderID.rawValue, value: symbol),
-                from: self, at: .now)?.changed == true
-        else { return false }
-        return true
+        family.send(
+            SetFolderSymbol(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue,
+                symbol: symbol),
+            from: self)
     }
 
     @discardableResult
@@ -365,11 +364,10 @@ extension BrowserStore {
         into parentID: FolderID?
     ) -> Bool {
         guard !deletingSpaceIDs.contains(spaceID) else { return false }
-        return family.accepts(
-            .folderMove, in: spaceID,
-            arguments: BrowserSessionArguments.FolderMove(
-                folderId: folderID.rawValue, parentId: parentID?.rawValue, beforeFolderId: nil, before: nil,
-                placement: nil),
+        return family.canSend(
+            MoveFolder(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue, placement: nil,
+                parentID: parentID?.rawValue, beforeFolderID: nil, beforeTabID: nil),
             from: self)
     }
 

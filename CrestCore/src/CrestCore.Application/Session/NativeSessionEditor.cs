@@ -9,9 +9,6 @@ namespace CrestCore.Application;
 internal static class NativeSessionEditor {
     #region Variables
 
-    private const string NewFolderTitle = "New Folder";
-    private const string UntitledFolderTitle = "Untitled Folder";
-
     private sealed class SuppliedIds(IReadOnlyList<Guid> values) : IIdSource {
         #region Variables
 
@@ -40,8 +37,6 @@ internal static class NativeSessionEditor {
         Guid? result = null;
         var selectSpace = false;
         var copies = new List<SessionTabCopy>();
-        Guid? copiedGroup = null;
-        Guid? sourceGroup = null;
         var changed = true;
         SessionFaviconUpdate? favicon = null;
         switch (operation) {
@@ -105,87 +100,6 @@ internal static class NativeSessionEditor {
                 changed = edited.MoveTab(args.RequiredTabId, args.RequiredPlacement, args.FolderId, args.Before,
                     args.Detach == true, now);
                 break;
-            case SessionOperation.SplitOpenLink:
-            case SessionOperation.SplitJoin: {
-                    if (operation == SessionOperation.SplitOpenLink) {
-                        var tab = BrowserTab.Restore(args.RequiredTab);
-                        edited.InsertTab(tab, null);
-                        args = args with { TabId = tab.Id }; result = tab.Id;
-                    }
-                    var target = edited.Tab(args.RequiredTargetId);
-                    if (target.Placement.IsDurable) sourceGroup = target.SplitGroupId;
-                    var joined = edited.JoinSplit(args.RequiredTabId, args.RequiredTargetId, index,
-                        new SuppliedIds(args.RequiredIds), now);
-                    selected = joined.SelectedTab; selectSpace = true;
-                    copiedGroup = sourceGroup is not null && joined.Copies.Any(p => p.Source == target.Id)
-                        ? edited.Tab(joined.SelectedTab).SplitGroupId : null;
-                    foreach (var pair in joined.Copies)
-                        CopyPage(pair.Source, pair.Copy);
-                    break;
-                }
-            case SessionOperation.SplitJoinInPlace:
-                changed = edited.JoinSplitInPlace(args.RequiredTabId, args.RequiredTargetId, index, args.RequiredGroupId, now);
-                selected = args.RequiredTabId;
-                break;
-            case SessionOperation.SplitLeave:
-                changed = edited.Tab(args.RequiredTabId).SplitGroupId is not null;
-                edited.LeaveSplit(args.RequiredTabId, now);
-                break;
-            case SessionOperation.SplitReorder:
-                changed = args.Offset is { } offset
-                    ? edited.StepSplitMember(args.RequiredTabId, offset, now)
-                    : edited.MoveSplitMember(args.RequiredTabId, index!.Value, now);
-                break;
-            case SessionOperation.SplitDissolve:
-                changed = edited.DissolveSplit(args.RequiredGroupId, now);
-                break;
-            case SessionOperation.SplitMove:
-                edited.MoveSplitGroup(args.RequiredGroupId, args.RequiredPlacement, args.FolderId, args.Before, now);
-                break;
-            case SessionOperation.FolderCreate:
-                var createdFolder = args.RequiredFolderId;
-                var createdTitle = args.Title;
-                var createdPlacement = args.RequiredPlacement;
-                edited.AddFolder(createdFolder, string.IsNullOrWhiteSpace(createdTitle) ? NewFolderTitle : createdTitle,
-                    createdPlacement, args.ParentId);
-                if (args.Color is { } color) edited.SetFolderColor(createdFolder, color);
-                if (args.Symbol is { } symbol) edited.SetFolderSymbol(createdFolder, symbol);
-                // Creating a folder around tabs is one transaction. Filing them
-                // separately would publish a folder nobody asked to see empty,
-                // and would leave it behind when the filing turned out invalid.
-                if (args.TabIds is { Count: > 0 } members)
-                    edited.FileTabs(members, createdPlacement, createdFolder, now, null, null, args.Detach == true);
-                break;
-            case SessionOperation.FolderColor:
-                changed = edited.SetFolderColor(args.RequiredFolderId,
-                    args.FolderColorValue ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput));
-                break;
-            case SessionOperation.FolderSymbol:
-                changed = edited.SetFolderSymbol(args.RequiredFolderId,
-                    args.FolderSymbolValue ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput));
-                break;
-            case SessionOperation.FolderRename:
-                var folderId = args.RequiredFolderId;
-                var folderTitle = (args.Title ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)).Trim();
-                if (folderTitle.Length == 0) folderTitle = UntitledFolderTitle;
-                changed = edited.Folders.Single(f => f.Id == folderId).Title != folderTitle;
-                if (changed) edited.RenameFolder(folderId, folderTitle);
-                break;
-            case SessionOperation.FolderCollapse:
-                var collapsedId = args.RequiredFolderId; var collapsed = args.Collapsed ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-                changed = edited.Folders.Single(f => f.Id == collapsedId).IsCollapsed != collapsed;
-                if (changed) edited.CollapseFolder(collapsedId, collapsed, now);
-                break;
-            case SessionOperation.FolderDelete:
-                edited.DeleteFolder(args.RequiredFolderId, now);
-                break;
-            case SessionOperation.FolderMove:
-                edited.MoveFolder(args.RequiredFolderId, args.Placement, args.ParentId, now, args.BeforeFolderId, args.Before);
-                break;
-            case SessionOperation.TabsFile:
-                edited.FileTabs(args.RequiredTabIds, args.RequiredPlacement, args.FolderId, now, args.Before, args.BeforeFolderId,
-                    args.Detach == true);
-                break;
             case SessionOperation.TabClose:
             case SessionOperation.TabDelete:
             case SessionOperation.TabClearCurrent: {
@@ -199,11 +113,8 @@ internal static class NativeSessionEditor {
                 }
             default: throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit);
         }
-        if (sourceGroup is { } oldGroup && copiedGroup is { } newGroup) edited.CopySplitMetadata(oldGroup, newGroup, now);
         if (operation is SessionOperation.TabClose or SessionOperation.TabDelete or SessionOperation.TabClearCurrent
-            or SessionOperation.SplitJoin or SessionOperation.SplitOpenLink or SessionOperation.SplitJoinInPlace
-            or SessionOperation.SplitLeave or SessionOperation.SplitDissolve
-            || operation is SessionOperation.TabMove or SessionOperation.TabsFile && args.Detach == true)
+            || operation is SessionOperation.TabMove && args.Detach == true)
             edited.PruneSplitMetadata();
         return new(edited, result, selected, selectSpace, copies, changed, favicon);
 
