@@ -41,6 +41,9 @@ final class FaviconAssets {
     /// Counts the tabs that gained an image, so the readers of a tab that had
     /// none hear when it gains one.
     private var additions = 0
+    /// Hands over the image a page reported, which leaves the store that kept
+    /// it until a tab adopted it.
+    @ObservationIgnored var takePageImage: (UUID) -> Data? = { _ in nil }
 
     // MARK: - Actions - Reading
 
@@ -98,15 +101,17 @@ final class FaviconAssets {
         setImage(slots[sourceTabID]?.data ?? offers[workspaceID]?.placed[sourceTabID], of: copyTabID)
     }
 
-    /// A tab told to adopt an image wears the one its command's issuer
-    /// offered, and keeps its own when none is on offer; one told not to
-    /// adopt wears none.
-    func assign(adopts: Bool, to tabID: UUID, in workspaceID: UUID) {
-        if !adopts {
+    /// A tab told to adopt an image wears the one `pageID` reported, which
+    /// moves here from the page's store, or with no page the one its command's
+    /// issuer offered, and keeps its own when neither holds one; one told not
+    /// to adopt wears none.
+    func assign(adopts: Bool, to tabID: UUID, in workspaceID: UUID, from pageID: UUID?) {
+        guard adopts else {
             setImage(nil, of: tabID)
-        } else if let offered = offers[workspaceID]?.assigned {
-            setImage(offered, of: tabID)
+            return
         }
+        let offered = if let pageID { takePageImage(pageID) } else { offers[workspaceID]?.assigned }
+        if let offered { setImage(offered, of: tabID) }
     }
 
     /// The batch ended: a removed tab that `holds` says no workspace holds

@@ -282,19 +282,6 @@ extension BrowserStore {
         return true
     }
 
-    func cacheAutomaticTabFavicon(
-        _ faviconData: Data,
-        iconAccent: BrowserTabIconAccent?,
-        url: URL,
-        for id: TabID,
-        in spaceID: SpaceID
-    ) {
-        guard
-            cacheSessionTabFavicon(faviconData, iconAccent: iconAccent,
-                url: url, tabID: id, in: spaceID)
-        else { return }
-    }
-
     func clearTabIcon(for id: TabID, in spaceID: SpaceID) {
         guard setSessionTabIcon(.automatic, tabID: id, in: spaceID) else { return }
     }
@@ -343,81 +330,19 @@ extension BrowserStore {
         return tab.id
     }
 
+    /// Gives the selected tab `url` to load when it shows a native view or the
+    /// Start Page, so a page can open for it. An existing web page stays at its
+    /// accepted location until its engine reports the new navigation, which
+    /// the core records.
     func navigateSelectedTab(to url: URL) {
-        // An existing web page stays at its accepted location until the engine
-        // reports the new navigation. Native content needs a web tab to host it.
         guard selectedTab?.isWebPage == false,
-            let space = selectedSpace, let tabID = selectedTabID(in: space.id),
-            observeSessionTab(
-                url: url, title: url.host() ?? url.absoluteString, faviconData: nil, iconAccent: nil, tabID: tabID,
-                in: space.id)
+            let space = selectedSpace, let tabID = selectedTabID(in: space.id)
         else { return }
-    }
-
-    #if DEBUG
-    func updateSelectedTabFromPage(
-        url observedURL: URL?,
-        title: String?,
-        faviconData: Data? = nil,
-        iconAccent: BrowserTabIconAccent? = nil
-    ) {
-        guard let space = selectedSpace, let tabID = selectedTabID(in: space.id),
-            observeSessionTab(
-                url: observedURL, title: title, faviconData: faviconData, iconAccent: iconAccent, tabID: tabID,
-                in: space.id)
-        else { return }
-    }
-    #endif
-
-    /// Accept one completed navigation for an exact tab and Space assignment.
-    /// Page title and address observations before this callback stay visual.
-    @discardableResult
-    func updateTabFromPage(
-        committedURL: URL,
-        title: String?,
-        faviconData: Data? = nil,
-        iconAccent: BrowserTabIconAccent? = nil,
-        for tabID: TabID,
-        matching assignment: BrowserSpaceRuntimeAssignment
-    ) -> Bool {
-        guard let space = space(matching: assignment),
-            space.tabs.contains(where: { $0.id == tabID })
-        else { return false }
-        let changedMetadata = observeSessionTab(
-            url: committedURL, title: title,
-            faviconData: faviconData, iconAccent: iconAccent, tabID: tabID, in: assignment.spaceID)
-        let visited = family.executeRecords(
-            .historyVisit, in: assignment.spaceID,
-            arguments: BrowserSessionArguments.HistoryVisit(url: committedURL.absoluteString, title: title),
-            from: self)
-        guard changedMetadata || visited else { return false }
-        return changedMetadata
-    }
-
-    func updateBackgroundPage(_ update: BrowserBackgroundPageUpdate) {
-        if let url = update.completedNavigationURL {
-            updateTabFromPage(
-                committedURL: url, title: update.title, faviconData: update.faviconData,
-                iconAccent: update.iconAccent, for: update.tabID, matching: update.assignment)
-        } else {
-            updateCommittedPageFavicon(
-                update.faviconData, iconAccent: update.iconAccent, url: update.url,
-                for: update.tabID, matching: update.assignment)
-        }
-    }
-
-    /// A favicon can finish after the navigation that established its URL.
-    /// The core checks that it still belongs to an automatic icon at that page.
-    func updateCommittedPageFavicon(_ data: Data?, iconAccent: BrowserTabIconAccent?,
-        url: URL?, for tabID: TabID, matching assignment: BrowserSpaceRuntimeAssignment) {
-        guard let data, !data.isEmpty, let url,
-            let space = space(matching: assignment),
-            let tab = space.tabs.first(where: { $0.id == tabID }),
-            tab.url == url,
-            tab.faviconData != data || tab.iconAccent != iconAccent
-        else { return }
-        cacheAutomaticTabFavicon(data, iconAccent: iconAccent, url: url,
-            for: tabID, in: assignment.spaceID)
+        family.send(
+            NavigateTab(
+                workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue,
+                url: url.absoluteString),
+            from: self, failure: "Core navigation failed")
     }
 
 }

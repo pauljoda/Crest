@@ -25,7 +25,6 @@ public sealed partial class BrowserContractsTests {
 
     [Theory]
     [InlineData("space.future", BrowserRuleCodes.UnknownSpaceCommand)]
-    [InlineData("history.future", BrowserRuleCodes.UnknownHistoryCommand)]
     [InlineData("transient.future", BrowserRuleCodes.UnknownTransientCommand)]
     [InlineData("preferences.future", BrowserRuleCodes.UnknownPreferenceCommand)]
     public void UnknownOperationFamiliesKeepTheirSpecificErrors(string operation, string expectedCode) {

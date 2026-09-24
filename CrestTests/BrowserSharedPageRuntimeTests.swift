@@ -225,7 +225,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         XCTAssertEqual(historyState, 7)
     }
 
-    func testPageCallbacksAndSingleMetadataPublisherFollowTheCurrentWorkspaceOwner() async throws {
+    func testPageCallbacksFollowTheCurrentWorkspaceOwner() throws {
         let tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab])
         let owner = BrowserPageRuntimeStore()
@@ -234,16 +234,11 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         blankOwner.publishesPageMetadataCentrally = true
         let browser = hosting(space)
         var links: [String] = []
-        var updates: [String] = []
         let first = BrowserPagePool(
             browser: browser,
             runtimeStore: owner,
             openModifiedLink: { _, _, _ in
                 links.append("first")
-                return nil
-            },
-            backgroundPageDidUpdate: { _ in
-                updates.append("first")
                 return nil
             })
         let second = BrowserPagePool(
@@ -252,20 +247,12 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
             openModifiedLink: { _, _, _ in
                 links.append("second")
                 return nil
-            },
-            backgroundPageDidUpdate: { _ in
-                updates.append("second")
-                return nil
             })
         let blank = BrowserPagePool(
             browser: hosting(space, on: browser.core),
             runtimeStore: blankOwner,
             openModifiedLink: { _, _, _ in
                 links.append("blank")
-                return nil
-            },
-            backgroundPageDidUpdate: { _ in
-                updates.append("blank")
                 return nil
             })
         defer {
@@ -278,19 +265,13 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         second.setWindowFocused(true)
         let request = URLRequest(url: try XCTUnwrap(URL(string: "https://callback.crest.test/")))
         page.openModifiedLink(request, space.id, false)
-        page.completedNavigationCount += 1
-        try await waitUntil { updates.count == 1 }
         XCTAssertEqual(links, ["second"])
-        XCTAssertEqual(updates, ["second"])
 
         let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
         XCTAssertTrue(blank.transferTabRuntime(from: second, matching: assignment, as: tab, in: space))
         blank.select(tab: tab, space: space)
         page.openModifiedLink(request, space.id, false)
-        page.completedNavigationCount += 1
-        try await waitUntil { updates.count == 2 }
         XCTAssertEqual(links, ["second", "blank"])
-        XCTAssertEqual(updates, ["second", "blank"])
     }
 
     func testNativeTabMovePreservesItsLoadedModelAcrossWorkspaceOwners() throws {

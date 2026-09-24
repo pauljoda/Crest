@@ -287,7 +287,7 @@ final class BrowserStoreTests: XCTestCase {
         }
 
         store.openNewTab(url: url)
-        store.recordVisit(url: url, title: "Private account")
+        store.seedVisit(to: url, titled: "Private account")
         XCTAssertFalse(try XCTUnwrap(store.selectedSpace).history.isEmpty)
         XCTAssertNotEqual(store.selectedTab?.id, originalTabID)
 
@@ -348,138 +348,6 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(openedID, draft.id)
         XCTAssertEqual(store.selectedTab?.id, draft.id)
         XCTAssertEqual(try XCTUnwrap(store.selectedSpace).currentTabs.count, originalCount)
-    }
-
-    /// A completed navigation in an unfocused card updates only its own tab.
-    func testCompletedUnfocusedCardUpdatesItsOwnTabAndLeavesTheSelectionAlone() throws {
-        let store = BrowserStore(session: .preview)
-        let space = try XCTUnwrap(store.selectedSpace)
-        let selectedTab = try XCTUnwrap(store.selectedTab)
-        let member = try XCTUnwrap(space.tabs.first { $0.id != selectedTab.id })
-        let url = try XCTUnwrap(URL(string: "https://example.com/card"))
-
-        XCTAssertTrue(
-            store.updateTabFromPage(
-                committedURL: url,
-                title: "Unfocused card",
-                for: member.id,
-                matching: BrowserSpaceRuntimeAssignment(space: space)
-            )
-        )
-
-        let updated = try XCTUnwrap(
-            store.selectedSpace?.tabs.first { $0.id == member.id }
-        )
-        XCTAssertEqual(updated.url, url)
-        XCTAssertEqual(updated.title, "Unfocused card")
-        XCTAssertEqual(store.selectedTab?.id, selectedTab.id)
-        XCTAssertEqual(store.selectedTab?.url, selectedTab.url)
-        XCTAssertEqual(store.selectedTab?.title, selectedTab.title)
-    }
-
-    func testLiveCardMetadataWritesNothingBeforeCommit() throws {
-        let store = BrowserStore(session: .preview)
-        let space = try XCTUnwrap(store.selectedSpace)
-        let member = try XCTUnwrap(space.tabs.first { $0.url != nil })
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let revision = store.sessionRevision
-
-        store.updateBackgroundPage(
-            BrowserBackgroundPageUpdate(
-                tabID: member.id, assignment: assignment, url: member.url,
-                title: "Uncommitted title", faviconData: nil, iconAccent: nil,
-                estimatedProgress: 0.5, isLoading: true, readerModeState: .unavailable,
-                completedNavigationURL: nil, processTerminationCount: 0)
-        )
-        XCTAssertEqual(store.sessionRevision, revision)
-        XCTAssertEqual(store.session.space(id: space.id)?.tabs.first { $0.id == member.id }?.title, member.title)
-    }
-
-    func testATransientNilCardURLDoesNotWriteItsLiveTitle() throws {
-        let store = BrowserStore(session: .preview)
-        let space = try XCTUnwrap(store.selectedSpace)
-        let member = try XCTUnwrap(space.tabs.first { $0.url != nil })
-
-        store.updateBackgroundPage(
-            BrowserBackgroundPageUpdate(
-                tabID: member.id, assignment: BrowserSpaceRuntimeAssignment(space: space),
-                url: nil, title: "Still loading", faviconData: nil, iconAccent: nil,
-                estimatedProgress: 0.5, isLoading: true, readerModeState: .unavailable,
-                completedNavigationURL: nil, processTerminationCount: 0)
-        )
-
-        let updated = try XCTUnwrap(
-            store.selectedSpace?.tabs.first { $0.id == member.id }
-        )
-        XCTAssertEqual(updated.url, member.url)
-        XCTAssertEqual(updated.title, member.title)
-    }
-
-    /// A card can hold a stale assignment for a frame after a Space switch or a
-    /// profile rebuild. Writing across that boundary is the isolation failure
-    /// per-Space browsing exists to prevent, so the write is simply refused.
-    func testACardHoldingAStaleAssignmentWritesNothing() throws {
-        let store = BrowserStore(session: .preview)
-        let space = try XCTUnwrap(store.selectedSpace)
-        let member = try XCTUnwrap(space.tabs.first { $0.url != nil })
-        let url = try XCTUnwrap(URL(string: "https://example.com/other-profile"))
-
-        XCTAssertFalse(
-            store.updateTabFromPage(
-                committedURL: url,
-                title: "Foreign profile",
-                for: member.id,
-                matching: BrowserSpaceRuntimeAssignment(
-                    spaceID: space.id,
-                    profileID: UUID()
-                )
-            )
-        )
-        XCTAssertFalse(
-            store.updateTabFromPage(
-                committedURL: url,
-                title: "Foreign Space",
-                for: member.id,
-                matching: BrowserSpaceRuntimeAssignment(
-                    spaceID: SpaceID(),
-                    profileID: space.profile.id
-                )
-            )
-        )
-
-        let unchanged = try XCTUnwrap(
-            store.selectedSpace?.tabs.first { $0.id == member.id }
-        )
-        XCTAssertEqual(unchanged.url, member.url)
-        XCTAssertEqual(unchanged.title, member.title)
-    }
-
-    /// The automatic-icon identity rules are the selected tab's rules: a renamed
-    /// or emoji-iconed tab keeps the icon someone chose, whatever its page reports.
-    func testACardNeverOverwritesAnIconSomeoneChose() throws {
-        let store = BrowserStore(session: .preview)
-        let space = try XCTUnwrap(store.selectedSpace)
-        let member = try XCTUnwrap(space.tabs.first { $0.url != nil })
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        store.setTabEmojiIcon("🛰️", for: member.id, in: space.id)
-
-        XCTAssertTrue(
-            store.updateTabFromPage(
-                committedURL: try XCTUnwrap(URL(string: "https://example.com/settled")),
-                title: "Settled",
-                faviconData: Data("pulled".utf8),
-                iconAccent: BrowserTabIconAccent(red: 0.1, green: 0.2, blue: 0.3),
-                for: member.id,
-                matching: assignment
-            )
-        )
-
-        let updated = try XCTUnwrap(
-            store.selectedSpace?.tabs.first { $0.id == member.id }
-        )
-        XCTAssertEqual(updated.iconMode, .emoji)
-        XCTAssertNil(updated.faviconData)
-        XCTAssertEqual(updated.title, "Settled")
     }
 
     func testUpdatingSpaceBrowsingPreferencesPersistsOnlyThatSpacesChoices() async throws {
@@ -1607,7 +1475,9 @@ private final class DelayedBrowserSyncJournalPersistence: BrowserSyncJournalPers
 @MainActor
 final class BrowserStoreMutationTests: XCTestCase {
 
-    func testSelectedPageKeepsProvisionalMetadataVisualUntilNavigationCompletes() throws {
+    /// A web page's address and title stay the page's own until its engine
+    /// reports the navigation, which the core records.
+    func testSelectedPageKeepsProvisionalMetadataVisual() throws {
         let originalURL = try XCTUnwrap(URL(string: "https://example.com/old"))
         let nextURL = try XCTUnwrap(URL(string: "https://example.com/new"))
         let tab = BrowserTab(title: "Old", url: originalURL, placement: .current)
@@ -1625,123 +1495,18 @@ final class BrowserStoreMutationTests: XCTestCase {
             faviconData: Data("new icon".utf8), iconAccent: nil)
 
         browser.navigateSelectedTab(to: nextURL)
-        XCTAssertEqual(synchronizer.synchronize(metadata, matching: source), nextURL.absoluteString)
+        XCTAssertEqual(synchronizer.address(of: metadata, matching: source), nextURL.absoluteString)
         XCTAssertEqual(browser.selectedTab?.url, originalURL)
         XCTAssertEqual(browser.selectedTab?.title, "Old")
-
-        XCTAssertNotNil(synchronizer.recordCompletedNavigation(metadata, matching: source))
-        XCTAssertEqual(browser.selectedTab?.url, nextURL)
-        XCTAssertEqual(browser.selectedTab?.title, "New")
-        XCTAssertEqual(browser.selectedSpace?.history.first?.url, nextURL)
-        XCTAssertEqual(browser.selectedTab?.faviconData, metadata.faviconData)
-    }
-
-    func testBackgroundPageIgnoresProvisionalMetadataAndAcceptsLateCommittedFavicon() throws {
-        let originalURL = try XCTUnwrap(URL(string: "https://example.com/old"))
-        let nextURL = try XCTUnwrap(URL(string: "https://example.com/new"))
-        let tab = BrowserTab(title: "Old", url: originalURL, placement: .current)
-        let space = BrowserSpace(
-            id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle",
-            accent: .indigo, folders: [], tabs: [tab])
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]))
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        func update(_ completedURL: URL?, favicon: Data?) -> BrowserBackgroundPageUpdate {
-            BrowserBackgroundPageUpdate(
-                tabID: tab.id, assignment: assignment, url: nextURL, title: "New",
-                faviconData: favicon, iconAccent: nil, estimatedProgress: 1,
-                isLoading: false, readerModeState: .unavailable,
-                completedNavigationURL: completedURL, processTerminationCount: 0)
-        }
-
-        browser.updateBackgroundPage(update(nil, favicon: nil))
-        XCTAssertEqual(browser.selectedTab?.url, originalURL)
-        XCTAssertEqual(browser.selectedTab?.title, "Old")
-
-        browser.updateBackgroundPage(update(nextURL, favicon: nil))
-        XCTAssertEqual(browser.selectedTab?.url, nextURL)
-        XCTAssertEqual(browser.selectedTab?.title, "New")
-        XCTAssertEqual(browser.selectedSpace?.history.first?.url, nextURL)
-
-        let icon = Data("late icon".utf8)
-        browser.updateBackgroundPage(update(nil, favicon: icon))
-        XCTAssertEqual(browser.selectedTab?.faviconData, icon)
-    }
-
-    func testRecordingAVisitAddsHistoryToThatSpaceOnly() throws {
-        let store = BrowserStore(session: .preview)
-        let selectedSpaceID = store.selectedSpaceID
-        let otherSpaceID = try XCTUnwrap(store.session.spaces.last { $0.id != selectedSpaceID }?.id)
-
-        store.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/read")),
-            title: "Read"
-        )
-
-        store.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/elsewhere")),
-            title: "Elsewhere",
-            in: otherSpaceID
-        )
-        XCTAssertEqual(store.session.space(id: selectedSpaceID)?.history.count, 1)
-        XCTAssertEqual(store.session.space(id: otherSpaceID)?.history.count, 1)
-    }
-
-    func testCompletedBackgroundNavigationPublishesMetadataAndHistoryTogetherOnce() throws {
-        for (changesTitle, changesIcon) in [(false, false), (true, false), (true, true)] {
-            let store = BrowserStore(session: .preview)
-            let otherWindow = store.makeWindowStore()
-            let space = try XCTUnwrap(store.selectedSpace)
-            let tab = try XCTUnwrap(space.tabs.first { $0.url != nil })
-            let url = try XCTUnwrap(tab.url)
-            let selectedTabID = otherWindow.selectedTab?.id
-            let title = changesTitle ? "Completed background navigation" : tab.title
-            let faviconData = changesIcon ? Data("new icon".utf8) : tab.faviconData
-
-            store.updateBackgroundPage(
-                BrowserBackgroundPageUpdate(
-                    tabID: tab.id, assignment: BrowserSpaceRuntimeAssignment(space: space),
-                    url: url, title: title, faviconData: faviconData, iconAccent: tab.iconAccent,
-                    estimatedProgress: 1, isLoading: false, readerModeState: .unavailable,
-                    completedNavigationURL: url, processTerminationCount: 0
-                )
-            )
-
-            let sharedSpace = try XCTUnwrap(otherWindow.session.space(id: space.id))
-            XCTAssertEqual(sharedSpace.tabs.first { $0.id == tab.id }?.title, title)
-            XCTAssertEqual(sharedSpace.tabs.first { $0.id == tab.id }?.faviconData, faviconData)
-            XCTAssertEqual(sharedSpace.history.first?.url, url)
-            XCTAssertEqual(sharedSpace.history.first?.title, title)
-            XCTAssertEqual(sharedSpace.history.first?.visitCount, 1)
-            XCTAssertEqual(otherWindow.selectedTab?.id, selectedTabID)
-        }
-    }
-
-    func testCompletedBackgroundNavigationRejectsAReplacedProfileWithoutWritingHistory() throws {
-        let store = BrowserStore(session: .preview)
-        let space = try XCTUnwrap(store.selectedSpace)
-        let tab = try XCTUnwrap(space.tabs.first { $0.url != nil })
-        let before = store.session
-
-        store.updateBackgroundPage(
-            BrowserBackgroundPageUpdate(
-                tabID: tab.id,
-                assignment: BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: UUID()),
-                url: tab.url, title: "Stale page", faviconData: nil, iconAccent: nil,
-                estimatedProgress: 1, isLoading: false, readerModeState: .unavailable,
-                completedNavigationURL: tab.url, processTerminationCount: 0
-            )
-        )
-
-        XCTAssertEqual(store.session, before)
+        XCTAssertTrue(try XCTUnwrap(browser.selectedSpace).history.isEmpty)
     }
 
     func testClearingHistoryEmptiesOnlyTheSelectedSpace() throws {
         let store = BrowserStore(session: .preview)
         let selectedSpaceID = store.selectedSpaceID
-        store.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/read")),
-            title: "Read"
+        store.seedVisit(
+            to: try XCTUnwrap(URL(string: "https://example.com/read")),
+            titled: "Read"
         )
 
         store.clearHistory()
@@ -1759,13 +1524,13 @@ final class BrowserStoreMutationTests: XCTestCase {
             assignment: BrowserSpaceRuntimeAssignment(space: initiatingSpace),
             spaceName: initiatingSpace.name
         )
-        store.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/initiating")),
-            title: "Initiating"
+        store.seedVisit(
+            to: try XCTUnwrap(URL(string: "https://example.com/initiating")),
+            titled: "Initiating"
         )
-        store.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/later-selected")),
-            title: "Later selected",
+        store.seedVisit(
+            to: try XCTUnwrap(URL(string: "https://example.com/later-selected")),
+            titled: "Later selected",
             in: laterSelectedSpace.id
         )
 
@@ -1790,9 +1555,9 @@ final class BrowserStoreMutationTests: XCTestCase {
             browsingMode: .privateBrowsing
         )
         let initiatingSpace = try XCTUnwrap(store.selectedSpace)
-        store.recordVisit(
-            url: try XCTUnwrap(URL(string: "https://example.com/private")),
-            title: "Private"
+        store.seedVisit(
+            to: try XCTUnwrap(URL(string: "https://example.com/private")),
+            titled: "Private"
         )
         let request = BrowserSidebarClearHistoryConfirmation(
             assignment: BrowserSpaceRuntimeAssignment(space: initiatingSpace),

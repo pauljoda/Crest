@@ -192,10 +192,6 @@ final class BrowserMacApplication {
                     session: browser.presented
                 )
             },
-            backgroundPageDidUpdate: { update in
-                browser.updateBackgroundPage(update)
-                return browser.session
-            },
             openPeek: { request in transientBrowsing.presentPeek(request) },
             handleLinkDrag: { transientBrowsing.handleLinkDrag($0) },
             splitLinkHost: browser.splitLinkHost,
@@ -234,10 +230,6 @@ final class BrowserMacApplication {
                     space: space,
                     session: privateBrowser.presented
                 )
-            },
-            backgroundPageDidUpdate: { update in
-                privateBrowser.updateBackgroundPage(update)
-                return privateBrowser.session
             },
             openPeek: { request in privateTransientBrowsing.presentPeek(request) },
             handleLinkDrag: { privateTransientBrowsing.handleLinkDrag($0) },

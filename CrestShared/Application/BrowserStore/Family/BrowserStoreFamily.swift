@@ -47,6 +47,7 @@ final class BrowserStoreFamily {
         self.temporarySettingsBrowser = temporarySettingsBrowser
         storage = nil
         favicons = nil
+        observePageRecords()
     }
 
     /// The family of the session `storage` keeps in its file. Every image the
@@ -62,12 +63,14 @@ final class BrowserStoreFamily {
         for tab in tabs { favicons.reconcile(tab.faviconData, tabID: tab.id) }
         favicons.pruneFavicons(keeping: Set(tabs.map(\.id)))
         storage.storageFailureHandler = { [weak self] reason in self?.storageDidFail(reason) }
+        observePageRecords()
     }
 
     private init(core: BrowserCoreSessionAuthority, assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) {
         self.core = core; temporarySourceAssignment = assignment; temporarySettingsBrowser = settingsBrowser
         storage = nil
         favicons = nil
+        observePageRecords()
     }
 
     func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) throws -> BrowserStoreFamily {
@@ -401,6 +404,31 @@ final class BrowserStoreFamily {
         }
         borrowedFamilies.removeAll { $0.value == nil }
         for child in borrowedFamilies.compactMap(\.value) { _ = child.refreshBorrowed() }
+    }
+
+    /// Hears what the core records from the pages of this family's workspace,
+    /// which changes the session without a command of the family's.
+    private func observePageRecords() {
+        core.device?.engines.observeRecords(self) { [weak self] in self?.pageRecordsApplied($0) }
+    }
+
+    /// The core recorded a page's navigation or gave a tab its page's icon:
+    /// the images tabs took are kept beside the session file, and every window
+    /// reconciles with the session as it does after a command.
+    private func pageRecordsApplied(_ records: Engines.PageRecords) {
+        guard let workspace = core.workspaceID,
+            records.navigations.contains(where: { $0.workspaceID == workspace })
+                || records.icons.contains(where: { $0.workspaceID == workspace })
+        else { return }
+        let session = authoritativeSession
+        if let favicons {
+            let adopted = Set(records.icons.filter { $0.workspaceID == workspace }.map(\.tabID))
+            for tab in session.spaces.flatMap(\.tabs) where adopted.contains(tab.id.rawValue) {
+                favicons.reconcile(tab.faviconData, tabID: tab.id)
+            }
+        }
+        stores.removeAll { $0.value == nil }
+        for store in stores.compactMap(\.value) { store.receiveFamilySessionChange(from: session, to: session) }
     }
 
     /// Defence in depth for locked Spaces. The UI already refuses to reach one,

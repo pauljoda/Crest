@@ -44,6 +44,8 @@ public sealed partial class CrestApp {
         var changes = new ChangeFeed();
         lock (gate) pages.Report(engine, report, changes);
         foreach (var change in changes.Published) Announce(change);
+        WakeIfOwed();
+        WakeForRequestedTurn();
         Deliver();
     }
 

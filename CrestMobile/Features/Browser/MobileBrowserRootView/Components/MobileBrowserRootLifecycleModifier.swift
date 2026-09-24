@@ -57,20 +57,6 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
             .onChange(of: model.selectedPage?.displayURL) {
                 synchronizePageMetadata()
             }
-            .onChange(of: model.selectedPage?.title) {
-                synchronizePageMetadata()
-            }
-            .onChange(of: model.selectedPage?.faviconData) {
-                synchronizePageMetadata()
-            }
-            .onChange(of: model.selectedPage?.themeColor) {
-                synchronizePageMetadata()
-            }
-            .onChange(of: model.selectedPage?.completedNavigationCount) {
-                model.recordCompletedNavigation(
-                    isAddressEditing: isAddressEditing
-                )
-            }
 
         let runtimeObservedContent =
             pageObservedContent

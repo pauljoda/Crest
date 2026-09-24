@@ -124,12 +124,8 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         )
         try await waitUntil(timeout: .seconds(8)) {
             originalPage.completedNavigationCount > originalStartingCount
-                && originalPage.url?.host() == historyURL.host()
+                && context.browser.session.space(id: context.source.id)?.history.first?.visitCount == 1
         }
-        context.model.recordCompletedNavigation(
-            originalPage.completedNavigationCount,
-            during: .committed
-        )
 
         lease.releaseForMemoryPressure()
         context.model.restorePage()
@@ -141,12 +137,8 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         )
         try await waitUntil(timeout: .seconds(8)) {
             restoredPage.completedNavigationCount > restoredStartingCount
-                && restoredPage.url?.host() == historyURL.host()
+                && context.browser.session.space(id: context.source.id)?.history.first?.visitCount == 2
         }
-        context.model.recordCompletedNavigation(
-            restoredPage.completedNavigationCount,
-            during: .committed
-        )
 
         let sourceHistory = try XCTUnwrap(
             context.browser.session.space(id: context.source.id)?.history
@@ -426,95 +418,15 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         )
     }
 
-    func testStagedCompletionReconcilesExactlyOnceWhenPeekCommits() throws {
-        let context = try makeContext()
-        context.coordinator.stagePeek(context.request)
-        XCTAssertTrue(context.model.preparePage(isActive: true))
-        let lease = try XCTUnwrap(context.model.pageLease)
-
-        context.model.recordCompletedNavigation(1, during: .staged)
-        XCTAssertNil(context.model.lastRecordedCompletedNavigationCount)
-        context.coordinator.commitPeek(context.request)
-        XCTAssertTrue(context.model.preparePage(isActive: true))
-        XCTAssertTrue(context.model.pageLease === lease)
-        context.model.recordCompletedNavigation(1, during: .committed)
-        context.model.recordCompletedNavigation(1, during: .committed)
-        XCTAssertEqual(context.model.lastRecordedCompletedNavigationCount, 1)
-
-        context.model.dismiss()
-        context.model.handleDisappearance()
-        XCTAssertNil(lease.page)
-        XCTAssertNil(context.model.pageLease)
-        XCTAssertTrue(
-            context.browser.session.space(id: context.source.id)?.history.isEmpty
-                == true
-        )
-        XCTAssertTrue(
-            context.browser.session.space(id: context.source.id)?.archivedTabs.isEmpty
-                == true
-        )
-    }
-
-    func testStagedWebLoadWritesOneExactHistoryEntryOnlyAfterCommit() async throws {
-        let context = try makeContext()
-        context.coordinator.stagePeek(context.request)
-        XCTAssertTrue(context.model.preparePage(isActive: true))
-        let page = try XCTUnwrap(context.model.page)
-        let startingCount = page.completedNavigationCount
-        let historyURL = try XCTUnwrap(
-            URL(string: "https://peek-history.crest.test/committed")
-        )
-
-        page.webView.loadHTMLString(
-            "<html><body>Committed Peek</body></html>",
-            baseURL: historyURL
-        )
-        try await waitUntil(timeout: .seconds(8)) {
-            page.completedNavigationCount > startingCount
-                && page.url?.host() == historyURL.host()
-        }
-        let completedCount = page.completedNavigationCount
-        context.model.recordCompletedNavigation(completedCount, during: .staged)
-        XCTAssertTrue(
-            context.browser.session.space(id: context.source.id)?.history.isEmpty
-                == true
-        )
-
-        context.coordinator.commitPeek(context.request)
-        XCTAssertTrue(context.browser.family.beginDeletingSpace(context.source.id))
-        context.model.recordCompletedNavigation(completedCount, during: .committed)
-        XCTAssertNil(context.model.lastRecordedCompletedNavigationCount)
-        XCTAssertTrue(
-            context.browser.session.space(id: context.source.id)?.history.isEmpty
-                == true
-        )
-        context.browser.family.finishDeletingSpace(context.source.id)
-        context.model.recordCompletedNavigation(completedCount, during: .committed)
-        context.model.recordCompletedNavigation(completedCount, during: .committed)
-
-        let sourceHistory = try XCTUnwrap(
-            context.browser.session.space(id: context.source.id)?.history
-        )
-        XCTAssertEqual(sourceHistory.count, 1)
-        XCTAssertEqual(sourceHistory.first?.url.host(), historyURL.host())
-        XCTAssertEqual(sourceHistory.first?.visitCount, 1)
-        XCTAssertTrue(
-            context.browser.session.space(id: context.destination.id)?.history.isEmpty
-                == true
-        )
-    }
-
     func testCancelledStagedPeekCreatesNoHistoryOrArchive() throws {
         let context = try makeContext()
         context.coordinator.stagePeek(context.request)
         XCTAssertTrue(context.model.preparePage(isActive: true))
         let lease = try XCTUnwrap(context.model.pageLease)
 
-        context.model.recordCompletedNavigation(1, during: .staged)
         context.coordinator.cancelStagedPeek(id: context.request.id)
         context.model.handleDisappearance()
 
-        XCTAssertNil(context.model.lastRecordedCompletedNavigationCount)
         XCTAssertNil(lease.page)
         XCTAssertNil(context.model.pageLease)
         XCTAssertTrue(

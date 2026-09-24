@@ -131,19 +131,6 @@ final class BrowserPeekModel {
         }
     }
 
-    func recordCompletedNavigation() {
-        guard isCurrentRequest,
-            let pageLease,
-            let page = pageLease.page,
-            let url = page.url
-        else { return }
-        browser.recordVisit(
-            url: url,
-            title: page.title,
-            matching: pageLease.assignment
-        )
-    }
-
     @discardableResult
     func promote(to destinationAssignment: BrowserSpaceRuntimeAssignment) -> Bool {
         guard let pages,

@@ -14,6 +14,10 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// A window showed a tab, which records when it was used.
     public static SyncStaging TabUse { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.Coalesced);
 
+    /// A page reported where a navigation landed or which icon it shows, or a
+    /// tab took an address to load.
+    public static SyncStaging PageReport { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.Coalesced);
+
     /// A tab moved between workspaces.
     public static SyncStaging Transfer { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
 

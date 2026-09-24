@@ -7,11 +7,9 @@ namespace CrestCore.Application;
 
 internal enum SessionOperation {
     Unknown,
-    UnknownHistory,
     UnknownPreferences,
     UnknownSpace,
     UnknownTransient,
-    HistoryVisit,
     LaunchPlan,
     PreferencesImport,
     PreferencesSet,
@@ -36,10 +34,8 @@ internal enum SessionOperation {
     TabCloseDurable,
     TabCopy,
     TabDelete,
-    TabFaviconCache,
     TabIcon,
     TabMove,
-    TabObserve,
     TabOpen,
     TabPromoteTransient,
     TabRename,
@@ -56,7 +52,6 @@ internal static class SessionOperationCodes {
     #region Actions - Decoding
 
     public static SessionOperation Parse(string? value) => value switch {
-        "history.visit" => SessionOperation.HistoryVisit,
         "launch.plan" => SessionOperation.LaunchPlan,
         "preferences.import" => SessionOperation.PreferencesImport,
         "preferences.set" => SessionOperation.PreferencesSet,
@@ -81,10 +76,8 @@ internal static class SessionOperationCodes {
         "tab.close_durable" => SessionOperation.TabCloseDurable,
         "tab.copy" => SessionOperation.TabCopy,
         "tab.delete" => SessionOperation.TabDelete,
-        "tab.favicon.cache" => SessionOperation.TabFaviconCache,
         "tab.icon" => SessionOperation.TabIcon,
         "tab.move" => SessionOperation.TabMove,
-        "tab.observe" => SessionOperation.TabObserve,
         "tab.open" => SessionOperation.TabOpen,
         "tab.promote_transient" => SessionOperation.TabPromoteTransient,
         "tab.rename" => SessionOperation.TabRename,
@@ -95,7 +88,6 @@ internal static class SessionOperationCodes {
         "transient.archive" => SessionOperation.TransientArchive,
         "transient.promote" => SessionOperation.TransientPromote,
         "workspace.import" => SessionOperation.WorkspaceImport,
-        _ when value?.StartsWith("history.", StringComparison.Ordinal) == true => SessionOperation.UnknownHistory,
         _ when value?.StartsWith("preferences.", StringComparison.Ordinal) == true => SessionOperation.UnknownPreferences,
         _ when value?.StartsWith("space.", StringComparison.Ordinal) == true => SessionOperation.UnknownSpace,
         _ when value?.StartsWith("transient.", StringComparison.Ordinal) == true => SessionOperation.UnknownTransient,
@@ -136,10 +128,6 @@ internal static class SessionOperationCodes {
 
     #region Actions - Families
 
-    public static bool IsHistory(SessionOperation operation) => operation is
-        SessionOperation.UnknownHistory
-        or SessionOperation.HistoryVisit;
-
     /// App-wide behavior preferences and the launch plan that reads them.
     public static bool IsPreferences(SessionOperation operation) => operation is
         SessionOperation.UnknownPreferences
@@ -147,10 +135,6 @@ internal static class SessionOperationCodes {
         or SessionOperation.PreferencesImport
         or SessionOperation.PreferencesSet
         or SessionOperation.PreferencesTranslationRule;
-
-    public static bool IsRecord(SessionOperation operation) => operation is
-        SessionOperation.UnknownHistory
-        or SessionOperation.HistoryVisit;
 
     public static bool IsTransient(SessionOperation operation) => operation is
         SessionOperation.UnknownTransient

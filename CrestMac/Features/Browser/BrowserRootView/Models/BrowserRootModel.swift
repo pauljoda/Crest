@@ -214,25 +214,18 @@ extension BrowserRootModel {
         return BrowserWindowTitle.resolve(page: selectedPage, storedTitle: tab.title, url: tab.url)
     }
 
+    /// Shows the address of the page the window shows in the address field,
+    /// unless the person is editing it. The core records what the page's
+    /// navigations change in the session from its engine's reports.
     func synchronizePageMetadata() {
         guard !isAddressEditing else { return }
         if pages.publishesPageMetadataCentrally {
             address = (selectedPage?.metadata.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? ""
         } else if let page = selectedPage, let source = selectedTabAssignment,
-            let updatedAddress = pageSession.synchronize(page.metadata, matching: source)
+            let updatedAddress = pageSession.address(of: page.metadata, matching: source)
         {
             address = updatedAddress
         }
-    }
-
-    func recordCompletedNavigation() {
-        guard let page = selectedPage, page.url != nil, let source = selectedTabAssignment else { return }
-        synchronizePageMetadata()
-        let space =
-            pages.publishesPageMetadataCentrally
-            ? browser.selectedSpace : pageSession.recordCompletedNavigation(page.metadata, matching: source)
-        guard let space else { return }
-        Task { await pages.styleVisitedLinks(in: space) }
     }
 
 }

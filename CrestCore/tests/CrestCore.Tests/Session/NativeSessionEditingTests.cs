@@ -50,26 +50,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void NavigatingANativeTabReplacesItsNativeContentWithAWebPage() {
-        var fixture = SavedSession();
-        var space = fixture.Document["session"]!["spaces"]![0]!;
-        var tab = space["tabs"]![0]!.AsObject();
-        tab["url"] = null;
-        tab["savedURL"] = null;
-        tab["nativeContent"] = new JsonObject { ["kind"] = "settings" };
-
-        var result = Edited(space, "tab.observe", new() {
-            ["tabId"] = fixture.Tab.ToString(),
-            ["url"] = "https://example.org/",
-            ["title"] = "Example"
-        });
-        var navigated = result["space"]!["tabs"]![0]!;
-        Assert.Null(navigated["nativeContent"]);
-        Assert.Equal("https://example.org/", navigated["url"]!.GetValue<string>());
-        Assert.Equal("Example", navigated["title"]!.GetValue<string>());
-    }
-
-    [Fact]
     public void NativeOpenAndClosePreserveDurableTabsAndPublishTheRequestedSelection() {
         var f = SavedSession(); var original = f.Document["session"]!["spaces"]![0]!;
         var session = new JsonObject { ["spaces"] = new JsonArray(original.DeepClone()) };

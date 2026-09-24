@@ -13,10 +13,12 @@ internal sealed record SessionTabCopy(Guid Source, Guid Copy) {
     #endregion
 }
 
-internal sealed record SessionFaviconUpdate(Guid TabId, bool Adopts) {
+/// A tab's image: when `Adopts`, the one `PageId` reported, or with no page
+/// the one the command's issuer offered; otherwise none.
+internal sealed record SessionFaviconUpdate(Guid TabId, bool Adopts, Guid? PageId = null) {
     #region Actions - Publishing
 
-    public TabFaviconAssigned Assigned(Guid workspaceId) => new(workspaceId, TabId, Adopts);
+    public TabFaviconAssigned Assigned(Guid workspaceId) => new(workspaceId, TabId, Adopts, PageId);
 
     #endregion
 }

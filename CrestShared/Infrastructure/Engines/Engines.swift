@@ -27,6 +27,23 @@ final class Engines {
         }
     }
 
+    /// What the core recorded from pages' reports in one batch of changes:
+    /// the navigations it recorded and the tabs that took their page's icon.
+    struct PageRecords {
+        var navigations: [NavigationRecorded] = []
+        var icons: [TabFaviconAssigned] = []
+
+        var isEmpty: Bool { navigations.isEmpty && icons.isEmpty }
+
+        /// Whether the core recorded a navigation of `pageID`.
+        func recordedNavigation(of pageID: UUID) -> Bool {
+            navigations.contains { $0.pageID == pageID }
+        }
+    }
+
+    /// One registration to hear page records, which lasts as long as its owner.
+    private typealias RecordObserver = (owner: WeakOwner, handler: @MainActor (PageRecords) -> Void)
+
     /// A page the core opened, with what its engine's binding built for the
     /// platform to host: the Mac page adapter, or iOS's page.
     struct OpenedPage {
@@ -56,6 +73,13 @@ final class Engines {
     /// core addresses while the engine stays registered.
     @ObservationIgnored private var registered: [EngineKind: (engine: UInt64, relay: Relay)] = [:]
     @ObservationIgnored private var requests: [UUID: PageRequest] = [:]
+    /// The engine that hosts each page the core asked one to create.
+    @ObservationIgnored private var hosts: [UUID: EngineKind] = [:]
+    /// The icon each page last reported, until a tab adopts it and the bytes
+    /// move to `FaviconAssets` under that tab.
+    @ObservationIgnored private var pageIcons: [UUID: Data] = [:]
+    /// Those who hear what the core recorded from pages' reports.
+    @ObservationIgnored private var recordObservers: [RecordObserver] = []
     @ObservationIgnored private unowned let core: CrestCore
 
     // MARK: - Initializers
@@ -108,16 +132,67 @@ final class Engines {
         requests[pageID]
     }
 
-    /// Reports what happened to one of `binding`'s pages.
-    func report(_ event: some EngineEvent, from binding: any EngineBinding) {
-        guard let engine = registered[binding.integration.kind]?.engine else { return }
+    /// Reports what happened to one of `binding`'s pages. `icon` is the image
+    /// a `PageIconChanged` names, which waits here for the tab that adopts it.
+    func report(_ event: some EngineEvent, from binding: any EngineBinding, icon: (page: UUID, data: Data)? = nil) {
+        report(event, on: binding.integration.kind, icon: icon)
+    }
+
+    /// Reports what happened to `pageID` through the engine that hosts it; a
+    /// page no engine was asked to create reports nothing.
+    func report(_ event: some EngineEvent, for pageID: UUID, icon: Data? = nil) {
+        guard let kind = hosts[pageID] else { return }
+        report(event, on: kind, icon: icon.map { (pageID, $0) })
+    }
+
+    /// The icon `pageID` reported, which leaves this store for the tab that
+    /// adopts it.
+    func takeIcon(of pageID: UUID) -> Data? {
+        pageIcons.removeValue(forKey: pageID)
+    }
+
+    /// The page is gone, and nothing it reported waits here any longer.
+    func forget(_ pageID: UUID) {
+        hosts[pageID] = nil
+        pageIcons[pageID] = nil
+    }
+
+    private func report(_ event: some EngineEvent, on kind: EngineKind, icon: (page: UUID, data: Data)?) {
+        guard let engine = registered[kind]?.engine else { return }
+        if let icon { pageIcons[icon.page] = icon.data }
         core.report(event, engine: engine)
+    }
+
+    // MARK: - Actions - Records
+
+    /// Calls `handler` with what the core recorded from pages' reports in
+    /// each batch it applies, once the whole batch is applied. The
+    /// registration lasts as long as `owner`.
+    func observeRecords(_ owner: AnyObject, _ handler: @escaping @MainActor (PageRecords) -> Void) {
+        recordObservers.removeAll { $0.owner.value == nil }
+        recordObservers.append((WeakOwner(value: owner), handler))
+    }
+
+    /// Tells the observers what a batch recorded from pages' reports.
+    func recordsApplied(_ records: PageRecords) {
+        recordObservers.removeAll { $0.owner.value == nil }
+        for observer in recordObservers { observer.handler(records) }
     }
 
     // MARK: - Actions - Commands
 
-    /// Hands a command the core issued to the binding it names.
+    /// Hands a command the core issued to the binding it names. A page the
+    /// core asks an engine to create is that engine's until it closes.
     func run(_ command: EngineCommand, on kind: EngineKind) {
+        switch command {
+        case .createPage(let creation): hosts[creation.pageID] = kind
+        case .closePage(let closing): forget(closing.pageID)
+        }
         bindings[kind]?.run(command)
     }
+}
+
+/// A registration's owner, held weakly so the registration goes with it.
+private struct WeakOwner {
+    weak var value: AnyObject?
 }

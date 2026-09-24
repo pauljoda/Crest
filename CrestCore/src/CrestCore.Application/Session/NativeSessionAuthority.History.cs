@@ -137,4 +137,11 @@ public sealed partial class NativeSessionAuthority {
     }
 
     #endregion
+
+    #region Actions - Dates
+
+    /// The dates as the stored format's seconds, which the removal policies read.
+    private static double[] Seconds(IEnumerable<DateTimeOffset> dates) => dates.Select(StoredSessionCodec.Seconds).ToArray();
+
+    #endregion
 }

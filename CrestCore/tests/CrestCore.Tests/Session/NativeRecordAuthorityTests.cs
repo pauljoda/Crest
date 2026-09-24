@@ -9,31 +9,6 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
-    [Fact]
-    public void OwnedHistoryVisitsPreserveIdentityAndStaleCommandsCannotReplaceNewerVisits() {
-        var f = SavedSession(); var session = f.Document["session"]!;
-        session["spaces"]![0]!["history"] = new JsonArray();
-        var core = new NativeSessionAuthority(Bytes(session));
-        byte[] Visit(string url, string title) => SpaceCommand(session, "history.visit", new() { ["url"] = url, ["title"] = title });
-        var first = core.PrepareCommand(Visit("https://example.org/page#one", "First"));
-        Assert.Empty(JsonNode.Parse(core.Checkpoint().Read(f.Space.ToString()))!.AsArray());
-        first.Commit();
-        var original = JsonNode.Parse(core.Checkpoint().Read(f.Space.ToString()))![0]!;
-        var stale = core.PrepareCommand(Visit("https://example.org/page#two", "Stale"));
-        core.PrepareCommand(Visit("https://example.org/page#three", "Latest")).Commit();
-        AssertStale(stale.Commit);
-        var entry = JsonNode.Parse(core.Checkpoint().Read(f.Space.ToString()))![0]!;
-        Assert.Equal(original["id"]!.GetValue<string>(), entry["id"]!.GetValue<string>());
-        Assert.Equal("https://example.org/page", entry["url"]!.GetValue<string>());
-        Assert.Equal("Latest", entry["title"]!.GetValue<string>());
-        Assert.Equal(2, entry["visitCount"]!.GetValue<int>());
-        var wrong = JsonNode.Parse(Visit("https://example.org/", "Wrong profile"))!;
-        wrong["profileId"] = Guid.NewGuid().ToString();
-        Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(Bytes(wrong)));
-        var skipped = core.PrepareCommand(Visit("crest://extensions", "Internal"));
-        Assert.Empty(JsonNode.Parse(skipped.Output)!["changes"]!.AsArray());
-    }
-
     /// A history entry last visited at `time`, in the stored date format.
     private static JsonObject Visit(double time, string url) => new() {
         ["id"] = Guid.NewGuid().ToString(),

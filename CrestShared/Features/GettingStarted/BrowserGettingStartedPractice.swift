@@ -88,12 +88,15 @@ final class BrowserGettingStartedPractice {
             at: nil)
     }
 
+    /// The practice has no pages, so the example tab opens as a loaded page
+    /// would leave it: titled, and wearing the site's icon.
     func openExampleTab() {
-        guard let id = browser.openNewTab(url: URL(string: "https://wikipedia.org")!) else { return }
-        _ = browser.updateTabFromPage(
-            committedURL: URL(string: "https://wikipedia.org")!, title: "Wikipedia",
-            faviconData: BrowserGettingStartedArtwork.favicon("GuideWikipedia"),
-            for: id, matching: assignment)
+        guard
+            let id = browser.openSessionTab(
+                title: "Wikipedia", url: URL(string: "https://wikipedia.org")!, in: space.id),
+            let favicon = BrowserGettingStartedArtwork.favicon("GuideWikipedia")
+        else { return }
+        _ = browser.setTabFavicon(favicon, iconAccent: nil, for: id, matching: assignment)
     }
 
     func move(_ id: TabID, by offset: Int) {

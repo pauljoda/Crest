@@ -25,8 +25,9 @@ import SwiftUI
 ///   gesture cannot replace it, because web content consumes the clicks that
 ///   matter. The reorder state's registry, in the global space, is how a drag
 ///   arriving from the sidebar knows which cards it is between.
-/// - **`BrowserSplitCardLifecycleModifier`**, which keeps this member's tab row and
-///   history current while some other card holds focus.
+///
+/// Every card's page, focused or not, reports its navigations to the core,
+/// which keeps its tab row and history current.
 struct BrowserSplitCardView: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
@@ -63,15 +64,6 @@ struct BrowserSplitCardView: View {
             tabPromotionNamespace: tabPromotionNamespace,
             startPageFocusRequest: startPageFocusRequest,
             isCommandPalettePresented: isCommandPalettePresented
-        )
-        .modifier(
-            BrowserSplitCardLifecycleModifier(
-                tab: tab,
-                space: space,
-                page: isSelectedSpace ? page : nil,
-                browser: browser,
-                pages: pages
-            )
         )
         .overlay {
             BrowserSplitCardHoverTracker { isHovering in

@@ -46,6 +46,21 @@
         private var creating = false
         private var created = false
         private var disposed = false
+        /// Tells the core what the page's navigations and icon do.
+        @ObservationIgnored private lazy var reporter = EnginePageReporter(
+            pageID: pageID, title: { [weak self] in self?.reportedTitle ?? "" },
+            report: { [weak self] event, icon in
+                guard let self else { return }
+                self.binding?.pageReported(event, icon: icon.map { (self.pageID, $0) })
+            })
+        /// The page's title, as the last `changed` report gave it.
+        @ObservationIgnored private var reportedTitle = ""
+        /// The engine started a navigation to a new document since the last
+        /// commit. The host reports no start for a move within the document,
+        /// so a commit without one is such a move.
+        @ObservationIgnored private var startedSinceCommit = false
+        /// A new document committed and has not finished loading.
+        @ObservationIgnored private var awaitsFinish = false
 
         init(
             id: UUID, profileID: UUID, isPrivateBrowsing: Bool, hostCommands: (any BrowserEngineHostCommands)?,
@@ -520,6 +535,18 @@
                 url: ChromiumInternalURL.engine(requestedURL.absoluteString))
         }
 
+        /// An icon the engine found, for the document it names when that is
+        /// still the one the page shows.
+        private func reportIcon(_ values: [String: Any]) {
+            let source = (values["url"] as? String).flatMap(URL.init(string:))
+            if let source, let currentURL,
+                !BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: currentURL)
+            {
+                return
+            }
+            reporter.foundIcon(values["data"] as? Data, at: source ?? currentURL)
+        }
+
         private func history(_ entries: [ChromiumPageChange.HistoryEntry]?) -> [BrowserNavigationHistoryItem] {
             (entries ?? []).compactMap { entry in
                 guard entry.depth > 0, let url = URL(string: ChromiumInternalURL.presented(entry.url)) else {
@@ -556,7 +583,54 @@
             if change.committed == true { surface.layoutEngineView() }
             pageHost = change.url.flatMap(URL.init(string:))?.host()
             mediaSessionLocation = change.url
+            reportNavigation(change)
             observer(ChromiumPageReport(.changed, change: change.presented()))
+        }
+
+        /// Turns a `changed` report into the core's navigation events: a commit
+        /// after a start begins a new document, which finishes the first time
+        /// the engine stops loading it; a commit without one is a move within
+        /// the document.
+        private func reportNavigation(_ change: ChromiumPageChange) {
+            if let color = change.themeColor, color >> 24 > 0 {
+                reporter.themeChanged(
+                    BrowserTabIconAccent(
+                        red: Double((color >> 16) & 0xFF) / 255, green: Double((color >> 8) & 0xFF) / 255,
+                        blue: Double(color & 0xFF) / 255))
+            } else {
+                reporter.themeChanged(nil)
+            }
+            guard let url = currentURL else { return }
+            switch change.pageFailure {
+            case .navigationFailed:
+                awaitsFinish = false
+                let failure = BrowserNavigationFailure(chromiumNetError: change.errorCode ?? 0, failingURL: url)
+                reporter.failed(url, error: failure.kind)
+                return
+            case .processTerminated:
+                awaitsFinish = false
+                reporter.interrupted()
+                return
+            case nil:
+                break
+            }
+            if change.committed == true {
+                if startedSinceCommit {
+                    startedSinceCommit = false
+                    awaitsFinish = true
+                    reporter.committed(url)
+                } else {
+                    reporter.movedWithinDocument(to: url)
+                }
+            }
+            if let title = change.title, title != reportedTitle {
+                reportedTitle = title
+                reporter.titleChanged()
+            }
+            if awaitsFinish, change.isLoading != true {
+                awaitsFinish = false
+                reporter.finished(url, title: change.title)
+            }
         }
 
         private func receive(_ report: ChromiumPageReport) {
@@ -677,6 +751,11 @@
                 binding?.pageClosed(self)
             } else if event == .storeInstall || event == .storeRemove {
                 performStoreRequest(event, values)
+            } else if event == .navigationStarted {
+                startedSinceCommit = true
+                reporter.started(nil)
+            } else if event == .favicon {
+                reportIcon(values)
             }
             observer(report)
         }

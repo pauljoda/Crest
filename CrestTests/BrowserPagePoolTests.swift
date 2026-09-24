@@ -364,13 +364,6 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         XCTAssertEqual(updatedTab.title, "Background Ready")
         XCTAssertEqual(context.store.selectedSpace?.history.last?.url, destinationURL)
-        XCTAssertTrue(
-            context.updates.values.contains {
-                $0.tabID == backgroundTab.id
-                    && $0.estimatedProgress == 1
-                    && !$0.isLoading
-            }
-        )
         XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
         XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
     }
@@ -396,12 +389,6 @@ final class BrowserPagePoolTests: XCTestCase {
 
         page.load(failureURL)
         try await waitForNavigationFailure(in: page)
-        for attempt in 0..<200 {
-            if context.updates.values.contains(where: {
-                $0.tabID == backgroundTab.id && $0.url == failureURL
-            }) { break }
-            if attempt < 199 { try await Task.sleep(for: .milliseconds(20)) }
-        }
 
         let failedTab = try XCTUnwrap(
             context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id }
@@ -433,11 +420,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let expectedTerminationCount = page.processTerminationCount + 1
 
         page.webViewWebContentProcessDidTerminate(webView)
-        try await waitForBackgroundUpdate(
-            tabID: backgroundTab.id,
-            processTerminationCount: expectedTerminationCount,
-            in: context.updates
-        )
+        XCTAssertEqual(page.processTerminationCount, expectedTerminationCount)
 
         XCTAssertTrue(context.pool.containsResidentPage(for: backgroundTab.id))
         XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
@@ -2273,8 +2256,9 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertTrue(store.splitTabWithSelectedTab(source.id, matching: BrowserSpaceRuntimeAssignment(space: space)))
         let copy = try XCTUnwrap(store.selectedTab)
-        XCTAssertEqual(copy.url, child, "Resident state wins even before the page observation reaches the store.")
-        XCTAssertEqual(store.selectedSpace?.savedTabs, [source])
+        XCTAssertEqual(copy.url, child, "The copy starts where the resident page is.")
+        // The saved tab stays saved, where its page's recorded navigation left it.
+        XCTAssertEqual(store.selectedSpace?.savedTabs.map(\.id), [source.id])
         // Copying an unmaterialized copy must leave its own native state available.
         var nextCopy = BrowserTab(title: copy.title, url: copy.url, placement: .current)
         pool.prepareTabCopy(from: copy, to: &nextCopy, in: space)
@@ -2829,25 +2813,6 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTFail("Timed out waiting for a navigation failure.")
     }
 
-    private func waitForBackgroundUpdate(
-        tabID: TabID,
-        processTerminationCount: Int,
-        in recorder: BrowserBackgroundPageUpdateRecorder
-    ) async throws {
-        for attempt in 0..<200 {
-            if recorder.values.contains(where: {
-                $0.tabID == tabID
-                    && $0.processTerminationCount == processTerminationCount
-            }) {
-                return
-            }
-            if attempt < 199 {
-                try await Task.sleep(for: .milliseconds(20))
-            }
-        }
-        XCTFail("Timed out waiting for background process recovery.")
-    }
-
     /// Loads `url` as a simulated response so a back/forward entry exists without
     /// a network fixture, and waits for WebKit to commit it.
     private func load(_ url: URL, in page: BrowserPage) async throws {
@@ -2908,7 +2873,6 @@ final class BrowserPagePoolTests: XCTestCase {
         let store = BrowserStore.hostingPages(
             BrowserSession(spaces: [space]), showing: space.id, tabs: fixtureSelections
         )
-        let updates = BrowserBackgroundPageUpdateRecorder()
         let pool = BrowserPagePool(
             browser: store,
             openModifiedLink: { url, spaceID, selecting in
@@ -2926,11 +2890,6 @@ final class BrowserPagePoolTests: XCTestCase {
                     space: space,
                     session: store.presented
                 )
-            },
-            backgroundPageDidUpdate: { update in
-                updates.values.append(update)
-                store.updateBackgroundPage(update)
-                return store.session
             }
         )
         pool.select(session: store.presented)
@@ -2939,8 +2898,7 @@ final class BrowserPagePoolTests: XCTestCase {
             pool: pool,
             sourcePage: try XCTUnwrap(pool.activePage),
             sourceTabID: sourceTab.id,
-            spaceID: space.id,
-            updates: updates
+            spaceID: space.id
         )
     }
 
@@ -3136,7 +3094,6 @@ private struct ModifiedLinkContext {
     let sourcePage: BrowserPage
     let sourceTabID: TabID
     let spaceID: SpaceID
-    let updates: BrowserBackgroundPageUpdateRecorder
 
     var openedTabs: [BrowserTab] {
         store.selectedSpace?.tabs.filter { $0.id != sourceTabID } ?? []
@@ -3145,11 +3102,6 @@ private struct ModifiedLinkContext {
     func open(_ url: URL, selecting: Bool) {
         sourcePage.openModifiedLink(URLRequest(url: url), spaceID, selecting)
     }
-}
-
-@MainActor
-private final class BrowserBackgroundPageUpdateRecorder {
-    var values: [BrowserBackgroundPageUpdate] = []
 }
 
 /// One opener page, its pool, and the store that owns their tabs, so popup tests

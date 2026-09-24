@@ -2289,6 +2289,10 @@
     "folder-split-intents": {
       "category": "internal",
       "message": "Every folder and split-view command is a typed core intent, and a reversed history range is refused instead of doing nothing."
+    },
+    "single-page-app-history": {
+      "category": "improved",
+      "message": "Pages that change address without reloading, such as a new video or a repository page, now appear in history, and the tab keeps its current address when reopened."
     }
   }
 }

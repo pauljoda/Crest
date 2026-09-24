@@ -41,16 +41,6 @@ enum BrowserSessionArguments {
         let returnToSavedURL: Bool
     }
 
-    /// `tab.observe`.
-    struct TabObserve: Encodable, Sendable {
-        let tabId: UUID
-        @BrowserCoreNullable var url: String?
-        @BrowserCoreNullable var title: String?
-        let hasFavicon: Bool
-        let faviconChanged: Bool
-        @BrowserCoreNullable var iconAccent: BrowserTabIconAccent?
-    }
-
     /// `tab.icon`.
     struct TabIcon: Encodable, Sendable {
         let tabId: UUID
@@ -58,14 +48,6 @@ enum BrowserSessionArguments {
         let hasFavicon: Bool
         @BrowserCoreNullable var iconAccent: BrowserTabIconAccent?
         var emoji: String?
-    }
-
-    /// `tab.favicon.cache`.
-    struct TabFaviconCache: Encodable, Sendable {
-        let tabId: UUID
-        let url: String
-        let hasFavicon: Bool
-        @BrowserCoreNullable var iconAccent: BrowserTabIconAccent?
     }
 
     /// `tab.saved_location`.
@@ -128,14 +110,6 @@ enum BrowserSessionArguments {
     struct TransientArchive: Encodable {
         let requestId: UUID
         let tab: BrowserTab
-    }
-
-    // MARK: - History
-
-    /// `history.visit`.
-    struct HistoryVisit: Encodable, Sendable {
-        let url: String
-        @BrowserCoreNullable var title: String?
     }
 
     // MARK: - Spaces

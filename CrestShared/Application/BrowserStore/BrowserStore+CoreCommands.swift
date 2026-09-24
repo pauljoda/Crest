@@ -17,25 +17,6 @@ extension BrowserStore {
         return session.space(id: spaceID)?.folders.contains(where: { $0.id == id }) == true ? id : nil
     }
 
-    /// Records what a page reports about its tab, and answers whether the tab
-    /// changed.
-    func observeSessionTab(
-        url: URL?, title: String?, faviconData: Data?,
-        iconAccent: BrowserTabIconAccent?, tabID: TabID, in spaceID: SpaceID
-    ) -> Bool {
-        guard let tab = session.space(id: spaceID)?.tabs.first(where: { $0.id == tabID }),
-            (url ?? tab.url) != tab.url || title != tab.title
-                || faviconData != tab.faviconData || iconAccent != tab.iconAccent
-        else { return false }
-        let arguments = BrowserSessionArguments.TabObserve(
-            tabId: tabID.rawValue, url: url?.absoluteString, title: title,
-            hasFavicon: !(faviconData?.isEmpty ?? true), faviconChanged: faviconData != tab.faviconData,
-            iconAccent: iconAccent)
-        let result = family.execute(
-            .tabObserve, in: spaceID, arguments: arguments, from: self, at: .now, image: faviconData)
-        return result?.changed == true
-    }
-
     func setSessionTabIcon(
         _ mode: TabIconMode, emoji: String? = nil, faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil, tabID: TabID, in spaceID: SpaceID
@@ -45,17 +26,6 @@ extension BrowserStore {
             emoji: emoji)
         return family.execute(.tabIcon, in: spaceID, arguments: arguments, from: self, at: .now, image: faviconData)?
             .changed == true
-    }
-
-    func cacheSessionTabFavicon(
-        _ faviconData: Data, iconAccent: BrowserTabIconAccent?,
-        url: URL, tabID: TabID, in spaceID: SpaceID
-    ) -> Bool {
-        let arguments = BrowserSessionArguments.TabFaviconCache(
-            tabId: tabID.rawValue, url: url.absoluteString, hasFavicon: !faviconData.isEmpty, iconAccent: iconAccent)
-        return family.execute(
-            .tabFaviconCache, in: spaceID, arguments: arguments, from: self, at: .now, image: faviconData
-        )?.changed == true
     }
 
     func setSessionSavedLocation(_ action: BrowserSavedLocationAction, tabID: TabID, in spaceID: SpaceID) -> Bool {

@@ -75,14 +75,8 @@ internal static class NativeSessionEditor {
                 changed = renamed.CustomTitle != (string.IsNullOrWhiteSpace(title) ? null : title.Trim());
                 if (changed) renamed.Rename(title, now);
                 break;
-            case SessionOperation.TabObserve:
-                changed = Observe(Target(args.TabId ?? selected));
-                break;
             case SessionOperation.TabIcon:
                 changed = SetIcon(Target(args.RequiredTabId));
-                break;
-            case SessionOperation.TabFaviconCache:
-                changed = CacheFavicon(Target(args.RequiredTabId));
                 break;
             case SessionOperation.TabSavedLocation:
                 var located = Target(args.RequiredTabId);
@@ -120,8 +114,6 @@ internal static class NativeSessionEditor {
 
         BrowserTab? Target(Guid? id) => id is { } value ? edited.Tabs.FirstOrDefault(t => t.Id == value) : null;
 
-        TabIconMode Mode(BrowserTab tab) => tab.State.StoredIconMode ?? TabIconMode.Inferred(tab.State.Symbol);
-
         // The image itself stays in the native cache. The core names the tab
         // whose stored bytes the platform must now replace or drop.
         void Assign(Guid tab, bool adopts) => favicon = new SessionFaviconUpdate(tab, adopts);
@@ -129,25 +121,6 @@ internal static class NativeSessionEditor {
         void ClearIconAssets(BrowserTab tab) {
             tab.SetFavicon(null, null);
             Assign(tab.Id, false);
-        }
-
-        // The page settled. A rename is not touched, a blank title is the page
-        // saying nothing rather than clearing the name, and an automatic icon
-        // follows the page while a chosen or pulled one does not.
-        bool Observe(BrowserTab? tab) {
-            if (tab is null) return false;
-            var url = args.Url ?? tab.Url;
-            var title = args.Title;
-            var accent = args.IconAccent;
-            var followsPage = Mode(tab).FollowsPage;
-            var updatesIcon = followsPage && (args.FaviconChanged == true || tab.State.IconAccent != accent);
-            if (url == tab.Url && Blank(title) == Blank(tab.Title) && !updatesIcon) return false;
-            tab.ObserveAppearance(url, title);
-            if (followsPage && args.HasFavicon == true) {
-                tab.SetFavicon(url, accent);
-                Assign(tab.Id, true);
-            }
-            return true;
         }
 
         // Someone chose this tab's icon by hand, or handed it back to the page.
@@ -165,18 +138,6 @@ internal static class NativeSessionEditor {
             return true;
         }
 
-        // A favicon that finished loading after the page moved on belongs to
-        // the address it was captured from, not to whatever the tab shows now.
-        bool CacheFavicon(BrowserTab? tab) {
-            if (tab is null || !Mode(tab).FollowsPage || args.HasFavicon != true) return false;
-            var captured = args.Url ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-            if (!HistoryPolicy.SamePage(tab.Url, captured)) return false;
-            tab.SetIcon(TabIconMode.WebSymbol);
-            tab.SetFavicon(captured, args.IconAccent);
-            Assign(tab.Id, true);
-            return true;
-        }
-
         void CopyPage(Guid source, Guid copy) {
             var observation = args.CopyObservations?.FirstOrDefault(item => item.TabId == source);
             var tab = edited.Tab(copy);
@@ -185,8 +146,6 @@ internal static class NativeSessionEditor {
             copies.Add(new SessionTabCopy(source, copy));
         }
     }
-
-    private static string? Blank(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     #endregion
 }

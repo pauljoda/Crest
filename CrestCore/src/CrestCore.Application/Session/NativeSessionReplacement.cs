@@ -46,8 +46,12 @@ internal sealed class NativeSessionReplacement : IDisposable {
         }
     }
 
-    /// Accepts the reserved state, then tells the device.
-    internal void Commit() => owner.Published(Complete(), Session, FollowUp, Events);
+    /// Accepts the reserved state, then tells the device, then applies the
+    /// page edits that waited for it.
+    internal void Commit() {
+        owner.Published(Complete(), Session, FollowUp, Events);
+        owner.ApplyDeferredPageEdits();
+    }
 
     /// Accepts the reserved state and answers the one it replaced. The caller
     /// tells the device once it holds no lock.
@@ -60,12 +64,15 @@ internal sealed class NativeSessionReplacement : IDisposable {
         }
     }
 
+    /// Leaves the session as it was, then applies the page edits that waited
+    /// for the reservation.
     public void Dispose() {
         lock (NativeSessionAuthority.Gate) {
             if (completed) return;
             owner.CompleteReplacement(this, false);
             completed = true;
         }
+        owner.ApplyDeferredPageEdits();
     }
 
     #endregion

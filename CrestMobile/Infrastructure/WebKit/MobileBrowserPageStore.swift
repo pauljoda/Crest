@@ -29,9 +29,9 @@ final class MobileBrowserPageStore:
     typealias ModifiedLinkOpener =
         @MainActor (URL, SpaceID, Bool) -> BrowserModifiedLinkRegistration?
 
-    @ObservationIgnored private let backgroundPageDidUpdate: (BrowserBackgroundPageUpdate) -> Void
+    /// What each background page the store watches looked like when it last
+    /// changed, which tells when its first navigation settled.
     @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
-    @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
 
     /// The focused card: the one page the toolbar, find bar, navigation
     /// controls, and every lifecycle observer speak for. Split View adds cards
@@ -117,7 +117,6 @@ final class MobileBrowserPageStore:
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         openNewTab: @escaping (URL) -> Void = { _ in },
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
-        backgroundPageDidUpdate: @escaping (BrowserBackgroundPageUpdate) -> Void = { _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         residencyDecisionProvider: @escaping ResidencyDecisionProvider = {
             page,
@@ -143,7 +142,6 @@ final class MobileBrowserPageStore:
         self.linkDestinationHost = linkDestinationHost
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
-        self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
         // Windows share their browsing mode's downloads; a store made on its
         // own, such as a preview's, keeps them over its window's core.
@@ -164,6 +162,7 @@ final class MobileBrowserPageStore:
             installMemoryPressureSource()
         }
         pageZoomPreferences.register(self)
+        browser.core.engines.observeRecords(self) { [weak self] in self?.restyleVisitedLinks(after: $0) }
     }
 
     deinit {
@@ -264,13 +263,14 @@ final class MobileBrowserPageStore:
         else { return }
         pagesByTabID[registration.tab.id] = page
         residencyRevision &+= 1
-        observeBackgroundPage(page, in: space)
+        observeBackgroundPage(page)
         page.load(request)
         if selecting { select(session: registration.session) }
     }
 
-    private func observeBackgroundPage(_ page: MobileBrowserPage, in space: BrowserSpace) {
-        backgroundPageAssignments[page.tabID] = BrowserSpaceRuntimeAssignment(space: space)
+    /// Watches a page opened behind the one on screen until its first
+    /// navigation settles, so residency can count its idle time.
+    private func observeBackgroundPage(_ page: MobileBrowserPage) {
         backgroundPageSnapshots[page.tabID] = BrowserBackgroundPageSnapshot(page: page)
         trackBackgroundPageChanges(page)
     }
@@ -288,9 +288,7 @@ final class MobileBrowserPageStore:
 
     private func backgroundPageDidChange(_ page: MobileBrowserPage) {
         let tabID = page.tabID
-        guard pagesByTabID[tabID] === page,
-            let assignment = backgroundPageAssignments[tabID]
-        else { return }
+        guard pagesByTabID[tabID] === page, backgroundPageSnapshots[tabID] != nil else { return }
         let previous = backgroundPageSnapshots[tabID]
         let current = BrowserBackgroundPageSnapshot(page: page)
         backgroundPageSnapshots[tabID] = current
@@ -300,18 +298,6 @@ final class MobileBrowserPageStore:
         {
             stampPreparedPageIfNeeded(tabID, at: .now)
         }
-        guard previous != current, !presentedTabIDs.contains(tabID) else { return }
-        let completedURL =
-            current.completedNavigationCount > (previous?.completedNavigationCount ?? 0)
-            ? page.url : nil
-        backgroundPageDidUpdate(
-            BrowserBackgroundPageUpdate(
-                tabID: tabID, assignment: assignment, url: current.url,
-                title: current.title, faviconData: current.faviconData,
-                iconAccent: current.iconAccent, estimatedProgress: current.estimatedProgress,
-                isLoading: current.isLoading, readerModeState: current.readerModeState,
-                completedNavigationURL: completedURL, processTerminationCount: 0
-            ))
     }
 
     private func prepareSelectedPage(
@@ -634,7 +620,6 @@ final class MobileBrowserPageStore:
         }
         pagesByTabID.removeAll()
         backgroundPageSnapshots.removeAll()
-        backgroundPageAssignments.removeAll()
         residencyRevision &+= 1
         inactiveSinceByTabID.removeAll()
         memoryPressureReleaseTask?.cancel()
@@ -663,6 +648,18 @@ final class MobileBrowserPageStore:
 
     func styleVisitedLinks(in space: BrowserSpace) async {
         await activePage?.styleVisitedLinks(history: space.history)
+    }
+
+    /// A visit the core recorded in the Space the active page shows restyles
+    /// its visited links.
+    private func restyleVisitedLinks(after records: Engines.PageRecords) {
+        guard let page = activePage,
+            records.navigations.contains(where: {
+                $0.workspaceID == browser.window.workspaceID && $0.spaceID == page.spaceID.rawValue
+            }),
+            let space = browser.session.space(id: page.spaceID)
+        else { return }
+        Task { @MainActor [weak self] in await self?.styleVisitedLinks(in: space) }
     }
 
     func makePeekPageLease(
@@ -849,7 +846,7 @@ final class MobileBrowserPageStore:
         if selecting {
             activate(page, at: .now)
         } else {
-            observeBackgroundPage(page, in: registration.space)
+            observeBackgroundPage(page)
         }
         return page.webView
     }
@@ -1461,7 +1458,6 @@ final class MobileBrowserPageStore:
     }
 
     private func forgetBackgroundPageObservation(for tabID: TabID) {
-        backgroundPageAssignments[tabID] = nil
         backgroundPageSnapshots[tabID] = nil
     }
 

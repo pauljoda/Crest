@@ -37,6 +37,7 @@ final class BrowserQuickWindowModel {
         self.preferences = preferences
         self.requestLifecycle = requestLifecycle
         activityClock = BrowserTransientActivityClock()
+        browser.core.engines.observeRecords(self) { [weak self] in self?.recordActivity(after: $0) }
     }
 
     init(
@@ -209,18 +210,11 @@ final class BrowserQuickWindowModel {
         return true
     }
 
-    func recordCompletedNavigation() {
-        guard isCurrentRequest,
-            let pageLease,
-            let page = pageLease.page,
-            let url = page.url
-        else { return }
+    /// A navigation the core recorded for this Quick Window's page is
+    /// activity, which keeps the window from archiving itself while in use.
+    private func recordActivity(after records: Engines.PageRecords) {
+        guard isCurrentRequest, let page, records.recordedNavigation(of: page.corePage.id) else { return }
         activityClock.recordActivity(restartsTimerImmediately: true)
-        browser.recordVisit(
-            url: url,
-            title: page.title,
-            matching: pageLease.assignment
-        )
     }
 
     func updatePresentedURL(_ url: URL) {

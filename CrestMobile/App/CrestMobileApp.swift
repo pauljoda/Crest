@@ -171,7 +171,6 @@ private final class BrowserMobileApplication {
                 else { return nil }
                 return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.presented)
             },
-            backgroundPageDidUpdate: { browser.updateBackgroundPage($0) },
             openPeek: { request in transientBrowsing.presentPeek(request) }
         )
 

@@ -30,6 +30,7 @@ enum Change: Equatable, Sendable {
     case downloadsRemoved(DownloadsRemoved)
     case foldersChanged(FoldersChanged)
     case historyChanged(HistoryChanged)
+    case navigationRecorded(NavigationRecorded)
     case pageChanged(PageChanged)
     case pageOpened(PageOpened)
     case pageRemoved(PageRemoved)
@@ -110,6 +111,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownTab(UnknownTab)
     case unknownWorkspace(UnknownWorkspace)
     case unsavedWorkspace(UnsavedWorkspace)
+    case unsupportedAddress(UnsupportedAddress)
     case webPagesOnly(WebPagesOnly)
     case windowNotOpen(WindowNotOpen)
     case workspaceBusy(WorkspaceBusy)
@@ -131,6 +133,7 @@ extension CoreState {
         case .downloadsRemoved(let change): apply(change)
         case .foldersChanged(let change): apply(change)
         case .historyChanged(let change): apply(change)
+        case .navigationRecorded(let change): apply(change)
         case .pageChanged(let change): apply(change)
         case .pageOpened(let change): apply(change)
         case .pageRemoved(let change): apply(change)
@@ -889,6 +892,45 @@ struct NativeTabContent: Equatable, Sendable {
     let resourceID: UUID?
 }
 
+struct NavigateTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let url: String
+}
+
+struct NavigationCommitted: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String
+    let sameDocument: Bool
+}
+
+struct NavigationFailed: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String?
+    let error: NavigationError
+}
+
+struct NavigationFinished: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String
+    let title: String
+}
+
+struct NavigationRecorded: Equatable, Sendable {
+    let pageID: UUID
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID?
+    let url: String
+}
+
+struct NavigationStarted: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String
+    let sameDocument: Bool
+}
+
 struct OpenLinkInSplit: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -932,6 +974,12 @@ struct PageCreated: EngineEvent, Equatable, Sendable {
 
 struct PageCreationFailed: EngineEvent, Equatable, Sendable {
     let pageID: UUID
+}
+
+struct PageIconChanged: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String
+    let accent: TabIconAccent?
 }
 
 struct PageOpened: Equatable, Sendable {
@@ -1364,6 +1412,7 @@ struct TabFaviconAssigned: Equatable, Sendable {
     let workspaceID: UUID
     let tabID: UUID
     let adopts: Bool
+    let pageID: UUID?
 }
 
 struct TabIconAccent: Equatable, Sendable {
@@ -1452,6 +1501,10 @@ struct UnknownWorkspace: Equatable, Sendable {
 
 struct UnsavedWorkspace: Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct UnsupportedAddress: Equatable, Sendable {
+    let url: String
 }
 
 struct WebPagesOnly: Equatable, Sendable {
@@ -3242,6 +3295,71 @@ struct MemoryPressureLevel: Hashable, Sendable {
     }
 
     static func == (lhs: MemoryPressureLevel, rhs: MemoryPressureLevel) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `NavigationError`. A member's wire tag is its index in `all`.
+struct NavigationError: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let code: String
+
+    private init(tag: Int, name: String, code: String) {
+        self.tag = tag
+        self.name = name
+        self.code = code
+    }
+
+    static let offline = NavigationError(tag: 0, name: "offline", code: "CREST_INTERNET_DISCONNECTED")
+    static let timedOut = NavigationError(tag: 1, name: "timedOut", code: "CREST_TIMED_OUT")
+    static let cannotFindServer = NavigationError(tag: 2, name: "cannotFindServer", code: "CREST_NAME_NOT_RESOLVED")
+    static let cannotConnect = NavigationError(tag: 3, name: "cannotConnect", code: "CREST_CONNECTION_REFUSED")
+    static let connectionLost = NavigationError(tag: 4, name: "connectionLost", code: "CREST_CONNECTION_RESET")
+    static let secureConnectionFailed = NavigationError(
+        tag: 5,
+        name: "secureConnectionFailed",
+        code: "CREST_CERTIFICATE_INVALID"
+    )
+    static let tooManyRedirects = NavigationError(tag: 6, name: "tooManyRedirects", code: "CREST_TOO_MANY_REDIRECTS")
+    static let unsupportedAddress = NavigationError(
+        tag: 7,
+        name: "unsupportedAddress",
+        code: "CREST_UNSUPPORTED_ADDRESS"
+    )
+    static let blocked = NavigationError(tag: 8, name: "blocked", code: "CREST_CONTENT_BLOCKED")
+    static let unavailable = NavigationError(tag: 9, name: "unavailable", code: "CREST_RESOURCE_UNAVAILABLE")
+    static let webContentProcessStopped = NavigationError(
+        tag: 10,
+        name: "webContentProcessStopped",
+        code: "CREST_WEB_PROCESS_STOPPED"
+    )
+    static let unknown = NavigationError(tag: 11, name: "unknown", code: "CREST_NAVIGATION_FAILED")
+
+    static let all: [NavigationError] = [
+        offline,
+        timedOut,
+        cannotFindServer,
+        cannotConnect,
+        connectionLost,
+        secureConnectionFailed,
+        tooManyRedirects,
+        unsupportedAddress,
+        blocked,
+        unavailable,
+        webContentProcessStopped,
+        unknown
+    ]
+
+    static func named(_ name: String?) -> NavigationError? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: NavigationError, rhs: NavigationError) -> Bool {
         lhs.tag == rhs.tag
     }
 

@@ -30,10 +30,7 @@ public sealed partial class BrowserContractsTests {
         core.AttachAccess(access);
         var identity = Identity(session);
         var rename = SpaceCommand(session, "tab.rename", new() { ["tabId"] = session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
-        var visit = SpaceCommand(session, "history.visit",
-            new() { ["url"] = "https://example.com/secret", ["title"] = "Secret" });
-        foreach (var request in new[] { rename, visit })
-            Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(request)).Code);
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(rename)).Code);
         using var device = new TestDevice(core);
         var folder = Guid.Parse(session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.GetValue<string>());
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>

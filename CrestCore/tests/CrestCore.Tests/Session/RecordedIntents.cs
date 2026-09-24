@@ -34,9 +34,13 @@ internal sealed class TestIds : IIdSource {
     #endregion
 }
 
-/// The recorded session commands whose operations are typed intents now. A
-/// recorded step keeps the request the command sent, so the step runs as the
-/// intent that replaced it, at the time the request names.
+/// A recorded `history.visit`, which a page's engine reports now: a document
+/// in the Space `SpaceId` finished at `Url`, titled `Title`, at `At`.
+internal sealed record RecordedNavigation(Guid SpaceId, string Url, string Title, DateTimeOffset At);
+
+/// The recorded session commands whose operations are typed intents or engine
+/// reports now. A recorded step keeps the request the command sent, so the
+/// step runs as what replaced it, at the time the request names.
 internal static class RecordedIntents {
     #region Actions - Reading
 
@@ -64,6 +68,33 @@ internal static class RecordedIntents {
             "split.tint" => new TintSplit(workspace, Id("spaceId"), Argument("groupId"), Color(arguments["value"])),
             _ => null
         };
+    }
+
+    /// The navigation a recorded `history.visit` stands for, or null for any
+    /// other request.
+    public static RecordedNavigation? Navigation(JsonObject request) {
+        if (request["operation"]!.GetValue<string>() != "history.visit") return null;
+        var arguments = request["arguments"]!.AsObject();
+        return new(Guid.Parse(request["spaceId"]!.GetValue<string>()), arguments["url"]!.GetValue<string>(),
+            arguments["title"]?.GetValue<string>() ?? "", Time(request));
+    }
+
+    /// An engine for recorded navigations' pages, which does what the core asks.
+    public static Engine PageEngine(CrestApp app) =>
+        app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, IsDefault: true), _ => { });
+
+    /// Reports `navigation` from a page `engine` hosts in `window` for no tab,
+    /// as a Quick Window's page does, and answers the changes the core
+    /// published, through the page's release.
+    public static IReadOnlyList<Change> Report(CrestApp app, Engine engine, RecordedNavigation navigation, Guid workspace, Guid window) {
+        var page = Guid.NewGuid();
+        var changes = new List<Change>(app.Send(new OpenPage(page, workspace, navigation.SpaceId, null, window)));
+        app.Report(engine, new PageCreated(page));
+        app.Report(engine, new NavigationStarted(page, navigation.Url, SameDocument: false));
+        app.Report(engine, new NavigationCommitted(page, navigation.Url, SameDocument: false));
+        app.Report(engine, new NavigationFinished(page, navigation.Url, navigation.Title));
+        changes.AddRange(app.Send(new ReleasePage(page, KeepsState: false)));
+        return changes;
     }
 
     /// The identities a recorded request gave the records it made, which the

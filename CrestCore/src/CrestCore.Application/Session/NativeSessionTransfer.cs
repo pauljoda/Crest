@@ -49,6 +49,8 @@ public sealed class NativeSessionTransfer : IDisposable {
         }
         source.Published(previousSource, a.Session, a.FollowUp, a.Events);
         destination.Published(previousDestination, b.Session, b.FollowUp, b.Events);
+        source.ApplyDeferredPageEdits();
+        destination.ApplyDeferredPageEdits();
     }
 
     /// Reserves both states, stages the side that syncs, saves the side that
@@ -75,6 +77,8 @@ public sealed class NativeSessionTransfer : IDisposable {
 
     public void Dispose() {
         lock (NativeSessionAuthority.Gate) { if (completed) return; a?.Dispose(); b?.Dispose(); completed = true; }
+        source.ApplyDeferredPageEdits();
+        destination.ApplyDeferredPageEdits();
     }
 
     #endregion

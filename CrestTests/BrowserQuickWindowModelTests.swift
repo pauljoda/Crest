@@ -13,7 +13,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         page.webView.loadHTMLString("<title>Quick page</title>", baseURL: context.model.presentedRequest.url)
         try await waitUntil { page.title == "Quick page" && !page.isLoading }
         XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
-        context.browser.updateSelectedTabFromPage(url: nil, title: "Unrelated selected tab")
+        context.browser.seedSelectedTabNavigation(to: nil, titled: "Unrelated selected tab")
         XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
         let changed = expectation(description: "Quick Window observes document title")
         withObservationTracking {
@@ -78,7 +78,6 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         XCTAssertNil(sourceLease.page)
         XCTAssertNil(model.pageLease)
 
-        model.recordCompletedNavigation()
         XCTAssertFalse(model.archivePageIfNeeded())
         XCTAssertTrue(
             context.browser.session.space(id: context.source.id)?.history
@@ -262,11 +261,13 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         )
     }
 
+    /// The core records the Quick Window page's visit in the Space it
+    /// browses, and the recorded navigation counts as activity.
     func testCompletedNavigationRecordsOneVisitOnlyInTheExactSourceSpace() async throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
         let page = try XCTUnwrap(context.model.page)
-        let startingCount = page.completedNavigationCount
+        let activity = context.model.activityClock.revision
         let historyURL = try XCTUnwrap(
             URL(string: "https://quick-history.crest.test/completed")
         )
@@ -276,10 +277,9 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             baseURL: historyURL
         )
         try await waitUntil(timeout: .seconds(8)) {
-            page.completedNavigationCount > startingCount
-                && page.url?.host() == historyURL.host()
+            context.browser.session.space(id: context.source.id)?.history.isEmpty == false
         }
-        context.model.recordCompletedNavigation()
+        XCTAssertGreaterThan(context.model.activityClock.revision, activity)
 
         let sourceHistory = try XCTUnwrap(
             context.browser.session.space(id: context.source.id)?.history

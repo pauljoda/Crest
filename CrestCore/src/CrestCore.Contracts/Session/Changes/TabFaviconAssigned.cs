@@ -1,6 +1,7 @@
 namespace CrestCore.Contracts;
 
-/// <summary>A command decided which image a tab shows: the one the page that issued
-/// the command reported when <see cref="Adopts"/>, else none. The image bytes stay
+/// <summary>The core decided which image a tab shows. When <see cref="Adopts"/> it
+/// wears the image <see cref="PageId"/> reported, or with no page the one the
+/// issuer of its command offered; otherwise it wears none. The image bytes stay
 /// with the platform.</summary>
-public sealed record TabFaviconAssigned(Guid WorkspaceId, Guid TabId, bool Adopts) : Change;
+public sealed record TabFaviconAssigned(Guid WorkspaceId, Guid TabId, bool Adopts, Guid? PageId) : Change;

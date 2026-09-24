@@ -140,18 +140,14 @@ extension MobileBrowserRootModel {
 // MARK: - Page Synchronization
 
 extension MobileBrowserRootModel {
+    /// Shows the address of the selected page in the address field, unless
+    /// the person is editing it. The core records what the page's navigations
+    /// change in the session from its engine's reports.
     func synchronizePageMetadata(isAddressEditing: Bool) {
         guard let page = selectedPage, let source = selectedTabAssignment,
-            let updatedAddress = pageSession.synchronize(page.metadata, matching: source)
+            let updatedAddress = pageSession.address(of: page.metadata, matching: source)
         else { return }
         if !isAddressEditing { address = updatedAddress }
-    }
-
-    func recordCompletedNavigation(isAddressEditing: Bool) {
-        guard let page = selectedPage, page.url != nil, let source = selectedTabAssignment else { return }
-        synchronizePageMetadata(isAddressEditing: isAddressEditing)
-        guard let space = pageSession.recordCompletedNavigation(page.metadata, matching: source) else { return }
-        Task { await pages.styleVisitedLinks(in: space) }
     }
 
 }

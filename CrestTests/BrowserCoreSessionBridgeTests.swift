@@ -16,6 +16,7 @@ final class BrowserCoreSessionBridgeTests: XCTestCase {
         original.spaces[0].tabs[0].faviconURL = original.spaces[0].tabs[0].url
         let harness = try BrowserStoredSessionHarness(session: original)
         let store = harness.store
+        harness.core.engines.register(WebKitEngineBinding(), isDefault: true)
         var batches: [[Change]] = []
         harness.core.batchApplied = { batches.append($0) }
         let spaceID = original.spaces[0].id
@@ -24,8 +25,10 @@ final class BrowserCoreSessionBridgeTests: XCTestCase {
         let opened = try XCTUnwrap(
             store.openSessionTab(title: "Opened", url: URL(string: "https://opened.example/"), in: spaceID))
         XCTAssertTrue(store.setTabCustomTitle("Renamed", for: opened, in: spaceID))
-        store.recordVisit(url: try XCTUnwrap(URL(string: "https://visited.example/a")), title: "First")
-        store.recordVisit(url: try XCTUnwrap(URL(string: "https://visited.example/a#again")), title: "Again")
+        let page = try XCTUnwrap(store.openReportingPage(for: nil, in: spaceID))
+        store.finishNavigation(of: page, to: try XCTUnwrap(URL(string: "https://visited.example/a")), titled: "First")
+        store.finishNavigation(
+            of: page, to: try XCTUnwrap(URL(string: "https://visited.example/a#again")), titled: "Again")
         XCTAssertTrue(store.closeTab(opened, in: spaceID))
         store.restoreArchivedTab(opened)
         let folder = try XCTUnwrap(

@@ -1,0 +1,264 @@
+using System.Text.Json.Nodes;
+
+using CrestCore.Application;
+using CrestCore.Contracts;
+using CrestCore.Domain;
+
+using Xunit;
+
+namespace CrestCore.Tests;
+
+/// What the core records from a page's navigations: one record per document,
+/// on the tab that owns the page and in its Space's history, and nothing for a
+/// failure, a locked Space or a move that stays on the page.
+public sealed partial class BrowserContractsTests {
+    /// A live page for the fixture tab of `session`'s first Space, or for a
+    /// Quick Window or Peek request when `transient`, hosted over `authority`.
+    private static (CrestApp App, Engine Engine, Guid Page, Guid Workspace) NavigatingPage(NativeSessionAuthority authority,
+        JsonNode session, bool transient = false) {
+        var (app, engine, _, workspace, window) = PageHost(authority);
+        var page = Guid.NewGuid();
+        var space = session["spaces"]![0]!;
+        app.Send(new OpenPage(page, workspace, SpaceId(space), transient ? null : TabId(space, 0), window));
+        app.Report(engine, new PageCreated(page));
+        app.Drain();
+        return (app, engine, page, workspace);
+    }
+
+    /// Reports a new document at `url` that finishes titled `title`, and
+    /// answers the changes it caused.
+    private static IReadOnlyList<Change> Navigate(CrestApp app, Engine engine, Guid page, string url, string title) {
+        app.Report(engine, new NavigationStarted(page, url, SameDocument: false));
+        app.Report(engine, new NavigationCommitted(page, url, SameDocument: false));
+        app.Report(engine, new NavigationFinished(page, url, title));
+        return Own(app.Drain());
+    }
+
+    private static TabState FirstTab(NativeSessionAuthority authority) => authority.Current.Spaces[0].Tabs[0];
+
+    private static IReadOnlyList<HistoryEntryState> History(NativeSessionAuthority authority) => authority.Current.Spaces[0].History;
+
+    [Fact]
+    public void ATabsPageRecordsEachDocumentOnceInOneRevisionWhenItFinishes() {
+        var session = SavedSession().Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var (app, engine, page, workspace) = NavigatingPage(authority, session);
+        using var disposal = app;
+        var earlier = History(authority)[0];
+
+        // The tab and the visit change together, then the record is announced.
+        var changes = Navigate(app, engine, page, "https://example.com/article#two", "Later title");
+        Assert.Equal([typeof(TabsChanged), typeof(HistoryChanged), typeof(NavigationRecorded)], changes.Select(change => change.GetType()));
+        Assert.Equal(new NavigationRecorded(page, workspace, SpaceId(session["spaces"]![0]!), FirstTab(authority).Id,
+            "https://example.com/article#two"), changes[^1]);
+        Assert.Equal(("https://example.com/article#two", "Later title"), (FirstTab(authority).Url, FirstTab(authority).Title));
+        // A page's title never replaces a name the person gave the tab.
+        Assert.Equal("My reading", FirstTab(authority).CustomTitle);
+        // A fragment is the same page, so the visit joins its entry.
+        Assert.Equal(earlier with { Title = "Later title", LastVisitedAt = History(authority)[0].LastVisitedAt, VisitCount = 5 },
+            History(authority)[0]);
+
+        // A second finish of the same document records nothing.
+        app.Report(engine, new NavigationFinished(page, "https://example.com/article#two", "Again"));
+        Assert.Empty(Own(app.Drain()));
+
+        // A document that commits and never finishes records nothing.
+        app.Report(engine, new NavigationCommitted(page, "https://example.com/unfinished", SameDocument: false));
+        Assert.Empty(Own(app.Drain()));
+        Assert.Equal("https://example.com/article#two", FirstTab(authority).Url);
+
+        // A blank title is the page saying nothing, not a request to clear.
+        Navigate(app, engine, page, "https://example.com/untitled", "");
+        Assert.Equal(("https://example.com/untitled", "Later title"), (FirstTab(authority).Url, FirstTab(authority).Title));
+        Assert.Equal(("https://example.com/untitled", "example.com"), (History(authority)[0].Url, History(authority)[0].Title));
+    }
+
+    [Fact]
+    public void AQuickWindowOrPeekPageRecordsOnlyAVisit() {
+        var session = SavedSession().Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var (app, engine, page, workspace) = NavigatingPage(authority, session, transient: true);
+        using var disposal = app;
+        var tab = FirstTab(authority);
+
+        var changes = Navigate(app, engine, page, "https://news.example/story", "Story");
+        Assert.Equal([typeof(HistoryChanged), typeof(NavigationRecorded)], changes.Select(change => change.GetType()));
+        Assert.Null(Assert.IsType<NavigationRecorded>(changes[^1]).TabId);
+        Assert.Equal(tab, FirstTab(authority));
+        Assert.Equal(("https://news.example/story", "Story", 1), (History(authority)[0].Url, History(authority)[0].Title,
+            History(authority)[0].VisitCount));
+
+        // An address history does not keep changes nothing, and is still taken.
+        var history = History(authority);
+        Assert.Equal([typeof(NavigationRecorded)], Navigate(app, engine, page, "crest://extensions", "Extensions")
+            .Select(change => change.GetType()));
+        Assert.Equal(history, History(authority));
+    }
+
+    [Fact]
+    public void APageInALockedSpaceRecordsNothing() {
+        var session = GuardedSession();
+        var access = new SpaceAccessAuthority();
+        var authority = new NativeSessionAuthority(Bytes(session));
+        authority.AttachAccess(access);
+        var identity = Identity(session);
+        Grant(access, identity);
+        var (app, engine, page, _) = NavigatingPage(authority, session);
+        using var disposal = app;
+        var before = authority.Current;
+
+        access.Lock(identity.Space);
+        Assert.Empty(Navigate(app, engine, page, "https://example.com/secret", "Secret"));
+        Assert.Same(before, authority.Current);
+    }
+
+    [Fact]
+    public void APrivateWorkspaceRecordsIntoItsOwnMemorySession() {
+        var session = SavedSession().Document["session"]!.DeepClone().AsObject();
+        session["coreWorkspaceKind"] = "private";
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var (app, engine, page, _) = NavigatingPage(authority, session);
+        using var disposal = app;
+
+        Assert.Contains(Navigate(app, engine, page, "https://private.example/", "Private"), change => change is NavigationRecorded);
+        Assert.Equal(WorkspaceKind.Private, authority.Kind);
+        Assert.Equal("https://private.example/", FirstTab(authority).Url);
+        Assert.Equal("https://private.example/", History(authority)[0].Url);
+    }
+
+    [Fact]
+    public void AMoveWithinTheDocumentRecordsOnlyWhenItReachesAnotherPage() {
+        var session = SavedSession().Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var (app, engine, page, _) = NavigatingPage(authority, session);
+        using var disposal = app;
+        Navigate(app, engine, page, "https://app.example/inbox", "Inbox");
+
+        void Move(string url, string title) {
+            app.Report(engine, new NavigationStarted(page, url, SameDocument: true));
+            app.Report(engine, new NavigationCommitted(page, url, SameDocument: true));
+            app.Report(engine, new NavigationFinished(page, url, title));
+        }
+
+        // A fragment stays on the page it names.
+        Move("https://app.example/inbox#message-4", "Inbox");
+        Assert.Empty(Own(app.Drain()));
+        Assert.Equal("https://app.example/inbox", FirstTab(authority).Url);
+
+        // `pushState` to another page is a visit of its own, recorded once.
+        Move("https://app.example/message/4", "Message 4");
+        Assert.Single(Own(app.Drain()).OfType<NavigationRecorded>());
+        Assert.Equal(("https://app.example/message/4", "Message 4"), (FirstTab(authority).Url, FirstTab(authority).Title));
+        Assert.Equal(["https://app.example/message/4", "https://app.example/inbox"], History(authority).Take(2).Select(entry => entry.Url));
+        app.Report(engine, new NavigationFinished(page, "https://app.example/message/4", "Message 4"));
+        Assert.Empty(Own(app.Drain()));
+    }
+
+    [Fact]
+    public void AFailedNavigationRecordsNothingAndTheNextDocumentDoes() {
+        var session = SavedSession().Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var (app, engine, page, _) = NavigatingPage(authority, session);
+        using var disposal = app;
+        var before = authority.Current;
+
+        app.Report(engine, new NavigationStarted(page, "https://down.example/", SameDocument: false));
+        app.Report(engine, new NavigationCommitted(page, "https://down.example/", SameDocument: false));
+        app.Report(engine, new NavigationFailed(page, "https://down.example/", NavigationError.ConnectionLost));
+        app.Report(engine, new NavigationFinished(page, "https://down.example/", "Error"));
+        Assert.Empty(Own(app.Drain()));
+        Assert.Same(before, authority.Current);
+
+        Assert.Single(Navigate(app, engine, page, "https://up.example/", "Up").OfType<NavigationRecorded>());
+    }
+
+    [Fact]
+    public void AFinishThatArrivesDuringATransactionIsRecordedOnceAfterIt() {
+        var session = SavedSession().Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var (app, engine, page, _) = NavigatingPage(authority, session);
+        using var disposal = app;
+        var rename = authority.PrepareCommand(SpaceCommand(session, "tab.rename",
+            new() { ["tabId"] = FirstTab(authority).Id.ToString(), ["title"] = "Renamed" }));
+
+        var reserved = rename.Reserve();
+        app.Report(engine, new NavigationCommitted(page, "https://example.org/during", SameDocument: false));
+        app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
+        Assert.Empty(Own(app.Drain()));
+        Assert.Equal("https://example.com/article#one", FirstTab(authority).Url);
+
+        reserved.Commit();
+        var changes = Own(app.Drain());
+        Assert.Single(changes.OfType<NavigationRecorded>());
+        Assert.Equal(("Renamed", "https://example.org/during", "During"),
+            (FirstTab(authority).CustomTitle, FirstTab(authority).Url, FirstTab(authority).Title));
+        Assert.Equal(("https://example.org/during", 1), (History(authority)[0].Url, History(authority)[0].VisitCount));
+        app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
+        Assert.Empty(Own(app.Drain()));
+    }
+
+    [Fact]
+    public void ATabWearsItsDocumentsIconOnlyWhileItsIconFollowsThePage() {
+        var session = SavedSession().Document["session"]!;
+        var authority = new NativeSessionAuthority(Bytes(session));
+        var (app, engine, page, workspace) = NavigatingPage(authority, session);
+        using var disposal = app;
+        var tab = FirstTab(authority).Id;
+        void Choose(string mode, string? emoji = null) => authority.PrepareCommand(SpaceCommand(session, "tab.icon",
+            new() { ["tabId"] = tab.ToString(), ["mode"] = mode, ["emoji"] = emoji })).Commit();
+        Choose("automatic");
+        app.Drain();
+        var accent = new TabIconAccent(0.5, 0.25, 0.125);
+
+        // An icon found before the document is recorded waits for the record.
+        app.Report(engine, new NavigationCommitted(page, "https://example.org/", SameDocument: false));
+        app.Report(engine, new PageIconChanged(page, "https://example.org/", accent));
+        Assert.Empty(Own(app.Drain()));
+        app.Report(engine, new NavigationFinished(page, "https://example.org/", "Example"));
+        Assert.Contains(new TabFaviconAssigned(workspace, tab, Adopts: true, page), Own(app.Drain()));
+        Assert.Equal(("https://example.org/", accent), (FirstTab(authority).FaviconUrl, FirstTab(authority).IconAccent));
+
+        // Once it is recorded, a new icon or theme goes straight to the tab.
+        var themed = new TabIconAccent(1, 0, 0);
+        app.Report(engine, new PageIconChanged(page, "https://example.org/", themed));
+        Assert.Equal([typeof(TabsChanged), typeof(TabFaviconAssigned)], Own(app.Drain()).Select(change => change.GetType()));
+        Assert.Equal(themed, FirstTab(authority).IconAccent);
+
+        // A new document leaves the old one's icon behind.
+        Navigate(app, engine, page, "https://example.net/", "Elsewhere");
+        Assert.Equal("https://example.org/", FirstTab(authority).FaviconUrl);
+
+        // A chosen icon is never replaced by the page's.
+        Choose("emoji", "📚");
+        app.Drain();
+        app.Report(engine, new PageIconChanged(page, "https://example.net/", accent));
+        Assert.Empty(Own(app.Drain()));
+        Assert.Equal("crest.emoji:📚", FirstTab(authority).Symbol);
+    }
+
+    [Fact]
+    public void NavigatingANativeTabGivesItAWebAddressAndLeavesAWebPageToItsEngine() {
+        var fixture = SavedSession();
+        var session = fixture.Document["session"]!;
+        var tab = session["spaces"]![0]!["tabs"]![0]!.AsObject();
+        tab["url"] = null;
+        tab["savedURL"] = null;
+        tab["nativeContent"] = new JsonObject { ["kind"] = "settings" };
+        var authority = new NativeSessionAuthority(Bytes(session));
+        using var app = new CrestApp();
+        var workspace = app.AttachWorkspace(authority);
+        app.Drain();
+
+        Assert.IsType<TabsChanged>(Assert.Single(app.Send(new NavigateTab(workspace, fixture.Space, fixture.Tab, "https://example.org/"))));
+        Assert.Null(FirstTab(authority).NativeContent);
+        Assert.Equal(("https://example.org/", "example.org"), (FirstTab(authority).Url, FirstTab(authority).Title));
+
+        // A web page keeps its address until its engine reports one.
+        Assert.Empty(app.Send(new NavigateTab(workspace, fixture.Space, fixture.Tab, "https://example.net/")));
+        Assert.Equal(new UnsupportedAddress("example"),
+            Refusal(app, new NavigateTab(workspace, fixture.Space, fixture.Tab, "example")));
+        Assert.Equal(new UnknownSpace(fixture.Tab), Refusal(app, new NavigateTab(workspace, fixture.Tab, fixture.Tab, "https://a.example/")));
+        var gone = Guid.NewGuid();
+        Assert.Equal(new UnknownTab(gone), Refusal(app, new NavigateTab(workspace, fixture.Space, gone, "https://example.net/")));
+    }
+}

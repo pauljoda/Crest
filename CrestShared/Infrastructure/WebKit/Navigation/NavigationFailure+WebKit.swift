@@ -46,7 +46,7 @@ extension BrowserNavigationFailure {
         return error.domain == "WebKitErrorDomain" && error.code == 102
     }
 
-    private static func kind(for error: NSError) -> BrowserNavigationFailureKind {
+    private static func kind(for error: NSError) -> NavigationError {
         guard error.domain == NSURLErrorDomain else {
             if error.domain == WKError.errorDomain {
                 return .unavailable

@@ -52,12 +52,12 @@ public sealed partial class CrestApp : IDisposable {
         this.ids = ids;
         if (configuration.StorageDirectory is not { } directory) {
             device = new(storage: null, DeviceRecords.Empty, Announce, RequestTurn);
-            pages = new(device, engines);
+            pages = new(device, engines, clock, ids);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
         device = new(storage, storage.Device, Announce, RequestTurn);
-        pages = new(device, engines);
+        pages = new(device, engines, clock, ids);
         try {
             if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
         } catch (Exception error) {

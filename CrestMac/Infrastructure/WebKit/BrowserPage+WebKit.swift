@@ -120,6 +120,12 @@ extension BrowserPage {
         guard isCurrentNavigation(navigation) else { return }
         activeNavigation = nil
         recordNavigationFailure(error, phase: phase, currentURL: webKitView?.url)
+        // A navigation that became a download or was cancelled is no failure.
+        if let failure = navigationFailure {
+            webKitAdapter?.reporter?.failed(failure.failingURL, error: failure.kind)
+        } else {
+            webKitAdapter?.reporter?.interrupted()
+        }
     }
 
     /// Whether `navigationAction` would replace this page's own main frame.

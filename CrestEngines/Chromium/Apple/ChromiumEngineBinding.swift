@@ -70,6 +70,12 @@
             report(PageClosed(pageID: page.pageID))
         }
 
+        /// Reports what the engine saw one of its pages do. `icon` is the image
+        /// a `PageIconChanged` names, which waits for the tab that adopts it.
+        func pageReported(_ event: some EngineEvent, icon: (page: UUID, data: Data)?) {
+            engines?.report(event, from: self, icon: icon)
+        }
+
         private func report(_ event: some EngineEvent) {
             engines?.report(event, from: self)
         }

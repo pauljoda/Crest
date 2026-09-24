@@ -3,33 +3,6 @@ import Foundation
 // MARK: - History and Cleanup
 
 extension BrowserStore {
-    func recordVisit(url: URL, title: String?) {
-        guard selectedSpace != nil else { return }
-        let spaceID = selectedSpaceID
-        guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
-    }
-
-    func recordVisit(url: URL, title: String?, in spaceID: SpaceID) {
-        guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
-    }
-
-    @discardableResult
-    func recordVisit(
-        url: URL,
-        title: String?,
-        matching assignment: BrowserSpaceRuntimeAssignment
-    ) -> Bool {
-        guard space(matching: assignment) != nil else { return false }
-        guard recordSessionVisit(url: url, title: title, in: assignment.spaceID) else { return false }
-        return true
-    }
-
-    private func recordSessionVisit(url: URL, title: String?, in spaceID: SpaceID) -> Bool {
-        family.executeRecords(
-            .historyVisit, in: spaceID,
-            arguments: BrowserSessionArguments.HistoryVisit(url: url.absoluteString, title: title), from: self)
-    }
-
     func archiveTransientPage(url: URL, title: String?, in spaceID: SpaceID) {
         guard let space = session.space(id: spaceID) else { return }
         _ = archiveTransientPage(url: url, title: title, matching: BrowserSpaceRuntimeAssignment(space: space))

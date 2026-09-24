@@ -32,10 +32,12 @@ extension BrowserPage: WKNavigationDelegate {
         credentialState.didStartNavigation()
         readerModeSession?.invalidate()
         faviconSession?.invalidate()
+        webKitAdapter?.reporter?.started(webView.url)
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
+        if let url = webView.url { webKitAdapter?.reporter?.committed(url) }
         linkHover?.didCommitNavigation()
         linkDrag?.didFinishNavigation()
         mediaSessionCoordinator?.didCommitNavigation()
@@ -355,8 +357,10 @@ extension BrowserPage: WKNavigationDelegate {
                 self.committedNavigationCount == committedNavigation,
                 webView.url == completedURL
             else { return }
-            self.receive(.titleChanged(documentTitle?.isEmpty == false ? documentTitle : webView.title))
+            let title = documentTitle?.isEmpty == false ? documentTitle : webView.title
+            self.receive(.titleChanged(title))
             self.completedNavigationCount += 1
+            if let completedURL { self.webKitAdapter?.reporter?.finished(completedURL, title: title) }
         }
         updateUnderPageBackground()
         mediaSessionCoordinator?.didFinishNavigation()

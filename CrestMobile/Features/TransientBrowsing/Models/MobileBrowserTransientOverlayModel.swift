@@ -9,8 +9,6 @@ final class MobileBrowserTransientOverlayModel {
     private(set) var releasedPageSnapshot: BrowserTransientPageSnapshot?
     private(set) var wasPromoted = false
     private(set) var wasArchived = false
-    private(set) var lastRecordedCompletedNavigationCount: Int?
-    @ObservationIgnored private(set) var lastRecordedNavigationPageIdentity: ObjectIdentifier?
 
     @ObservationIgnored let browser: BrowserStore
     @ObservationIgnored private let pages: MobileBrowserPageStore?
@@ -37,6 +35,7 @@ final class MobileBrowserTransientOverlayModel {
         self.preferences = preferences
         self.didPromote = didPromote
         activityClock = BrowserTransientActivityClock()
+        browser.core.engines.observeRecords(self) { [weak self] in self?.recordActivity(after: $0) }
     }
 
     init(
@@ -93,10 +92,6 @@ final class MobileBrowserTransientOverlayModel {
         activityClock.revision
     }
 
-    var completedNavigationCount: Int? {
-        page?.completedNavigationCount
-    }
-
     @discardableResult
     func preparePage(isActive: Bool) -> Bool {
         let space: BrowserSpace
@@ -125,7 +120,6 @@ final class MobileBrowserTransientOverlayModel {
             return true
         }
         pageLease?.release()
-        resetNavigationRecording()
         guard let pages else { return true }
         if case .peek(let peek) = request {
             pageLease = pages.makePeekPageLease(
@@ -181,33 +175,12 @@ final class MobileBrowserTransientOverlayModel {
         dismissUnavailableRequest()
     }
 
-    func recordCompletedNavigation(
-        _ completedNavigationCount: Int,
-        during presentationPhase: BrowserPeekPresentationPhase
-    ) {
-        guard presentationPhase == .committed,
-            completedNavigationCount > 0,
-            isCurrentRequest,
-            let pageLease,
-            let page = pageLease.page,
-            let url = page.url
-        else { return }
-        let pageIdentity = ObjectIdentifier(page)
-        guard
-            pageIdentity != lastRecordedNavigationPageIdentity
-                || completedNavigationCount != lastRecordedCompletedNavigationCount
-        else { return }
-        // A missing Space leaves the completion unreconciled so a later call
-        // can record it. History declining the URL itself (a non-web page) is
-        // final for this completion, so it still counts as reconciled.
-        guard browser.space(matching: pageLease.assignment) != nil else { return }
-        browser.recordVisit(
-            url: url,
-            title: page.title,
-            matching: pageLease.assignment
-        )
-        lastRecordedNavigationPageIdentity = pageIdentity
-        lastRecordedCompletedNavigationCount = completedNavigationCount
+    /// A navigation the core recorded for this request's page is activity,
+    /// which keeps a Quick Window from archiving itself while in use.
+    private func recordActivity(after records: Engines.PageRecords) {
+        guard isCurrentRequest, let page = pageLease?.page, records.recordedNavigation(of: page.corePage.id) else {
+            return
+        }
         activityClock.recordActivity(restartsTimerImmediately: true)
     }
 
@@ -230,7 +203,6 @@ final class MobileBrowserTransientOverlayModel {
         case .sourceLocked:
             setSourceLocked(true)
         case .usable:
-            resetNavigationRecording()
             pageLease.restore()
         }
     }
@@ -297,7 +269,6 @@ final class MobileBrowserTransientOverlayModel {
         guard isCurrentRequest else { return }
         pageLease?.release()
         pageLease = nil
-        resetNavigationRecording()
         releasedPageSnapshot = nil
         switch request {
         case .peek(let peekRequest):
@@ -316,7 +287,6 @@ final class MobileBrowserTransientOverlayModel {
             pageLease?.release()
         }
         pageLease = nil
-        resetNavigationRecording()
         releasedPageSnapshot = nil
     }
 
@@ -386,7 +356,6 @@ final class MobileBrowserTransientOverlayModel {
         }
         pageLease?.release()
         pageLease = nil
-        resetNavigationRecording()
         releasedPageSnapshot = nil
         coordinator.presentQuickWindow(
             quickWindowRequest.retargeted(
@@ -419,18 +388,12 @@ final class MobileBrowserTransientOverlayModel {
         )
     }
 
-    private func resetNavigationRecording() {
-        lastRecordedNavigationPageIdentity = nil
-        lastRecordedCompletedNavigationCount = nil
-    }
-
     private func releasePageRetainingQuickWindowSnapshot() {
         if request.isQuickWindow, let pageLease {
             releasedPageSnapshot = snapshot(pageLease)
         }
         pageLease?.release()
         pageLease = nil
-        resetNavigationRecording()
     }
 
     private var currentSnapshot: BrowserTransientPageSnapshot? {

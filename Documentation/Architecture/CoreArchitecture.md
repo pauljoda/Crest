@@ -205,6 +205,26 @@ Crest can run more than one engine at a time.
   page keeps its tab, and the UI re-hosts the view because `page.engine`
   changed.
 
+### Recording navigations
+
+A binding reports each page's navigations as `NavigationStarted`,
+`NavigationCommitted`, `NavigationFinished` and `NavigationFailed`, and the
+core records one visit per document, when the document finishes, because
+both engines know the page's title only then. A page with a tab updates the
+tab's address and title and adds the visit to its Space's history in one
+revision; a Quick Window or Peek page adds only the visit. Nothing is recorded
+for a failed load, in a locked Space or one being deleted. A report that
+arrives while a transaction holds the session is recorded once it ends.
+
+A move within a document, such as `history.pushState`, is a visit of its own
+when it reaches another page, and records nothing when only the fragment
+changes. Single-page sites are where people spend their time, and a video
+watched or a message read is a page they will look for in history and expect
+their tab to reopen. A fragment is part of the page it names, so recording it
+would only count the same visit again. Such a move finishes once the page's
+title settles, since those sites set the new title after they change the
+address.
+
 ### Protected media fallback
 
 Crest's Chromium has no Widevine. WebKit plays FairPlay through the system's

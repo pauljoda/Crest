@@ -14,7 +14,7 @@ extension BrowserNavigationFailure {
         )
     }
 
-    private static func kind(forChromiumNetError code: Int) -> BrowserNavigationFailureKind {
+    private static func kind(forChromiumNetError code: Int) -> NavigationError {
         switch code {
         case -106: .offline
         case -7, -118: .timedOut

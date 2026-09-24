@@ -292,7 +292,7 @@ public sealed unsafe class ContractCodecTests {
         Assert.Equal(schema.EngineFingerprint, extended.EngineFingerprint);
         Assert.Equal(ContractCodec.EngineFingerprint.ToArray(), schema.EngineFingerprint);
         Assert.Contains("record EngineRegistration(", schema.EngineCanonical, StringComparison.Ordinal);
-        Assert.Contains("engineevent 0 PageClosed", schema.EngineCanonical, StringComparison.Ordinal);
+        Assert.Contains("engineevent 4 PageClosed", schema.EngineCanonical, StringComparison.Ordinal);
         Assert.DoesNotContain("intent ", schema.EngineCanonical, StringComparison.Ordinal);
     }
 

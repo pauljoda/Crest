@@ -113,8 +113,13 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     @ObservationIgnored lazy var faviconSession = BrowserFaviconSession(
         document: BrowserWebKitFaviconDocument(webView: webView, profileID: profileID),
         policy: .immediate,
-        receive: { [weak self] in self?.faviconData = $0 }
+        receive: { [weak self] data in
+            self?.faviconData = data
+            self?.reporter.foundIcon(data, at: self?.webView.url)
+        }
     )
+    /// Tells the core what the page's navigations and icon do.
+    @ObservationIgnored lazy var reporter = EnginePageReporter(page: corePage) { [weak self] in self?.title ?? "" }
     @ObservationIgnored private let credentialSession: BrowserCredentialSession
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
@@ -815,6 +820,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                         self?.translation.documentURLDidChange(from: self?.url, to: url)
                         self?.url = url
                         self?.refreshNavigationState()
+                        self?.reportMoveWithinDocument(to: url)
                     }
                     self?.credentialState.didChangeTopLevelURL(to: webView.url ?? self?.url)
                 }
@@ -823,6 +829,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                 Task { @MainActor in
                     self?.recordObservedTitle(webView.title)
                     self?.refreshNavigationState()
+                    self?.reporter.titleChanged()
                 }
             },
             webView.observe(\.estimatedProgress, options: [.initial, .new]) { [weak self] webView, _ in
@@ -841,6 +848,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                 Task { @MainActor in
                     let themeColor = webView.themeColor
                     self?.themeColor = themeColor
+                    self?.reporter.themeChanged(self?.siteThemeIconAccent)
                     // A standards-provided theme color owns the browser's
                     // overscroll atmosphere. Nil restores WebKit's derived
                     // html/body background instead of inventing a Crest color.
@@ -854,6 +862,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                 Task { @MainActor in self?.refreshNavigationState() }
             },
         ]
+    }
+
+    /// WebKit tells its delegate nothing about a move within the document,
+    /// such as `history.pushState` or a fragment. The address changing while
+    /// nothing loads, neither a request Crest made nor a navigation WebKit
+    /// started, is that move.
+    private func reportMoveWithinDocument(to url: URL) {
+        guard activeNavigation == nil, !webView.isLoading else { return }
+        reporter.movedWithinDocument(to: url)
     }
 
     @objc private func refreshFromPull() {
@@ -889,8 +906,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                 committedNavigationCount == committedNavigation,
                 webView.url == completedURL
             else { return }
-            recordObservedTitle(documentTitle?.isEmpty == false ? documentTitle : webView.title)
+            let title = documentTitle?.isEmpty == false ? documentTitle : webView.title
+            recordObservedTitle(title)
             completedNavigationCount &+= 1
+            if let completedURL { reporter.finished(completedURL, title: title) }
             updateUnderPageBackground()
         }
     }
@@ -1016,6 +1035,12 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
             fallbackURL: fallbackURL
         )
         canGoBack = canReturnFromNavigationFailure || webView.canGoBack
+        // A navigation that became a download or was cancelled is no failure.
+        if let navigationFailure {
+            reporter.failed(navigationFailure.failingURL, error: navigationFailure.kind)
+        } else {
+            reporter.interrupted()
+        }
     }
 
     func refreshNavigationState() {

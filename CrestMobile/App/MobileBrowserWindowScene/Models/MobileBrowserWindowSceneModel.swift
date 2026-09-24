@@ -84,7 +84,6 @@ final class MobileBrowserWindowSceneModel {
                 else { return nil }
                 return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.presented)
             },
-            backgroundPageDidUpdate: { browser.updateBackgroundPage($0) },
             openPeek: { request in transientBrowsing.presentPeek(request) }
         )
         let privateBrowser = BrowserStore.privateBrowsing(core: rootBrowser.core)
@@ -114,7 +113,6 @@ final class MobileBrowserWindowSceneModel {
                 else { return nil }
                 return BrowserModifiedLinkRegistration(tab: tab, space: space, session: privateBrowser.presented)
             },
-            backgroundPageDidUpdate: { privateBrowser.updateBackgroundPage($0) },
             openPeek: { request in
                 privateTransientBrowsing.presentPeek(request)
             }

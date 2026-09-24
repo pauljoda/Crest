@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// How the failure page presents each `NavigationError`. A member the switches
+/// do not name reads as the unknown one.
 struct BrowserNavigationFailurePresentation {
     let failure: BrowserNavigationFailure
 
@@ -27,7 +29,7 @@ struct BrowserNavigationFailurePresentation {
             "This page isn’t available"
         case .webContentProcessStopped:
             "This page stopped responding"
-        case .unknown:
+        default:
             "This page couldn’t be opened"
         }
     }
@@ -56,7 +58,7 @@ struct BrowserNavigationFailurePresentation {
             Text("\(failure.displayHost) returned a response Crest couldn’t load.")
         case .webContentProcessStopped:
             Text("The web content process stopped repeatedly. Your tab and address are safe.")
-        case .unknown:
+        default:
             Text("Crest encountered an unexpected problem while opening \(failure.displayHost).")
         }
     }
@@ -79,7 +81,7 @@ struct BrowserNavigationFailurePresentation {
             "Review this Space’s content and network settings."
         case .webContentProcessStopped:
             "Try reloading the page in a fresh web content process."
-        case .unknown:
+        default:
             "Try the address again or open a different page."
         }
     }
@@ -102,7 +104,7 @@ struct BrowserNavigationFailurePresentation {
             "A firewall, filter, or device policy may also be responsible."
         case .webContentProcessStopped:
             "If it happens again, try closing and reopening the tab."
-        case .unknown:
+        default:
             "The technical details below can help identify the cause."
         }
     }
@@ -129,7 +131,7 @@ struct BrowserNavigationFailurePresentation {
             "hand.raised.slash"
         case .webContentProcessStopped:
             "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
-        case .unknown:
+        default:
             "doc.badge.ellipsis"
         }
     }

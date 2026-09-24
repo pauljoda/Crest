@@ -29,10 +29,8 @@ internal sealed record SessionEditArguments {
     public bool? ReturnToSavedUrl { get; init; }
     public bool? Keep { get; init; }
     public bool? ResetArchivePlacement { get; init; }
-    public bool? FaviconChanged { get; init; }
     public bool? HasFavicon { get; init; }
     public string? Title { get; init; }
-    public string? Url { get; init; }
     public TabIconMode? Mode { get; init; }
     public string? Emoji { get; init; }
 
@@ -73,10 +71,8 @@ internal sealed record SessionEditArguments {
             ReturnToSavedUrl = Flag("returnToSavedURL"),
             Keep = Flag("keep"),
             ResetArchivePlacement = Flag("resetArchivePlacement"),
-            FaviconChanged = Flag("faviconChanged"),
             HasFavicon = Flag("hasFavicon"),
             Title = Text("title"),
-            Url = Text("url"),
             Mode = TabIconMode.Named(Text("mode")),
             Emoji = Text("emoji"),
         };
@@ -88,9 +84,7 @@ internal sealed record SessionEditArguments {
         SessionOperation.TabOpen => ["tab", "index", "after", "select"],
         SessionOperation.TabCopy => ["tabId", "ids", "placement", "index", "select", "copyObservations"],
         SessionOperation.TabRename => ["tabId", "title"],
-        SessionOperation.TabObserve => ["tabId", "url", "title", "iconAccent", "faviconChanged", "hasFavicon"],
         SessionOperation.TabIcon => ["tabId", "mode", "emoji", "iconAccent", "hasFavicon"],
-        SessionOperation.TabFaviconCache => ["tabId", "url", "iconAccent", "hasFavicon"],
         SessionOperation.TabSavedLocation => ["tabId", "action"],
         SessionOperation.TabResidency => ["tabId", "keep"],
         SessionOperation.TabMove => ["tabId", "placement", "folderId", "before", "detach"],

@@ -12,6 +12,9 @@ public sealed partial class CrestApp {
     private Action? wake;
     private int wakesInFlight;
     private bool turnRequested;
+    /// A change arrived in an empty batch while a call held the lock, so the
+    /// host is owed a wake once that call lets go, unless it drains first.
+    private bool wakeOwed;
 
     #endregion
 
@@ -22,6 +25,7 @@ public sealed partial class CrestApp {
         lock (pendingGate) {
             var drained = pending.ToArray();
             pending.Clear();
+            Volatile.Write(ref wakeOwed, false);
             return drained;
         }
     }
@@ -59,17 +63,27 @@ public sealed partial class CrestApp {
     }
 
     /// Queues a change for the next drain. The host is woken only when the
-    /// batch goes from empty to not empty; a drain is already due otherwise,
-    /// and an intent this thread is running drains it before it returns.
-    /// A newer save replaces an undrained older one.
+    /// batch goes from empty to not empty; a drain is already due otherwise.
+    /// A change announced while this thread holds the lock owes the wake to
+    /// the call that holds it: an intent drains the batch before it returns,
+    /// and a report wakes the host once it lets go. A newer save replaces an
+    /// undrained older one.
     private void Announce(Change change) {
         bool wakes;
         lock (pendingGate) {
             if (change is Saved && pending.Count > 0 && pending[^1] is Saved) pending[^1] = change;
             else pending.Add(change);
-            wakes = pending.Count == 1 && !gate.IsHeldByCurrentThread;
+            wakes = pending.Count == 1;
         }
-        if (wakes) Wake();
+        if (!wakes) return;
+        if (gate.IsHeldByCurrentThread) Volatile.Write(ref wakeOwed, true);
+        else Wake();
+    }
+
+    /// Wakes the host for changes announced while the lock was held and not
+    /// drained since.
+    private void WakeIfOwed() {
+        if (Interlocked.Exchange(ref wakeOwed, false)) Wake();
     }
 
     private void Wake() {

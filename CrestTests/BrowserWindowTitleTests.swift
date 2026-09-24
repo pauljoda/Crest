@@ -41,7 +41,7 @@ final class BrowserWindowTitleTests: XCTestCase {
         let first = makeModel()
         let second = makeModel(browser: first.browser.makeWindowStore())
         second.browser.selectTab(second.browser.selectedSpace!.tabs[1].id)
-        second.browser.updateSelectedTabFromPage(url: nil, title: "Other window changed")
+        second.browser.seedSelectedTabNavigation(to: nil, titled: "Other window changed")
         XCTAssertEqual(first.windowTitle, "Alpha")
         XCTAssertEqual(second.windowTitle, "Other window changed")
     }
@@ -51,13 +51,9 @@ final class BrowserWindowTitleTests: XCTestCase {
         let group = SplitGroupID()
         model.browser.session.spaces[0].tabs[0].splitGroupID = group
         model.browser.session.spaces[0].tabs[1].splitGroupID = group
+        // The unfocused member's page recorded a new title.
+        model.browser.session.spaces[0].tabs[1].title = "Background Beta"
         let space = model.browser.selectedSpace!
-        model.browser.updateTabFromPage(
-            committedURL: space.tabs[1].url!,
-            title: "Background Beta",
-            for: space.tabs[1].id,
-            matching: BrowserSpaceRuntimeAssignment(space: space)
-        )
         XCTAssertEqual(model.windowTitle, "Alpha")
         model.browser.selectTab(space.tabs[1].id)
         XCTAssertEqual(model.windowTitle, "Background Beta")
@@ -89,7 +85,6 @@ final class BrowserWindowTitleTests: XCTestCase {
         model.address = "Destination address draft"
 
         model.synchronizePageMetadata()
-        model.recordCompletedNavigation()
 
         XCTAssertEqual(model.browser.session, sessionBeforePageCallbacks)
         XCTAssertEqual(model.address, "Destination address draft")

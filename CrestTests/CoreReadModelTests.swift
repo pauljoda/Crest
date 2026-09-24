@@ -11,7 +11,7 @@ import XCTest
 @MainActor
 final class CoreReadModelTests: XCTestCase {
     func testTheReadModelFedTheDrainedBatchesHoldsWhatTheCopyHolds() throws {
-        let core = CrestCore()
+        let core = CrestCore.hostingPages()
         var batches: [[Change]] = []
         core.batchApplied = { batches.append($0) }
         var original = BrowserSession.preview
@@ -28,8 +28,10 @@ final class CoreReadModelTests: XCTestCase {
         let pulled = Data([1, 2, 3])
         store.setTabFavicon(pulled, iconAccent: nil, for: opened, in: spaceID)
         let copy = try XCTUnwrap(store.duplicateTab(opened, in: spaceID))
-        store.recordVisit(url: try XCTUnwrap(URL(string: "https://visited.example/a")), title: "First")
-        store.recordVisit(url: try XCTUnwrap(URL(string: "https://visited.example/a#again")), title: "Again")
+        let page = try XCTUnwrap(store.openReportingPage(for: nil, in: spaceID))
+        store.finishNavigation(of: page, to: try XCTUnwrap(URL(string: "https://visited.example/a")), titled: "First")
+        store.finishNavigation(
+            of: page, to: try XCTUnwrap(URL(string: "https://visited.example/a#again")), titled: "Again")
         XCTAssertTrue(store.closeTab(opened, in: spaceID))
         store.restoreArchivedTab(opened)
         XCTAssertNotNil(

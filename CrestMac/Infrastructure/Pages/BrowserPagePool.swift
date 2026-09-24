@@ -35,9 +35,6 @@ final class BrowserPagePool:
     typealias ModifiedLinkOpener =
         @MainActor (URL, SpaceID, Bool) -> BrowserModifiedLinkRegistration?
 
-    typealias BackgroundPageUpdateHandler =
-        @MainActor (BrowserBackgroundPageUpdate) -> BrowserSession?
-
     /// The focused card: the one tab the URL bar, navigation controls, find,
     /// zoom, sharing, and every lifecycle observer speak for. Split View adds
     /// cards beside it without adding a second focus.
@@ -113,7 +110,6 @@ final class BrowserPagePool:
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
     @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
-    @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let handleLinkDrag: (BrowserPeekInteractionEvent) -> Void
     @ObservationIgnored private let splitLinkHost: BrowserSplitLinkHost
@@ -148,8 +144,9 @@ final class BrowserPagePool:
     /// Where unloaded tabs leave their WebKit session state. Its archive is nil
     /// for a private pool, even if an archive is handed in.
     @ObservationIgnored private let tabState: BrowserTabStateCoordinator
+    /// What each background page this pool watches looked like when it last
+    /// changed, which tells when its first navigation settled.
     @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
-    @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
 
     init(
         browser: BrowserStore,
@@ -177,7 +174,6 @@ final class BrowserPagePool:
         popupTabHost: BrowserPopupTabHost = .unavailable,
         openNewTab: @escaping (URL) -> Void = { _ in },
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
-        backgroundPageDidUpdate: @escaping BackgroundPageUpdateHandler = { _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         handleLinkDrag: @escaping (BrowserPeekInteractionEvent) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
@@ -222,7 +218,6 @@ final class BrowserPagePool:
         contentBlocking = BrowserContentBlockingController(provider: contentRuleListProvider)
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
-        self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
         self.handleLinkDrag = handleLinkDrag
         self.splitLinkHost = splitLinkHost
@@ -258,6 +253,7 @@ final class BrowserPagePool:
         }
         pageZoomPreferences.register(self)
         self.runtimeStore.register(self)
+        core.engines.observeRecords(self) { [weak self] in self?.restyleVisitedLinks(after: $0) }
     }
 
     deinit {
@@ -384,25 +380,6 @@ final class BrowserPagePool:
         }
     }
 
-    func publishRuntimePageUpdate(
-        _ runtime: BrowserTabRuntime, tabID: TabID,
-        previous: BrowserBackgroundPageSnapshot?, current: BrowserBackgroundPageSnapshot
-    ) {
-        let page = runtime.page
-        let completedURL = current.completedNavigationCount > (previous?.completedNavigationCount ?? 0) ? page.url : nil
-        let update = BrowserBackgroundPageUpdate(
-            tabID: tabID,
-            assignment: BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID),
-            url: current.url, title: current.title, faviconData: current.faviconData, iconAccent: current.iconAccent,
-            estimatedProgress: current.estimatedProgress, isLoading: current.isLoading,
-            readerModeState: current.readerModeState, completedNavigationURL: completedURL,
-            processTerminationCount: current.processTerminationCount)
-        guard let session = backgroundPageDidUpdate(update) else { return }
-        if completedURL != nil, let space = session.space(id: page.spaceID), space.profile.id == page.profileID {
-            Task { @MainActor [weak self] in await self?.styleVisitedLinks(in: space) }
-        }
-    }
-
     func makeWindowPool(
         browser: BrowserStore,
         sharesRuntimes: Bool,
@@ -438,11 +415,6 @@ final class BrowserPagePool:
                     let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
                 return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.presented)
-            },
-            backgroundPageDidUpdate: { [weak browser] update in
-                guard let browser else { return nil }
-                browser.updateBackgroundPage(update)
-                return browser.session
             },
             openPeek: { [weak transientBrowsing] in transientBrowsing?.presentPeek($0) },
             handleLinkDrag: { [weak transientBrowsing] in transientBrowsing?.handleLinkDrag($0) },
@@ -645,23 +617,17 @@ final class BrowserPagePool:
         else {
             return
         }
-        observeBackgroundPage(
-            page,
-            for: registration.tab.id,
-            in: registration.space
-        )
+        observeBackgroundPage(page, for: registration.tab.id)
         page.load(request)
         if selecting { select(session: registration.session) }
         reconcileCredentialAccess(in: registration.session.session)
     }
 
-    private func observeBackgroundPage(
-        _ page: BrowserPage,
-        for tabID: TabID,
-        in space: BrowserSpace
-    ) {
+    /// Watches a page opened behind the one on screen until its first
+    /// navigation settles, so residency can count its idle time. A shared
+    /// runtime store watches its own pages.
+    private func observeBackgroundPage(_ page: BrowserPage, for tabID: TabID) {
         guard !publishesPageMetadataCentrally else { return }
-        backgroundPageAssignments[tabID] = BrowserSpaceRuntimeAssignment(space: space)
         backgroundPageSnapshots[tabID] = BrowserBackgroundPageSnapshot(page: page)
         trackBackgroundPageChanges(page, for: tabID)
     }
@@ -678,9 +644,7 @@ final class BrowserPagePool:
     }
 
     private func backgroundPageDidChange(_ page: BrowserPage, for tabID: TabID) {
-        guard tabRuntimes[tabID]?.page === page,
-            let assignment = backgroundPageAssignments[tabID]
-        else {
+        guard tabRuntimes[tabID]?.page === page, backgroundPageSnapshots[tabID] != nil else {
             forgetBackgroundPageObservation(for: tabID)
             return
         }
@@ -699,47 +663,10 @@ final class BrowserPagePool:
         {
             inactiveSinceByTabID[tabID] = .now
         }
-
-        guard !publishesPageMetadataCentrally,
-            previous != current, !presentedTabIDs.contains(tabID)
-        else {
-            return
-        }
-        let completedNavigationURL: URL? =
-            if let previous,
-                current.completedNavigationCount > previous.completedNavigationCount
-            {
-                page.url
-            } else {
-                nil
-            }
-        let update = BrowserBackgroundPageUpdate(
-            tabID: tabID,
-            assignment: assignment,
-            url: current.url,
-            title: current.title,
-            faviconData: current.faviconData,
-            iconAccent: current.iconAccent,
-            estimatedProgress: current.estimatedProgress,
-            isLoading: current.isLoading,
-            readerModeState: current.readerModeState,
-            completedNavigationURL: completedNavigationURL,
-            processTerminationCount: current.processTerminationCount
-        )
-        guard let session = backgroundPageDidUpdate(update) else { return }
-        if completedNavigationURL != nil,
-            let space = session.space(id: assignment.spaceID),
-            space.profile.id == assignment.profileID
-        {
-            Task { @MainActor [weak self] in
-                await self?.styleVisitedLinks(in: space)
-            }
-        }
     }
 
     private func forgetBackgroundPageObservation(for tabID: TabID) {
         backgroundPageSnapshots[tabID] = nil
-        backgroundPageAssignments[tabID] = nil
     }
 
     /// The cards `tab` brings on screen, with the caller's own tab value in
@@ -1022,6 +949,18 @@ final class BrowserPagePool:
         }
     }
 
+    /// A visit the core recorded restyles every card this window shows in its
+    /// Space: the card beside the one that navigated is the one most likely to
+    /// show the link just followed.
+    private func restyleVisitedLinks(after records: Engines.PageRecords) {
+        let workspace = browser.window.workspaceID
+        let spaceIDs = Set(records.navigations.filter { $0.workspaceID == workspace }.map(\.spaceID))
+        for spaceID in spaceIDs {
+            guard let space = browser.session.space(id: SpaceID(rawValue: spaceID)) else { continue }
+            Task { @MainActor [weak self] in await self?.styleVisitedLinks(in: space) }
+        }
+    }
+
     func makePeekPageLease(
         request: BrowserPeekRequest,
         in space: BrowserSpace,
@@ -1186,8 +1125,11 @@ final class BrowserPagePool:
         }
         retainResidentPage(page, for: registration.tab.id)
         residencyRevision &+= 1
-        if adoption.foreground { activate(registration.tab.id, at: .now) }
-        else { observeBackgroundPage(page, for: registration.tab.id, in: registration.space) }
+        if adoption.foreground {
+            activate(registration.tab.id, at: .now)
+        } else {
+            observeBackgroundPage(page, for: registration.tab.id)
+        }
         return true
     }
 
@@ -1233,7 +1175,7 @@ final class BrowserPagePool:
         if selecting {
             activate(registration.tab.id, at: .now)
         } else {
-            observeBackgroundPage(page, for: registration.tab.id, in: registration.space)
+            observeBackgroundPage(page, for: registration.tab.id)
         }
         return page
     }

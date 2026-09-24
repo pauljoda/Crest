@@ -150,8 +150,6 @@ public static class BrowserRuleCodes {
     public const string UnknownArchivedTab = "unknown_archived_tab";
     public const string UnknownCurrentTab = "unknown_current_tab";
     public const string UnknownFolder = "unknown_folder";
-    public const string UnknownHistoryCommand = "unknown_history_command";
-    public const string UnknownRecordCommand = "unknown_record_command";
     public const string UnknownSearchProvider = "unknown_search_provider";
     public const string UnknownSpace = "unknown_space";
     public const string UnknownSpaceCommand = "unknown_space_command";

@@ -362,9 +362,8 @@ final class BrowserPeekModelTests: XCTestCase {
         )
         try await waitUntil(timeout: .seconds(8)) {
             page.completedNavigationCount > startingCount
-                && page.url?.host() == historyURL.host()
+                && context.browser.session.space(id: context.source.id)?.history.isEmpty == false
         }
-        context.model.recordCompletedNavigation()
 
         let sourceHistory = try XCTUnwrap(
             context.browser.session.space(id: context.source.id)?.history

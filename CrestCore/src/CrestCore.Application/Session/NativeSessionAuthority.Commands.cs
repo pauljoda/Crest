@@ -29,8 +29,6 @@ public sealed partial class NativeSessionAuthority {
         if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(request, operation);
         if (length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(request);
-        if (SessionOperationCodes.IsRecord(operation))
-            return PrepareRecordCommand(request);
         if (SessionOperationCodes.IsTransient(operation))
             return PrepareTransientCommand(request);
         if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(request);

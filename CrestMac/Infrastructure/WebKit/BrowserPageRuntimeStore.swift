@@ -132,10 +132,6 @@ final class BrowserPageRuntimeStore {
                 inactiveSinceByTabID[tabID] = .now
             }
         }
-        guard publishesPageMetadataCentrally, previous != current || currentPageChanged,
-            let owner = runtime.routingWindowID.flatMap({ pools[$0]?.value }) ?? mostRecentPool(among: Set(pools.keys))
-        else { return }
-        owner.publishRuntimePageUpdate(runtime, tabID: tabID, previous: previous, current: current)
     }
 
     private func reassignPresentation(_ tabID: TabID, excluding windowID: BrowserWindowID) {

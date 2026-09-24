@@ -144,6 +144,11 @@ internal sealed partial class Device {
             return workspaces.TryGetValue(workspaceId, out var authority) ? authority : throw new Rejected(new UnknownWorkspace(workspaceId));
     }
 
+    /// The attached workspace, or null for one that is gone.
+    internal NativeSessionAuthority? Attached(Guid workspaceId) {
+        lock (gate) return workspaces.GetValueOrDefault(workspaceId);
+    }
+
     /// The Space a window may show: one the session holds that is not being deleted.
     private static SpaceState? Available(SessionState session, Guid spaceId) =>
         session.SpaceDeletions.Any(deletion => deletion.SpaceId == spaceId) ? null : session.Spaces.FirstOrDefault(space => space.Id == spaceId);

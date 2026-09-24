@@ -55,18 +55,6 @@ struct BrowserRootLifecycleModifier: ViewModifier {
             .onChange(of: model.pages.activePage?.displayURL) {
                 model.synchronizePageMetadata()
             }
-            .onChange(of: model.pages.activePage?.title) {
-                model.synchronizePageMetadata()
-            }
-            .onChange(of: model.pages.activePage?.faviconData) {
-                model.synchronizePageMetadata()
-            }
-            .onChange(of: model.pages.activePage?.themeColor) {
-                model.synchronizePageMetadata()
-            }
-            .onChange(of: model.pages.activePage?.completedNavigationCount) {
-                model.recordCompletedNavigation()
-            }
 
         let runtimeObservedContent =
             pageObservedContent

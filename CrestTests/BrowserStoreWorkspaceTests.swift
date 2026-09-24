@@ -11,7 +11,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         let tab = try XCTUnwrap(first.selectedSpace?.tabs.first)
         let ids = first.session.tabIDs
 
-        first.updateSelectedTabFromPage(url: tab.url, title: "Changed elsewhere")
+        first.seedSelectedTabNavigation(to: tab.url, titled: "Changed elsewhere")
 
         XCTAssertNil(empty.selectedTab)
         XCTAssertEqual(empty.session.tabIDs, ids)
@@ -22,6 +22,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
 
     func testTemporaryWorkspaceBorrowsItsProfileButKeepsAllBrowsingRecordsLocal() async throws {
         let harness = try BrowserStoredSessionHarness(session: .preview)
+        harness.core.engines.register(WebKitEngineBinding(), isDefault: true)
         let source = harness.store
         let sourceSpace = try XCTUnwrap(source.selectedSpace)
         let original = source.session
@@ -40,7 +41,9 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
 
         let url = try XCTUnwrap(URL(string: "https://temporary.crest.test/local"))
         let tabID = try XCTUnwrap(temporary.openNewTab(url: url))
-        temporary.recordVisit(url: url, title: "Temporary visit")
+        let page = try XCTUnwrap(temporary.openReportingPage(for: nil))
+        temporary.finishNavigation(of: page, to: url, titled: "Temporary visit")
+        page.release(keepingState: false)
         temporary.pinTab(tabID)
         temporary.deleteTab(tabID, in: sourceSpace.id)
 

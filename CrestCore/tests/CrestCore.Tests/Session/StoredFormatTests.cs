@@ -82,6 +82,7 @@ public sealed class StoredFormatTests {
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
         var ids = new TestIds();
         using var app = new CrestApp(new AppConfiguration(null), clock, ids);
+        var engine = RecordedIntents.PageEngine(app);
         var workspace = app.AttachWorkspace(authority);
         var differences = new List<string>();
         void Compare(string name, JsonNode? actual) =>
@@ -102,6 +103,9 @@ public sealed class StoredFormatTests {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
                 app.Send(intent);
+            } else if (RecordedIntents.Navigation(request) is { } navigation) {
+                clock.Now = navigation.At;
+                RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);
             } else {
                 var command = authority.PrepareCommand(Bytes(request));
                 Compare(name, JsonNode.Parse(command.Output));

@@ -20,6 +20,10 @@ public sealed class BrowserTab {
     public Guid? FolderId => State.FolderId;
     public Guid? SplitGroupId => State.SplitGroupId;
     public DateTimeOffset LastActivatedAt => State.LastActivatedAt;
+
+    /// How the tab's icon is filled: its stored mode, or the one its symbol
+    /// implies for a tab written before modes were stored.
+    public TabIconMode IconMode => State.StoredIconMode ?? TabIconMode.Inferred(State.Symbol);
     public bool KeepsPageLoaded => State.KeepsPageLoaded;
 
     /// The address a saved or pinned tab belongs to. A current tab has none:
@@ -110,6 +114,17 @@ public sealed class BrowserTab {
     public void SetFavicon(string? url, TabIconAccent? accent) => State = State with { FaviconUrl = url, IconAccent = accent };
 
     public void SetIconMode(TabIconMode mode) => State = State with { StoredIconMode = mode };
+
+    /// The page reported an icon for the document at `url`, which the tab
+    /// shows. An icon that follows its page wears it, with the color the
+    /// page's theme puts behind it; a chosen or pulled icon keeps what it has.
+    /// Answers whether the tab wears it.
+    public bool WearPageIcon(string url, TabIconAccent? accent) {
+        if (!IconMode.FollowsPage) return false;
+        SetIcon(TabIconMode.WebSymbol);
+        SetFavicon(url, accent);
+        return true;
+    }
 
     #endregion
 

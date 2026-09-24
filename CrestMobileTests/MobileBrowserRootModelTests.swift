@@ -653,7 +653,6 @@ final class MobileBrowserRootModelTests: XCTestCase {
         access.lock(space.id)
         actions.presentFind()
         fixture.model.synchronizePageMetadata(isAddressEditing: false)
-        fixture.model.recordCompletedNavigation(isAddressEditing: false)
 
         XCTAssertTrue(fixture.pages.activePage === page)
         XCTAssertNil(fixture.model.selectedPage)

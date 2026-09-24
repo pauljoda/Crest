@@ -312,27 +312,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(store.selectedTab?.placement, placement)
     }
 
-    func testObservedPageTitleUpdatesNeverClobberARenamedTab() throws {
-        let store = makeStore(.preview)
-        let spaceID = store.selectedSpaceID
-        let tabID = try XCTUnwrap(
-            store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/docs")))
-        )
-        XCTAssertTrue(store.setTabCustomTitle("Release Notes", for: tabID, in: spaceID))
-
-        store.updateTabFromPage(
-            committedURL: try XCTUnwrap(URL(string: "https://example.com/changelog")),
-            title: "Changelog",
-            for: tabID,
-            matching: BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
-        )
-
-        let tab = try XCTUnwrap(store.selectedTab)
-        XCTAssertEqual(tab.title, "Changelog")
-        XCTAssertEqual(tab.customTitle, "Release Notes")
-        XCTAssertEqual(tab.displayTitle, "Release Notes")
-    }
-
     func testRenamingATabDoesNotClaimANewerPositionChange() throws {
         let store = makeStore(.preview)
         let spaceID = store.selectedSpaceID

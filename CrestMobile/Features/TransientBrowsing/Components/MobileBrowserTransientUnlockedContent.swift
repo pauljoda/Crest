@@ -37,17 +37,6 @@ struct MobileBrowserTransientUnlockedContent: View {
         .task(id: model.activityRevision) {
             await model.autoArchiveAfterInactivity()
         }
-        .onChange(of: model.completedNavigationCount) { oldCount, newCount in
-            guard presentationPhase == .committed,
-                let newCount,
-                newCount > 0,
-                newCount != oldCount
-            else { return }
-            model.recordCompletedNavigation(
-                newCount,
-                during: presentationPhase
-            )
-        }
         .onChange(of: scenePhase) { _, phase in
             model.setActive(phase == .active)
         }
@@ -121,12 +110,6 @@ struct MobileBrowserTransientUnlockedContent: View {
 
     private func updatePresentation() async {
         guard model.preparePage(isActive: scenePhase == .active) else { return }
-        if let completedNavigationCount = model.completedNavigationCount {
-            model.recordCompletedNavigation(
-                completedNavigationCount,
-                during: presentationPhase
-            )
-        }
         guard presentationPhase == .committed else { return }
         // All Peek inputs use the shared motion state; only Quick Window has
         // its independent scene entrance.

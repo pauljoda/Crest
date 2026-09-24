@@ -52,10 +52,12 @@ extension MobileBrowserPage: WKNavigationDelegate {
         credentialState.didStartNavigation()
         readerModeSession.invalidate()
         faviconSession.invalidate()
+        reporter.started(webView.url)
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
+        if let url = webView.url { reporter.committed(url) }
         mediaSessionCoordinator?.didCommitNavigation()
         committedNavigationCount &+= 1
         // Supplements belong to the current document. A document replacement

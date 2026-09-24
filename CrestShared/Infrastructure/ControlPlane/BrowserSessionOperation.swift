@@ -4,7 +4,6 @@ import Foundation
 /// spellings in `SessionOperation.cs`. App-wide `preferences.*` commands have
 /// their own request model, `BrowserAppPreferenceCommand`.
 enum BrowserSessionOperation: String, Codable, Sendable {
-    case historyVisit = "history.visit"
     case launchPlan = "launch.plan"
     case spaceAccess = "space.access"
     case spaceBranding = "space.branding"
@@ -26,10 +25,8 @@ enum BrowserSessionOperation: String, Codable, Sendable {
     case tabCloseDurable = "tab.close_durable"
     case tabCopy = "tab.copy"
     case tabDelete = "tab.delete"
-    case tabFaviconCache = "tab.favicon.cache"
     case tabIcon = "tab.icon"
     case tabMove = "tab.move"
-    case tabObserve = "tab.observe"
     case tabOpen = "tab.open"
     case tabPromoteTransient = "tab.promote_transient"
     case tabRename = "tab.rename"

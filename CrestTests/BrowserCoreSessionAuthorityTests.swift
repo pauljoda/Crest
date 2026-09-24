@@ -43,15 +43,20 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         archived.faviconData = Data([1, 3, 5])
         original.spaces[0].archivedTabs = [ArchivedTab(tab: archived, archivedAt: .now, reason: .closed)]
         let store = BrowserStore(
-            session: original, showing: original.spaces[0].id, tabs: fallbackTabs(original.spaces[0]))
+            session: original, showing: original.spaces[0].id, tabs: fallbackTabs(original.spaces[0]),
+            core: .hostingPages())
         let other = store.makeWindowStore()
         other.selectSpace(original.spaces[1].id)
         let otherSpace = other.selectedSpace?.id
         let otherTab = other.selectedTab?.id
 
-        store.recordVisit(url: try XCTUnwrap(URL(string: "https://example.org/visit#one")), title: "First")
+        // A page's recorded visits reach every window of the workspace.
+        let page = try XCTUnwrap(store.openReportingPage(for: nil))
+        store.finishNavigation(
+            of: page, to: try XCTUnwrap(URL(string: "https://example.org/visit#one")), titled: "First")
         let visit = try XCTUnwrap(store.selectedSpace?.history.first)
-        store.recordVisit(url: try XCTUnwrap(URL(string: "https://example.org/visit#two")), title: "Second")
+        store.finishNavigation(
+            of: page, to: try XCTUnwrap(URL(string: "https://example.org/visit#two")), titled: "Second")
         XCTAssertEqual(store.selectedSpace?.history.first?.id, visit.id)
         XCTAssertEqual(store.selectedSpace?.history.first?.visitCount, 2)
         XCTAssertEqual(other.session.space(id: spaceID)?.history, store.selectedSpace?.history)
@@ -419,17 +424,23 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertNil(next.selectedTabID(in: space.id), "The next save must not write the selection back")
     }
 
-    /// Tab images stay native assets beside the core's file: a captured icon
-    /// reaches the favicon store, a relaunch reattaches it, and a deleted tab's
-    /// image is pruned.
+    /// Tab images stay native assets beside the core's file: the icon a page
+    /// reports moves to its tab when the core records it and reaches the
+    /// favicon store, a relaunch reattaches it, and a deleted tab's image is
+    /// pruned.
     func testTabImagesFollowTheSessionIntoTheFaviconStore() async throws {
         let harness = try BrowserStoredSessionHarness(session: .preview)
         let store = harness.store
+        harness.core.engines.register(WebKitEngineBinding(), isDefault: true)
         let spaceID = try XCTUnwrap(store.selectedSpace?.id)
-        let tab = try XCTUnwrap(store.selectedSpace?.tabs.first { $0.url != nil })
+        let tab = try XCTUnwrap(store.selectedSpace?.tabs.first { $0.url != nil && $0.iconMode.followsPage })
         let icon = Data("captured".utf8)
-        store.cacheAutomaticTabFavicon(icon, iconAccent: nil, url: try XCTUnwrap(tab.url), for: tab.id, in: spaceID)
+        let page = try XCTUnwrap(store.openReportingPage(for: tab.id, in: spaceID))
+        store.finishNavigation(of: page, to: try XCTUnwrap(tab.url), titled: tab.title, icon: icon)
+        XCTAssertEqual(store.session.space(id: spaceID)?.tabs.first { $0.id == tab.id }?.faviconData, icon)
         XCTAssertEqual(harness.favicons.favicon(tabID: tab.id), icon)
+        XCTAssertNil(harness.core.engines.takeIcon(of: page.id), "The image moved to the tab")
+        page.release(keepingState: false)
         let relaunched = try await harness.relaunch()
         XCTAssertEqual(relaunched.store.session.space(id: spaceID)?.tabs.first { $0.id == tab.id }?.faviconData, icon)
         store.deleteTab(tab.id, in: spaceID)

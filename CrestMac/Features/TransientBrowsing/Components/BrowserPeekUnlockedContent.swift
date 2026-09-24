@@ -117,12 +117,7 @@ struct BrowserPeekUnlockedContent: View {
     }
 
     private var taskLifecycle: BrowserPeekTaskLifecycleModifier {
-        BrowserPeekTaskLifecycleModifier(
-            requestID: model.request.id,
-            completedNavigationCount: model.page?.completedNavigationCount,
-            present: presentCard,
-            recordCompletedNavigation: model.recordCompletedNavigation
-        )
+        BrowserPeekTaskLifecycleModifier(requestID: model.request.id, present: presentCard)
     }
 
     private func presentCard() async {

@@ -137,7 +137,7 @@ extension CoreState {
 
     func apply(_ change: TabFaviconAssigned) {
         if workspaces[change.workspaceID]?.holdsOpen(tabID: change.tabID) == true {
-            favicons.assign(adopts: change.adopts, to: change.tabID, in: change.workspaceID)
+            favicons.assign(adopts: change.adopts, to: change.tabID, in: change.workspaceID, from: change.pageID)
         }
         forward(.tabFaviconAssigned(change), to: change.workspaceID)
     }

@@ -7,20 +7,6 @@ struct BrowserModifiedLinkRegistration {
     let session: BrowserPresentedSession
 }
 
-struct BrowserBackgroundPageUpdate {
-    let tabID: TabID
-    let assignment: BrowserSpaceRuntimeAssignment
-    let url: URL?
-    let title: String
-    let faviconData: Data?
-    let iconAccent: BrowserTabIconAccent?
-    let estimatedProgress: Double
-    let isLoading: Bool
-    let readerModeState: BrowserReaderModeState
-    let completedNavigationURL: URL?
-    let processTerminationCount: Int
-}
-
 @MainActor
 struct BrowserBackgroundPageSnapshot: Equatable {
     let url: URL?

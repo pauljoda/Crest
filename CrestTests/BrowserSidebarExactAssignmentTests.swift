@@ -315,13 +315,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         let historyURL = try XCTUnwrap(
             URL(string: "https://sidebar-history.crest.test/selection")
         )
-        XCTAssertTrue(
-            context.store.recordVisit(
-                url: historyURL,
-                title: "Selection",
-                matching: assignment
-            )
-        )
+        context.store.seedVisit(to: historyURL, titled: "Selection", in: assignment.spaceID)
         let confirmation = try XCTUnwrap(
             BrowserSidebarSpacePresentationPolicy.clearHistoryConfirmation(
                 for: context.source,
@@ -360,13 +354,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         let historyURL = try XCTUnwrap(
             URL(string: "https://sidebar-history.crest.test/relock")
         )
-        XCTAssertTrue(
-            context.store.recordVisit(
-                url: historyURL,
-                title: "Relock",
-                matching: assignment
-            )
-        )
+        context.store.seedVisit(to: historyURL, titled: "Relock", in: assignment.spaceID)
         let didUnlock = await access.unlock(context.source)
         XCTAssertTrue(didUnlock)
         let confirmation = try XCTUnwrap(

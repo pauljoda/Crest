@@ -72,6 +72,7 @@ public sealed partial class NativeSessionAuthority {
             NameSplit name => NamingSplit(basis, name, now),
             SetSplitIcon icon => SettingSplitIcon(basis, icon, now),
             TintSplit tint => TintingSplit(basis, tint, now),
+            NavigateTab navigation => NavigatingTab(basis, navigation),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;

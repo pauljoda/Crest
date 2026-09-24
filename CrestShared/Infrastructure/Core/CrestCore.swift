@@ -83,6 +83,7 @@ final class CrestCore {
         }
         storageDirectory = configuration.storageDirectory.map { URL(fileURLWithPath: $0, isDirectory: true) }
         wake.core = self
+        state.favicons.takePageImage = { [weak self] in self?.engines.takeIcon(of: $0) }
         let installed = crest_app_set_wake(handle, relayCoreWake, Unmanaged.passUnretained(wake).toOpaque())
         guard installed == CREST_OK else { Self.buildBug(installed, "set its wake callback") }
     }
@@ -140,15 +141,19 @@ final class CrestCore {
     /// Applies one batch to `state`, in order, and reports a failed save the
     /// core started itself.
     private func apply(_ changes: [Change]) {
+        var pageRecords = Engines.PageRecords()
         for change in changes {
             state.apply(change)
             switch change {
             case .storageFailed(let failure): storageFailed(failure.reason)
             case .syncJournalChanged: syncJournalChangeHandler?()
+            case .navigationRecorded(let recorded): pageRecords.navigations.append(recorded)
+            case .tabFaviconAssigned(let assigned) where assigned.pageID != nil: pageRecords.icons.append(assigned)
             default: break
             }
         }
         state.finishBatch(changes)
+        if !pageRecords.isEmpty { engines.recordsApplied(pageRecords) }
         #if DEBUG
             batchApplied?(changes)
         #endif

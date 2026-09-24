@@ -21,6 +21,9 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     /// twice on it throws, and removing one would strip it from the opener.
     let ownsUserContentController: Bool
     var activeNavigation: WKNavigation?
+    /// Tells the core what the page's navigations and icon do, once the page
+    /// is attached.
+    private(set) var reporter: EnginePageReporter?
     let contentRuleSession: BrowserPageContentRuleSession
     var geolocationCoordinator: BrowserGeolocationCoordinator?
     private let geolocationService: any BrowserGeolocationServicing
@@ -57,7 +60,10 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         BrowserFaviconSession(
             document: BrowserWebKitFaviconDocument(webView: webView, profileID: $0.profileID),
             policy: .delayedDocumentIcons,
-            receive: { [weak self] in self?.page?.receive(.favicon($0, source: nil)) }
+            receive: { [weak self] data in
+                self?.page?.receive(.favicon(data, source: nil))
+                self?.reporter?.foundIcon(data, at: self?.webView.url)
+            }
         )
     }
 
@@ -113,6 +119,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
 
     func attach(to page: BrowserPage, allowsCredentialAccess: Bool) {
         self.page = page
+        reporter = EnginePageReporter(page: page.corePage) { [weak page] in page?.title ?? "" }
         webView.menuHost = page
         webView.linkHover = linkHover
         webView.linkDrag = linkDrag
@@ -293,11 +300,15 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
                 guard let self else { return }
                 self.page?.receive(.urlChanged(self.webView.url))
                 self.publishSecurityState()
+                self.reportMoveWithinDocument()
             }
         }
         .store(in: &observations)
         webView.publisher(for: \.title, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.page?.receive(.titleChanged(value)) }
+            MainActor.assumeIsolated {
+                self?.page?.receive(.titleChanged(value))
+                self?.reporter?.titleChanged()
+            }
         }
         .store(in: &observations)
         webView.publisher(for: \.estimatedProgress, options: [.initial, .new]).sink { [weak self] value in
@@ -317,7 +328,10 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         }
         .store(in: &observations)
         webView.publisher(for: \.themeColor, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.page?.receive(.themeColorChanged(value)) }
+            MainActor.assumeIsolated {
+                self?.page?.receive(.themeColorChanged(value))
+                self?.reporter?.themeChanged(self?.page?.siteThemeIconAccent)
+            }
         }
         .store(in: &observations)
         webView.publisher(for: \.canGoBack, options: [.initial, .new]).sink { [weak self] _ in
@@ -328,6 +342,15 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             MainActor.assumeIsolated { self?.page?.receive(.historyChanged) }
         }
         .store(in: &observations)
+    }
+
+    /// WebKit tells its delegate nothing about a move within the document,
+    /// such as `history.pushState` or a fragment. The address changing while
+    /// nothing loads, neither a request Crest made nor a navigation WebKit
+    /// started, is that move.
+    private func reportMoveWithinDocument() {
+        guard activeNavigation == nil, !webView.isLoading, let url = webView.url else { return }
+        reporter?.movedWithinDocument(to: url)
     }
 
     /// Restates the page's security from the document WebKit is showing, its

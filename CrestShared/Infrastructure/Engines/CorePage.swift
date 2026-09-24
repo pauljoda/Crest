@@ -49,5 +49,15 @@ final class CorePage {
         guard !isReleased else { return }
         isReleased = true
         _ = try? core?.send(ReleasePage(pageID: id, keepsState: keepingState))
+        core?.engines.forget(id)
+    }
+
+    // MARK: - Actions - Reports
+
+    /// Reports what the page's engine saw it do, through that engine. `icon`
+    /// is the image a `PageIconChanged` names. A released page reports nothing.
+    func report(_ event: some EngineEvent, icon: Data? = nil) {
+        guard !isReleased else { return }
+        core?.engines.report(event, for: id, icon: icon)
     }
 }

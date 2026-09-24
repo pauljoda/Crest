@@ -124,6 +124,7 @@ public sealed partial class BrowserContractsTests {
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
         var ids = new TestIds();
         using var app = new CrestApp(new AppConfiguration(null), clock, ids);
+        var engine = RecordedIntents.PageEngine(app);
         var workspace = app.AttachWorkspace(authority);
         var reader = SessionReader.Opening(app.Drain());
         Assert.Equal(authority.Current, reader.State);
@@ -146,6 +147,9 @@ public sealed partial class BrowserContractsTests {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
                 changes = app.Send(intent);
+            } else if (RecordedIntents.Navigation(request) is { } navigation) {
+                clock.Now = navigation.At;
+                changes = RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);
             } else {
                 var command = authority.PrepareCommand(Bytes(request));
                 if (step["commit"]!.GetValue<bool>()) command.Commit();

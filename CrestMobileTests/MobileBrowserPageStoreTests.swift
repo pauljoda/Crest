@@ -67,7 +67,8 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let copy = try XCTUnwrap(browser.selectedTab)
         XCTAssertEqual(copy.url, child)
         XCTAssertNotEqual(copy.id, source.id)
-        XCTAssertEqual(browser.selectedSpace?.savedTabs, [source])
+        // The saved tab stays saved, where its page's recorded navigation left it.
+        XCTAssertEqual(browser.selectedSpace?.savedTabs.map(\.id), [source.id])
         XCTAssertEqual(browser.selectedSpace?.pinnedTabs, originalPinnedTabs)
         // Copying an unmaterialized copy must leave its own native state available.
         var nextCopy = BrowserTab(title: copy.title, url: copy.url, placement: .current)
