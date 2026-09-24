@@ -66,20 +66,25 @@ for `EnginePage` lists every direct engine call.
    operation string or a code. The generator gives each type its wire tag, and
    the source never spells one.
 2. Rule failures are objects: `TabLimitReached(Limit)`, not `"tab_limit"`.
-3. A fixed set is one self-describing object. Its members are static
-   instances that carry their own data and behavior: the stored spelling, any
-   labels or limits, and the rules that belong to the concept. There is no
-   separate codes, policy or extension type for them. Each language uses its
-   own natural form:
-   - In C#, a sealed class with a private constructor and static readonly
-     instances (`TabIconMode.Automatic`, with `Name`, `All` and
-     `Named(string)`). When code must switch, the class has a nested `Kinds`
-     enum that it exposes as `Kind`.
-   - In Swift, an `enum` whose cases carry the same data as properties. The
-     generator emits it from the C# instances, so the data is written once.
+3. Objects describe themselves. A type owns its data and every behavior that
+   depends on it. No sibling `*Codes`, `*Policy`, `*Rules` or `*Mapping` types,
+   and no extension files that switch over its kinds. A fixed set is one type
+   whose static instances define its members. Each instance is constructed with
+   the values that make its behavior emerge: its stored spelling, labels,
+   limits, and any rule that differs by kind, passed in as a value or a
+   function. Methods are written once over those values and never name a
+   particular member, so adding a kind means adding one instance.
+   - In C#, this is a sealed class with a private constructor and static
+     readonly instances (`TabIconMode.Automatic`, with `Name`, `All` and
+     `Named(string)`).
+   - In Swift, it is a struct with `static let` instances, which the generator
+     emits from the C# instances so the data is written once.
 
-   A set whose members carry no data or behavior may stay a plain enum.
-   Capability sets are flags. No capability is a string.
+   A nested `Kinds` enum is used only where a switch cannot be avoided. Plain
+   enums remain only for sets whose members carry nothing. Unions of message
+   types (changes, events, rejections) are not fixed sets, so the one place
+   that handles them switches over them. Capability sets are flags. No
+   capability is a string.
 4. Identifiers are plain `Guid` in C# and `UUID` in Swift, and they appear only
    at boundaries. Inside the core, methods take the objects themselves
    (`window.Show(space, tab)`), not their identifiers. Crest does not wrap a
