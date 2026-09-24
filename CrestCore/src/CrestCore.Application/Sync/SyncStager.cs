@@ -9,20 +9,24 @@ namespace CrestCore.Application;
 /// A queued stage waits for the host to finish the turn that queued it and
 /// for its urgency's delay, then stages the newest queued session with the
 /// newest edit's reason. So the edits one turn of the host makes stage once,
-/// however many there are. A stage requested later replaces one that has not
-/// committed; one that finds itself replaced when it seals is dropped, and the
-/// newer one stages instead. A stage that runs outside the worker, because its
-/// revision is saved with the journal or because a merge stages the local
-/// session itself, supersedes whatever is queued.
+/// however many there are, and each record one of them removed is deleted for
+/// the reason of the edit that removed it. A stage requested later replaces
+/// one that has not committed, taking over its edits; one that finds itself
+/// replaced when it seals is dropped, and the newer one stages instead. A
+/// stage that runs outside the worker, because its revision is saved with the
+/// journal or because a merge stages the local session itself, supersedes
+/// whatever is queued.
 ///
 /// Its state is guarded by the session gate, which the worker also waits on.
 internal sealed class SyncStager {
     #region Types
 
     /// One requested stage: the session to stage, the reason its removals are
-    /// deleted for, when its delay ends, the host turn it was queued in and
-    /// its place among requests.
-    internal sealed record Request(SessionState Session, SyncDeletionReason Reason, DateTimeOffset Due, ulong Turn, ulong Sequence);
+    /// deleted for unless an earlier edit removed them, the edits it covers,
+    /// when its delay ends, the host turn it was queued in and its place among
+    /// requests.
+    internal sealed record Request(SessionState Session, SyncDeletionReason Reason, SyncRemovals Removals, DateTimeOffset Due,
+        ulong Turn, ulong Sequence);
 
     #endregion
 
@@ -32,6 +36,9 @@ internal sealed class SyncStager {
     private Thread? worker;
     /// The newest request not yet staged.
     private Request? queued;
+    /// The request the worker is staging, whose edits a newer request takes
+    /// over in case its stage is dropped.
+    private Request? staging;
     /// The newest request or supersession; only a stage for it may commit.
     private ulong requested;
     /// Every request up to this one has staged, failed, or been superseded by
@@ -53,13 +60,15 @@ internal sealed class SyncStager {
 
     #region Actions - Requests
 
-    /// Queues `session` to stage with `staging`'s reason once the host's turn
-    /// ends and its urgency's delay passes without a newer request.
-    public void Queue(SessionState session, SyncStaging staging) {
+    /// Queues `next`, which an edit made from `previous`, to stage with
+    /// `edit`'s reason once the host's turn ends and its urgency's delay passes
+    /// without a newer request.
+    public void Queue(SessionState previous, SessionState next, SyncStaging edit) {
         lock (NativeSessionAuthority.Gate) {
             if (stopped) return;
             requested++;
-            queued = new(session, staging.Reason, DateTimeOffset.UtcNow + staging.Urgency.Delay, turns, requested);
+            var removals = Pending.Adding(new(previous, next, edit.Reason));
+            queued = new(next, edit.Reason, removals, DateTimeOffset.UtcNow + edit.Urgency.Delay, turns, requested);
             worker ??= Start();
             Monitor.PulseAll(NativeSessionAuthority.Gate);
         }
@@ -67,11 +76,11 @@ internal sealed class SyncStager {
     }
 
     /// A stage that runs outside the worker now covers every queued edit.
-    /// Answers the request it replaced, which `Requeue` restores if that
-    /// stage never commits.
+    /// Answers the request it replaced, whose edits it takes over and which
+    /// `Requeue` restores if that stage never commits.
     public Request? Supersede() {
         lock (NativeSessionAuthority.Gate) {
-            var replaced = queued;
+            var replaced = queued ?? staging;
             queued = null;
             requested++;
             settled = requested;
@@ -97,6 +106,10 @@ internal sealed class SyncStager {
     /// Whether a stage for `sequence` may still commit. The caller holds the
     /// session gate.
     public bool IsCurrent(ulong sequence) => sequence == requested;
+
+    /// The edits no stage has committed yet: those of the queued request, or
+    /// of the one being staged. The caller holds the session gate.
+    private SyncRemovals Pending => (queued ?? staging)?.Removals ?? SyncRemovals.None;
 
     /// The host finished a turn, so the stages it queued may start.
     public void TurnEnded() {
@@ -144,6 +157,7 @@ internal sealed class SyncStager {
         while (Next() is { } request) {
             bool settles = owner.StageQueued(request);
             lock (NativeSessionAuthority.Gate) {
+                staging = null;
                 if (settles) settled = Math.Max(settled, request.Sequence);
                 Monitor.PulseAll(NativeSessionAuthority.Gate);
             }
@@ -172,6 +186,7 @@ internal sealed class SyncStager {
         Request Take() {
             var next = queued!;
             queued = null;
+            staging = next;
             return next;
         }
     }

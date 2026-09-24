@@ -2273,6 +2273,10 @@
     "core-sync-staging": {
       "category": "internal",
       "message": "The core stages sync itself, with each edit's deletion reason and urgency, and saves changes that sync together before returning."
+    },
+    "per-record-deletion-reasons": {
+      "category": "internal",
+      "message": "Each synced deletion carries the reason of the edit that removed it, so a deleted folder followed by a quick edit still syncs as deleted."
     }
   }
 }

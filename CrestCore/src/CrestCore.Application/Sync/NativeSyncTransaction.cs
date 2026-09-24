@@ -48,9 +48,12 @@ public sealed class NativeSyncTransaction : IDisposable {
         _ = Journal.Read();
     }
 
-    /// Stages `session` for `reason`, dating tombstones `now` seconds since 2001.
-    internal void Stage(SessionState session, SyncDeletionReason reason, double now) {
-        Journal = Journal.Stage(StoredSessionCodec.Encode(session), reason, now);
+    /// Stages `session`, deleting each record it lost for the reason `removals`
+    /// names for it, else for `reason`, and dating tombstones `now` seconds
+    /// since 2001.
+    internal void Stage(SessionState session, SyncDeletionReason reason,
+        IReadOnlyDictionary<string, SyncDeletionReason> removals, double now) {
+        Journal = Journal.Stage(StoredSessionCodec.Encode(session), reason, now, removals);
         _ = Journal.Read();
     }
 

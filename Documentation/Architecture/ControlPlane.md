@@ -497,10 +497,13 @@ core stages every accepted revision itself, on a worker, from the revision's
 immutable state; each command carries the reason its removals are deleted for
 and how soon it stages. A coalesced edit waits briefly for a newer one, and a
 stage that a newer request replaces before it seals is dropped, so a burst of
-edits stages once. Space deletion, imports, batches and moves between Spaces or
-workspaces stage inside their reservation, and the file takes the session and
-the journal in one transaction before either publishes. A disposable seed never
-stages, and the first attachment stages the session as a launch does. Incoming
+edits stages once. The newer request takes over the edits it replaces, and each
+record an edit removed is deleted for that edit's reason, found from the
+removals the session's change feed reports, rather than the newest edit's.
+Space deletion, imports, batches and moves between Spaces or workspaces stage
+inside their reservation, and the file takes the session and the journal in one
+transaction before either publishes. A disposable seed never stages, and the
+first attachment stages the session as a launch does. Incoming
 merges bind their journal transaction to the session replacement, so both core
 values publish under the same lock after SQLite commits. The transport hears
 `SyncJournalChanged` after each stage and reads the journal the core accepted.

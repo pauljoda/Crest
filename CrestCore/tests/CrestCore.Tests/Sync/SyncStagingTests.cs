@@ -65,6 +65,37 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ARecordAnEarlierEditOfABurstRemovedIsDeletedForThatEditsReason() {
+        var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
+        session.Remove("disposableSeedMarker");
+        var (owner, sync) = Syncing(session);
+        var folder = Guid.NewGuid();
+        var color = new JsonObject { ["red"] = 0.43, ["green"] = 0.48, ["blue"] = 0.54, ["alpha"] = 1 };
+        var creation = new JsonObject {
+            ["folderId"] = folder.ToString(),
+            ["title"] = "Doomed",
+            ["placement"] = "saved",
+            ["parentId"] = null,
+            ["color"] = color,
+            ["symbol"] = "folder",
+            ["tabIds"] = new JsonArray(),
+            ["detach"] = false
+        };
+        owner.PrepareCommand(SpaceCommand(session, "folder.create", creation)).Commit();
+        sync.Flush();
+        JsonNode FolderRecord() => JsonNode.Parse(sync.Snapshot.Read())!["records"]!.AsArray().Single(record =>
+            record!["id"]!["kind"]!.GetValue<string>() == "folder" && Guid.Parse(record["id"]!["value"]!.GetValue<string>()) == folder)!;
+        Assert.NotNull(FolderRecord()["payload"]);
+
+        // The rename is the newest edit, but it did not remove the folder.
+        owner.PrepareCommand(SpaceCommand(session, "folder.delete", new() { ["folderId"] = folder.ToString() })).Commit();
+        Rename(owner, session, fixture.Tab, "Renamed after the deletion");
+        sync.Flush();
+
+        Assert.Equal("explicitDelete", FolderRecord()["tombstone"]!["reason"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void ADisposableSeedSessionNeverStages() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         Assert.NotNull(session["disposableSeedMarker"]);

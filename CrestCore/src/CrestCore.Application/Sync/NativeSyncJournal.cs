@@ -114,16 +114,23 @@ public sealed class NativeSyncJournal {
 
     /// The journal after staging `session`, a whole session in the stored
     /// format that nothing else holds, under this journal's preferences.
-    /// Records it no longer holds are deleted for `reason` where their absence
-    /// authorizes a deletion; `now` in seconds since 2001 dates the tombstones.
-    internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now) => Apply(new JsonObject {
-        ["version"] = 1,
-        ["operation"] = NativeSyncOperationCodes.Name(NativeSyncOperation.Stage),
-        ["preferences"] = Preferences,
-        ["arguments"] = new JsonObject { ["session"] = session, ["deletionReason"] = reason.Name, ["now"] = now }
-    });
+    /// Records it no longer holds are deleted, where their absence authorizes a
+    /// deletion, for the reason `removals` names for them by record name, else
+    /// for `reason`; `now` in seconds since 2001 dates the tombstones.
+    internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now,
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = NativeSyncOperationCodes.Name(NativeSyncOperation.Stage),
+            ["preferences"] = Preferences,
+            ["arguments"] = new JsonObject { ["session"] = session, ["deletionReason"] = reason.Name, ["now"] = now }
+        };
+        return Apply(request, removals);
+    }
 
-    internal NativeSyncJournal Apply(JsonObject request) {
+    /// The journal after `request`. A stage deletes each record it removes for
+    /// the reason `removals` names for it, else for the request's own.
+    internal NativeSyncJournal Apply(JsonObject request, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         var fields = metadata.DeepClone().AsObject();
         fields["preferences"] = request["preferences"]!.DeepClone();
@@ -231,7 +238,8 @@ public sealed class NativeSyncJournal {
                         string kind = Kind(record);
                         var placement = kind == SyncRecordKinds.Tab ? TabPlacement.Named(Value(payload)["placement"]!.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement) : (TabPlacement?)null;
                         reason = SyncDeletionPolicy.Reason(kind, placement, archiveReasons.GetValueOrDefault(Id(record["id"]!["value"])),
-                            desired.ContainsKey(SyncRecordKinds.Space + ":" + Id(record["spaceID"]).ToString("D")), fallback);
+                            desired.ContainsKey(SyncRecordKinds.Space + ":" + Id(record["spaceID"]).ToString("D")),
+                            removals?.GetValueOrDefault(id) ?? fallback);
                     }
                     if (reason is null) continue;
                     next[id] = Delete(record, reason); queued.Add(id);

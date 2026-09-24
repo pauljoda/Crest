@@ -27,7 +27,7 @@ public sealed partial class NativeSessionAuthority {
             if (sync is null) attached = session;
             sync = value; value.Session = this;
         }
-        if (attached is { DisposableSeedMarker: null }) value.Queue(attached, SyncStaging.Launch);
+        if (attached is { DisposableSeedMarker: null }) value.Queue(attached, attached, SyncStaging.Launch);
     }
 
     /// Reserves a validated revision while it is saved. Other writes are
@@ -86,7 +86,7 @@ public sealed partial class NativeSessionAuthority {
         var reserved = ReserveCommand(command);
         NativeSyncTransaction? staged;
         try {
-            staged = StageWithSave(command.Session, staging.Reason);
+            staged = StageWithSave(command.Base, command.Session, staging.Reason);
             if (staged is not null) reserved.BindSync(staged);
         } catch {
             reserved.Dispose();
@@ -101,12 +101,14 @@ public sealed partial class NativeSessionAuthority {
         staged?.Owner.AnnounceStaged();
     }
 
-    /// The sealed journal `next` stages with its save, or null when no sync is
-    /// attached or `next` is a disposable seed, which never syncs.
-    internal NativeSyncTransaction? StageWithSave(SessionState next, CrestCore.Contracts.SyncDeletionReason reason) {
+    /// The sealed journal `next`, made from `previous`, stages with its save,
+    /// or null when no sync is attached or `next` is a disposable seed, which
+    /// never syncs.
+    internal NativeSyncTransaction? StageWithSave(SessionState previous, SessionState next,
+        CrestCore.Contracts.SyncDeletionReason reason) {
         NativeSyncAuthority? target;
         lock (Gate) target = sync;
-        return target is null || next.DisposableSeedMarker is not null ? null : target.StageWithSave(next, reason);
+        return target is null || next.DisposableSeedMarker is not null ? null : target.StageWithSave(previous, next, reason);
     }
 
     /// Queues the stage of an accepted state, when a sync is attached, the
@@ -115,7 +117,7 @@ public sealed partial class NativeSessionAuthority {
         NativeSyncAuthority? target;
         lock (Gate) target = sync;
         if (target is null || staging is null || next.DisposableSeedMarker is not null || next.Equals(previous)) return;
-        target.Queue(next, staging);
+        target.Queue(previous, next, staging);
     }
 
     /// Replaces the session with the edits `delta` names and saves the result,

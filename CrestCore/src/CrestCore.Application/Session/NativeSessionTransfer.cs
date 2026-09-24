@@ -59,8 +59,9 @@ public sealed class NativeSessionTransfer : IDisposable {
         NativeSyncTransaction? staged = null;
         try {
             var reason = SyncStaging.Transfer.Reason;
-            if (source.StageWithSave(a!.Session, reason) is { } fromSource) a!.BindSync(staged = fromSource);
-            else if (destination.StageWithSave(b!.Session, reason) is { } fromDestination) b!.BindSync(staged = fromDestination);
+            if (source.StageWithSave(sourceCommand.Base, a!.Session, reason) is { } fromSource) a!.BindSync(staged = fromSource);
+            else if (destination.StageWithSave(destinationCommand.Base, b!.Session, reason) is { } fromDestination)
+                b!.BindSync(staged = fromDestination);
             source.Storage?.Save(a!.Session, a.Revision, a.SyncTransaction?.Journal, a.Checkpoint);
             destination.Storage?.Save(b!.Session, b.Revision, b.SyncTransaction?.Journal, b.Checkpoint);
         } catch {
