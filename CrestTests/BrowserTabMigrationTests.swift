@@ -373,7 +373,7 @@ final class BrowserTabMigrationTests: XCTestCase {
         )
         let space = try XCTUnwrap(imported.spaces.first)
 
-        XCTAssertEqual(space.pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
+        XCTAssertEqual(space.pinnedTabs.count, TabPlacement.pinnedCapacity)
         XCTAssertEqual(space.savedTabs.count, 2)
         XCTAssertEqual(space.folders.map(\.title), ["Imported Pinned Tabs"])
         XCTAssertTrue(space.savedTabs.allSatisfy { $0.folderID == space.folders[0].id })

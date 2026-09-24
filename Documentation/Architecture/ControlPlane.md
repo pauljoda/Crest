@@ -734,7 +734,7 @@ shows, and what the first window opens; without an answer a launch stays
 isolated and opens the Start Page. Isolation is answered before any session
 exists; the first window's destination is the session's `launch.plan` read,
 which applies the saved startup preference the core owns. A tab opened from another is placed by the
-`tab.open` command's `after` anchor, after the whole split of its origin.
+`OpenTab` intent's `AfterTabId`, after the whole split of its origin.
 `MediaSessionPolicy` arbitrates page media sessions identically for the WebKit
 bridge and Chromium's native session: stale and retired reports, sibling
 documents of a tab, the remembered-identity window, dismissal clearing, display

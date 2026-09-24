@@ -21,7 +21,7 @@ extension BrowserStore {
         let arguments = BrowserCoreTabBatch.Arguments(
             request: request, action: action,
             follow: linkPreferences.followsTabsMovedToAnotherSpace,
-            observations: copyObservations(for: observedIDs, in: source))
+            observations: sourcePages(for: observedIDs, in: source).map(BrowserCoreTabBatch.CopyObservation.init))
         return try family.prepareTabBatch(request, arguments: arguments, from: self, at: date)
     }
 

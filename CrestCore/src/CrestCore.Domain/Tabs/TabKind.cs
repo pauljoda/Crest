@@ -1,7 +1,7 @@
 namespace CrestCore.Domain;
 
 /// <summary>The content a tab presents. Persisted native kind names are resolved at the boundary.</summary>
-public sealed record TabContent {
+public sealed record TabKind {
     #region Variables
 
     public string Name { get; }
@@ -10,16 +10,16 @@ public sealed record TabContent {
     public string Symbol { get; }
     public bool IsStartPage { get; }
     public bool IsWebPage => RenderType == TabRenderType.WebRender && !IsStartPage;
-    public static TabContent Web { get; } = new("New tab", TabRenderType.WebRender, null, "globe");
-    public static TabContent StartPage { get; } = new("Start Page", TabRenderType.UiNative, null, "flag.fill", true);
-    public static TabContent Settings { get; } = new("Settings", TabRenderType.UiNative, "settings", "gearshape");
-    public static TabContent GettingStarted { get; } = new("Getting Started", TabRenderType.UiNative, "getting-started", "book.closed.fill");
+    public static TabKind Web { get; } = new("New tab", TabRenderType.WebRender, null, "globe");
+    public static TabKind StartPage { get; } = new("Start Page", TabRenderType.UiNative, null, "flag.fill", true);
+    public static TabKind Settings { get; } = new("Settings", TabRenderType.UiNative, "settings", "gearshape");
+    public static TabKind GettingStarted { get; } = new("Getting Started", TabRenderType.UiNative, "getting-started", "book.closed.fill");
 
     #endregion
 
     #region Constructors
 
-    private TabContent(string name, TabRenderType renderType, string? nativeKind, string symbol, bool isStartPage = false) {
+    private TabKind(string name, TabRenderType renderType, string? nativeKind, string symbol, bool isStartPage = false) {
         Name = name;
         RenderType = renderType;
         NativeKind = nativeKind;
@@ -31,7 +31,7 @@ public sealed record TabContent {
 
     #region Actions - Content decoding
 
-    public static TabContent Native(string kind, string title, string symbol = "square") {
+    public static TabKind Native(string kind, string title, string symbol = "square") {
         if (string.IsNullOrWhiteSpace(kind)) throw new BrowserRuleException(BrowserRuleCodes.InvalidNativeKind);
         return kind switch {
             "settings" => Settings,
@@ -40,7 +40,7 @@ public sealed record TabContent {
         };
     }
 
-    public static TabContent FromStored(string? nativeKind, string? url, string title)
+    public static TabKind FromStored(string? nativeKind, string? url, string title)
         => nativeKind is { } kind ? Native(kind, title) : url is null ? StartPage : Web;
 
     #endregion

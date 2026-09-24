@@ -35,7 +35,6 @@ enum BrowserPolicyOperation: String, Codable, Sendable {
     case shortcutsAssign = "shortcuts.assign"
     case shortcutsBindings = "shortcuts.bindings"
     case shortcutsNumberedSelection = "shortcuts.numbered_selection"
-    case tabsDismissal = "tabs.dismissal"
     case translationMatches = "translation.matches"
     case translationRule = "translation.rule"
     case brandingNormalize = "branding.normalize"

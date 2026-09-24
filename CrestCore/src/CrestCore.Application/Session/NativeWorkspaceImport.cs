@@ -257,7 +257,7 @@ public sealed class NativeWorkspaceImport {
         var edited = additions.Select(tab => {
             var placement = PlacementFor(tab);
             Guid? folder;
-            if (placement == TabPlacement.Pinned && ++pinned > WorkspaceImportPolicy.MaximumPinnedTabs) {
+            if (placement == TabPlacement.Pinned && !placement.Holds(++pinned)) {
                 placement = TabPlacement.Saved;
                 if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
                     overflowFolder = new FolderState(Guid.NewGuid(), TabPlacement.Saved, WorkspaceImportPolicy.OverflowFolderTitle,

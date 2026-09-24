@@ -12,7 +12,7 @@ struct BrowserTabSections: Equatable, Sendable {
         var currentTabs: [BrowserTab] = []
         var tabsByFolderID: [FolderID: [BrowserTab]] = [:]
 
-        pinnedTabs.reserveCapacity(min(tabs.count, BrowserSpace.maximumPinnedTabs))
+        pinnedTabs.reserveCapacity(min(tabs.count, TabPlacement.pinnedCapacity))
         currentTabs.reserveCapacity(tabs.count)
 
         for tab in tabs {

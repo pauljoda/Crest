@@ -154,6 +154,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 profileID: space.profile.id, tabID: unrelatedID)
             let unrelatedState = archive.archivedState(profileID: space.profile.id, tabID: unrelatedID)
             let preferences = BrowserAppPreferenceStore()
+            preferences.bind(to: browser, legacy: BrowserLegacyAppPreferences())
             preferences.savedTabClosePolicy = policy
             let action = BrowserDurableTabCloseAction(
                 browser: browser, spaceAccess: BrowserSpaceAccessController(), preferences: preferences,

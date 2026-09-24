@@ -8,7 +8,9 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         for placement: TabPlacement in [.pinned, .saved] {
             for policy in BrowserDurableTabClosePolicy.allCases {
                 let context = try makeContext(placement: placement)
+                // The core puts the page away as the session's preferences say.
                 let preferences = BrowserAppPreferenceStore()
+                preferences.bind(to: context.browser, legacy: BrowserLegacyAppPreferences())
                 preferences.savedTabClosePolicy = policy
                 var discardedState: Bool?
                 let action = BrowserDurableTabCloseAction(

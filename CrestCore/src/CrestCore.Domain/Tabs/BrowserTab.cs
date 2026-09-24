@@ -14,7 +14,7 @@ public sealed class BrowserTab {
     public TabState State { get; private set; }
 
     public Guid Id => State.Id;
-    public TabContent Content => TabContent.FromStored(State.NativeContent?.Kind, State.Url, State.Title);
+    public TabKind Content => TabKind.FromStored(State.NativeContent?.Kind, State.Url, State.Title);
     public string? Url => State.Url;
     public string Title => State.Title;
     public string? CustomTitle => State.CustomTitle;
@@ -41,7 +41,7 @@ public sealed class BrowserTab {
     /// address and nothing else may have one.
     public static BrowserTab Restore(TabState state) {
         var restored = state with { CustomTitle = string.IsNullOrWhiteSpace(state.CustomTitle) ? null : state.CustomTitle.Trim() };
-        var content = TabContent.FromStored(restored.NativeContent?.Kind, restored.Url, restored.Title);
+        var content = TabKind.FromStored(restored.NativeContent?.Kind, restored.Url, restored.Title);
         if (content.IsWebPage != (restored.Url is not null)) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabContent);
         return new(restored);
     }

@@ -5,8 +5,8 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// Wire spellings for the page-residency, process-recovery, tab-dismissal and
-/// tab-selection policy operations. They match the native lifecycle models'
+/// Wire spellings for the page-residency, process-recovery and tab-selection
+/// policy operations. They match the native lifecycle models'
 /// case names.
 internal static class TabPolicyCodes {
     #region Actions - Encoding
@@ -24,9 +24,6 @@ internal static class TabPolicyCodes {
         ["action"] = Recovery(action),
         ["maximumAutomaticReloads"] = PageProcessRecoveryPolicy.MaximumAutomaticReloads
     };
-
-    public static JsonObject DismissalAnswer(TabDismissalAction action) => new() { ["action"] = action.Name };
-
 
     private static JsonArray Identifiers(IReadOnlyList<string> values) =>
         new(values.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray());

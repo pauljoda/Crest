@@ -29,40 +29,9 @@ public sealed partial class NativeSessionAuthority {
         if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(request, operation);
         if (length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(request);
-        if (SessionOperationCodes.IsTransient(operation))
-            return PrepareTransientCommand(request);
         if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(request);
-        if (SessionOperationCodes.IsSpace(operation))
-            return PrepareSpaceCommand(request);
-        if (operation is SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient)
-            throw new BrowserRuleException(BrowserRuleCodes.TransientRequiresCommand);
-        var (next, answer, followUp, events) = EditSpace(request, operation);
-        return new NativeSessionCommand(this, session, next, Output(answer), followUp: followUp, events: events);
-    }
-
-    /// One tab, folder or split edit in the Space the request names: the next
-    /// session, the answer for the requesting window, what that window shows
-    /// next and what the edit did that the sessions cannot tell. A tab the
-    /// window shows that the edit dismisses gives way to the tab it showed
-    /// before, from its history.
-    private (SessionState Next, JsonObject Answer, WindowFollowUp FollowUp, SessionTabEvents Events) EditSpace(JsonObject request,
-        SessionOperation operation) {
-        var spaceId = Id(request["spaceId"]);
-        if (PendingDeletion(session, spaceId) is not null)
-            throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-        var original = session.Spaces.Single(s => s.Id == spaceId);
-        if (Id(request["profileId"]) != original.ProfileId)
-            throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
-        var followUp = new WindowFollowUp(IssuingWindow(request));
-        var arguments = SessionEditArguments.Decode(request["arguments"]!.AsObject(), operation);
-        arguments = arguments with { FallbackTabId = DismissalFallback(operation, original, arguments, followUp) };
-        var result = NativeSessionEditor.Evaluate(operation, original, arguments, Now(request), followUp.Window?.Tab(spaceId));
-        followUp.ShowTab(spaceId, result.SelectedTabId);
-        if (result.SelectSpace) followUp.ShowSpace(spaceId);
-        var edited = result.Edited.Capture(original);
-        var next = Replacing(session, edited);
-        Validate(next);
-        return (next, result.Answer(edited), followUp, result.Events);
+        if (SessionOperationCodes.IsSpace(operation)) return PrepareSpaceCommand(request);
+        throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit);
     }
 
     /// The window that issued `request`, as it is now, or null for a command
@@ -70,19 +39,6 @@ public sealed partial class NativeSessionAuthority {
     private Window? IssuingWindow(JsonObject request) {
         var windowId = request[WindowField] is { } value ? Id(value) : (Guid?)null;
         return device?.Snapshot(workspaceId, windowId);
-    }
-
-    /// The tab to show after a close or deletion dismisses the tab the window
-    /// shows: the one it showed before. A durable close skips the tab's split,
-    /// whose other members would present the closed card again.
-    private static Guid? DismissalFallback(SessionOperation operation, SpaceState space, SessionEditArguments arguments,
-        WindowFollowUp followUp) {
-        if (operation is not (SessionOperation.TabClose or SessionOperation.TabDelete or SessionOperation.TabCloseDurable)
-            || arguments.TabId is not { } dismissed) return null;
-        var group = space.Tabs.FirstOrDefault(tab => tab.Id == dismissed)?.SplitGroupId;
-        var available = space.Tabs.Where(tab => operation != SessionOperation.TabCloseDurable
-            || tab.Id != dismissed && (group is null || tab.SplitGroupId != group)).Select(tab => tab.Id).ToHashSet();
-        return followUp.FallbackAfterDismissing(space.Id, dismissed, available);
     }
 
     /// The request's time, in the stored date format.

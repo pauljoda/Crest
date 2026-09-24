@@ -158,7 +158,7 @@ final class BrowserSyncTests: XCTestCase {
     }
 
     func testLocalNativePinDoesNotBlockAFullSetOfCloudPins() throws {
-        var remote = currentTabSession(count: BrowserSpace.maximumPinnedTabs)
+        var remote = currentTabSession(count: TabPlacement.pinnedCapacity)
         for index in remote.spaces[0].tabs.indices { remote.spaces[0].tabs[index].placement = .pinned }
         var journal = BrowserSyncJournal()
         try journal.stage(session: remote)
@@ -166,8 +166,8 @@ final class BrowserSyncTests: XCTestCase {
         let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .pinned)
         local.spaces[0].tabs = [settings]
         let merged = try journal.materializedSession(applyingTo: local)
-        XCTAssertEqual(merged.spaces[0].tabs.count, BrowserSpace.maximumPinnedTabs + 1)
-        XCTAssertEqual(merged.spaces[0].pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
+        XCTAssertEqual(merged.spaces[0].tabs.count, TabPlacement.pinnedCapacity + 1)
+        XCTAssertEqual(merged.spaces[0].pinnedTabs.count, TabPlacement.pinnedCapacity)
     }
 
     func testJournalPayloadIsAPrivacyAllowlistRatherThanAnEncodedSession() throws {

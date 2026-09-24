@@ -63,16 +63,14 @@ public sealed partial class BrowserContractsTests {
         foreach (var tab in new[] { fixture.Tab, earlier, closing }) device.Send(new ShowTab(closer, fixture.Space, tab));
         var other = device.Open(fixture.Space);
         device.Send(new ShowTab(other, fixture.Space, fixture.Tab));
-        var revision = authority.Revision;
-
-        authority.PrepareCommand(SpaceCommand(session, "tab.close", new() { ["tabId"] = closing.ToString() }, window: closer)).Commit();
+        device.Send(new CloseTab(device.Workspace, closer, fixture.Space, closing));
         Assert.Equal(earlier, device.Tab(closer, fixture.Space));
         Assert.Equal(fixture.Space, device.Space(closer));
         // A window showing another tab changes nothing.
         Assert.Equal(fixture.Tab, device.Tab(other, fixture.Space));
 
         // A tab another window closes leaves this one showing nothing there.
-        authority.PrepareCommand(SpaceCommand(session, "tab.close", new() { ["tabId"] = earlier.ToString() }, window: other)).Commit();
+        device.Send(new CloseTab(device.Workspace, other, fixture.Space, earlier));
         Assert.Null(device.Tab(closer, fixture.Space));
     }
 

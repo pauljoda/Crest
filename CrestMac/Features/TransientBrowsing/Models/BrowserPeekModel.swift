@@ -139,10 +139,8 @@ final class BrowserPeekModel {
             let pageLease,
             let page = pageLease.page,
             let outcome = BrowserTransientPagePromotion(
-                requestID: request.id,
+                page: page.corePage,
                 url: page.url ?? request.url,
-                sourceAssignment: request.assignment,
-                leaseAssignment: pageLease.assignment,
                 destinationAssignment: destinationAssignment
             ).perform(
                 in: browser,

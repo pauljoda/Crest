@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -39,43 +40,31 @@ public sealed partial class BrowserContractsTests {
         var initial = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         var localTab = session["spaces"]![0]!["tabs"]![0]!.DeepClone();
         localTab["folderID"] = null; localTab["splitGroupID"] = null; localTab["placement"] = "current";
-        child.Commit(Bytes(new JsonObject {
+        byte[] Local(JsonNode tab) => Bytes(new JsonObject {
             ["version"] = 1,
             ["spaces"] = new JsonArray(new JsonObject {
                 ["id"] = initial["spaces"]![0]!["id"]!.DeepClone(),
-                ["tabs"] = new JsonObject { ["replace"] = new JsonArray(localTab) }
+                ["tabs"] = new JsonObject { ["replace"] = new JsonArray(tab.DeepClone()) }
             })
-        }));
-        var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
-        var request = Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "tab.open",
-            ["now"] = 800000100.0,
-            ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
-            ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["arguments"] = new JsonObject {
-                ["tab"] = new JsonObject {
-                    ["id"] = SwiftId(Guid.NewGuid()),
-                    ["title"] = "Prepared locally",
-                    ["url"] = "https://example.org/",
-                    ["placement"] = "current",
-                    ["symbol"] = "globe",
-                    ["lastActivatedAt"] = 800000100.0
-                }
-            }
         });
-        var pending = child.PrepareCommand(request);
+        child.Commit(Local(localTab));
+        var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         owner.PrepareCommand(SpaceCommand(session, "space.identity",
             new() { ["name"] = "New canonical name", ["symbol"] = "book", ["accent"] = "teal" })).Commit();
-        Assert.Equal("stale_borrowed_source", Assert.Throws<BrowserRuleException>(() => pending.Commit()).Code);
-        Assert.Equal("stale_borrowed_source", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(request)).Code);
+        Assert.Equal("stale_borrowed_source", Assert.Throws<BrowserRuleException>(() => child.Commit(Local(localTab))).Code);
         var refresh = child.PrepareBorrowedRefresh();
         Assert.Equal(2UL, child.Revision);
         refresh.Commit();
         var after = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         Assert.True(JsonNode.DeepEquals(local["spaces"]![0]!["tabs"], after["spaces"]![0]!["tabs"]));
         Assert.Equal("New canonical name", after["spaces"]![0]!["name"]!.GetValue<string>());
-        child.PrepareCommand(request).Commit();
+
+        // A tab the borrowed workspace opens stays with it.
+        using var device = new TestDevice(owner);
+        var borrowed = device.Attach(child);
+        device.Send(new OpenTab(borrowed, Guid.NewGuid(), SpaceId(session["spaces"]![0]!), Guid.NewGuid(),
+            new TabContent("https://example.org/", null, "Prepared locally", null), TabPlacement.Current, null, false));
+        Assert.Contains("Prepared locally", System.Text.Encoding.UTF8.GetString(child.Checkpoint().Read("core")));
         Assert.DoesNotContain("Prepared locally", System.Text.Encoding.UTF8.GetString(owner.Checkpoint().Read("core")));
     }
 

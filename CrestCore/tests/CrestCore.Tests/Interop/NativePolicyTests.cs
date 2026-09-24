@@ -283,27 +283,6 @@ public sealed class NativePolicyTests {
         request["consecutiveTerminations"] = 0;
         Assert.Throws<BrowserRuleException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())));
     }
-    [Theory]
-    [InlineData("pinned", false, 4, "unloadPage")]
-    [InlineData("saved", false, 4, "unloadPage")]
-    [InlineData("current", false, 4, "closeTab")]
-    [InlineData("current", true, 2, "closeTab")]
-    [InlineData("current", true, 1, "closeWindow")]
-    [InlineData(null, false, 4, "closeWindow")]
-    public void DismissingATabUnloadsDurableTabsAndClosesTheLoneStartPageWindow(
-        string? placement, bool isStartPage, int tabCount, string action) {
-        var request = new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "tabs.dismissal",
-            ["placement"] = placement,
-            ["isStartPage"] = isStartPage,
-            ["tabCount"] = tabCount
-        };
-        var response = JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
-        Assert.Equal(action, response["action"]!.GetValue<string>());
-        request["placement"] = "archived";
-        Assert.Throws<ProtocolException>(() => NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())));
-    }
     private static JsonObject Candidate(string tabId, double? inactiveSince,
         bool keepsPageLoaded = false, int? presentedIndex = null) => new() {
             ["tabID"] = tabId,

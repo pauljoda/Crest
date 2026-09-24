@@ -253,7 +253,7 @@ enum BrowserSidebarReorderPolicy {
         guard case .tabs(placement: .pinned, folderID: _) = section,
             !isAlreadyInSection
         else { return true }
-        return existingCount < BrowserSpace.maximumPinnedTabs
+        return existingCount < TabPlacement.pinnedCapacity
     }
 
     /// Rows belonging to `section`, in their current visual order.

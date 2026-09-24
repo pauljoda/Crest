@@ -16,10 +16,8 @@ struct MobileBrowserCommandController {
     }
 
     var canDismissSelectedTab: Bool {
-        BrowserCorePolicy.tabDismissal(
-            for: browser.selectedTab,
-            tabCount: orderedTabs.count
-        ) != .closeWindow
+        guard let tab = browser.selectedTab, let space = browser.selectedSpace else { return false }
+        return !browser.closingLeavesOnlyTheWindow(tab.id, in: space.id)
     }
 
     var canDuplicateSelectedTab: Bool {
@@ -48,19 +46,10 @@ struct MobileBrowserCommandController {
 
     @discardableResult
     func dismissSelectedTab() -> TabID? {
-        guard let selectedTab = browser.selectedTab else { return nil }
-        switch BrowserCorePolicy.tabDismissal(
-            for: selectedTab,
-            tabCount: orderedTabs.count
-        ) {
-        case .closeTab:
-            if selectedTab.isStartPage {
-                browser.closeTab(selectedTab.id)
-                synchronizePages()
-                return selectedTab.id
-            }
-            return archiveSelectedTab()
-        case .unloadPage:
+        guard let selectedTab = browser.selectedTab, canDismissSelectedTab else { return nil }
+        // TRANSITIONAL until WP C slice (g) moves before-unload into the core:
+        // a saved or pinned tab's page is put away before the core records it.
+        if selectedTab.placement.isDurable {
             guard let space = browser.selectedSpace,
                 BrowserDurableTabCloseAction(
                     browser: browser, spaceAccess: spaceAccess,
@@ -72,9 +61,13 @@ struct MobileBrowserCommandController {
             else { return nil }
             synchronizePages()
             return selectedTab.id
-        case .closeWindow:
-            return nil
         }
+        if selectedTab.isStartPage {
+            browser.closeTab(selectedTab.id)
+            synchronizePages()
+            return selectedTab.id
+        }
+        return archiveSelectedTab()
     }
 
     @discardableResult

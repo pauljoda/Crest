@@ -2313,6 +2313,10 @@
     "quit-saves-window-space": {
       "category": "fixed",
       "message": "Switching a window to another Space or resizing a split right before quitting Crest is now always remembered when the window reopens."
+    },
+    "tab-lifecycle-intents": {
+      "category": "internal",
+      "message": "Opening, closing, copying and moving tabs and keeping Quick Window and Peek pages are typed core intents, and the core decides whether a closed tab archives or goes back."
     }
   }
 }

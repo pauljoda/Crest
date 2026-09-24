@@ -82,7 +82,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let preview = try plan.preview(mergingInto: existing)
         let merged = try XCTUnwrap(preview.space(id: existing.spaces[0].id))
         XCTAssertEqual(merged.profile, existing.spaces[0].profile)
-        XCTAssertEqual(merged.pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
+        XCTAssertEqual(merged.pinnedTabs.count, TabPlacement.pinnedCapacity)
         XCTAssertEqual(
             merged.tabs.filter { $0.url == URL(string: "https://duplicate.example/") }.count,
             1
@@ -110,7 +110,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         XCTAssertEqual(preview.spaces.count, 2)
         XCTAssertEqual(preview.spaces[1].name, "Work")
         XCTAssertTrue(preview.spaces[1].tabs.contains { $0.title == "Duplicate" })
-        XCTAssertEqual(preview.spaces[1].pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
+        XCTAssertEqual(preview.spaces[1].pinnedTabs.count, TabPlacement.pinnedCapacity)
     }
 
     func testPlacementOverrideMovesAnImportedTabBetweenPreviewSections() throws {

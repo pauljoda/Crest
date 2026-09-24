@@ -5,35 +5,12 @@ namespace CrestCore.Domain;
 public sealed partial class BrowserTabCollection {
     #region Actions - Lifetime
 
-    public BrowserTab PromoteTransient(TabState source, Guid? selected, DateTimeOffset now) {
-        var tab = BrowserTab.Restore(TransientState(source, now));
-        int? insertion = null;
-        if (selected is { } id && tabs.FindIndex(t => t.Id == id) is var index && index >= 0) {
-            var split = tabs[index].SplitGroupId;
-            index++;
-            while (split is not null && index < tabs.Count && tabs[index].SplitGroupId == split) index++;
-            insertion = index;
-        }
-        InsertTab(tab, insertion);
-        return tab;
-    }
-
-    public void ArchiveTransient(TabState source, DateTimeOffset now) {
-        if (tabs.Any(t => t.Id == source.Id) || archive.Any(archived => archived.Tab.Id == source.Id))
-            throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
-        archive.Add(new(TransientState(source, now), now, ArchiveReason.QuickWindow));
-    }
-
-    private static TabState TransientState(TabState source, DateTimeOffset now) {
-        if (!TabContent.FromStored(source.NativeContent?.Kind, source.Url, source.Title).IsWebPage || string.IsNullOrEmpty(source.Url))
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidTransientPage);
-        return source with {
-            Placement = TabPlacement.Current,
-            FolderId = null,
-            SplitGroupId = null,
-            SavedUrl = null,
-            LastActivatedAt = now
-        };
+    /// Archives a Quick Window's page as the closed open tab `closed`.
+    /// Refused with `TabAlreadyExists` when the Space holds its identity.
+    public void ArchiveTransient(TabState closed, DateTimeOffset now) {
+        if (tabs.Any(t => t.Id == closed.Id) || archive.Any(archived => archived.Tab.Id == closed.Id))
+            throw new Rejected(new TabAlreadyExists(closed.Id));
+        archive.Add(new(closed, now, ArchiveReason.QuickWindow));
     }
 
     public BrowserTab RestoreArchived(TabState source, DateTimeOffset now) {
@@ -48,9 +25,11 @@ public sealed partial class BrowserTabCollection {
         return tab;
     }
 
+    /// Puts a saved or pinned tab's page away, returning the tab to its saved
+    /// address when `returnToSavedUrl`, and answers the tab its window shows
+    /// next: `fallback` in place of the tab when it showed it.
     public Guid? CloseDurable(Guid id, Guid? selected, Guid? fallback, bool returnToSavedUrl) {
         var tab = Tab(id);
-        if (!tab.Placement.IsDurable) throw new BrowserRuleException(BrowserRuleCodes.NotDurableTab);
         if (returnToSavedUrl) tab.ReturnToSavedUrl();
         return selected == id ? fallback is { } other && other != id && tabs.Any(t => t.Id == other)
             ? other : null : selected;

@@ -174,23 +174,24 @@ public sealed partial class BrowserContractsTests {
 
     [Fact]
     public void AFinishThatArrivesDuringATransactionIsRecordedOnceAfterIt() {
-        var session = SavedSession().Document["session"]!;
+        var session = TwoSpaceSession();
         var authority = new NativeSessionAuthority(Bytes(session));
         var (app, engine, page, _) = NavigatingPage(authority, session);
         using var disposal = app;
-        var opened = Guid.NewGuid();
-        var opening = authority.PrepareCommand(SpaceCommand(session, "tab.open", new() {
-            ["tab"] = new JsonObject {
-                ["id"] = SwiftId(opened),
-                ["title"] = "Opened",
-                ["url"] = "https://example.org/opened",
-                ["placement"] = "current",
-                ["symbol"] = "globe",
-                ["lastActivatedAt"] = 800000001.0
-            }
+        var other = session["spaces"]![1]!;
+        var opened = TabId(other, 0);
+        var moving = authority.PrepareCommand(Bytes(new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "tab.transfer",
+            ["spaceId"] = other["id"]!.DeepClone(),
+            ["profileId"] = other["profile"]!["id"]!.DeepClone(),
+            ["destinationSpaceId"] = session["spaces"]![0]!["id"]!.DeepClone(),
+            ["destinationProfileId"] = session["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
+            ["now"] = 800000001.0,
+            ["arguments"] = new JsonObject { ["tabId"] = opened.ToString(), ["placement"] = "current" }
         }));
 
-        var reserved = opening.Reserve();
+        var reserved = moving.Reserve();
         app.Report(engine, new NavigationCommitted(page, "https://example.org/during", SameDocument: false));
         app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
         Assert.Empty(Own(app.Drain()));

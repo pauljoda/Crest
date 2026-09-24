@@ -418,21 +418,6 @@ final class BrowserCoreSessionAuthority {
 
     // MARK: - Actions - Commands
 
-    /// Runs a tab command.
-    func execute<Arguments: Encodable>(
-        _ operation: BrowserSessionOperation, in spaceID: SpaceID, arguments: Arguments,
-        window: UUID?, at date: Date
-    ) throws -> BrowserCoreSessionEditing.Result {
-        guard let space = projection.space(id: spaceID) else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
-        let data = try JSONEncoder().encode(
-            Command(
-                operation: operation, spaceId: spaceID.rawValue, profileId: space.profile.id,
-                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
-        return try commitCommand(data) {
-            try JSONDecoder().decode(BrowserCoreSessionEditing.Result.self, from: $0)
-        }
-    }
-
     func executeSpace<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
         window: UUID?, at date: Date

@@ -32,24 +32,13 @@ extension BrowserStore {
         }) {
             return activateSessionTab(draft.id, in: space.id) ? draft.id : nil
         }
-        return openSessionTab(
-            title: BrowserTab.startPageTitle,
-            url: nil,
-            symbol: BrowserTab.startPageSymbol,
-            in: space.id,
-            insertingAfter: selectedTabID(in: space.id)
-        )
+        return openSessionTab(.startPage, in: space.id, insertingAfter: selectedTabID(in: space.id))
     }
 
     @discardableResult
     func openNewTab(url: URL) -> TabID? {
         guard let space = selectedSpace else { return nil }
-        return openSessionTab(
-            title: url.host() ?? url.absoluteString,
-            url: url,
-            in: space.id,
-            insertingAfter: selectedTabID(in: space.id)
-        )
+        return openSessionTab(.page(url), in: space.id, insertingAfter: selectedTabID(in: space.id))
     }
 
     @discardableResult
@@ -67,12 +56,7 @@ extension BrowserStore {
             let space = session.space(id: spaceID)
         else { return nil }
         return openSessionTab(
-            title: url.host() ?? url.absoluteString,
-            url: url,
-            in: spaceID,
-            insertingAfter: selectedTabID(in: space.id),
-            shouldSelect: selecting
-        )
+            .page(url), in: spaceID, insertingAfter: selectedTabID(in: space.id), shouldSelect: selecting)
     }
 
     @discardableResult
@@ -102,11 +86,7 @@ extension BrowserStore {
         else { return nil }
         guard
             let tabID = openSessionTab(
-                title: destinationURL.host() ?? destinationURL.absoluteString,
-                url: destinationURL,
-                in: spaceID,
-                insertingAfter: selectedTabID(in: space.id),
-                shouldSelect: selecting
+                .page(destinationURL), in: spaceID, insertingAfter: selectedTabID(in: space.id), shouldSelect: selecting
             ),
             let updatedSpace = session.space(id: spaceID),
             let tab = updatedSpace.tabs.first(where: { $0.id == tabID })
@@ -128,20 +108,20 @@ extension BrowserStore {
         )
     }
 
+    /// Closes an open tab once its page agrees to go, which the core archives.
+    /// A saved or pinned tab's page is put away by `BrowserDurableTabCloseAction`,
+    /// which retires the page first, so this path leaves it alone.
     @discardableResult
     func closeTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
-        closeTab(id, in: spaceID, resetArchivePlacement: true)
-    }
-
-    private func closeTab(_ id: TabID, in spaceID: SpaceID, resetArchivePlacement: Bool) -> Bool {
         guard let space = session.space(id: spaceID),
-            space.tabs.contains(where: { $0.id == id }) else { return false }
+            space.tabs.contains(where: { $0.id == id && !$0.placement.isDurable })
+        else { return false }
         let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: spaceID, profileID: space.profile.id)
+        // TRANSITIONAL until WP C slice (g): the page's before-unload runs here,
+        // before the core closes the tab.
         return performPageDismissal(of: [assignment]) { [weak self] in
-            guard let self, self.session.space(id: spaceID) != nil,
-                self.closeSessionTab(id, in: spaceID, resetArchivePlacement: resetArchivePlacement)
-            else { return false }
-            return true
+            guard let self, self.session.space(id: spaceID) != nil else { return false }
+            return self.closeSessionTab(id, in: spaceID)
         }
     }
 
@@ -164,8 +144,9 @@ extension BrowserStore {
     @discardableResult
     func closeTab(_ id: TabID) -> Bool {
         guard let space = selectedSpace,
-            space.currentTabs.contains(where: { $0.id == id }) else { return false }
-        return closeTab(id, in: space.id, resetArchivePlacement: false)
+            space.currentTabs.contains(where: { $0.id == id })
+        else { return false }
+        return closeTab(id, in: space.id)
     }
 
     func deleteTab(_ id: TabID, in spaceID: SpaceID) {

@@ -214,8 +214,8 @@ the record, and sync never uploads it.
 (ignored, retired, withdrawn or published, with its ordinal, sibling supersession,
 identity-window eviction and dismissal clearing) and `media.arbitrate` orders at
 most 64 published sessions and names the Now Playing owner; neither carries
-metadata or artwork. The `tab.open` session edit accepts `after`, a tab the new
-tab opens after and outside the split of, instead of an explicit `index`.
+metadata or artwork. The `OpenTab` intent names `AfterTabId`, a tab the new
+tab opens after and outside the split of, instead of an explicit index.
 
 This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.

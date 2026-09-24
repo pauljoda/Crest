@@ -261,26 +261,18 @@ struct BrowserCommandActions {
         NSApp.keyWindow?.performClose(nil)
     }
 
+    /// Closes the selected tab the way the core closes it, or the window when
+    /// the core says only the window is left to close.
     func closeTabOrWindow() {
-        guard let selectedTab = browser.selectedTab else {
+        guard let selectedTab = browser.selectedTab, let space = browser.selectedSpace,
+            !browser.closingLeavesOnlyTheWindow(selectedTab.id, in: space.id)
+        else {
             closeKeyWindow()
             return
         }
-
-        switch BrowserCorePolicy.tabDismissal(
-            for: selectedTab,
-            tabCount: orderedTabs.count
-        ) {
-        case .closeTab:
-            if selectedTab.isStartPage {
-                browser.closeTab(selectedTab.id)
-                pages.reconcile(session: browser.session)
-                pages.select(session: browser.presented)
-            } else {
-                archiveSelectedTab()
-            }
-        case .unloadPage:
-            guard let space = browser.selectedSpace else { return }
+        // TRANSITIONAL until WP C slice (g) moves before-unload into the core:
+        // a saved or pinned tab's page is put away before the core records it.
+        if selectedTab.placement.isDurable {
             if BrowserDurableTabCloseAction(
                 browser: browser, spaceAccess: spaceAccess,
                 closePage: { pages.closeDurablePage($0, discardState: $1) }
@@ -291,8 +283,12 @@ struct BrowserCommandActions {
             {
                 pages.select(session: browser.presented)
             }
-        case .closeWindow:
-            closeKeyWindow()
+        } else if selectedTab.isStartPage {
+            browser.closeTab(selectedTab.id)
+            pages.reconcile(session: browser.session)
+            pages.select(session: browser.presented)
+        } else {
+            archiveSelectedTab()
         }
     }
 

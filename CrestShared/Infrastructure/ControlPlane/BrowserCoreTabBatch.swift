@@ -22,7 +22,26 @@ enum BrowserCoreTabBatch {
     /// the batch made, and the copies it made there.
     struct Change: Decodable {
         var space: BrowserSpace
-        var copies: [BrowserCoreSessionEditing.Result.Copy]
+        var copies: [Copy]
+    }
+
+    /// A tab the batch copied, and the copy.
+    struct Copy: Decodable {
+        var source: UUID
+        var copy: UUID
+    }
+
+    /// The title and address a copy starts from, observed from its source page.
+    struct CopyObservation: Encodable, Sendable {
+        let tabId: UUID
+        let title: String
+        @BrowserCoreNullable var url: String?
+
+        init(_ page: SourcePage) {
+            tabId = page.tabID
+            title = page.title
+            url = page.address
+        }
     }
 
     struct Response: Decodable {
@@ -53,7 +72,7 @@ enum BrowserCoreTabBatch {
         let request: BrowserTabBatchRequest
         let action: BrowserTabBatchAction
         let follow: Bool
-        let observations: [BrowserSessionArguments.CopyObservation]
+        let observations: [CopyObservation]
 
         func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)

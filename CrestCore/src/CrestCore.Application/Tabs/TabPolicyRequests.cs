@@ -47,16 +47,6 @@ internal static class TabPolicyRequests {
         }
     }
 
-    public sealed record Dismissal(TabPlacement? Placement, bool IsStartPage, int TabCount) {
-        public static Dismissal Decode(JsonElement request) {
-            Members(request, "placement", "isStartPage", "tabCount");
-            var placement = Optional(request, "placement") is null ? (TabPlacement?)null
-                : TabPlacement.Named(Protocol.Text(request, "placement")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
-            bool isStartPage = OptionalFlag(request, "isStartPage") ?? false;
-            return new(placement, isStartPage, Integer(request, "tabCount"));
-        }
-    }
-
     private static MemoryPressureLevel PressureLevel(JsonElement request) =>
         MemoryPressureLevel.Named(Protocol.Text(request, "level")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPressureLevel);
 

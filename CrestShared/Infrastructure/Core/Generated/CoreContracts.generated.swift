@@ -45,6 +45,7 @@ enum Change: Equatable, Sendable {
     case tabCopied(TabCopied)
     case tabFaviconAssigned(TabFaviconAssigned)
     case tabsChanged(TabsChanged)
+    case transientPagePromoted(TransientPagePromoted)
     case windowChanged(WindowChanged)
     case windowClosed(WindowClosed)
     case windowRecordsAdopted(WindowRecordsAdopted)
@@ -56,6 +57,7 @@ enum Change: Equatable, Sendable {
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
     case alreadyInSplit(AlreadyInSplit)
+    case cannotPinSplit(CannotPinSplit)
     case credentialRecordLimitReached(CredentialRecordLimitReached)
     case defaultEngineAlreadyRegistered(DefaultEngineAlreadyRegistered)
     case downloadLimitReached(DownloadLimitReached)
@@ -87,8 +89,11 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidSearchEngine(InvalidSearchEngine)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidTabIcon(InvalidTabIcon)
+    case lastStartPage(LastStartPage)
+    case noCurrentTabs(NoCurrentTabs)
     case noSavedAddress(NoSavedAddress)
     case pageProfileMismatch(PageProfileMismatch)
+    case pinnedTabsFull(PinnedTabsFull)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
@@ -105,6 +110,7 @@ enum Rejection: Equatable, Error, Sendable {
     case tabAlreadyExists(TabAlreadyExists)
     case tabAlreadyHasPage(TabAlreadyHasPage)
     case tabLimitReached(TabLimitReached)
+    case transientAlreadyCompleted(TransientAlreadyCompleted)
     case unknownArchivedTab(UnknownArchivedTab)
     case unknownFolder(UnknownFolder)
     case unknownPage(UnknownPage)
@@ -150,6 +156,7 @@ extension CoreState {
         case .tabCopied(let change): apply(change)
         case .tabFaviconAssigned(let change): apply(change)
         case .tabsChanged(let change): apply(change)
+        case .transientPagePromoted(let change): apply(change)
         case .windowChanged(let change): apply(change)
         case .windowClosed(let change): apply(change)
         case .windowRecordsAdopted(let change): apply(change)
@@ -206,6 +213,14 @@ struct ArchiveChanged: Equatable, Sendable {
     let archived: [ArchivedTabState]
     let removed: [UUID]
     let order: [UUID]?
+}
+
+struct ArchiveTransientPage: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let pageID: UUID
+    let spaceID: UUID
+    let address: String
+    let title: String?
 }
 
 struct ArchivedTabState: Equatable, Sendable {
@@ -277,6 +292,10 @@ struct CancelDownload: Intent, Equatable, Sendable {
     let message: String
 }
 
+struct CannotPinSplit: Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct ChooseTabIcon: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -291,6 +310,12 @@ struct CleanUpCurrentTabs: Intent, Equatable, Sendable {
     let spaceID: UUID?
 }
 
+struct ClearCurrentTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+}
+
 struct ClearHistory: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID?
@@ -299,6 +324,13 @@ struct ClearHistory: Intent, Equatable, Sendable {
 struct ClosePage: Equatable, Sendable {
     let pageID: UUID
     let keepsState: Bool
+}
+
+struct CloseTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
 }
 
 struct CloseWindow: Intent, Equatable, Sendable {
@@ -502,6 +534,13 @@ struct DeleteFolder: Intent, Equatable, Sendable {
     let folderID: UUID
 }
 
+struct DeleteTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+}
+
 struct DismissShownTab: Intent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
@@ -617,6 +656,16 @@ struct DuplicatePage: Equatable, Sendable {
 }
 
 struct DuplicateSearchEngineName: Equatable, Sendable {
+}
+
+struct DuplicateTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let placement: TabPlacement?
+    let shows: Bool
+    let source: SourcePage?
 }
 
 struct EngineAlreadyRegistered: Equatable, Sendable {
@@ -822,6 +871,10 @@ struct KeyCombination: Equatable, Sendable {
     let modifiers: ShortcutModifiers
 }
 
+struct LastStartPage: Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct LeaveSplit: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -902,6 +955,16 @@ struct MoveSplitMember: Intent, Equatable, Sendable {
     let index: Int
 }
 
+struct MoveTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let placement: TabPlacement
+    let folderID: UUID?
+    let beforeTabID: UUID?
+    let leavesSplit: Bool
+}
+
 struct NameSplit: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -953,6 +1016,10 @@ struct NavigationStarted: EngineEvent, Equatable, Sendable {
     let sameDocument: Bool
 }
 
+struct NoCurrentTabs: Equatable, Sendable {
+    let spaceID: UUID
+}
+
 struct NoSavedAddress: Equatable, Sendable {
     let tabID: UUID
 }
@@ -974,6 +1041,17 @@ struct OpenPage: Intent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID?
     let windowID: UUID
+}
+
+struct OpenTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let content: TabContent
+    let placement: TabPlacement
+    let afterTabID: UUID?
+    let shows: Bool
 }
 
 struct OpenWindow: Intent, Equatable, Sendable {
@@ -1049,6 +1127,19 @@ struct PendingSave: Query, Equatable, Sendable {
 
 struct PendingSaveRevision: Equatable, Sendable {
     let revision: Int64?
+}
+
+struct PinnedTabsFull: Equatable, Sendable {
+    let capacity: Int
+}
+
+struct PromoteTransientPage: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let pageID: UUID
+    let spaceID: UUID
+    let placement: TabPlacement
+    let address: String
 }
 
 struct QuickWindowSite: Query, Equatable, Sendable {
@@ -1442,6 +1533,13 @@ struct TabAlreadyHasPage: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct TabContent: Equatable, Sendable {
+    let address: String?
+    let view: NativeTabContent?
+    let title: String?
+    let symbol: String?
+}
+
 struct TabCopied: Equatable, Sendable {
     let workspaceID: UUID
     let sourceTabID: UUID
@@ -1512,6 +1610,17 @@ struct TintSplit: Intent, Equatable, Sendable {
     let spaceID: UUID
     let groupID: UUID
     let tint: BrandColor?
+}
+
+struct TransientAlreadyCompleted: Equatable, Sendable {
+    let pageID: UUID
+}
+
+struct TransientPagePromoted: Equatable, Sendable {
+    let workspaceID: UUID
+    let pageID: UUID
+    let tabID: UUID
+    let adoptsPage: Bool
 }
 
 struct TranslationRule: Equatable, Sendable {

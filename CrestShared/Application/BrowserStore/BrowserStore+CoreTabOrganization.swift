@@ -1,21 +1,26 @@
 import Foundation
 
 extension BrowserStore {
+    /// Moves a tab within its Space, and answers whether it moved. A split
+    /// member leaves its split when `detachesFromSplit`; the core refuses to
+    /// pin one that does not.
     func moveSessionTab(
         _ id: TabID, in spaceID: SpaceID, to placement: TabPlacement,
         folderID: FolderID? = nil, before anchor: TabID? = nil, detachesFromSplit: Bool = false
     ) -> Bool {
-        let arguments = BrowserSessionArguments.TabMove(
-            tabId: id.rawValue, placement: placement, folderId: folderID?.rawValue, before: anchor?.rawValue,
-            detach: detachesFromSplit)
-        return family.execute(.tabMove, in: spaceID, arguments: arguments, from: self, at: .now)?.changed ?? false
+        family.send(
+            MoveTab(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: id.rawValue, placement: placement,
+                folderID: folderID?.rawValue, beforeTabID: anchor?.rawValue, leavesSplit: detachesFromSplit),
+            from: self)
     }
 
-    func copyObservations(for ids: Set<TabID>, in space: BrowserSpace) -> [BrowserSessionArguments.CopyObservation] {
+    /// What the pages of the tabs `ids` names show now, which copies of them
+    /// start from.
+    func sourcePages(for ids: Set<TabID>, in space: BrowserSpace) -> [SourcePage] {
         space.tabs.filter { ids.contains($0.id) }.map { source in
             let observed = tabCopying?.sourceForTabCopy(source, in: space) ?? source
-            return BrowserSessionArguments.CopyObservation(
-                tabId: source.id.rawValue, title: observed.title, url: observed.url?.absoluteString)
+            return SourcePage(tabID: source.id.rawValue, address: observed.url?.absoluteString, title: observed.title)
         }
     }
 
@@ -27,9 +32,7 @@ extension BrowserStore {
         if let group = space.tabs.first(where: { $0.id == target })?.splitGroupID {
             ids.formUnion(space.splitGroupMembers(of: group).map(\.id))
         }
-        return copyObservations(for: ids, in: space).map {
-            SourcePage(tabID: $0.tabId, address: $0.url, title: $0.title)
-        }
+        return sourcePages(for: ids, in: space)
     }
 
     /// The core has accepted each copy's identity and visible URL/title. The
@@ -44,15 +47,17 @@ extension BrowserStore {
         }
     }
 
-    /// Runs a join the window issued in `space`, and prepares the pages of
-    /// the copies it made. Answers false when the core refused it.
-    func sendSplitJoin(_ intent: some Intent, in space: BrowserSpace) -> Bool {
-        guard let sent = family.perform(intent, from: self) else { return false }
-        prepareAcceptedCopies(
-            sent.changes.compactMap {
-                guard case .tabCopied(let copied) = $0, copied.workspaceID == family.workspaceID else { return nil }
-                return copied
-            }, from: space)
-        return true
+    /// Runs an intent the window issued in `space` that copies tabs, and
+    /// prepares the pages of the copies it made. Answers the copies, or nil
+    /// when the core refused it.
+    @discardableResult
+    func sendCopying(_ intent: some Intent, in space: BrowserSpace) -> [TabCopied]? {
+        guard let sent = family.perform(intent, from: self) else { return nil }
+        let copies: [TabCopied] = sent.changes.compactMap {
+            guard case .tabCopied(let copied) = $0, copied.workspaceID == family.workspaceID else { return nil }
+            return copied
+        }
+        prepareAcceptedCopies(copies, from: space)
+        return copies
     }
 }

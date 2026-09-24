@@ -301,14 +301,13 @@ static void locked_space_boundary(void) {
     assert(crest_session_attach_access(session, access) == CREST_OK);
     assert(crest_session_attach_access(session, access) == CREST_OK);
 
+    /* A tab batch reads the Space's records, so the gate refuses it before
+     * preparation; once granted, it prepares and answers its own refusal. */
     char edit[1024];
     size = snprintf(edit, sizeof(edit),
-        "{\"version\":1,\"operation\":\"tab.move\",\"spaceId\":{\"rawValue\":\"%s\"},"
-        "\"profileId\":\"%s\",\"now\":800000002,"
-        "\"arguments\":{\"tabId\":\"%s\",\"placement\":\"saved\"},"
-        "\"view\":{\"spaceId\":\"%s\","
-        "\"tabs\":[{\"spaceId\":\"%s\",\"tabId\":\"%s\"}]}}",
-        space_id, profile_id, tab_id, space_id, space_id, tab_id);
+        "{\"version\":1,\"operation\":\"tabs.batch\",\"spaceId\":{\"rawValue\":\"%s\"},"
+        "\"profileId\":\"%s\",\"now\":800000002,\"arguments\":{}}",
+        space_id, profile_id);
     assert(size > 0 && (size_t)size < sizeof(edit));
     assert(crest_session_prepare_command(session, (const uint8_t*)edit, (size_t)size, &command)
         == CREST_INVALID_MESSAGE && command == 0);

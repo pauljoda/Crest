@@ -161,15 +161,9 @@ public sealed partial class BrowserContractsTests {
             }));
         var receiver = Receive(new NativeSyncJournal(Bytes(initial)), source, "replace", sender);
         var authority = new NativeSessionAuthority(Bytes(source));
-        if (renames)
-            authority.Handle(new RenameTab(Guid.Empty, fixture.Space, fixture.Tab, "Renamed on the other device"),
-                StoredSessionCodec.Date(now), new TestIds());
-        else {
-            var request = JsonNode.Parse(SpaceCommand(source, "tab.move",
-                new() { ["tabId"] = fixture.Tab.ToString(), ["placement"] = "current", ["detach"] = true }))!;
-            request["now"] = now;
-            authority.PrepareCommand(Bytes(request)).Commit();
-        }
+        authority.Handle(renames ? new RenameTab(Guid.Empty, fixture.Space, fixture.Tab, "Renamed on the other device")
+            : new MoveTab(Guid.Empty, fixture.Space, fixture.Tab, TabPlacement.Current, null, null, LeavesSplit: true),
+            StoredSessionCodec.Date(now), new TestIds());
         source = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         sender = sender.Apply(Stage(source));
         var sent = JsonNode.Parse(sender.Read())!;

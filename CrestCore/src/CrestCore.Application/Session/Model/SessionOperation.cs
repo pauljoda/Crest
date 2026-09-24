@@ -9,7 +9,6 @@ internal enum SessionOperation {
     Unknown,
     UnknownPreferences,
     UnknownSpace,
-    UnknownTransient,
     LaunchPlan,
     PreferencesImport,
     PreferencesSet,
@@ -28,19 +27,8 @@ internal enum SessionOperation {
     SpaceSavedExpansion,
     SpaceSearchProviderRemove,
     SpaceSearchProviderUpsert,
-    TabArchiveTransient,
-    TabClearCurrent,
-    TabClose,
-    TabCloseDurable,
-    TabCopy,
-    TabDelete,
-    TabMove,
-    TabOpen,
-    TabPromoteTransient,
     TabTransfer,
     TabsBatch,
-    TransientArchive,
-    TransientPromote,
     WorkspaceImport,
 }
 
@@ -66,23 +54,11 @@ internal static class SessionOperationCodes {
         "space.saved_expansion" => SessionOperation.SpaceSavedExpansion,
         "space.search_provider.remove" => SessionOperation.SpaceSearchProviderRemove,
         "space.search_provider.upsert" => SessionOperation.SpaceSearchProviderUpsert,
-        "tab.archive_transient" => SessionOperation.TabArchiveTransient,
-        "tab.clear_current" => SessionOperation.TabClearCurrent,
-        "tab.close" => SessionOperation.TabClose,
-        "tab.close_durable" => SessionOperation.TabCloseDurable,
-        "tab.copy" => SessionOperation.TabCopy,
-        "tab.delete" => SessionOperation.TabDelete,
-        "tab.move" => SessionOperation.TabMove,
-        "tab.open" => SessionOperation.TabOpen,
-        "tab.promote_transient" => SessionOperation.TabPromoteTransient,
         "tab.transfer" => SessionOperation.TabTransfer,
         "tabs.batch" => SessionOperation.TabsBatch,
-        "transient.archive" => SessionOperation.TransientArchive,
-        "transient.promote" => SessionOperation.TransientPromote,
         "workspace.import" => SessionOperation.WorkspaceImport,
         _ when value?.StartsWith("preferences.", StringComparison.Ordinal) == true => SessionOperation.UnknownPreferences,
         _ when value?.StartsWith("space.", StringComparison.Ordinal) == true => SessionOperation.UnknownSpace,
-        _ when value?.StartsWith("transient.", StringComparison.Ordinal) == true => SessionOperation.UnknownTransient,
         _ => SessionOperation.Unknown
     };
 
@@ -101,10 +77,7 @@ internal static class SessionOperationCodes {
         var explicitDelete = SyncDeletionReason.ExplicitDelete;
         var superseded = SyncDeletionReason.Superseded;
         return operation switch {
-            SessionOperation.TabDelete => new(explicitDelete, SyncUrgency.Immediate),
-            SessionOperation.TabOpen or SessionOperation.TabCopy or SessionOperation.TabClose or SessionOperation.TabClearCurrent
-                or SessionOperation.TabCloseDurable or SessionOperation.TransientPromote
-                or SessionOperation.SpaceCreate or SessionOperation.SpaceAccess
+            SessionOperation.SpaceCreate or SessionOperation.SpaceAccess
                 or SessionOperation.SpaceCredentialPreferences => new(superseded, SyncUrgency.Immediate),
             SessionOperation.SpaceRemove => new(explicitDelete, SyncUrgency.WithSave),
             SessionOperation.SpaceDeletionBegin or SessionOperation.WorkspaceImport or SessionOperation.TabTransfer =>
@@ -127,11 +100,6 @@ internal static class SessionOperationCodes {
         or SessionOperation.PreferencesImport
         or SessionOperation.PreferencesSet
         or SessionOperation.PreferencesTranslationRule;
-
-    public static bool IsTransient(SessionOperation operation) => operation is
-        SessionOperation.UnknownTransient
-        or SessionOperation.TransientArchive
-        or SessionOperation.TransientPromote;
 
     public static bool IsSpace(SessionOperation operation) => operation is
         SessionOperation.UnknownSpace

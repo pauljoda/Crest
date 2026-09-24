@@ -47,65 +47,70 @@ extension BrowserStore {
             from: self) != nil
     }
 
-    /// Native authentication supplies current access results. The core checks
-    /// the owning profiles and completes promotion before an adapter moves a view.
-    func promoteTransientPage(
-        requestID: UUID, url: URL?, source: BrowserSpaceRuntimeAssignment,
-        lease: BrowserSpaceRuntimeAssignment?, destination: BrowserSpaceRuntimeAssignment,
-        sourceAccessible: Bool, destinationAccessible: Bool, supportsLiveAdoption: Bool
-    ) -> (tabID: TabID?, adoptLivePage: Bool)? {
-        guard space(matching: source) != nil, space(matching: destination) != nil else { return nil }
-        let date = Date.now
-        let tab = url.map {
-            BrowserTab(title: $0.host() ?? $0.absoluteString, url: $0, placement: .current, lastActivatedAt: date)
-        }
-        let arguments = BrowserSessionArguments.TransientPromote(
-            requestId: requestID, sourceSpaceId: source.spaceID.rawValue, sourceProfileId: source.profileID,
-            leaseSpaceId: lease?.spaceID.rawValue, leaseProfileId: lease?.profileID,
-            sourceAccessible: sourceAccessible, destinationAccessible: destinationAccessible,
-            supportsLiveAdoption: supportsLiveAdoption, tab: tab)
-        guard
-            let result = family.execute(
-                .transientPromote, in: destination.spaceID, arguments: arguments, from: self, at: date)
-        else { return nil }
-        return (result.tabId.map(TabID.init(rawValue:)), result.adoptLivePage == true)
+    /// Keeps a Quick Window's or Peek's page as a new tab of `spaceID`, which
+    /// this window then shows, and answers the core's promotion: the tab's
+    /// identity and whether the tab may take the live page. Nil when a rule
+    /// refused it, such as a locked Space or a page already kept.
+    func promoteTransientPage(_ page: CorePage, url: URL, into spaceID: SpaceID) -> TransientPagePromoted? {
+        let promotion = PromoteTransientPage(
+            workspaceID: family.workspaceID, windowID: windowID.rawValue, pageID: page.id, spaceID: spaceID.rawValue,
+            placement: .current, address: url.absoluteString)
+        return family.perform(promotion, from: self)?.changes.lazy.compactMap {
+            guard case .transientPagePromoted(let promoted) = $0, promoted.pageID == page.id else { return nil }
+            return promoted
+        }.first
     }
 
+    /// Opens a tab showing `content` in `placement`'s section and answers its
+    /// identity, or nil when the core refused it. The core places a tab
+    /// opened from `origin` after it and outside its split, resolves its
+    /// address and names a page it was given no title for.
     @discardableResult
     func openSessionTab(
-        title: String, url: URL?, nativeContent: BrowserNativeTabContent? = nil,
-        symbol: String = "globe", in spaceID: SpaceID, placement: TabPlacement = .current, requestedIndex: Int? = nil,
-        insertingAfter origin: TabID? = nil, shouldSelect: Bool = true, at date: Date = .now
+        _ content: TabContent, in spaceID: SpaceID, placement: TabPlacement = .current,
+        insertingAfter origin: TabID? = nil, shouldSelect: Bool = true
     ) -> TabID? {
-        let tab = BrowserTab(
-            title: title, url: url, nativeContent: nativeContent, symbol: symbol,
-            placement: placement, lastActivatedAt: date)
-        // The core places a tab opened from `origin` after it and outside its split.
-        let arguments = BrowserSessionArguments.TabOpen(
-            tab: tab, index: requestedIndex, select: shouldSelect, after: origin?.rawValue)
-        guard let id = family.execute(.tabOpen, in: spaceID, arguments: arguments, from: self, at: date)?.tabId
-        else { return nil }
-        return TabID(rawValue: id)
+        let id = TabID()
+        let opening = OpenTab(
+            workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue,
+            content: content, placement: placement, afterTabID: origin?.rawValue, shows: shouldSelect)
+        return family.perform(opening, from: self) == nil ? nil : id
     }
 
-    /// Closes a tab. A window that showed it returns to the tab it showed
-    /// before, which the core's device chooses.
+    /// Closes a tab the way its section closes one: the core archives an open
+    /// tab and puts a saved or pinned tab's page away. A window that showed it
+    /// returns to the tab it showed before, which the core's device chooses.
     @discardableResult
-    func closeSessionTab(_ id: TabID, in spaceID: SpaceID, resetArchivePlacement: Bool = true) -> Bool {
-        let arguments = BrowserSessionArguments.TabClose(
-            tabId: id.rawValue, resetArchivePlacement: resetArchivePlacement)
-        return family.execute(.tabClose, in: spaceID, arguments: arguments, from: self, at: .now) != nil
+    func closeSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
+        family.perform(
+            CloseTab(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
+                tabID: id.rawValue),
+            from: self) != nil
+    }
+
+    /// Whether closing `id` leaves only its window to close: the core keeps
+    /// the Start Page that is its Space's only tab.
+    func closingLeavesOnlyTheWindow(_ id: TabID, in spaceID: SpaceID) -> Bool {
+        let closing = CloseTab(
+            workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue)
+        guard case .lastStartPage = family.refusal(of: closing, from: self) else { return false }
+        return true
     }
 
     @discardableResult
     func deleteSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
-        family.execute(
-            .tabDelete, in: spaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
-            from: self, at: .now) != nil
+        family.perform(
+            DeleteTab(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
+                tabID: id.rawValue),
+            from: self) != nil
     }
 
     func clearSessionTabs(in spaceID: SpaceID) -> Bool {
-        family.execute(.tabClearCurrent, in: spaceID, arguments: BrowserCoreNoArguments(), from: self, at: .now) != nil
+        family.perform(
+            ClearCurrentTabs(workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue),
+            from: self) != nil
     }
 
     func renameSessionTab(_ title: String?, tabID: TabID, in spaceID: SpaceID) -> Bool {
@@ -165,5 +170,23 @@ extension BrowserStore {
                 placement: location.tabPlacement, folderID: folderID?.rawValue, beforeTabID: anchor?.rawValue,
                 beforeFolderID: beforeFolderID?.rawValue, leavesSplits: detachesSplitMembers),
             from: self)
+    }
+}
+
+extension TabContent {
+    /// The Start Page, which the core names.
+    static let startPage = TabContent(address: nil, view: nil, title: nil, symbol: nil)
+
+    /// The page at `url`, called `title` until it reports its own, or by its
+    /// host when the core is given no title.
+    static func page(_ url: URL, title: String? = nil) -> TabContent {
+        TabContent(address: url.absoluteString, view: nil, title: title, symbol: nil)
+    }
+
+    /// A native view, titled and drawn as this platform names it.
+    static func view(_ content: BrowserNativeTabContent, title: String, symbol: String) -> TabContent {
+        TabContent(
+            address: nil, view: NativeTabContent(kind: content.kind, resourceID: content.resourceID), title: title,
+            symbol: symbol)
     }
 }

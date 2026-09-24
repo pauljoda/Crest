@@ -53,9 +53,6 @@ extension BrowserStore {
         _ content: BrowserNativeTabContent, title: String, symbol: String, placement: TabPlacement = .saved
     ) -> TabID? {
         guard let space = selectedSpace else { return nil }
-        let id = openSessionTab(
-            title: title, url: nil, nativeContent: content, symbol: symbol,
-            in: space.id, placement: placement)
-        return id
+        return openSessionTab(.view(content, title: title, symbol: symbol), in: space.id, placement: placement)
     }
 }

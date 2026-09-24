@@ -3,9 +3,11 @@ import Foundation
 // MARK: - Organization
 
 extension BrowserStore {
+    /// Pins the selected tab, which leaves its split: pinned tabs keep none.
     func pinSelectedTab() {
         guard let id = selectedTab?.id, let spaceID = selectedSpace?.id,
-            moveSessionTab(id, in: spaceID, to: .pinned) else { return }
+            moveSessionTab(id, in: spaceID, to: .pinned, detachesFromSplit: !TabPlacement.pinned.holdsSplits)
+        else { return }
     }
 
     func pinTab(_ id: TabID) {
@@ -47,11 +49,13 @@ extension BrowserStore {
 
         let moved: Bool
         if actualSourceSpaceID == selectedSpaceID {
+            // A tab moving to a section that keeps no splits leaves its own.
             moved = moveSessionTab(
                 id, in: actualSourceSpaceID,
                 to: placement,
                 folderID: folderID,
-                before: destinationTabID
+                before: destinationTabID,
+                detachesFromSplit: !placement.holdsSplits
             )
         } else {
             moved = moveTabBetweenSpaces(
@@ -92,7 +96,8 @@ extension BrowserStore {
                 id, in: assignment.spaceID,
                 to: placement,
                 folderID: folderID,
-                before: destinationTabID
+                before: destinationTabID,
+                detachesFromSplit: !placement.holdsSplits
             )
         else { return false }
         return true
@@ -294,22 +299,18 @@ extension BrowserStore {
         )
     }
 
+    /// Copies a tab among the open tabs, under an identity the core gives it,
+    /// and shows the copy. Answers the copy, or nil when the core refused it.
     @discardableResult
     func duplicateTab(_ id: TabID, in spaceID: SpaceID) -> TabID? {
         guard let space = session.space(id: spaceID),
-            let result = family.execute(
-                .tabCopy, in: spaceID,
-                arguments: BrowserSessionArguments.TabCopy(
-                    tabId: id.rawValue, ids: [UUID()], copyObservations: copyObservations(for: [id], in: space)),
-                from: self, at: .now), let rawID = result.tabId
+            let copy = sendCopying(
+                DuplicateTab(
+                    workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
+                    tabID: id.rawValue, placement: nil, shows: true, source: sourcePages(for: [id], in: space).first),
+                in: space)?.first
         else { return nil }
-        let duplicateID = TabID(rawValue: rawID)
-        prepareAcceptedCopies(
-            result.copies.map {
-                TabCopied(workspaceID: family.workspaceID, sourceTabID: $0.source, copyTabID: $0.copy)
-            },
-            from: space)
-        return duplicateID
+        return TabID(rawValue: copy.copyTabID)
     }
 
     @discardableResult
@@ -354,12 +355,12 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == item.tabID }),
             space.tabs.contains(where: { $0.id == targetTabID })
         else { return false }
-        return sendSplitJoin(
+        return sendCopying(
             JoinSplit(
                 workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
                 tabID: item.tabID.rawValue, targetTabID: targetTabID.rawValue, index: memberIndex,
                 sourcePages: splitSourcePages(source: item.tabID, target: targetTabID, in: space)),
-            in: space)
+            in: space) != nil
     }
 
     /// Removal relocates the departing tab past its run, so it goes through the
@@ -578,13 +579,13 @@ extension BrowserStore {
         else { return nil }
         let openedID = TabID()
         guard
-            sendSplitJoin(
+            sendCopying(
                 OpenLinkInSplit(
                     workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
                     tabID: openedID.rawValue, targetTabID: targetTabID.rawValue, address: url.absoluteString,
                     title: url.host() ?? url.absoluteString,
                     sourcePages: splitSourcePages(source: nil, target: targetTabID, in: space)),
-                in: space)
+                in: space) != nil
         else { return nil }
         return openedID
     }

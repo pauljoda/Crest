@@ -88,7 +88,7 @@ struct PortableSpace: Codable, Equatable, Sendable {
             }
             if tab.placement == .pinned {
                 pinnedCount += 1
-                guard pinnedCount <= BrowserSpace.maximumPinnedTabs else {
+                guard pinnedCount <= TabPlacement.pinnedCapacity else {
                     throw BrowserPortableArchiveError.invalidContents
                 }
             }

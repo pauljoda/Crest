@@ -136,6 +136,12 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
 
     private Page Known(Guid pageId) => open.TryGetValue(pageId, out var page) ? page : throw new Rejected(new UnknownPage(pageId));
 
+    /// The Quick Window or Peek page `pageId` names, or null when this device
+    /// hosts no such page.
+    public TransientPage? Transient(Guid pageId) => open.TryGetValue(pageId, out var page) && page.TabId is null
+        ? new(page.Id, page.WorkspaceId, page.SpaceId, page.ProfileId, page.Engine.Supports(EngineCapability.WorkspaceTransfer))
+        : null;
+
     /// The Space a page may live in: one the workspace holds, that is not
     /// being deleted, here or in the workspace a borrowed one borrows from, and
     /// that this process may show.

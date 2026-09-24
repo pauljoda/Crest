@@ -93,7 +93,7 @@ final class BrowserGettingStartedPractice {
     func openExampleTab() {
         guard
             let id = browser.openSessionTab(
-                title: "Wikipedia", url: URL(string: "https://wikipedia.org")!, in: space.id),
+                .page(URL(string: "https://wikipedia.org")!, title: "Wikipedia"), in: space.id),
             let favicon = BrowserGettingStartedArtwork.favicon("GuideWikipedia")
         else { return }
         _ = browser.setTabFavicon(favicon, iconAccent: nil, for: id, matching: assignment)

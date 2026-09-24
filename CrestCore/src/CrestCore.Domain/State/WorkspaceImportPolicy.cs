@@ -1,12 +1,13 @@
 using System.Text;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 public static class WorkspaceImportPolicy {
     #region Variables
 
     public const int MaximumSpaces = 64;
-    public const int MaximumPinnedTabs = BrowserLimits.PinnedTabs;
     public const int MaximumFolders = 500;
 
     /// The saved folder that receives imported pinned tabs past the limit.
@@ -22,7 +23,7 @@ public static class WorkspaceImportPolicy {
     }
 
     public static void RequirePinnedCapacity(int count) {
-        if (count > MaximumPinnedTabs) throw new BrowserRuleException(BrowserRuleCodes.PinnedLimitReached);
+        if (!TabPlacement.Pinned.Holds(count)) throw new BrowserRuleException(BrowserRuleCodes.PinnedLimitReached);
     }
 
     /// An imported Space must already hold well-formed split runs. Repair

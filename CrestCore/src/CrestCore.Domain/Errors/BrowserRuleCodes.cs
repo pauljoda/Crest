@@ -86,15 +86,12 @@ public static class BrowserRuleCodes {
     public const string InvalidTabCount = "invalid_tab_count";
     public const string InvalidTerminationCount = "invalid_termination_count";
     public const string InvalidTransferTransaction = "invalid_transfer_transaction";
-    public const string InvalidTransientPage = "invalid_transient_page";
     public const string InvalidTransition = "invalid_transition";
     public const string InvalidWorkspaceKind = "invalid_workspace_kind";
     public const string MediaSessionLimit = "media_session_limit";
     public const string MissingSpaceIdentity = "missing_space_identity";
-    public const string NoCurrentTabs = "no_current_tabs";
     public const string NoIncludedSpaces = "no_included_spaces";
     public const string NotBorrowedWorkspace = "not_borrowed_workspace";
-    public const string NotDurableTab = "not_durable_tab";
     public const string NotPrivateWorkspace = "not_private_workspace";
     public const string NotStartPageDraft = "not_start_page_draft";
     public const string PageBusy = "page_busy";
@@ -140,9 +137,6 @@ public static class BrowserRuleCodes {
     public const string SyncTransactionNotSealed = "sync_transaction_not_sealed";
     public const string TabLimit = "tab_limit";
     public const string TemporaryWorkspaceRequired = "temporary_workspace_required";
-    public const string TransientAlreadyCompleted = "transient_already_completed";
-    public const string TransientRequiresCommand = "transient_requires_command";
-    public const string TransientSpaceLocked = "transient_space_locked";
     public const string TranslationRuleLimit = "translation_rule_limit";
     public const string UnknownArchive = "unknown_archive";
     public const string UnknownArchivedTab = "unknown_archived_tab";
@@ -155,7 +149,6 @@ public static class BrowserRuleCodes {
     public const string UnknownSplitGroup = "unknown_split_group";
     public const string UnknownSyncOperation = "unknown_sync_operation";
     public const string UnknownTab = "unknown_tab";
-    public const string UnknownTransientCommand = "unknown_transient_command";
     public const string UnknownWorkspaceCommand = "unknown_workspace_command";
     public const string UnsafeSearchTemplate = "unsafe_search_template";
     public const string UnsupportedAccessPolicy = "unsupported_access_policy";
@@ -166,7 +159,6 @@ public static class BrowserRuleCodes {
     public const string WrongProfile = "wrong_profile";
     public const string WrongProfileIdentity = "wrong_profile_identity";
     public const string WrongSpaceIdentity = "wrong_space_identity";
-    public const string WrongTransientProfile = "wrong_transient_profile";
 
     // Site permissions and origins.
     public const string DuplicateSitePermissionRecord = "duplicate_site_permission_record";

@@ -159,8 +159,8 @@ public static class NativeSessionMaintenance {
 
     private static bool IsStartPage(TabState tab) => tab.Url is null && tab.NativeContent is null;
 
-    private static TabState StartTab(Guid id, DateTimeOffset now) => new(id, TabContent.StartPage.Name, null, null, null,
-        TabContent.StartPage.Symbol, null, null, null, TabPlacement.Current, null, null, now, null, null, null, false);
+    private static TabState StartTab(Guid id, DateTimeOffset now) => new(id, TabKind.StartPage.Name, null, null, null,
+        TabKind.StartPage.Symbol, null, null, null, TabPlacement.Current, null, null, now, null, null, null, false);
 
     /// A blank rename is no rename, edit clocks are whole milliseconds, and a
     /// Start Page wears its own title and symbol.
@@ -171,7 +171,7 @@ public static class NativeSessionMaintenance {
             TitleModifiedAt = tab.TitleModifiedAt is { } title ? BrowserEditTimestamp.Normalize(title) : null
         };
         return IsStartPage(normalized)
-            ? normalized with { Title = TabContent.StartPage.Name, Symbol = TabContent.StartPage.Symbol } : normalized;
+            ? normalized with { Title = TabKind.StartPage.Name, Symbol = TabKind.StartPage.Symbol } : normalized;
     }
 
     /// One metadata record per split. Repeated records merge field by field, the

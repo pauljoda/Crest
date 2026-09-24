@@ -13,6 +13,8 @@ public sealed class Engine {
     /// New pages open on this engine.
     public bool IsDefault { get; }
 
+    /// What the binding said it supports when it registered.
+    private readonly IReadOnlyList<EngineCapability> capabilities;
     private readonly Action<EngineCommand> run;
     private volatile bool isRetired;
 
@@ -23,8 +25,16 @@ public sealed class Engine {
     internal Engine(EngineRegistration registration, Action<EngineCommand> run) {
         Kind = registration.Kind;
         IsDefault = registration.IsDefault;
+        capabilities = [.. registration.Capabilities];
         this.run = run;
     }
+
+    #endregion
+
+    #region Actions - Capabilities
+
+    /// Whether the binding supports `capability`.
+    internal bool Supports(EngineCapability capability) => capabilities.Contains(capability);
 
     #endregion
 

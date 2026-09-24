@@ -15,7 +15,6 @@ public static partial class NativePolicyEvaluator {
         if (operation != PolicyOperation.Limits) return null;
         PolicyFields.Members(request);
         return new() {
-            ["pinnedTabs"] = BrowserLimits.PinnedTabs,
             ["folders"] = BrowserLimits.Folders,
             ["folderDepth"] = BrowserLimits.FolderDepth,
             ["historyEntries"] = BrowserLimits.HistoryEntries,

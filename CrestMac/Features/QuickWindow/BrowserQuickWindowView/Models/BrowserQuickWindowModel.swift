@@ -194,13 +194,19 @@ final class BrowserQuickWindowModel {
         let url = currentSnapshot?.url ?? presentedRequest.initialURL
         let remembersSpace = BrowserCorePolicy.quickWindowRetarget(presentedRequest,
             to: url ?? presentedRequest.url, assignment: assignment, pageURL: url).remembersSpace
-        guard let outcome = BrowserTransientPagePromotion(requestID: presentedRequest.id,
-            url: url, sourceAssignment: selectedAssignment, leaseAssignment: pageLease?.assignment,
-            destinationAssignment: assignment, supportsLiveAdoption: supportsLivePagePromotion
-        ).perform(in: browser, isLocked: spaceAccess.isLocked, adoptPage: { [pageLease] tabID, space in
-            guard let pageLease else { return false }
-            return pages.adoptTransientPage(pageLease, as: tabID, in: space)
-        }) else { return false }
+        // A page memory pressure took back comes back to be kept.
+        if pageLease?.page == nil { pageLease?.restore() }
+        guard
+            let outcome = BrowserTransientPagePromotion(
+                page: pageLease?.page?.corePage, url: url, destinationAssignment: assignment,
+                supportsLiveAdoption: supportsLivePagePromotion
+            ).perform(
+                in: browser, isLocked: spaceAccess.isLocked,
+                adoptPage: { [pageLease] tabID, space in
+                    guard let pageLease else { return false }
+                    return pages.adoptTransientPage(pageLease, as: tabID, in: space)
+                })
+        else { return false }
         if remembersSpace, let url {
             preferences.rememberSpace(assignment.spaceID, for: url)
         }
@@ -233,11 +239,7 @@ final class BrowserQuickWindowModel {
         else { return false }
         guard
             browser.archiveTransientPage(
-                url: snapshot.url,
-                title: snapshot.title,
-                matching: snapshot.assignment,
-                requestID: presentedRequest.id
-            )
+                snapshot.pageID, url: snapshot.url, title: snapshot.title, matching: snapshot.assignment)
         else { return false }
         wasArchived = true
         return true
@@ -356,7 +358,8 @@ final class BrowserQuickWindowModel {
         BrowserTransientPageSnapshot(
             assignment: lease.assignment,
             url: lease.recoverableURL,
-            title: lease.page?.title
+            title: lease.page?.title,
+            pageID: lease.pageID
         )
     }
 

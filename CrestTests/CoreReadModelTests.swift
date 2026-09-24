@@ -23,7 +23,7 @@ final class CoreReadModelTests: XCTestCase {
         let first = original.spaces[0].tabs[0].id
 
         let opened = try XCTUnwrap(
-            store.openSessionTab(title: "Opened", url: URL(string: "https://opened.example/"), in: spaceID))
+            store.openSessionTab(.page(URL(string: "https://opened.example/")!, title: "Opened"), in: spaceID))
         XCTAssertTrue(store.setTabCustomTitle("Renamed", for: opened, in: spaceID))
         let pulled = Data([1, 2, 3])
         store.setTabFavicon(pulled, iconAccent: nil, for: opened, in: spaceID)

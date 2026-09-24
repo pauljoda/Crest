@@ -3,29 +3,20 @@ import Foundation
 // MARK: - History and Cleanup
 
 extension BrowserStore {
-    func archiveTransientPage(url: URL, title: String?, in spaceID: SpaceID) {
-        guard let space = session.space(id: spaceID) else { return }
-        _ = archiveTransientPage(url: url, title: title, matching: BrowserSpaceRuntimeAssignment(space: space))
-    }
-
+    /// Keeps a Quick Window's page, `pageID`, in the archive of the Space it
+    /// lived in, and answers whether the core kept it. The page may already
+    /// be gone, as one memory pressure took back is; the core names a page it
+    /// is given no title for.
     @discardableResult
     func archiveTransientPage(
-        url: URL,
-        title: String?,
-        matching assignment: BrowserSpaceRuntimeAssignment,
-        requestID: UUID = UUID()
+        _ pageID: UUID, url: URL, title: String?, matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        let date = Date.now
-        let tab = BrowserTab(title: title.flatMap { $0.isEmpty ? nil : $0 } ?? url.host() ?? url.absoluteString,
-            url: url, placement: .current, lastActivatedAt: date)
-        guard
-            family.execute(
-                .transientArchive, in: assignment.spaceID,
-                arguments: BrowserSessionArguments.TransientArchive(requestId: requestID, tab: tab),
-                from: self, at: date) != nil
-        else { return false }
-        return true
+        return family.perform(
+            ArchiveTransientPage(
+                workspaceID: family.workspaceID, pageID: pageID, spaceID: assignment.spaceID.rawValue,
+                address: url.absoluteString, title: title),
+            from: self) != nil
     }
 
     func clearHistory() {

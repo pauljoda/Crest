@@ -122,16 +122,6 @@ enum BrowserCorePolicy {
         @BrowserCoreOptional var action: BrowserProcessRecoveryAction?
     }
 
-    private struct DismissalRequest: Encodable {
-        let placement: TabPlacement
-        let isStartPage: Bool
-        let tabCount: Int
-    }
-
-    private struct DismissalAnswer: Decodable {
-        @BrowserCoreOptional var action: BrowserTabDismissalAction?
-    }
-
     private struct AutomaticDownloadRequest: Encodable {
         let userInitiated: Bool
         let userApprovedRetry: Bool
@@ -268,14 +258,6 @@ enum BrowserCorePolicy {
         evaluate(
             .residencyProcessRecovery, ProcessRecoveryRequest(consecutiveTerminations: consecutiveTerminations),
             answer: ProcessRecoveryAnswer.self)?.action ?? .showFailure
-    }
-
-    /// What dismissing this tab means. An unavailable core closes the tab, the
-    /// one dismissal that never discards a window or a durable page.
-    static func tabDismissal(for tab: BrowserTab?, tabCount: Int) -> BrowserTabDismissalAction {
-        guard let tab else { return .closeWindow }
-        let request = DismissalRequest(placement: tab.placement, isStartPage: tab.isStartPage, tabCount: tabCount)
-        return evaluate(.tabsDismissal, request, answer: DismissalAnswer.self)?.action ?? .closeTab
     }
 
     // MARK: - Actions - Downloads

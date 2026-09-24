@@ -25,7 +25,6 @@ public sealed partial class BrowserContractsTests {
 
     [Theory]
     [InlineData("space.future", BrowserRuleCodes.UnknownSpaceCommand)]
-    [InlineData("transient.future", BrowserRuleCodes.UnknownTransientCommand)]
     [InlineData("preferences.future", BrowserRuleCodes.UnknownPreferenceCommand)]
     public void UnknownOperationFamiliesKeepTheirSpecificErrors(string operation, string expectedCode) {
         var fixture = SavedSession();
@@ -79,46 +78,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(after["spaces"]![0]!["history"]!.AsArray());
     }
 
-    [Fact]
-    public void NativeCommandsPrepareWithoutMutationAndRejectConcurrentCommits() {
-        var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var space = session["spaces"]![0]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        byte[] Request(string title) => Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaceId"] = fixture.Space.ToString(),
-            ["profileId"] = space["profile"]!["id"]!.DeepClone(),
-            ["operation"] = "tab.open",
-            ["now"] = 800000001.0,
-            ["arguments"] = new JsonObject {
-                ["tab"] = new JsonObject {
-                    ["id"] = SwiftId(Guid.NewGuid()),
-                    ["title"] = title,
-                    ["url"] = "https://example.org/",
-                    ["placement"] = "current",
-                    ["symbol"] = "globe",
-                    ["lastActivatedAt"] = 800000001.0
-                }
-            },
-        });
-        var before = authority.Checkpoint().Read("core");
-        var first = authority.PrepareCommand(Request("Accepted"));
-        var competing = authority.PrepareCommand(Request("Stale"));
-        Assert.Equal(before, authority.Checkpoint().Read("core"));
-        Assert.Null(JsonNode.Parse(first.Output)!["space"]!["selectedTabID"]);
-        first.Commit();
-        Assert.IsType<StaleCommand>(Assert.Throws<Rejected>(() => competing.Commit()).Rejection);
-        Assert.IsType<StaleCommand>(Assert.Throws<Rejected>(() => first.Commit()).Rejection);
-        var checkpoint = authority.Checkpoint();
-        var saved = JsonNode.Parse(checkpoint.Read("core"))!["spaces"]![0]!;
-        var titles = saved["tabs"]!.AsArray().Select(tab => tab!["title"]!.GetValue<string>()).ToList();
-        Assert.Contains("Accepted", titles);
-        Assert.DoesNotContain("Stale", titles);
-        Assert.Null(saved["selectedTabID"]);
-        Assert.True(JsonNode.DeepEquals(space["history"], JsonNode.Parse(checkpoint.Read(fixture.Space.ToString()))));
-        Assert.True(JsonNode.DeepEquals(space["branding"], saved["branding"]));
-    }
-
     /// A command in `target`, the session's first Space unless named, issued
     /// from `window` when one is given.
     private static byte[] SpaceCommand(JsonNode session, string operation, JsonObject arguments, JsonNode? target = null,
@@ -133,40 +92,6 @@ public sealed partial class BrowserContractsTests {
             ["now"] = 800000002.0
         };
         return Bytes(window is { } issuer ? IssuedFrom(request, issuer) : request);
-    }
-
-    [Fact]
-    public void OwnedTabCopiesUseCurrentRecordsAndRejectAStalePublication() {
-        var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
-        JsonObject Arguments(Guid id) => new() {
-            ["tabId"] = fixture.Tab.ToString(),
-            ["ids"] = new JsonArray(id.ToString()),
-            ["copyObservations"] = new JsonArray(new JsonObject {
-                ["tabId"] = fixture.Tab.ToString(),
-                ["url"] = "https://example.com/live-child",
-                ["title"] = "Live title"
-            })
-        };
-        var rejected = core.PrepareCommand(SpaceCommand(session, "tab.copy", Arguments(Guid.NewGuid())));
-        device.Send(new RenameTab(device.Workspace, fixture.Space, fixture.Tab, "Latest name"));
-        AssertStale(rejected.Commit);
-        var id = Guid.NewGuid();
-        var accepted = core.PrepareCommand(SpaceCommand(session, "tab.copy", Arguments(id)));
-        accepted.Commit();
-        var space = JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!;
-        var copy = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == id)!;
-        var original = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == fixture.Tab)!;
-        Assert.Equal("Latest name", copy["customTitle"]!.GetValue<string>());
-        Assert.Equal("Live title", copy["title"]!.GetValue<string>());
-        Assert.Equal("https://example.com/live-child", copy["url"]!.GetValue<string>());
-        Assert.Equal("current", copy["placement"]!.GetValue<string>());
-        Assert.Null(copy["splitGroupID"]); Assert.Null(copy["savedURL"]);
-        Assert.True(JsonNode.DeepEquals(original["iconAccent"], copy["iconAccent"]));
-        Assert.Equal("saved", original["placement"]!.GetValue<string>());
-        Assert.Equal("https://example.com/article#one", original["url"]!.GetValue<string>());
-        Assert.Single(JsonNode.Parse(accepted.Output)!["copies"]!.AsArray());
     }
 
     [Fact]

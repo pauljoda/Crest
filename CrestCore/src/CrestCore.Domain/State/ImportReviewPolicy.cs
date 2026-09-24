@@ -62,7 +62,7 @@ public static class ImportReviewPolicy {
                 if (!choice.IncludedTabIds.Contains(tab.Id)
                     || choice.Placements.GetValueOrDefault(tab.Id, tab.Placement) != TabPlacement.Pinned) continue;
                 int count = counts.GetValueOrDefault(key);
-                if (count >= WorkspaceImportPolicy.MaximumPinnedTabs) overflow.Add(tab.Id);
+                if (!TabPlacement.Pinned.Holds(count + 1)) overflow.Add(tab.Id);
                 else counts[key] = count + 1;
             }
         }

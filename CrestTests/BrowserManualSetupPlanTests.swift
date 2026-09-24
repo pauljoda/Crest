@@ -112,7 +112,7 @@ final class BrowserManualSetupPlanTests: XCTestCase {
     func testPlanRejectsInvalidAddressesAndPinnedOverflow() throws {
         var existing = makeSession()
         let spaceID = try XCTUnwrap(existing.spaces.first?.id)
-        existing.spaces[0].tabs = (1...BrowserSpace.maximumPinnedTabs).map { index in
+        existing.spaces[0].tabs = (1...TabPlacement.pinnedCapacity).map { index in
             BrowserTab(
                 title: "Pin \(index)",
                 url: URL(string: "https://pin-\(index).example/"),

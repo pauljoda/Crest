@@ -23,7 +23,7 @@ internal static partial class StoredSessionCodec {
             ? new NativeTabContent(Text(content[Key.Kind]) ?? "", OptionalIdentity(content[Key.ResourceId])) : null;
         var url = native is null ? Text(value[Key.Url]) : null;
         var title = Text(value[Key.Title]);
-        var shown = TabContent.FromStored(native?.Kind, url, title ?? "");
+        var shown = TabKind.FromStored(native?.Kind, url, title ?? "");
         return new(Identity(value[Key.Id]), title ?? shown.Title(url), url, native,
             native is null ? Text(value[Key.SavedUrl]) : null, Text(value[Key.Symbol]) ?? shown.Symbol,
             Text(value[Key.FaviconUrl]), value[Key.IconAccent] is JsonObject accent ? DecodeIconAccent(accent) : null,

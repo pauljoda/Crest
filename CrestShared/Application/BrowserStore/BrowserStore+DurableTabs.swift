@@ -1,13 +1,12 @@
 import Foundation
 
 extension BrowserStore {
-    /// Records an explicit close without removing the durable tab or archiving it.
-    /// The page owner retires its runtime before publishing this session change.
+    /// Records an explicit close without removing the durable tab or archiving
+    /// it: the core puts its page away, back at its saved address when the
+    /// app's preferences say so. The page owner retires its runtime before
+    /// publishing this session change.
     @discardableResult
-    func closeDurableTab(
-        _ assignment: BrowserTabRuntimeAssignment,
-        returningToSavedURL: Bool
-    ) -> Bool {
+    func closeDurableTab(_ assignment: BrowserTabRuntimeAssignment) -> Bool {
         let spaceAssignment = BrowserSpaceRuntimeAssignment(
             spaceID: assignment.spaceID, profileID: assignment.profileID
         )
@@ -17,10 +16,6 @@ extension BrowserStore {
         else { return false }
         // The core returns the window to the tab it showed before, skipping the
         // closed tab's split, whose other members would present it again.
-        let arguments = BrowserSessionArguments.TabCloseDurable(
-            tabId: tab.id.rawValue, returnToSavedURL: returningToSavedURL)
-        guard family.execute(.tabCloseDurable, in: space.id, arguments: arguments, from: self, at: .now) != nil
-        else { return false }
-        return true
+        return closeSessionTab(tab.id, in: space.id)
     }
 }

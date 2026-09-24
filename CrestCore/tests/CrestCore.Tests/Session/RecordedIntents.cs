@@ -53,6 +53,8 @@ internal static class RecordedIntents {
         Guid? Optional(string key) => arguments[key] is { } value ? Guid.Parse(value.GetValue<string>()) : null;
         BrandColor? Color(JsonNode? value) => value is JsonObject color ? StoredSessionCodec.DecodeColor(color) : null;
         return request["operation"]!.GetValue<string>() switch {
+            "tab.open" => Opening(workspace, window ?? Guid.Empty, Id("spaceId"), arguments),
+            "tab.close" => new CloseTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId")),
             "archive.restore" => new RestoreArchivedTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId")),
             "records.sweep" => new SweepExpiredRecords(workspace),
             "folder.create" => new CreateFolder(workspace, Id("spaceId"), Argument("folderId"),
@@ -68,6 +70,14 @@ internal static class RecordedIntents {
             "split.tint" => new TintSplit(workspace, Id("spaceId"), Argument("groupId"), Color(arguments["value"])),
             _ => null
         };
+    }
+
+    /// The tab a recorded `tab.open` gave the core whole, opened as the intent
+    /// that names what it shows.
+    private static OpenTab Opening(Guid workspace, Guid window, Guid space, JsonObject arguments) {
+        var tab = StoredSessionCodec.DecodeTab(arguments["tab"]);
+        return new(workspace, window, space, tab.Id, new TabContent(tab.Url, tab.NativeContent, tab.Title, tab.Symbol), tab.Placement,
+            arguments["after"] is { } after ? Guid.Parse(after.GetValue<string>()) : null, arguments["select"]?.GetValue<bool>() == true);
     }
 
     /// The navigation a recorded `history.visit` stands for, or null for any

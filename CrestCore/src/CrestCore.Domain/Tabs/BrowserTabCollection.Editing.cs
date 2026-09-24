@@ -7,15 +7,20 @@ namespace CrestCore.Domain;
 public sealed partial class BrowserTabCollection {
     #region Actions - Editing
 
-    public bool MoveTab(Guid id, TabPlacement placement, Guid? requestedFolder, Guid? before,
+    /// Moves a tab into `folder`, or to the top level of `placement`'s section,
+    /// before `before` when it is there, or after the section's last tab.
+    /// Answers whether anything moved. Refused with `UnknownFolder` or
+    /// `InvalidFolderPlacement` for a folder that is not there or not in the
+    /// section, or a tab named to go before itself, and with `PinnedTabsFull`
+    /// for a full section.
+    public bool MoveTab(Guid id, TabPlacement placement, Guid? folder, Guid? before,
         bool detachSplit, DateTimeOffset now) {
         var tab = Tab(id);
-        if (before == id) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
-        Guid? folder = placement.HoldsFolders && folders.Any(f => f.Id == requestedFolder && f.Location == placement)
-            ? requestedFolder : null;
+        if (before == id) throw new Rejected(new InvalidFolderPlacement());
+        if (folder is { } named && (KnownFolder(named).Location != placement || !placement.HoldsFolders))
+            throw new Rejected(new InvalidFolderPlacement());
         var remaining = tabs.Where(t => t.Id != id).ToList();
-        if (!placement.Holds(remaining.Count(t => t.Placement == placement) + 1))
-            throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
+        RequireRoom(placement, remaining.Count(t => t.Placement == placement) + 1);
         bool Matches(BrowserTab tab) => tab.Placement == placement && tab.FolderId == folder;
         int insertion = before is { } target ? remaining.FindIndex(t => t.Id == target && Matches(t)) : -1;
         if (insertion < 0) {
@@ -71,11 +76,13 @@ public sealed partial class BrowserTabCollection {
     public int? InsertionIndexAfter(Guid origin) =>
         tabs.Any(t => t.Id == origin) ? tabs.IndexOf(SplitMembers(origin)[^1]) + 1 : null;
 
+    /// Adds a tab to its section, at `requestedIndex` within it, or where its
+    /// section puts a new tab. Refused with `PinnedTabsFull`,
+    /// `TabLimitReached` or `TabAlreadyExists`.
     public void InsertTab(BrowserTab tab, int? requestedIndex, bool duplicate = false) {
-        if (!tab.Placement.Holds(tabs.Count(t => t.Placement == tab.Placement) + 1))
-            throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
+        RequireRoom(tab.Placement, tabs.Count(t => t.Placement == tab.Placement) + 1);
         if (tabs.Count >= MaximumTabs) throw new Rejected(new TabLimitReached(MaximumTabs));
-        if (tabs.Any(t => t.Id == tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
+        if (tabs.Any(t => t.Id == tab.Id)) throw new Rejected(new TabAlreadyExists(tab.Id));
         int lower = tabs.FindIndex(t => t.Placement.Rank >= tab.Placement.Rank);
         if (lower < 0) lower = tabs.Count;
         int upper = NextSection(tabs, tab.Placement);
@@ -104,6 +111,11 @@ public sealed partial class BrowserTabCollection {
             selected = FallbackSelection();
         NormalizeSplits(now);
         return selected;
+    }
+
+    /// Refuses a section that cannot hold `count` tabs.
+    private static void RequireRoom(TabPlacement placement, int count) {
+        if (!placement.Holds(count) && placement.Capacity is { } capacity) throw new Rejected(new PinnedTabsFull(capacity));
     }
 
     #endregion

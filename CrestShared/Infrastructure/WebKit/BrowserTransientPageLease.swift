@@ -16,6 +16,9 @@ final class BrowserTransientPageLease {
         )
     }
     private(set) var page: BrowserPlatformPage?
+    /// The core page the lease last held, which stays named after memory
+    /// pressure takes the page back.
+    private(set) var pageID: UUID
     private(set) var wasReleasedForMemoryPressure = false
     var recoverableURL: URL { page?.url ?? reloadURL }
     var canBeReused: Bool { page != nil || wasReleasedForMemoryPressure }
@@ -39,6 +42,7 @@ final class BrowserTransientPageLease {
         onDownloadOnlyNavigation: (() -> Void)? = nil
     ) {
         self.page = page
+        pageID = page.corePage.id
         spaceID = page.spaceID
         profileID = page.profileID
         reloadURL = url
@@ -64,6 +68,7 @@ final class BrowserTransientPageLease {
         page.monitorUserActivity(userActivity)
         page.load(reloadURL)
         self.page = page
+        pageID = page.corePage.id
         wasReleasedForMemoryPressure = false
     }
 

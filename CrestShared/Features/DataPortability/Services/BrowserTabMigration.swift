@@ -137,7 +137,7 @@ enum BrowserTabMigration {
             {
                 throw BrowserTabMigrationError.invalidContents
             }
-            if placement == .pinned, pinnedCount < BrowserSpace.maximumPinnedTabs {
+            if placement == .pinned, pinnedCount < TabPlacement.pinnedCapacity {
                 pinnedCount += 1
             } else if placement == .pinned {
                 placement = .saved

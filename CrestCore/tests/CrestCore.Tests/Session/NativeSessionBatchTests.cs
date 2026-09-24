@@ -70,7 +70,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("pinned_capacity", JsonNode.Parse(rejected.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => rejected.Commit());
         Assert.Equal(before, core.Checkpoint().Read("core"));
-        core.PrepareCommand(SpaceCommand(session, "tab.move", new() { ["tabId"] = fixture.Tab.ToString(), ["placement"] = "current", ["detach"] = false })).Commit();
+        device.Send(new MoveTab(device.Workspace, fixture.Space, fixture.Tab, TabPlacement.Current, null, null, LeavesSplit: false));
         var staleSelection = core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
         Assert.Equal("stale_selection", JsonNode.Parse(staleSelection.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => staleSelection.Commit());

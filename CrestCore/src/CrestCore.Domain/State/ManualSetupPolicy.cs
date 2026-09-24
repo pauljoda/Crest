@@ -59,7 +59,7 @@ public static class ManualSetupPolicy {
         string url, string? title) {
         ArgumentNullException.ThrowIfNull(url);
         if (existingPinned < 0 || otherAddedPinned < 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabCount);
-        if (placement == TabPlacement.Pinned && (long)existingPinned + otherAddedPinned >= WorkspaceImportPolicy.MaximumPinnedTabs)
+        if (placement == TabPlacement.Pinned && (long)existingPinned + otherAddedPinned >= TabPlacement.PinnedCapacity)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimitReached);
         return new(Title(url, title), placement == TabPlacement.Pinned ? PinnedTabSymbol : TabSymbol,
             placement.IsDurable);

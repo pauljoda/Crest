@@ -220,9 +220,10 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([.. space.Tabs.Skip(1).Select(tab => tab.Id), space.Tabs[0].Id], moved.Order);
     }
 
-    /// A tab a window opens: the command's changes wait in the pending batch,
-    /// and the next intent answers them before its own, so a reader shows the
-    /// new tab before the window that shows it and ends in the core's state.
+    /// A tab a window opens outside an intent the app runs, as a session's own
+    /// work does: its changes wait in the pending batch, and the next intent
+    /// answers them before its own, so a reader shows the new tab before the
+    /// window that shows it and ends in the core's state.
     [Fact]
     public void AnIntentAnswersThePendingBatchBeforeItsOwnChanges() {
         var authority = MaximalSession();
@@ -234,17 +235,8 @@ public sealed partial class BrowserContractsTests {
         app.Send(new OpenWindow(window, workspace, Saved: false, CopyingWindowId: null, space.Id, [new(space.Id, space.Tabs[0].Id)],
             RestoresTabs: true));
         var opened = Guid.NewGuid();
-        authority.PrepareCommand(SpaceCommand(StoredSessionCodec.Encode(authority.Current), "tab.open", new() {
-            ["select"] = true,
-            ["tab"] = new JsonObject {
-                ["id"] = SwiftId(opened),
-                ["title"] = "Opened",
-                ["url"] = "https://opened.example/",
-                ["placement"] = "current",
-                ["symbol"] = "globe",
-                ["lastActivatedAt"] = 800000001.0
-            }
-        }, window: window)).Commit();
+        authority.Handle(new OpenTab(workspace, window, space.Id, opened, new TabContent("https://opened.example/", null, "Opened", null),
+            TabPlacement.Current, AfterTabId: null, Shows: true), DateTimeOffset.UtcNow, new TestIds());
 
         var answered = app.Send(new ShowTab(window, space.Id, space.Tabs[0].Id));
 
@@ -268,27 +260,28 @@ public sealed partial class BrowserContractsTests {
         using var app = new CrestApp();
         var workspace = app.AttachWorkspace(authority);
         var space = authority.Current.Spaces[0];
+        var destination = authority.Current.Spaces[1];
         var window = Guid.NewGuid();
         app.Send(new OpenWindow(window, workspace, Saved: false, CopyingWindowId: null, space.Id, [], RestoresTabs: true));
-        byte[] Open(string title) => SpaceCommand(StoredSessionCodec.Encode(authority.Current), "tab.open",
-            new() {
-                ["tab"] = new JsonObject {
-                    ["id"] = SwiftId(Guid.NewGuid()),
-                    ["title"] = title,
-                    ["url"] = "https://example.org/",
-                    ["placement"] = "current",
-                    ["symbol"] = "globe",
-                    ["lastActivatedAt"] = 800000001.0
-                }
-            });
-        var before = authority.PrepareCommand(Open("Before"));
+        var moving = space.Tabs[0].Id;
+        byte[] Move() => Bytes(new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "tab.transfer",
+            ["spaceId"] = space.Id.ToString(),
+            ["profileId"] = space.ProfileId.ToString(),
+            ["destinationSpaceId"] = destination.Id.ToString(),
+            ["destinationProfileId"] = destination.ProfileId.ToString(),
+            ["now"] = 800000001.0,
+            ["arguments"] = new JsonObject { ["tabId"] = moving.ToString() }
+        });
+        var before = authority.PrepareCommand(Move());
         var touched = app.Send(new ShowTab(window, space.Id, space.Tabs[1].Id));
         Assert.Single(touched.OfType<TabsChanged>());
 
         AssertStale(before.Commit);
-        authority.PrepareCommand(Open("After")).Commit();
-        var titles = authority.Current.Spaces[0].Tabs.Select(tab => tab.Title).ToList();
-        Assert.Contains("After", titles);
-        Assert.DoesNotContain("Before", titles);
+        Assert.Contains(authority.Current.Spaces[0].Tabs, tab => tab.Id == moving);
+        authority.PrepareCommand(Move()).Commit();
+        Assert.DoesNotContain(authority.Current.Spaces[0].Tabs, tab => tab.Id == moving);
+        Assert.Contains(authority.Current.Spaces[1].Tabs, tab => tab.Id == moving);
     }
 }

@@ -54,7 +54,7 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
     /// opening a slot the release would decline.
     func testAGridFullOfItsOwnTabsStillRefusesAnIncomingPin() {
         let fixture = ReorderRegistryFixture(
-            ownPinCount: BrowserSpace.maximumPinnedTabs
+            ownPinCount: TabPlacement.pinnedCapacity
         )
         let state = fixture.sidebarInteraction.sidebarReorderState
         fixture.register(in: state)
@@ -177,7 +177,7 @@ private struct ReorderRegistryFixture {
         }
         // One short of the cap, so nothing here is a grid that is genuinely
         // full — only the sum of two grids is.
-        foreignPins = (0..<(BrowserSpace.maximumPinnedTabs - 1)).map { index in
+        foreignPins = (0..<(TabPlacement.pinnedCapacity - 1)).map { index in
             makeTab(
                 id: TabID(rawValue: uuid(UInt8(0x50 + index))),
                 title: "Foreign Pin \(index)",

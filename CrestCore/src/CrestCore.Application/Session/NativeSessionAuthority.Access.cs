@@ -68,7 +68,7 @@ public sealed partial class NativeSessionAuthority {
         foreach (var field in new[] { "spaceId", "destinationSpaceId" })
             if (OptionalSpace(request[field]) is { } id) yield return id;
         if (request["arguments"] is not JsonObject args) yield break;
-        foreach (var field in new[] { "sourceSpaceId", "destinationSpaceId", "leaseSpaceId" })
+        foreach (var field in new[] { "destinationSpaceId" })
             if (OptionalSpace(args[field]) is { } id) yield return id;
         if (operation != SessionOperation.WorkspaceImport) yield break;
         // Importing into an existing Space writes its tabs and folders. A new

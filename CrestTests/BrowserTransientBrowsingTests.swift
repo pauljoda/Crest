@@ -639,7 +639,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         browser.finishNavigation(of: page, to: url, titled: "Transient")
         XCTAssertTrue(
             browser.archiveTransientPage(
-                url: url, title: "Transient", matching: BrowserSpaceRuntimeAssignment(space: personal)))
+                page.id, url: url, title: "Transient", matching: BrowserSpaceRuntimeAssignment(space: personal)))
         page.release(keepingState: false)
         let session = browser.session
 
@@ -675,11 +675,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
 
         XCTAssertNil(browser.openNewTab(url: url, matching: assignment))
         XCTAssertFalse(
-            browser.archiveTransientPage(
-                url: url,
-                title: "Stale",
-                matching: assignment
-            )
+            browser.archiveTransientPage(UUID(), url: url, title: "Stale", matching: assignment)
         )
         XCTAssertTrue(browser.selectedSpace?.history.isEmpty == true)
         XCTAssertTrue(

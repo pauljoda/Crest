@@ -7,7 +7,6 @@ namespace CrestCore.Domain;
 public static class BrowserLimits {
     #region Variables
 
-    public const int PinnedTabs = TabPlacement.PinnedCapacity;
     public const int Folders = FolderTree.MaximumCount;
     public const int FolderDepth = FolderTree.MaximumDepth;
     public const int HistoryEntries = HistoryPolicy.MaximumEntries;

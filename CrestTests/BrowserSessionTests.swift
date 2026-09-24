@@ -360,7 +360,7 @@ final class BrowserSessionTests: XCTestCase {
 
     func testSpaceCapsPinnedGridAtTwelveTabs() throws {
         let store = makeStore(.preview)
-        let limit = BrowserSpace.maximumPinnedTabs
+        let limit = TabPlacement.pinnedCapacity
 
         for index in 0..<limit {
             guard try XCTUnwrap(store.selectedSpace).pinnedTabs.count < limit else { break }
@@ -689,7 +689,7 @@ final class BrowserSessionTests: XCTestCase {
             repaired.folders.allSatisfy { folder in
                 folder.parentID == nil || repaired.folders.contains { $0.id == folder.parentID }
             })
-        XCTAssertEqual(repaired.pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
+        XCTAssertEqual(repaired.pinnedTabs.count, TabPlacement.pinnedCapacity)
         XCTAssertTrue(repaired.tabs.filter { $0.placement != .saved }.allSatisfy { $0.folderID == nil })
         XCTAssertTrue(
             repaired.savedTabs.allSatisfy { tab in

@@ -13,7 +13,7 @@ enum BrowserManualSetupError: Error, Equatable, LocalizedError {
         case .missingSpace:
             "That Space is no longer available."
         case .pinnedLimitReached:
-            "This Space already has the maximum of \(BrowserSpace.maximumPinnedTabs) pinned tabs."
+            "This Space already has the maximum of \(TabPlacement.pinnedCapacity) pinned tabs."
         case .spaceLimitReached:
             "Crest supports up to \(BrowserPortableArchive.maximumSpaceCount) Spaces."
         }

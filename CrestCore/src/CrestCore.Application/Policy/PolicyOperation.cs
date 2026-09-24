@@ -34,7 +34,6 @@ internal enum PolicyOperation {
     ShortcutsAssign,
     ShortcutsBindings,
     ShortcutsNumberedSelection,
-    TabsDismissal,
     TranslationMatches,
     TranslationRule,
     // Links, Quick Windows, presentation, branding and workspace routing.
@@ -86,7 +85,6 @@ internal static class PolicyOperationCodes {
         "shortcuts.assign" => PolicyOperation.ShortcutsAssign,
         "shortcuts.bindings" => PolicyOperation.ShortcutsBindings,
         "shortcuts.numbered_selection" => PolicyOperation.ShortcutsNumberedSelection,
-        "tabs.dismissal" => PolicyOperation.TabsDismissal,
         "translation.matches" => PolicyOperation.TranslationMatches,
         "translation.rule" => PolicyOperation.TranslationRule,
         // Links, Quick Windows, presentation, branding and workspace routing.

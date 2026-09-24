@@ -101,6 +101,14 @@ internal sealed partial class Device {
         announce(new WorkspaceClosed(workspaceId));
     }
 
+    /// The app's preferences, which the persistent session keeps for every
+    /// workspace: null before that session is attached, or while it keeps none.
+    public AppPreferences? PersistentPreferences() {
+        NativeSessionAuthority? persistent;
+        lock (gate) persistent = persistentWorkspace is { } id ? workspaces.GetValueOrDefault(id) : null;
+        return persistent?.Current.AppPreferences;
+    }
+
     private static Dictionary<Guid, Guid> LegacyTabs(JsonObject? selection) {
         var tabs = new Dictionary<Guid, Guid>();
         foreach (var space in selection?[StoredSessionCodec.Key.Spaces] as JsonArray ?? []) {

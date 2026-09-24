@@ -238,22 +238,6 @@ final class BrowserStoreFamily {
     /// A core answer read from the owned session without changing it.
     func readCore<Request: Encodable>(_ request: Request) -> Data? { try? core.read(request) }
 
-    /// Runs a tab command.
-    func execute<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
-        arguments: Arguments, from source: BrowserStore, at date: Date)
-        -> BrowserCoreSessionEditing.Result? {
-        let previous = authoritativeSession
-        do {
-            let result = try core.execute(
-                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
-            reconcileStores(after: previous, from: source)
-            return result
-        } catch {
-            source.localSyncErrorDescription = "Core command failed: \(error)"
-            return nil
-        }
-    }
-
     /// Runs one session intent that `source`'s window issued. What it changed
     /// reaches the session copy and the read model through the core's changes,
     /// and every window then follows the accepted session. Answers whether the
@@ -298,6 +282,13 @@ final class BrowserStoreFamily {
     func canSend(_ intent: some Intent, from source: BrowserStore) -> Bool {
         guard let permission = try? source.core.query(CanSend(intent: intent)) else { return false }
         return permission.refusal == nil
+    }
+
+    /// The rule that would refuse a session intent `source`'s window issues,
+    /// asked without changing anything, or nil when the core would accept it
+    /// or could not answer.
+    func refusal(of intent: some Intent, from source: BrowserStore) -> Rejection? {
+        (try? source.core.query(CanSend(intent: intent)))?.refusal
     }
 
     /// A record command without arguments of its own.

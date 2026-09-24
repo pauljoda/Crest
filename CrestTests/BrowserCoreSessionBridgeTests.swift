@@ -23,7 +23,7 @@ final class BrowserCoreSessionBridgeTests: XCTestCase {
         store.selectSpace(spaceID)
 
         let opened = try XCTUnwrap(
-            store.openSessionTab(title: "Opened", url: URL(string: "https://opened.example/"), in: spaceID))
+            store.openSessionTab(.page(URL(string: "https://opened.example/")!, title: "Opened"), in: spaceID))
         XCTAssertTrue(store.setTabCustomTitle("Renamed", for: opened, in: spaceID))
         let page = try XCTUnwrap(store.openReportingPage(for: nil, in: spaceID))
         store.finishNavigation(of: page, to: try XCTUnwrap(URL(string: "https://visited.example/a")), titled: "First")

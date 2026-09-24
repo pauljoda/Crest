@@ -30,9 +30,9 @@ public sealed partial class BrowserContractsTests {
         core.AttachAccess(access);
         var identity = Identity(session);
         var tab = Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>());
-        var move = SpaceCommand(session, "tab.move", new() { ["tabId"] = tab.ToString(), ["placement"] = "current" });
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(move)).Code);
         using var device = new TestDevice(core);
+        var move = new MoveTab(device.Workspace, identity.Space, tab, TabPlacement.Current, null, null, LeavesSplit: false);
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(move)).Rejection);
         var folder = Guid.Parse(session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.GetValue<string>());
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new RenameFolder(device.Workspace, identity.Space, folder, "Leaked"))).Rejection);
@@ -66,8 +66,7 @@ public sealed partial class BrowserContractsTests {
 
         access.Lock(identity.Space);
         var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
-            SpaceCommand(current, "tab.move", new() { ["tabId"] = tab.ToString(), ["placement"] = "current" }))).Code);
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(move)).Rejection);
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"))).Rejection);
         // Taking protection away is the decision authentication guards.
@@ -225,15 +224,11 @@ public sealed partial class BrowserContractsTests {
         // The borrowed workspace inherits the same authority, so relocking the
         // source also stops edits inside the Blank Window that borrowed it.
         access.Lock(identity.Space);
-        var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "tab.move",
-            ["now"] = 800000100.0,
-            ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
-            ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["arguments"] = new JsonObject { ["tabId"] = Guid.NewGuid().ToString(), ["placement"] = "current" }
-        }))).Code);
+        using var device = new TestDevice(owner);
+        var borrowed = device.Attach(child);
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(new MoveTab(borrowed, identity.Space,
+            Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>()), TabPlacement.Current, null, null,
+            LeavesSplit: false))).Rejection);
     }
 
     [Fact]

@@ -1156,7 +1156,7 @@ final class BrowserStoreTests: XCTestCase {
         )
         let pinnedTabID = try XCTUnwrap(
             firstWindow.openSessionTab(
-                title: "Pinned", url: try XCTUnwrap(URL(string: "https://pinned.crest.test")),
+                .page(try XCTUnwrap(URL(string: "https://pinned.crest.test")), title: "Pinned"),
                 in: firstWindow.selectedSpaceID, placement: .pinned, shouldSelect: false
             )
         )

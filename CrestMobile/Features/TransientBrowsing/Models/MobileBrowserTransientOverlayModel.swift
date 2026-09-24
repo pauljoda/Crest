@@ -216,10 +216,8 @@ final class MobileBrowserTransientOverlayModel {
             let pageLease,
             let page = pageLease.page,
             let outcome = BrowserTransientPagePromotion(
-                requestID: request.id,
+                page: page.corePage,
                 url: page.url ?? request.url,
-                sourceAssignment: request.spaceAssignment,
-                leaseAssignment: pageLease.assignment,
                 destinationAssignment: destinationAssignment
             ).perform(
                 in: browser,
@@ -328,11 +326,7 @@ final class MobileBrowserTransientOverlayModel {
                 wasArchived: wasArchived, wasPromoted: wasPromoted, hasPage: snapshot != nil),
             let snapshot,
             browser.archiveTransientPage(
-                url: snapshot.url,
-                title: snapshot.title,
-                matching: snapshot.assignment,
-                requestID: request.id
-            )
+                snapshot.pageID, url: snapshot.url, title: snapshot.title, matching: snapshot.assignment)
         else { return }
         wasArchived = true
     }
@@ -406,7 +400,8 @@ final class MobileBrowserTransientOverlayModel {
         BrowserTransientPageSnapshot(
             assignment: lease.assignment,
             url: lease.recoverableURL,
-            title: lease.page?.title
+            title: lease.page?.title,
+            pageID: lease.pageID
         )
     }
 }

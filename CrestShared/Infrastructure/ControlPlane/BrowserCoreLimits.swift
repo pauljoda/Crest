@@ -7,7 +7,6 @@ import Foundation
 struct BrowserCoreLimits: Decodable, Equatable, Sendable {
     // MARK: - Variables
 
-    let pinnedTabs: Int
     let folders: Int
     let folderDepth: Int
     let historyEntries: Int

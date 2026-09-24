@@ -38,6 +38,11 @@ public sealed partial class BrowserContractsTests {
         /// Attaches another session and answers its workspace.
         public Guid Attach(NativeSessionAuthority authority) => app.AttachWorkspace(authority);
 
+        /// Registers the default engine, which supports `capabilities` beside
+        /// the ones every engine must, and does what the core asks.
+        public Engine Register(params EngineCapability[] capabilities) => app.RegisterEngine(
+            new EngineRegistration(EngineKind.WebKit, [.. EngineCapability.Required, .. capabilities], IsDefault: true), _ => { });
+
         /// A window on the first session showing `space`, and `tabs` in the Spaces they name.
         public Guid Open(Guid? space, params (Guid Space, Guid? Tab)[] tabs) => OpenIn(Workspace, space, tabs);
 

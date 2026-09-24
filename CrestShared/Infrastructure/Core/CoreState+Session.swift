@@ -135,6 +135,11 @@ extension CoreState {
         forward(.tabCopied(change), to: change.workspaceID)
     }
 
+    /// A promoted page changes no state of its own: the session's changes
+    /// before it carry the new tab, and the window that promoted it reads it
+    /// from the changes its intent answered.
+    func apply(_ change: TransientPagePromoted) {}
+
     func apply(_ change: TabFaviconAssigned) {
         if workspaces[change.workspaceID]?.holdsOpen(tabID: change.tabID) == true {
             favicons.assign(adopts: change.adopts, to: change.tabID, in: change.workspaceID, from: change.pageID)

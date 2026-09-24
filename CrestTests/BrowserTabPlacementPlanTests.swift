@@ -126,7 +126,7 @@ final class BrowserTabPlacementPlanTests: XCTestCase {
             )
         )
 
-        let fullPins = (0..<BrowserSpace.maximumPinnedTabs).map {
+        let fullPins = (0..<TabPlacement.pinnedCapacity).map {
             makeTab("Pin \($0)", placement: .pinned)
         }
         let fullDestination = makeSpace(tabs: fullPins)

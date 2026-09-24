@@ -484,6 +484,8 @@ final class BrowserPeekModelTests: XCTestCase {
         let spaceAccess = BrowserSpaceAccessController(
             authenticator: BrowserPreviewAuthenticator(result: true)
         )
+        // The core refuses a locked Space's pages through the same grants.
+        browser.family.attachSpaceAccess(spaceAccess)
         return PeekTestContext(
             source: source,
             destination: destination,
