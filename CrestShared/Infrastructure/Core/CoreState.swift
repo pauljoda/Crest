@@ -11,6 +11,8 @@ final class CoreState {
 
     /// This run's download records, newest first.
     var downloads: [DownloadState] = []
+    /// What each open window shows, by window.
+    var windows: [UUID: WindowState] = [:]
     /// The newest session revision the core has on disk; zero before its
     /// first save and for a core that keeps nothing.
     var savedRevision: Int64 = 0

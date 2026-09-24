@@ -13,16 +13,20 @@ public sealed class NativeSessionCommand {
     private readonly string? rejection;
     internal ulong? BorrowedSourceRevision { get; }
     internal Guid? TransientCompletion { get; }
+    /// What the command chose for the window that issued it to show next.
+    internal WindowFollowUp? FollowUp { get; }
 
     #endregion
 
     #region Constructors
 
     internal NativeSessionCommand(NativeSessionAuthority owner, ulong revision,
-        SessionState session, byte[] output, string? rejection = null, Guid? transientCompletion = null) {
+        SessionState session, byte[] output, string? rejection = null, Guid? transientCompletion = null,
+        WindowFollowUp? followUp = null) {
         this.owner = owner; ExpectedRevision = revision; Session = session; Output = output; this.rejection = rejection;
         BorrowedSourceRevision = owner.BorrowedRevision;
         TransientCompletion = transientCompletion;
+        FollowUp = followUp;
     }
 
     #endregion

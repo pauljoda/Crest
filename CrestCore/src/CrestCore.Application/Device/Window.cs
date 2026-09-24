@@ -1,0 +1,206 @@
+using CrestCore.Contracts;
+using CrestCore.Domain;
+
+namespace CrestCore.Application;
+
+/// One of this device's windows and what it shows: the Space on screen, the
+/// tab it shows in each Space it has shown (or none), the column shares of the
+/// split groups it resized, and each Space's recently shown tabs, which choose
+/// the tab to show when the shown one is dismissed. The device serializes
+/// every call.
+internal sealed class Window {
+    #region Variables
+
+    /// A split group renders only with at least this many members.
+    private const int MinimumSplitMembers = 2;
+
+    /// The tab shown in each Space; null when the window shows none there.
+    private readonly Dictionary<Guid, Guid?> tabs;
+    private readonly Dictionary<Guid, IReadOnlyList<double>> shares;
+    /// Each Space's shown tabs, most recent last. Kept in memory only.
+    private readonly Dictionary<Guid, List<Guid>> recent;
+
+    public Guid Id { get; }
+    public Guid WorkspaceId { get; }
+    /// Whether the window keeps its record in the device store.
+    public bool Saved { get; }
+    public Guid ShownSpaceId { get; private set; }
+
+    /// What the window shows, as the platform reads it.
+    public WindowState State => new(Id, WorkspaceId, ShownSpaceId,
+        [.. tabs.OrderBy(entry => entry.Key).Select(entry => new ShownTab(entry.Key, entry.Value))],
+        [.. shares.OrderBy(entry => entry.Key).Select(entry => new SplitColumnShares(entry.Key, entry.Value))]);
+
+    #endregion
+
+    #region Constructors
+
+    private Window(Guid id, Guid workspaceId, bool saved, Guid shownSpaceId, Dictionary<Guid, Guid?> tabs,
+        Dictionary<Guid, IReadOnlyList<double>> shares, Dictionary<Guid, List<Guid>> recent) {
+        Id = id;
+        WorkspaceId = workspaceId;
+        Saved = saved;
+        ShownSpaceId = shownSpaceId;
+        this.tabs = tabs;
+        this.shares = shares;
+        this.recent = recent;
+    }
+
+    /// A window that shows what `record` kept, or only its Space.
+    public static Window Restoring(SavedWindow record, Guid workspaceId, bool restoresTabs) => new(record.Id, workspaceId, saved: true,
+        record.ShownSpaceId, restoresTabs ? record.Tabs.ToDictionary(tab => tab.SpaceId, tab => tab.TabId) : [],
+        restoresTabs ? record.Shares.ToDictionary(group => group.GroupId, group => group.Shares) : [], []);
+
+    /// A window that starts as `other` shows, without its split columns.
+    public static Window Copying(Window other, Guid id, bool saved) =>
+        new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], []);
+
+    /// A window on `session`'s launch Space: its default Space unless that is
+    /// being deleted, else the first Space. `legacyTabs` are the tabs an older
+    /// release kept in the session, which a window without a record adopts.
+    public static Window Launching(Guid id, Guid workspaceId, bool saved, SessionState session,
+        IReadOnlyDictionary<Guid, Guid> legacyTabs) {
+        var available = Available(session).ToArray();
+        var launch = available.FirstOrDefault(space => space.Id == session.DefaultSpaceId) ?? available.FirstOrDefault();
+        var window = new Window(id, workspaceId, saved, launch?.Id ?? Guid.Empty,
+            legacyTabs.Where(entry => session.Spaces.Any(space => space.Id == entry.Key && Contains(space, entry.Value)))
+                .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], []);
+        if (launch is not null) window.ShowSpace(launch);
+        return window;
+    }
+
+    /// A copy a command reads while the device keeps editing the window.
+    public Window Snapshot() => new(Id, WorkspaceId, Saved, ShownSpaceId, new(tabs), new(shares),
+        recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)));
+
+    #endregion
+
+    #region Actions - Showing
+
+    /// The tab the window shows in a Space, or null when it shows none there.
+    public Guid? Tab(Guid spaceId) => tabs.GetValueOrDefault(spaceId);
+
+    /// Shows `space`, on the tab the window showed there while it still
+    /// exists, else on the Space's fallback tab.
+    public void ShowSpace(SpaceState space) {
+        ShownSpaceId = space.Id;
+        if (!Contains(space, tabs.GetValueOrDefault(space.Id))) tabs[space.Id] = FallbackTab(space);
+        Remember(space.Id);
+    }
+
+    /// Moves the window to `spaceId` and keeps what it shows there, even nothing.
+    public void MoveTo(Guid spaceId) => ShownSpaceId = spaceId;
+
+    /// Shows `tabId` in its Space and moves the window there, or shows nothing
+    /// in `spaceId` and leaves the window where it is.
+    public void ShowTab(Guid spaceId, Guid? tabId) {
+        if (tabId is not null) ShownSpaceId = spaceId;
+        tabs[spaceId] = tabId;
+        Remember(spaceId);
+    }
+
+    /// Applies what a command chose for this window to show next.
+    public void Apply(WindowFollowUp followUp) {
+        foreach (var (spaceId, tabId) in followUp.Dismissed)
+            if (recent.TryGetValue(spaceId, out var history)) history.Remove(tabId);
+        foreach (var (spaceId, tabId) in followUp.Tabs) {
+            tabs[spaceId] = tabId;
+            Remember(spaceId);
+        }
+        if (followUp.SpaceId is { } space) ShownSpaceId = space;
+    }
+
+    /// The tab to show after `dismissed` leaves `space`: the tab the window
+    /// showed there before it, while `available` still holds it. The history
+    /// forgets `dismissed`, and forgets everything when nothing qualifies.
+    public Guid? DismissalFallback(Guid spaceId, Guid dismissed, IReadOnlySet<Guid> available) {
+        if (!recent.TryGetValue(spaceId, out var history)) return null;
+        history.Remove(dismissed);
+        if (history.Count > 0 && available.Contains(history[^1])) return history[^1];
+        history.Clear();
+        return null;
+    }
+
+    /// Answers whether the window still matches `session` after it changed,
+    /// repairing it when it does not: a tab that is gone shows nothing, a
+    /// Space that is gone or being deleted gives way to the first remaining
+    /// one on its fallback tab, split shares survive only while their group
+    /// renders with as many columns, and the history forgets what is gone.
+    public bool Repair(SessionState session) {
+        var before = State;
+        var spaces = session.Spaces.ToDictionary(space => space.Id);
+        foreach (var (spaceId, tabId) in tabs.ToArray()) {
+            if (!spaces.TryGetValue(spaceId, out var space)) tabs.Remove(spaceId);
+            else if (tabId is not null && !Contains(space, tabId)) tabs[spaceId] = null;
+        }
+        if (!Available(session).Any(space => space.Id == ShownSpaceId) && Available(session).FirstOrDefault() is { } fallback)
+            ShowSpace(fallback);
+        foreach (var groupId in shares.Keys.ToArray())
+            if (!session.Spaces.Any(space => RenderedColumns(space, groupId) == shares[groupId].Count)) shares.Remove(groupId);
+        foreach (var (spaceId, history) in recent.ToArray()) {
+            if (!spaces.TryGetValue(spaceId, out var space)) recent.Remove(spaceId);
+            else history.RemoveAll(tabId => !Contains(space, tabId));
+        }
+        foreach (var spaceId in tabs.Keys) Remember(spaceId);
+        return State != before;
+    }
+
+    /// Records one split group's column shares, normalized. Answers false for
+    /// shares that cannot describe columns.
+    public bool Resize(Guid groupId, IReadOnlyList<double> requested) {
+        if (SplitShares(requested) is not { } normalized) return false;
+        shares[groupId] = normalized;
+        return true;
+    }
+
+    /// The record the device store keeps for this window.
+    public SavedWindow Record(long used) => new(Id, ShownSpaceId,
+        [.. tabs.Select(entry => new ShownTab(entry.Key, entry.Value))],
+        [.. shares.Select(entry => new SplitColumnShares(entry.Key, entry.Value))], used);
+
+    private void Remember(Guid spaceId) {
+        if (tabs.GetValueOrDefault(spaceId) is not { } tabId) return;
+        if (!recent.TryGetValue(spaceId, out var history)) recent[spaceId] = history = [];
+        if (history.Count > 0 && history[^1] == tabId) return;
+        history.Remove(tabId);
+        history.Add(tabId);
+    }
+
+    #endregion
+
+    #region Actions - Rules
+
+    /// The tab a Space shows when no window chose one: the first open tab,
+    /// else the first pinned one, else the first tab.
+    public static Guid? FallbackTab(SpaceState space) =>
+        TabSelectionPolicy.Fallback([.. space.Tabs.Select(tab => tab.Placement)]) is { } index ? space.Tabs[index].Id : null;
+
+    /// Shares that describe a split's columns, normalized to sum to one, or
+    /// null: there must be at least one and no more than a split holds, each a
+    /// finite share greater than zero and at most the whole.
+    public static IReadOnlyList<double>? SplitShares(IReadOnlyList<double> requested) {
+        ArgumentNullException.ThrowIfNull(requested);
+        const double tolerance = 0.0001;
+        if (requested.Count is 0 or > BrowserTabCollection.MaximumSplitMembers
+            || requested.Any(value => !double.IsFinite(value) || value <= 0 || value > 1)) return null;
+        double total = requested.Sum();
+        return Math.Abs(total - 1) <= tolerance ? [.. requested] : [.. requested.Select(value => value / total)];
+    }
+
+    /// The Spaces a window may show: every one not being deleted.
+    private static IEnumerable<SpaceState> Available(SessionState session) =>
+        session.Spaces.Where(space => session.SpaceDeletions.All(deletion => deletion.SpaceId != space.Id));
+
+    private static bool Contains(SpaceState space, Guid? tabId) => tabId is { } id && space.Tabs.Any(tab => tab.Id == id);
+
+    /// How many columns a split group renders with in `space`: the length of
+    /// its first contiguous run of tabs, when that run can render.
+    private static int RenderedColumns(SpaceState space, Guid groupId) {
+        int start = space.Tabs.ToList().FindIndex(tab => tab.SplitGroupId == groupId);
+        if (start < 0) return 0;
+        int length = space.Tabs.Skip(start).TakeWhile(tab => tab.SplitGroupId == groupId).Count();
+        return length >= MinimumSplitMembers ? length : 0;
+    }
+
+    #endregion
+}

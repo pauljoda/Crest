@@ -11,6 +11,8 @@ internal static partial class Sqlite {
     private const string Library = "libsqlite3";
 
     public const int Ok = 0, Row = 100, Done = 101;
+    /// `SQLITE_NULL`, the type of a column that holds no value.
+    private const int Null = 5;
     public const int OpenReadOnly = 0x1, OpenReadWrite = 0x2, OpenCreate = 0x4, OpenUri = 0x40, OpenFullMutex = 0x10000;
 
     /// `SQLITE_TRANSIENT`: SQLite copies bound values before the call returns.
@@ -40,7 +42,6 @@ internal static partial class Sqlite {
 
     #region Actions - Binding
 
-    public static int BindText(nint statement, int index, string value) => sqlite3_bind_text(statement, index, value, -1, Transient);
 
     public static unsafe int BindBlob(nint statement, int index, ReadOnlySpan<byte> value) {
         fixed (byte* bytes = value) return sqlite3_bind_blob(statement, index, bytes, value.Length, Transient);
@@ -52,6 +53,12 @@ internal static partial class Sqlite {
         var source = sqlite3_column_blob(statement, column);
         return count == 0 || source == null ? [] : new ReadOnlySpan<byte>(source, count).ToArray();
     }
+
+    public static int BindText(nint statement, int index, string? value) =>
+        value is null ? sqlite3_bind_null(statement, index) : sqlite3_bind_text(statement, index, value, -1, Transient);
+
+    /// Whether a column holds SQL NULL.
+    public static bool ColumnIsNull(nint statement, int column) => sqlite3_column_type(statement, column) == Null;
 
     public static string ColumnText(nint statement, int column) =>
         Marshal.PtrToStringUTF8(sqlite3_column_text(statement, column)) ?? "";
@@ -85,6 +92,24 @@ internal static partial class Sqlite {
 
     [LibraryImport(Library)]
     public static partial int sqlite3_column_int(nint statement, int column);
+
+    [LibraryImport(Library)]
+    public static partial long sqlite3_column_int64(nint statement, int column);
+
+    [LibraryImport(Library)]
+    public static partial double sqlite3_column_double(nint statement, int column);
+
+    [LibraryImport(Library)]
+    public static partial int sqlite3_bind_int64(nint statement, int index, long value);
+
+    [LibraryImport(Library)]
+    public static partial int sqlite3_bind_double(nint statement, int index, double value);
+
+    [LibraryImport(Library)]
+    private static partial int sqlite3_bind_null(nint statement, int index);
+
+    [LibraryImport(Library)]
+    private static partial int sqlite3_column_type(nint statement, int column);
 
     [LibraryImport(Library)]
     public static partial int sqlite3_extended_errcode(nint connection);

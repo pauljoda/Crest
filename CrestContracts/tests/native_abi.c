@@ -392,6 +392,19 @@ static void storage_boundary(void) {
     crest_buffer_free(&buffer);
     assert(crest_app_set_wake(app, NULL, NULL) == CREST_OK);
     assert(crest_app_session(app, &session, &revision, &sync, &projection) == CREST_OK && session != 0 && revision == 1);
+    /* The stored session's workspace, which a saved window shows. */
+    uint8_t workspace[16] = { 0 }, again[16] = { 0 };
+    assert(crest_session_attach_device(session, app, workspace) == CREST_OK);
+    assert(crest_session_attach_device(session, app, again) == CREST_OK && memcmp(workspace, again, 16) == 0);
+    /* OpenWindow: its tag, the window, the workspace, Saved, no window to copy,
+     * no Space to show, RestoresTabs. It answers one WindowChanged. */
+    uint8_t opening[37] = { CREST_INTENT_OPEN_WINDOW };
+    memset(opening + 1, 0x42, 16);
+    memcpy(opening + 17, workspace, 16);
+    opening[33] = 1; opening[34] = 0; opening[35] = 0; opening[36] = 1;
+    assert(crest_app_dispatch(app, opening, sizeof(opening), &buffer) == CREST_OK);
+    assert(buffer.length > 2 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_WINDOW_CHANGED);
+    crest_buffer_free(&buffer);
     assert(crest_session_release_command(projection) == CREST_OK);
     assert(crest_sync_authority_release(sync) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_OK);

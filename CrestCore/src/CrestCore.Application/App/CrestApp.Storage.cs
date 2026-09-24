@@ -92,6 +92,7 @@ public sealed partial class CrestApp {
         launchProjection = Encoding.UTF8.GetBytes(projection.ToJsonString());
         Session = session;
         SessionSync = sync;
+        device.AttachPersistent(session, legacySelection);
     }
 
     #endregion

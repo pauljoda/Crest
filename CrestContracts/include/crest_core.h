@@ -183,6 +183,11 @@ CREST_API crest_status_t CREST_CALL crest_session_commit_transfer(
     uint64_t transfer, uint64_t sync_transaction, uint64_t *source_revision, uint64_t *destination_revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_transfer(uint64_t transfer);
 
+/* Attaches a session to an app's device, so that app's windows may show it,
+ * and writes the workspace identity the core gave it (16 RFC 4122 bytes) to
+ * out_workspace. A session already attached answers its own. The windows over
+ * a session close when it is destroyed. */
+CREST_API crest_status_t CREST_CALL crest_session_attach_device(uint64_t session, uint64_t app, uint8_t *out_workspace);
 CREST_API crest_status_t CREST_CALL crest_session_destroy(uint64_t session);
 
 /* Commands operate on the owned session using only arguments and, as read-only

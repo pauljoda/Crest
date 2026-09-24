@@ -94,7 +94,17 @@ public sealed partial class NativeSessionAuthority {
         ["session"] = StoredSessionCodec.Encode(value with { Spaces = value.Spaces.Select(Settings).ToArray() })
     });
 
-    public void Release() { lock (Gate) released = true; }
+    /// Takes no more edits, and the windows over this session close with it.
+    public void Release() {
+        Device? target;
+        Guid workspace;
+        lock (Gate) {
+            released = true;
+            target = device;
+            workspace = workspaceId;
+        }
+        target?.Detach(workspace);
+    }
 
     #endregion
 }

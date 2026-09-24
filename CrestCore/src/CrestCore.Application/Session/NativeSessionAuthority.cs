@@ -210,29 +210,36 @@ public sealed partial class NativeSessionAuthority {
     /// rather than in sync materialization, so it answers to the Space access
     /// gate exactly as a semantic command does.
     public ulong Commit(ulong expected, ReadOnlySpan<byte> delta, bool nativeValueEdit = false) {
+        SessionState next;
+        ulong revision;
         lock (Gate) {
-            var next = Prepare(expected, delta, nativeValueEdit: nativeValueEdit);
-            var revision = checked(Revision + 1);
+            next = Prepare(expected, delta, nativeValueEdit: nativeValueEdit);
+            revision = checked(Revision + 1);
             session = next; Revision = revision;
             storage?.Enqueue(session, Revision);
-            return revision;
         }
+        Published(next, followUp: null);
+        return revision;
     }
 
     public static (ulong Source, ulong Destination) CommitPair(
         NativeSessionAuthority source, ulong sourceRevision, ReadOnlySpan<byte> sourceDelta,
         NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> destinationDelta) {
         if (ReferenceEquals(source, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameSessionTransfer);
+        SessionState a, b;
+        ulong ar, br;
         lock (Gate) {
-            var a = source.Prepare(sourceRevision, sourceDelta);
-            var b = destination.Prepare(destinationRevision, destinationDelta);
-            var ar = checked(source.Revision + 1); var br = checked(destination.Revision + 1);
+            a = source.Prepare(sourceRevision, sourceDelta);
+            b = destination.Prepare(destinationRevision, destinationDelta);
+            ar = checked(source.Revision + 1); br = checked(destination.Revision + 1);
             source.session = a; destination.session = b;
             source.Revision = ar; destination.Revision = br;
             source.storage?.Enqueue(a, ar);
             destination.storage?.Enqueue(b, br);
-            return (ar, br);
         }
+        source.Published(a, followUp: null);
+        destination.Published(b, followUp: null);
+        return (ar, br);
     }
 
     /// The stored parts of the accepted revision `expected`.

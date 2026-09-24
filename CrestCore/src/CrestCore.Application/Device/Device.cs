@@ -1,0 +1,181 @@
+using System.Text.Json.Nodes;
+
+using CrestCore.Contracts;
+
+namespace CrestCore.Application;
+
+/// This device's windows and what each shows. It is saved in the device store
+/// beside the session and never synced.
+///
+/// Every workspace a window may show is attached here: the persistent session
+/// the core keeps, and each memory-only session (private browsing, a borrowed
+/// workspace, a Quick Window). Only windows over the persistent session are
+/// saved; the rest live as long as the process. After any session commit, and
+/// after every window intent, the device repairs the windows of the workspace
+/// that changed and publishes each window whose state changed.
+///
+/// The device lock is taken last: nothing is called on a session or on the
+/// host while it is held.
+internal sealed partial class Device {
+    #region Variables
+
+    /// Saved window records beyond this many are forgotten, least recently
+    /// used first, as the defaults store of earlier releases did.
+    public const int MaximumSavedWindows = 16;
+
+    private readonly Lock gate = new();
+    private readonly Dictionary<Guid, Window> open = [];
+    private readonly Dictionary<Guid, NativeSessionAuthority> workspaces = [];
+    /// The saved windows' records, open or not.
+    private readonly Dictionary<Guid, SavedWindow> saved = [];
+    private readonly SessionStorage? storage;
+    private readonly Action<Change> announce;
+    /// The tabs an older release kept in the session, which a window without a
+    /// record adopts during the launch that loaded them.
+    private IReadOnlyDictionary<Guid, Guid> legacyTabs = new Dictionary<Guid, Guid>();
+    private Guid? persistentWorkspace;
+    private long lastUse;
+    private bool adoptedWindowRecords;
+
+    #endregion
+
+    #region Constructors
+
+    /// A device whose saved windows `storage` keeps, starting from `records`;
+    /// without storage every window lives in memory.
+    public Device(SessionStorage? storage, DeviceRecords records, Action<Change> announce) {
+        ArgumentNullException.ThrowIfNull(records);
+        ArgumentNullException.ThrowIfNull(announce);
+        this.storage = storage;
+        this.announce = announce;
+        foreach (var record in records.Windows) saved[record.Id] = record;
+        lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
+        adoptedWindowRecords = records.AdoptedWindowRecords;
+    }
+
+    #endregion
+
+    #region Actions - Workspaces
+
+    /// Attaches a session a window may show and answers the identity the
+    /// device gave its workspace; a session already attached keeps its own.
+    public Guid Attach(NativeSessionAuthority authority) {
+        ArgumentNullException.ThrowIfNull(authority);
+        Guid workspaceId;
+        lock (gate) {
+            if (workspaces.FirstOrDefault(entry => ReferenceEquals(entry.Value, authority)) is { Value: not null } known)
+                return known.Key;
+            workspaceId = Guid.NewGuid();
+            workspaces[workspaceId] = authority;
+        }
+        authority.AttachDevice(this, workspaceId);
+        return workspaceId;
+    }
+
+    /// Attaches the persistent session the core loaded, which every saved
+    /// window shows, with the selection an older release kept in it.
+    public void AttachPersistent(NativeSessionAuthority authority, JsonObject? legacySelection) {
+        var workspaceId = Attach(authority);
+        lock (gate) {
+            persistentWorkspace = workspaceId;
+            legacyTabs = LegacyTabs(legacySelection);
+        }
+    }
+
+    /// A session that is gone takes the windows over it with it. Their
+    /// records stay, since only the persistent session has saved windows.
+    public void Detach(Guid workspaceId) {
+        lock (gate) {
+            workspaces.Remove(workspaceId);
+            foreach (var window in open.Values.Where(window => window.WorkspaceId == workspaceId).ToArray()) open.Remove(window.Id);
+        }
+    }
+
+    private static Dictionary<Guid, Guid> LegacyTabs(JsonObject? selection) {
+        var tabs = new Dictionary<Guid, Guid>();
+        foreach (var space in selection?[StoredSessionCodec.Key.Spaces] as JsonArray ?? []) {
+            if (space is not JsonObject value) continue;
+            try {
+                tabs.TryAdd(StoredSessionCodec.Identity(value[StoredSessionCodec.Key.Id]),
+                    StoredSessionCodec.Identity(value[StoredSessionCodec.Key.LegacySelectedTab]));
+            } catch (Exception error) when (StoredSession.IsUndecodable(error)) {
+                // A Space the older release stored without a readable tab adopts nothing.
+            }
+        }
+        return tabs;
+    }
+
+    #endregion
+
+    #region Actions - Session changes
+
+    /// A command a window issued is about to read what that window shows.
+    /// Answers a copy, or null for a window that is not open over `workspaceId`.
+    public Window? Snapshot(Guid workspaceId, Guid? windowId) {
+        if (windowId is not { } id) return null;
+        lock (gate) return open.TryGetValue(id, out var window) && window.WorkspaceId == workspaceId ? window.Snapshot() : null;
+    }
+
+    /// The tabs the windows over `workspaceId` show, and those every saved
+    /// window's record shows for the persistent session, which cleanup keeps.
+    public IReadOnlySet<Guid> ShownTabs(Guid workspaceId) {
+        lock (gate) {
+            var shown = open.Values.Where(window => window.WorkspaceId == workspaceId)
+                .SelectMany(window => window.State.ShownTabs).Select(tab => tab.TabId).OfType<Guid>().ToHashSet();
+            if (workspaceId == persistentWorkspace)
+                shown.UnionWith(saved.Values.SelectMany(record => record.Tabs).Select(tab => tab.TabId).OfType<Guid>());
+            return shown;
+        }
+    }
+
+    /// A workspace accepted a new revision: the window that issued the command
+    /// takes what it chose to show, and every window over the workspace is
+    /// repaired against `session`. Called with no session lock held.
+    public void SessionPublished(Guid workspaceId, SessionState session, WindowFollowUp? followUp) {
+        ArgumentNullException.ThrowIfNull(session);
+        List<Change> changes;
+        lock (gate) {
+            changes = Changing(open.Values.Where(window => window.WorkspaceId == workspaceId), window => {
+                if (followUp is not null && window.Id == followUp.Window?.Id) window.Apply(followUp);
+                window.Repair(session);
+            });
+        }
+        foreach (var change in changes) announce(change);
+    }
+
+    /// Runs `edit` on each of `windows` and answers a change for every one
+    /// that shows something else afterwards, keeping saved records current.
+    /// The caller holds the device lock.
+    private List<Change> Changing(IEnumerable<Window> windows, Action<Window> edit) {
+        var changes = new List<Change>();
+        foreach (var window in windows.ToArray()) {
+            var before = window.State;
+            edit(window);
+            var after = window.State;
+            if (after == before) continue;
+            changes.Add(new WindowChanged(after));
+            if (window.Saved) Record(window);
+        }
+        return changes;
+    }
+
+    #endregion
+
+    #region Actions - Records
+
+    /// Keeps a saved window's record current and marks it most recently
+    /// used, forgetting the least recently used records beyond the cap.
+    private void Record(Window window) {
+        saved[window.Id] = window.Record(++lastUse);
+        Forget();
+        storage?.EnqueueDevice(Records());
+    }
+
+    private void Forget() {
+        while (saved.Count > MaximumSavedWindows) saved.Remove(saved.Values.MinBy(record => record.Used)!.Id);
+    }
+
+    private DeviceRecords Records() => new([.. saved.Values.OrderBy(record => record.Used)], adoptedWindowRecords);
+
+    #endregion
+}

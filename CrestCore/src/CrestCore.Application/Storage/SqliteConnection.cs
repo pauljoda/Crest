@@ -113,10 +113,114 @@ internal sealed class SqliteConnection : IDisposable {
         return result == Sqlite.Done ? result : throw Failure(result);
     });
 
-    private void Bind(nint statement, string part) {
-        int result = Sqlite.BindText(statement, 1, part);
+    private void Bind(nint statement, string part) => Bind(statement, 1, part);
+
+    #endregion
+
+    #region Actions - Device store
+
+    /// Creates the device store's tables beside the checkpoint table. They are
+    /// additive: a build that predates them reads the file as before.
+    public void CreateDeviceTables() {
+        Execute("CREATE TABLE IF NOT EXISTS device_window (id TEXT PRIMARY KEY, shown_space TEXT NOT NULL, used INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_window_tab (window TEXT NOT NULL, space TEXT NOT NULL, tab TEXT, "
+            + "PRIMARY KEY (window, space))");
+        Execute("CREATE TABLE IF NOT EXISTS device_window_split (window TEXT NOT NULL, split_group TEXT NOT NULL, "
+            + "position INTEGER NOT NULL, share REAL NOT NULL, PRIMARY KEY (window, split_group, position))");
+        Execute("CREATE TABLE IF NOT EXISTS device_marker (name TEXT PRIMARY KEY)");
+    }
+
+    /// The saved windows the device store holds, and whether `marker` is set.
+    /// A row whose identities do not read is left out.
+    public DeviceRecords ReadDevice(string marker) {
+        var windows = new Dictionary<Guid, (Guid ShownSpace, long Used)>();
+        var tabs = new List<(Guid Window, ShownTab Tab)>();
+        var shares = new List<(Guid Window, Guid Group, double Share)>();
+        Rows("SELECT id, shown_space, used FROM device_window", statement => {
+            if (Identity(statement, 0) is { } id && Identity(statement, 1) is { } shown)
+                windows[id] = (shown, Sqlite.sqlite3_column_int64(statement, 2));
+        });
+        Rows("SELECT window, space, tab FROM device_window_tab", statement => {
+            if (Identity(statement, 0) is { } window && Identity(statement, 1) is { } space)
+                tabs.Add((window, new ShownTab(space, Sqlite.ColumnIsNull(statement, 2) ? null : Identity(statement, 2))));
+        });
+        Rows("SELECT window, split_group, share FROM device_window_split ORDER BY window, split_group, position", statement => {
+            if (Identity(statement, 0) is { } window && Identity(statement, 1) is { } group)
+                shares.Add((window, group, Sqlite.sqlite3_column_double(statement, 2)));
+        });
+        bool adopted = false;
+        Query("SELECT 1 FROM device_marker WHERE name=?", statement => {
+            Bind(statement, marker);
+            int result = Sqlite.sqlite3_step(statement);
+            adopted = result == Sqlite.Row;
+            return result is Sqlite.Row or Sqlite.Done ? result : throw Failure(result);
+        });
+        return new([.. windows.Select(window => new SavedWindow(window.Key, window.Value.ShownSpace,
+            [.. tabs.Where(tab => tab.Window == window.Key).Select(tab => tab.Tab)],
+            [.. shares.Where(share => share.Window == window.Key).GroupBy(share => share.Group)
+                .Select(group => new SplitColumnShares(group.Key, [.. group.Select(share => share.Share)]))],
+            window.Value.Used)).OrderBy(record => record.Used)], adopted);
+    }
+
+    /// Replaces everything the device store holds with `records`, setting
+    /// `marker` when they have adopted an installed release's records. The
+    /// caller runs it inside a transaction.
+    public void WriteDevice(DeviceRecords records, string marker) {
+        foreach (var table in new[] { "device_window", "device_window_tab", "device_window_split", "device_marker" })
+            Execute($"DELETE FROM {table}");
+        foreach (var window in records.Windows) {
+            Insert("INSERT INTO device_window(id, shown_space, used) VALUES(?,?,?)", statement => {
+                Bind(statement, 1, Spelling(window.Id));
+                Bind(statement, 2, Spelling(window.ShownSpaceId));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 3, window.Used));
+            });
+            foreach (var tab in window.Tabs)
+                Insert("INSERT INTO device_window_tab(window, space, tab) VALUES(?,?,?)", statement => {
+                    Bind(statement, 1, Spelling(window.Id));
+                    Bind(statement, 2, Spelling(tab.SpaceId));
+                    Bind(statement, 3, tab.TabId is { } id ? Spelling(id) : null);
+                });
+            foreach (var group in window.Shares)
+                for (int position = 0; position < group.Shares.Count; position++) {
+                    int column = position;
+                    Insert("INSERT INTO device_window_split(window, split_group, position, share) VALUES(?,?,?,?)", statement => {
+                        Bind(statement, 1, Spelling(window.Id));
+                        Bind(statement, 2, Spelling(group.GroupId));
+                        Checked(Sqlite.sqlite3_bind_int64(statement, 3, column));
+                        Checked(Sqlite.sqlite3_bind_double(statement, 4, group.Shares[column]));
+                    });
+                }
+        }
+        if (records.AdoptedWindowRecords)
+            Insert("INSERT INTO device_marker(name) VALUES(?)", statement => Bind(statement, 1, marker));
+    }
+
+    private void Rows(string sql, Action<nint> row) => Query(sql, statement => {
+        while (true) {
+            int result = Sqlite.sqlite3_step(statement);
+            if (result == Sqlite.Done) return result;
+            if (result != Sqlite.Row) throw Failure(result);
+            row(statement);
+        }
+    });
+
+    private void Insert(string sql, Action<nint> bind) => Query(sql, statement => {
+        bind(statement);
+        int result = Sqlite.sqlite3_step(statement);
+        return result == Sqlite.Done ? result : throw Failure(result);
+    });
+
+    private void Bind(nint statement, int index, string? value) => Checked(Sqlite.BindText(statement, index, value));
+
+    private void Checked(int result) {
         if (result != Sqlite.Ok) throw Failure(result);
     }
+
+    private static Guid? Identity(nint statement, int column) =>
+        Guid.TryParse(Sqlite.ColumnText(statement, column), out var id) ? id : null;
+
+    /// An identity as the store spells it.
+    private static string Spelling(Guid id) => id.ToString("D").ToUpperInvariant();
 
     #endregion
 

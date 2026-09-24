@@ -18,6 +18,8 @@ public sealed partial class CrestApp : IDisposable {
     private readonly Search search = new();
     private readonly ContentBlocking contentBlocking = new();
     private readonly Links links = new();
+    /// This device's windows and what each shows.
+    private readonly Device device;
 
     #endregion
 
@@ -31,8 +33,12 @@ public sealed partial class CrestApp : IDisposable {
     /// when the file cannot be used.
     public CrestApp(AppConfiguration configuration) {
         ArgumentNullException.ThrowIfNull(configuration);
-        if (configuration.StorageDirectory is not { } directory) return;
+        if (configuration.StorageDirectory is not { } directory) {
+            device = new(storage: null, DeviceRecords.Empty, Announce);
+            return;
+        }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
+        device = new(storage, storage.Device, Announce);
         try {
             if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
         } catch (Exception error) {
@@ -58,6 +64,9 @@ public sealed partial class CrestApp : IDisposable {
                     break;
                 case AdoptLegacySession adoption:
                     Adopt(adoption, changes);
+                    break;
+                case WindowIntent window:
+                    device.Handle(window, changes);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");
@@ -90,11 +99,21 @@ public sealed partial class CrestApp : IDisposable {
                 BalancedProtectionRules rules => contentBlocking.Answer(rules),
                 ExternalLinkRoute route => links.Answer(route),
                 QuickWindowSite site => links.Answer(site),
+                CanTearOff tearOff => device.Answer(tearOff),
                 _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
             };
             return (TAnswer)answer;
         }
     }
+
+    #endregion
+
+    #region Actions - Workspaces
+
+    /// Attaches a session this device's windows may show and answers the
+    /// workspace identity the core gave it; a session already attached keeps
+    /// its own.
+    public Guid AttachWorkspace(NativeSessionAuthority session) => device.Attach(session);
 
     #endregion
 

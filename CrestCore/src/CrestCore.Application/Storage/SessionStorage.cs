@@ -28,6 +28,8 @@ internal sealed class SessionStorage : IDisposable {
     /// removes it once it has opted in.
     private const string CloudRecoverySuffix = ".cloud-recovery";
     private const string PreservedDirectoryPrefix = "Recovery-";
+    /// The device store's marker that it adopted an installed release's window records.
+    private const string WindowRecordsMarker = "window-records";
     private const string TemporaryExtension = ".sqlite";
     private static readonly string[] SidecarSuffixes = ["-wal", "-shm"];
     /// The rollback journal SQLite keeps beside a checkpoint copy while it writes.
@@ -47,10 +49,16 @@ internal sealed class SessionStorage : IDisposable {
     private SessionState? writtenSession;
     private NativeSyncJournal? writtenJournal;
     private (SessionState Session, ulong Revision)? pending;
+    /// The newest device records not yet written, and those the file holds.
+    private DeviceRecords? pendingDevice;
+    private DeviceRecords writtenDevice;
     private ulong writtenRevision;
     private bool pendingIsNew, stopping, closed;
 
     public string Directory { get; }
+
+    /// What the device store held when the file was opened.
+    public DeviceRecords Device { get; }
 
     /// Whether the file holds a session.
     public bool HoldsSession {
@@ -64,10 +72,11 @@ internal sealed class SessionStorage : IDisposable {
     #region Constructors
 
     private SessionStorage(string directory, SqliteConnection connection, Dictionary<string, byte[]> parts,
-        NativeSyncJournal? journal, Action<Change> announce) {
+        NativeSyncJournal? journal, DeviceRecords device, Action<Change> announce) {
         Directory = directory;
         this.connection = connection;
         written = parts;
+        Device = writtenDevice = device;
         writtenJournal = journal;
         this.announce = announce;
         worker = new Thread(Run) { IsBackground = true, Name = "Crest session storage" };
@@ -94,11 +103,12 @@ internal sealed class SessionStorage : IDisposable {
                 connection.Execute("PRAGMA synchronous=FULL");
                 connection.InTransaction(() => {
                     connection.Execute("CREATE TABLE IF NOT EXISTS checkpoint (part TEXT PRIMARY KEY, data BLOB NOT NULL)");
+                    connection.CreateDeviceTables();
                     connection.Execute($"PRAGMA user_version={StorageVersion}");
                 });
                 var parts = ReadAll(connection);
                 loaded = validated is { } earlier && SameParts(earlier.Parts, parts) ? earlier.Session : StoredSession.Decode(parts);
-                return new(directory, connection, parts, loaded.Journal, announce);
+                return new(directory, connection, parts, loaded.Journal, ReadDevice(connection), announce);
             } catch {
                 connection.Dispose();
                 throw;
@@ -140,6 +150,16 @@ internal sealed class SessionStorage : IDisposable {
     private static void RequireVersion(int version) {
         if (version > StorageVersion) throw new Rejected(new StorageFromNewerApp());
         if (version < 0) throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
+    }
+
+    /// The device store, or nothing when it cannot be read: the session
+    /// never depends on it.
+    private static DeviceRecords ReadDevice(SqliteConnection source) {
+        try {
+            return source.ReadDevice(WindowRecordsMarker);
+        } catch (StorageException) {
+            return DeviceRecords.Empty;
+        }
     }
 
     private static Dictionary<string, byte[]> ReadAll(SqliteConnection source) =>
@@ -192,6 +212,32 @@ internal sealed class SessionStorage : IDisposable {
         }
     }
 
+    /// Hands the worker the device records to save behind. The newest
+    /// records replace any that are still pending.
+    public void EnqueueDevice(DeviceRecords records) {
+        ArgumentNullException.ThrowIfNull(records);
+        lock (queue) {
+            if (stopping) return;
+            pendingDevice = records;
+            pendingIsNew = true;
+            Monitor.Pulse(queue);
+        }
+    }
+
+    /// Writes the device records before returning. Throws `StorageException`
+    /// and leaves the file as it was when the write fails.
+    public void SaveDevice(DeviceRecords records) {
+        ArgumentNullException.ThrowIfNull(records);
+        lock (writing) {
+            RequireOpen();
+            connection.InTransaction(() => connection.WriteDevice(records, WindowRecordsMarker));
+            writtenDevice = records;
+            lock (queue) {
+                if (ReferenceEquals(pendingDevice, records)) pendingDevice = null;
+            }
+        }
+    }
+
     private void Run() {
         while (true) {
             lock (queue) {
@@ -200,6 +246,28 @@ internal sealed class SessionStorage : IDisposable {
                 pendingIsNew = false;
             }
             Announce(WriteBehind());
+            Announce(WriteDeviceBehind());
+        }
+    }
+
+    /// Saves the newest pending device records. A failure is published, and
+    /// the records stay pending for the next attempt.
+    private Change? WriteDeviceBehind() {
+        DeviceRecords? records;
+        lock (queue) records = pendingDevice;
+        if (records is null) return null;
+        try {
+            lock (writing) {
+                RequireOpen();
+                if (!records.Equals(writtenDevice)) connection.InTransaction(() => connection.WriteDevice(records, WindowRecordsMarker));
+                writtenDevice = records;
+            }
+            lock (queue) {
+                if (ReferenceEquals(pendingDevice, records)) pendingDevice = null;
+            }
+            return null;
+        } catch (Exception error) {
+            return new StorageFailed(error is StorageException storage ? storage.Reason : StorageFailure.Unavailable);
         }
     }
 
@@ -374,6 +442,7 @@ internal sealed class SessionStorage : IDisposable {
         }
         worker.Join();
         Announce(WriteBehind() is Saved saved ? saved : null);
+        Announce(WriteDeviceBehind());
         lock (writing) {
             closed = true;
             connection.Dispose();

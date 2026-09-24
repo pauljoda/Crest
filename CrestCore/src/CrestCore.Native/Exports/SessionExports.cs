@@ -83,6 +83,18 @@ public static unsafe partial class Exports {
         } catch (Exception e) { return SessionError(e); }
     }
 
+    /// Attaches a session to an app's device so its windows may show it, and
+    /// writes the workspace identity the core gave it (16 RFC 4122 bytes).
+    [UnmanagedCallersOnly(EntryPoint = "crest_session_attach_device", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SessionAttachDevice(ulong handle, ulong app, byte* workspace) {
+        if (workspace == null) return CoreStatus.InvalidArgument;
+        if (!Sessions.TryGetValue(handle, out var session) || !Apps.TryGetValue(app, out var crest)) return CoreStatus.InvalidHandle;
+        try {
+            return crest.AttachWorkspace(session).TryWriteBytes(new Span<byte>(workspace, 16), bigEndian: true, out _)
+                ? CoreStatus.Ok : CoreStatus.InternalError;
+        } catch (Exception e) { return SessionError(e); }
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_session_destroy", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionDestroy(ulong handle) {
         if (!Sessions.TryRemove(handle, out var session)) return CoreStatus.InvalidHandle;

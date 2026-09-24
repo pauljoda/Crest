@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xe0, 0xe4, 0xdf, 0x7e, 0x61, 0x1a, 0xfa, 0xb2, 0x0d, 0x2b, 0xa0, 0x6c, 0xbf, 0x45, 0xd4, 0x20, 0x30, 0x8c, 0x7e, 0x04, 0x46, 0x53, 0x97, 0xad, 0xcf, 0x86, 0xf9, 0x9f, 0xf5, 0x51, 0x2f, 0xac
+        0x20, 0x28, 0x32, 0x58, 0xc1, 0x4b, 0x05, 0x71, 0x09, 0xff, 0xd5, 0xef, 0xbc, 0x71, 0xe3, 0xfd, 0x58, 0xbc, 0xb3, 0x59, 0x3d, 0xc0, 0x7f, 0x39, 0x2e, 0xd0, 0x7c, 0x1b, 0x6b, 0xbc, 0x24, 0xf6
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -22,19 +22,25 @@ public static class ContractCodec {
         switch (tag) {
             case 0: return ReadAcknowledgeDownloads(reader);
             case 1: return ReadAdoptLegacySession(reader);
-            case 2: return ReadAssessDownloadRisk(reader);
-            case 3: return ReadAwaitDownloadApproval(reader);
-            case 4: return ReadBeginDownload(reader);
-            case 5: return ReadBlockAutomaticDownload(reader);
-            case 6: return ReadCancelDownload(reader);
-            case 7: return ReadExpireDownloads(reader);
-            case 8: return ReadFailDownload(reader);
-            case 9: return ReadFinishDownload(reader);
-            case 10: return ReadRecordDownloadTransfer(reader);
-            case 11: return ReadRemoveDownload(reader);
-            case 12: return ReadRemoveProfileDownloads(reader);
-            case 13: return ReadRestartDownload(reader);
-            case 14: return ReadSetDownloadDestination(reader);
+            case 2: return ReadAdoptWindowRecords(reader);
+            case 3: return ReadAssessDownloadRisk(reader);
+            case 4: return ReadAwaitDownloadApproval(reader);
+            case 5: return ReadBeginDownload(reader);
+            case 6: return ReadBlockAutomaticDownload(reader);
+            case 7: return ReadCancelDownload(reader);
+            case 8: return ReadCloseWindow(reader);
+            case 9: return ReadExpireDownloads(reader);
+            case 10: return ReadFailDownload(reader);
+            case 11: return ReadFinishDownload(reader);
+            case 12: return ReadOpenWindow(reader);
+            case 13: return ReadRecordDownloadTransfer(reader);
+            case 14: return ReadRemoveDownload(reader);
+            case 15: return ReadRemoveProfileDownloads(reader);
+            case 16: return ReadResizeSplitColumns(reader);
+            case 17: return ReadRestartDownload(reader);
+            case 18: return ReadSetDownloadDestination(reader);
+            case 19: return ReadShowSpace(reader);
+            case 20: return ReadShowTab(reader);
             default: throw new WireFormatException($"Unknown Intent tag {tag}.");
         }
     }
@@ -51,57 +57,81 @@ public static class ContractCodec {
                 writer.WriteTag(1);
                 WriteAdoptLegacySession(writer, member);
                 break;
-            case AssessDownloadRisk member:
+            case AdoptWindowRecords member:
                 writer.WriteTag(2);
+                WriteAdoptWindowRecords(writer, member);
+                break;
+            case AssessDownloadRisk member:
+                writer.WriteTag(3);
                 WriteAssessDownloadRisk(writer, member);
                 break;
             case AwaitDownloadApproval member:
-                writer.WriteTag(3);
+                writer.WriteTag(4);
                 WriteAwaitDownloadApproval(writer, member);
                 break;
             case BeginDownload member:
-                writer.WriteTag(4);
+                writer.WriteTag(5);
                 WriteBeginDownload(writer, member);
                 break;
             case BlockAutomaticDownload member:
-                writer.WriteTag(5);
+                writer.WriteTag(6);
                 WriteBlockAutomaticDownload(writer, member);
                 break;
             case CancelDownload member:
-                writer.WriteTag(6);
+                writer.WriteTag(7);
                 WriteCancelDownload(writer, member);
                 break;
+            case CloseWindow member:
+                writer.WriteTag(8);
+                WriteCloseWindow(writer, member);
+                break;
             case ExpireDownloads member:
-                writer.WriteTag(7);
+                writer.WriteTag(9);
                 WriteExpireDownloads(writer, member);
                 break;
             case FailDownload member:
-                writer.WriteTag(8);
+                writer.WriteTag(10);
                 WriteFailDownload(writer, member);
                 break;
             case FinishDownload member:
-                writer.WriteTag(9);
+                writer.WriteTag(11);
                 WriteFinishDownload(writer, member);
                 break;
+            case OpenWindow member:
+                writer.WriteTag(12);
+                WriteOpenWindow(writer, member);
+                break;
             case RecordDownloadTransfer member:
-                writer.WriteTag(10);
+                writer.WriteTag(13);
                 WriteRecordDownloadTransfer(writer, member);
                 break;
             case RemoveDownload member:
-                writer.WriteTag(11);
+                writer.WriteTag(14);
                 WriteRemoveDownload(writer, member);
                 break;
             case RemoveProfileDownloads member:
-                writer.WriteTag(12);
+                writer.WriteTag(15);
                 WriteRemoveProfileDownloads(writer, member);
                 break;
+            case ResizeSplitColumns member:
+                writer.WriteTag(16);
+                WriteResizeSplitColumns(writer, member);
+                break;
             case RestartDownload member:
-                writer.WriteTag(13);
+                writer.WriteTag(17);
                 WriteRestartDownload(writer, member);
                 break;
             case SetDownloadDestination member:
-                writer.WriteTag(14);
+                writer.WriteTag(18);
                 WriteSetDownloadDestination(writer, member);
+                break;
+            case ShowSpace member:
+                writer.WriteTag(19);
+                WriteShowSpace(writer, member);
+                break;
+            case ShowTab member:
+                writer.WriteTag(20);
+                WriteShowTab(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Intent.");
         }
@@ -115,6 +145,10 @@ public static class ContractCodec {
             case 2: return ReadSaved(reader);
             case 3: return ReadSessionAdopted(reader);
             case 4: return ReadStorageFailed(reader);
+            case 5: return ReadTabActivated(reader);
+            case 6: return ReadWindowChanged(reader);
+            case 7: return ReadWindowClosed(reader);
+            case 8: return ReadWindowRecordsAdopted(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -143,6 +177,22 @@ public static class ContractCodec {
                 writer.WriteTag(4);
                 WriteStorageFailed(writer, member);
                 break;
+            case TabActivated member:
+                writer.WriteTag(5);
+                WriteTabActivated(writer, member);
+                break;
+            case WindowChanged member:
+                writer.WriteTag(6);
+                WriteWindowChanged(writer, member);
+                break;
+            case WindowClosed member:
+                writer.WriteTag(7);
+                WriteWindowClosed(writer, member);
+                break;
+            case WindowRecordsAdopted member:
+                writer.WriteTag(8);
+                WriteWindowRecordsAdopted(writer, member);
+                break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
         }
     }
@@ -166,13 +216,18 @@ public static class ContractCodec {
             case 13: return ReadInvalidPasswordLength(reader);
             case 14: return ReadInvalidRetentionLifetime(reader);
             case 15: return ReadInvalidSearchEngine(reader);
-            case 16: return ReadRecoveryCheckpointUnusable(reader);
-            case 17: return ReadSaveFailed(reader);
-            case 18: return ReadSearchEngineLimitReached(reader);
-            case 19: return ReadStaleCredentialComparison(reader);
-            case 20: return ReadStorageFromNewerApp(reader);
-            case 21: return ReadStorageRestoreInterrupted(reader);
-            case 22: return ReadStorageUnreadable(reader);
+            case 16: return ReadInvalidSplitColumnShares(reader);
+            case 17: return ReadRecoveryCheckpointUnusable(reader);
+            case 18: return ReadSaveFailed(reader);
+            case 19: return ReadSearchEngineLimitReached(reader);
+            case 20: return ReadSpaceLocked(reader);
+            case 21: return ReadStaleCredentialComparison(reader);
+            case 22: return ReadStorageFromNewerApp(reader);
+            case 23: return ReadStorageRestoreInterrupted(reader);
+            case 24: return ReadStorageUnreadable(reader);
+            case 25: return ReadUnknownWorkspace(reader);
+            case 26: return ReadUnsavedWorkspace(reader);
+            case 27: return ReadWindowNotOpen(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -245,33 +300,53 @@ public static class ContractCodec {
                 writer.WriteTag(15);
                 WriteInvalidSearchEngine(writer, member);
                 break;
-            case RecoveryCheckpointUnusable member:
+            case InvalidSplitColumnShares member:
                 writer.WriteTag(16);
+                WriteInvalidSplitColumnShares(writer, member);
+                break;
+            case RecoveryCheckpointUnusable member:
+                writer.WriteTag(17);
                 WriteRecoveryCheckpointUnusable(writer, member);
                 break;
             case SaveFailed member:
-                writer.WriteTag(17);
+                writer.WriteTag(18);
                 WriteSaveFailed(writer, member);
                 break;
             case SearchEngineLimitReached member:
-                writer.WriteTag(18);
+                writer.WriteTag(19);
                 WriteSearchEngineLimitReached(writer, member);
                 break;
+            case SpaceLocked member:
+                writer.WriteTag(20);
+                WriteSpaceLocked(writer, member);
+                break;
             case StaleCredentialComparison member:
-                writer.WriteTag(19);
+                writer.WriteTag(21);
                 WriteStaleCredentialComparison(writer, member);
                 break;
             case StorageFromNewerApp member:
-                writer.WriteTag(20);
+                writer.WriteTag(22);
                 WriteStorageFromNewerApp(writer, member);
                 break;
             case StorageRestoreInterrupted member:
-                writer.WriteTag(21);
+                writer.WriteTag(23);
                 WriteStorageRestoreInterrupted(writer, member);
                 break;
             case StorageUnreadable member:
-                writer.WriteTag(22);
+                writer.WriteTag(24);
                 WriteStorageUnreadable(writer, member);
+                break;
+            case UnknownWorkspace member:
+                writer.WriteTag(25);
+                WriteUnknownWorkspace(writer, member);
+                break;
+            case UnsavedWorkspace member:
+                writer.WriteTag(26);
+                WriteUnsavedWorkspace(writer, member);
+                break;
+            case WindowNotOpen member:
+                writer.WriteTag(27);
+                WriteWindowNotOpen(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
         }
@@ -281,21 +356,22 @@ public static class ContractCodec {
         int tag = reader.ReadTag();
         switch (tag) {
             case 0: return ReadBalancedProtectionRules(reader);
-            case 1: return ReadCredentialCapture(reader);
-            case 2: return ReadCredentialFill(reader);
-            case 3: return ReadCredentialSave(reader);
-            case 4: return ReadCredentialSaveCheck(reader);
-            case 5: return ReadCredentialSaveMatch(reader);
-            case 6: return ReadCustomSearchEngineAdmission(reader);
-            case 7: return ReadDownloadProgress(reader);
-            case 8: return ReadDownloadRisk(reader);
-            case 9: return ReadExternalLinkRoute(reader);
-            case 10: return ReadMostRecentCredential(reader);
-            case 11: return ReadPasskeyAccess(reader);
-            case 12: return ReadQuickWindowSite(reader);
-            case 13: return ReadStrongPassword(reader);
-            case 14: return ReadSystemPasswordOffer(reader);
-            case 15: return ReadSystemPasswordWriteThrough(reader);
+            case 1: return ReadCanTearOff(reader);
+            case 2: return ReadCredentialCapture(reader);
+            case 3: return ReadCredentialFill(reader);
+            case 4: return ReadCredentialSave(reader);
+            case 5: return ReadCredentialSaveCheck(reader);
+            case 6: return ReadCredentialSaveMatch(reader);
+            case 7: return ReadCustomSearchEngineAdmission(reader);
+            case 8: return ReadDownloadProgress(reader);
+            case 9: return ReadDownloadRisk(reader);
+            case 10: return ReadExternalLinkRoute(reader);
+            case 11: return ReadMostRecentCredential(reader);
+            case 12: return ReadPasskeyAccess(reader);
+            case 13: return ReadQuickWindowSite(reader);
+            case 14: return ReadStrongPassword(reader);
+            case 15: return ReadSystemPasswordOffer(reader);
+            case 16: return ReadSystemPasswordWriteThrough(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -308,64 +384,68 @@ public static class ContractCodec {
                 writer.WriteTag(0);
                 WriteBalancedProtectionRules(writer, member);
                 break;
-            case CredentialCapture member:
+            case CanTearOff member:
                 writer.WriteTag(1);
+                WriteCanTearOff(writer, member);
+                break;
+            case CredentialCapture member:
+                writer.WriteTag(2);
                 WriteCredentialCapture(writer, member);
                 break;
             case CredentialFill member:
-                writer.WriteTag(2);
+                writer.WriteTag(3);
                 WriteCredentialFill(writer, member);
                 break;
             case CredentialSave member:
-                writer.WriteTag(3);
+                writer.WriteTag(4);
                 WriteCredentialSave(writer, member);
                 break;
             case CredentialSaveCheck member:
-                writer.WriteTag(4);
+                writer.WriteTag(5);
                 WriteCredentialSaveCheck(writer, member);
                 break;
             case CredentialSaveMatch member:
-                writer.WriteTag(5);
+                writer.WriteTag(6);
                 WriteCredentialSaveMatch(writer, member);
                 break;
             case CustomSearchEngineAdmission member:
-                writer.WriteTag(6);
+                writer.WriteTag(7);
                 WriteCustomSearchEngineAdmission(writer, member);
                 break;
             case DownloadProgress member:
-                writer.WriteTag(7);
+                writer.WriteTag(8);
                 WriteDownloadProgress(writer, member);
                 break;
             case DownloadRisk member:
-                writer.WriteTag(8);
+                writer.WriteTag(9);
                 WriteDownloadRisk(writer, member);
                 break;
             case ExternalLinkRoute member:
-                writer.WriteTag(9);
+                writer.WriteTag(10);
                 WriteExternalLinkRoute(writer, member);
                 break;
             case MostRecentCredential member:
-                writer.WriteTag(10);
+                writer.WriteTag(11);
                 WriteMostRecentCredential(writer, member);
                 break;
             case PasskeyAccess member:
-                writer.WriteTag(11);
+                writer.WriteTag(12);
                 WritePasskeyAccess(writer, member);
                 break;
             case QuickWindowSite member:
-                writer.WriteTag(12);
+                writer.WriteTag(13);
                 WriteQuickWindowSite(writer, member);
                 break;
             case StrongPassword member:
-                writer.WriteTag(13);
+                writer.WriteTag(14);
                 WriteStrongPassword(writer, member);
                 break;
             case SystemPasswordOffer member:
-                writer.WriteTag(14);
+                writer.WriteTag(15);
                 WriteSystemPasswordOffer(writer, member);
                 break;
             case SystemPasswordWriteThrough member:
-                writer.WriteTag(15);
+                writer.WriteTag(16);
                 WriteSystemPasswordWriteThrough(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
@@ -391,65 +471,69 @@ public static class ContractCodec {
                 var answer0 = app.Query(question);
                 WriteContentRuleList(writer, answer0);
                 break;
-            case CredentialCapture question:
+            case CanTearOff question:
                 var answer1 = app.Query(question);
-                WriteCredentialCaptureDecision(writer, answer1);
+                WriteTearOffPermission(writer, answer1);
+                break;
+            case CredentialCapture question:
+                var answer2 = app.Query(question);
+                WriteCredentialCaptureDecision(writer, answer2);
                 break;
             case CredentialFill question:
-                var answer2 = app.Query(question);
-                WriteCredentialFillDecision(writer, answer2);
+                var answer3 = app.Query(question);
+                WriteCredentialFillDecision(writer, answer3);
                 break;
             case CredentialSave question:
-                var answer3 = app.Query(question);
-                WriteCredentialSavePlan(writer, answer3);
+                var answer4 = app.Query(question);
+                WriteCredentialSavePlan(writer, answer4);
                 break;
             case CredentialSaveCheck question:
-                var answer4 = app.Query(question);
-                WriteCredentialSaveVerdict(writer, answer4);
+                var answer5 = app.Query(question);
+                WriteCredentialSaveVerdict(writer, answer5);
                 break;
             case CredentialSaveMatch question:
-                var answer5 = app.Query(question);
-                WriteCredentialChoice(writer, answer5);
+                var answer6 = app.Query(question);
+                WriteCredentialChoice(writer, answer6);
                 break;
             case CustomSearchEngineAdmission question:
-                var answer6 = app.Query(question);
-                WriteCustomSearchEngine(writer, answer6);
+                var answer7 = app.Query(question);
+                WriteCustomSearchEngine(writer, answer7);
                 break;
             case DownloadProgress question:
-                var answer7 = app.Query(question);
-                WriteDownloadProgressReading(writer, answer7);
+                var answer8 = app.Query(question);
+                WriteDownloadProgressReading(writer, answer8);
                 break;
             case DownloadRisk question:
-                var answer8 = app.Query(question);
-                WriteDownloadRiskVerdict(writer, answer8);
+                var answer9 = app.Query(question);
+                WriteDownloadRiskVerdict(writer, answer9);
                 break;
             case ExternalLinkRoute question:
-                var answer9 = app.Query(question);
-                WriteExternalLinkPlacement(writer, answer9);
+                var answer10 = app.Query(question);
+                WriteExternalLinkPlacement(writer, answer10);
                 break;
             case MostRecentCredential question:
-                var answer10 = app.Query(question);
-                WriteCredentialChoice(writer, answer10);
+                var answer11 = app.Query(question);
+                WriteCredentialChoice(writer, answer11);
                 break;
             case PasskeyAccess question:
-                var answer11 = app.Query(question);
-                WritePasskeyAccessVerdict(writer, answer11);
+                var answer12 = app.Query(question);
+                WritePasskeyAccessVerdict(writer, answer12);
                 break;
             case QuickWindowSite question:
-                var answer12 = app.Query(question);
-                WriteQuickWindowSiteKey(writer, answer12);
+                var answer13 = app.Query(question);
+                WriteQuickWindowSiteKey(writer, answer13);
                 break;
             case StrongPassword question:
-                var answer13 = app.Query(question);
-                WriteStrongPasswordRecipe(writer, answer13);
+                var answer14 = app.Query(question);
+                WriteStrongPasswordRecipe(writer, answer14);
                 break;
             case SystemPasswordOffer question:
-                var answer14 = app.Query(question);
-                WriteSystemPasswordOfferDecision(writer, answer14);
+                var answer15 = app.Query(question);
+                WriteSystemPasswordOfferDecision(writer, answer15);
                 break;
             case SystemPasswordWriteThrough question:
-                var answer15 = app.Query(question);
-                WriteSystemPasswordWriteThroughSupport(writer, answer15);
+                var answer16 = app.Query(question);
+                WriteSystemPasswordWriteThroughSupport(writer, answer16);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
@@ -479,6 +563,23 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         WriteLegacySession(writer, value.Installed);
         writer.WriteBytes(value.Seed);
+    }
+
+    public static AdoptWindowRecords ReadAdoptWindowRecords(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new AdoptWindowRecords(
+            reader.ReadPresence() ? (byte[]?)reader.ReadBytes() : null);
+    }
+
+    public static void WriteAdoptWindowRecords(WireWriter writer, AdoptWindowRecords value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Records is { } presentRecords) {
+            writer.WritePresence(true);
+            writer.WriteBytes(presentRecords);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static AppConfiguration ReadAppConfiguration(WireReader reader) {
@@ -566,6 +667,34 @@ public static class ContractCodec {
         writer.WriteGuid(value.DownloadId);
     }
 
+    public static CanTearOff ReadCanTearOff(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CanTearOff(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (IReadOnlyList<Guid>?)reader.ReadList(() => reader.ReadGuid()) : null);
+    }
+
+    public static void WriteCanTearOff(WireWriter writer, CanTearOff value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteGuid(value.ProfileId);
+        writer.WriteGuid(value.TabId);
+        if (value.DraggedTabs is { } presentDraggedTabs) {
+            writer.WritePresence(true);
+            writer.WriteCount(presentDraggedTabs.Count);
+            foreach (var itemDraggedTabsValue in presentDraggedTabs) {
+                writer.WriteGuid(itemDraggedTabsValue);
+            }
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static CancelDownload ReadCancelDownload(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new CancelDownload(
@@ -578,6 +707,18 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.DownloadId);
         writer.WriteString(value.Message);
+    }
+
+    public static CloseWindow ReadCloseWindow(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CloseWindow(
+            reader.ReadGuid());
+    }
+
+    public static void WriteCloseWindow(WireWriter writer, CloseWindow value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
     }
 
     public static ContentRuleList ReadContentRuleList(WireReader reader) {
@@ -1503,6 +1644,16 @@ public static class ContractCodec {
         WriteSearchEngineFlaw(writer, value.Flaw);
     }
 
+    public static InvalidSplitColumnShares ReadInvalidSplitColumnShares(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidSplitColumnShares();
+    }
+
+    public static void WriteInvalidSplitColumnShares(WireWriter writer, InvalidSplitColumnShares value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
     public static KeyCombination ReadKeyCombination(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new KeyCombination(
@@ -1659,6 +1810,38 @@ public static class ContractCodec {
         }
     }
 
+    public static OpenWindow ReadOpenWindow(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new OpenWindow(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadBool(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool());
+    }
+
+    public static void WriteOpenWindow(WireWriter writer, OpenWindow value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteBool(value.Saved);
+        if (value.CopyingWindowId is { } presentCopyingWindowId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentCopyingWindowId);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.ShowingSpaceId is { } presentShowingSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentShowingSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.RestoresTabs);
+    }
+
     public static PasskeyAccess ReadPasskeyAccess(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new PasskeyAccess(
@@ -1770,6 +1953,25 @@ public static class ContractCodec {
         writer.WriteGuid(value.ProfileId);
     }
 
+    public static ResizeSplitColumns ReadResizeSplitColumns(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ResizeSplitColumns(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => reader.ReadDouble()));
+    }
+
+    public static void WriteResizeSplitColumns(WireWriter writer, ResizeSplitColumns value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteGuid(value.GroupId);
+        writer.WriteCount(value.Shares.Count);
+        foreach (var itemShares in value.Shares) {
+            writer.WriteDouble(itemShares);
+        }
+    }
+
     public static RestartDownload ReadRestartDownload(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new RestartDownload(
@@ -1863,6 +2065,89 @@ public static class ContractCodec {
         WriteDevicePlatform(writer, value.Platform);
         WriteKeyCombination(writer, value.Keys);
         writer.WriteBool(value.YieldsToOverrides);
+    }
+
+    public static ShowSpace ReadShowSpace(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ShowSpace(
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteShowSpace(WireWriter writer, ShowSpace value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteGuid(value.SpaceId);
+    }
+
+    public static ShowTab ReadShowTab(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ShowTab(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteShowTab(WireWriter writer, ShowTab value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteGuid(value.SpaceId);
+        if (value.TabId is { } presentTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentTabId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static ShownTab ReadShownTab(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ShownTab(
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteShownTab(WireWriter writer, ShownTab value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.SpaceId);
+        if (value.TabId is { } presentTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentTabId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static SpaceLocked ReadSpaceLocked(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceLocked(
+            reader.ReadGuid());
+    }
+
+    public static void WriteSpaceLocked(WireWriter writer, SpaceLocked value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.SpaceId);
+    }
+
+    public static SplitColumnShares ReadSplitColumnShares(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SplitColumnShares(
+            reader.ReadGuid(),
+            reader.ReadList(() => reader.ReadDouble()));
+    }
+
+    public static void WriteSplitColumnShares(WireWriter writer, SplitColumnShares value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.GroupId);
+        writer.WriteCount(value.Shares.Count);
+        foreach (var itemShares in value.Shares) {
+            writer.WriteDouble(itemShares);
+        }
     }
 
     public static StaleCredentialComparison ReadStaleCredentialComparison(WireReader reader) {
@@ -2011,6 +2296,26 @@ public static class ContractCodec {
         WriteSystemPasswordWriteThroughAvailability(writer, value.Availability);
     }
 
+    public static TabActivated ReadTabActivated(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabActivated(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadDate(),
+            reader.ReadInt64());
+    }
+
+    public static void WriteTabActivated(WireWriter writer, TabActivated value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteGuid(value.TabId);
+        writer.WriteDate(value.At);
+        writer.WriteInt64(value.Revision);
+    }
+
     public static TabFavicon ReadTabFavicon(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new TabFavicon(
@@ -2023,6 +2328,152 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.TabId);
         writer.WriteBytes(value.Image);
+    }
+
+    public static TearOffPermission ReadTearOffPermission(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TearOffPermission(
+            reader.ReadBool(),
+            reader.ReadPresence() ? (TearOffRefusal?)ReadTearOffRefusal(reader) : null);
+    }
+
+    public static void WriteTearOffPermission(WireWriter writer, TearOffPermission value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.Allowed);
+        if (value.Reason is { } presentReason) {
+            writer.WritePresence(true);
+            WriteTearOffRefusal(writer, presentReason);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static UnknownWorkspace ReadUnknownWorkspace(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new UnknownWorkspace(
+            reader.ReadGuid());
+    }
+
+    public static void WriteUnknownWorkspace(WireWriter writer, UnknownWorkspace value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+    }
+
+    public static UnsavedWorkspace ReadUnsavedWorkspace(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new UnsavedWorkspace(
+            reader.ReadGuid());
+    }
+
+    public static void WriteUnsavedWorkspace(WireWriter writer, UnsavedWorkspace value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+    }
+
+    public static WindowChanged ReadWindowChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WindowChanged(
+            ReadWindowState(reader));
+    }
+
+    public static void WriteWindowChanged(WireWriter writer, WindowChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteWindowState(writer, value.Window);
+    }
+
+    public static WindowClosed ReadWindowClosed(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WindowClosed(
+            reader.ReadGuid());
+    }
+
+    public static void WriteWindowClosed(WireWriter writer, WindowClosed value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+    }
+
+    public static WindowLayout ReadWindowLayout(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WindowLayout(
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (double?)reader.ReadDouble() : null,
+            reader.ReadPresence() ? (bool?)reader.ReadBool() : null);
+    }
+
+    public static void WriteWindowLayout(WireWriter writer, WindowLayout value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        if (value.SidebarWidth is { } presentSidebarWidth) {
+            writer.WritePresence(true);
+            writer.WriteDouble(presentSidebarWidth);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SidebarIsPresented is { } presentSidebarIsPresented) {
+            writer.WritePresence(true);
+            writer.WriteBool(presentSidebarIsPresented);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static WindowNotOpen ReadWindowNotOpen(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WindowNotOpen(
+            reader.ReadGuid());
+    }
+
+    public static void WriteWindowNotOpen(WireWriter writer, WindowNotOpen value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+    }
+
+    public static WindowRecordsAdopted ReadWindowRecordsAdopted(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WindowRecordsAdopted(
+            reader.ReadList(() => ReadWindowLayout(reader)));
+    }
+
+    public static void WriteWindowRecordsAdopted(WireWriter writer, WindowRecordsAdopted value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Layouts.Count);
+        foreach (var itemLayouts in value.Layouts) {
+            WriteWindowLayout(writer, itemLayouts);
+        }
+    }
+
+    public static WindowState ReadWindowState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WindowState(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadShownTab(reader)),
+            reader.ReadList(() => ReadSplitColumnShares(reader)));
+    }
+
+    public static void WriteWindowState(WireWriter writer, WindowState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.ShownSpaceId);
+        writer.WriteCount(value.ShownTabs.Count);
+        foreach (var itemShownTabs in value.ShownTabs) {
+            WriteShownTab(writer, itemShownTabs);
+        }
+        writer.WriteCount(value.SplitColumnShares.Count);
+        foreach (var itemSplitColumnShares in value.SplitColumnShares) {
+            WriteSplitColumnShares(writer, itemSplitColumnShares);
+        }
     }
 
     public static CredentialCaptureAction ReadCredentialCaptureAction(WireReader reader) {
@@ -2161,6 +2612,16 @@ public static class ContractCodec {
     }
 
     public static void WriteSystemPasswordWriteThroughAvailability(WireWriter writer, SystemPasswordWriteThroughAvailability value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static TearOffRefusal ReadTearOffRefusal(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (TearOffRefusal)reader.ReadEnum(4);
+    }
+
+    public static void WriteTearOffRefusal(WireWriter writer, TearOffRefusal value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }

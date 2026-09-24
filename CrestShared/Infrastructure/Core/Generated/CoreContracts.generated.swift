@@ -24,6 +24,10 @@ enum Change: Equatable, Sendable {
     case saved(Saved)
     case sessionAdopted(SessionAdopted)
     case storageFailed(StorageFailed)
+    case tabActivated(TabActivated)
+    case windowChanged(WindowChanged)
+    case windowClosed(WindowClosed)
+    case windowRecordsAdopted(WindowRecordsAdopted)
 }
 
 /// The rule that refused an intent or a query.
@@ -44,13 +48,18 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
+    case invalidSplitColumnShares(InvalidSplitColumnShares)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
+    case spaceLocked(SpaceLocked)
     case staleCredentialComparison(StaleCredentialComparison)
     case storageFromNewerApp(StorageFromNewerApp)
     case storageRestoreInterrupted(StorageRestoreInterrupted)
     case storageUnreadable(StorageUnreadable)
+    case unknownWorkspace(UnknownWorkspace)
+    case unsavedWorkspace(UnsavedWorkspace)
+    case windowNotOpen(WindowNotOpen)
 }
 
 extension CoreState {
@@ -62,6 +71,10 @@ extension CoreState {
         case .saved(let change): apply(change)
         case .sessionAdopted(let change): apply(change)
         case .storageFailed(let change): apply(change)
+        case .tabActivated(let change): apply(change)
+        case .windowChanged(let change): apply(change)
+        case .windowClosed(let change): apply(change)
+        case .windowRecordsAdopted(let change): apply(change)
         }
     }
 }
@@ -75,6 +88,10 @@ struct AcknowledgeDownloads: Intent, Equatable, Sendable {
 struct AdoptLegacySession: Intent, Equatable, Sendable {
     let installed: LegacySession
     let seed: Data
+}
+
+struct AdoptWindowRecords: Intent, Equatable, Sendable {
+    let records: Data?
 }
 
 struct AppConfiguration: Equatable, Sendable {
@@ -107,9 +124,23 @@ struct BlockAutomaticDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
 
+struct CanTearOff: Query, Equatable, Sendable {
+    typealias Answer = TearOffPermission
+
+    let windowID: UUID
+    let spaceID: UUID
+    let profileID: UUID
+    let tabID: UUID
+    let draggedTabs: [UUID]?
+}
+
 struct CancelDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
+}
+
+struct CloseWindow: Intent, Equatable, Sendable {
+    let windowID: UUID
 }
 
 struct ContentRuleList: Equatable, Sendable {
@@ -411,6 +442,9 @@ struct InvalidSearchEngine: Equatable, Sendable {
     let flaw: SearchEngineFlaw
 }
 
+struct InvalidSplitColumnShares: Equatable, Sendable {
+}
+
 struct KeyCombination: Equatable, Sendable {
     let key: String
     let isSpecialKey: Bool
@@ -457,6 +491,15 @@ struct MostRecentCredential: Query, Equatable, Sendable {
     let records: [CredentialRecord]
 }
 
+struct OpenWindow: Intent, Equatable, Sendable {
+    let windowID: UUID
+    let workspaceID: UUID
+    let saved: Bool
+    let copyingWindowID: UUID?
+    let showingSpaceID: UUID?
+    let restoresTabs: Bool
+}
+
 struct PasskeyAccess: Query, Equatable, Sendable {
     typealias Answer = PasskeyAccessVerdict
 
@@ -498,6 +541,12 @@ struct RemoveProfileDownloads: Intent, Equatable, Sendable {
     let profileID: UUID
 }
 
+struct ResizeSplitColumns: Intent, Equatable, Sendable {
+    let windowID: UUID
+    let groupID: UUID
+    let shares: [Double]
+}
+
 struct RestartDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
@@ -528,6 +577,31 @@ struct ShortcutDefault: Equatable, Sendable {
     let platform: DevicePlatform
     let keys: KeyCombination
     let yieldsToOverrides: Bool
+}
+
+struct ShowSpace: Intent, Equatable, Sendable {
+    let windowID: UUID
+    let spaceID: UUID
+}
+
+struct ShowTab: Intent, Equatable, Sendable {
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID?
+}
+
+struct ShownTab: Equatable, Sendable {
+    let spaceID: UUID
+    let tabID: UUID?
+}
+
+struct SpaceLocked: Equatable, Sendable {
+    let spaceID: UUID
+}
+
+struct SplitColumnShares: Equatable, Sendable {
+    let groupID: UUID
+    let shares: [Double]
 }
 
 struct StaleCredentialComparison: Equatable, Sendable {
@@ -583,9 +657,60 @@ struct SystemPasswordWriteThroughSupport: Equatable, Sendable {
     let availability: SystemPasswordWriteThroughAvailability
 }
 
+struct TabActivated: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let at: Date
+    let revision: Int64
+}
+
 struct TabFavicon: Equatable, Sendable {
     let tabID: UUID
     let image: Data
+}
+
+struct TearOffPermission: Equatable, Sendable {
+    let allowed: Bool
+    let reason: TearOffRefusal?
+}
+
+struct UnknownWorkspace: Equatable, Sendable {
+    let workspaceID: UUID
+}
+
+struct UnsavedWorkspace: Equatable, Sendable {
+    let workspaceID: UUID
+}
+
+struct WindowChanged: Equatable, Sendable {
+    let window: WindowState
+}
+
+struct WindowClosed: Equatable, Sendable {
+    let windowID: UUID
+}
+
+struct WindowLayout: Equatable, Sendable {
+    let windowID: UUID
+    let sidebarWidth: Double?
+    let sidebarIsPresented: Bool?
+}
+
+struct WindowNotOpen: Equatable, Sendable {
+    let windowID: UUID
+}
+
+struct WindowRecordsAdopted: Equatable, Sendable {
+    let layouts: [WindowLayout]
+}
+
+struct WindowState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let workspaceID: UUID
+    let shownSpaceID: UUID
+    let shownTabs: [ShownTab]
+    let splitColumnShares: [SplitColumnShares]
 }
 
 // MARK: - Enums
@@ -693,6 +818,13 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case isolatedLaunch = 2
     case systemVersionRequired = 3
     case managedBrowserCapabilityRequired = 4
+}
+
+enum TearOffRefusal: Int, CaseIterable, Sendable {
+    case spaceChanged = 0
+    case spaceLocked = 1
+    case tabGone = 2
+    case severalTabs = 3
 }
 
 // MARK: - Fixed sets

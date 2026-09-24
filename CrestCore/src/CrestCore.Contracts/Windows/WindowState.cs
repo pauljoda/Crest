@@ -1,0 +1,21 @@
+namespace CrestCore.Contracts;
+
+/// What one open window shows: the Space on screen, the tab it shows in each
+/// Space it has shown, and the column shares of the split groups it has
+/// resized. A Space without an entry has not been shown in this window yet; an
+/// entry without a tab shows nothing.
+public sealed record WindowState(Guid Id, Guid WorkspaceId, Guid ShownSpaceId, IReadOnlyList<ShownTab> ShownTabs,
+    IReadOnlyList<SplitColumnShares> SplitColumnShares) {
+    #region Actions - Equality
+
+    public bool Equals(WindowState? other) => other is not null
+        && Id == other.Id
+        && WorkspaceId == other.WorkspaceId
+        && ShownSpaceId == other.ShownSpaceId
+        && ShownTabs.SequenceEqual(other.ShownTabs)
+        && SplitColumnShares.SequenceEqual(other.SplitColumnShares);
+
+    public override int GetHashCode() => HashCode.Combine(Id, WorkspaceId, ShownSpaceId, ShownTabs.Count);
+
+    #endregion
+}

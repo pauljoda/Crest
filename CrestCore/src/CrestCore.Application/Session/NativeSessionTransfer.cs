@@ -62,7 +62,10 @@ public sealed class NativeSessionTransfer : IDisposable {
             Dispose();
             throw;
         }
-        return Commit();
+        var revisions = Commit();
+        source.Published(a!.Session, a.FollowUp);
+        destination.Published(b!.Session, b.FollowUp);
+        return revisions;
     }
 
     public void Dispose() {

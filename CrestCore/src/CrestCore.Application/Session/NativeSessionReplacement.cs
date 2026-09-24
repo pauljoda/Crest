@@ -14,6 +14,8 @@ internal sealed class NativeSessionReplacement : IDisposable {
     internal ulong Revision { get; }
     internal ulong? BorrowedSourceRevision { get; }
     internal Guid? TransientCompletion { get; }
+    /// What the command chose for the window that issued it to show next.
+    internal WindowFollowUp? FollowUp { get; }
     internal NativeSessionCheckpoint Checkpoint { get; }
     internal NativeSyncTransaction? SyncTransaction { get; private set; }
 
@@ -22,10 +24,12 @@ internal sealed class NativeSessionReplacement : IDisposable {
     #region Constructors
 
     internal NativeSessionReplacement(NativeSessionAuthority owner, SessionState session,
-        ulong revision, NativeSessionCheckpoint checkpoint, ulong? borrowedSourceRevision = null, Guid? transientCompletion = null) {
+        ulong revision, NativeSessionCheckpoint checkpoint, ulong? borrowedSourceRevision = null, Guid? transientCompletion = null,
+        WindowFollowUp? followUp = null) {
         this.owner = owner; Session = session; Revision = revision; Checkpoint = checkpoint;
         BorrowedSourceRevision = borrowedSourceRevision;
         TransientCompletion = transientCompletion;
+        FollowUp = followUp;
     }
 
     #endregion

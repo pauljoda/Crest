@@ -101,7 +101,9 @@ public sealed partial class NativeSessionAuthority {
             reserved.Dispose();
             throw;
         }
-        return reserved.Commit();
+        var revision = reserved.Commit();
+        Published(reserved.Session, reserved.FollowUp);
+        return revision;
     }
 
     internal NativeSessionReplacement ReserveCommand(NativeSessionCommand command) {
@@ -113,7 +115,8 @@ public sealed partial class NativeSessionAuthority {
             var nextRevision = checked(Revision + 1);
             var checkpoint = new NativeSessionCheckpoint(command.Session);
             _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
-            replacement = new(this, command.Session, nextRevision, checkpoint, command.BorrowedSourceRevision, command.TransientCompletion);
+            replacement = new(this, command.Session, nextRevision, checkpoint, command.BorrowedSourceRevision, command.TransientCompletion,
+                command.FollowUp);
             return replacement;
         }
     }

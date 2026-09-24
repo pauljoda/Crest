@@ -2201,6 +2201,10 @@
     "pressure-keys-targets-sets": {
       "category": "internal",
       "message": "Memory pressure levels, shortcut special keys and numbered selection targets share one shape."
+    },
+    "core-device-window-store": {
+      "category": "internal",
+      "message": "The core keeps each window's shown Space, tabs and split columns in a device store that is saved locally and never synced."
     }
   }
 }

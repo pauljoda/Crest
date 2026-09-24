@@ -74,6 +74,7 @@ public sealed partial class NativeSessionAuthority {
     }
 
     internal ulong CommitCommand(NativeSessionCommand command) {
+        ulong revision;
         lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
             command.RequireAccepted();
@@ -82,10 +83,11 @@ public sealed partial class NativeSessionAuthority {
             session = command.Session;
             if (command.TransientCompletion is { } completed) completedTransients.Add(completed);
             borrowedSourceRevision = command.BorrowedSourceRevision ?? borrowedSourceRevision;
-            Revision = nextRevision;
+            Revision = revision = nextRevision;
             storage?.Enqueue(session, Revision);
-            return Revision;
         }
+        Published(command.Session, command.FollowUp);
+        return revision;
     }
 
     #endregion
