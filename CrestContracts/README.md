@@ -65,8 +65,9 @@ brand colors, crest palette, Spaces, tabs per Space, sync records).
 `address.intent` and `search.url` name the engine as `{"id":"google"}` for a
 built-in or a `custom:<uuid>` identity with its stored templates; the core owns the
 built-in catalog, template validation and query encoding, and a stored custom
-engine that no longer validates resolves to Google. `search.custom_provider`
-reports the rule a custom engine breaks, and `search.custom_providers` applies the
+engine that no longer validates resolves to Google. The typed
+`CustomSearchEngineAdmission` query answers the engine Crest would save or
+refuses it with the rule it breaks, and `search.custom_providers` applies the
 restore rule to stored engines. `translation.rule` and `translation.matches`
 answer automatic page-translation choices in their persisted native shape. Custom-engine saves and removals are the
 `space.search_provider.upsert` and `space.search_provider.remove` session commands.
@@ -122,8 +123,9 @@ Space can take it. Route edits answer
 the edited route or `{"error":code}`, reorders and removals answer the route
 order, and `links.space_removed` answers what a deleted Space leaves behind.
 `quick_window.*` answer archive lifetime, archive-on-dismissal and retargeting;
-`page.presentation`, `content_blocking.rules` and `branding.normalize` answer
-page surfaces, the Balanced rule list and branding range rules.
+`page.presentation` and `branding.normalize` answer page surfaces and branding
+range rules, and the `BalancedProtectionRules` query answers the Balanced rule
+list.
 `workspace.command_route` answers `local`, `source` or `rejected` for a session
 command issued from an owned or borrowed workspace.
 

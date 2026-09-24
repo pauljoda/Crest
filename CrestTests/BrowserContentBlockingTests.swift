@@ -11,13 +11,15 @@ final class BrowserContentBlockingTests: XCTestCase {
         let store = try isolatedRuleListStore()
         defer { store.remove() }
         let compiler = RecordingBuiltInRuleListCompiler()
+        let core = CrestCore()
         let provider = BrowserContentRuleListProvider(
+            core: core,
             ruleListStore: store.store,
             compiler: compiler
         )
 
         let ruleLists = try await provider.balancedRuleLists()
-        let rules = try XCTUnwrap(BrowserCorePolicy.balancedContentBlockingRules())
+        let rules = try core.query(BalancedProtectionRules())
 
         XCTAssertEqual(ruleLists.map(\.identifier), [rules.identifier])
         XCTAssertEqual(compiler.identifiers, [rules.identifier])

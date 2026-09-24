@@ -28,12 +28,18 @@ public sealed class SearchPolicyTests {
         Evaluate(new() { ["operation"] = "search.url", ["searchProvider"] = provider, ["query"] = query, ["purpose"] = purpose })["url"]
             ?.GetValue<string>();
 
-    private static string? Error(JsonObject provider, params (string Id, string Name)[] existing) =>
-        Evaluate(new() {
-            ["operation"] = "search.custom_provider",
-            ["provider"] = provider.DeepClone(),
-            ["existing"] = new JsonArray(existing.Select(e => (JsonNode)new JsonObject { ["id"] = e.Id, ["name"] = e.Name }).ToArray())
-        })["error"]?.GetValue<string>();
+    private static CustomSearchEngine Engine(string name, string template, Guid? id = null) =>
+        new(id ?? Guid.Parse(KagiId), name, template, "  ");
+
+    /// The rule admitting `engine` next to `existing` breaks, or null when it is admitted.
+    private static Rejection? Refusal(CustomSearchEngine engine, params CustomSearchEngine[] existing) {
+        try {
+            new Search().Answer(new CustomSearchEngineAdmission(engine, existing));
+            return null;
+        } catch (Rejected rejected) {
+            return rejected.Rejection;
+        }
+    }
 
     [Theory]
     [InlineData("native mac browser", "native%20mac%20browser")]
@@ -97,52 +103,48 @@ public sealed class SearchPolicyTests {
     [InlineData("https://example.com/search?q=%s", "Example", null)]
     [InlineData("  https://example.com/search?q=%s  ", "  Example  ", null)]
     [InlineData("https://example.com:443/search/%s", "Example", null)]
-    [InlineData("https://example.com/search?q=%s", "   ", BrowserRuleCodes.InvalidSearchName)]
-    [InlineData("https://example.com/search?q=%s", "12345678901234567890123456789012345678901234567890123456789012345", BrowserRuleCodes.SearchNameTooLong)]
-    [InlineData("https://example.com/search", "Example", BrowserRuleCodes.SearchPlaceholderMissing)]
-    [InlineData("https://example.com/?q=%s&again=%s", "Example", BrowserRuleCodes.InvalidSearchPlaceholder)]
-    [InlineData("https://example.com/?q=%s&again={searchTerms}", "Example", BrowserRuleCodes.InvalidSearchPlaceholder)]
-    [InlineData("https://example.com/?q=%s&bad=%zz", "Example", BrowserRuleCodes.InvalidSearchTemplate)]
-    [InlineData("http://example.com/?q=%s", "Example", BrowserRuleCodes.SearchTemplateRequiresHttps)]
-    [InlineData("example.com/?q=%s", "Example", BrowserRuleCodes.SearchTemplateRequiresHttps)]
-    [InlineData("https://user:password@example.com/?q=%s", "Example", BrowserRuleCodes.SearchTemplateCredentials)]
-    [InlineData("https://example.com:8443/?q=%s", "Example", BrowserRuleCodes.SearchTemplatePort)]
-    [InlineData("https://%s.example.com/search", "Example", BrowserRuleCodes.UnsafeSearchTemplate)]
-    [InlineData("https://localhost/search?q=%s", "Example", BrowserRuleCodes.UnsafeSearchTemplate)]
-    [InlineData("https://printer.local/search?q=%s", "Example", BrowserRuleCodes.UnsafeSearchTemplate)]
-    [InlineData("https://192.168.1.1/search?q=%s", "Example", BrowserRuleCodes.UnsafeSearchTemplate)]
-    [InlineData("https://example.com/search#q=%s", "Example", BrowserRuleCodes.SearchPlaceholderInFragment)]
-    [InlineData("https://example.com/search?Token=secret&q=%s", "Example", BrowserRuleCodes.SearchTemplateContainsSecret)]
-    [InlineData("https://example.com/search?api%5Fkey=secret&q=%s", "Example", BrowserRuleCodes.SearchTemplateContainsSecret)]
-    public void CustomEngineValidationNamesTheRuleThePersonBroke(string template, string name, string? code) {
-        var result = Evaluate(new() {
-            ["operation"] = "search.custom_provider",
-            ["provider"] = new JsonObject { ["id"] = KagiId, ["name"] = name, ["searchURLTemplate"] = template, ["suggestionURLTemplate"] = "  " },
-            ["existing"] = new JsonArray()
-        });
-        Assert.Equal(code, result["error"]?.GetValue<string>());
-        if (code is null) {
-            Assert.Equal("Example", result["provider"]!["name"]!.GetValue<string>());
-            Assert.Equal(template.Trim(), result["provider"]!["searchURLTemplate"]!.GetValue<string>());
-            Assert.Null(result["provider"]!["suggestionURLTemplate"]);
+    [InlineData("https://example.com/search?q=%s", "   ", SearchEngineFlaw.EmptyName)]
+    [InlineData("https://example.com/search?q=%s", "12345678901234567890123456789012345678901234567890123456789012345", SearchEngineFlaw.NameTooLong)]
+    [InlineData("https://example.com/search", "Example", SearchEngineFlaw.MissingPlaceholder)]
+    [InlineData("https://example.com/?q=%s&again=%s", "Example", SearchEngineFlaw.AmbiguousPlaceholder)]
+    [InlineData("https://example.com/?q=%s&again={searchTerms}", "Example", SearchEngineFlaw.AmbiguousPlaceholder)]
+    [InlineData("https://example.com/?q=%s&bad=%zz", "Example", SearchEngineFlaw.InvalidTemplate)]
+    [InlineData("http://example.com/?q=%s", "Example", SearchEngineFlaw.RequiresHttps)]
+    [InlineData("example.com/?q=%s", "Example", SearchEngineFlaw.RequiresHttps)]
+    [InlineData("https://user:password@example.com/?q=%s", "Example", SearchEngineFlaw.CredentialsInTemplate)]
+    [InlineData("https://example.com:8443/?q=%s", "Example", SearchEngineFlaw.NonstandardPort)]
+    [InlineData("https://%s.example.com/search", "Example", SearchEngineFlaw.UnsafeHost)]
+    [InlineData("https://localhost/search?q=%s", "Example", SearchEngineFlaw.UnsafeHost)]
+    [InlineData("https://printer.local/search?q=%s", "Example", SearchEngineFlaw.UnsafeHost)]
+    [InlineData("https://192.168.1.1/search?q=%s", "Example", SearchEngineFlaw.UnsafeHost)]
+    [InlineData("https://example.com/search#q=%s", "Example", SearchEngineFlaw.PlaceholderInFragment)]
+    [InlineData("https://example.com/search?Token=secret&q=%s", "Example", SearchEngineFlaw.SecretInTemplate)]
+    [InlineData("https://example.com/search?api%5Fkey=secret&q=%s", "Example", SearchEngineFlaw.SecretInTemplate)]
+    public void CustomEngineValidationNamesTheRuleThePersonBroke(string template, string name, SearchEngineFlaw? flaw) {
+        var engine = Engine(name, template);
+        Assert.Equal(flaw is { } expected ? new InvalidSearchEngine(expected) : null, Refusal(engine));
+        if (flaw is null) {
+            var admitted = new Search().Answer(new CustomSearchEngineAdmission(engine, []));
+            Assert.Equal(new CustomSearchEngine(engine.Id, "Example", template.Trim(), null), admitted);
         }
     }
 
     [Fact]
     public void AdmissionRejectsFoldedDuplicateNamesAndTheThirtyThirdEngine() {
-        var provider = new JsonObject { ["id"] = KagiId, ["name"] = "Café", ["searchURLTemplate"] = "https://example.org/?q=%s" };
-        Assert.Equal(BrowserRuleCodes.DuplicateSearchName, Error(provider, (Guid.NewGuid().ToString("D"), "  CAFE ")));
-        Assert.Equal(BrowserRuleCodes.SearchTemplateTooLong, Error(new() {
-            ["id"] = KagiId,
-            ["name"] = "Long",
-            ["searchURLTemplate"] = "https://example.com/?q=%s&p=" + new string('a', 2048)
-        }));
+        var engine = Engine("Café", "https://example.org/?q=%s");
+        Assert.Equal(new DuplicateSearchEngineName(), Refusal(engine, Engine("  CAFE ", "https://a.example/?q=%s", Guid.NewGuid())));
+        Assert.Equal(new InvalidSearchEngine(SearchEngineFlaw.TemplateTooLong),
+            Refusal(Engine("Long", "https://example.com/?q=%s&p=" + new string('a', 2048))));
         // Editing an engine may keep its own name.
-        Assert.Null(Error(provider, (KagiId, "Café")));
-        var full = Enumerable.Range(0, 32).Select(i => (Guid.NewGuid().ToString("D"), $"Engine {i}")).ToArray();
-        Assert.Equal(BrowserRuleCodes.SearchProviderLimit, Error(provider, full));
-        full[5] = (KagiId, "Engine 5");
-        Assert.Null(Error(provider, full));
+        Assert.Null(Refusal(engine, engine));
+        var full = Enumerable.Range(0, 32).Select(i => Engine($"Engine {i}", "https://a.example/?q=%s", Guid.NewGuid())).ToArray();
+        Assert.Equal(new SearchEngineLimitReached(SearchPreferences.MaximumCustomProviders), Refusal(engine, full));
+        full[5] = engine with { Name = "Engine 5" };
+        Assert.Null(Refusal(engine, full));
+        // Session commands still report the same rules as their codes.
+        Assert.Equal(BrowserRuleCodes.SearchProviderLimit, BrowserRuleCodes.SearchEngine(new SearchEngineLimitReached(32)));
+        Assert.Equal(BrowserRuleCodes.SearchTemplatePort,
+            Assert.Throws<BrowserRuleException>(() => SearchProvider.Custom(Guid.NewGuid(), "Port", "https://a.example:8443/?q=%s", null)).Code);
     }
 
     [Fact]

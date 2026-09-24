@@ -2129,6 +2129,10 @@
     "credential-typed-queries": {
       "category": "internal",
       "message": "Credential and passkey decisions are typed core queries, and each app shares one passkey access controller."
+    },
+    "search-content-blocking-typed-queries": {
+      "category": "internal",
+      "message": "Custom search engine admission and Balanced content-blocking rules are typed core queries."
     }
   }
 }

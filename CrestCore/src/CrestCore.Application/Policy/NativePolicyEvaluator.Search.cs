@@ -10,11 +10,11 @@ namespace CrestCore.Application;
 public static partial class NativePolicyEvaluator {
     #region Actions - Search
 
-    /// Null when the operation is not an address or search policy.
+    /// Null when the operation is not an address or search policy. Custom
+    /// engine admission is the typed `CustomSearchEngineAdmission` query.
     private static JsonObject? EvaluateSearch(PolicyOperation operation, JsonElement request) => operation switch {
         PolicyOperation.AddressIntent => ResolveAddress(Requests.AddressIntent.Decode(request)),
         PolicyOperation.SearchUrl => SearchUrl(Requests.SearchUrl.Decode(request)),
-        PolicyOperation.SearchCustomProvider => AdmitCustomProvider(Requests.CustomProvider.Decode(request)),
         PolicyOperation.SearchCustomProviders => RestoreCustomProviders(Requests.CustomProviders.Decode(request)),
         _ => null
     };
@@ -26,18 +26,6 @@ public static partial class NativePolicyEvaluator {
         SearchUrlPurpose.Search => request.Provider.Search(request.Query),
         _ => request.Provider.Suggest(request.Query)
     });
-
-    private static JsonObject AdmitCustomProvider(Requests.CustomProvider request) {
-        // The editor explains the specific rule the person broke. A request
-        // carries either the typed engine or the rule it broke.
-        if (request.Provider is not { } provider) return PolicyAnswers.Error(request.Rejection!);
-        try {
-            SearchPreferences.RequireAdmissible(provider, request.Existing);
-            return SearchCodes.ProviderAnswer(provider);
-        } catch (BrowserRuleException error) {
-            return PolicyAnswers.Error(error);
-        }
-    }
 
     private static JsonObject RestoreCustomProviders(Requests.CustomProviders request) {
         var restored = SearchPreferences.Restore(request.SelectedId, request.Stored.Select(entry => entry.Provider), false);

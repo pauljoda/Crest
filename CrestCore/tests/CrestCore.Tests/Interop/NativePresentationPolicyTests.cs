@@ -83,18 +83,6 @@ public sealed class NativePresentationPolicyTests {
         Assert.False(lookup["remembersSpace"]!.GetValue<bool>());
     }
 
-    [Fact]
-    public void BalancedProtectionBlocksThirdPartyLoadsFromEveryListedHostAndItsSubdomains() {
-        var result = Evaluate(new() { ["operation"] = "content_blocking.rules" });
-        Assert.Equal(BalancedContentBlocking.Identifier, result["identifier"]!.GetValue<string>());
-        var rules = JsonNode.Parse(result["source"]!.GetValue<string>())!.AsArray();
-        Assert.Equal(BalancedContentBlocking.BlockedHostSuffixes.Count, rules.Count);
-        var trigger = rules[0]!["trigger"]!;
-        Assert.Equal(@"^[^:]+://+([^:/]+\.)?doubleclick\.net[:/]", trigger["url-filter"]!.GetValue<string>());
-        Assert.Equal(["third-party"], trigger["load-type"]!.AsArray().Select(value => value!.GetValue<string>()));
-        Assert.DoesNotContain("document", trigger["resource-type"]!.AsArray().Select(value => value!.GetValue<string>()));
-        Assert.All(rules, rule => Assert.Equal("block", rule!["action"]!["type"]!.GetValue<string>()));
-    }
 
     [Fact]
     public void BrandingNormalizationClampsBannerRangesAndCrestLayersAndReadsTermsAsTheNativeReaderDoes() {

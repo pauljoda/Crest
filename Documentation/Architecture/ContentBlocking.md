@@ -12,8 +12,8 @@ converter inside Crest's trusted update path.
 
 The portable core owns the rules. `BalancedContentBlocking` in `CrestCore`
 holds the blocked host suffixes and a versioned identifier, and the
-`content_blocking.rules` policy operation returns that identifier with the
-WebKit content-rule JSON. The WebKit adapter compiles the source once, caches
+`BalancedProtectionRules` query returns that identifier with the WebKit
+content-rule JSON. The WebKit adapter compiles the source once, caches
 the resulting `WKContentRuleList` under the identifier, and applies it to pages
 in Spaces where Balanced protection is on. If the core cannot answer, nothing
 is compiled. Turning protection on or off reloads the visible pages so the

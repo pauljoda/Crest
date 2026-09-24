@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xbe, 0x8d, 0xc7, 0x19, 0xba, 0x2e, 0x24, 0x49, 0x59, 0x98, 0x84, 0xc8, 0xbf, 0x4b, 0xc0, 0xbb, 0x81, 0xe0, 0x8b, 0x4c, 0xc3, 0x0c, 0x4e, 0xb7, 0xd5, 0x88, 0x5d, 0xd4, 0xa9, 0x8c, 0xe8, 0x5f
+        0xca, 0x35, 0x9d, 0x5e, 0xca, 0x75, 0xdb, 0xe2, 0x70, 0x4a, 0xf1, 0xea, 0xba, 0x74, 0xc8, 0x7e, 0xba, 0xc1, 0xdc, 0x5e, 0x9d, 0x1c, 0x19, 0xaa, 0x0f, 0x55, 0xd8, 0xcb, 0x59, 0x7c, 0xc4, 0x1a
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -34,18 +34,20 @@ enum CoreCodec {
     static func decodeQuery(from reader: inout WireReader) throws(WireError) -> any Query {
         let tag = try reader.readTag()
         switch tag {
-        case 0: return try CredentialCapture(from: &reader)
-        case 1: return try CredentialFill(from: &reader)
-        case 2: return try CredentialSave(from: &reader)
-        case 3: return try CredentialSaveCheck(from: &reader)
-        case 4: return try CredentialSaveMatch(from: &reader)
-        case 5: return try DownloadProgress(from: &reader)
-        case 6: return try DownloadRisk(from: &reader)
-        case 7: return try MostRecentCredential(from: &reader)
-        case 8: return try PasskeyAccess(from: &reader)
-        case 9: return try StrongPassword(from: &reader)
-        case 10: return try SystemPasswordOffer(from: &reader)
-        case 11: return try SystemPasswordWriteThrough(from: &reader)
+        case 0: return try BalancedProtectionRules(from: &reader)
+        case 1: return try CredentialCapture(from: &reader)
+        case 2: return try CredentialFill(from: &reader)
+        case 3: return try CredentialSave(from: &reader)
+        case 4: return try CredentialSaveCheck(from: &reader)
+        case 5: return try CredentialSaveMatch(from: &reader)
+        case 6: return try CustomSearchEngineAdmission(from: &reader)
+        case 7: return try DownloadProgress(from: &reader)
+        case 8: return try DownloadRisk(from: &reader)
+        case 9: return try MostRecentCredential(from: &reader)
+        case 10: return try PasskeyAccess(from: &reader)
+        case 11: return try StrongPassword(from: &reader)
+        case 12: return try SystemPasswordOffer(from: &reader)
+        case 13: return try SystemPasswordWriteThrough(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -81,17 +83,20 @@ extension Rejection {
         case 1: self = .downloadLimitReached(try DownloadLimitReached(from: &reader))
         case 2: self = .duplicateCredential(try DuplicateCredential(from: &reader))
         case 3: self = .duplicateDownload(try DuplicateDownload(from: &reader))
-        case 4: self = .invalidCredentialDate(try InvalidCredentialDate(from: &reader))
-        case 5: self = .invalidCredentialOrigin(try InvalidCredentialOrigin(from: &reader))
-        case 6: self = .invalidCredentialRecord(try InvalidCredentialRecord(from: &reader))
-        case 7: self = .invalidCredentialUsername(try InvalidCredentialUsername(from: &reader))
-        case 8: self = .invalidDownloadIdentity(try InvalidDownloadIdentity(from: &reader))
-        case 9: self = .invalidDownloadProgress(try InvalidDownloadProgress(from: &reader))
-        case 10: self = .invalidDownloadSample(try InvalidDownloadSample(from: &reader))
-        case 11: self = .invalidDownloadText(try InvalidDownloadText(from: &reader))
-        case 12: self = .invalidPasswordLength(try InvalidPasswordLength(from: &reader))
-        case 13: self = .invalidRetentionLifetime(try InvalidRetentionLifetime(from: &reader))
-        case 14: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
+        case 4: self = .duplicateSearchEngineName(try DuplicateSearchEngineName(from: &reader))
+        case 5: self = .invalidCredentialDate(try InvalidCredentialDate(from: &reader))
+        case 6: self = .invalidCredentialOrigin(try InvalidCredentialOrigin(from: &reader))
+        case 7: self = .invalidCredentialRecord(try InvalidCredentialRecord(from: &reader))
+        case 8: self = .invalidCredentialUsername(try InvalidCredentialUsername(from: &reader))
+        case 9: self = .invalidDownloadIdentity(try InvalidDownloadIdentity(from: &reader))
+        case 10: self = .invalidDownloadProgress(try InvalidDownloadProgress(from: &reader))
+        case 11: self = .invalidDownloadSample(try InvalidDownloadSample(from: &reader))
+        case 12: self = .invalidDownloadText(try InvalidDownloadText(from: &reader))
+        case 13: self = .invalidPasswordLength(try InvalidPasswordLength(from: &reader))
+        case 14: self = .invalidRetentionLifetime(try InvalidRetentionLifetime(from: &reader))
+        case 15: self = .invalidSearchEngine(try InvalidSearchEngine(from: &reader))
+        case 16: self = .searchEngineLimitReached(try SearchEngineLimitReached(from: &reader))
+        case 17: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
@@ -110,38 +115,47 @@ extension Rejection {
         case .duplicateDownload(let value):
             writer.writeTag(3)
             value.encode(into: &writer)
-        case .invalidCredentialDate(let value):
+        case .duplicateSearchEngineName(let value):
             writer.writeTag(4)
             value.encode(into: &writer)
-        case .invalidCredentialOrigin(let value):
+        case .invalidCredentialDate(let value):
             writer.writeTag(5)
             value.encode(into: &writer)
-        case .invalidCredentialRecord(let value):
+        case .invalidCredentialOrigin(let value):
             writer.writeTag(6)
             value.encode(into: &writer)
-        case .invalidCredentialUsername(let value):
+        case .invalidCredentialRecord(let value):
             writer.writeTag(7)
             value.encode(into: &writer)
-        case .invalidDownloadIdentity(let value):
+        case .invalidCredentialUsername(let value):
             writer.writeTag(8)
             value.encode(into: &writer)
-        case .invalidDownloadProgress(let value):
+        case .invalidDownloadIdentity(let value):
             writer.writeTag(9)
             value.encode(into: &writer)
-        case .invalidDownloadSample(let value):
+        case .invalidDownloadProgress(let value):
             writer.writeTag(10)
             value.encode(into: &writer)
-        case .invalidDownloadText(let value):
+        case .invalidDownloadSample(let value):
             writer.writeTag(11)
             value.encode(into: &writer)
-        case .invalidPasswordLength(let value):
+        case .invalidDownloadText(let value):
             writer.writeTag(12)
             value.encode(into: &writer)
-        case .invalidRetentionLifetime(let value):
+        case .invalidPasswordLength(let value):
             writer.writeTag(13)
             value.encode(into: &writer)
-        case .staleCredentialComparison(let value):
+        case .invalidRetentionLifetime(let value):
             writer.writeTag(14)
+            value.encode(into: &writer)
+        case .invalidSearchEngine(let value):
+            writer.writeTag(15)
+            value.encode(into: &writer)
+        case .searchEngineLimitReached(let value):
+            writer.writeTag(16)
+            value.encode(into: &writer)
+        case .staleCredentialComparison(let value):
+            writer.writeTag(17)
             value.encode(into: &writer)
         }
     }
@@ -194,6 +208,25 @@ extension AwaitDownloadApproval {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(2)
         encode(into: &writer)
+    }
+}
+
+extension BalancedProtectionRules {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(0)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> ContentRuleList {
+        let answer = try ContentRuleList(from: &reader)
+        return answer
     }
 }
 
@@ -255,6 +288,19 @@ extension CancelDownload {
     }
 }
 
+extension ContentRuleList {
+    init(from reader: inout WireReader) throws(WireError) {
+        let identifier = try reader.readString()
+        let source = try reader.readString()
+        self.init(identifier: identifier, source: source)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(identifier)
+        writer.writeString(source)
+    }
+}
+
 extension CredentialCapture {
     init(from reader: inout WireReader) throws(WireError) {
         let facts = try CredentialFormFacts(from: &reader)
@@ -294,7 +340,7 @@ extension CredentialCapture {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(0)
+        writer.writeTag(1)
         encode(into: &writer)
     }
 
@@ -362,7 +408,7 @@ extension CredentialFill {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(1)
+        writer.writeTag(2)
         encode(into: &writer)
     }
 
@@ -547,7 +593,7 @@ extension CredentialSave {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(2)
+        writer.writeTag(3)
         encode(into: &writer)
     }
 
@@ -574,7 +620,7 @@ extension CredentialSaveCheck {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(3)
+        writer.writeTag(4)
         encode(into: &writer)
     }
 
@@ -606,7 +652,7 @@ extension CredentialSaveMatch {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(4)
+        writer.writeTag(5)
         encode(into: &writer)
     }
 
@@ -679,6 +725,66 @@ extension CredentialUsernameHint {
     }
 }
 
+extension CustomSearchEngine {
+    init(from reader: inout WireReader) throws(WireError) {
+        let id = try reader.readUUID()
+        let name = try reader.readString()
+        let searchTemplate = try reader.readString()
+        let suggestionTemplate: String?
+        if try reader.readPresence() {
+            let suggestionTemplateValue = try reader.readString()
+            suggestionTemplate = suggestionTemplateValue
+        } else {
+            suggestionTemplate = nil
+        }
+        self.init(id: id, name: name, searchTemplate: searchTemplate, suggestionTemplate: suggestionTemplate)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(id)
+        writer.writeString(name)
+        writer.writeString(searchTemplate)
+        if let present0 = suggestionTemplate {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
+extension CustomSearchEngineAdmission {
+    init(from reader: inout WireReader) throws(WireError) {
+        let engine = try CustomSearchEngine(from: &reader)
+        let existingCount = try reader.readCount()
+        var existing: [CustomSearchEngine] = []
+        existing.reserveCapacity(existingCount)
+        for _ in 0..<existingCount {
+            let existingElement = try CustomSearchEngine(from: &reader)
+            existing.append(existingElement)
+        }
+        self.init(engine: engine, existing: existing)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        engine.encode(into: &writer)
+        writer.writeCount(existing.count)
+        for element0 in existing {
+            element0.encode(into: &writer)
+        }
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(6)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> CustomSearchEngine {
+        let answer = try CustomSearchEngine(from: &reader)
+        return answer
+    }
+}
+
 extension DownloadLimitReached {
     init(from reader: inout WireReader) throws(WireError) {
         let limit = try reader.readInt()
@@ -722,7 +828,7 @@ extension DownloadProgress {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(5)
+        writer.writeTag(7)
         encode(into: &writer)
     }
 
@@ -784,7 +890,7 @@ extension DownloadRisk {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(6)
+        writer.writeTag(8)
         encode(into: &writer)
     }
 
@@ -1104,6 +1210,15 @@ extension DuplicateDownload {
     }
 }
 
+extension DuplicateSearchEngineName {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
 extension ExpireDownloads {
     init(from reader: inout WireReader) throws(WireError) {
         let now = try reader.readDate()
@@ -1274,6 +1389,17 @@ extension InvalidRetentionLifetime {
     }
 }
 
+extension InvalidSearchEngine {
+    init(from reader: inout WireReader) throws(WireError) {
+        let flaw = try SearchEngineFlaw(from: &reader)
+        self.init(flaw: flaw)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        flaw.encode(into: &writer)
+    }
+}
+
 extension MostRecentCredential {
     init(from reader: inout WireReader) throws(WireError) {
         let recordsCount = try reader.readCount()
@@ -1294,7 +1420,7 @@ extension MostRecentCredential {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(7)
+        writer.writeTag(9)
         encode(into: &writer)
     }
 
@@ -1319,7 +1445,7 @@ extension PasskeyAccess {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(8)
+        writer.writeTag(10)
         encode(into: &writer)
     }
 
@@ -1408,6 +1534,17 @@ extension RestartDownload {
     }
 }
 
+extension SearchEngineLimitReached {
+    init(from reader: inout WireReader) throws(WireError) {
+        let limit = try reader.readInt()
+        self.init(limit: limit)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt(limit)
+    }
+}
+
 extension SetDownloadDestination {
     init(from reader: inout WireReader) throws(WireError) {
         let downloadID = try reader.readUUID()
@@ -1459,7 +1596,7 @@ extension StrongPassword {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(9)
+        writer.writeTag(11)
         encode(into: &writer)
     }
 
@@ -1506,7 +1643,7 @@ extension SystemPasswordOffer {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(10)
+        writer.writeTag(12)
         encode(into: &writer)
     }
 
@@ -1544,7 +1681,7 @@ extension SystemPasswordWriteThrough {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(11)
+        writer.writeTag(13)
         encode(into: &writer)
     }
 
@@ -1738,6 +1875,20 @@ extension PasskeyDeviceConfiguration {
         let rawValue = try reader.readEnum()
         guard let value = PasskeyDeviceConfiguration(rawValue: rawValue) else {
             throw WireError.malformed("Unknown PasskeyDeviceConfiguration \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension SearchEngineFlaw {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = SearchEngineFlaw(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown SearchEngineFlaw \(rawValue)")
         }
         self = value
     }

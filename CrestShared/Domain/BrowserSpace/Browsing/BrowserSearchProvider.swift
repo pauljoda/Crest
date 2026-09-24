@@ -157,25 +157,64 @@ struct BrowserCustomSearchProvider: Codable, Equatable, Identifiable, Sendable {
         self.suggestionURLTemplate = suggestionURLTemplate
     }
 
+    /// The engine the core admitted.
+    init(_ engine: CustomSearchEngine) {
+        self.init(
+            id: engine.id, name: engine.name, searchURLTemplate: engine.searchTemplate,
+            suggestionURLTemplate: engine.suggestionTemplate)
+    }
+
     var provider: BrowserSearchProvider { BrowserSearchProvider(custom: self) }
+
+    /// This engine as the core's custom-engine rules read it.
+    var engine: CustomSearchEngine {
+        CustomSearchEngine(
+            id: id, name: name, searchTemplate: searchURLTemplate, suggestionTemplate: suggestionURLTemplate)
+    }
 }
 
-/// The core's custom-engine rule codes, with the explanation the editor shows.
-enum BrowserCustomSearchProviderError: String, LocalizedError, Equatable {
-    case emptyName = "invalid_search_name"
-    case nameTooLong = "search_name_too_long"
-    case templateTooLong = "search_template_too_long"
-    case missingPlaceholder = "search_placeholder_missing"
-    case ambiguousPlaceholder = "invalid_search_placeholder"
-    case invalidURL = "invalid_search_template"
-    case requiresHTTPS = "search_template_requires_https"
-    case unsafeHost = "unsafe_search_template"
-    case unsupportedPort = "search_template_port"
-    case credentialsNotAllowed = "search_template_credentials"
-    case fragmentPlaceholderNotAllowed = "search_placeholder_in_fragment"
-    case secretNotAllowed = "search_template_contains_secret"
-    case duplicateName = "duplicate_search_name"
-    case tooManyProviders = "search_provider_limit"
+/// The rule a custom engine breaks, with the explanation the editor shows.
+enum BrowserCustomSearchProviderError: LocalizedError, Equatable {
+    case emptyName
+    case nameTooLong
+    case templateTooLong
+    case missingPlaceholder
+    case ambiguousPlaceholder
+    case invalidURL
+    case requiresHTTPS
+    case unsafeHost
+    case unsupportedPort
+    case credentialsNotAllowed
+    case fragmentPlaceholderNotAllowed
+    case secretNotAllowed
+    case duplicateName
+    case tooManyProviders
+
+    /// The core's refusal of a custom engine. Any other refusal reads as an
+    /// invalid template.
+    init(_ rejection: Rejection) {
+        self =
+            switch rejection {
+            case .invalidSearchEngine(let invalid):
+                switch invalid.flaw {
+                case .emptyName: .emptyName
+                case .nameTooLong: .nameTooLong
+                case .templateTooLong: .templateTooLong
+                case .missingPlaceholder: .missingPlaceholder
+                case .ambiguousPlaceholder: .ambiguousPlaceholder
+                case .invalidIdentity, .invalidTemplate: .invalidURL
+                case .requiresHttps: .requiresHTTPS
+                case .unsafeHost: .unsafeHost
+                case .nonstandardPort: .unsupportedPort
+                case .credentialsInTemplate: .credentialsNotAllowed
+                case .placeholderInFragment: .fragmentPlaceholderNotAllowed
+                case .secretInTemplate: .secretNotAllowed
+                }
+            case .duplicateSearchEngineName: .duplicateName
+            case .searchEngineLimitReached: .tooManyProviders
+            default: .invalidURL
+            }
+    }
 
     var errorDescription: String? {
         switch self {

@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xbe, 0x8d, 0xc7, 0x19, 0xba, 0x2e, 0x24, 0x49, 0x59, 0x98, 0x84, 0xc8, 0xbf, 0x4b, 0xc0, 0xbb, 0x81, 0xe0, 0x8b, 0x4c, 0xc3, 0x0c, 0x4e, 0xb7, 0xd5, 0x88, 0x5d, 0xd4, 0xa9, 0x8c, 0xe8, 0x5f
+        0xca, 0x35, 0x9d, 0x5e, 0xca, 0x75, 0xdb, 0xe2, 0x70, 0x4a, 0xf1, 0xea, 0xba, 0x74, 0xc8, 0x7e, 0xba, 0xc1, 0xdc, 0x5e, 0x9d, 0x1c, 0x19, 0xaa, 0x0f, 0x55, 0xd8, 0xcb, 0x59, 0x7c, 0xc4, 0x1a
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -134,17 +134,20 @@ public static class ContractCodec {
             case 1: return ReadDownloadLimitReached(reader);
             case 2: return ReadDuplicateCredential(reader);
             case 3: return ReadDuplicateDownload(reader);
-            case 4: return ReadInvalidCredentialDate(reader);
-            case 5: return ReadInvalidCredentialOrigin(reader);
-            case 6: return ReadInvalidCredentialRecord(reader);
-            case 7: return ReadInvalidCredentialUsername(reader);
-            case 8: return ReadInvalidDownloadIdentity(reader);
-            case 9: return ReadInvalidDownloadProgress(reader);
-            case 10: return ReadInvalidDownloadSample(reader);
-            case 11: return ReadInvalidDownloadText(reader);
-            case 12: return ReadInvalidPasswordLength(reader);
-            case 13: return ReadInvalidRetentionLifetime(reader);
-            case 14: return ReadStaleCredentialComparison(reader);
+            case 4: return ReadDuplicateSearchEngineName(reader);
+            case 5: return ReadInvalidCredentialDate(reader);
+            case 6: return ReadInvalidCredentialOrigin(reader);
+            case 7: return ReadInvalidCredentialRecord(reader);
+            case 8: return ReadInvalidCredentialUsername(reader);
+            case 9: return ReadInvalidDownloadIdentity(reader);
+            case 10: return ReadInvalidDownloadProgress(reader);
+            case 11: return ReadInvalidDownloadSample(reader);
+            case 12: return ReadInvalidDownloadText(reader);
+            case 13: return ReadInvalidPasswordLength(reader);
+            case 14: return ReadInvalidRetentionLifetime(reader);
+            case 15: return ReadInvalidSearchEngine(reader);
+            case 16: return ReadSearchEngineLimitReached(reader);
+            case 17: return ReadStaleCredentialComparison(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -169,48 +172,60 @@ public static class ContractCodec {
                 writer.WriteTag(3);
                 WriteDuplicateDownload(writer, member);
                 break;
-            case InvalidCredentialDate member:
+            case DuplicateSearchEngineName member:
                 writer.WriteTag(4);
+                WriteDuplicateSearchEngineName(writer, member);
+                break;
+            case InvalidCredentialDate member:
+                writer.WriteTag(5);
                 WriteInvalidCredentialDate(writer, member);
                 break;
             case InvalidCredentialOrigin member:
-                writer.WriteTag(5);
+                writer.WriteTag(6);
                 WriteInvalidCredentialOrigin(writer, member);
                 break;
             case InvalidCredentialRecord member:
-                writer.WriteTag(6);
+                writer.WriteTag(7);
                 WriteInvalidCredentialRecord(writer, member);
                 break;
             case InvalidCredentialUsername member:
-                writer.WriteTag(7);
+                writer.WriteTag(8);
                 WriteInvalidCredentialUsername(writer, member);
                 break;
             case InvalidDownloadIdentity member:
-                writer.WriteTag(8);
+                writer.WriteTag(9);
                 WriteInvalidDownloadIdentity(writer, member);
                 break;
             case InvalidDownloadProgress member:
-                writer.WriteTag(9);
+                writer.WriteTag(10);
                 WriteInvalidDownloadProgress(writer, member);
                 break;
             case InvalidDownloadSample member:
-                writer.WriteTag(10);
+                writer.WriteTag(11);
                 WriteInvalidDownloadSample(writer, member);
                 break;
             case InvalidDownloadText member:
-                writer.WriteTag(11);
+                writer.WriteTag(12);
                 WriteInvalidDownloadText(writer, member);
                 break;
             case InvalidPasswordLength member:
-                writer.WriteTag(12);
+                writer.WriteTag(13);
                 WriteInvalidPasswordLength(writer, member);
                 break;
             case InvalidRetentionLifetime member:
-                writer.WriteTag(13);
+                writer.WriteTag(14);
                 WriteInvalidRetentionLifetime(writer, member);
                 break;
+            case InvalidSearchEngine member:
+                writer.WriteTag(15);
+                WriteInvalidSearchEngine(writer, member);
+                break;
+            case SearchEngineLimitReached member:
+                writer.WriteTag(16);
+                WriteSearchEngineLimitReached(writer, member);
+                break;
             case StaleCredentialComparison member:
-                writer.WriteTag(14);
+                writer.WriteTag(17);
                 WriteStaleCredentialComparison(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -220,18 +235,20 @@ public static class ContractCodec {
     public static object ReadQuery(WireReader reader) {
         int tag = reader.ReadTag();
         switch (tag) {
-            case 0: return ReadCredentialCapture(reader);
-            case 1: return ReadCredentialFill(reader);
-            case 2: return ReadCredentialSave(reader);
-            case 3: return ReadCredentialSaveCheck(reader);
-            case 4: return ReadCredentialSaveMatch(reader);
-            case 5: return ReadDownloadProgress(reader);
-            case 6: return ReadDownloadRisk(reader);
-            case 7: return ReadMostRecentCredential(reader);
-            case 8: return ReadPasskeyAccess(reader);
-            case 9: return ReadStrongPassword(reader);
-            case 10: return ReadSystemPasswordOffer(reader);
-            case 11: return ReadSystemPasswordWriteThrough(reader);
+            case 0: return ReadBalancedProtectionRules(reader);
+            case 1: return ReadCredentialCapture(reader);
+            case 2: return ReadCredentialFill(reader);
+            case 3: return ReadCredentialSave(reader);
+            case 4: return ReadCredentialSaveCheck(reader);
+            case 5: return ReadCredentialSaveMatch(reader);
+            case 6: return ReadCustomSearchEngineAdmission(reader);
+            case 7: return ReadDownloadProgress(reader);
+            case 8: return ReadDownloadRisk(reader);
+            case 9: return ReadMostRecentCredential(reader);
+            case 10: return ReadPasskeyAccess(reader);
+            case 11: return ReadStrongPassword(reader);
+            case 12: return ReadSystemPasswordOffer(reader);
+            case 13: return ReadSystemPasswordWriteThrough(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -240,52 +257,60 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         switch (value) {
-            case CredentialCapture member:
+            case BalancedProtectionRules member:
                 writer.WriteTag(0);
+                WriteBalancedProtectionRules(writer, member);
+                break;
+            case CredentialCapture member:
+                writer.WriteTag(1);
                 WriteCredentialCapture(writer, member);
                 break;
             case CredentialFill member:
-                writer.WriteTag(1);
+                writer.WriteTag(2);
                 WriteCredentialFill(writer, member);
                 break;
             case CredentialSave member:
-                writer.WriteTag(2);
+                writer.WriteTag(3);
                 WriteCredentialSave(writer, member);
                 break;
             case CredentialSaveCheck member:
-                writer.WriteTag(3);
+                writer.WriteTag(4);
                 WriteCredentialSaveCheck(writer, member);
                 break;
             case CredentialSaveMatch member:
-                writer.WriteTag(4);
+                writer.WriteTag(5);
                 WriteCredentialSaveMatch(writer, member);
                 break;
+            case CustomSearchEngineAdmission member:
+                writer.WriteTag(6);
+                WriteCustomSearchEngineAdmission(writer, member);
+                break;
             case DownloadProgress member:
-                writer.WriteTag(5);
+                writer.WriteTag(7);
                 WriteDownloadProgress(writer, member);
                 break;
             case DownloadRisk member:
-                writer.WriteTag(6);
+                writer.WriteTag(8);
                 WriteDownloadRisk(writer, member);
                 break;
             case MostRecentCredential member:
-                writer.WriteTag(7);
+                writer.WriteTag(9);
                 WriteMostRecentCredential(writer, member);
                 break;
             case PasskeyAccess member:
-                writer.WriteTag(8);
+                writer.WriteTag(10);
                 WritePasskeyAccess(writer, member);
                 break;
             case StrongPassword member:
-                writer.WriteTag(9);
+                writer.WriteTag(11);
                 WriteStrongPassword(writer, member);
                 break;
             case SystemPasswordOffer member:
-                writer.WriteTag(10);
+                writer.WriteTag(12);
                 WriteSystemPasswordOffer(writer, member);
                 break;
             case SystemPasswordWriteThrough member:
-                writer.WriteTag(11);
+                writer.WriteTag(13);
                 WriteSystemPasswordWriteThrough(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
@@ -296,53 +321,61 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(query);
         switch (query) {
-            case CredentialCapture question:
+            case BalancedProtectionRules question:
                 var answer0 = app.Query(question);
-                WriteCredentialCaptureDecision(writer, answer0);
+                WriteContentRuleList(writer, answer0);
+                break;
+            case CredentialCapture question:
+                var answer1 = app.Query(question);
+                WriteCredentialCaptureDecision(writer, answer1);
                 break;
             case CredentialFill question:
-                var answer1 = app.Query(question);
-                WriteCredentialFillDecision(writer, answer1);
+                var answer2 = app.Query(question);
+                WriteCredentialFillDecision(writer, answer2);
                 break;
             case CredentialSave question:
-                var answer2 = app.Query(question);
-                WriteCredentialSavePlan(writer, answer2);
+                var answer3 = app.Query(question);
+                WriteCredentialSavePlan(writer, answer3);
                 break;
             case CredentialSaveCheck question:
-                var answer3 = app.Query(question);
-                WriteCredentialSaveVerdict(writer, answer3);
+                var answer4 = app.Query(question);
+                WriteCredentialSaveVerdict(writer, answer4);
                 break;
             case CredentialSaveMatch question:
-                var answer4 = app.Query(question);
-                WriteCredentialChoice(writer, answer4);
+                var answer5 = app.Query(question);
+                WriteCredentialChoice(writer, answer5);
+                break;
+            case CustomSearchEngineAdmission question:
+                var answer6 = app.Query(question);
+                WriteCustomSearchEngine(writer, answer6);
                 break;
             case DownloadProgress question:
-                var answer5 = app.Query(question);
-                WriteDownloadProgressReading(writer, answer5);
+                var answer7 = app.Query(question);
+                WriteDownloadProgressReading(writer, answer7);
                 break;
             case DownloadRisk question:
-                var answer6 = app.Query(question);
-                WriteDownloadRiskVerdict(writer, answer6);
+                var answer8 = app.Query(question);
+                WriteDownloadRiskVerdict(writer, answer8);
                 break;
             case MostRecentCredential question:
-                var answer7 = app.Query(question);
-                WriteCredentialChoice(writer, answer7);
+                var answer9 = app.Query(question);
+                WriteCredentialChoice(writer, answer9);
                 break;
             case PasskeyAccess question:
-                var answer8 = app.Query(question);
-                WritePasskeyAccessVerdict(writer, answer8);
+                var answer10 = app.Query(question);
+                WritePasskeyAccessVerdict(writer, answer10);
                 break;
             case StrongPassword question:
-                var answer9 = app.Query(question);
-                WriteStrongPasswordRecipe(writer, answer9);
+                var answer11 = app.Query(question);
+                WriteStrongPasswordRecipe(writer, answer11);
                 break;
             case SystemPasswordOffer question:
-                var answer10 = app.Query(question);
-                WriteSystemPasswordOfferDecision(writer, answer10);
+                var answer12 = app.Query(question);
+                WriteSystemPasswordOfferDecision(writer, answer12);
                 break;
             case SystemPasswordWriteThrough question:
-                var answer11 = app.Query(question);
-                WriteSystemPasswordWriteThroughSupport(writer, answer11);
+                var answer13 = app.Query(question);
+                WriteSystemPasswordWriteThroughSupport(writer, answer13);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
@@ -384,6 +417,16 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.DownloadId);
+    }
+
+    public static BalancedProtectionRules ReadBalancedProtectionRules(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new BalancedProtectionRules();
+    }
+
+    public static void WriteBalancedProtectionRules(WireWriter writer, BalancedProtectionRules value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
     }
 
     public static BeginDownload ReadBeginDownload(WireReader reader) {
@@ -430,6 +473,20 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.DownloadId);
         writer.WriteString(value.Message);
+    }
+
+    public static ContentRuleList ReadContentRuleList(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ContentRuleList(
+            reader.ReadString(),
+            reader.ReadString());
+    }
+
+    public static void WriteContentRuleList(WireWriter writer, ContentRuleList value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Identifier);
+        writer.WriteString(value.Source);
     }
 
     public static CredentialCapture ReadCredentialCapture(WireReader reader) {
@@ -757,6 +814,46 @@ public static class ContractCodec {
         writer.WriteDouble(value.CapturedAt);
     }
 
+    public static CustomSearchEngine ReadCustomSearchEngine(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CustomSearchEngine(
+            reader.ReadGuid(),
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+    }
+
+    public static void WriteCustomSearchEngine(WireWriter writer, CustomSearchEngine value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteString(value.Name);
+        writer.WriteString(value.SearchTemplate);
+        if (value.SuggestionTemplate is { } presentSuggestionTemplate) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSuggestionTemplate);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static CustomSearchEngineAdmission ReadCustomSearchEngineAdmission(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CustomSearchEngineAdmission(
+            ReadCustomSearchEngine(reader),
+            reader.ReadList(() => ReadCustomSearchEngine(reader)));
+    }
+
+    public static void WriteCustomSearchEngineAdmission(WireWriter writer, CustomSearchEngineAdmission value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCustomSearchEngine(writer, value.Engine);
+        writer.WriteCount(value.Existing.Count);
+        foreach (var itemExisting in value.Existing) {
+            WriteCustomSearchEngine(writer, itemExisting);
+        }
+    }
+
     public static DownloadLimitReached ReadDownloadLimitReached(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new DownloadLimitReached(
@@ -1081,6 +1178,16 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
     }
 
+    public static DuplicateSearchEngineName ReadDuplicateSearchEngineName(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DuplicateSearchEngineName();
+    }
+
+    public static void WriteDuplicateSearchEngineName(WireWriter writer, DuplicateSearchEngineName value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
     public static ExpireDownloads ReadExpireDownloads(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new ExpireDownloads(
@@ -1237,6 +1344,18 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
     }
 
+    public static InvalidSearchEngine ReadInvalidSearchEngine(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidSearchEngine(
+            ReadSearchEngineFlaw(reader));
+    }
+
+    public static void WriteInvalidSearchEngine(WireWriter writer, InvalidSearchEngine value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteSearchEngineFlaw(writer, value.Flaw);
+    }
+
     public static MostRecentCredential ReadMostRecentCredential(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new MostRecentCredential(
@@ -1330,6 +1449,18 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.DownloadId);
+    }
+
+    public static SearchEngineLimitReached ReadSearchEngineLimitReached(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SearchEngineLimitReached(
+            reader.ReadInt32());
+    }
+
+    public static void WriteSearchEngineLimitReached(WireWriter writer, SearchEngineLimitReached value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteInt32(value.Limit);
     }
 
     public static SetDownloadDestination ReadSetDownloadDestination(WireReader reader) {
@@ -1576,6 +1707,16 @@ public static class ContractCodec {
     }
 
     public static void WritePasskeyDeviceConfiguration(WireWriter writer, PasskeyDeviceConfiguration value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SearchEngineFlaw ReadSearchEngineFlaw(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SearchEngineFlaw)reader.ReadEnum(13);
+    }
+
+    public static void WriteSearchEngineFlaw(WireWriter writer, SearchEngineFlaw value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }

@@ -107,8 +107,7 @@ final class MobileBrowserPageStore:
             @escaping HTTPAuthenticationCredentialSaver = { _, _ in },
         profileRemover:
             any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
-        contentRuleListProvider:
-            any BrowserContentRuleListProviding = BrowserContentRuleListProvider.shared,
+        contentRuleListProvider: (any BrowserContentRuleListProviding)? = nil,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
         popupTabHost: BrowserPopupTabHost = .unavailable,
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
@@ -136,7 +135,6 @@ final class MobileBrowserPageStore:
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
         self.profileRemover = profileRemover
-        contentBlocking = BrowserContentBlockingController(provider: contentRuleListProvider)
         self.linkDestinationHost = linkDestinationHost
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
@@ -155,6 +153,8 @@ final class MobileBrowserPageStore:
             )
         downloadRiskConfirmation = downloads.riskConfirmation
         downloadCenter = downloads.center
+        contentBlocking = BrowserContentBlockingController(
+            provider: contentRuleListProvider ?? BrowserContentRuleListProvider.forLaunch(core: downloads.center.core))
         if monitorsMemoryPressure {
             installMemoryPressureSource()
         }

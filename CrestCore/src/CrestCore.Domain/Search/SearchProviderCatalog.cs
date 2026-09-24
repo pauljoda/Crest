@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// The built-in search engines every Space offers, with their results and
@@ -29,8 +31,8 @@ public static class SearchProviderCatalog {
     /// template: queries go to Google, as the selection fallback does.
     public static SearchProvider CustomOrDefault(Guid id, string name, string search, string? suggestions) {
         try {
-            return SearchProvider.Custom(id, name, search, suggestions);
-        } catch (BrowserRuleException) {
+            return SearchProvider.Admit(id, name, search, suggestions);
+        } catch (Rejected) {
             return Google;
         }
     }

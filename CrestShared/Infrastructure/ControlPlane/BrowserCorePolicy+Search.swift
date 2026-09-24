@@ -92,21 +92,6 @@ extension BrowserCorePolicy {
         let url: String
     }
 
-    private struct CustomProviderRequest: Encodable {
-        struct Existing: Encodable {
-            let id: String
-            let name: String
-        }
-
-        let provider: BrowserCoreSearchProviderRecord
-        let existing: [Existing]
-    }
-
-    private struct CustomProviderAnswer: Decodable {
-        @BrowserCoreOptional var error: BrowserCoreErrorCode?
-        @BrowserCoreOptional var provider: BrowserCoreSearchProviderRecord?
-    }
-
     private struct CustomProvidersRequest: Encodable {
         let selectedID: BrowserSearchProviderID
         let providers: [BrowserCoreSearchProviderRecord]
@@ -148,24 +133,6 @@ extension BrowserCorePolicy {
             searchProvider: SearchProviderDescriptor(provider), query: query, purpose: purpose)
         guard let answer = evaluate(.searchURL, request, answer: SearchURLAnswer.self) else { return nil }
         return URL(string: answer.url)
-    }
-
-    /// The normalized custom engine the core would save, or the rule it breaks.
-    static func admittedCustomSearchProvider(
-        _ provider: BrowserCustomSearchProvider,
-        existing: [BrowserCustomSearchProvider]
-    ) throws -> BrowserCustomSearchProvider {
-        let request = CustomProviderRequest(
-            provider: BrowserCoreSearchProviderRecord(provider),
-            existing: existing.map { CustomProviderRequest.Existing(id: $0.id.coreIdentifier, name: $0.name) })
-        guard let answer = evaluate(.searchCustomProvider, request, answer: CustomProviderAnswer.self) else {
-            throw BrowserCustomSearchProviderError.invalidURL
-        }
-        if let error = answer.error {
-            throw BrowserCustomSearchProviderError(rawValue: error.rawValue) ?? .invalidURL
-        }
-        guard let admitted = answer.provider?.provider else { throw BrowserCustomSearchProviderError.invalidURL }
-        return admitted
     }
 
     /// Which stored custom engines remain usable, and the selection that

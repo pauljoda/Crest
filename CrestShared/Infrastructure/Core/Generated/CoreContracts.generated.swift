@@ -29,6 +29,7 @@ enum Rejection: Equatable, Error, Sendable {
     case downloadLimitReached(DownloadLimitReached)
     case duplicateCredential(DuplicateCredential)
     case duplicateDownload(DuplicateDownload)
+    case duplicateSearchEngineName(DuplicateSearchEngineName)
     case invalidCredentialDate(InvalidCredentialDate)
     case invalidCredentialOrigin(InvalidCredentialOrigin)
     case invalidCredentialRecord(InvalidCredentialRecord)
@@ -39,6 +40,8 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidDownloadText(InvalidDownloadText)
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
+    case invalidSearchEngine(InvalidSearchEngine)
+    case searchEngineLimitReached(SearchEngineLimitReached)
     case staleCredentialComparison(StaleCredentialComparison)
 }
 
@@ -67,6 +70,11 @@ struct AwaitDownloadApproval: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
 
+struct BalancedProtectionRules: Query, Equatable, Sendable {
+    typealias Answer = ContentRuleList
+
+}
+
 struct BeginDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let profileID: UUID
@@ -82,6 +90,11 @@ struct BlockAutomaticDownload: Intent, Equatable, Sendable {
 struct CancelDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
+}
+
+struct ContentRuleList: Equatable, Sendable {
+    let identifier: String
+    let source: String
 }
 
 struct CredentialCapture: Query, Equatable, Sendable {
@@ -196,6 +209,20 @@ struct CredentialUsernameHint: Equatable, Sendable {
     let capturedAt: Double
 }
 
+struct CustomSearchEngine: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let name: String
+    let searchTemplate: String
+    let suggestionTemplate: String?
+}
+
+struct CustomSearchEngineAdmission: Query, Equatable, Sendable {
+    typealias Answer = CustomSearchEngine
+
+    let engine: CustomSearchEngine
+    let existing: [CustomSearchEngine]
+}
+
 struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
@@ -294,6 +321,9 @@ struct DuplicateCredential: Equatable, Sendable {
 struct DuplicateDownload: Equatable, Sendable {
 }
 
+struct DuplicateSearchEngineName: Equatable, Sendable {
+}
+
 struct ExpireDownloads: Intent, Equatable, Sendable {
     let now: Date
     let retentions: [DownloadRetention]
@@ -342,6 +372,10 @@ struct InvalidPasswordLength: Equatable, Sendable {
 struct InvalidRetentionLifetime: Equatable, Sendable {
 }
 
+struct InvalidSearchEngine: Equatable, Sendable {
+    let flaw: SearchEngineFlaw
+}
+
 struct MostRecentCredential: Query, Equatable, Sendable {
     typealias Answer = CredentialChoice
 
@@ -376,6 +410,10 @@ struct RemoveProfileDownloads: Intent, Equatable, Sendable {
 
 struct RestartDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
+}
+
+struct SearchEngineLimitReached: Equatable, Sendable {
+    let limit: Int
 }
 
 struct SetDownloadDestination: Intent, Equatable, Sendable {
@@ -513,6 +551,22 @@ enum PasskeyDeviceConfiguration: Int, CaseIterable, Sendable {
     case configured = 0
     case notConfigured = 1
     case unknown = 2
+}
+
+enum SearchEngineFlaw: Int, CaseIterable, Sendable {
+    case invalidIdentity = 0
+    case emptyName = 1
+    case nameTooLong = 2
+    case templateTooLong = 3
+    case missingPlaceholder = 4
+    case ambiguousPlaceholder = 5
+    case invalidTemplate = 6
+    case requiresHttps = 7
+    case unsafeHost = 8
+    case nonstandardPort = 9
+    case credentialsInTemplate = 10
+    case placeholderInFragment = 11
+    case secretInTemplate = 12
 }
 
 enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {

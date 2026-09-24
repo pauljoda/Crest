@@ -10,15 +10,11 @@ namespace CrestCore.Application;
 public static partial class NativePolicyEvaluator {
     #region Actions - Presentation
 
-    /// Null when the operation is not a page presentation, content-blocking or
-    /// branding policy.
+    /// Null when the operation is not a page presentation or branding policy.
     private static JsonObject? EvaluatePresentation(PolicyOperation operation, JsonElement request) {
         switch (operation) {
             case PolicyOperation.PagePresentation:
                 return PresentPage(Requests.Page.Decode(request));
-            case PolicyOperation.ContentBlockingRules:
-                PolicyFields.Members(request);
-                return PresentationCodes.ContentBlockingAnswer();
             case PolicyOperation.BrandingNormalize:
                 return PresentationCodes.BrandingAnswer(StoredSessionCodec.Encode(
                     SpaceBrandingPolicy.Normalize(StoredSessionCodec.DecodeBranding(Requests.Branding.Decode(request).Document))));

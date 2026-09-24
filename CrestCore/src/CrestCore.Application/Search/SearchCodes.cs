@@ -66,18 +66,9 @@ internal static class SearchCodes {
 
     #region Actions - Encoding
 
-    public static JsonObject Custom(SearchProvider provider) => new() {
-        [Id] = provider.Id[SearchProvider.CustomPrefix.Length..],
-        [Name] = provider.Name,
-        [SearchTemplate] = provider.SearchTemplate,
-        [SuggestionTemplate] = provider.SuggestionTemplate
-    };
-
     public static JsonObject IntentAnswer(AddressResolution? intent) => new() { ["url"] = intent?.Url, ["searchQuery"] = intent?.SearchQuery };
 
     public static JsonObject UrlAnswer(string? url) => new() { ["url"] = url };
-
-    public static JsonObject ProviderAnswer(SearchProvider provider) => new() { ["provider"] = Custom(provider) };
 
     public static JsonObject RestoredAnswer(string? selectedId, IEnumerable<int> indices) => new() {
         ["selectedID"] = selectedId,

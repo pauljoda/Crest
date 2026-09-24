@@ -61,17 +61,26 @@ public sealed class SearchPreferences {
         SearchSuggestionsEnabled = SuggestionsEnabled
     };
 
-    /// Rejects an already validated custom engine whose name another custom
-    /// engine uses (ignoring case and diacritics), or that would exceed the limit.
-    public static void RequireAdmissible(SearchProvider provider, IReadOnlyCollection<(string Id, string Name)> existing) {
+    /// Refuses an already validated custom engine whose name another custom
+    /// engine uses (ignoring case and diacritics), or that would exceed the
+    /// limit. Throws `Rejected` naming the rule.
+    public static void Admit(SearchProvider provider, IReadOnlyCollection<(string Id, string Name)> existing) {
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(existing);
-        if (!provider.IsCustom) throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchProvider);
+        if (!provider.IsCustom) throw new Rejected(new InvalidSearchEngine(SearchEngineFlaw.InvalidIdentity));
         string name = Fold(provider.Name);
-        if (existing.Any(p => p.Id != provider.Id && Fold(p.Name) == name))
-            throw new BrowserRuleException(BrowserRuleCodes.DuplicateSearchName);
+        if (existing.Any(p => p.Id != provider.Id && Fold(p.Name) == name)) throw new Rejected(new DuplicateSearchEngineName());
         if (existing.All(p => p.Id != provider.Id) && existing.Count >= MaximumCustomProviders)
-            throw new BrowserRuleException(BrowserRuleCodes.SearchProviderLimit);
+            throw new Rejected(new SearchEngineLimitReached(MaximumCustomProviders));
+    }
+
+    /// `Admit` for session commands, which report the rule as its code.
+    public static void RequireAdmissible(SearchProvider provider, IReadOnlyCollection<(string Id, string Name)> existing) {
+        try {
+            Admit(provider, existing);
+        } catch (Rejected rejected) {
+            throw new BrowserRuleException(BrowserRuleCodes.SearchEngine(rejected.Rejection));
+        }
     }
 
     private static string Fold(string value) => string.Concat(value.Trim().Normalize(NormalizationForm.FormD)

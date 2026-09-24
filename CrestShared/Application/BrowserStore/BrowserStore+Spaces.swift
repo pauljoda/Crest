@@ -154,8 +154,14 @@ extension BrowserStore {
     ) throws {
         guard let owner = spaceCommandOwner(.spaceSearchProviderUpsert, in: spaceID),
             let space = owner.session.space(id: spaceID) else { return }
-        let admitted = try BrowserCorePolicy.admittedCustomSearchProvider(
-            provider, existing: space.browsingPreferences.customSearchProviders)
+        let admission = CustomSearchEngineAdmission(
+            engine: provider.engine, existing: space.browsingPreferences.customSearchProviders.map(\.engine))
+        let admitted: BrowserCustomSearchProvider
+        do {
+            admitted = BrowserCustomSearchProvider(try core.query(admission))
+        } catch {
+            throw BrowserCustomSearchProviderError(error)
+        }
         // The command re-applies the same rule against the accepted record; an
         // unchanged save reports no change rather than an error.
         guard

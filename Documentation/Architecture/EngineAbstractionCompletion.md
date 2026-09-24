@@ -160,7 +160,7 @@ Remaining:
   the WebKit adapter folder.
 - `BrowserPagePool`'s initializer defaults still name WebKit adapter types:
   `WebKitBrowserWebsiteDataStoreRemover` and
-  `BrowserContentRuleListProvider.shared`.
+  `BrowserContentRuleListProvider`.
 - `BrowserPage` builds a `BrowserPopupCoordinator` for every page, and that
   type imports WebKit. `BrowserTransientPageLease`, which Quick Window uses,
   carries WebKit content-rule lists.
@@ -268,11 +268,11 @@ operations or a bounded export. Swift keeps projections and adapters.
 | Downloads | Typed download intents, changes and the `DownloadProgress` and `DownloadRisk` queries on `crest_app_*`; the `downloads.automatic` operation |
 | Credentials and passkeys | The `CredentialCapture`, `CredentialFill`, `CredentialSaveCheck`, `MostRecentCredential`, `CredentialSaveMatch`, `CredentialSave`, `StrongPassword`, `PasskeyAccess`, `SystemPasswordWriteThrough` and `SystemPasswordOffer` queries on `crest_app_*`. Passwords never cross the boundary |
 | Site permissions and origins | `crest_permissions_*` ledger (`load`, `decision`, `media_decision`, `records`, `set`, `reset_record`, `reset_space`, `reset_session`); `geolocation.origin`, `notifications.origin`, `notifications.permission_request`, `popups.automatic`, `popups.notice`, `external.url`, `external.local_document`, `external.scheme`, `external.consent`, `authentication.handling`, `authentication.source_label` and `authentication.fixture_trust` |
-| Search and translation | `SearchProviderCatalog`; `search.url`, `search.custom_provider`, `search.custom_providers` and `translation.*`; the `space.search_provider.*` commands |
+| Search and translation | `SearchProviderCatalog`; the `CustomSearchEngineAdmission` query; `search.url`, `search.custom_providers` and `translation.*`; the `space.search_provider.*` commands |
 | Window state and plans | `window.repair`, `window.split_layout`, `window.tear_off`, `tabs.selection_fallback`, `setup.space`, `setup.tab`, `setup.reconcile`, `onboarding.completion` and `onboarding.guide`; the `workspace.review` query; split-run validation in the workspace import |
 | Shortcuts, launch and media | `shortcuts.bindings`, `.assign` and `.numbered_selection`; `launch.plan`; `media.session_event` and `media.arbitrate`; the `tab.open` `after` anchor |
 | Behavior preferences | The session's `appPreferences` record behind `preferences.set`, `preferences.translation_rule` and a one-time `preferences.import`. Device-local, never synced |
-| Links, Quick Window, presentation | `links.*`, `quick_window.*`, `workspace.command_route`, `page.presentation`, `content_blocking.rules`, `branding.normalize` and the `space.branding` command |
+| Links, Quick Window, presentation | `links.*`, `quick_window.*`, `workspace.command_route`, `page.presentation`, the `BalancedProtectionRules` query, `branding.normalize` and the `space.branding` command |
 
 Selection left the core. The active Space and each Space's shown tab are
 window state (`BrowserStoreSelection`, persisted in `BrowserWindowState`).

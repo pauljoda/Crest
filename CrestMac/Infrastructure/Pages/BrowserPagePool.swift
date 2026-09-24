@@ -174,8 +174,7 @@ final class BrowserPagePool:
         profileRemover:
             any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
         makePageEngine: BrowserPageEngineMaker? = nil,
-        contentRuleListProvider:
-            any BrowserContentRuleListProviding = BrowserContentRuleListProvider.shared,
+        contentRuleListProvider: (any BrowserContentRuleListProviding)? = nil,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
         popupTabHost: BrowserPopupTabHost = .unavailable,
         openNewTab: @escaping (URL) -> Void = { _ in },
@@ -208,6 +207,8 @@ final class BrowserPagePool:
         self.windowID = windowID
         self.profileDataStores = profileDataStores ?? BrowserPageProfileDataStores()
         self.monitorsMemoryPressure = monitorsMemoryPressure
+        let contentRuleListProvider =
+            contentRuleListProvider ?? BrowserContentRuleListProvider.forLaunch(core: core)
         self.contentRuleListProvider = contentRuleListProvider
         self.passkeyAccess = passkeyAccess
         tabState = owner.tabState

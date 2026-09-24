@@ -645,7 +645,7 @@ creating, removing, reordering Spaces and imports are refused there; everything
 else is local. The borrowed authority enforces the same rule, rejecting a
 source-owned command with `borrowed_profile_requires_owner`. The page surface
 for a selected tab (`page.presentation`), the Balanced content-blocking rule
-list (`content_blocking.rules`) and branding range rules (`branding.normalize`,
+list (the `BalancedProtectionRules` query) and branding range rules (`branding.normalize`,
 also applied by the `space.branding` command) are core policy; the crest's
 heraldic vocabulary and its composition parameters stay native.
 

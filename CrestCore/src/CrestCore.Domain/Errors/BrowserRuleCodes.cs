@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Stable browser rule error code identifiers exposed to native callers.
@@ -210,6 +212,33 @@ public static class BrowserRuleCodes {
     public const string InvalidPreferenceValue = "invalid_preference_value";
     public const string UnknownPreference = "unknown_preference";
     public const string UnknownPreferenceCommand = "unknown_preference_command";
+
+    #endregion
+
+    #region Actions - Search engines
+
+    /// The code a session command reports for a refused custom search engine,
+    /// until those commands answer typed rejections.
+    public static string SearchEngine(Rejection rejection) => rejection switch {
+        DuplicateSearchEngineName => DuplicateSearchName,
+        SearchEngineLimitReached => SearchProviderLimit,
+        InvalidSearchEngine invalid => invalid.Flaw switch {
+            SearchEngineFlaw.EmptyName => InvalidSearchName,
+            SearchEngineFlaw.NameTooLong => SearchNameTooLong,
+            SearchEngineFlaw.TemplateTooLong => SearchTemplateTooLong,
+            SearchEngineFlaw.MissingPlaceholder => SearchPlaceholderMissing,
+            SearchEngineFlaw.AmbiguousPlaceholder => InvalidSearchPlaceholder,
+            SearchEngineFlaw.InvalidTemplate => InvalidSearchTemplate,
+            SearchEngineFlaw.RequiresHttps => SearchTemplateRequiresHttps,
+            SearchEngineFlaw.UnsafeHost => UnsafeSearchTemplate,
+            SearchEngineFlaw.NonstandardPort => SearchTemplatePort,
+            SearchEngineFlaw.CredentialsInTemplate => SearchTemplateCredentials,
+            SearchEngineFlaw.PlaceholderInFragment => SearchPlaceholderInFragment,
+            SearchEngineFlaw.SecretInTemplate => SearchTemplateContainsSecret,
+            _ => InvalidSearchProvider
+        },
+        _ => InvalidSearchProvider
+    };
 
     #endregion
 }

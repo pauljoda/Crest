@@ -69,6 +69,7 @@ struct MobileBrowserPreviewFixture {
             browsingMode: .privateBrowsing
         )
         let contentRuleListProvider = BrowserContentRuleListProvider(
+            core: browser.core,
             ruleListStore: nil
         )
         let pages = MobileBrowserPageStore(

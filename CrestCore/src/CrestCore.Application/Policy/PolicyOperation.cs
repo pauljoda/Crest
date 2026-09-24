@@ -28,7 +28,6 @@ internal enum PolicyOperation {
     ResidencyProcessRecovery,
     ResidencyReleaseLimit,
     ResidencyReleasePlan,
-    SearchCustomProvider,
     SearchCustomProviders,
     SearchUrl,
     SetupReconcile,
@@ -43,7 +42,6 @@ internal enum PolicyOperation {
     TranslationRule,
     // Links, Quick Windows, presentation, branding and workspace routing.
     BrandingNormalize,
-    ContentBlockingRules,
     LinksRoute,
     LinksRouteCreate,
     LinksRouteMove,
@@ -91,7 +89,6 @@ internal static class PolicyOperationCodes {
         "residency.process_recovery" => PolicyOperation.ResidencyProcessRecovery,
         "residency.release_limit" => PolicyOperation.ResidencyReleaseLimit,
         "residency.release_plan" => PolicyOperation.ResidencyReleasePlan,
-        "search.custom_provider" => PolicyOperation.SearchCustomProvider,
         "search.custom_providers" => PolicyOperation.SearchCustomProviders,
         "search.url" => PolicyOperation.SearchUrl,
         "setup.reconcile" => PolicyOperation.SetupReconcile,
@@ -106,7 +103,6 @@ internal static class PolicyOperationCodes {
         "translation.rule" => PolicyOperation.TranslationRule,
         // Links, Quick Windows, presentation, branding and workspace routing.
         "branding.normalize" => PolicyOperation.BrandingNormalize,
-        "content_blocking.rules" => PolicyOperation.ContentBlockingRules,
         "links.route" => PolicyOperation.LinksRoute,
         "links.route_create" => PolicyOperation.LinksRouteCreate,
         "links.route_move" => PolicyOperation.LinksRouteMove,

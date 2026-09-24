@@ -8,18 +8,13 @@ enum BrowserWorkspaceCommandRoute: String, Decodable {
     case rejected
 }
 
-/// Page presentation, content blocking, branding and workspace routing rules
-/// owned by the portable core.
+/// Page presentation, branding and workspace routing rules owned by the
+/// portable core.
 extension BrowserCorePolicy {
     // MARK: - Types
 
     private struct PresentationAnswer: Decodable {
         let presentation: BrowserPagePresentation
-    }
-
-    private struct ContentBlockingAnswer: Decodable {
-        let identifier: String
-        let source: String
     }
 
     private struct BrandingRequest: Encodable {
@@ -55,14 +50,6 @@ extension BrowserCorePolicy {
         else { return .noSelection }
         pagePresentations.withLock { $0[input] = presentation }
         return presentation
-    }
-
-    /// Crest's bundled Balanced rule list: its versioned identifier and WebKit
-    /// content-rule source. Nil when the core cannot answer, so nothing is
-    /// compiled under a stale identifier.
-    static func balancedContentBlockingRules() -> (identifier: String, source: String)? {
-        guard let answer = evaluate(.contentBlockingRules, answer: ContentBlockingAnswer.self) else { return nil }
-        return (answer.identifier, answer.source)
     }
 
     /// Branding with the core's range rules applied. The native decoder then

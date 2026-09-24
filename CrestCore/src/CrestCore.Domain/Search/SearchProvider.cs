@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// One search engine: a built-in from `SearchProviderCatalog` or a Space's
@@ -49,47 +51,60 @@ public sealed record SearchProvider(string Id, string Name, string SearchTemplat
     #region Actions - Validation
 
     /// Validates and normalizes a custom engine. Names and templates are
-    /// trimmed; an empty suggestion template means the engine has none.
-    public static SearchProvider Custom(Guid id, string name, string search, string? suggestions) {
+    /// trimmed; an empty suggestion template means the engine has none. Throws
+    /// `Rejected` with `InvalidSearchEngine` naming the first flaw found.
+    public static SearchProvider Admit(Guid id, string name, string search, string? suggestions) {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(search);
-        if (id == Guid.Empty) throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchProvider);
+        if (id == Guid.Empty) throw Flawed(SearchEngineFlaw.InvalidIdentity);
         name = name.Trim();
-        if (name.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchName);
-        if (new StringInfo(name).LengthInTextElements > MaximumNameLength) throw new BrowserRuleException(BrowserRuleCodes.SearchNameTooLong);
+        if (name.Length == 0) throw Flawed(SearchEngineFlaw.EmptyName);
+        if (new StringInfo(name).LengthInTextElements > MaximumNameLength) throw Flawed(SearchEngineFlaw.NameTooLong);
         return new(CustomId(id), name, ValidateTemplate(search),
             string.IsNullOrWhiteSpace(suggestions) ? null : ValidateTemplate(suggestions));
     }
 
+    /// `Admit` for session commands and stored preferences, which report a
+    /// flaw as its rule code.
+    public static SearchProvider Custom(Guid id, string name, string search, string? suggestions) {
+        try {
+            return Admit(id, name, search, suggestions);
+        } catch (Rejected rejected) {
+            throw new BrowserRuleException(BrowserRuleCodes.SearchEngine(rejected.Rejection));
+        }
+    }
+
+    private static Rejected Flawed(SearchEngineFlaw flaw) => new(new InvalidSearchEngine(flaw));
+
     private static string ValidateTemplate(string value) {
         value = value.Trim();
-        if (value.Length > MaximumTemplateLength) throw new BrowserRuleException(BrowserRuleCodes.SearchTemplateTooLong);
+        if (value.Length > MaximumTemplateLength) throw Flawed(SearchEngineFlaw.TemplateTooLong);
         int count = Occurrences(value, PercentPlaceholder) + Occurrences(value, OpenSearchPlaceholder);
-        if (count == 0) throw new BrowserRuleException(BrowserRuleCodes.SearchPlaceholderMissing);
-        if (count != 1) throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchPlaceholder);
+        if (count == 0) throw Flawed(SearchEngineFlaw.MissingPlaceholder);
+        if (count != 1) throw Flawed(SearchEngineFlaw.AmbiguousPlaceholder);
         for (int i = 0; i < value.Length; i++) {
             if (value[i] != '%') continue;
             if (i + 1 < value.Length && value[i + 1] == 's') { i++; continue; }
             if (i + 2 >= value.Length || !Uri.IsHexDigit(value[i + 1]) || !Uri.IsHexDigit(value[i + 2]))
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchTemplate);
+                throw Flawed(SearchEngineFlaw.InvalidTemplate);
             i += 2;
         }
         var probe = value.Replace(PercentPlaceholder, ProbeMarker, StringComparison.Ordinal)
             .Replace(OpenSearchPlaceholder, ProbeMarker, StringComparison.Ordinal);
         // A template without a scheme is an HTTPS omission, not a malformed URL.
         if (!Uri.TryCreate(probe, UriKind.Absolute, out var uri) || uri.IsFile)
-            throw new BrowserRuleException(probe.Contains("://", StringComparison.Ordinal)
-                ? BrowserRuleCodes.InvalidSearchTemplate : BrowserRuleCodes.SearchTemplateRequiresHttps);
-        if (uri.Scheme != Uri.UriSchemeHttps) throw new BrowserRuleException(BrowserRuleCodes.SearchTemplateRequiresHttps);
-        if (uri.Host.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidSearchTemplate);
-        if (uri.UserInfo.Length != 0) throw new BrowserRuleException(BrowserRuleCodes.SearchTemplateCredentials);
-        if (uri.Port != 443) throw new BrowserRuleException(BrowserRuleCodes.SearchTemplatePort);
-        if (!IsPublicHost(uri.Host)) throw new BrowserRuleException(BrowserRuleCodes.UnsafeSearchTemplate);
+            throw Flawed(probe.Contains("://", StringComparison.Ordinal)
+                ? SearchEngineFlaw.InvalidTemplate : SearchEngineFlaw.RequiresHttps);
+        if (uri.Scheme != Uri.UriSchemeHttps) throw Flawed(SearchEngineFlaw.RequiresHttps);
+        if (uri.Host.Length == 0) throw Flawed(SearchEngineFlaw.InvalidTemplate);
+        if (uri.UserInfo.Length != 0) throw Flawed(SearchEngineFlaw.CredentialsInTemplate);
+        if (uri.Port != 443) throw Flawed(SearchEngineFlaw.NonstandardPort);
+        if (!IsPublicHost(uri.Host)) throw Flawed(SearchEngineFlaw.UnsafeHost);
         if (uri.Fragment.Contains(ProbeMarker, StringComparison.Ordinal))
-            throw new BrowserRuleException(BrowserRuleCodes.SearchPlaceholderInFragment);
+            throw Flawed(SearchEngineFlaw.PlaceholderInFragment);
         foreach (var parameter in uri.Query.TrimStart('?').Split('&'))
             if (SecretParameters.Contains(Uri.UnescapeDataString(parameter.Split('=')[0]), StringComparer.OrdinalIgnoreCase))
-                throw new BrowserRuleException(BrowserRuleCodes.SearchTemplateContainsSecret);
+                throw Flawed(SearchEngineFlaw.SecretInTemplate);
         return value;
     }
 

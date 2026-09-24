@@ -38,26 +38,6 @@ internal static class SearchPolicyRequests {
         }
     }
 
-    /// A custom engine the person is adding. `Rejection` is the rule the typed
-    /// engine itself broke; the editor explains it instead of failing the call.
-    public sealed record CustomProvider(IReadOnlyList<(string Id, string Name)> Existing, SearchProvider? Provider,
-        BrowserRuleException? Rejection) {
-        public static CustomProvider Decode(JsonElement request) {
-            Members(request, "provider", "existing");
-            var existing = new List<(string Id, string Name)>();
-            foreach (var item in Element(request, "existing").EnumerateArray()) {
-                Protocol.Members(item, SearchCodes.Id, SearchCodes.Name);
-                existing.Add((SearchProvider.CustomId(Protocol.Id(item, SearchCodes.Id)), SearchCodes.Edited(item, SearchCodes.Name)));
-                if (existing.Count > MaximumStoredProviders) throw new ProtocolException(ProtocolErrorCodes.SearchProviderBatchLimit);
-            }
-            try {
-                return new(existing, SearchCodes.Custom(Element(request, "provider")), null);
-            } catch (BrowserRuleException error) {
-                return new(existing, null, error);
-            }
-        }
-    }
-
     /// The stored custom engines by their position in the request. A stored
     /// engine that no longer validates is left out, never run.
     public sealed record CustomProviders(IReadOnlyList<(int Index, SearchProvider Provider)> Stored, string? SelectedId) {

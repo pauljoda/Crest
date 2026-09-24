@@ -42,25 +42,8 @@ internal static class PresentationCodes {
 
     public static JsonObject PresentationAnswer(PagePresentation value) => new() { ["presentation"] = Presentation(value) };
 
-    /// Balanced protection's rules under their store identifier.
-    public static JsonObject ContentBlockingAnswer() =>
-        new() { ["identifier"] = BalancedContentBlocking.Identifier, ["source"] = BalancedRuleSource() };
-
     public static JsonObject BrandingAnswer(JsonNode branding) => new() { ["branding"] = branding };
 
-    /// WebKit content-rule JSON for Balanced protection, as the source text the
-    /// rule-list store compiles under `BalancedContentBlocking.Identifier`.
-    private static string BalancedRuleSource() => new JsonArray(BalancedContentBlocking.BlockedHostSuffixes.Select(host =>
-        (JsonNode)new JsonObject {
-            ["trigger"] = new JsonObject {
-                ["url-filter"] = BalancedContentBlocking.UrlFilter(host),
-                ["url-filter-is-case-sensitive"] = true,
-                ["load-type"] = new JsonArray("third-party"),
-                ["resource-type"] = new JsonArray(BalancedContentBlocking.NetworkResourceTypes
-                    .Select(type => (JsonNode?)JsonValue.Create(type)).ToArray())
-            },
-            ["action"] = new JsonObject { ["type"] = "block" }
-        }).ToArray()).ToJsonString();
 
     #endregion
 }
