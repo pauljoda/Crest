@@ -22,7 +22,7 @@ public sealed partial class NativeSessionAuthority {
     /// workspace it borrows from owns the Space's profile and its settings,
     /// and makes, orders and deletes Spaces.
     private void RequireOwnedSpaces() {
-        if (workspaceKind == WorkspaceKind.Borrowed) throw new Rejected(new BorrowedProfileRequiresOwner(workspaceId));
+        if (!workspaceKind.OwnsSpaces) throw new Rejected(new BorrowedProfileRequiresOwner(workspaceId));
     }
 
     /// `basis` with the Space an intent edited in its place.
@@ -33,7 +33,7 @@ public sealed partial class NativeSessionAuthority {
         RequireOwnedSpaces();
         if (basis.Spaces.Any(space => space.Id == intent.SpaceId)) throw new Rejected(new SpaceAlreadyExists(intent.SpaceId));
         if (basis.Spaces.Count >= BrowserLimits.Spaces) throw new Rejected(new SpaceLimitReached(BrowserLimits.Spaces));
-        var space = SpaceTemplate.For(workspaceKind == WorkspaceKind.Private)
+        var space = SpaceTemplate.For(workspaceKind.IsPrivate)
             .Make(intent.SpaceId, ids.Next(), ids.Next(), basis.Spaces.Count + 1, now);
         // A new Space is the one its window shows next, on its only tab.
         var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId)).ShowSpace(space.Id).ShowTab(space.Id, space.Tabs[0].Id);
@@ -141,7 +141,7 @@ public sealed partial class NativeSessionAuthority {
     /// A private workspace starts over with one fresh private Space, which
     /// the window that asked shows. Nothing it held ever synced.
     private SessionEdit ResettingPrivateBrowsing(SessionState basis, ResetPrivateBrowsing intent, DateTimeOffset now, IIdSource ids) {
-        if (workspaceKind != WorkspaceKind.Private) throw new Rejected(new NotPrivateWorkspace(workspaceId));
+        if (!workspaceKind.IsPrivate) throw new Rejected(new NotPrivateWorkspace(workspaceId));
         var space = SpaceTemplate.Private.Make(ids.Next(), ids.Next(), ids.Next(), number: 1, now);
         var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId)).ShowSpace(space.Id).ShowTab(space.Id, space.Tabs[0].Id);
         return new(basis with { Spaces = [space], SpaceDeletions = [], DefaultSpaceId = null }, Staging: null, followUp);

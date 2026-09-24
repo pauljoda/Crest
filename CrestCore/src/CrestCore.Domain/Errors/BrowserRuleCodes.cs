@@ -6,9 +6,7 @@ public static class BrowserRuleCodes {
 
     public const string AccessAlreadyAttached = "access_already_attached";
     public const string AlreadyClosing = "already_closing";
-    public const string BorrowedProfile = "borrowed_profile";
     public const string BorrowedProfileRequiresOwner = "borrowed_profile_requires_owner";
-    public const string BorrowedSourceRequired = "borrowed_source_required";
     public const string DeletionRequiresCommand = "deletion_requires_command";
     public const string DuplicateMediaSession = "duplicate_media_session";
     public const string DuplicatePersistedIdentity = "duplicate_persisted_identity";
@@ -63,7 +61,6 @@ public static class BrowserRuleCodes {
     public const string InvalidTabCount = "invalid_tab_count";
     public const string InvalidTerminationCount = "invalid_termination_count";
     public const string InvalidTransition = "invalid_transition";
-    public const string InvalidWorkspaceKind = "invalid_workspace_kind";
     public const string MediaSessionLimit = "media_session_limit";
     public const string MissingSpaceIdentity = "missing_space_identity";
     public const string NoIncludedSpaces = "no_included_spaces";

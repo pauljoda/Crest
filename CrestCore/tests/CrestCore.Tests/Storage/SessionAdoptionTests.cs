@@ -30,7 +30,12 @@ public sealed partial class BrowserContractsTests {
 
     private static byte[] SeedDocument() => Bytes(SavedSession().Document["session"]!);
 
-    private static JsonObject Projection(CrestApp app) => JsonNode.Parse(app.SessionProjection()!.Output)!.AsObject();
+    /// The session `app` keeps in its file, opened as a launch opens it.
+    private static NativeSessionAuthority StoredSession(CrestApp app) => app.Workspace(TestWorkspaces.OpenStored(app).Workspace);
+
+    /// The session `app` keeps in its file, opened as a launch opens it, in
+    /// the stored format with each Space's history inside it.
+    private static JsonObject StoredDocument(CrestApp app) => StoredSessionCodec.Encode(StoredSession(app).Current);
 
     private static void AssertSameSession(JsonObject expected, JsonNode actual) {
         var differences = StoredJson.Differences(expected, actual, StoredJson.Comparison.AsSwiftReads);
@@ -49,14 +54,14 @@ public sealed partial class BrowserContractsTests {
         }
 
         using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
-            Assert.Null(app.Session);
+            Assert.Null(app.StoredSync);
             var adopted = Assert.Single(app.Send(new AdoptLegacySession(installed, SeedDocument())).OfType<SessionAdopted>());
             // The split layout kept images in the platform's own store.
             Assert.Empty(adopted.Favicons);
 
-            var projection = Projection(app);
-            AssertSameSession(expected, projection["session"]!);
-            var spaces = projection["session"]!["spaces"]!.AsArray();
+            var stored = StoredDocument(app);
+            AssertSameSession(expected, stored);
+            var spaces = stored["spaces"]!.AsArray();
             Assert.Equal([13, 12], spaces.Select(space => space!["history"]!.AsArray().Count));
             Assert.Contains(spaces, space => space!["accessPolicy"]!.GetValue<string>() == "deviceOwnerAuthentication");
             Assert.Contains(spaces.SelectMany(space => space!["tabs"]!.AsArray()), tab => tab!["faviconURL"] is not null);
@@ -64,11 +69,11 @@ public sealed partial class BrowserContractsTests {
             Assert.NotEmpty(spaces.SelectMany(space => space!["archivedTabs"]!.AsArray()));
             // A window without a record of its own still adopts the tabs the release showed.
             var window = Assert.IsType<WindowChanged>(Assert.Single(Own(app.Send(new OpenWindow(Guid.NewGuid(),
-                app.AttachWorkspace(app.Session!), Saved: true, null, null, [], RestoresTabs: true))))).Window;
+                TestWorkspaces.OpenStored(app).Workspace, Saved: true, null, null, [], RestoresTabs: true))))).Window;
             Assert.Contains(new ShownTab(SpaceId(spaces[1]!), SpaceId(spaces[1]!["tabs"]![2]!)), window.ShownTabs);
 
             // The journal keeps its device identity, clock, records and the uploads still owed.
-            var carried = JsonNode.Parse(app.SessionSync!.Snapshot.Read())!;
+            var carried = JsonNode.Parse(app.StoredSync!.Snapshot.Read())!;
             foreach (var member in new[] { "deviceID", "logicalClock", "records", "pendingRecordIDs" })
                 Assert.True(StoredJson.Differences(journal[member], carried[member], StoredJson.Comparison.AsSwiftReads).Count == 0, member);
             Assert.NotEmpty(journal["pendingRecordIDs"]!.AsArray());
@@ -83,8 +88,8 @@ public sealed partial class BrowserContractsTests {
         using var relaunched = new CrestApp(new AppConfiguration(directory.Path));
         relaunched.Drain();
         Assert.Empty(Own(relaunched.Send(new AdoptLegacySession(changed, SeedDocument()))));
-        AssertSameSession(expected, Projection(relaunched)["session"]!);
-        Assert.Equal(journal["records"]!.AsArray().Count, JsonNode.Parse(relaunched.SessionSync!.Snapshot.Read())!["records"]!.AsArray().Count);
+        AssertSameSession(expected, StoredDocument(relaunched));
+        Assert.Equal(journal["records"]!.AsArray().Count, JsonNode.Parse(relaunched.StoredSync!.Snapshot.Read())!["records"]!.AsArray().Count);
     }
 
     [Fact]
@@ -142,7 +147,7 @@ public sealed partial class BrowserContractsTests {
         var favicon = Assert.Single(adopted.Favicons);
         Assert.Equal(open, favicon.TabId);
         Assert.Equal(image, favicon.Image);
-        var carried = Projection(app)["session"]!["spaces"]![0]!;
+        var carried = StoredDocument(app)["spaces"]![0]!;
         var folder = Assert.Single(carried["folders"]!.AsArray(), item => item!["location"]!.GetValue<string>() == "current")!;
         Assert.Equal(group, SpaceId(folder));
         Assert.Equal("Research", folder["title"]!.GetValue<string>());
@@ -154,7 +159,7 @@ public sealed partial class BrowserContractsTests {
         Assert.NotEqual(group, Guid.Parse(tabs.Single(tab => SpaceId(tab!) == fixture.Tab)!["folderID"]!["rawValue"]!.GetValue<string>()));
         Assert.Equal(HistoryPolicy.MaximumEntries, carried["history"]!.AsArray().Count);
         Assert.Equal("Earlier visit", carried["history"]![0]!["title"]!.GetValue<string>());
-        Assert.Null(Projection(app)["session"]!["currentTabFolders"]);
+        Assert.Null(StoredDocument(app)["currentTabFolders"]);
     }
 
     [Fact]
@@ -172,7 +177,7 @@ public sealed partial class BrowserContractsTests {
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         app.Send(new AdoptLegacySession(installed with { Core = Bytes(core) }, SeedDocument()));
 
-        var spaces = Projection(app)["session"]!["spaces"]!.AsArray();
+        var spaces = StoredDocument(app)["spaces"]!.AsArray();
         Assert.Equal(core["spaces"]!.AsArray().Select(item => SpaceId(item!)), spaces.Select(item => SpaceId(item!)));
         Assert.Equal("indigo", spaces[1]!["accent"]!.GetValue<string>());
         // An unreadable restriction keeps the Space guarded; none at all is open.
@@ -195,9 +200,8 @@ public sealed partial class BrowserContractsTests {
                 installed.Journal);
             using var app = new CrestApp(new AppConfiguration(directory.Path));
             Assert.Single(app.Send(new AdoptLegacySession(unreadable, Bytes(seed))).OfType<SessionAdopted>());
-            var projection = Projection(app);
             Assert.Equal(Guid.Parse(seed["disposableSeedMarker"]!.GetValue<string>()),
-                Guid.Parse(projection["session"]!["disposableSeedMarker"]!.GetValue<string>()));
+                Guid.Parse(StoredDocument(app)["disposableSeedMarker"]!.GetValue<string>()));
             Assert.True(File.Exists(directory.File + ".cloud-recovery"));
             // The seed carries no journal, so there is no complete checkpoint to keep.
             Assert.False(File.Exists(directory.Recovery));
@@ -205,7 +209,7 @@ public sealed partial class BrowserContractsTests {
         using (var directory = new StorageDirectory()) {
             using var app = new CrestApp(new AppConfiguration(directory.Path));
             app.Send(new AdoptLegacySession(new LegacySession(null, null, [], installed.Journal), Bytes(seed)));
-            Assert.Equal(SpaceId(seed["spaces"]![0]!), SpaceId(Projection(app)["session"]!["spaces"]![0]!));
+            Assert.Equal(SpaceId(seed["spaces"]![0]!), SpaceId(StoredDocument(app)["spaces"]![0]!));
             Assert.False(File.Exists(directory.File + ".cloud-recovery"));
         }
     }
@@ -218,7 +222,7 @@ public sealed partial class BrowserContractsTests {
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         var refused = Assert.Throws<Rejected>(() => app.Send(new AdoptLegacySession(installed with { Journal = Bytes(journal) }, SeedDocument())));
         Assert.IsType<StorageFromNewerApp>(refused.Rejection);
-        Assert.Null(app.Session);
+        Assert.Null(app.StoredSync);
         Assert.DoesNotContain("core", StoredParts(directory.File).Keys);
     }
 
@@ -230,7 +234,7 @@ public sealed partial class BrowserContractsTests {
         JsonNode expected;
         using (var app = new CrestApp(configuration)) {
             app.Send(new AdoptLegacySession(installed, SeedDocument()));
-            expected = Projection(app)["session"]!;
+            expected = StoredDocument(app);
         }
         var broken = "not a session"u8.ToArray();
         var sidecar = "preserve this WAL"u8.ToArray();
@@ -241,8 +245,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal((CoreStatus.Ok, (Rejection?)null), AppClient.Restore(configuration));
 
         using (var restored = new CrestApp(configuration)) {
-            AssertSameSession(expected.AsObject(), Projection(restored)["session"]!);
-            var carried = JsonNode.Parse(restored.SessionSync!.Snapshot.Read())!;
+            AssertSameSession(expected.AsObject(), StoredDocument(restored));
+            var carried = JsonNode.Parse(restored.StoredSync!.Snapshot.Read())!;
             // A new device identity, so no version issued after the checkpoint is reissued.
             Assert.NotEqual(journal["deviceID"]!.GetValue<string>(), carried["deviceID"]!.GetValue<string>());
             foreach (var member in new[] { "logicalClock", "records", "pendingRecordIDs" })
@@ -279,6 +283,6 @@ public sealed partial class BrowserContractsTests {
         Assert.IsType<StorageRestoreInterrupted>(Assert.Throws<Rejected>(() => new CrestApp(configuration)).Rejection);
         Assert.Equal((CoreStatus.Ok, (Rejection?)null), AppClient.Restore(configuration));
         using var restored = new CrestApp(configuration);
-        Assert.NotNull(restored.Session);
+        Assert.NotNull(restored.StoredSync);
     }
 }

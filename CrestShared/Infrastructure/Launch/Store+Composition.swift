@@ -18,20 +18,29 @@ extension BrowserStore {
         let favicons: any BrowserFaviconStoring = BrowserFaviconFileStore.production() ?? InMemoryBrowserFaviconStore()
         let stored = try migratedStorage(
             core: core, legacy: .installed, favicons: favicons, seed: .freshInstallSeed, environment: launchEnvironment)
-        return production(stored: stored, core: core, favicons: favicons, credentialVault: KeychainCredentialVault())
+        return try production(
+            stored: stored, core: core, favicons: favicons, credentialVault: KeychainCredentialVault())
     }
 
-    /// The store over the session the core loaded. Its sync component is the
-    /// core's own, which staged the loaded session and saves every journal it
-    /// accepts with the session.
+    /// The store over the session the core keeps in its file, which `stored`
+    /// opened. Its sync component is the core's own, which staged the session
+    /// when it opened and saves every journal it accepts with the session. A
+    /// journal that cannot be read is a startup failure.
     static func production(
-        stored: BrowserCoreStoredSession, core: CrestCore, favicons: any BrowserFaviconStoring,
+        stored: BrowserCoreSessionAuthority, core: CrestCore, favicons: any BrowserFaviconStoring,
         credentialVault: any CredentialVault
-    ) -> BrowserStore {
+    ) throws -> BrowserStore {
+        let kept: BrowserCoreSyncAuthority?
+        do { kept = try core.storedSync() } catch {
+            throw BrowserSessionStartupFailure(storageDirectory: core.storageDirectory, underlying: error)
+        }
+        guard let sync = kept else {
+            preconditionFailure("The core opened its file's session without the sync component kept beside it.")
+        }
         let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
         return BrowserStore(
             credentialVault: credentialVault,
-            syncCoordinator: BrowserSyncCoordinator(core: stored.sync),
+            syncCoordinator: BrowserSyncCoordinator(core: sync),
             browsingMode: .standard,
             family: family,
             core: core
@@ -73,13 +82,10 @@ extension BrowserStore {
         launchEnvironment: BrowserLaunchEnvironment,
         core: CrestCore
     ) -> BrowserStore {
+        // The fixture opens as a seed, which is never saved or synced: only
+        // the session the core keeps in its file syncs.
         let session = launchRepair(isolatedFixtureSession(for: launchEnvironment))
-        return BrowserStore(
-            session: session,
-            credentialVault: InMemoryCredentialVault(),
-            syncCoordinator: BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence()),
-            core: core
-        )
+        return BrowserStore(session: session, credentialVault: InMemoryCredentialVault(), core: core)
     }
 
     private static func persistentIsolatedLaunch(
@@ -94,7 +100,7 @@ extension BrowserStore {
         let stored = try migratedStorage(
             core: core, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: []),
             favicons: favicons, seed: isolatedFixtureSession(for: launchEnvironment), environment: launchEnvironment)
-        return production(
+        return try production(
             stored: stored, core: core, favicons: favicons,
             credentialVault: KeychainCredentialVault(servicePrefix: namespace))
     }
@@ -131,38 +137,50 @@ extension BrowserStore {
         }
     }
 
-    /// Takes over the session `core` keeps. On the first launch whose file
-    /// holds none, the core carries the installed release's defaults session,
-    /// history and sync journal into the file, or installs `seed` when there is
-    /// nothing it can carry; the images that session held inside its tabs land
-    /// in `favicons`. The legacy values are left in place, so this is also the
-    /// seam an upgrade test drives with its own directory, defaults suite and
-    /// favicon store.
+    /// Opens the session `core` keeps in its file. On the first launch whose
+    /// file holds none, the core carries the installed release's defaults
+    /// session, history and sync journal into the file, or installs `seed`
+    /// when there is nothing it can carry; the images that session held inside
+    /// its tabs land in `favicons`. The legacy values are left in place, so
+    /// this is also the seam an upgrade test drives with its own directory,
+    /// defaults suite and favicon store.
     static func migratedStorage(
         core: CrestCore, legacy: BrowserLegacySessionDefaults, favicons: any BrowserFaviconStoring,
         seed: @autoclosure () -> BrowserSession, environment: BrowserLaunchEnvironment
-    ) throws -> BrowserCoreStoredSession {
+    ) throws -> BrowserCoreSessionAuthority {
         guard let directory = core.storageDirectory else {
             preconditionFailure("A core that keeps nothing on disk has no stored session to open.")
         }
         do {
-            if let stored = try BrowserCoreStoredSession.load(core: core, favicons: favicons) {
-                try BrowserSessionRecovery.prepareCloudRecovery(in: directory, environment: environment)
-                return stored
-            }
-            let adoption = AdoptLegacySession(installed: legacy.values, seed: try JSONEncoder().encode(seed()))
-            for case .sessionAdopted(let adopted) in try core.send(adoption) {
-                for favicon in adopted.favicons {
-                    favicons.reconcile(favicon.image, tabID: TabID(rawValue: favicon.tabID))
+            let stored: BrowserCoreSessionAuthority
+            if let opened = try openStored(core: core, favicons: favicons) {
+                stored = opened
+            } else {
+                let adoption = AdoptLegacySession(installed: legacy.values, seed: try JSONEncoder().encode(seed()))
+                for case .sessionAdopted(let adopted) in try core.send(adoption) {
+                    for favicon in adopted.favicons {
+                        favicons.reconcile(favicon.image, tabID: TabID(rawValue: favicon.tabID))
+                    }
                 }
+                stored = try BrowserCoreSessionAuthority.openStored(in: core, favicons: favicons)
             }
             try BrowserSessionRecovery.prepareCloudRecovery(in: directory, environment: environment)
-            guard let stored = try BrowserCoreStoredSession.load(core: core, favicons: favicons) else {
-                throw BrowserCoreStoredSession.LoadError.noSession
-            }
             return stored
         } catch {
             throw BrowserSessionStartupFailure(storageDirectory: directory, underlying: error)
+        }
+    }
+
+    /// The session `core` keeps in its file, opened, or nil while the file
+    /// holds none yet.
+    private static func openStored(core: CrestCore, favicons: any BrowserFaviconStoring) throws(Rejection)
+        -> BrowserCoreSessionAuthority?
+    {
+        do {
+            return try BrowserCoreSessionAuthority.openStored(in: core, favicons: favicons)
+        } catch {
+            guard case .noStoredSession = error else { throw error }
+            return nil
         }
     }
 
@@ -189,11 +207,14 @@ extension BrowserStore {
         return launchEnvironment.presentsShowcaseSession ? .showcase : .preview
     }
 
+    /// A window over a new private workspace, which starts from the core's
+    /// private template and keeps nothing.
     static func privateBrowsing(core: CrestCore = CrestCore()) -> BrowserStore {
         BrowserStore(
-            session: .privateBrowsing(),
             credentialVault: PrivateBrowsingCredentialVault(),
+            syncCoordinator: nil,
             browsingMode: .privateBrowsing,
+            family: BrowserStoreFamily(privateIn: core),
             core: core
         )
     }

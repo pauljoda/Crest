@@ -3,18 +3,6 @@ import Foundation
 import OSLog
 
 extension CrestCore {
-    // MARK: - Types
-
-    /// TRANSITIONAL until session intents land: handles to the persistent
-    /// session the core keeps, for the JSON session commands. The caller owns
-    /// each one.
-    struct StoredSessionHandles {
-        let session: UInt64
-        let sync: UInt64
-        /// A command whose answer is the session as loaded and repaired.
-        let projection: UInt64
-    }
-
     // MARK: - Actions - Saves
 
     /// Returns once every edit the core accepted before the call is on disk,
@@ -55,20 +43,20 @@ extension CrestCore {
 
     // MARK: - Actions - Stored session
 
-    /// TRANSITIONAL until session intents land: the persistent session the
-    /// core keeps, or nil when its file holds none yet.
-    func storedSessionHandles() -> StoredSessionHandles? {
-        var session: UInt64 = 0
+    /// TRANSITIONAL until typed sync (slice 8): the sync component of the
+    /// session the core keeps in its file, which stages that session's edits
+    /// and saves each journal it accepts with the session, or nil while the
+    /// file holds no session yet. Only that session syncs.
+    func storedSync() throws -> BrowserCoreSyncAuthority? {
         var sync: UInt64 = 0
-        var projection: UInt64 = 0
-        let status = crest_app_session(handle, &session, &sync, &projection)
+        let status = crest_app_sync(handle, &sync)
         switch status {
         case CREST_OK:
-            return StoredSessionHandles(session: session, sync: sync, projection: projection)
+            return try BrowserCoreSyncAuthority(adopting: sync)
         case CREST_EMPTY:
             return nil
         default:
-            Self.buildBug(status, "reach its stored session")
+            Self.buildBug(status, "reach its stored session's sync")
         }
     }
 

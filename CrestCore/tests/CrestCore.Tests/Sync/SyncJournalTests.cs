@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -163,12 +164,11 @@ public sealed partial class BrowserContractsTests {
         var document = JournalDocument(record);
         var initial = new NativeSyncJournal(Bytes(document));
         var sync = new NativeSyncAuthority(initial);
-        var owner = new NativeSessionAuthority(Bytes(session));
+        var owner = TestWorkspaces.Session(session);
         owner.AttachSync(sync);
         owner.AttachSync(sync); // A second window shares this family.
-        Assert.Throws<BrowserRuleException>(() => new NativeSessionAuthority(Bytes(session)).AttachSync(sync));
-        var privateSession = session.DeepClone().AsObject(); privateSession["coreWorkspaceKind"] = "private";
-        Assert.Throws<BrowserRuleException>(() => new NativeSessionAuthority(Bytes(privateSession)).AttachSync(new(initial)));
+        Assert.Throws<BrowserRuleException>(() => TestWorkspaces.Session(session).AttachSync(sync));
+        Assert.Throws<BrowserRuleException>(() => TestWorkspaces.Session(session, WorkspaceKind.Private).AttachSync(new(initial)));
         sync.Flush();
         var launched = sync.Snapshot;
         var request = JournalCommand(document, "acknowledge", new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });

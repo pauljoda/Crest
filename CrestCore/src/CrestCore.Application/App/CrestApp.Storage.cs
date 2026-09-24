@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
@@ -10,30 +9,36 @@ public sealed partial class CrestApp {
     #region Variables
 
     private readonly SessionStorage? storage;
-    private byte[]? launchProjection;
 
-    /// TRANSITIONAL until session intents land: the persistent session this
-    /// core keeps in storage, once the file holds one. The JSON command path
-    /// reaches it through this authority.
-    public NativeSessionAuthority? Session { get; private set; }
-    /// TRANSITIONAL, with `Session`: the sync component attached to it.
-    public NativeSyncAuthority? SessionSync { get; private set; }
+    /// The session this core keeps in its file, as it loaded and repaired it,
+    /// once the file holds one. `OpenWorkspace` opens it.
+    private NativeSessionAuthority? storedSession;
+    /// The sync component the file's session stages into, kept beside it.
+    private NativeSyncAuthority? storedSync;
+    /// The selection an older release kept in the stored session, which the
+    /// windows of the launch that loaded it adopt.
+    private JsonObject? storedSelection;
+    /// The tabs the repair gave a new identity, each with the tab whose image
+    /// it wears.
+    private IReadOnlyList<(Guid Source, Guid Copy)> repairedCopies = [];
+
+    /// TRANSITIONAL until typed sync (slice 8): the sync component of the
+    /// session this core keeps in its file, for the cloud transport's journal
+    /// calls; null while the file holds no session.
+    public NativeSyncAuthority? StoredSync {
+        get {
+            lock (gate) return storedSync;
+        }
+    }
 
     #endregion
 
     #region Actions - Stored session
 
-    /// TRANSITIONAL until session intents land: the session as it was loaded
-    /// and repaired, `{"session", "assets"}`, read with the command API.
-    /// `assets` names the tab each repaired tab's native images came from.
-    public NativeSessionCommand? SessionProjection() {
-        lock (gate) return Session is { } session && launchProjection is { } bytes ? session.Projection(bytes) : null;
-    }
-
     /// Gives a file that holds no session its first one, before returning:
     /// the installed release's, or the seed. See `AdoptLegacySession`.
     private void Adopt(AdoptLegacySession adoption, ChangeFeed changes) {
-        if (storage is not { } target || Session is not null) return;
+        if (storage is not { } target || storedSession is not null) return;
         // A file that holds a session this core could not take over is refused
         // at creation, so one found here was written by an adoption whose
         // takeover failed: it is as unreadable now as it was then.
@@ -64,9 +69,9 @@ public sealed partial class CrestApp {
         SessionStorage.Restore(directory);
     }
 
-    /// Makes a stored session the core's persistent session. The recovery
-    /// checkpoint preserves the file exactly as loaded before anything else is
-    /// written; the repaired session is then the first save.
+    /// Makes a stored session the one `OpenWorkspace` opens from the file. The
+    /// recovery checkpoint preserves the file exactly as loaded before anything
+    /// else is written; the repaired session is then the first save.
     private void Establish(SessionState stored, NativeSyncJournal? journal, JsonObject? legacySelection) {
         var target = storage!;
         try {
@@ -81,14 +86,12 @@ public sealed partial class CrestApp {
         } catch (BrowserRuleException) {
             throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
         }
-        var sync = new NativeSyncAuthority(journal ?? NativeSyncJournal.Fresh(Guid.NewGuid()));
-        var session = new NativeSessionAuthority(repaired, target);
-        launchProjection = Encoding.UTF8.GetBytes(NativeSessionMaintenance.Answer(repaired, origins).ToJsonString());
-        Session = session;
-        SessionSync = sync;
-        device.AttachPersistent(session, legacySelection);
-        // After the device, so the transport hears the launch stage.
-        session.AttachSync(sync);
+        storedSession = new NativeSessionAuthority(repaired, target);
+        storedSync = new NativeSyncAuthority(journal ?? NativeSyncJournal.Fresh(Guid.NewGuid()));
+        storedSelection = legacySelection;
+        repairedCopies = [.. origins
+            .Select(origin => (Source: origin.SourceTabId, Copy: repaired.Spaces[origin.SpaceIndex].Tabs[origin.TabIndex].Id))
+            .Where(pair => pair.Source != pair.Copy)];
     }
 
     #endregion

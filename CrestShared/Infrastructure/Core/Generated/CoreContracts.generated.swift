@@ -61,6 +61,7 @@ enum Rejection: Equatable, Error, Sendable {
     case alreadyInSplit(AlreadyInSplit)
     case authenticationBusy(AuthenticationBusy)
     case borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner)
+    case borrowedWorkspaceRequiresSpace(BorrowedWorkspaceRequiresSpace)
     case cannotDeleteLastSpace(CannotDeleteLastSpace)
     case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
@@ -95,6 +96,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
+    case invalidSeed(InvalidSeed)
     case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidTabIcon(InvalidTabIcon)
@@ -102,6 +104,7 @@ enum Rejection: Equatable, Error, Sendable {
     case lastStartPage(LastStartPage)
     case noCurrentTabs(NoCurrentTabs)
     case noSavedAddress(NoSavedAddress)
+    case noStoredSession(NoStoredSession)
     case notPrivateWorkspace(NotPrivateWorkspace)
     case pageNotLoadable(PageNotLoadable)
     case pageProfileMismatch(PageProfileMismatch)
@@ -117,6 +120,7 @@ enum Rejection: Equatable, Error, Sendable {
     case spaceBeingDeleted(SpaceBeingDeleted)
     case spaceLimitReached(SpaceLimitReached)
     case spaceLocked(SpaceLocked)
+    case spaceProfileChanged(SpaceProfileChanged)
     case splitBoundary(SplitBoundary)
     case splitLimitReached(SplitLimitReached)
     case splitNeedsTwoTabs(SplitNeedsTwoTabs)
@@ -126,6 +130,7 @@ enum Rejection: Equatable, Error, Sendable {
     case storageFromNewerApp(StorageFromNewerApp)
     case storageRestoreInterrupted(StorageRestoreInterrupted)
     case storageUnreadable(StorageUnreadable)
+    case storedSessionClosed(StoredSessionClosed)
     case syncStagingRefused(SyncStagingRefused)
     case tabAlreadyExists(TabAlreadyExists)
     case tabAlreadyHasPage(TabAlreadyHasPage)
@@ -326,8 +331,18 @@ struct BlockAutomaticDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
 
+struct BorrowSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let profileID: UUID
+}
+
 struct BorrowedProfileRequiresOwner: Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct BorrowedWorkspaceRequiresSpace: Equatable, Sendable {
+    let kind: WorkspaceKind
 }
 
 struct BrandColor: Equatable, Sendable {
@@ -445,6 +460,10 @@ struct CloseTabs: Intent, Equatable, Sendable {
 
 struct CloseWindow: Intent, Equatable, Sendable {
     let windowID: UUID
+}
+
+struct CloseWorkspace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
 }
 
 struct CollapseFolder: Intent, Equatable, Sendable {
@@ -1023,6 +1042,10 @@ struct InvalidSearchEngine: Equatable, Sendable {
     let flaw: SearchEngineFlaw
 }
 
+struct InvalidSeed: Equatable, Sendable {
+    let flaw: SeedFlaw
+}
+
 struct InvalidSpaceOrder: Equatable, Sendable {
 }
 
@@ -1314,6 +1337,9 @@ struct NoSavedAddress: Equatable, Sendable {
     let tabID: UUID
 }
 
+struct NoStoredSession: Equatable, Sendable {
+}
+
 struct NotPrivateWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
@@ -1355,6 +1381,11 @@ struct OpenWindow: Intent, Equatable, Sendable {
     let showingSpaceID: UUID?
     let showingTabs: [ShownTab]
     let restoresTabs: Bool
+}
+
+struct OpenWorkspace: Intent, Equatable, Sendable {
+    let kind: WorkspaceKind
+    let seed: Data?
 }
 
 struct PageChanged: Equatable, Sendable {
@@ -1840,6 +1871,10 @@ struct SpaceLocked: Equatable, Sendable {
     }
 }
 
+struct SpaceProfileChanged: Equatable, Sendable {
+    let spaceID: UUID
+}
+
 struct SpaceSettings: Equatable, Sendable {
     let name: String
     let symbol: String
@@ -1954,6 +1989,9 @@ struct StorageRestoreInterrupted: Equatable, Sendable {
 
 struct StorageUnreadable: Equatable, Sendable {
     let reason: StorageFailure
+}
+
+struct StoredSessionClosed: Equatable, Sendable {
 }
 
 struct StrongPassword: Query, Equatable, Sendable {
@@ -2474,6 +2512,15 @@ enum SavedTabClosePolicy: Int, CaseIterable, Sendable {
     case returnToSavedURL = 1
 }
 
+enum SeedFlaw: Int, CaseIterable, Sendable {
+    case unreadable = 0
+    case missingIdentity = 1
+    case duplicateSpace = 2
+    case sharedProfile = 3
+    case duplicateTab = 4
+    case unknownDeletion = 5
+}
+
 struct ShortcutModifiers: OptionSet, Sendable {
     let rawValue: Int
     static let command = ShortcutModifiers(rawValue: 1)
@@ -2561,12 +2608,6 @@ enum TearOffRefusal: Int, CaseIterable, Sendable {
     case spaceLocked = 1
     case tabGone = 2
     case severalTabs = 3
-}
-
-enum WorkspaceKind: Int, CaseIterable, Sendable {
-    case persistent = 0
-    case `private` = 1
-    case borrowed = 2
 }
 
 // MARK: - Fixed sets
@@ -7258,6 +7299,77 @@ struct TabPlacement: Hashable, Sendable {
     }
 
     static func == (lhs: TabPlacement, rhs: TabPlacement) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `WorkspaceKind`. A member's wire tag is its index in `all`.
+struct WorkspaceKind: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let opensDirectly: Bool
+    let keepsFile: Bool
+    let isPrivate: Bool
+    let ownsSpaces: Bool
+    let keepsAppPreferences: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        opensDirectly: Bool,
+        keepsFile: Bool,
+        isPrivate: Bool,
+        ownsSpaces: Bool,
+        keepsAppPreferences: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.opensDirectly = opensDirectly
+        self.keepsFile = keepsFile
+        self.isPrivate = isPrivate
+        self.ownsSpaces = ownsSpaces
+        self.keepsAppPreferences = keepsAppPreferences
+    }
+
+    static let persistent = WorkspaceKind(
+        tag: 0,
+        name: "persistent",
+        opensDirectly: true,
+        keepsFile: true,
+        isPrivate: false,
+        ownsSpaces: true,
+        keepsAppPreferences: true
+    )
+    static let `private` = WorkspaceKind(
+        tag: 1,
+        name: "private",
+        opensDirectly: true,
+        keepsFile: false,
+        isPrivate: true,
+        ownsSpaces: true,
+        keepsAppPreferences: false
+    )
+    static let borrowed = WorkspaceKind(
+        tag: 2,
+        name: "borrowed",
+        opensDirectly: false,
+        keepsFile: false,
+        isPrivate: false,
+        ownsSpaces: false,
+        keepsAppPreferences: false
+    )
+
+    static let all: [WorkspaceKind] = [persistent, `private`, borrowed]
+
+    static func named(_ name: String?) -> WorkspaceKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: WorkspaceKind, rhs: WorkspaceKind) -> Bool {
         lhs.tag == rhs.tag
     }
 

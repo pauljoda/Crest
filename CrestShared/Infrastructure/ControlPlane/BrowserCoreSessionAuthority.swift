@@ -2,25 +2,23 @@ import CrestCoreABI
 import Foundation
 import Observation
 
-/// One core session per store family, attached to the core's device from the
-/// moment it exists. `projection` is the Swift copy of the session the core
-/// holds, with native favicon assets; only the session changes the core
-/// publishes update it (see `BrowserCoreSessionBridge.swift`), so it can never
-/// show an unaccepted edit. It holds browsing data only. What each window shows
-/// is the core device's: a command names the window that issued it, and the
-/// device moves that window when the command commits and repairs the others.
-/// A command commits only while the core still holds the session it was
-/// prepared against; nothing here names a revision.
+/// One workspace the core opened for a store family, and the Swift copy of
+/// its session. `projection` is that copy, with native favicon assets; only
+/// the session changes the core publishes update it (see
+/// `BrowserCoreSessionBridge.swift`), so it can never show an unaccepted edit.
+/// It holds browsing data only. What each window shows is the core device's:
+/// a command names the window that issued it, and the device moves that window
+/// when the command commits and repairs the others. A command commits only
+/// while the core still holds the session it was prepared against; nothing
+/// here names a revision.
+///
+/// The core opens the workspace (`OpenWorkspace`, `BorrowSpace`), gives it its
+/// identity and closes it (`CloseWorkspace`). Whoever owns the family closes
+/// it when its windows go; a workspace no one closed closes once this copy is
+/// gone.
 @Observable @MainActor
 final class BrowserCoreSessionAuthority {
     // MARK: - Types
-
-    /// What kind of workspace a session holds. Raw values are the core's
-    /// `coreWorkspaceKind` spellings.
-    enum WorkspaceKind: String, Encodable, Sendable {
-        case persistent
-        case `private`
-    }
 
     final class PreparedChange {
         fileprivate let handle: UInt64
@@ -40,32 +38,6 @@ final class BrowserCoreSessionAuthority {
     /// The images the issuer of a command holds, which `FaviconAssets` places
     /// while the core's changes for the command are applied.
     typealias OfferedImages = FaviconAssets.Offer
-
-    /// The session a new core session starts from, with its workspace kind
-    /// beside the session's own members.
-    private struct Creation: Encodable {
-        private enum CodingKeys: String, CodingKey {
-            case coreWorkspaceKind
-            case corePrivateBrowsing
-        }
-
-        let session: BrowserSession
-        let workspaceKind: WorkspaceKind
-        let privateBrowsing: Bool
-
-        func encode(to encoder: any Encoder) throws {
-            try session.encode(to: encoder)
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(workspaceKind, forKey: .coreWorkspaceKind)
-            try container.encode(privateBrowsing, forKey: .corePrivateBrowsing)
-        }
-    }
-
-    /// The Space a borrowed session borrows.
-    private struct Borrowing: Encodable {
-        let spaceId: UUID
-        let profileId: UUID
-    }
 
     /// `workspace.import`.
     private struct WorkspaceImportCommand: Encodable {
@@ -132,128 +104,123 @@ final class BrowserCoreSessionAuthority {
         init(_ status: Int32) { self = status == CREST_STORAGE_FAILED ? .storageFailed : .rejected(status) }
     }
 
-    private final class SessionHandle: Sendable {
-        let value: UInt64
-        init(value: UInt64) { self.value = value }
-        deinit { crest_session_destroy(value) }
-    }
-
     // MARK: - Variables
 
     private(set) var projection: BrowserSession
-    @ObservationIgnored private let owner: SessionHandle
-    @ObservationIgnored private let borrowedSource: BrowserCoreSessionAuthority?
-    /// The core whose device shows this session in its windows, and the
-    /// workspace it gave the session.
+    /// Whether the core still holds the workspace open. It closes when this
+    /// copy closes it, when the workspace it borrows from closes or stops
+    /// lending its Space, and when the core closes it for any other reason.
+    private(set) var isOpen = true
+    /// The workspace the core gave the session, which every change to it names.
+    let workspaceID: UUID
+    /// The core whose device shows this session in its windows.
     @ObservationIgnored private(set) weak var device: CrestCore?
-    @ObservationIgnored private(set) var workspaceID: UUID?
 
     // MARK: - Initializers
 
-    /// A memory-only session over `session`, attached to `core`'s device.
-    init(
-        session: BrowserSession, workspaceKind: WorkspaceKind = .persistent, privateBrowsing: Bool = false,
-        core: CrestCore
-    ) {
-        projection = session
-        borrowedSource = nil
-        do {
-            let data = try JSONEncoder().encode(
-                Creation(
-                    session: Self.compact(session), workspaceKind: workspaceKind,
-                    privateBrowsing: privateBrowsing || workspaceKind == .private))
-            var handle: UInt64 = 0
-            let result = data.withUnsafeBytes {
-                crest_session_create($0.bindMemory(to: UInt8.self).baseAddress, data.count, &handle)
-            }
-            guard result == CREST_OK else { throw CoreError.rejected(result) }
-            owner = SessionHandle(value: handle)
-        } catch {
-            preconditionFailure("Could not initialize the core session: \(error)")
-        }
-        attach(to: core)
-    }
-
-    /// TRANSITIONAL until session intents land: the persistent session `core`
-    /// keeps in its file, taken over with the projection it loaded.
-    init(adopting handle: UInt64, projection: BrowserSession, core: CrestCore) {
-        owner = SessionHandle(value: handle)
-        self.projection = projection
-        borrowedSource = nil
-        attach(to: core)
-    }
-
-    private init(owner: SessionHandle, borrowedSource: BrowserCoreSessionAuthority, core: CrestCore) {
-        self.owner = owner
-        projection = BrowserSession(spaces: [])
-        self.borrowedSource = borrowedSource
-        attach(to: core)
-    }
-
-    // MARK: - Actions - Device
-
-    /// Attaches this session to `core`'s device so its windows may show it.
-    /// The device publishes the session whole, which the projection takes,
-    /// wearing the images the session it starts from wears. The persistent
-    /// session is attached when the core loads its file, and may have been
-    /// published already, so its tabs take those images first.
-    private func attach(to core: CrestCore) {
-        var bytes = [UInt8](repeating: 0, count: 16)
-        let status = crest_session_attach_device(owner.value, core.handle, &bytes)
-        guard status == CREST_OK else { CrestCore.buildBug(status, "attach a session to its device") }
-        let workspace = bytes.withUnsafeBytes { UUID(uuid: $0.load(as: uuid_t.self)) }
+    /// The workspace `opened` announced, whose changes reach this copy from
+    /// then on. Its tabs wear the images `core` holds for them, so a caller
+    /// that brings images of its own adopts them first.
+    private init(opened: WorkspaceOpened, core: CrestCore) {
+        workspaceID = opened.workspaceID
         device = core
-        workspaceID = workspace
-        core.state.register(self, for: workspace)
-        let images = OfferedImages(placedFrom: projection)
-        core.state.adoptImages(images.placed, in: workspace)
-        follow(offering: images)
+        let images = core.state.favicons
+        projection = BrowserSession(core: opened.session, image: { images.image(of: $0) })
+        core.state.register(self, for: opened.workspaceID)
     }
+
+    /// A workspace no one closed closes on the main queue's next turn, never
+    /// inside this deinit, which may run while the core applies a batch. It
+    /// is skipped once the core is gone.
+    isolated deinit {
+        guard isOpen, let device else { return }
+        let closing = CloseWorkspace(workspaceID: workspaceID)
+        DispatchQueue.main.async { [weak device] in
+            MainActor.assumeIsolated { _ = try? device?.send(closing) }
+        }
+    }
+
+    // MARK: - Actions - Opening
+
+    /// Opens a workspace of `kind` in `core`. With `seed`, a session in the
+    /// stored format for launches without a file (isolated runs, previews,
+    /// tests), it keeps nothing: it is never saved or synced, and its tabs wear
+    /// the images `seed` carries. Without one, a private workspace starts from
+    /// the core's private template. Throws the rule that refuses it.
+    static func open(_ kind: WorkspaceKind, seed: BrowserSession?, in core: CrestCore) throws
+        -> BrowserCoreSessionAuthority
+    {
+        let bytes = try seed.map { try JSONEncoder().encode(compact($0)) }
+        let opened = Self.opened(by: try core.send(OpenWorkspace(kind: kind, seed: bytes)))
+        if let seed { core.state.adoptImages(OfferedImages(placedFrom: seed).placed, in: opened.workspaceID) }
+        return BrowserCoreSessionAuthority(opened: opened, core: core)
+    }
+
+    /// Opens the session `core` keeps in its file, as it loaded and repaired
+    /// it. Each tab wears the image `favicons` keeps for it, and a tab the
+    /// repair gave a new identity wears its source's. Throws `NoStoredSession`
+    /// while the file holds no session yet.
+    static func openStored(in core: CrestCore, favicons: any BrowserFaviconStoring) throws(Rejection)
+        -> BrowserCoreSessionAuthority
+    {
+        let changes = try core.send(OpenWorkspace(kind: .persistent, seed: nil))
+        let opened = Self.opened(by: changes)
+        var images: [UUID: Data] = [:]
+        for space in opened.session.spaces {
+            for tab in space.tabs { images[tab.id] = favicons.favicon(tabID: TabID(rawValue: tab.id)) }
+        }
+        for case .tabCopied(let copied) in changes where copied.workspaceID == opened.workspaceID {
+            images[copied.copyTabID] = favicons.favicon(tabID: TabID(rawValue: copied.sourceTabID))
+        }
+        core.state.adoptImages(images, in: opened.workspaceID)
+        return BrowserCoreSessionAuthority(opened: opened, core: core)
+    }
+
+    /// Opens a workspace that borrows the Space `assignment` names, with its
+    /// profile, settings and access grants, and tabs of its own. It follows
+    /// this workspace's edits of the Space's settings and closes once this
+    /// workspace no longer lends it. Throws the rule that refuses it.
+    func borrow(_ assignment: BrowserSpaceRuntimeAssignment) throws(Rejection) -> BrowserCoreSessionAuthority {
+        guard let device else { preconditionFailure("A workspace lends its Space only while its core exists.") }
+        let changes = try device.send(
+            BorrowSpace(workspaceID: workspaceID, spaceID: assignment.spaceID.rawValue, profileID: assignment.profileID)
+        )
+        return BrowserCoreSessionAuthority(opened: Self.opened(by: changes), core: device)
+    }
+
+    /// The workspace an intent that opens one announced.
+    private static func opened(by changes: [Change]) -> WorkspaceOpened {
+        for case .workspaceOpened(let opened) in changes.reversed() { return opened }
+        preconditionFailure("The core opened a workspace without announcing it. Rebuild the core.")
+    }
+
+    // MARK: - Actions - Closing
+
+    /// Closes the workspace, and first every workspace that borrows from it:
+    /// its pages and windows go and its session takes no edits. The device
+    /// keeps its windows' saved records. Closing it again does nothing.
+    func close() {
+        guard isOpen else { return }
+        _ = try? device?.send(CloseWorkspace(workspaceID: workspaceID))
+        isOpen = false
+    }
+
+    // MARK: - Actions - Changes
 
     /// TRANSITIONAL until S6.7: one session change the core published for this
     /// workspace. See `BrowserSession.apply(_:images:)`.
     func receive(_ change: Change, images: FaviconAssets) {
+        if case .workspaceClosed = change { isOpen = false }
         projection.apply(change, images: images)
     }
 
     /// Applies what the core published for a commit that just returned, with
     /// the images its issuer offered.
     private func follow(offering images: OfferedImages = OfferedImages()) {
-        guard let device, let workspaceID else { return }
+        guard let device else { return }
         device.state.favicons.offer(images, in: workspaceID)
         defer { device.state.favicons.withdrawOffer(in: workspaceID) }
         device.drain()
-    }
-
-    // MARK: - Actions - Borrowing
-
-    func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment) throws -> BrowserCoreSessionAuthority {
-        guard let device else { preconditionFailure("A session borrows only once it shows in a core's windows.") }
-        let input = try JSONEncoder().encode(
-            Borrowing(spaceId: assignment.spaceID.rawValue, profileId: assignment.profileID))
-        var handle: UInt64 = 0
-        let status = input.withUnsafeBytes {
-            crest_session_create_borrowed(owner.value, $0.bindMemory(to: UInt8.self).baseAddress, input.count, &handle)
-        }
-        guard status == CREST_OK else { throw CoreError.rejected(status) }
-        return BrowserCoreSessionAuthority(owner: SessionHandle(value: handle), borrowedSource: self, core: device)
-    }
-
-    /// Only the source authority supplies policy. Native callers cannot substitute
-    /// a session snapshot or turn local organization into canonical profile edits.
-    /// Answers whether the borrowed Space changed.
-    @discardableResult
-    func refreshBorrowed() throws -> Bool {
-        guard borrowedSource != nil else { return false }
-        let previous = projection
-        var command: UInt64 = 0
-        let prepared = crest_session_prepare_borrowed_refresh(owner.value, &command)
-        guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
-        defer { crest_session_release_command(command) }
-        let committed = crest_session_commit_command(command)
-        guard committed == CREST_OK else { throw CoreError.rejected(committed) }
-        follow()
-        return projection != previous
     }
 
     // MARK: - Actions - Replacement
@@ -267,17 +234,16 @@ final class BrowserCoreSessionAuthority {
         follow()
         let next = keepingPreferences(proposed)
         let delta = try JSONEncoder().encode(try delta(to: next))
-        let result = delta.withUnsafeBytes { bytes in
-            crest_session_replace_durably(
-                owner.value, sync?.handle ?? 0, bytes.bindMemory(to: UInt8.self).baseAddress, delta.count)
+        let app = try appHandle()
+        let result = withUnsafeBytes(of: workspaceID.uuid) { workspace in
+            delta.withUnsafeBytes { bytes in
+                crest_session_replace_durably(
+                    app, workspace.bindMemory(to: UInt8.self).baseAddress, sync?.handle ?? 0,
+                    bytes.bindMemory(to: UInt8.self).baseAddress, delta.count)
+            }
         }
         guard result == CREST_OK else { throw CoreError(result) }
         follow(offering: OfferedImages(placedFrom: next))
-    }
-
-    func attachSync(_ sync: BrowserCoreSyncAuthority) throws {
-        let result = crest_session_attach_sync(owner.value, sync.handle)
-        guard result == CREST_OK else { throw CoreError.rejected(result) }
     }
 
     // MARK: - Actions - Commands
@@ -329,11 +295,22 @@ final class BrowserCoreSessionAuthority {
 
     private func prepareCommand(_ data: Data) throws -> UInt64 {
         var command: UInt64 = 0
-        let prepared = data.withUnsafeBytes {
-            crest_session_prepare_command(owner.value, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &command)
+        let app = try appHandle()
+        let prepared = withUnsafeBytes(of: workspaceID.uuid) { workspace in
+            data.withUnsafeBytes {
+                crest_session_prepare_command(
+                    app, workspace.bindMemory(to: UInt8.self).baseAddress, $0.bindMemory(to: UInt8.self).baseAddress,
+                    data.count, &command)
+            }
         }
         guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
         return command
+    }
+
+    /// The core the workspace is open in, which the JSON commands name with it.
+    private func appHandle() throws -> UInt64 {
+        guard let device else { throw CoreError.rejected(CREST_INVALID_HANDLE) }
+        return device.handle
     }
 
     private func readCommand(_ command: UInt64) throws -> Data {

@@ -189,7 +189,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void RemoteCleanupRequiresTheSealedOwningSyncTransactionAndPublishesAtomically() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var owner = new NativeSessionAuthority(Bytes(session));
+        var owner = TestWorkspaces.Session(session);
         var sync = new NativeSyncAuthority(new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid())))));
         owner.AttachSync(sync);
         using var transaction = sync.Prepare(Bytes(new JsonObject {
@@ -225,7 +225,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(Delta(result), transaction));
         Assert.True(transaction.Seal());
         Assert.Throws<BrowserRuleException>(() => owner.Commit(Delta(result)));
-        var foreign = new NativeSessionAuthority(Bytes(session));
+        var foreign = TestWorkspaces.Session(session);
         Assert.Throws<BrowserRuleException>(() => foreign.ReserveReplacement(Delta(result), transaction));
         var altered = result.DeepClone(); altered["spaceDeletions"]![0]!["operationID"] = Guid.NewGuid().ToString("D");
         Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(Delta(altered), transaction));

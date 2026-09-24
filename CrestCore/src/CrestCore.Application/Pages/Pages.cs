@@ -88,11 +88,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
             if (!intent.KeepsState) unloaded.Remove(intent.PageId);
             return;
         }
-        if (page.TabId is null && intent.KeepsState) {
-            foreach (var gone in unloaded.Values.Where(remembered => device.Attached(remembered.WorkspaceId) is null).ToArray())
-                unloaded.Remove(gone.Id);
-            unloaded[page.Id] = Transient(page) with { MovesBetweenWindows = false };
-        }
+        if (page.TabId is null && intent.KeepsState) unloaded[page.Id] = Transient(page) with { MovesBetweenWindows = false };
         changes.Publish(new PageRemoved(page.Id));
         if (page.Phase.HoldsEnginePage) issue(page.Engine, new ClosePage(page.Id, intent.KeepsState));
     }
@@ -113,6 +109,26 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     private void LeaveFailure(LeavePageFailure intent, ChangeFeed changes) {
         var page = Known(intent.PageId);
         Update(page, changes, page.LeaveFailure);
+    }
+
+    #endregion
+
+    #region Actions - Workspaces
+
+    /// A workspace closed: each of its pages is gone at once, and its engine
+    /// closes what it still holds afterwards, keeping nothing. What its Quick
+    /// Window or Peek pages showed when their owners unloaded them is
+    /// forgotten too.
+    public void Drop(Guid workspaceId, ChangeFeed changes, Action<Engine, EngineCommand> issue) {
+        ArgumentNullException.ThrowIfNull(changes);
+        ArgumentNullException.ThrowIfNull(issue);
+        foreach (var page in open.Values.Where(page => page.WorkspaceId == workspaceId).ToArray()) {
+            open.Remove(page.Id);
+            changes.Publish(new PageRemoved(page.Id));
+            if (page.Phase.HoldsEnginePage) issue(page.Engine, new ClosePage(page.Id, KeepsState: false));
+        }
+        foreach (var remembered in unloaded.Values.Where(remembered => remembered.WorkspaceId == workspaceId).ToArray())
+            unloaded.Remove(remembered.Id);
     }
 
     #endregion
@@ -230,7 +246,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// one of a workspace that closed is not remembered.
     public TransientPage? Transient(Guid pageId) => open.TryGetValue(pageId, out var page)
         ? page.TabId is null ? Transient(page) : null
-        : unloaded.GetValueOrDefault(pageId) is { } remembered && device.Attached(remembered.WorkspaceId) is not null ? remembered : null;
+        : unloaded.GetValueOrDefault(pageId);
 
     /// Forgets an unloaded Quick Window or Peek page the session kept or
     /// archived.

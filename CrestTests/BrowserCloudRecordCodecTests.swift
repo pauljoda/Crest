@@ -213,15 +213,14 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
     func testFullSpaceCustomizationSyncsBetweenStoresAndSurvivesReload() async throws {
         let session = BrowserSession.preview
         let spaceID = session.spaces[0].id
-        let senderCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
-        let receiverCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
-        try senderCoordinator.stage(session: session)
-        let sender = BrowserStore(
-            session: session,
-            syncCoordinator: senderCoordinator)
-        let receiver = BrowserStore(
-            session: session,
-            syncCoordinator: receiverCoordinator)
+        var senderJournal = BrowserSyncJournal()
+        try senderJournal.stage(session: session)
+        let senderHarness = try BrowserStoredSessionHarness(session: session, journal: senderJournal)
+        let receiverHarness = try BrowserStoredSessionHarness(session: session)
+        let sender = senderHarness.store
+        let receiver = receiverHarness.store
+        let senderCoordinator = try XCTUnwrap(sender.syncCoordinator)
+        let receiverCoordinator = try XCTUnwrap(receiver.syncCoordinator)
         let codec = BrowserCloudRecordCodec()
         try receiver.mergeRemoteSyncRecords(
             senderCoordinator.journal.records.map { try codec.decode(codec.encode($0)) })
@@ -243,7 +242,8 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
                 startingPresetID: "winter", sheenAngle: 125, sealTeeth: 16,
                 showsOutline: true, depth: .lifted),
             folderColorIntensity: 0.71, textColorMode: .light, hasCustomAppearance: true)
-        let charges = BrowserSpaceCrestSymbol.allCases.map(BrowserSpaceCrestCharge.heraldic)
+        let charges =
+            BrowserSpaceCrestSymbol.allCases.map(BrowserSpaceCrestCharge.heraldic)
             + [.system("hammer.fill"), .emoji("🐉"), .monogram("PD", .serif), .none]
         for charge in charges {
             branding.crest.charge = charge

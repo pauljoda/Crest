@@ -25,8 +25,8 @@ public sealed partial class BrowserContractsTests {
     public void HistoryRemovalUsesLastVisitsHalfOpenRangeAndAddressesWithoutTheirFragment() {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         space["history"] = new JsonArray([.. new[] { 10.0, 20.0, 30.0 }.Select(time => (JsonNode)Visit(time, $"https://example.org/{time}"))]);
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         DateTimeOffset At(double seconds) => StoredSessionCodec.Date(seconds);
 
         Assert.IsType<InvalidDateRange>(Assert.Throws<Rejected>(() =>
@@ -38,8 +38,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(SavedHistory(core, f.Space));
 
         space["history"] = new JsonArray(Visit(40, "https://example.org/40"));
-        var cleared = new NativeSessionAuthority(Bytes(session));
-        using var other = new TestDevice(cleared);
+        using var other = new TestDevice(session);
+        var cleared = other.Authority;
         Assert.IsType<UnknownSpace>(Assert.Throws<Rejected>(() => other.Send(new ClearHistory(other.Workspace, Guid.NewGuid()))).Rejection);
         other.Send(new ClearHistory(other.Workspace, f.Space));
         Assert.Empty(SavedHistory(cleared, f.Space));
@@ -50,8 +50,8 @@ public sealed partial class BrowserContractsTests {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         var tab = space["tabs"]![0]!.DeepClone(); var id = Guid.NewGuid(); tab["id"] = SwiftId(id);
         space["archivedTabs"] = new JsonArray(new JsonObject { ["tab"] = tab, ["archivedAt"] = 0.0, ["reason"] = "closed" });
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Showing(session);
 
         device.Send(new RestoreArchivedTab(device.Workspace, window, f.Space, id));
@@ -75,8 +75,8 @@ public sealed partial class BrowserContractsTests {
         space["archivedTabs"] = new JsonArray(
             new JsonObject { ["tab"] = tab.DeepClone(), ["archivedAt"] = 0.0, ["reason"] = "closed" },
             new JsonObject { ["tab"] = tab.DeepClone(), ["archivedAt"] = 900000.0, ["reason"] = "closed" });
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         device.Clock.Now = StoredSessionCodec.Date(900001.0);
 
         device.Send(new SweepExpiredRecords(device.Workspace));
@@ -95,8 +95,8 @@ public sealed partial class BrowserContractsTests {
         space["browsingPreferences"]!["dataRetention"] = new JsonObject { ["history"] = "oneDay", ["archive"] = "oneDay" };
         space["history"] = new JsonArray(Visit(0, "https://example.com/old"));
         space["archivedTabs"] = new JsonArray();
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Showing(session);
         var shown = device.Shown(window);
         device.Clock.Now = StoredSessionCodec.Date(800000100);
@@ -116,8 +116,8 @@ public sealed partial class BrowserContractsTests {
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         space["browsingPreferences"]!["dataRetention"] = new JsonObject { ["history"] = "oneWeek" };
         space["history"] = new JsonArray();
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         const double start = 800000000, day = 86400;
         void SweepAt(double seconds) {
             device.Clock.Now = StoredSessionCodec.Date(seconds);
@@ -162,8 +162,8 @@ public sealed partial class BrowserContractsTests {
         var first = space["tabs"]![0]!; var group = Guid.Parse(first["splitGroupID"]!["rawValue"]!.GetValue<string>());
         var second = first.DeepClone(); second["id"] = SwiftId(Guid.NewGuid()); space["tabs"]!.AsArray().Add(second);
         space["splitGroups"] = new JsonArray(new JsonObject { ["id"] = SwiftId(group), ["customIconSymbol"] = "crest.emoji:🌊", ["iconModifiedAt"] = 123.0 });
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         device.Send(new NameSplit(device.Workspace, f.Space, group, "  Research  "));
         var metadata = JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!["splitGroups"]![0]!;
         Assert.Equal("Research", metadata["customTitle"]!.GetValue<string>());

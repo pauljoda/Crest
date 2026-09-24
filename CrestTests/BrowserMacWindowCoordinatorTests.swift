@@ -127,8 +127,12 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         let space = try XCTUnwrap(source.browser.selectedSpace)
         let item = BrowserTabDragItem(tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
         let request = try XCTUnwrap(fixture.coordinator.prepareTearOff(item, from: source.id))
+        let canceled = try XCTUnwrap(fixture.coordinator.existingModel(for: request.id)).browser.family
         fixture.coordinator.cancelPendingTransfer(to: request.id)
 
+        // The canceled window's workspace closes with it.
+        XCTAssertFalse(canceled.isOpen)
+        XCTAssertNil(fixture.browser.core.state.workspaces[canceled.workspaceID])
         XCTAssertFalse(fixture.coordinator.completePendingTransfer(to: request.id))
         XCTAssertEqual(source.browser.selectedTab?.id, tab.id)
         XCTAssertNil(fixture.coordinator.existingModel(for: request.id))

@@ -79,17 +79,13 @@ CREST_API crest_status_t CREST_CALL crest_app_drain(uint64_t app, crest_buffer_t
  * edits one turn makes stage once. A drain inside a turn does not end it. */
 CREST_API crest_status_t CREST_CALL crest_app_end_turn(uint64_t app);
 
-/* TRANSITIONAL, removed when session intents land: the persistent session the
- * app keeps in storage, for the JSON session commands. EMPTY when the app has
- * no storage or its file holds no session yet. On OK the caller owns a session
- * handle (crest_session_destroy), its sync authority (crest_sync_authority_release)
- * and a projection command (crest_session_read_command, then
- * crest_session_release_command) that answers {"session", "assets",
- * "legacySelection"}: the session as loaded and repaired, which tab each
- * repaired tab's native images came from, and the selection an older release
- * stored in the session, when it stored one. */
-CREST_API crest_status_t CREST_CALL crest_app_session(uint64_t app,
-    uint64_t* out_session, uint64_t* out_sync, uint64_t* out_projection);
+/* TRANSITIONAL until typed sync: the sync component of the session the app
+ * keeps in its file, for the journal calls. EMPTY when the app keeps no file or
+ * its file holds no session yet. On OK the caller owns the authority handle
+ * (crest_sync_authority_release). The session itself opens with the intent
+ * OpenWorkspace, which publishes WorkspaceOpened; the component hears that
+ * launch stage once the workspace opens. */
+CREST_API crest_status_t CREST_CALL crest_app_sync(uint64_t app, uint64_t* out_sync);
 
 #ifdef __cplusplus
 } /* extern "C" */

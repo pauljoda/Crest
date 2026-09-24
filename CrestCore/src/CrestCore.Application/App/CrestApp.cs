@@ -55,13 +55,13 @@ public sealed partial class CrestApp : IDisposable {
         // consults it, so a borrowed workspace unlocks with its source.
         var grants = new SpaceAccessAuthority();
         if (configuration.StorageDirectory is not { } directory) {
-            device = new(storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn);
+            device = new(storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseOrphan);
             pages = new(device, engines, clock, ids);
             access = new(device, grants);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
-        device = new(storage, storage.Device, grants, Announce, RequestTurn);
+        device = new(storage, storage.Device, grants, Announce, RequestTurn, CloseOrphan);
         pages = new(device, engines, clock, ids);
         access = new(device, grants);
         try {
@@ -93,6 +93,9 @@ public sealed partial class CrestApp : IDisposable {
                     break;
                 case AdoptLegacySession adoption:
                     Adopt(adoption, changes);
+                    break;
+                case WorkspaceIntent workspace:
+                    Handle(workspace);
                     break;
                 case WindowIntent window:
                     device.Handle(window, changes);
@@ -168,15 +171,6 @@ public sealed partial class CrestApp : IDisposable {
 
     #endregion
 
-    #region Actions - Workspaces
-
-    /// Attaches a session this device's windows may show and answers the
-    /// workspace identity the core gave it; a session already attached keeps
-    /// its own.
-    public Guid AttachWorkspace(NativeSessionAuthority session) => device.Attach(session);
-
-    #endregion
-
     #region Actions - Lifetime
 
     /// Stages and saves any accepted revision still pending and closes the
@@ -184,8 +178,8 @@ public sealed partial class CrestApp : IDisposable {
     /// engine binding hears from the core again.
     public void Dispose() {
         lock (gate) engines.Clear();
-        SessionSync?.Stop();
-        Session?.Release();
+        storedSync?.Stop();
+        storedSession?.Close();
         storage?.Dispose();
     }
 

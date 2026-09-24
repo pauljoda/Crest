@@ -17,8 +17,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void APromotedPageBecomesATabOnceAndTheTabTakesThePageOnlyInItsOwnSpace() {
         var session = TwoSpaceSession();
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         device.Register(EngineCapability.WorkspaceTransfer);
         Guid first = SpaceId(session["spaces"]![0]!), second = SpaceId(session["spaces"]![1]!);
         var window = device.Open(first, (first, TabId(session["spaces"]![0]!, 0)));
@@ -49,8 +49,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AnEngineThatCannotMoveAPageBetweenWindowsLeavesThePromotedTabToOpenItsOwn() {
         var session = SavedSession().Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         device.Register();
         var space = SpaceId(session["spaces"]![0]!);
         var window = device.Open(space);
@@ -63,8 +63,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AnArchivedPageIsKeptOnceInItsSpacesArchiveEvenAfterItsPageIsGone() {
         var session = TwoSpaceSession();
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         device.Register();
         Guid first = SpaceId(session["spaces"]![0]!), second = SpaceId(session["spaces"]![1]!);
         var window = device.Open(first, (first, TabId(session["spaces"]![0]!, 0)));
@@ -96,8 +96,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AnUnloadedQuickWindowPageStaysArchivableUntilItIsArchivedOrLetGoAndAClosedPeekLeavesNothing() {
         var f = SavedSession(); var session = f.Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         device.Register();
         var window = device.Open(f.Space);
         ArchiveTransientPage Archiving(Guid pageId) => new(device.Workspace, pageId, f.Space);

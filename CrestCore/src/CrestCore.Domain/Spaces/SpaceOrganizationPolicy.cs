@@ -16,10 +16,6 @@ public static class SpaceOrganizationPolicy {
 
     #region Actions - Space organization
 
-    public static void RequireOwnedProfiles(WorkspaceKind kind) {
-        if (kind == WorkspaceKind.Borrowed) throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfile);
-    }
-
     /// Throws `Rejected` with `CannotDeleteLastSpace` unless `count` Spaces
     /// leave one behind when one goes.
     public static void RequireRemovable(int count) {

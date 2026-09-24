@@ -107,12 +107,11 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
-    private static NativeSessionAuthority MaximalSession() {
-        var creation = JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Session", "Fixtures",
-            "maximal-session.json")))!.AsObject();
-        creation["coreWorkspaceKind"] = "persistent";
-        return new NativeSessionAuthority(Bytes(creation));
-    }
+    private static NativeSessionAuthority MaximalSession() => TestWorkspaces.Session(MaximalDocument());
+
+    /// The maximal stored-session fixture.
+    private static JsonNode MaximalDocument() => JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Session",
+        "Fixtures", "maximal-session.json")))!;
 
     /// Every command the recorded script runs, from the windows it names,
     /// reaches a reader that started from the opened workspace as changes
@@ -120,13 +119,14 @@ public sealed partial class BrowserContractsTests {
     /// again changes nothing.
     [Fact]
     public void AReaderOfTheChangesHoldsTheCoresStateAfterEveryCommand() {
-        var authority = MaximalSession();
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
         var ids = new TestIds();
         using var app = new CrestApp(new AppConfiguration(null), clock, ids);
         var engine = RecordedIntents.PageEngine(app);
-        var workspace = app.AttachWorkspace(authority);
-        var reader = SessionReader.Opening(app.Drain());
+        var opening = app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(MaximalDocument())));
+        var workspace = TestWorkspaces.Opened(opening);
+        var authority = app.Workspace(workspace);
+        var reader = SessionReader.Opening(opening);
         TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
         Assert.Equal(authority.Current, reader.State);
         var published = new HashSet<Type>();
@@ -234,10 +234,11 @@ public sealed partial class BrowserContractsTests {
     /// window that shows it and ends in the core's state.
     [Fact]
     public void AnIntentAnswersThePendingBatchBeforeItsOwnChanges() {
-        var authority = MaximalSession();
         using var app = new CrestApp();
-        var workspace = app.AttachWorkspace(authority);
-        var reader = SessionReader.Opening(app.Drain());
+        var opening = app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(MaximalDocument())));
+        var workspace = TestWorkspaces.Opened(opening);
+        var authority = app.Workspace(workspace);
+        var reader = SessionReader.Opening(opening);
         TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
         var space = authority.Current.Spaces[0];
         var window = Guid.NewGuid();

@@ -17,8 +17,8 @@ public sealed partial class BrowserContractsTests {
         var folders = space["folders"]!.AsArray();
         while (folders.Count < FolderTree.MaximumCount - 1)
             folders.Add(new JsonObject { ["id"] = SwiftId(Guid.NewGuid()), ["title"] = "Filler", ["location"] = "saved" });
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         CreateFolder Creating(TabPlacement placement, Guid? parent = null) =>
             new(device.Workspace, f.Space, Guid.NewGuid(), placement, parent, "Folder", null, null, [], LeavesSplits: false);
 
@@ -43,8 +43,8 @@ public sealed partial class BrowserContractsTests {
         var draft = target.DeepClone(); var draftId = Guid.NewGuid();
         draft["id"] = SwiftId(draftId); draft["url"] = null; draft["title"] = "Start Page";
         space["tabs"]!.AsArray().Add(target); space["tabs"]!.AsArray().Add(draft);
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Showing(session);
         var copy = Guid.NewGuid();
         device.Ids.Supply([copy]);

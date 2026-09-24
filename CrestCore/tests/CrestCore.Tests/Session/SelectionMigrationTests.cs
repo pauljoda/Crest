@@ -15,7 +15,7 @@ public sealed partial class BrowserContractsTests {
     public void ALegacySelectionLoadsButNeverReachesACheckpointOrSurvivesAnEdit() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         Assert.NotNull(session["selectedSpaceID"]); Assert.NotNull(session["spaces"]![0]!["selectedTabID"]);
-        var authority = new NativeSessionAuthority(Bytes(session));
+        var authority = TestWorkspaces.Session(session);
 
         var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         Assert.Null(saved["selectedSpaceID"]);
@@ -37,9 +37,9 @@ public sealed partial class BrowserContractsTests {
 
         // A window showing a tab only records when it was last used; the
         // document still carries no selection.
-        using var device = new TestDevice(authority);
+        using var device = new TestDevice(session);
         device.Send(new ShowTab(device.Open(fixture.Space), fixture.Space, fixture.Tab));
-        var touched = JsonNode.Parse(authority.Checkpoint().Read("core"))!["spaces"]![0]!;
+        var touched = JsonNode.Parse(device.Authority.Checkpoint().Read("core"))!["spaces"]![0]!;
         Assert.True(touched["tabs"]![0]!["lastActivatedAt"]!.GetValue<double>() > 800000000.25);
         Assert.Null(touched["selectedTabID"]);
     }
@@ -57,8 +57,8 @@ public sealed partial class BrowserContractsTests {
         Guid earlier = Guid.NewGuid(), closing = Guid.NewGuid();
         space["tabs"]!.AsArray().Add(Current(earlier));
         space["tabs"]!.AsArray().Add(Current(closing));
-        var authority = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(authority);
+        using var device = new TestDevice(session);
+        var authority = device.Authority;
         var closer = device.Open(fixture.Space);
         foreach (var tab in new[] { fixture.Tab, earlier, closing }) device.Send(new ShowTab(closer, fixture.Space, tab));
         var other = device.Open(fixture.Space);
@@ -87,8 +87,8 @@ public sealed partial class BrowserContractsTests {
             return id;
         }
         Guid shownElsewhere = Stale(), unshown = Stale();
-        var authority = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(authority);
+        using var device = new TestDevice(session);
+        var authority = device.Authority;
         device.Open(fixture.Space, (fixture.Space, shownElsewhere));
         device.Clock.Now = StoredSessionCodec.Date(800000100);
         device.Send(new SweepExpiredRecords(device.Workspace));

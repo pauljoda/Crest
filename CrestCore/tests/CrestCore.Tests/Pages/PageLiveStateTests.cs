@@ -16,7 +16,7 @@ public sealed partial class BrowserContractsTests {
         LivePage() {
         var fixture = SavedSession();
         var session = fixture.Document["session"]!;
-        var (app, engine, binding, workspace, window) = PageHost(new NativeSessionAuthority(Bytes(session)));
+        var (app, engine, binding, workspace, window) = PageHost(session);
         var page = Guid.NewGuid();
         app.Send(new OpenPage(page, workspace, fixture.Space, fixture.Tab, window));
         app.Report(engine, new PageCreated(page));
@@ -140,12 +140,12 @@ public sealed partial class BrowserContractsTests {
     public void NavigateLoadsInternalPagesOnlyOnAnEngineThatShowsThemAndNeverInALockedSpace() {
         var session = SavedSession().Document["session"]!;
         var space = SpaceId(session["spaces"]![0]!);
-        var authority = new NativeSessionAuthority(Bytes(session));
         using var app = new CrestApp();
         var binding = new RecordingEngine();
         var engine = app.RegisterEngine(new EngineRegistration(EngineKind.Chromium,
             [.. EngineCapability.Required, EngineCapability.InternalPages], IsDefault: true), binding.Run);
-        var workspace = app.AttachWorkspace(authority);
+        var workspace = TestWorkspaces.Open(app, session);
+        var authority = app.Workspace(workspace);
         var window = Guid.NewGuid();
         app.Send(new OpenWindow(window, workspace, Saved: false, null, null, [], RestoresTabs: true));
         var page = Guid.NewGuid();

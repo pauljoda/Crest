@@ -40,11 +40,13 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
 
         XCTAssertNil(launch.recoveryError)
         XCTAssertEqual(successfulLaunches, 1)
-        let restored = try XCTUnwrap(
-            BrowserCoreStoredSession.load(core: try XCTUnwrap(launch.value), favicons: InMemoryBrowserFaviconStore()))
-        XCTAssertEqual(restored.authority.projection, original)
-        XCTAssertNotEqual(restored.sync.journal.deviceID, journal.deviceID)
-        XCTAssertEqual(restored.sync.journal.records, journal.records)
+        let relaunched = try XCTUnwrap(launch.value)
+        let restored = try BrowserCoreSessionAuthority.openStored(
+            in: relaunched, favicons: InMemoryBrowserFaviconStore())
+        let sync = try XCTUnwrap(try relaunched.storedSync())
+        XCTAssertEqual(restored.projection, original)
+        XCTAssertNotEqual(sync.journal.deviceID, journal.deviceID)
+        XCTAssertEqual(sync.journal.records, journal.records)
         XCTAssertTrue(FileManager.default.fileExists(atPath: BrowserSessionRecovery.cloudMarker(in: directory).path))
     }
 
@@ -113,11 +115,12 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
             let crest = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
             let storage = try BrowserStore.migratedStorage(
                 core: crest, legacy: legacy, favicons: favicons, seed: .freshInstallSeed, environment: .current)
-            XCTAssertEqual(storage.authority.projection, installed)
-            XCTAssertTrue(storage.authority.projection.spaces.allSatisfy { $0.tabs.contains { $0.faviconData != nil } })
-            XCTAssertEqual(storage.sync.journal.deviceID, journal.deviceID)
-            XCTAssertEqual(storage.sync.journal.records, journal.records)
-            XCTAssertEqual(storage.sync.journal.pendingRecordIDs, journal.pendingRecordIDs)
+            let sync = try XCTUnwrap(try crest.storedSync())
+            XCTAssertEqual(storage.projection, installed)
+            XCTAssertTrue(storage.projection.spaces.allSatisfy { $0.tabs.contains { $0.faviconData != nil } })
+            XCTAssertEqual(sync.journal.deviceID, journal.deviceID)
+            XCTAssertEqual(sync.journal.records, journal.records)
+            XCTAssertEqual(sync.journal.pendingRecordIDs, journal.pendingRecordIDs)
             XCTAssertNotNil(defaults.data(forKey: BrowserLegacySessionDefaults.coreKey))
         }
 
@@ -126,7 +129,7 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         let relaunchedCore = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
         let relaunched = try BrowserStore.migratedStorage(
             core: relaunchedCore, legacy: legacy, favicons: favicons, seed: .freshInstallSeed, environment: .current)
-        XCTAssertEqual(relaunched.authority.projection, installed)
+        XCTAssertEqual(relaunched.projection, installed)
     }
 
     /// Spaces with distinct profiles, folders, a split, an archive, per-Space

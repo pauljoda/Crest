@@ -102,14 +102,11 @@ final class BrowserDataRetentionTests: XCTestCase {
         let oldArchive = Self.archive(title: "Expired", archivedAt: oldDate)
         session.spaces[0].history = [oldHistory]
         session.spaces[0].archivedTabs = [oldArchive]
-        let sync = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence()
-        )
-        try sync.stage(session: session, at: oldDate)
-        let browser = BrowserStore(
-            session: session,
-            syncCoordinator: sync
-        )
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: session, at: oldDate)
+        let harness = try BrowserStoredSessionHarness(session: session, journal: journal)
+        let browser = harness.store
+        let sync = try XCTUnwrap(browser.syncCoordinator)
 
         browser.updateDataRetentionPreferences(
             .init(

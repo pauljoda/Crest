@@ -50,8 +50,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ASavedTabReplacesOrReturnsToTheAddressItBelongsToAndAnOpenTabBelongsNowhere() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         TabState Tab() => core.Current.Spaces[0].Tabs[0];
         Assert.True(Tab().IsAwayFromSavedAddress);
 
@@ -62,8 +62,8 @@ public sealed partial class BrowserContractsTests {
         device.Send(new ReturnToSavedAddress(device.Workspace, fixture.Space, fixture.Tab));
         Assert.Same(home, core.Current);
 
-        var away = new NativeSessionAuthority(Bytes(session));
-        using var elsewhere = new TestDevice(away);
+        using var elsewhere = new TestDevice(session);
+        var away = elsewhere.Authority;
         elsewhere.Send(new ReturnToSavedAddress(elsewhere.Workspace, fixture.Space, fixture.Tab));
         Assert.Equal(("https://example.com/", "https://example.com/", false), (away.Current.Spaces[0].Tabs[0].Url,
             away.Current.Spaces[0].Tabs[0].SavedUrl, away.Current.Spaces[0].Tabs[0].IsAwayFromSavedAddress));
@@ -72,8 +72,8 @@ public sealed partial class BrowserContractsTests {
         var open = session.DeepClone();
         var tab = open["spaces"]![0]!["tabs"]![0]!;
         tab["placement"] = "current"; tab["savedURL"] = null; tab["folderID"] = null;
-        var current = new NativeSessionAuthority(Bytes(open));
-        using var browsing = new TestDevice(current);
+        using var browsing = new TestDevice(open);
+        var current = browsing.Authority;
         var before = current.Current;
         Assert.Equal(fixture.Tab, Assert.IsType<NoSavedAddress>(Assert.Throws<Rejected>(() =>
             browsing.Send(new ReplaceSavedAddress(browsing.Workspace, fixture.Space, fixture.Tab))).Rejection).TabId);
@@ -85,8 +85,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ChoosingATabsIconNamesTheImageItWearsEvenWhenNothingElseChanges() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         TabState Tab() => core.Current.Spaces[0].Tabs[0];
         ChooseTabIcon Choosing(TabIconMode mode, string? emoji = null, TabIconAccent? accent = null) =>
             new(device.Workspace, fixture.Space, fixture.Tab, mode, emoji, accent);
@@ -117,8 +117,8 @@ public sealed partial class BrowserContractsTests {
         var space = session["spaces"]![0]!;
         space["tabs"]![0]!["folderID"] = null;
         space["tabs"]![0]!["splitGroupID"] = null;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var folder = Guid.NewGuid();
 
         var changes = device.Send(new CreateFolder(device.Workspace, fixture.Space, folder, TabPlacement.Saved, null, null, null, null,

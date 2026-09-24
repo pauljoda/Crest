@@ -4,20 +4,42 @@ import Observation
 @Observable
 @MainActor
 final class MobileBrowserWindowSceneModel {
+    // MARK: - Types
+
+    /// A window's private browsing: a private workspace of its own and what
+    /// shows it. It closes with the window.
+    struct PrivateBrowsingRuntime {
+        let browser: BrowserStore
+        let pages: MobileBrowserPageStore
+        let navigation: MobileBrowserNavigationState
+        let transientBrowsing: BrowserTransientBrowsingCoordinator
+    }
+
+    // MARK: - Variables
+
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
     let navigation: MobileBrowserNavigationState
     let transientBrowsing: BrowserTransientBrowsingCoordinator
-    let privateBrowser: BrowserStore
-    let privatePages: MobileBrowserPageStore
-    let privateNavigation: MobileBrowserNavigationState
-    let privateTransientBrowsing: BrowserTransientBrowsingCoordinator
+    /// This window's private browsing. A window shown again after it closed
+    /// browses in a new private workspace, never in the one that closed.
+    private(set) var privateRuntime: PrivateBrowsingRuntime
     let windowState: BrowserWindowStateStore
     let pageStoreRegistry: MobileBrowserPageStoreRegistry
     let spaceAccess: BrowserSpaceAccessController
     let startupBehavior: BrowserStartupBehavior
 
     @ObservationIgnored private let linkPreferenceStore: BrowserLinkPreferenceStore
+    @ObservationIgnored private let privateDownloads: MobileBrowserDownloads?
+    /// Whether the window closed, taking its private workspace with it.
+    @ObservationIgnored private var isClosed = false
+
+    var privateBrowser: BrowserStore { privateRuntime.browser }
+    var privatePages: MobileBrowserPageStore { privateRuntime.pages }
+    var privateNavigation: MobileBrowserNavigationState { privateRuntime.navigation }
+    var privateTransientBrowsing: BrowserTransientBrowsingCoordinator { privateRuntime.transientBrowsing }
+
+    // MARK: - Initializers
 
     init(
         id: BrowserWindowID,
@@ -86,56 +108,24 @@ final class MobileBrowserWindowSceneModel {
             },
             openPeek: { request in transientBrowsing.presentPeek(request) }
         )
-        let privateBrowser = BrowserStore.privateBrowsing(core: rootBrowser.core)
-        let privateNavigation = MobileBrowserNavigationState(
-            regularSidebarIsPresented: sidebarIsPresented
-        )
-        let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
-        let privatePages = MobileBrowserPageStore(
-            browser: privateBrowser,
-            browsingMode: .privateBrowsing,
-            permissionCenter: privateDownloads?.center.permissionCenter ?? BrowserSitePermissionCenter(),
-            downloads: privateDownloads,
-            // The private store answers to the private session, so a popup from a
-            // private page can only ever land in a private tab.
-            popupTabHost: privateBrowser.popupTabHost,
-            linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess),
-            openNewTab: { url in privateBrowser.openNewTab(url: url) },
-            openModifiedLink: { url, spaceID, selecting in
-                guard
-                    let tabID = privateBrowser.openNewTab(
-                        url: url,
-                        in: spaceID,
-                        selecting: selecting
-                    ),
-                    let space = privateBrowser.session.space(id: spaceID),
-                    let tab = space.tabs.first(where: { $0.id == tabID })
-                else { return nil }
-                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: privateBrowser.presented)
-            },
-            openPeek: { request in
-                privateTransientBrowsing.presentPeek(request)
-            }
-        )
-
         browser.tabLinkProvider = pages
-        privateBrowser.tabLinkProvider = privatePages
         browser.tabCopying = pages
-        privateBrowser.tabCopying = privatePages
         self.browser = browser
         self.navigation = navigation
         self.pages = pages
         self.transientBrowsing = transientBrowsing
-        self.privateBrowser = privateBrowser
-        self.privateNavigation = privateNavigation
-        self.privatePages = privatePages
-        self.privateTransientBrowsing = privateTransientBrowsing
+        privateRuntime = Self.openPrivateBrowsing(
+            core: rootBrowser.core, sidebarIsPresented: sidebarIsPresented, spaceAccess: spaceAccess,
+            downloads: privateDownloads)
+        self.privateDownloads = privateDownloads
         self.windowState = windowState
         self.pageStoreRegistry = pageStoreRegistry
         self.spaceAccess = spaceAccess
         self.startupBehavior = startupBehavior
         self.linkPreferenceStore = linkPreferenceStore
     }
+
+    // MARK: - Actions - Window
 
     @discardableResult
     func presentGettingStartedAfterSetup(matching assignment: BrowserTabRuntimeAssignment) -> Bool {
@@ -153,6 +143,7 @@ final class MobileBrowserWindowSceneModel {
     }
 
     func activateWindow() {
+        reopenIfClosed()
         pageStoreRegistry.register(pages)
     }
 
@@ -181,14 +172,14 @@ final class MobileBrowserWindowSceneModel {
         flushPendingPersistence()
     }
 
+    /// The window closed. Other windows still present the standard
+    /// confirmations they share; this window's private workspace closes with
+    /// it, and so do its private downloads and their records in the shared
+    /// private center. Closing it again does nothing.
     func closeWindowRuntime() {
-        // Other windows still present the standard confirmations they share.
-        cancelPrivateDownloadConfirmations()
-        // This window's private session closes with it, and so do its private
-        // downloads and their records in the shared private center.
-        for space in privateBrowser.session.spaces {
-            privatePages.downloadCenter.deleteRecords(profileID: space.profile.id, spaceID: space.id)
-        }
+        guard !isClosed else { return }
+        isClosed = true
+        closePrivateWorkspace()
         pageStoreRegistry.unregister(pages)
         flushPendingPersistence()
     }
@@ -258,6 +249,73 @@ final class MobileBrowserWindowSceneModel {
             navigation.selectTab()
         }
         return true
+    }
+
+    // MARK: - Actions - Private browsing
+
+    /// A new private workspace in `core` and what shows it in this window.
+    private static func openPrivateBrowsing(
+        core: CrestCore, sidebarIsPresented: Bool, spaceAccess: BrowserSpaceAccessController,
+        downloads: MobileBrowserDownloads?
+    ) -> PrivateBrowsingRuntime {
+        let privateBrowser = BrowserStore.privateBrowsing(core: core)
+        let privateNavigation = MobileBrowserNavigationState(
+            regularSidebarIsPresented: sidebarIsPresented
+        )
+        let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
+        let privatePages = MobileBrowserPageStore(
+            browser: privateBrowser,
+            browsingMode: .privateBrowsing,
+            permissionCenter: downloads?.center.permissionCenter ?? BrowserSitePermissionCenter(),
+            downloads: downloads,
+            // The private store answers to the private session, so a popup from a
+            // private page can only ever land in a private tab.
+            popupTabHost: privateBrowser.popupTabHost,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess),
+            openNewTab: { url in privateBrowser.openNewTab(url: url) },
+            openModifiedLink: { url, spaceID, selecting in
+                guard
+                    let tabID = privateBrowser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ),
+                    let space = privateBrowser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
+                else { return nil }
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: privateBrowser.presented)
+            },
+            openPeek: { request in
+                privateTransientBrowsing.presentPeek(request)
+            }
+        )
+
+        privateBrowser.tabLinkProvider = privatePages
+        privateBrowser.tabCopying = privatePages
+        return PrivateBrowsingRuntime(
+            browser: privateBrowser, pages: privatePages, navigation: privateNavigation,
+            transientBrowsing: privateTransientBrowsing)
+    }
+
+    /// Closes this window's private workspace, once: its pages, downloads and
+    /// their records go with it.
+    private func closePrivateWorkspace() {
+        cancelPrivateDownloadConfirmations()
+        for space in privateBrowser.session.spaces {
+            privatePages.downloadCenter.deleteRecords(profileID: space.profile.id, spaceID: space.id)
+        }
+        privateBrowser.close()
+        privateBrowser.family.close()
+    }
+
+    /// A window shown again after it closed browses privately in a new
+    /// workspace.
+    private func reopenIfClosed() {
+        guard isClosed else { return }
+        isClosed = false
+        privateRuntime = Self.openPrivateBrowsing(
+            core: browser.core, sidebarIsPresented: windowState.sidebarIsPresented ?? true, spaceAccess: spaceAccess,
+            downloads: privateDownloads)
     }
 
     /// Private downloads share one confirmation across windows; this window

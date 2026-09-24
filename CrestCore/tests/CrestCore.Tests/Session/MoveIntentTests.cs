@@ -19,14 +19,14 @@ public sealed partial class BrowserContractsTests {
         document.Remove("disposableSeedMarker");
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         var answered = app.Send(Adoption(document));
-        var owner = app.Session!;
-        var sync = app.SessionSync!;
+        var (workspace, opened) = TestWorkspaces.OpenStored(app);
+        var owner = app.Workspace(workspace);
+        var sync = app.StoredSync!;
         sync.Flush();
-        _ = DrainUntil(app, changes => changes.OfType<SyncJournalChanged>().Any() && changes.OfType<Saved>().Any(), answered);
-        var workspace = app.AttachWorkspace(owner);
-        var profile = owner.Current.Spaces[0].ProfileId;
-        var borrowed = owner.CreateBorrowed(fixture.Space, profile);
-        var borrowing = app.AttachWorkspace(borrowed);
+        _ = DrainUntil(app, changes => changes.OfType<SyncJournalChanged>().Any() && changes.OfType<Saved>().Any(),
+            [.. answered, .. opened]);
+        var borrowing = TestWorkspaces.Borrow(app, workspace, document["spaces"]![0]!);
+        var borrowed = app.Workspace(borrowing);
         var windows = new Dictionary<Guid, WindowState>();
         void Record(IReadOnlyList<Change> changes) {
             foreach (var change in changes.OfType<WindowChanged>()) windows[change.Window.Id] = change.Window;
@@ -72,18 +72,14 @@ public sealed partial class BrowserContractsTests {
     public void ATabNeverMovesBetweenPrivateAndOtherBrowsingOrBetweenWorkspacesThatShareNoSpace() {
         var fixture = SavedSession();
         var session = fixture.Document["session"]!;
-        var owner = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(owner);
+        using var device = new TestDevice(session);
+        var owner = device.Authority;
         var window = device.Showing(session);
-        var privateSession = session.DeepClone();
-        privateSession["coreWorkspaceKind"] = "private";
-        var privateOwner = new NativeSessionAuthority(Bytes(privateSession));
-        device.Attach(privateOwner);
-        var profile = owner.Current.Spaces[0].ProfileId;
-        var privateWindow = device.OpenIn(device.Attach(privateOwner.CreateBorrowed(fixture.Space, profile)), fixture.Space);
-        var unrelatedOwner = new NativeSessionAuthority(Bytes(session));
-        device.Attach(unrelatedOwner);
-        var unrelatedWindow = device.OpenIn(device.Attach(unrelatedOwner.CreateBorrowed(fixture.Space, profile)), fixture.Space);
+        var space = session["spaces"]![0]!;
+        var privateOwner = device.Attach(session.DeepClone(), WorkspaceKind.Private);
+        var privateWindow = device.OpenIn(device.Borrow(space, privateOwner), fixture.Space);
+        var unrelatedOwner = device.Attach(session.DeepClone());
+        var unrelatedWindow = device.OpenIn(device.Borrow(space, unrelatedOwner), fixture.Space);
         MoveTabToWindow Moving(Guid destination) => new(device.Workspace, window, fixture.Space, fixture.Tab, destination);
         var before = owner.Current;
 
@@ -101,9 +97,9 @@ public sealed partial class BrowserContractsTests {
         Assert.Contains(owner.Current.Spaces[0].Tabs, tab => tab.Id == fixture.Tab);
 
         // A borrowing workspace that already holds the tab takes no second one.
-        var lending = owner.CreateBorrowed(fixture.Space, profile);
-        var lendingWindow = device.OpenIn(device.Attach(lending), fixture.Space);
-        var space = session["spaces"]![0]!;
+        var lendingWorkspace = device.Borrow(space);
+        var lending = device.Session(lendingWorkspace);
+        var lendingWindow = device.OpenIn(lendingWorkspace, fixture.Space);
         lending.Commit(Bytes(new JsonObject {
             ["version"] = 1,
             ["spaces"] = new JsonArray(new JsonObject {
@@ -129,8 +125,8 @@ public sealed partial class BrowserContractsTests {
                 ["symbol"] = "globe",
                 ["lastActivatedAt"] = 800000000.0
             });
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         device.Send(new ShowTab(window, f.Space, f.Left));
         MoveTabToSpace Moving(Guid tab, Guid destination, bool follows, TabPlacement? placement = null) =>

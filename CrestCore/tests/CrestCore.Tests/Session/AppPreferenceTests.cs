@@ -23,9 +23,9 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void LegacyPreferencesImportOnceAndPersistWithTheSession() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
         byte[] saved;
-        using (var device = new TestDevice(authority)) {
+        using (var device = new TestDevice(session)) {
+            var authority = device.Authority;
             Assert.Equal(StartupBehavior.ShowStartPage, device.Query(LaunchPlan(device.Workspace)).Startup);
             device.Send(new ImportAppPreferences(device.Workspace, LegacyPreferences()));
             saved = authority.Checkpoint().Read("core");
@@ -42,8 +42,8 @@ public sealed partial class BrowserContractsTests {
         Assert.True(stored["splitFocusFollowsMouse"]!.GetValue<bool>());
 
         // A later launch finds the record and never imports over it again.
-        var restored = new NativeSessionAuthority(saved);
-        using var relaunched = new TestDevice(restored);
+        using var relaunched = new TestDevice(JsonNode.Parse(saved)!);
+        var restored = relaunched.Authority;
         var kept = restored.Current.AppPreferences;
         relaunched.Send(new ImportAppPreferences(relaunched.Workspace, new("showStartPage", null, null, null, false, null, null, null,
             null)));
@@ -53,8 +53,8 @@ public sealed partial class BrowserContractsTests {
 
     [Fact]
     public void UnreadableLegacyValuesKeepTheirDefaults() {
-        var authority = new NativeSessionAuthority(Bytes(SavedSession().Document["session"]!));
-        using var device = new TestDevice(authority);
+        using var device = new TestDevice(SavedSession().Document["session"]!);
+        var authority = device.Authority;
         device.Send(new ImportAppPreferences(device.Workspace, new("retiredChoice", null, null, "not json", null, null, null, null, null)));
         var stored = authority.Current.AppPreferences!;
         Assert.Equal(AppPreferencesPolicy.Default, stored);
@@ -63,8 +63,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void OnlyThePersistentWorkspaceKeepsAppPreferences() {
         var session = SavedSession().Document["session"]!;
-        var owner = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(owner);
+        using var device = new TestDevice(session);
+        var owner = device.Authority;
         var preferences = AppPreferencesPolicy.Default with { ChecksSpelling = true };
         device.Send(new SetAppPreferences(device.Workspace, preferences));
         Assert.Equal(preferences, owner.Current.AppPreferences);
@@ -74,9 +74,8 @@ public sealed partial class BrowserContractsTests {
         owner.Commit(Bytes(new JsonObject { ["version"] = 1, ["metadata"] = header, ["spaces"] = new JsonArray() }));
         Assert.Equal(preferences, owner.Current.AppPreferences);
 
-        var borrowed = device.Attach(Borrow(owner, session));
-        var privateSession = session.DeepClone(); privateSession["coreWorkspaceKind"] = "private";
-        var privateWorkspace = device.Attach(new NativeSessionAuthority(Bytes(privateSession)));
+        var borrowed = device.Borrow(session["spaces"]![0]!);
+        var privateWorkspace = device.Attach(session.DeepClone(), WorkspaceKind.Private);
         foreach (var workspace in new[] { borrowed, privateWorkspace }) {
             Assert.Equal(new PersistentWorkspaceRequired(workspace), Assert.Throws<Rejected>(() =>
                 device.Send(new SetAppPreferences(workspace, preferences))).Rejection);
@@ -109,10 +108,10 @@ public sealed partial class BrowserContractsTests {
         var platform = DevicePlatform.Named(platformName)!;
         var session = SavedSession().Document["session"]!.AsObject();
         session["appPreferences"] = new JsonObject { ["startupBehavior"] = "lastActiveTab" };
-        using (var device = new TestDevice(new NativeSessionAuthority(Bytes(session))))
+        using (var device = new TestDevice(session))
             Assert.Equal(StartupBehavior.LastActiveTab, device.Query(LaunchPlan(device.Workspace, platform, gate)).Startup);
         session["appPreferences"] = new JsonObject { ["startupBehavior"] = "showStartPage" };
-        using var shows = new TestDevice(new NativeSessionAuthority(Bytes(session)));
+        using var shows = new TestDevice(session);
         Assert.Equal(gate ? StartupBehavior.LastActiveTab : StartupBehavior.ShowStartPage,
             shows.Query(LaunchPlan(shows.Workspace, platform, gate)).Startup);
         // Setup and isolated fixtures restore their staged tab; the mobile showcase always opens the Start Page.

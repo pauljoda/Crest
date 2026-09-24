@@ -37,6 +37,8 @@ internal sealed partial class Device {
     private readonly Action<Change> announce;
     /// Asks the host for a drain on its next turn.
     private readonly Action requestTurn;
+    /// Closes a borrowed workspace whose owner no longer lends its Space.
+    private readonly Action<Guid> closeOrphan;
     /// The tabs an older release kept in the session, which a window without a
     /// record adopts during the launch that loaded them.
     private IReadOnlyDictionary<Guid, Guid> legacyTabs = new Dictionary<Guid, Guid>();
@@ -51,17 +53,20 @@ internal sealed partial class Device {
     /// A device whose saved windows `storage` keeps, starting from `records`;
     /// without storage every window lives in memory. Each session it shows
     /// consults `access`. `requestTurn` asks the host for a drain on its next
-    /// turn.
+    /// turn, and `closeOrphan` closes a borrowed workspace whose owner no
+    /// longer lends its Space.
     public Device(SessionStorage? storage, DeviceRecords records, SpaceAccessAuthority access, Action<Change> announce,
-        Action requestTurn) {
+        Action requestTurn, Action<Guid> closeOrphan) {
         ArgumentNullException.ThrowIfNull(records);
         ArgumentNullException.ThrowIfNull(access);
         ArgumentNullException.ThrowIfNull(announce);
         ArgumentNullException.ThrowIfNull(requestTurn);
+        ArgumentNullException.ThrowIfNull(closeOrphan);
         this.storage = storage;
         this.access = access;
         this.announce = announce;
         this.requestTurn = requestTurn;
+        this.closeOrphan = closeOrphan;
         foreach (var record in records.Windows) saved[record.Id] = record;
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
         adoptedWindowRecords = records.AdoptedWindowRecords;
@@ -71,42 +76,53 @@ internal sealed partial class Device {
 
     #region Actions - Workspaces
 
-    /// Attaches a session a window may show, publishes it whole, and answers
-    /// the identity the device gave its workspace; a session already attached
-    /// keeps its own and publishes nothing. The session's Spaces answer to the
-    /// device's grants from then on.
-    public Guid Attach(NativeSessionAuthority authority) {
+    /// Attaches a session a window may show as the workspace `workspaceId`,
+    /// which the core drew for it, and publishes it whole. The session's
+    /// Spaces answer to the device's grants from then on.
+    public void Attach(NativeSessionAuthority authority, Guid workspaceId) {
         ArgumentNullException.ThrowIfNull(authority);
-        Guid workspaceId;
         lock (gate) {
-            if (workspaces.FirstOrDefault(entry => ReferenceEquals(entry.Value, authority)) is { Value: not null } known)
-                return known.Key;
-            workspaceId = Guid.NewGuid();
-            workspaces[workspaceId] = authority;
+            if (workspaces.Values.Any(attached => ReferenceEquals(attached, authority)) || !workspaces.TryAdd(workspaceId, authority))
+                throw new InvalidOperationException("A session joins the device once, as a workspace of its own.");
         }
         authority.AttachAccess(access);
         authority.AttachDevice(this, workspaceId);
         announce(new WorkspaceOpened(workspaceId, authority.Kind, authority.Current));
-        return workspaceId;
     }
 
     /// Attaches the persistent session the core loaded, which every saved
     /// window shows, with the selection an older release kept in it.
-    public void AttachPersistent(NativeSessionAuthority authority, JsonObject? legacySelection) {
-        var workspaceId = Attach(authority);
+    public void AttachPersistent(NativeSessionAuthority authority, JsonObject? legacySelection, Guid workspaceId) {
+        Attach(authority, workspaceId);
         lock (gate) {
             persistentWorkspace = workspaceId;
             legacyTabs = LegacyTabs(legacySelection);
         }
     }
 
-    /// A session that is gone takes the windows over it with it. Their
-    /// records stay, since only the persistent session has saved windows.
+    /// The workspace `authority` is attached as, or null when it is not.
+    public Guid? Identity(NativeSessionAuthority authority) {
+        lock (gate) return workspaces.FirstOrDefault(entry => ReferenceEquals(entry.Value, authority)) is { Value: not null } known
+            ? known.Key : null;
+    }
+
+    /// The workspaces that borrow a Space from `owner`.
+    public IReadOnlyList<Guid> Borrowers(NativeSessionAuthority owner) {
+        lock (gate) return [.. workspaces.Where(entry => entry.Value.Borrows(owner)).Select(entry => entry.Key)];
+    }
+
+    /// A workspace that closed takes the windows over it with it, each
+    /// published as closed, then publishes that it closed. Their saved records
+    /// stay, so a later launch restores those windows: a workspace closing is
+    /// not the person closing its windows.
     public void Detach(Guid workspaceId) {
+        Window[] closed;
         lock (gate) {
             if (!workspaces.Remove(workspaceId)) return;
-            foreach (var window in open.Values.Where(window => window.WorkspaceId == workspaceId).ToArray()) open.Remove(window.Id);
+            closed = [.. open.Values.Where(window => window.WorkspaceId == workspaceId)];
+            foreach (var window in closed) open.Remove(window.Id);
         }
+        foreach (var window in closed) announce(new WindowClosed(window.Id));
         announce(new WorkspaceClosed(workspaceId));
     }
 
@@ -168,13 +184,29 @@ internal sealed partial class Device {
         ArgumentNullException.ThrowIfNull(events);
         var changes = new List<Change>(SessionChanges.Publish(workspaceId, previous, next));
         changes.AddRange(events.Changes(workspaceId));
+        NativeSessionAuthority? owner;
         lock (gate) {
             changes.AddRange(Changing(open.Values.Where(window => window.WorkspaceId == workspaceId), window => {
                 if (followUp is not null && window.Id == followUp.Window?.Id) window.Apply(followUp);
                 window.Repair(next);
             }));
+            owner = workspaces.GetValueOrDefault(workspaceId);
         }
         foreach (var change in changes) announce(change);
+        if (owner is not null) FollowOwner(owner);
+    }
+
+    /// Each workspace that borrows a Space from `owner` follows what `owner`
+    /// accepted: its Space takes the owner's settings, published as its own
+    /// change, and a workspace whose owner no longer lends its Space closes.
+    /// Called with no lock held.
+    private void FollowOwner(NativeSessionAuthority owner) {
+        foreach (var borrowerId in Borrowers(owner)) {
+            if (Attached(borrowerId) is not { } borrower) continue;
+            if (borrower.LostSource()) closeOrphan(borrowerId);
+            else if (borrower.FollowOwner() is { } followed)
+                SessionPublished(borrowerId, followed.Previous, followed.Next, followUp: null, SessionTabEvents.None);
+        }
     }
 
     /// Publishes a change a workspace's session started itself, such as a

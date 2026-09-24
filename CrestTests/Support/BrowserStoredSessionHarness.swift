@@ -50,11 +50,9 @@ final class BrowserStoredSessionHarness {
     }
 
     private static func open(_ core: CrestCore, favicons: InMemoryBrowserFaviconStore) throws -> BrowserStore {
-        let stored = try XCTUnwrap(BrowserCoreStoredSession.load(core: core, favicons: favicons))
-        let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
-        return BrowserStore(
-            credentialVault: InMemoryCredentialVault(), syncCoordinator: BrowserSyncCoordinator(core: stored.sync),
-            browsingMode: .standard, family: family, core: core)
+        let stored = try BrowserCoreSessionAuthority.openStored(in: core, favicons: favicons)
+        return try BrowserStore.production(
+            stored: stored, core: core, favicons: favicons, credentialVault: InMemoryCredentialVault())
     }
 
     // MARK: - Actions - Launches

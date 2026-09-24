@@ -143,21 +143,104 @@ static void policy_boundary(void) {
 }
 static const char* space_id = "44444444-4444-4444-4444-444444444444";
 static const char* profile_id = "55555555-5555-5555-5555-555555555555";
+/* A byte string: its LEB128 length, then the bytes. */
+static size_t put_bytes(uint8_t* output, size_t at, size_t capacity, const char* bytes, size_t length) {
+    size_t remaining = length;
+    do {
+        assert(at < capacity);
+        uint8_t next = (uint8_t)(remaining & 0x7f);
+        remaining >>= 7;
+        output[at++] = remaining == 0 ? next : (uint8_t)(next | 0x80);
+    } while (remaining != 0);
+    assert(at + length <= capacity);
+    memcpy(output + at, bytes, length);
+    return at + length;
+}
+/* WorkspaceKind members travel as their index in WorkspaceKind.All. */
+enum { persistent_kind = 0, private_kind = 1, borrowed_kind = 2 };
+/* OpenWorkspace: its tag, the kind, then the seed: a presence byte and, when
+ * present, a byte string holding a session in the stored format. */
+static size_t open_workspace(uint8_t* output, size_t capacity, uint8_t kind, const char* seed, size_t length) {
+    assert(capacity >= 3);
+    size_t at = 0;
+    output[at++] = CREST_INTENT_OPEN_WORKSPACE;
+    output[at++] = kind;
+    output[at++] = seed != NULL;
+    return seed == NULL ? at : put_bytes(output, at, capacity, seed, length);
+}
+/* The workspace a WorkspaceOpened at `at` names: the 16 RFC 4122 bytes after
+ * its tag. Its kind follows them. */
+static void opened_workspace(const crest_buffer_t* buffer, size_t at, uint8_t workspace[16], uint8_t kind) {
+    assert(at + 18 <= buffer->length && buffer->bytes[at] == CREST_CHANGE_WORKSPACE_OPENED);
+    assert(buffer->bytes[at + 17] == kind);
+    memcpy(workspace, buffer->bytes + at + 1, 16);
+}
+/* Opens a workspace of `kind` from `seed` in `app` and answers its identity:
+ * the answer is its WorkspaceOpened alone. */
+static void open_seeded(uint64_t app, uint8_t kind, const char* seed, size_t length, uint8_t workspace[16]) {
+    uint8_t intent[1100];
+    crest_buffer_t buffer = { NULL, 0 };
+    size_t size = open_workspace(intent, sizeof(intent), kind, seed, length);
+    assert(crest_app_dispatch(app, intent, size, &buffer) == CREST_OK && buffer.bytes[0] == 1);
+    opened_workspace(&buffer, 1, workspace, kind);
+    crest_buffer_free(&buffer);
+}
+/* The core gives each workspace it opens its identity: from a seed, from the
+ * template of a private one, or by borrowing a Space; closing an owner closes
+ * its borrowers first. */
 static void session_boundary(void) {
+    const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
+    const uint8_t memory_only[] = { 0 };
+    uint64_t app = 0;
+    crest_buffer_t buffer = { NULL, 0 };
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
     char json[1024];
     int size = snprintf(json, sizeof(json),
         "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},"
         "\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"tabs\":[],\"folders\":[],"
         "\"history\":[],\"archivedTabs\":[]}]}", space_id, space_id, profile_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 999;
-    assert(crest_session_create(NULL, 0, &session) == CREST_INVALID_ARGUMENT && session == 0);
-    assert(crest_session_create((const uint8_t*)"{}", 2, &session) == CREST_INVALID_MESSAGE && session == 0);
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK && session != 0);
-    memset(json, 0xaa, sizeof(json)); /* The core must own its session copy. */
+    uint8_t intent[1100];
+    /* A seed that is not a session in the stored format is refused with the
+     * flaw it has (SeedFlaw.Unreadable is 0). */
+    size_t length = open_workspace(intent, sizeof(intent), persistent_kind, "[]", 2);
+    assert(crest_app_dispatch(app, intent, length, &buffer) == CREST_REJECTED);
+    assert(buffer.length == 2 && buffer.bytes[0] == CREST_REJECTION_INVALID_SEED && buffer.bytes[1] == 0);
+    crest_buffer_free(&buffer);
+    /* A borrowed workspace opens only by borrowing. */
+    length = open_workspace(intent, sizeof(intent), borrowed_kind, json, (size_t)size);
+    assert(crest_app_dispatch(app, intent, length, &buffer) == CREST_REJECTED);
+    assert(buffer.length == 2 && buffer.bytes[0] == CREST_REJECTION_BORROWED_WORKSPACE_REQUIRES_SPACE
+        && buffer.bytes[1] == borrowed_kind);
+    crest_buffer_free(&buffer);
 
-    assert(crest_session_destroy(session) == CREST_OK);
-    assert(crest_session_destroy(session) == CREST_INVALID_HANDLE);
+    uint8_t workspace[16], private_workspace[16], borrowed[16];
+    open_seeded(app, persistent_kind, json, (size_t)size, workspace);
+    open_seeded(app, private_kind, NULL, 0, private_workspace);
+    assert(memcmp(workspace, private_workspace, 16) != 0);
+    /* BorrowSpace: its tag, the owner, the Space (all 0x44) and its profile
+     * (all 0x55). */
+    uint8_t borrow[49] = { CREST_INTENT_BORROW_SPACE };
+    memcpy(borrow + 1, workspace, 16);
+    memset(borrow + 17, 0x44, 16);
+    memset(borrow + 33, 0x55, 16);
+    assert(crest_app_dispatch(app, borrow, sizeof(borrow), &buffer) == CREST_OK && buffer.bytes[0] == 1);
+    opened_workspace(&buffer, 1, borrowed, borrowed_kind);
+    crest_buffer_free(&buffer);
+
+    /* CloseWorkspace: its tag and the workspace. The borrower closes first; a
+     * workspace that is not open publishes nothing. */
+    uint8_t closing[17] = { CREST_INTENT_CLOSE_WORKSPACE };
+    memcpy(closing + 1, workspace, 16);
+    assert(crest_app_dispatch(app, closing, sizeof(closing), &buffer) == CREST_OK);
+    assert(buffer.length == 35 && buffer.bytes[0] == 2);
+    assert(buffer.bytes[1] == CREST_CHANGE_WORKSPACE_CLOSED && memcmp(buffer.bytes + 2, borrowed, 16) == 0);
+    assert(buffer.bytes[18] == CREST_CHANGE_WORKSPACE_CLOSED && memcmp(buffer.bytes + 19, workspace, 16) == 0);
+    crest_buffer_free(&buffer);
+    assert(crest_app_dispatch(app, closing, sizeof(closing), &buffer) == CREST_OK);
+    assert(buffer.length == 1 && buffer.bytes[0] == 0);
+    crest_buffer_free(&buffer);
+    assert(crest_app_destroy(app) == CREST_OK);
 }
 /* A binding under test: what attach handed it and the commands it ran. */
 typedef struct {
@@ -203,25 +286,22 @@ static void engine_boundary(void) {
     crest_buffer_free(&buffer);
     engine = fixture.engine;
 
-    /* A session attached to the app's device, with a window open over it. */
+    /* A workspace opened from a seed, with a window open over it. */
     char json[1024];
     int size = snprintf(json, sizeof(json),
         "{\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"tabs\":[],"
         "\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}", space_id, profile_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 0;
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK);
     uint8_t workspace[16];
-    assert(crest_session_attach_device(session, app, workspace) == CREST_OK);
+    open_seeded(app, persistent_kind, json, (size_t)size, workspace);
     /* OpenWindow: the window, the workspace, not saved, nothing to copy or show,
-     * RestoresTabs. It answers the pending WorkspaceOpened first, then its
-     * own WindowChanged. */
+     * RestoresTabs. It answers its own WindowChanged. */
     uint8_t opening[38] = { CREST_INTENT_OPEN_WINDOW };
     memset(opening + 1, 0x42, 16);
     memcpy(opening + 17, workspace, 16);
     opening[37] = 1;
     assert(crest_app_dispatch(app, opening, sizeof(opening), &buffer) == CREST_OK);
-    assert(buffer.bytes[0] == 2 && buffer.bytes[1] == CREST_CHANGE_WORKSPACE_OPENED);
+    assert(buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_WINDOW_CHANGED);
     crest_buffer_free(&buffer);
 
     /* OpenPage: the page, the workspace, the Space (all 0x44), no tab, the
@@ -260,7 +340,6 @@ static void engine_boundary(void) {
     assert(crest_engine_unregister(app, engine) == CREST_OK);
     assert(crest_engine_unregister(app, engine) == CREST_INVALID_HANDLE);
     assert(crest_engine_report(app, engine, created, sizeof(created)) == CREST_INVALID_HANDLE);
-    assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 }
 /* A command prepared before another one committed is refused, so a command
@@ -276,8 +355,13 @@ static void stale_command_boundary(void) {
         "],\"selectedTabID\":{\"rawValue\":\"%s\"},\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}",
         space_id, space_id, profile_id, tab_id, tab_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 0, command = 0, stale = 0;
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK);
+    const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
+    const uint8_t memory_only[] = { 0 };
+    uint64_t app = 0, command = 0, stale = 0;
+    crest_buffer_t buffer = { NULL, 0 };
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
+    uint8_t workspace[16];
+    open_seeded(app, persistent_kind, json, (size_t)size, workspace);
     /* A manual import that adds a tab to the Space the session holds. */
     static const char* imported_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
     char import[2048];
@@ -290,13 +374,22 @@ static void stale_command_boundary(void) {
         "\"customization\":{\"name\":\"Reading\",\"symbol\":\"book\",\"accent\":\"indigo\"}}]}}",
         space_id, profile_id, imported_id);
     assert(size > 0 && (size_t)size < sizeof(import));
-    assert(crest_session_prepare_command(session, (const uint8_t*)import, (size_t)size, &command) == CREST_OK);
-    assert(crest_session_prepare_command(session, (const uint8_t*)import, (size_t)size, &stale) == CREST_OK);
+    assert(crest_session_prepare_command(app, workspace, (const uint8_t*)import, (size_t)size, &command) == CREST_OK);
+    assert(crest_session_prepare_command(app, workspace, (const uint8_t*)import, (size_t)size, &stale) == CREST_OK);
     assert(crest_session_commit_command(command) == CREST_OK);
     assert(crest_session_release_command(command) == CREST_OK);
     assert(crest_session_commit_command(stale) == CREST_INVALID_STATE);
     assert(crest_session_release_command(stale) == CREST_OK);
-    assert(crest_session_destroy(session) == CREST_OK);
+    /* A command names an open workspace of its app. */
+    uint8_t closing[17] = { CREST_INTENT_CLOSE_WORKSPACE };
+    memcpy(closing + 1, workspace, 16);
+    assert(crest_app_dispatch(app, closing, sizeof(closing), &buffer) == CREST_OK);
+    crest_buffer_free(&buffer);
+    assert(crest_session_prepare_command(app, workspace, (const uint8_t*)import, (size_t)size, &command) == CREST_INVALID_MESSAGE
+        && command == 0);
+    assert(crest_session_prepare_command(app + 1000, workspace, (const uint8_t*)import, (size_t)size, &command)
+        == CREST_INVALID_HANDLE);
+    assert(crest_app_destroy(app) == CREST_OK);
 }
 /* The Quick Window site key is a typed query; borrowed-workspace command
  * routing is a core policy answer. */
@@ -333,19 +426,6 @@ static size_t storage_configuration(const char* directory, uint8_t* output, size
     memcpy(output + 2, directory, length);
     return length + 2;
 }
-/* A byte string: its LEB128 length, then the bytes. */
-static size_t put_bytes(uint8_t* output, size_t at, size_t capacity, const char* bytes, size_t length) {
-    size_t remaining = length;
-    do {
-        assert(at < capacity);
-        uint8_t next = (uint8_t)(remaining & 0x7f);
-        remaining >>= 7;
-        output[at++] = remaining == 0 ? next : (uint8_t)(next | 0x80);
-    } while (remaining != 0);
-    assert(at + length <= capacity);
-    memcpy(output + at, bytes, length);
-    return at + length;
-}
 /* Saved(Revision: 1): its tag, then the file revision as a little-endian
  * int64. An adoption hands the file its first revision. The storage worker
  * announces the save on its own thread, so the Saved lands in whichever
@@ -362,9 +442,10 @@ static int first_saves(const crest_buffer_t* buffer) {
     for (size_t index = 0; index < count; index++) assert(is_first_save(buffer, 1 + index * sizeof(first_save)));
     return (int)count;
 }
-/* The core opens and owns session.sqlite: an empty file answers EMPTY, the
- * first session is adopted once, and the save it starts wakes the host. A
- * directory without a recovery checkpoint cannot be restored. */
+/* The core opens and owns session.sqlite: an empty file holds no session to
+ * open, the first session is adopted once, the save it starts wakes the host,
+ * and the workspace that keeps the file opens once per launch. A directory
+ * without a recovery checkpoint cannot be restored. */
 static void storage_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     /* The core creates the directory it is given. */
@@ -372,10 +453,16 @@ static void storage_boundary(void) {
     snprintf(directory, sizeof(directory), "/tmp/crest-native-abi-%ld-%ld", (long)getpid(), (long)time(NULL));
     uint8_t configuration[160];
     size_t configured = storage_configuration(directory, configuration, sizeof(configuration));
-    uint64_t app = 0, session = 0, sync = 0, projection = 0;
+    uint64_t app = 0, sync = 0;
     crest_buffer_t buffer = { NULL, 0 };
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK && app != 0);
-    assert(crest_app_session(app, &session, &sync, &projection) == CREST_EMPTY && session == 0);
+    assert(crest_app_sync(app, &sync) == CREST_EMPTY && sync == 0);
+    /* OpenWorkspace for the file's session, without a seed. */
+    uint8_t stored[3];
+    size_t opening_stored = open_workspace(stored, sizeof(stored), persistent_kind, NULL, 0);
+    assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_REJECTED);
+    assert(buffer.length == 1 && buffer.bytes[0] == CREST_REJECTION_NO_STORED_SESSION);
+    crest_buffer_free(&buffer);
     assert(crest_app_set_wake(app, count_wake, (void*)&storage_wakes) == CREST_OK);
     char json[512];
     int size = snprintf(json, sizeof(json),
@@ -395,25 +482,14 @@ static void storage_boundary(void) {
     adoption[adopted++] = 0;
     adopted = put_bytes(adoption, adopted, sizeof(adoption), json, (size_t)size);
     assert(crest_app_dispatch(app, adoption, adopted, &buffer) == CREST_OK);
-    /* WorkspaceOpened for the session the file now holds, then SessionAdopted,
-     * carrying no images. The answer starts with the changes the core
-     * announced while the adoption ran, so the adoption's Saved comes before
-     * or after WorkspaceOpened when the save finished in time. The count says
-     * which: a Saved not at the front sits just before SessionAdopted. */
-    assert(buffer.length > 2 && buffer.bytes[0] < 0x80);
-    size_t changes = buffer.bytes[0], opened = 1, adopted_at = buffer.length - 2;
-    int saves = 0;
-    if (is_first_save(&buffer, opened)) { opened += sizeof(first_save); saves++; }
-    assert(buffer.bytes[opened] == CREST_CHANGE_WORKSPACE_OPENED);
+    /* SessionAdopted, carrying no images. The answer starts with the changes
+     * the core announced while the adoption ran, so the adoption's Saved comes
+     * first when the save finished in time. */
+    assert(buffer.length >= 3 && buffer.bytes[0] < 0x80);
+    int saves = is_first_save(&buffer, 1);
+    size_t adopted_at = 1 + (saves ? sizeof(first_save) : 0);
+    assert(buffer.bytes[0] == 1 + saves && buffer.length == adopted_at + 2);
     assert(buffer.bytes[adopted_at] == CREST_CHANGE_SESSION_ADOPTED && buffer.bytes[adopted_at + 1] == 0);
-    if (changes == 3 && saves == 0) {
-        adopted_at -= sizeof(first_save);
-        assert(is_first_save(&buffer, adopted_at));
-        saves++;
-    }
-    assert(changes == 2 + (size_t)saves);
-    /* WorkspaceOpened carries at least its workspace identity. */
-    assert(adopted_at > opened + 16);
     crest_buffer_free(&buffer);
     /* The file holds a session now: a second adoption changes nothing. Only
      * the first adoption's save can still arrive with its answer. */
@@ -424,8 +500,7 @@ static void storage_boundary(void) {
         struct timespec pause = { 0, 5000000 };
         nanosleep(&pause, NULL);
     }
-    /* The core wakes the host for the save and for a turn: the launch stage
-     * of the adopted session waits for the host to end its turn. */
+    /* The core wakes the host for the save it announced on its own thread. */
     assert(storage_wakes >= 1);
     /* The save is announced once, in an answer above or in a drain. */
     for (int attempt = 0; attempt < 1000 && saves == 0; attempt++) {
@@ -436,7 +511,19 @@ static void storage_boundary(void) {
         if (saves == 0) nanosleep(&pause, NULL);
     }
     assert(saves == 1);
-    /* Ending the turn starts the launch stage, which the host hears about. */
+    assert(crest_app_sync(app, &sync) == CREST_OK && sync != 0);
+    /* The stored session's workspace, which a saved window shows. Opening it
+     * again while it is open publishes the same identity again. */
+    uint8_t workspace[16] = { 0 }, again[16] = { 0 };
+    assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK && buffer.bytes[0] == 1);
+    opened_workspace(&buffer, 1, workspace, persistent_kind);
+    crest_buffer_free(&buffer);
+    assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK && buffer.bytes[0] == 1);
+    opened_workspace(&buffer, 1, again, persistent_kind);
+    crest_buffer_free(&buffer);
+    assert(memcmp(workspace, again, 16) == 0);
+    /* Ending the turn starts the launch stage of the workspace that opened,
+     * which the host hears about. */
     assert(crest_app_end_turn(app) == CREST_OK);
     int staged = 0;
     for (int attempt = 0; attempt < 1000 && !staged; attempt++) {
@@ -449,11 +536,6 @@ static void storage_boundary(void) {
     }
     assert(staged);
     assert(crest_app_set_wake(app, NULL, NULL) == CREST_OK);
-    assert(crest_app_session(app, &session, &sync, &projection) == CREST_OK && session != 0);
-    /* The stored session's workspace, which a saved window shows. */
-    uint8_t workspace[16] = { 0 }, again[16] = { 0 };
-    assert(crest_session_attach_device(session, app, workspace) == CREST_OK);
-    assert(crest_session_attach_device(session, app, again) == CREST_OK && memcmp(workspace, again, 16) == 0);
     /* OpenWindow: its tag, the window, the workspace, Saved, no window to copy,
      * no Space to show, no tabs to show, RestoresTabs. It answers one
      * WindowChanged. */
@@ -464,17 +546,25 @@ static void storage_boundary(void) {
     assert(crest_app_dispatch(app, opening, sizeof(opening), &buffer) == CREST_OK);
     assert(buffer.length > 2 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_WINDOW_CHANGED);
     crest_buffer_free(&buffer);
-    assert(crest_session_release_command(projection) == CREST_OK);
     assert(crest_sync_authority_release(sync) == CREST_OK);
-    assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 
-    /* A second launch loads what the first one saved. */
+    /* A second launch opens what the first one saved. Its launch save, which
+     * finds nothing to change, may be announced before or after
+     * WorkspaceOpened: a Saved is its tag and an int64. */
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK);
-    assert(crest_app_session(app, &session, &sync, &projection) == CREST_OK && session != 0);
-    assert(crest_session_release_command(projection) == CREST_OK);
+    assert(crest_app_sync(app, &sync) == CREST_OK && sync != 0);
+    assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK);
+    size_t at = 1, announced = 1;
+    for (; at < buffer.length && buffer.bytes[at] == CREST_CHANGE_SAVED; at += 9) announced++;
+    if (buffer.bytes[0] == announced + 1) {
+        assert(buffer.length > at + 9 && buffer.bytes[buffer.length - 9] == CREST_CHANGE_SAVED);
+        announced++;
+    }
+    assert(buffer.bytes[0] == announced);
+    opened_workspace(&buffer, at, again, persistent_kind);
+    crest_buffer_free(&buffer);
     assert(crest_sync_authority_release(sync) == CREST_OK);
-    assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 
     /* A file that is not a session is refused with a rejection, untouched. */

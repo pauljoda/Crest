@@ -115,32 +115,22 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
 
-/* Native-UI session authority. All calls are exception-contained. Inputs are
- * <= 64 MiB; no native objects or callbacks. A session created here keeps
- * nothing on disk; the app's persistent session (crest_app_session) saves every
- * accepted state behind, on the core's storage worker, and the durable commits
- * below save before they return. A command commits only while the session still
- * holds the state it was prepared against; otherwise commit answers
- * INVALID_STATE. Each accepted state reaches the app's device as typed changes
- * (crest_app_drain) once the session is attached to it. The session holds
- * browsing data only: Space and tab selection is window state, never stored or
- * synced. Older documents that still carry it load. Native projections exclude
- * favicon bytes, which remain platform assets. Destroy/release only after the
- * caller has drained its own references/calls.
+/* Native-UI session commands. TRANSITIONAL until the remaining JSON commands
+ * are intents. All calls are exception-contained; inputs are <= 64 MiB and
+ * carry no native objects or callbacks. Each names its app and the workspace
+ * it acts on by the 16 RFC 4122 bytes WorkspaceOpened carried: the intents
+ * OpenWorkspace and BorrowSpace open workspaces, and CloseWorkspace closes
+ * them. A workspace that is not open answers INVALID_MESSAGE. The workspace
+ * the app keeps in its file saves every accepted state behind, on the core's
+ * storage worker, and the durable commits below save before they return; any
+ * other workspace keeps nothing on disk. A command commits only while the
+ * session still holds the state it was prepared against; otherwise commit
+ * answers INVALID_STATE. Each accepted state reaches the app's device as typed
+ * changes (crest_app_drain). The session holds browsing data only: Space and
+ * tab selection is window state, never stored or synced. Native projections
+ * exclude favicon bytes, which remain platform assets. Release a command only
+ * after the caller has drained its own references and calls.
  */
-CREST_API crest_status_t CREST_CALL crest_session_create(const uint8_t* session, size_t length, uint64_t* out_session);
-/* Borrow a canonical profile into a new memory-only session, which attaching
-   it to a device publishes whole. A refresh brings the borrowed Space's settings
-   up to date with its owner and publishes nothing when they already are. */
-CREST_API crest_status_t CREST_CALL crest_session_create_borrowed(
-    uint64_t source, const uint8_t* request, size_t length, uint64_t* out_session);
-CREST_API crest_status_t CREST_CALL crest_session_prepare_borrowed_refresh(uint64_t session, uint64_t* out_command);
-/* Attaches a session to an app's device, so that app's windows may show it,
- * and writes the workspace identity the core gave it (16 RFC 4122 bytes) to
- * out_workspace. A session already attached answers its own. The windows over
- * a session close when it is destroyed. */
-CREST_API crest_status_t CREST_CALL crest_session_attach_device(uint64_t session, uint64_t app, uint8_t *out_workspace);
-CREST_API crest_status_t CREST_CALL crest_session_destroy(uint64_t session);
 
 /* Commands operate on the owned session using only arguments and, as read-only
  * context, what the requesting window shows. Prepare/read do not mutate; the
@@ -154,20 +144,20 @@ CREST_API crest_status_t CREST_CALL crest_session_destroy(uint64_t session);
  * returns; STORAGE_FAILED then leaves the session, the journal and the file as
  * they were, and the command can be committed again.
  * Input/output <= 4 MiB for page/Space edits, <= 64 MiB for workspace imports. Always release the command, including failed commits.
- * Keep its originating session alive until the command is released. */
+ * A command keeps the session it was prepared against until it is released. */
 CREST_API crest_status_t CREST_CALL crest_session_prepare_command(
-    uint64_t session, const uint8_t* input, size_t length, uint64_t* out_command);
+    uint64_t app, const uint8_t* workspace, const uint8_t* input, size_t length, uint64_t* out_command);
 CREST_API crest_status_t CREST_CALL crest_session_read_command(
     uint64_t command, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_session_commit_command(uint64_t command);
 CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t command);
-/* TRANSITIONAL, removed when session intents land: applies a value delta and
- * saves it before returning. With a sealed incoming sync transaction, which may
- * authorize local cleanup intents, its journal is saved and published with the
- * session; without one the delta is a native value edit. STORAGE_FAILED leaves
- * everything as it was. */
-CREST_API crest_status_t CREST_CALL crest_session_replace_durably(uint64_t session, uint64_t sync_transaction,
-    const uint8_t *delta, size_t delta_length);
+/* TRANSITIONAL, removed when session intents land: applies a value delta to
+ * the workspace's session and saves it before returning. With a sealed incoming
+ * sync transaction, which may authorize local cleanup intents, its journal is
+ * saved and published with the session; without one the delta is a native
+ * value edit. STORAGE_FAILED leaves everything as it was. */
+CREST_API crest_status_t CREST_CALL crest_session_replace_durably(uint64_t app, const uint8_t* workspace,
+    uint64_t sync_transaction, const uint8_t *delta, size_t delta_length);
 
 // A session's sync component owns journal publication and stages the session's
 // accepted edits itself, reporting SyncJournalChanged to the attached app.
@@ -188,9 +178,6 @@ CREST_API crest_status_t CREST_CALL crest_sync_authority_version(uint64_t author
 /* Blocks until every stage requested before the call has committed or failed,
  * without waiting out a coalescing delay. Call it off the UI thread. */
 CREST_API crest_status_t CREST_CALL crest_sync_authority_flush(uint64_t authority);
-/* Makes the authority the session's sync component. The first attachment
- * stages the session as a launch does. */
-CREST_API crest_status_t CREST_CALL crest_session_attach_sync(uint64_t session, uint64_t authority);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_prepare(uint64_t authority,
     const uint8_t *input, size_t length, uint64_t *transaction, uint64_t *journal, uint64_t *query);
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_seal(uint64_t transaction, int32_t *accepted);

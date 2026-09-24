@@ -32,14 +32,14 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
-    /// A memory-only app hosting `authority`'s pages on a default WebKit
-    /// binding, with one window open over it.
+    /// A memory-only app hosting the pages of a workspace of `kind`, opened
+    /// from `session`, on a default WebKit binding, with one window open over it.
     private static (CrestApp App, Engine Engine, RecordingEngine Binding, Guid Workspace, Guid Window) PageHost(
-        NativeSessionAuthority authority) {
+        JsonNode session, WorkspaceKind? kind = null) {
         var app = new CrestApp();
         var binding = new RecordingEngine();
         var engine = app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, IsDefault: true), binding.Run);
-        var workspace = app.AttachWorkspace(authority);
+        var workspace = TestWorkspaces.Open(app, session, kind);
         var window = Guid.NewGuid();
         app.Send(new OpenWindow(window, workspace, Saved: false, null, null, [], RestoresTabs: true));
         return (app, engine, binding, workspace, window);
@@ -60,7 +60,7 @@ public sealed partial class BrowserContractsTests {
     public void APageOpensOnTheDefaultEngineGoesLiveWhenCreatedAndIsGoneOnceReleased() {
         var session = TwoSpaceSession();
         var (space, tab) = (SpaceId(session["spaces"]![0]!), TabId(session["spaces"]![0]!, 0));
-        var (app, engine, binding, workspace, window) = PageHost(new NativeSessionAuthority(Bytes(session)));
+        var (app, engine, binding, workspace, window) = PageHost(session);
         using var disposal = app;
         var page = Guid.NewGuid();
 
@@ -107,33 +107,74 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void NoPageOpensInALockedSpaceOrOneBeingDeleted() {
         var session = GuardedSession(withOpenSecondSpace: true);
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, _, binding, workspace, window) = PageHost(authority);
+        var (app, _, binding, workspace, window) = PageHost(session);
         using var disposal = app;
         var locked = Identity(session);
         var open = SpaceId(session["spaces"]![1]!);
-        var borrowed = app.AttachWorkspace(authority.CreateBorrowed(open, ProfileId(session["spaces"]![1]!)));
+        var borrowed = TestWorkspaces.Borrow(app, workspace, session["spaces"]![1]!);
 
         Assert.Equal(new SpaceLocked(locked.Space), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window)));
         Unlock(app.Send, workspace, locked.Space);
         app.Send(new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window));
 
-        // A Space being deleted opens no page, nor does a workspace that borrows it.
-        app.Send(new BeginDeletingSpace(workspace, window, open, Guid.NewGuid()));
+        // A Space being deleted opens no page, and a workspace that borrows it
+        // closes with the deletion's first step.
+        Assert.Contains(new WorkspaceClosed(borrowed), app.Send(new BeginDeletingSpace(workspace, window, open, Guid.NewGuid())));
         Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, open, null, window)));
-        Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), borrowed, open, null, window)));
+        Assert.Equal(new UnknownWorkspace(borrowed), Refusal(app, new OpenPage(Guid.NewGuid(), borrowed, open, null, window)));
         Assert.Single(binding.Commands);
+    }
+
+    [Fact]
+    public void AClosingWorkspaceTakesItsPagesAndTheirEnginesKeepNothing() {
+        var session = TwoSpaceSession();
+        var (app, engine, binding, workspace, window) = PageHost(session);
+        using var disposal = app;
+        var (space, lent) = (session["spaces"]![0]!, session["spaces"]![1]!);
+        var borrowed = TestWorkspaces.Borrow(app, workspace, lent);
+        var borrowedWindow = Guid.NewGuid();
+        app.Send(new OpenWindow(borrowedWindow, borrowed, Saved: false, null, null, [], RestoresTabs: true));
+        var (borrowedPage, tabPage, opening) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        app.Send(new OpenPage(borrowedPage, borrowed, SpaceId(lent), null, borrowedWindow));
+        app.Send(new OpenPage(tabPage, workspace, SpaceId(space), TabId(space, 0), window));
+        app.Report(engine, new PageCreated(borrowedPage));
+        app.Report(engine, new PageCreated(tabPage));
+        app.Send(new OpenPage(opening, workspace, SpaceId(space), null, window));
+        app.Report(engine, new PageCreationFailed(opening));
+        _ = app.Drain();
+
+        // A replacement the owner takes outside an intent, as a sync merge
+        // does, removes the lent Space: its borrower closes, and the engine
+        // hears to close the borrower's page once the replacement returns.
+        app.Workspace(workspace).Commit(Bytes(new JsonObject {
+            ["version"] = 1,
+            ["spaces"] = new JsonArray(),
+            ["spaceOrder"] = new JsonArray(space["id"]!.DeepClone())
+        }));
+        Assert.Equal(new ClosePage(borrowedPage, KeepsState: false), binding.Commands[^1]);
+        Assert.Equal([new PageRemoved(borrowedPage), new WindowClosed(borrowedWindow), new WorkspaceClosed(borrowed)],
+            app.Drain().Where(change => change is PageRemoved or WindowClosed or WorkspaceClosed));
+
+        // Closing a workspace removes every page it has, then its window, and
+        // closes on the engine only what the engine still holds.
+        var delivered = binding.Commands.Count;
+        var closing = app.Send(new CloseWorkspace(workspace));
+        Assert.Equal([typeof(PageRemoved), typeof(PageRemoved), typeof(WindowClosed), typeof(WorkspaceClosed)],
+            closing.Select(change => change.GetType()));
+        Assert.Equal(new[] { tabPage, opening }.Order(), closing.OfType<PageRemoved>().Select(change => change.PageId).Order());
+        Assert.Equal([new WindowClosed(window), new WorkspaceClosed(workspace)], closing.Skip(2));
+        Assert.Equal([new ClosePage(tabPage, KeepsState: false)], binding.Commands.Skip(delivered));
+        Assert.Empty(app.Send(new CloseWorkspace(workspace)));
     }
 
     [Fact]
     public void APageMovesWithinItsProfileAcrossWorkspacesButNeverIntoAnotherProfile() {
         var session = TwoSpaceSession();
-        var owner = new NativeSessionAuthority(Bytes(session));
-        var (app, _, binding, workspace, window) = PageHost(owner);
+        var (app, _, binding, workspace, window) = PageHost(session);
         using var disposal = app;
         var (space, other) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
         var (tab, otherTab) = (TabId(session["spaces"]![0]!, 0), TabId(session["spaces"]![1]!, 0));
-        var borrowed = app.AttachWorkspace(owner.CreateBorrowed(space, ProfileId(session["spaces"]![0]!)));
+        var borrowed = TestWorkspaces.Borrow(app, workspace, session["spaces"]![0]!);
         var borrowedWindow = Guid.NewGuid();
         app.Send(new OpenWindow(borrowedWindow, borrowed, Saved: false, null, null, [], RestoresTabs: true));
         var transient = Guid.NewGuid();
@@ -162,7 +203,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void EachWindowHostsOnePageForATabAndAMovedPageBelongsToItsNewWindow() {
         var session = TwoSpaceSession();
-        var (app, _, _, workspace, first) = PageHost(new NativeSessionAuthority(Bytes(session)));
+        var (app, _, _, workspace, first) = PageHost(session);
         using var disposal = app;
         var (space, tab) = (SpaceId(session["spaces"]![0]!), TabId(session["spaces"]![0]!, 0));
         var second = Guid.NewGuid();
@@ -186,7 +227,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void CommandsReachTheirEngineInOrderAndNeverOnTheStackOfTheCallThatCausedThem() {
         var session = TwoSpaceSession();
-        var (app, engine, binding, workspace, window) = PageHost(new NativeSessionAuthority(Bytes(session)));
+        var (app, engine, binding, workspace, window) = PageHost(session);
         using var disposal = app;
         var space = SpaceId(session["spaces"]![0]!);
         var profile = ProfileId(session["spaces"]![0]!);
@@ -227,7 +268,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new EngineAlreadyRegistered(EngineKind.WebKit), Assert.Throws<Rejected>(
             () => app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.All, IsDefault: true), _ => { })).Rejection);
         var session = SavedSession().Document["session"]!;
-        var workspace = app.AttachWorkspace(new NativeSessionAuthority(Bytes(session)));
+        var workspace = TestWorkspaces.Open(app, session);
         var window = Guid.NewGuid();
         app.Send(new OpenWindow(window, workspace, Saved: false, null, null, [], RestoresTabs: true));
         Assert.Equal(new EngineNotRegistered(), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, SpaceId(session["spaces"]![0]!), null, window)));

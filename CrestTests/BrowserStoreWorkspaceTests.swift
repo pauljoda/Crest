@@ -56,7 +56,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(try harness.stored().session, original)
     }
 
-    func testTemporarySourceRefreshKeepsLocalOrganizationAndRejectsReplacedProfiles() throws {
+    func testTemporaryWorkspaceFollowsItsSourceKeepingLocalOrganizationAndClosesOnAReplacedProfile() throws {
         let source = BrowserStore(session: .preview)
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(source.selectedSpace))
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
@@ -64,9 +64,10 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         let tabID = try XCTUnwrap(temporary.openNewTab(url: url))
         let folderID = try XCTUnwrap(temporary.addFolder(title: "Local folder", in: assignment.spaceID))
         temporary.pinTab(tabID)
+        // The source's edit reaches the temporary workspace with the edit itself.
         source.updateSpaceIdentity(assignment.spaceID, name: "Source renamed", symbol: "book", accent: .orange)
 
-        XCTAssertTrue(temporary.reconcileTemporarySource())
+        XCTAssertTrue(temporary.family.isOpen)
         XCTAssertEqual(temporary.selectedSpace?.name, "Source renamed")
         XCTAssertEqual(temporary.selectedSpace?.tabs.map(\.id), [tabID])
         XCTAssertEqual(temporary.selectedSpace?.pinnedTabs.map(\.id), [tabID])
@@ -76,8 +77,9 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         replacement.spaces[0] = BrowserSpace(
             id: assignment.spaceID, profile: BrowsingProfile(), name: "Replacement", symbol: "globe", accent: .indigo,
             folders: [], tabs: [])
+        // A replacement outside an intent, as a sync merge makes, closes it.
         source.session = replacement
-        XCTAssertFalse(temporary.reconcileTemporarySource())
+        XCTAssertFalse(temporary.family.isOpen)
         XCTAssertTrue(temporary.session.spaces.isEmpty)
         // Revocation hides access, but must not rewrite the local browsing records.
         XCTAssertEqual(temporary.family.authoritativeSession, before)

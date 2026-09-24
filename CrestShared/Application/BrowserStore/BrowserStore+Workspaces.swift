@@ -2,7 +2,10 @@ import Foundation
 
 extension BrowserStore {
     /// Borrows a Space's profile and policies while keeping browsing records
-    /// in a separate, memory-only family. The window starts without a tab.
+    /// in a separate, memory-only family. The window starts without a tab. The
+    /// core keeps the borrowed Space's settings in step with its owner's and
+    /// closes the family's workspace once the owner no longer lends the Space;
+    /// whoever closes the window closes the workspace too.
     func makeTemporaryWindowStore(
         in assignment: BrowserSpaceRuntimeAssignment, id: BrowserWindowID = BrowserWindowID()
     ) -> BrowserStore? {
@@ -30,14 +33,6 @@ extension BrowserStore {
     /// Settings in a temporary window edit the canonical profile through their
     /// own selection facade. Its native tab still belongs to the workspace.
     var profileSettingsBrowser: BrowserStore { family.temporarySettingsBrowser ?? self }
-
-    /// Refreshes borrowed identity and policy without importing any source tabs,
-    /// folders, history, or archive. The scene closes when the source is gone.
-    @discardableResult
-    func reconcileTemporarySource() -> Bool {
-        guard family.refreshBorrowed() else { return false }
-        return true
-    }
 
     /// Whether the core would move the tab to `destination`'s window: a window
     /// over this workspace shows it, and one over a workspace that borrows

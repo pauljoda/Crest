@@ -99,12 +99,12 @@ internal sealed unsafe class AppClient : IDisposable {
 
     #region Actions - Stored session
 
-    /// The stored session's handles, or EMPTY when the file holds none.
-    public (int Status, ulong Session, ulong Sync, ulong Projection) Session() {
-        ulong session, sync, projection;
-        int status = ((delegate* unmanaged[Cdecl]<ulong, ulong*, ulong*, ulong*, int>)&Exports.AppSession)(
-            Handle, &session, &sync, &projection);
-        return (status, session, sync, projection);
+    /// The handle of the stored session's sync component, or EMPTY when the
+    /// file holds no session.
+    public (int Status, ulong Sync) Sync() {
+        ulong sync;
+        int status = ((delegate* unmanaged[Cdecl]<ulong, ulong*, int>)&Exports.AppSync)(Handle, &sync);
+        return (status, sync);
     }
 
     #endregion

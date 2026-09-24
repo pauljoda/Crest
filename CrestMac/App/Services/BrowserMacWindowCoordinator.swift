@@ -148,11 +148,16 @@ final class BrowserMacWindowCoordinator {
             model.pages.releaseWindowPresentation()
         }
         model.browser.close()
+        // A temporary window's workspace is its own and goes with it.
+        if model.isTemporary { model.browser.family.close() }
     }
 
+    /// Closes each temporary window whose workspace the core closed, because
+    /// the Space it borrowed was deleted, took another profile or lost its
+    /// owner.
     func reconcileTemporaryWorkspaces() {
         let invalid = windows.values.filter {
-            $0.isTemporary && !$0.browser.reconcileTemporarySource()
+            $0.isTemporary && !$0.browser.family.isOpen
         }
         for model in invalid {
             model.pages.closeWindowWorkspace()
@@ -207,6 +212,7 @@ final class BrowserMacWindowCoordinator {
         destination.pages.closeWindowWorkspace()
         destination.browser.family.temporarySettingsBrowser?.close()
         destination.browser.close()
+        destination.browser.family.close()
         destination.window?.close()
     }
 

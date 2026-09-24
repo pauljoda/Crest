@@ -13,10 +13,11 @@ namespace CrestCore.Tests;
 /// failure, a locked Space or a move that stays on the page.
 public sealed partial class BrowserContractsTests {
     /// A live page for the fixture tab of `session`'s first Space, or for a
-    /// Quick Window or Peek request when `transient`, hosted over `authority`.
-    private static (CrestApp App, Engine Engine, Guid Page, Guid Workspace) NavigatingPage(NativeSessionAuthority authority,
-        JsonNode session, bool transient = false) {
-        var (app, engine, _, workspace, window) = PageHost(authority);
+    /// Quick Window or Peek request when `transient`, hosted over a workspace of
+    /// `kind` opened from `session`.
+    private static (CrestApp App, Engine Engine, Guid Page, Guid Workspace) NavigatingPage(JsonNode session,
+        WorkspaceKind? kind = null, bool transient = false) {
+        var (app, engine, _, workspace, window) = PageHost(session, kind);
         var page = Guid.NewGuid();
         var space = session["spaces"]![0]!;
         app.Send(new OpenPage(page, workspace, SpaceId(space), transient ? null : TabId(space, 0), window));
@@ -41,8 +42,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ATabsPageRecordsEachDocumentOnceInOneRevisionWhenItFinishes() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, workspace) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(session);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
         var earlier = History(authority)[0];
 
@@ -76,8 +77,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AQuickWindowOrPeekPageRecordsOnlyAVisit() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, workspace) = NavigatingPage(authority, session, transient: true);
+        var (app, engine, page, workspace) = NavigatingPage(session, transient: true);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
         var tab = FirstTab(authority);
 
@@ -98,8 +99,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void APageInALockedSpaceRecordsNothing() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, workspace) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(session);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
         // The Space asks for authentication from now on, and this process
         // holds no grant for it.
@@ -113,9 +114,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void APrivateWorkspaceRecordsIntoItsOwnMemorySession() {
         var session = SavedSession().Document["session"]!.DeepClone().AsObject();
-        session["coreWorkspaceKind"] = "private";
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, _) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(session, WorkspaceKind.Private);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
 
         Assert.Contains(Browse(app, engine, page, "https://private.example/", "Private"), change => change is NavigationRecorded);
@@ -127,8 +127,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AMoveWithinTheDocumentRecordsOnlyWhenItReachesAnotherPage() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, _) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(session);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
         Browse(app, engine, page, "https://app.example/inbox", "Inbox");
 
@@ -155,8 +155,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AFailedNavigationRecordsNothingAndTheNextDocumentDoes() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, _) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(session);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
         var before = authority.Current;
 
@@ -175,8 +175,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AFinishThatArrivesDuringATransactionIsRecordedOnceAfterIt() {
         var session = TwoSpaceSession();
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, _) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(session);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
         // A replacement holds the session while it is saved.
         var reserved = authority.ReserveReplacement(Bytes(new JsonObject { ["version"] = 1, ["spaces"] = new JsonArray() }));
@@ -197,8 +197,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ATabWearsItsDocumentsIconOnlyWhileItsIconFollowsThePage() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var (app, engine, page, workspace) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(session);
+        var authority = app.Workspace(workspace);
         using var disposal = app;
         var tab = FirstTab(authority).Id;
         var space = authority.Current.Spaces[0].Id;
@@ -241,9 +241,9 @@ public sealed partial class BrowserContractsTests {
         tab["url"] = null;
         tab["savedURL"] = null;
         tab["nativeContent"] = new JsonObject { ["kind"] = "settings" };
-        var authority = new NativeSessionAuthority(Bytes(session));
         using var app = new CrestApp();
-        var workspace = app.AttachWorkspace(authority);
+        var workspace = TestWorkspaces.Open(app, session);
+        var authority = app.Workspace(workspace);
         app.Drain();
 
         // Blank input, and input no page can load, are refused.

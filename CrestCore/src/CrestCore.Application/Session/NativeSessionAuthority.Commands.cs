@@ -12,7 +12,7 @@ public sealed partial class NativeSessionAuthority {
     /// Prepares against the accepted records, which the command remembers: it
     /// commits only while they are still the accepted ones. The session's
     /// changes are published when it commits.
-    public NativeSessionCommand PrepareCommand(ReadOnlySpan<byte> bytes) {
+    internal NativeSessionCommand PrepareCommand(ReadOnlySpan<byte> bytes) {
         lock (Gate) {
             RequireWritable();
             var request = Parse(bytes);
@@ -45,12 +45,6 @@ public sealed partial class NativeSessionAuthority {
         var bytes = Encoding.UTF8.GetBytes(answer.ToJsonString());
         if (bytes.Length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         return bytes;
-    }
-
-    /// A command that changes nothing and answers `output`, read and released
-    /// with the command API like any other.
-    internal NativeSessionCommand Projection(byte[] output) {
-        lock (Gate) return new(this, session, session, output);
     }
 
     /// Accepts a prepared command, saved behind, publishes what it changed and

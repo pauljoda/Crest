@@ -286,8 +286,10 @@ below. Private, temporary and borrowed families stay in memory.
 Which Space a window shows and the tab it shows in each Space are the core
 device's window state, never part of the session. The session holds Spaces,
 tabs, order, folders, splits and `lastActivatedAt` timestamps. Every session a
-window may show is attached to the device (`crest_session_attach_device`),
-which answers its workspace identity. A window opens with `OpenWindow`, closes
+window may show is a workspace the core opened (`OpenWorkspace`, `BorrowSpace`),
+and `WorkspaceOpened` carries the identity it gave it. Closing a workspace
+(`CloseWorkspace`) closes its windows but keeps their saved records, so the next
+launch restores them. A window opens with `OpenWindow`, closes
 with `CloseWindow`, and changes what it shows with `ShowSpace`, `ShowTab`,
 `DismissShownTab` and `ResizeSplitColumns`; the core publishes `WindowChanged`
 and Swift renders each window from `CrestCore.state.windows`. Showing a tab
@@ -367,16 +369,17 @@ session, value delta or import that would give two Spaces the same profile is
 rejected as `duplicate_space_profile`, and checkpoint repair gives the colliding
 Space a fresh profile instead of sharing another Space's browsing data.
 
-Blank Windows and detached-tab windows request a borrowed workspace from the canonical core authority.
-The core binds the source Space and profile identity, inherits its engine and
-private-browsing registration, and creates empty local browsing collections.
-Policy refresh reads the source authority directly and preserves local tabs,
-folders, history, archive and split groups. A native snapshot cannot
-create a borrower or replace its canonical policy. A borrowed session takes no
-command while its Space's settings differ from its source's, until a refresh
-brings them up to date; source deletion, replacement or release revokes access.
-The Swift family publishes accepted projections and schedules native window
-reconciliation. It no longer merges borrowed profile policy itself.
+Blank Windows and detached-tab windows open a borrowed workspace with
+`BorrowSpace`. The core binds the source Space and profile identity, inherits
+its engine and private-browsing registration, and creates empty local browsing
+collections. Each edit the owner accepts brings the borrowed Space's settings
+up to date in the same answer, keeping its local tabs, folders, history,
+archive and split groups; that state is never saved or staged. A native
+snapshot cannot create a borrower or replace its canonical policy. When the
+Space is deleted or starts deleting, takes another profile, or its owner
+closes, the core closes the borrower (`WorkspaceClosed`), and the window over
+it closes. Whoever closes a temporary window closes its workspace with
+`CloseWorkspace`.
 
 Quick Window and Peek promotion on Mac and mobile use the same transient
 completion commands. The authority validates the source and destination profiles

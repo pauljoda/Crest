@@ -17,10 +17,10 @@ public sealed partial class NativeSessionAuthority {
 
     /// Makes `value` this session's sync component. The first time, it stages
     /// the session as it is, as a launch does.
-    public void AttachSync(NativeSyncAuthority value) {
+    internal void AttachSync(NativeSyncAuthority value) {
         SessionState? attached = null;
         lock (Gate) {
-            if (workspaceKind != WorkspaceKind.Persistent
+            if (!workspaceKind.KeepsFile
                 || sync is not null && !ReferenceEquals(sync, value)
                 || value.Session is not null && !ReferenceEquals(value.Session, this))
                 throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
@@ -123,7 +123,7 @@ public sealed partial class NativeSessionAuthority {
     /// Replaces the session with the edits `delta` names and saves the result,
     /// with a sync transaction's journal when one is given, before publishing
     /// it. A failed save leaves the accepted state and the file unchanged.
-    public void ReplaceDurably(ReadOnlySpan<byte> delta, NativeSyncTransaction? transaction = null) =>
+    internal void ReplaceDurably(ReadOnlySpan<byte> delta, NativeSyncTransaction? transaction = null) =>
         SaveAndCommit(ReserveReplacement(delta, transaction, nativeValueEdit: transaction is null));
 
     /// Saves a reserved state, then publishes it. No lock is held while the

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -26,11 +27,7 @@ public sealed class StoredFormatTests {
 
     private static Guid? Id(JsonNode? value) => value is null ? null : Guid.Parse(value.GetValue<string>());
 
-    private static NativeSessionAuthority Load(JsonObject session) {
-        var creation = session.DeepClone().AsObject();
-        creation["coreWorkspaceKind"] = "persistent";
-        return new NativeSessionAuthority(Bytes(creation));
-    }
+    private static NativeSessionAuthority Load(JsonObject session) => TestWorkspaces.Session(session);
 
     /// The checkpoint's core part with each Space's history part put back.
     private static JsonObject Written(NativeSessionAuthority authority) {
@@ -77,12 +74,12 @@ public sealed class StoredFormatTests {
     public void CommandAnswersMatchWhatThePreviousCoreAnswered() {
         var session = Fixture("maximal-session.json");
         var expected = Fixture("session-answers.json");
-        var authority = Load(session);
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
         var ids = new TestIds();
         using var app = new CrestApp(new AppConfiguration(null), clock, ids);
         var engine = RecordedIntents.PageEngine(app);
-        var workspace = app.AttachWorkspace(authority);
+        var workspace = TestWorkspaces.Open(app, session);
+        var authority = app.Workspace(workspace);
         TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
         var differences = new List<string>();
         void Compare(string name, JsonNode? actual) =>
@@ -178,11 +175,16 @@ internal static class StoredJson {
     private static bool Same(JsonValue left, JsonValue right, Comparison comparison) {
         if (left.GetValueKind() != right.GetValueKind()) return false;
         return left.GetValueKind() switch {
-            JsonValueKind.Number => left.GetValue<double>() == right.GetValue<double>(),
+            JsonValueKind.Number => Number(left) == Number(right),
             JsonValueKind.String => left.GetValue<string>() == right.GetValue<string>()
                 || comparison == Comparison.AsSwiftReads && Guid.TryParse(left.GetValue<string>(), out var a)
                     && Guid.TryParse(right.GetValue<string>(), out var b) && a == b,
             _ => left.ToJsonString() == right.ToJsonString()
         };
     }
+
+    /// A number as its spelling reads, whether it was parsed or written as a
+    /// value of any numeric type.
+    private static double Number(JsonValue value) =>
+        double.Parse(value.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture);
 }

@@ -14,8 +14,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void TheCoreMakesEachNewSpaceAndStopsAtTheSpaceLimit() {
         var f = SavedSession(); var session = f.Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Showing(session);
         var (created, profile, tab) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         device.Ids.Supply([profile, tab]);
@@ -44,9 +44,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void APrivateWorkspaceMakesPrivateSpacesAndStartsOverWithOne() {
         var session = SavedSession().Document["session"]!;
-        session["coreWorkspaceKind"] = "private";
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session, WorkspaceKind.Private);
+        var core = device.Authority;
         var window = device.Showing(session);
 
         device.Send(new CreateSpace(device.Workspace, window, Guid.NewGuid()));
@@ -63,11 +62,10 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(core.Current.SpaceDeletions);
         Assert.Equal(fresh.Id, device.Space(window));
 
-        var persistent = new NativeSessionAuthority(Bytes(SavedSession().Document["session"]!));
-        var ordinary = device.Attach(persistent);
+        var ordinary = device.Attach(SavedSession().Document["session"]!);
         Assert.Equal(new NotPrivateWorkspace(ordinary), Assert.Throws<Rejected>(() =>
             device.Send(new ResetPrivateBrowsing(ordinary, window))).Rejection);
-        var borrowed = device.Attach(core.CreateBorrowed(fresh.Id, fresh.ProfileId));
+        var borrowed = TestWorkspaces.Opened(device.Send(new BorrowSpace(device.Workspace, fresh.Id, fresh.ProfileId)));
         Assert.Equal(new BorrowedProfileRequiresOwner(borrowed), Assert.Throws<Rejected>(() =>
             device.Send(new CreateSpace(borrowed, window, Guid.NewGuid()))).Rejection);
     }
@@ -80,10 +78,10 @@ public sealed partial class BrowserContractsTests {
         second["tabs"] = new JsonArray(); second["selectedTabID"] = null;
         session["spaces"]!.AsArray().Add(second);
         var (first, other) = (SpaceId(session["spaces"]![0]!), SpaceId(second));
-        var core = new NativeSessionAuthority(Bytes(session));
         byte[] saved;
         var operation = Guid.NewGuid();
-        using (var device = new TestDevice(core)) {
+        using (var device = new TestDevice(session)) {
+            var core = device.Authority;
             var window = device.Showing(session);
             device.Send(new BeginDeletingSpace(device.Workspace, window, first, operation));
             // The window leaves the Space being deleted, which takes no edits
@@ -99,8 +97,8 @@ public sealed partial class BrowserContractsTests {
         }
 
         // The app quit while the profile's data was being erased.
-        var relaunched = new NativeSessionAuthority(saved);
-        using var again = new TestDevice(relaunched);
+        using var again = new TestDevice(JsonNode.Parse(saved)!);
+        var relaunched = again.Authority;
         var shown = again.Open(other);
         Assert.Single(relaunched.Current.SpaceDeletions);
         var resumed = relaunched.Current;

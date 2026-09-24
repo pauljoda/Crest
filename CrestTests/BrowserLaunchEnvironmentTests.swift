@@ -228,7 +228,8 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
             let store = try BrowserStore.production(core: core, launchEnvironment: environment)
 
             XCTAssertTrue(store.credentialVault is InMemoryCredentialVault)
-            XCTAssertNotNil(store.syncCoordinator)
+            // Only the session the core keeps in its file syncs.
+            XCTAssertNil(store.syncCoordinator)
         }
     }
 }

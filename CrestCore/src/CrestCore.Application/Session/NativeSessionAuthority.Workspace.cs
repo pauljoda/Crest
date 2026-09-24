@@ -10,7 +10,7 @@ public sealed partial class NativeSessionAuthority {
     #region Actions - Workspace
 
     private NativeSessionCommand PrepareWorkspaceCommand(JsonObject request) {
-        if (workspaceKind != WorkspaceKind.Persistent) throw new BrowserRuleException(BrowserRuleCodes.PersistentWorkspaceRequired);
+        if (!workspaceKind.KeepsAppPreferences) throw new BrowserRuleException(BrowserRuleCodes.PersistentWorkspaceRequired);
         var followUp = new WindowFollowUp(IssuingWindow(request));
         var (next, answer) = NativeWorkspaceImport.Preview(session, request["arguments"]!.AsObject(),
             request["mode"]!.GetValue<string>(), request["now"]!.GetValue<double>(), followUp);

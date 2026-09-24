@@ -10,7 +10,7 @@ public sealed partial class NativeSessionAuthority {
     /// stay on this device: sync neither uploads nor replaces them, and no
     /// edit of them reaches the journal.
     private void RequirePreferenceOwner() {
-        if (workspaceKind != WorkspaceKind.Persistent) throw new Rejected(new PersistentWorkspaceRequired(workspaceId));
+        if (!workspaceKind.KeepsAppPreferences) throw new Rejected(new PersistentWorkspaceRequired(workspaceId));
     }
 
     private SessionEdit SettingPreferences(SessionState basis, SetAppPreferences intent) {

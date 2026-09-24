@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
@@ -11,6 +9,13 @@ public sealed partial class NativeSessionAuthority {
     private readonly NativeSessionAuthority? borrowedSource;
     private readonly Guid borrowedSpace, borrowedProfile;
     private bool released;
+
+    /// The session takes no edits: its workspace closed.
+    internal bool IsReleased {
+        get {
+            lock (Gate) return released;
+        }
+    }
 
     #endregion
 
@@ -27,25 +32,57 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Borrowing
 
-    public NativeSessionAuthority CreateBorrowed(Guid spaceId, Guid profileId) {
+    /// A memory-only session that shows the Space `spaceId` names, with its
+    /// settings and profile and none of its records, and consults this
+    /// session's grants. Throws `Rejected` naming the rule that refuses it; see
+    /// `BorrowSpace`.
+    internal NativeSessionAuthority Borrow(Guid spaceId, Guid profileId) {
         lock (Gate) {
-            RequireWritable();
-            SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
-            RequireAccessible(spaceId);
-            var original = BorrowableSpace(spaceId, profileId);
+            if (released) throw new Rejected(new UnknownWorkspace(workspaceId));
+            if (!workspaceKind.OwnsSpaces) throw new Rejected(new BorrowedProfileRequiresOwner(workspaceId));
+            var original = session.Spaces.FirstOrDefault(space => space.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
+            if (PendingDeletion(session, spaceId) is not null) throw new Rejected(new SpaceBeingDeleted(spaceId));
+            if (original.ProfileId != profileId) throw new Rejected(new SpaceProfileChanged(spaceId));
+            if (IsLockedUnderGate(original)) throw new Rejected(new SpaceLocked(spaceId));
             var borrowed = original with { Folders = [], Tabs = [], SplitGroups = [], ArchivedTabs = [], History = [] };
             return new(new([borrowed], original.Id, null, [], null), this, spaceId, profileId);
         }
     }
 
-    /// The Space a workspace borrows, which must be the one `spaceId` names
-    /// with the profile `profileId` names and not being deleted.
-    private SpaceState BorrowableSpace(Guid spaceId, Guid profileId) {
-        if (PendingDeletion(session, spaceId) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-        var space = session.Spaces.SingleOrDefault(s => s.Id == spaceId)
-            ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
-        if (space.ProfileId != profileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
-        return space;
+    /// Whether this session borrows its Space from `owner`.
+    internal bool Borrows(NativeSessionAuthority owner) => ReferenceEquals(borrowedSource, owner);
+
+    /// Whether the workspace this session borrows from no longer lends its
+    /// Space: it closed, or the Space is gone, uses another profile or is being
+    /// deleted. A session that borrows nothing never loses its source.
+    internal bool LostSource() {
+        lock (Gate) return borrowedSource is { } source && Lent(source) is null;
+    }
+
+    /// Brings the borrowed Space's settings up to date with its owner, keeping
+    /// its own records and saved-tabs expansion, and answers the state it
+    /// replaced and the new one; null when they already match, the source no
+    /// longer lends the Space, or a reservation holds the session. The new
+    /// state is never saved or staged, since a borrowed session keeps nothing.
+    internal (SessionState Previous, SessionState Next)? FollowOwner() {
+        lock (Gate) {
+            if (released || replacement is not null || borrowedSource is not { } source || Lent(source) is not { } original)
+                return null;
+            var local = session.Spaces.Single();
+            var refreshed = BorrowedSpace(original, local);
+            if (refreshed == local) return null;
+            var next = session with { Spaces = [refreshed] };
+            return (Accept(next), next);
+        }
+    }
+
+    /// The Space `source` lends this session, as it holds it now, or null when
+    /// it closed, holds no such Space, holds it with another profile or is
+    /// deleting it. The caller holds the gate.
+    private SpaceState? Lent(NativeSessionAuthority source) {
+        var original = source.session.Spaces.SingleOrDefault(space => space.Id == borrowedSpace);
+        return source.released || original is null || original.ProfileId != borrowedProfile
+            || PendingDeletion(source.session, borrowedSpace) is not null ? null : original;
     }
 
     private SpaceState RequireBorrowedSource() {
@@ -81,8 +118,9 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// Throws unless `value`, a state of a borrowed session, shows its Space
-    /// with the settings its owner holds now; a refresh brings it up to date.
-    /// Any other session always passes.
+    /// with the settings its owner holds now; the core brings a borrowed
+    /// session up to date as soon as its owner changes. Any other session
+    /// always passes.
     internal void RequireCurrentBorrowedPolicy(SessionState value) {
         if (borrowedSource is null) return;
         var original = RequireBorrowedSource();
@@ -90,29 +128,10 @@ public sealed partial class NativeSessionAuthority {
             throw new BrowserRuleException(BrowserRuleCodes.StaleBorrowedSource);
     }
 
-    /// A command that brings the borrowed Space's settings up to date with its
-    /// owner, and changes nothing when they already are.
-    public NativeSessionCommand PrepareBorrowedRefresh() {
-        lock (Gate) {
-            RequireWritable(requireCurrentBorrowedPolicy: false);
-            var original = RequireBorrowedSource(); var local = session.Spaces.Single();
-            var refreshed = BorrowedSpace(original, local);
-            var next = refreshed == local ? session : session with { Spaces = [refreshed] };
-            Validate(next);
-            return new(this, session, next, []);
-        }
-    }
-
-    /// Takes no more edits, and the windows over this session close with it.
-    public void Release() {
-        Device? target;
-        Guid workspace;
-        lock (Gate) {
-            released = true;
-            target = device;
-            workspace = workspaceId;
-        }
-        target?.Detach(workspace);
+    /// Takes no more edits. The core then drops the workspace's pages and
+    /// windows and publishes that it closed.
+    internal void Close() {
+        lock (Gate) released = true;
     }
 
     #endregion

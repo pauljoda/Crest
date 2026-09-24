@@ -31,8 +31,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void LockedSpaceCommandsAreRejectedBeforePreparationUntilAGrantExistsAndAgainAfterRelocking() {
         var session = GuardedSession();
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var identity = Identity(session);
         var tab = Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>());
         var move = new MoveTab(device.Workspace, identity.Space, tab, TabPlacement.Current, null, null, LeavesSplit: false);
@@ -91,8 +91,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void SyncMaterializationAndDeletionStillReachALockedSpaceWhileItsCommandsStayRejected() {
         var session = GuardedSession(withOpenSecondSpace: true);
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         // Materialized records commit as a session replacement, never as a
         // command, so background convergence does not need a grant.
         using (var reserved = core.ReserveReplacement(RenameDelta(session, "Merged from another device")))
@@ -135,7 +135,7 @@ public sealed partial class BrowserContractsTests {
     public void ALockedSpacesRecordsRejectANativeValueEditWhileOtherSpacesAndSyncKeepWriting() {
         var session = GuardedSession(withOpenSecondSpace: true);
         var access = new SpaceAccessAuthority();
-        var core = new NativeSessionAuthority(Bytes(session));
+        var core = TestWorkspaces.Session(session);
         core.AttachAccess(access);
         var identity = Identity(session);
         // A value edit proposes records instead of naming an operation, so the
@@ -211,17 +211,16 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ALockedSpaceCannotBeBorrowedOrTransferredIntoATemporaryWorkspace() {
         var session = GuardedSession();
-        var owner = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(owner);
+        using var device = new TestDevice(session);
+        var owner = device.Authority;
         var identity = Identity(session);
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
-            () => owner.CreateBorrowed(identity.Space, identity.Profile)).Code);
+        Assert.Equal(new SpaceLocked(identity.Space), Assert.Throws<Rejected>(
+            () => device.Send(new BorrowSpace(device.Workspace, identity.Space, identity.Profile))).Rejection);
         Unlock(device.Send, device.Workspace, identity.Space);
-        var child = owner.CreateBorrowed(identity.Space, identity.Profile);
+        var borrowed = device.Borrow(session["spaces"]![0]!);
         // The borrowed workspace inherits the same authority, so relocking the
         // source also stops edits inside the Blank Window that borrowed it.
         device.Send(new LockSpace(identity.Space));
-        var borrowed = device.Attach(child);
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(new MoveTab(borrowed, identity.Space,
             Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>()), TabPlacement.Current, null, null,
             LeavesSplit: false))).Rejection);
@@ -236,10 +235,11 @@ public sealed partial class BrowserContractsTests {
         second["history"] = new JsonArray(); second["archivedTabs"] = new JsonArray();
         var shared = session.DeepClone();
         shared["spaces"] = new JsonArray(space.DeepClone(), second.DeepClone());
-        Assert.Equal("duplicate_space_profile", Assert.Throws<BrowserRuleException>(
-            () => new NativeSessionAuthority(Bytes(shared))).Code);
+        using (var app = new CrestApp())
+            Assert.Equal(new InvalidSeed(SeedFlaw.SharedProfile), Assert.Throws<Rejected>(
+                () => app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(shared)))).Rejection);
 
-        var core = new NativeSessionAuthority(Bytes(session));
+        var core = TestWorkspaces.Session(session);
         var metadata = second.DeepClone();
         Assert.Equal("duplicate_space_profile", Assert.Throws<BrowserRuleException>(() => core.Commit(Bytes(new JsonObject {
             ["version"] = 1,

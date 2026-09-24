@@ -436,8 +436,8 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let stored = try BrowserStore.migratedStorage(
             core: crest, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: [defaults]),
             favicons: icons, seed: .freshInstallSeed, environment: .current)
-        XCTAssertEqual(stored.authority.projection, installed)
-        let store = BrowserStore.production(
+        XCTAssertEqual(stored.projection, installed)
+        let store = try BrowserStore.production(
             stored: stored, core: crest, favicons: icons, credentialVault: InMemoryCredentialVault())
         XCTAssertEqual(store.selectedSpaceID, installed.defaultSpaceID)
         XCTAssertEqual(store.selectedTabID(in: space.id), tab.id)
@@ -451,9 +451,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
 
         await store.flushPendingSyncPersistence()
         let relaunched = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
-        let reopened = try XCTUnwrap(try BrowserCoreStoredSession.load(core: relaunched, favicons: icons))
-        XCTAssertEqual(reopened.authority.projection, store.session)
-        let next = BrowserStore.production(
+        let reopened = try BrowserCoreSessionAuthority.openStored(in: relaunched, favicons: icons)
+        XCTAssertEqual(reopened.projection, store.session)
+        let next = try BrowserStore.production(
             stored: reopened, core: relaunched, favicons: icons, credentialVault: InMemoryCredentialVault())
         XCTAssertNil(next.selectedTabID(in: space.id), "The next save must not write the selection back")
     }

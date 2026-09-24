@@ -15,8 +15,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void CustomSearchEnginesAreAdmittedSelectedAndStoredInTheNativeSpelling() {
         var session = SavedSession().Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var space = SpaceId(session["spaces"]![0]!);
         var (kagi, other) = (Guid.NewGuid(), Guid.NewGuid());
         JsonNode Stored() => JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!["browsingPreferences"]!;
@@ -55,8 +55,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void RefusedCustomSearchEnginesLeaveTheSpaceUnchanged() {
         var session = SavedSession().Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var space = SpaceId(session["spaces"]![0]!);
         device.Send(new AddSearchEngine(device.Workspace, space, new(Guid.NewGuid(), "Café", "https://example.org/?q=%s", null), Selects: false));
         var admitted = core.Current;
@@ -90,8 +90,8 @@ public sealed partial class BrowserContractsTests {
             ["lastVisitedAt"] = 0.0,
             ["visitCount"] = 1
         });
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var space = core.Current.Spaces[0];
         var preferences = space.Settings.BrowsingPreferences;
         Assert.Single(space.History);

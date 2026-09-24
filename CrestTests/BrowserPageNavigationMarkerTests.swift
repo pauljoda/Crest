@@ -5,6 +5,10 @@ import XCTest
 
 @MainActor
 final class BrowserPageNavigationMarkerTests: XCTestCase {
+    /// The pool of the page a test drives, which keeps its window and
+    /// workspace open: a workspace that closes takes its pages with it.
+    private var pool: BrowserPagePool?
+
     func testSameDocumentNavigationRetiresPendingURLAcrossHistoryTraversal() async throws {
         let page = try makePage()
         defer { page.release(keepingState: false) }
@@ -196,6 +200,7 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
             tabs: [tab]
         )
         let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
+        self.pool = pool
         pool.select(tab: tab, space: space)
         return try XCTUnwrap(pool.activePage)
     }

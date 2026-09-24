@@ -39,8 +39,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AnOpenedTabLandsOutsideTheSplitItOpensFromAndOnlyTheAskingWindowShowsIt() {
         var (session, space, member, partner, plain) = SplitSession();
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Open(space, (space, member));
         var elsewhere = device.Open(space, (space, member));
         OpenTab Opening(Guid id, TabContent content, Guid? after, bool shows = true) =>
@@ -82,8 +82,8 @@ public sealed partial class BrowserContractsTests {
                 ["symbol"] = "globe",
                 ["lastActivatedAt"] = 800000000.0
             });
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Open(f.Space);
         var full = core.Current;
 
@@ -101,8 +101,8 @@ public sealed partial class BrowserContractsTests {
 
     [Fact]
     public void ClosingArchivesAnOpenTabAndPutsASavedTabsPageAwayReturningTheWindowToItsPreviousTab() {
-        var core = MaximalSession();
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(MaximalDocument());
+        var core = device.Authority;
         TestGrants.UnlockGuarded(device.Send, device.Workspace, core.Current);
         var space = core.Current.Spaces[0];
         Guid Id(string value) => Guid.Parse(value);
@@ -135,8 +135,8 @@ public sealed partial class BrowserContractsTests {
     public void TheStartPageThatIsItsSpacesOnlyTabLeavesOnlyItsWindowToClose() {
         var f = SavedSession(); var session = f.Document["session"]!; var tab = session["spaces"]![0]!["tabs"]![0]!.AsObject();
         tab["placement"] = "current"; tab["url"] = null; tab["savedURL"] = null; tab["folderID"] = null; tab["splitGroupID"] = null;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Tab));
         var closing = new CloseTab(device.Workspace, window, f.Space, f.Tab);
 
@@ -154,8 +154,8 @@ public sealed partial class BrowserContractsTests {
 
     [Fact]
     public void DeletingArchivesATabAsAnOpenOneAndClearingArchivesOnlyOpenTabs() {
-        var core = MaximalSession();
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(MaximalDocument());
+        var core = device.Authority;
         TestGrants.UnlockGuarded(device.Send, device.Workspace, core.Current);
         var space = core.Current.Spaces[0];
         var article = Guid.Parse("B61250D4-3D4E-4DD6-8871-0BB326669142");
@@ -182,8 +182,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ACopyTakesAnIdentityTheCoreGivesAndStartsFromWhatItsSourcesPageShows() {
         var f = SavedSession(); var session = f.Document["session"]!;
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Tab));
         device.ShowPage(window, f.Space, f.Tab, PageSnapshot.Blank with { Url = "https://example.com/live-child", Title = "Live title" });
         var copy = Guid.NewGuid();
@@ -207,8 +207,8 @@ public sealed partial class BrowserContractsTests {
         var (session, space, member, partner, _) = SplitSession();
         var folders = session["spaces"]![0]!["folders"]!.AsArray();
         var saved = Guid.Parse(folders[0]!["id"]!["rawValue"]!.GetValue<string>());
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         MoveTab Moving(TabPlacement placement, Guid? folder = null, bool leaves = false) =>
             new(device.Workspace, space, member, placement, folder, null, leaves);
         var before = core.Current;

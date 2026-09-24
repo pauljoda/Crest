@@ -101,13 +101,12 @@ public sealed unsafe partial class BrowserContractsTests {
         var original = StoredParts(directory.File);
 
         using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
-            var projection = JsonNode.Parse(app.SessionProjection()!.Output)!;
-            var spaces = projection["session"]!["spaces"]!.AsArray();
+            var spaces = StoredDocument(app)["spaces"]!.AsArray();
             Assert.Equal(["Work", "Personal"], spaces.Select(space => space!["name"]!.GetValue<string>()));
             Assert.Equal("deviceOwnerAuthentication", spaces[1]!["accessPolicy"]!.GetValue<string>());
             Assert.Equal([13, 12], spaces.Select(space => space!["history"]!.AsArray().Count));
             Assert.Equal([12, 8], spaces.Select(space => space!["tabs"]!.AsArray().Count));
-            var journal = JsonNode.Parse(app.SessionSync!.Snapshot.Read())!;
+            var journal = JsonNode.Parse(app.StoredSync!.Snapshot.Read())!;
             Assert.Equal(30, journal["records"]!.AsArray().Count);
             Assert.Equal(27, journal["pendingRecordIDs"]!.AsArray().Count);
         }
@@ -122,9 +121,9 @@ public sealed unsafe partial class BrowserContractsTests {
         using var directory = new StorageDirectory();
         var document = SavedSession().Document["session"]!.AsObject();
         using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
-            Assert.Null(app.Session);
+            Assert.Null(app.StoredSync);
             app.Send(Adoption(document));
-            var session = app.Session!;
+            var session = StoredSession(app);
             for (int edit = 1; edit <= 20; edit++) session.Commit(RenameDelta(document, $"Edit {edit}"));
             var announced = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 21));
             var saved = announced.OfType<Saved>().Select(change => change.Revision).ToArray();
@@ -134,7 +133,7 @@ public sealed unsafe partial class BrowserContractsTests {
             Assert.DoesNotContain(announced, change => change is StorageFailed);
         }
         using var reopened = new CrestApp(new AppConfiguration(directory.Path));
-        var tabs = JsonNode.Parse(reopened.SessionProjection()!.Output)!["session"]!["spaces"]![0]!["tabs"]!.AsArray();
+        var tabs = StoredDocument(reopened)["spaces"]![0]!["tabs"]!.AsArray();
         Assert.Equal("Edit 20", tabs[0]!["title"]!.GetValue<string>());
     }
 
@@ -150,7 +149,7 @@ public sealed unsafe partial class BrowserContractsTests {
                 connection.Execute($"CREATE TRIGGER log_{operation} AFTER {operation} ON checkpoint WHEN NEW.part NOT LIKE 'log.%' "
                     + "BEGIN INSERT INTO checkpoint(part, data) VALUES ('log.' || NEW.part || '.' || hex(randomblob(8)), x'01'); END");
         }
-        var session = app.Session!;
+        var session = StoredSession(app);
         session.Commit(RenameDelta(document, "Only the title"));
         _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 2));
 
@@ -170,13 +169,13 @@ public sealed unsafe partial class BrowserContractsTests {
         document["spaces"]!.AsArray().Add(second);
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         var answered = app.Send(Adoption(document));
-        var session = app.Session!;
-        var sync = app.SessionSync!;
+        var (workspace, opened) = TestWorkspaces.OpenStored(app);
+        var session = app.Workspace(workspace);
+        var sync = app.StoredSync!;
         sync.Flush();
         var launched = DrainUntil(app,
-            changes => changes.OfType<SyncJournalChanged>().Any() && changes.OfType<Saved>().Any(), answered);
+            changes => changes.OfType<SyncJournalChanged>().Any() && changes.OfType<Saved>().Any(), [.. answered, .. opened]);
         Assert.Contains(launched, change => change is SyncJournalChanged { PendingRecords: > 0 });
-        var workspace = app.AttachWorkspace(session);
         var deleting = SpaceId(second);
         var operation = Guid.NewGuid();
         app.Send(new BeginDeletingSpace(workspace, Guid.NewGuid(), deleting, operation));
@@ -206,6 +205,45 @@ public sealed unsafe partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void APrivateWorkspaceStartsFromThePrivateTemplateAndReachesNeitherTheFileNorTheJournal() {
+        using var directory = new StorageDirectory();
+        var document = SavedSession().Document["session"]!.AsObject();
+        document.Remove("disposableSeedMarker");
+        Dictionary<string, byte[]> before;
+        using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
+            var answered = app.Send(Adoption(document));
+            var (_, opened) = TestWorkspaces.OpenStored(app);
+            var sync = app.StoredSync!;
+            sync.Flush();
+            _ = DrainUntil(app, changes => changes.OfType<SyncJournalChanged>().Any() && changes.OfType<Saved>().Any(),
+                [.. answered, .. opened]);
+            before = StoredParts(directory.File);
+            var staged = sync.Snapshot;
+
+            // It opens with the one private Space a private window starts with.
+            var workspace = Assert.Single(app.Send(new OpenWorkspace(WorkspaceKind.Private, Seed: null)).OfType<WorkspaceOpened>());
+            var space = Assert.Single(workspace.Session.Spaces);
+            Assert.Equal(WorkspaceKind.Private, workspace.Kind);
+            Assert.Equal(("Private", "eyeglasses", BuiltInSearchEngine.DuckDuckGo, CurrentTabCleanup.Never, false),
+                (space.Settings.Name, space.Settings.Symbol, space.Settings.BrowsingPreferences.SelectedBuiltInEngine,
+                    space.Settings.BrowsingPreferences.CurrentTabCleanup, space.Settings.CredentialPreferences.IsEnabled));
+            Assert.Single(space.Tabs);
+
+            // What it browses stays in memory: nothing is saved or staged.
+            var window = Guid.NewGuid();
+            app.Send(new OpenWindow(window, workspace.WorkspaceId, Saved: false, null, null, [], RestoresTabs: true));
+            app.Send(new OpenTab(workspace.WorkspaceId, window, space.Id, Guid.NewGuid(),
+                new TabContent("https://private.example/", null, "Private page", null), TabPlacement.Current, null, false));
+            app.Send(new SetSpaceIdentity(workspace.WorkspaceId, space.Id, "Renamed in private", "eyeglasses", SpaceAccent.Teal));
+            Assert.Null(app.Workspace(workspace.WorkspaceId).Storage);
+            Assert.Same(staged, sync.Snapshot);
+            Assert.DoesNotContain(app.Drain(), change => change is Saved or SyncJournalChanged);
+        }
+        // Closing the core saves whatever is still pending, and none of it was private.
+        AssertSameParts(before, StoredParts(directory.File));
+    }
+
+    [Fact]
     public void AJournalIsNeverWrittenAheadOfTheSessionItWasStagedFrom() {
         using var directory = new StorageDirectory();
         var fixture = SavedSession();
@@ -214,11 +252,11 @@ public sealed unsafe partial class BrowserContractsTests {
         var journal = JournalDocument(record);
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         app.Send(Adoption(document, journal));
-        var session = app.Session!;
+        var session = StoredSession(app);
         session.Commit(RenameDelta(document, "Edited before staging"));
         var acknowledge = JournalCommand(journal, "acknowledge",
             new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
-        using var transaction = app.SessionSync!.Prepare(acknowledge);
+        using var transaction = app.StoredSync!.Prepare(acknowledge);
         Assert.True(transaction.Seal());
         transaction.CommitDurably();
 
@@ -243,13 +281,14 @@ public sealed unsafe partial class BrowserContractsTests {
 
         using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
             AssertSameParts(written, StoredParts(directory.Recovery));
-            var projection = JsonNode.Parse(app.SessionProjection()!.Output)!;
-            var spaces = projection["session"]!["spaces"]!.AsArray();
-            Assert.NotEqual(spaces[0]!["profile"]!["id"]!.GetValue<string>(), spaces[1]!["profile"]!["id"]!.GetValue<string>());
-            // The repaired tab keeps the images of the tab it came from.
-            var origin = projection["assets"]!.AsArray().Single(asset => asset!["spaceIndex"]!.GetValue<int>() == 1);
-            Assert.Equal(fixture.Tab, Guid.Parse(origin!["sourceTabID"]!["rawValue"]!.GetValue<string>()));
-            Assert.NotEqual(fixture.Tab, Guid.Parse(spaces[1]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>()));
+            var (workspace, opened) = TestWorkspaces.OpenStored(app);
+            var spaces = app.Workspace(workspace).Current.Spaces;
+            Assert.Equal(spaces, Assert.IsType<WorkspaceOpened>(opened.Single(change => change is WorkspaceOpened)).Session.Spaces);
+            Assert.NotEqual(spaces[0].ProfileId, spaces[1].ProfileId);
+            // The repaired tab wears the image the platform keeps for the tab it came from.
+            var repaired = spaces[1].Tabs[0].Id;
+            Assert.NotEqual(fixture.Tab, repaired);
+            Assert.Equal(new TabCopied(workspace, fixture.Tab, repaired), Assert.Single(opened.OfType<TabCopied>()));
         }
 
         var saved = StoredCore(StoredParts(directory.File));
@@ -298,20 +337,20 @@ public sealed unsafe partial class BrowserContractsTests {
     public void TheHostIsWokenOnceForChangesTheCoreStartedAndDrainsThemInOrder() {
         using var directory = new StorageDirectory();
         using var memoryOnly = new AppClient();
-        Assert.Equal(CoreStatus.Empty, memoryOnly.Session().Status);
+        Assert.Equal(CoreStatus.Empty, memoryOnly.Sync().Status);
 
         using var app = new AppClient(directory.Path);
-        Assert.Equal(CoreStatus.Empty, app.Session().Status);
+        Assert.Equal(CoreStatus.Empty, app.Sync().Status);
+        Assert.Equal(new NoStoredSession(), app.Refuse(new OpenWorkspace(WorkspaceKind.Persistent, Seed: null)));
         Volatile.Write(ref wakes, 0);
         Assert.Equal(CoreStatus.Ok, app.SetWake(&CountWake, 42));
         var adoption = Adoption(SavedSession().Document["session"]!.AsObject());
-        // The session the file now holds joins the device within the intent,
-        // which answers it. Its first save runs behind the intent: a save that
-        // lands before the intent answers travels in that answer, and one that
-        // lands after wakes the host once for a drain.
+        // The file now holds a session, which opens as a workspace of its own.
+        // Its first save runs behind the intent: a save that lands before the
+        // intent answers travels in that answer, and one that lands after
+        // wakes the host once for a drain.
         var answer = app.Send(adoption);
-        Assert.Equal([typeof(WorkspaceOpened), typeof(SessionAdopted)],
-            answer.Where(change => change is not Saved).Select(change => change.GetType()));
+        Assert.Equal([typeof(SessionAdopted)], answer.Where(change => change is not Saved).Select(change => change.GetType()));
         if (answer.OfType<Saved>().SingleOrDefault() is { } early) {
             Assert.Equal(new Saved(1), early);
         } else {
@@ -325,10 +364,10 @@ public sealed unsafe partial class BrowserContractsTests {
         Assert.Empty(app.Send(adoption));
         Assert.Equal(CoreStatus.Ok, app.SetWake(null, 0));
 
-        var (status, session, sync, projection) = app.Session();
+        var opened = Assert.Single(app.Send(new OpenWorkspace(WorkspaceKind.Persistent, Seed: null)).OfType<WorkspaceOpened>());
+        Assert.Equal(WorkspaceKind.Persistent, opened.Kind);
+        var (status, sync) = app.Sync();
         Assert.Equal(CoreStatus.Ok, status);
-        Assert.NotEqual(0UL, session);
         Assert.NotEqual(0UL, sync);
-        Assert.NotEqual(0UL, projection);
     }
 }

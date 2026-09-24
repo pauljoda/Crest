@@ -21,8 +21,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ImportReidentifiesCollisionsWithoutPublishingUntilDurableCommit() {
         var session = SavedSession().Document["session"]!;
-        var owner = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(owner);
+        using var device = new TestDevice(session);
+        var owner = device.Authority;
         var window = device.Showing(session);
         // Current sources carry no selection; the imported Space opens on its first tab.
         var source = session["spaces"]![0]!.DeepClone().AsObject();
@@ -48,7 +48,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void RejectedImportCannotBeCommittedOrReservedAndKeepsTheSourceIntact() {
         var session = SavedSession().Document["session"]!;
-        var owner = new NativeSessionAuthority(Bytes(session));
+        var owner = TestWorkspaces.Session(session);
         var sources = new JsonArray(Enumerable.Range(0, 64).Select(_ => session["spaces"]![0]!.DeepClone()).ToArray());
         var command = owner.PrepareCommand(ImportCommand(sources));
         Assert.Equal("space_limit_reached", JsonNode.Parse(command.Output)!["error"]!.GetValue<string>());

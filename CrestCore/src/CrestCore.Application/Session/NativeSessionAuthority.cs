@@ -24,8 +24,6 @@ public sealed partial class NativeSessionAuthority {
     /// The largest edit request or answer the session exchanges with a window.
     public const int MaximumEditBytes = 4 * 1024 * 1024;
     internal static readonly object Gate = new();
-    private const string WorkspaceKindField = "coreWorkspaceKind";
-    private const string PrivateBrowsingField = "corePrivateBrowsing";
     private SessionState session;
     private NativeSessionReplacement? replacement;
     private readonly WorkspaceKind workspaceKind;
@@ -43,16 +41,14 @@ public sealed partial class NativeSessionAuthority {
 
     #region Constructors
 
-    public NativeSessionAuthority(ReadOnlySpan<byte> bytes) {
-        var input = Parse(bytes);
-        workspaceKind = input[WorkspaceKindField]?.GetValue<string>() switch {
-            null or "persistent" => WorkspaceKind.Persistent,
-            "private" => WorkspaceKind.Private,
-            "temporary" => throw new BrowserRuleException(BrowserRuleCodes.BorrowedSourceRequired),
-            _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidWorkspaceKind)
-        };
-        privateBrowsing = input[PrivateBrowsingField]?.GetValue<bool>() ?? workspaceKind == WorkspaceKind.Private;
-        session = StoredSessionCodec.DecodeSession(input);
+    /// A memory-only session of `kind` that starts as `initial` and keeps
+    /// nothing: it is never saved or synced.
+    internal NativeSessionAuthority(WorkspaceKind kind, SessionState initial) {
+        ArgumentNullException.ThrowIfNull(kind);
+        ArgumentNullException.ThrowIfNull(initial);
+        workspaceKind = kind;
+        privateBrowsing = kind.IsPrivate;
+        session = initial;
         Validate(session);
     }
 
@@ -82,30 +78,47 @@ public sealed partial class NativeSessionAuthority {
         return id;
     }
 
+    /// Throws unless `value` is a session a workspace can hold; see `Flaw`.
+    /// TRANSITIONAL until S5.8c: the JSON command and replacement paths still
+    /// report the rule a state breaks by its code.
     private static void Validate(SessionState value) {
+        if (Flaw(value) is not { } flaw) return;
+        throw new BrowserRuleException(flaw switch {
+            SeedFlaw.DuplicateSpace => BrowserRuleCodes.DuplicateSpace,
+            SeedFlaw.SharedProfile => BrowserRuleCodes.DuplicateSpaceProfile,
+            SeedFlaw.DuplicateTab => BrowserRuleCodes.DuplicateTab,
+            SeedFlaw.UnknownDeletion => BrowserRuleCodes.InvalidDeletionIntent,
+            _ => BrowserRuleCodes.InvalidIdentity
+        });
+    }
+
+    /// The first rule `value` breaks that keeps a workspace from holding it, or
+    /// null for a session a workspace can hold.
+    internal static SeedFlaw? Flaw(SessionState value) {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in spaces) {
             if (space.Id == Guid.Empty || space.ProfileId == Guid.Empty || space.Tabs.Any(tab => tab.Id == Guid.Empty))
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
-            if (!ids.Add(space.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpace);
+                return SeedFlaw.MissingIdentity;
+            if (!ids.Add(space.Id)) return SeedFlaw.DuplicateSpace;
             // A Space is exactly one profile and a profile belongs to exactly one
             // Space. Two Spaces sharing a profile would share cookies, credentials
             // and extension access across an isolation boundary the user relies on,
             // and would make "which Space owns this profile" unanswerable.
-            if (!profiles.Add(space.ProfileId)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
+            if (!profiles.Add(space.ProfileId)) return SeedFlaw.SharedProfile;
             foreach (var tab in space.Tabs)
-                if (!tabs.Add(tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
+                if (!tabs.Add(tab.Id)) return SeedFlaw.DuplicateTab;
         }
         var pendingIds = new HashSet<Guid>();
         foreach (var deletion in value.SpaceDeletions) {
             if (deletion.Id == Guid.Empty || deletion.SpaceId == Guid.Empty || deletion.ProfileId == Guid.Empty)
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
+                return SeedFlaw.MissingIdentity;
             if (!pendingIds.Add(deletion.SpaceId) || !spaces.Any(s => s.Id == deletion.SpaceId && s.ProfileId == deletion.ProfileId))
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent);
+                return SeedFlaw.UnknownDeletion;
         }
         // An empty temporary workspace and a briefly stale window selection are
         // valid native states. Window reconciliation handles their presentation.
+        return null;
     }
 
     /// A Space's settings without its records, as settings commands answer them.
@@ -209,7 +222,7 @@ public sealed partial class NativeSessionAuthority {
     /// `nativeValueEdit` marks a proposal that originates in the native views
     /// rather than in sync materialization, so it answers to the Space access
     /// gate exactly as a semantic command does.
-    public void Commit(ReadOnlySpan<byte> delta, bool nativeValueEdit = false) {
+    internal void Commit(ReadOnlySpan<byte> delta, bool nativeValueEdit = false) {
         SessionState previous, next;
         lock (Gate) {
             next = Prepare(delta, nativeValueEdit: nativeValueEdit);

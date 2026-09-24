@@ -19,12 +19,12 @@ public sealed partial class BrowserContractsTests {
         var app = new CrestApp(new AppConfiguration(directory.Path));
         var (installedCore, installed, _) = InstalledDefaults();
         var session = core ?? installedCore;
-        if (app.Session is null) app.Send(new AdoptLegacySession(installed with { Core = Bytes(session) }, SeedDocument()));
-        var spaces = JsonNode.Parse(app.SessionProjection()!.Output)!["session"]!["spaces"]!.AsArray();
-        // The file's session joined the device when the app opened it.
-        app.Drain();
-        var workspace = app.AttachWorkspace(app.Session!);
-        TestGrants.UnlockGuarded(app.Send, workspace, app.Session!.Current);
+        if (app.StoredSync is null) app.Send(new AdoptLegacySession(installed with { Core = Bytes(session) }, SeedDocument()));
+        // The file's session joins the device when a launch opens it.
+        var (workspace, _) = TestWorkspaces.OpenStored(app);
+        var opened = app.Workspace(workspace).Current;
+        var spaces = StoredSessionCodec.Encode(opened)["spaces"]!.AsArray();
+        TestGrants.UnlockGuarded(app.Send, workspace, opened);
         app.Drain();
         return (app, workspace, spaces);
     }
@@ -75,6 +75,31 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ClosingThePersistentWorkspaceKeepsItsSavedWindowsForTheNextLaunch() {
+        using var directory = new StorageDirectory();
+        var window = Guid.NewGuid();
+        Guid second;
+        {
+            var (app, workspace, spaces) = DeviceApp(directory);
+            using var disposal = app;
+            second = SpaceId(spaces[1]!);
+            app.Send(new OpenWindow(window, workspace, Saved: true, CopyingWindowId: null, ShowingSpaceId: null, ShowingTabs: [],
+                RestoresTabs: true));
+            app.Send(new ShowSpace(window, second));
+            // The workspace closing closes its window, which the person never closed.
+            Assert.Equal([new WindowClosed(window), new WorkspaceClosed(workspace)],
+                app.Send(new CloseWorkspace(workspace)).Where(change => change is WindowClosed or WorkspaceClosed));
+            Assert.Equal(new StoredSessionClosed(), Assert.Throws<Rejected>(() =>
+                app.Send(new OpenWorkspace(WorkspaceKind.Persistent, Seed: null))).Rejection);
+        }
+
+        var (relaunched, persistent, _) = DeviceApp(directory);
+        using var relaunchedDisposal = relaunched;
+        var restored = Shown(relaunched.Send(new OpenWindow(window, persistent, Saved: true, null, null, [], RestoresTabs: true)));
+        Assert.Equal(second, restored.ShownSpaceId);
+    }
+
+    [Fact]
     public void WindowsFollowTheSessionAndOnlyTheOnesThatChangePublish() {
         using var directory = new StorageDirectory();
         var (app, workspace, spaces) = DeviceApp(directory);
@@ -91,7 +116,7 @@ public sealed partial class BrowserContractsTests {
 
         // Another window closes the tab this one shows: it shows nothing in that
         // Space, and the window that shows another Space is left alone.
-        var session = app.Session!;
+        var session = app.Workspace(workspace);
         var space = session.Current.Spaces[1];
         session.Commit(Bytes(new JsonObject {
             ["version"] = 1,
@@ -125,17 +150,15 @@ public sealed partial class BrowserContractsTests {
         {
             var (app, workspace, spaces) = DeviceApp(directory);
             using var disposal = app;
-            var memory = new NativeSessionAuthority(Bytes(SavedSession().Document["session"]!));
-            var memoryWorkspace = app.AttachWorkspace(memory);
-            Assert.Equal(memoryWorkspace, app.AttachWorkspace(memory));
+            var memoryWorkspace = TestWorkspaces.Open(app, SavedSession().Document["session"]!);
             Assert.Equal(new UnsavedWorkspace(memoryWorkspace),
                 Assert.Throws<Rejected>(() => app.Send(new OpenWindow(Guid.NewGuid(), memoryWorkspace, true, null, null, [], true))).Rejection);
             app.Send(new OpenWindow(Guid.NewGuid(), memoryWorkspace, Saved: false, null, null, [], true));
             foreach (var window in windows) app.Send(new OpenWindow(window, workspace, Saved: true, null, null, [], true));
             // Using the first window again keeps it; the second is now the oldest.
             app.Send(new ShowSpace(windows[0], SpaceId(spaces[1]!)));
-            // A released session takes its windows with it.
-            memory.Release();
+            // A workspace that closes takes its windows with it.
+            app.Send(new CloseWorkspace(memoryWorkspace));
         }
         using var connection = SqliteConnection.Open(directory.File, Sqlite.OpenReadOnly);
         var stored = connection.ReadDevice("window-records").Windows.Select(record => record.Id).ToHashSet();
@@ -153,13 +176,13 @@ public sealed partial class BrowserContractsTests {
         Assert.NotEqual(second, Shown(app.Send(new OpenWindow(window, workspace, Saved: true, null, null, [], true))).ShownSpaceId);
         _ = DrainUntil(app, _ => app.Query(new PendingSave()).Revision is null);
         Assert.Null(app.Query(new PendingSave()).Revision);
-        var revision = app.Session!.Revision;
+        var revision = app.Workspace(workspace).Revision;
 
         // Another writer holds the file, so the device store cannot write behind yet.
         using var holder = SqliteConnection.Open(directory.File, Sqlite.OpenReadWrite);
         holder.Execute("BEGIN IMMEDIATE");
         Assert.Equal(second, Shown(app.Send(new ShowSpace(window, second))).ShownSpaceId);
-        Assert.Equal(revision, app.Session!.Revision);
+        Assert.Equal(revision, app.Workspace(workspace).Revision);
         var pending = Assert.NotNull(app.Query(new PendingSave()).Revision);
         Assert.NotEqual(second, holder.ReadDevice("window-records").Windows.Single(record => record.Id == window).ShownSpaceId);
         holder.Execute("ROLLBACK");

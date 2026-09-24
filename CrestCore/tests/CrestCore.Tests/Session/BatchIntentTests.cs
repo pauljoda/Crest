@@ -81,8 +81,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ClosingASelectionArchivesItsOpenTabsAndTheWindowReturnsToTheTabItShowedBefore() {
         var f = new BatchSpace();
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Last));
         device.Send(new ShowTab(window, f.Space, f.Open));
         var before = core.Current;
@@ -107,8 +107,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void DeletingASelectionIsSavedWithItsTombstonesBeforeItReturns() {
         var f = new BatchSpace();
-        var (core, sync) = Syncing(f.Session);
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var (core, sync) = (device.Authority, Syncing(device.Authority));
         var window = device.Open(f.Space, (f.Space, f.Saved));
         var staged = sync.Version;
 
@@ -132,8 +132,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void CopiesOfASelectionStartFromTheirPagesAndKeepTheirSplitTogether() {
         var f = new BatchSpace();
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Left));
         device.ShowPage(window, f.Space, f.Left, PageSnapshot.Blank with { Url = "https://batch.example/live", Title = "Live" });
         Guid leftCopy = Guid.NewGuid(), rightCopy = Guid.NewGuid(), savedCopy = Guid.NewGuid(), splitCopy = Guid.NewGuid();
@@ -161,8 +161,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ASelectionCombinesInOneSplitOfTwoToFourTabs() {
         var f = new BatchSpace();
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         SplitTabs Splitting(TabSelection selection, Guid? target = null) => new(device.Workspace, window, f.Space, selection, target, null);
         var before = core.Current;
@@ -187,8 +187,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void MovingASelectionToAnotherSpaceKeepsItsOrderAndFollowsOnlyWhenAsked() {
         var f = new BatchSpace();
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Last));
         device.Send(new ShowTab(window, f.Space, f.Open));
         MoveTabsToSpace Moving(TabSelection selection, Guid destination, bool follows) =>
@@ -229,8 +229,8 @@ public sealed partial class BrowserContractsTests {
                 ["symbol"] = "globe",
                 ["lastActivatedAt"] = 800000000.0
             });
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         var before = core.Current;
 
@@ -243,8 +243,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void FilingASelectionMovesItsFoldersWholeInTheOrderTheSidebarListsThem() {
         var f = new BatchSpace();
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         FileTabs Filing(TabSelection selection, TabPlacement placement, Guid? folder = null) =>
             new(device.Workspace, window, f.Space, selection, placement, folder, null, null, LeavesSplits: false);
@@ -288,8 +288,8 @@ public sealed partial class BrowserContractsTests {
                 ["symbol"] = "globe",
                 ["lastActivatedAt"] = 800000000.0
             });
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         FileTabs Filing(TabSelection selection, TabPlacement placement, Guid? folder = null, Guid? before = null) =>
             new(device.Workspace, window, f.Space, selection, placement, folder, before, null, LeavesSplits: false);
@@ -314,8 +314,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ANewFolderForASelectionTakesTheDefaultColorAndCanStandInATabsPlace() {
         var f = new BatchSpace();
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         Guid made = Guid.NewGuid(), around = Guid.NewGuid();
 
@@ -343,8 +343,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ASelectionThatChangedSinceTheWindowSawItIsRefused() {
         var f = new BatchSpace();
-        var core = new NativeSessionAuthority(Bytes(f.Session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(f.Session);
+        var core = device.Authority;
         var window = device.Open(f.Space, (f.Space, f.Open));
         var elsewhere = device.Open(f.Other);
         KeepTabsLoaded Keeping(TabSelection selection, Guid? from = null) => new(device.Workspace, from ?? window, f.Space, selection, true);

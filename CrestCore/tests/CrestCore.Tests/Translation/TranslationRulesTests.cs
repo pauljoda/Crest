@@ -22,9 +22,10 @@ public sealed class TranslationRulesTests {
             ["spaces"] = new JsonArray(),
             ["appPreferences"] = new JsonObject { ["translationRules"] = rules.DeepClone() }
         };
-        var authority = new NativeSessionAuthority(Encoding.UTF8.GetBytes(session.ToJsonString()));
         using var app = new CrestApp();
-        app.Send(new SetTranslationRule(app.AttachWorkspace(authority), source, target, enabled));
+        var workspace = TestWorkspaces.Open(app, session);
+        var authority = app.Workspace(workspace);
+        app.Send(new SetTranslationRule(workspace, source, target, enabled));
         return StoredSessionCodec.Encode(authority.Current.AppPreferences!)["translationRules"]!;
     }
 

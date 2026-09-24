@@ -28,8 +28,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("Stored native title", tab.Title);
 
         // A rename runs the Space through the domain and back to its stored form.
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         device.Send(new RenameTab(device.Workspace, fixture.Space, fixture.Tab, "Renamed"));
         var output = StoredSessionCodec.Encode(core.Current)["spaces"]![0]!["tabs"]![0]!;
         Assert.Equal("Renamed", output["customTitle"]!.GetValue<string>());

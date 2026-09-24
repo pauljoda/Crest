@@ -2369,6 +2369,10 @@
     "tab-move-intents": {
       "category": "internal",
       "message": "Moving a tab to another Space or window is a typed core intent, and a move between workspaces changes both or neither."
+    },
+    "workspace-intents": {
+      "category": "internal",
+      "message": "Opening, borrowing and closing workspaces are typed core intents: the core gives each workspace its identity, keeps a temporary window's Space in step with its owner and closes it once the owner stops lending it."
     }
   }
 }

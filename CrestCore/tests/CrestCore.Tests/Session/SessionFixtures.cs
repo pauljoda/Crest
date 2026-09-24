@@ -23,13 +23,18 @@ public sealed partial class BrowserContractsTests {
         /// The engine the device's pages open on, once one opened.
         private Engine? engine;
 
-        public TestDevice(NativeSessionAuthority authority) {
+        /// A device with a workspace of `kind`, persistent unless named, opened
+        /// from `session`, a document in the stored format.
+        public TestDevice(JsonNode session, WorkspaceKind? kind = null) {
             app = new(new AppConfiguration(null), Clock, Ids);
-            Workspace = app.AttachWorkspace(authority);
+            Workspace = TestWorkspaces.Open(app, session, kind);
         }
 
         /// The workspace of the session the device was made for.
         public Guid Workspace { get; }
+
+        /// The session of the workspace the device was made for.
+        public NativeSessionAuthority Authority => app.Workspace(Workspace);
 
         /// The time the device's core stamps session intents with.
         public TestClock Clock { get; } = new(DateTimeOffset.UtcNow);
@@ -37,8 +42,15 @@ public sealed partial class BrowserContractsTests {
         /// The identities the device's core gives new records.
         public TestIds Ids { get; } = new();
 
-        /// Attaches another session and answers its workspace.
-        public Guid Attach(NativeSessionAuthority authority) => app.AttachWorkspace(authority);
+        /// Opens another workspace of `kind` from `session` and answers it.
+        public Guid Attach(JsonNode session, WorkspaceKind? kind = null) => TestWorkspaces.Open(app, session, kind);
+
+        /// Opens a workspace that borrows `space`, a stored-format Space, of
+        /// `owner`, the device's first workspace unless named, and answers it.
+        public Guid Borrow(JsonNode space, Guid? owner = null) => TestWorkspaces.Borrow(app, owner ?? Workspace, space);
+
+        /// The session of the workspace `workspace` names.
+        public NativeSessionAuthority Session(Guid workspace) => app.Workspace(workspace);
 
         /// Registers the default engine, which supports `capabilities` beside
         /// the ones every engine must, and does what the core asks.

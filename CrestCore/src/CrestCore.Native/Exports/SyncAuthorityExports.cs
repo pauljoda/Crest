@@ -44,12 +44,6 @@ public static unsafe partial class Exports {
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_release", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncAuthorityRelease(ulong handle) => SyncAuthorities.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_session_attach_sync", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionAttachSync(ulong session, ulong sync) {
-        if (!Sessions.TryGetValue(session, out var owner) || !SyncAuthorities.TryGetValue(sync, out var value)) return CoreStatus.InvalidHandle;
-        try { owner.AttachSync(value); return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
-    }
-
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_version", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncAuthorityVersion(ulong handle, ulong* version) {
         if (version == null) return CoreStatus.InvalidArgument;

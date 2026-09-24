@@ -12,7 +12,9 @@ final class BrowserStoreFamily {
     private let core: BrowserCoreSessionAuthority
     private struct WeakFamily { weak var value: BrowserStoreFamily? }
     private var borrowedFamilies: [WeakFamily] = []
-    private var borrowedSourceIsAvailable = true
+    /// The session every window of this family followed last, which a
+    /// borrowed family's windows follow from when its owner's edit reaches it.
+    @ObservationIgnored private var followedSession: BrowserSession
     var authoritativeSession: BrowserSession { core.projection }
     let temporarySourceAssignment: BrowserSpaceRuntimeAssignment?
     let temporarySettingsBrowser: BrowserStore?
@@ -33,66 +35,90 @@ final class BrowserStoreFamily {
     /// only the windows over the session the core keeps in its file do.
     var keepsWindowRecords: Bool { storage != nil }
 
-    /// A family over a memory-only session, which `crest`'s windows show.
-    init(
-        session: BrowserSession, browsingMode: BrowserBrowsingMode = .standard,
-        temporarySourceAssignment: BrowserSpaceRuntimeAssignment? = nil,
-        temporarySettingsBrowser: BrowserStore? = nil, core crest: CrestCore
-    ) {
-        precondition(temporarySourceAssignment == nil, "Borrowed workspaces must be created by their core owner")
-        core = BrowserCoreSessionAuthority(session: session,
-            workspaceKind: browsingMode.isPrivate ? .private : .persistent,
-            privateBrowsing: browsingMode.isPrivate, core: crest)
-        self.temporarySourceAssignment = temporarySourceAssignment
-        self.temporarySettingsBrowser = temporarySettingsBrowser
+    /// Whether the core still holds this family's workspace open. A borrowed
+    /// one closes once its owner no longer lends its Space.
+    var isOpen: Bool { core.isOpen }
+
+    /// A family over a workspace `crest` opens in memory from `session`, of
+    /// the kind `browsingMode` browses in. It keeps nothing: it is never saved
+    /// or synced.
+    convenience init(session: BrowserSession, browsingMode: BrowserBrowsingMode = .standard, core crest: CrestCore) {
+        let kind: WorkspaceKind = browsingMode.isPrivate ? .private : .persistent
+        do {
+            self.init(memory: try BrowserCoreSessionAuthority.open(kind, seed: session, in: crest))
+        } catch {
+            preconditionFailure("The core refused to open a workspace over a session it was given: \(error)")
+        }
+    }
+
+    /// A family over a new private workspace in `crest`, which starts from the
+    /// core's private template.
+    convenience init(privateIn crest: CrestCore) {
+        do {
+            self.init(memory: try BrowserCoreSessionAuthority.open(.private, seed: nil, in: crest))
+        } catch {
+            preconditionFailure("The core refused to open a private workspace: \(error)")
+        }
+    }
+
+    private init(memory core: BrowserCoreSessionAuthority) {
+        self.core = core
+        followedSession = core.projection
+        temporarySourceAssignment = nil
+        temporarySettingsBrowser = nil
         storage = nil
         favicons = nil
         observePageRecords()
     }
 
-    /// The family of the session `storage` keeps in its file. Every image the
-    /// loaded session carries is reconciled with `favicons`, and images of tabs
-    /// it no longer has are pruned, as each later edit does for what it changed.
-    init(stored: BrowserCoreStoredSession, storage: CrestCore, favicons: any BrowserFaviconStoring) {
-        core = stored.authority
+    /// The family of the session `storage` keeps in its file, opened by
+    /// `stored`. Every image the loaded session carries is reconciled with
+    /// `favicons`, and images of tabs it no longer has are pruned, as each
+    /// later edit does for what it changed.
+    init(stored: BrowserCoreSessionAuthority, storage: CrestCore, favicons: any BrowserFaviconStoring) {
+        core = stored
+        followedSession = stored.projection
         temporarySourceAssignment = nil
         temporarySettingsBrowser = nil
         self.storage = storage
         self.favicons = favicons
-        let tabs = stored.authority.projection.spaces.flatMap(\.tabs)
+        let tabs = stored.projection.spaces.flatMap(\.tabs)
         for tab in tabs { favicons.reconcile(tab.faviconData, tabID: tab.id) }
         favicons.pruneFavicons(keeping: Set(tabs.map(\.id)))
         storage.storageFailureHandler = { [weak self] reason in self?.storageDidFail(reason) }
         observePageRecords()
     }
 
-    private init(core: BrowserCoreSessionAuthority, assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) {
-        self.core = core; temporarySourceAssignment = assignment; temporarySettingsBrowser = settingsBrowser
+    private init(
+        core: BrowserCoreSessionAuthority, assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore
+    ) {
+        self.core = core
+        temporarySourceAssignment = assignment
+        temporarySettingsBrowser = settingsBrowser
+        followedSession = core.projection
         storage = nil
         favicons = nil
         observePageRecords()
     }
 
-    func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) throws -> BrowserStoreFamily {
-        let child = BrowserStoreFamily(core: try core.makeBorrowed(in: assignment),
+    /// A family over a workspace that borrows the Space `assignment` names
+    /// from this family's workspace, whose settings `settingsBrowser` edits.
+    func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) throws
+        -> BrowserStoreFamily
+    {
+        let child = BrowserStoreFamily(
+            core: try core.borrow(assignment),
             assignment: assignment, settingsBrowser: settingsBrowser)
         borrowedFamilies.removeAll { $0.value == nil }
         borrowedFamilies.append(WeakFamily(value: child))
         return child
     }
 
-    func refreshBorrowed() -> Bool {
-        guard temporarySourceAssignment != nil else { return false }
-        let previous = authoritativeSession
-        do {
-            let changed = try core.refreshBorrowed()
-            borrowedSourceIsAvailable = true
-            if changed { reconcileStores(after: previous, from: nil) }
-            return true
-        } catch {
-            borrowedSourceIsAvailable = false
-            return false
-        }
+    /// Closes this family's workspace, and first every workspace that borrows
+    /// from it. Its windows close in the core, which keeps their saved
+    /// records. Closing it again does nothing.
+    func close() {
+        core.close()
     }
 
     /// Composition supplies the engine adapter once. Sync schedules it only
@@ -105,7 +131,8 @@ final class BrowserStoreFamily {
 
     private func scheduleSpaceDataCleanup() {
         guard spaceCleanupTask == nil, !(authoritativeSession.spaceDeletions ?? []).isEmpty,
-            let dataDeleter = spaceDataDeleter, let store = spaceCleanupStore else { return }
+            let dataDeleter = spaceDataDeleter, let store = spaceCleanupStore
+        else { return }
         spaceCleanupTask = Task { [weak self] in
             await store.resumePendingSpaceDeletions(dataDeleter: dataDeleter)
             self?.spaceCleanupTask = nil
@@ -114,39 +141,31 @@ final class BrowserStoreFamily {
 
     /// Temporary tabs retain their own organization, but profile identity and
     /// privacy always read through to their source, including during deletion.
+    /// A borrowed workspace the core closed shows no Space.
     var currentSession: BrowserSession {
         guard let assignment = temporarySourceAssignment, let source = temporarySettingsBrowser else {
             return authoritativeSession
         }
         var current = authoritativeSession
-        guard borrowedSourceIsAvailable, source.space(matching: assignment) != nil else {
+        guard core.isOpen, source.space(matching: assignment) != nil else {
             current.spaces = []
             return current
         }
         return current
     }
 
-    /// The workspace the core's device gave this family's session.
-    var workspaceID: UUID {
-        guard let workspace = core.workspaceID else {
-            preconditionFailure("A family's session joins its core's device when the family is made.")
-        }
-        return workspace
-    }
+    /// The workspace the core gave this family's session.
+    var workspaceID: UUID { core.workspaceID }
 
     /// Adds a window of this family, and answers the workspace it shows. A
-    /// session shows in the windows of the one core it was attached to.
+    /// session shows in the windows of the one core that opened it.
     func register(_ store: BrowserStore) -> UUID {
-        if let sync = store.syncCoordinator {
-            do { try core.attachSync(sync.core) }
-            catch { preconditionFailure("Cannot attach sync to the core session: \(error)") }
-        }
-        guard let workspace = core.workspaceID, core.device === store.core else {
-            preconditionFailure("A session shows in the windows of the core it was attached to.")
+        guard core.device === store.core else {
+            preconditionFailure("A session shows in the windows of the core that opened it.")
         }
         stores.removeAll { $0.value == nil }
         stores.append(WeakStore(value: store))
-        return workspace
+        return core.workspaceID
     }
 
     #if DEBUG
@@ -182,8 +201,10 @@ final class BrowserStoreFamily {
     /// Commits a prepared command whose failure the caller handles. The core
     /// saves an import and a cross-Space move with the journal it stages
     /// before this returns, because an upload follows.
-    private func commitPreparedChange(_ command: BrowserCoreSessionAuthority.PreparedChange,
-        previous: BrowserSession, from source: BrowserStore) throws {
+    private func commitPreparedChange(
+        _ command: BrowserCoreSessionAuthority.PreparedChange,
+        previous: BrowserSession, from source: BrowserStore
+    ) throws {
         try core.commit(command)
         reconcileStores(after: previous, from: source)
     }
@@ -319,12 +340,21 @@ final class BrowserStoreFamily {
     /// the session copy already holds what the core published for it.
     private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?) {
         persistFavicons(from: previous, to: authoritativeSession)
+        followedSession = authoritativeSession
         stores.removeAll { $0.value == nil }
         for store in stores.compactMap(\.value) {
             store.receiveFamilySessionChange(from: previous, to: authoritativeSession)
         }
         borrowedFamilies.removeAll { $0.value == nil }
-        for child in borrowedFamilies.compactMap(\.value) { _ = child.refreshBorrowed() }
+        for child in borrowedFamilies.compactMap(\.value) { child.followOwner() }
+    }
+
+    /// The core brought this borrowed family's Space up to date with its
+    /// owner's in the owner's own answer: its windows follow what changed.
+    private func followOwner() {
+        let previous = followedSession
+        guard authoritativeSession != previous else { return }
+        reconcileStores(after: previous, from: nil)
     }
 
     /// Hears what the core records from the pages of this family's workspace,
@@ -337,11 +367,13 @@ final class BrowserStoreFamily {
     /// the images tabs took are kept beside the session file, and every window
     /// reconciles with the session as it does after a command.
     private func pageRecordsApplied(_ records: Engines.PageRecords) {
-        guard let workspace = core.workspaceID,
+        let workspace = core.workspaceID
+        guard
             records.navigations.contains(where: { $0.workspaceID == workspace })
                 || records.icons.contains(where: { $0.workspaceID == workspace })
         else { return }
         let session = authoritativeSession
+        followedSession = session
         if let favicons {
             let adopted = Set(records.icons.filter { $0.workspaceID == workspace }.map(\.tabID))
             for tab in session.spaces.flatMap(\.tabs) where adopted.contains(tab.id.rawValue) {

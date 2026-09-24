@@ -58,8 +58,14 @@ The native Crest apps use the `crest_session_*`, `crest_sync_*`,
 `crest_app_*` and `crest_permissions_*` entry points,
 plus `crest_core_evaluate_policy` and `crest_core_evaluate_sync`.
 The session holds browsing data only; which Space and tab a window shows is the
-device's window state. `crest_session_attach_device` attaches a session to an
-app's device and writes the workspace identity the device gave it. Session
+device's window state. Workspaces open and close through `crest_app_dispatch`:
+`OpenWorkspace` opens the session the core keeps in its file, a private one from
+its template, or a seed in the stored format for launches without a file;
+`BorrowSpace` opens a workspace over another's Space; `CloseWorkspace` closes one
+and its borrowers. The core gives each its identity in `WorkspaceOpened`, and the
+remaining JSON session commands name their app and that workspace. Only the
+file's workspace saves and syncs; `crest_app_sync` hands the transport its sync
+component. Session
 commands name the window that issued them (`windowId`); when a command commits,
 the device moves that window to what the command chose, repairs every other
 window of that workspace, and publishes `WindowChanged` for each window that

@@ -26,7 +26,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void DurableReplacementReservesPublicationAndCancellationKeepsTheAcceptedRevision() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
+        var authority = TestWorkspaces.Session(session);
         var original = authority.Checkpoint().Read("core");
         using (var cancelled = authority.ReserveReplacement(RenameDelta(session, "Not saved"))) {
             Assert.Equal(original, authority.Checkpoint().Read("core"));
@@ -47,7 +47,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void NativeAuthorityKeepsEarlierCheckpointStable() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
+        var authority = TestWorkspaces.Session(session);
         var before = authority.Checkpoint();
         var original = before.Read("core");
         authority.Commit(RenameDelta(session, "Updated native title"));
@@ -87,8 +87,8 @@ public sealed partial class BrowserContractsTests {
         });
         var savedGroup = Guid.Parse(original["splitGroupID"]!["rawValue"]!.GetValue<string>());
         var folder = Guid.Parse(original["folderID"]!["rawValue"]!.GetValue<string>());
-        var core = new NativeSessionAuthority(Bytes(session));
-        using var device = new TestDevice(core);
+        using var device = new TestDevice(session);
+        var core = device.Authority;
         var window = device.Showing(session);
         var linked = Guid.NewGuid();
 

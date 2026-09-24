@@ -160,7 +160,7 @@ public sealed partial class BrowserContractsTests {
                 ["now"] = now
             }));
         var receiver = Receive(new NativeSyncJournal(Bytes(initial)), source, "replace", sender);
-        var authority = new NativeSessionAuthority(Bytes(source));
+        var authority = TestWorkspaces.Session(source);
         authority.Handle(renames ? new RenameTab(Guid.Empty, fixture.Space, fixture.Tab, "Renamed on the other device")
             : new MoveTab(Guid.Empty, fixture.Space, fixture.Tab, TabPlacement.Current, null, null, LeavesSplit: true),
             StoredSessionCodec.Date(now), new TestIds());

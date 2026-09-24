@@ -10,11 +10,16 @@ namespace CrestCore.Tests;
 public sealed partial class BrowserContractsTests {
     /// A persistent session that syncs, after its launch stage.
     private static (NativeSessionAuthority Session, NativeSyncAuthority Sync) Syncing(JsonNode session) {
-        var owner = new NativeSessionAuthority(Bytes(session));
+        var owner = TestWorkspaces.Session(session);
+        return (owner, Syncing(owner));
+    }
+
+    /// A sync component `owner` stages into, with the launch stage run.
+    private static NativeSyncAuthority Syncing(NativeSessionAuthority owner) {
         var sync = new NativeSyncAuthority(NativeSyncJournal.Fresh(Guid.NewGuid()));
         owner.AttachSync(sync);
         sync.Flush();
-        return (owner, sync);
+        return sync;
     }
 
     /// Renames `tab` in the session's first Space through the session's own
@@ -43,12 +48,9 @@ public sealed partial class BrowserContractsTests {
     public void TheEditsOfOneHostTurnStageOnceTheTurnEnds() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         session.Remove("disposableSeedMarker");
-        var owner = new NativeSessionAuthority(Bytes(session));
         using var app = new CrestApp();
-        app.AttachWorkspace(owner);
-        var sync = new NativeSyncAuthority(NativeSyncJournal.Fresh(Guid.NewGuid()));
-        owner.AttachSync(sync);
-        sync.Flush();
+        var owner = app.Workspace(TestWorkspaces.Open(app, session));
+        var sync = Syncing(owner);
         _ = app.Drain();
         var launched = sync.Version;
 
@@ -69,8 +71,8 @@ public sealed partial class BrowserContractsTests {
     public void ARecordAnEarlierEditOfABurstRemovedIsDeletedForThatEditsReason() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         session.Remove("disposableSeedMarker");
-        var (owner, sync) = Syncing(session);
-        using var device = new TestDevice(owner);
+        using var device = new TestDevice(session);
+        var (owner, sync) = (device.Authority, Syncing(device.Authority));
         var folder = Guid.NewGuid();
         device.Send(new CreateFolder(device.Workspace, fixture.Space, folder, TabPlacement.Saved, null, "Doomed",
             FolderState.DefaultColor, "folder", [], LeavesSplits: false));

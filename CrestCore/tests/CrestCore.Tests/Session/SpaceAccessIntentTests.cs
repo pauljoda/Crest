@@ -14,8 +14,8 @@ public sealed partial class BrowserContractsTests {
     private static (NativeSessionAuthority Core, TestDevice Device, Guid First, Guid Second) GuardedDevice() {
         var session = GuardedSession(withOpenSecondSpace: true);
         session["spaces"]![1]!["accessPolicy"] = "deviceOwnerAuthentication";
-        var core = new NativeSessionAuthority(Bytes(session));
-        return (core, new TestDevice(core), SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
+        var device = new TestDevice(session);
+        return (device.Authority, device, SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
     }
 
     private static SpaceLockChanged Access(IReadOnlyList<Change> changes) => Assert.Single(changes.OfType<SpaceLockChanged>());
@@ -108,7 +108,7 @@ public sealed partial class BrowserContractsTests {
         var (core, device, first, _) = GuardedDevice();
         using var disposal = device;
         Unlock(device.Send, device.Workspace, first);
-        var borrowed = device.Attach(core.CreateBorrowed(first, core.Current.Spaces[0].ProfileId));
+        var borrowed = TestWorkspaces.Opened(device.Send(new BorrowSpace(device.Workspace, first, core.Current.Spaces[0].ProfileId)));
         device.Send(new ClearHistory(borrowed, first));
 
         device.Send(new LockSpace(first));
