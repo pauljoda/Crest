@@ -461,6 +461,16 @@
         }
       }
     },
+    "%@, bundle identifier: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, bundle identifier: %2$@"
+          }
+        }
+      }
+    },
     "%@, color %lld" : {
       "localizations" : {
         "en" : {
@@ -3916,6 +3926,9 @@
     "Browsing and startup" : {
 
     },
+    "Build" : {
+
+    },
     "Build %@ · %@" : {
       "localizations" : {
         "en" : {
@@ -3927,6 +3940,7 @@
       }
     },
     "Build %@, bundle identifier: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7558,7 +7572,11 @@
     "Enter a valid URL template." : {
 
     },
+    "Error code" : {
+
+    },
     "Error code: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

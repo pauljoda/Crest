@@ -19,11 +19,13 @@ struct BrowserNavigationFailureHeadline: View {
                 .multilineTextAlignment(textAlignment)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // Selectable text is an AppKit view: a label with no value recurses when assistive apps read it.
             Text(failure.browserCode)
                 .font(.caption.monospaced())
                 .foregroundStyle(.tertiary)
                 .textSelection(.enabled)
-                .accessibilityLabel("Error code: \(failure.browserCode)")
+                .accessibilityLabel("Error code")
+                .accessibilityValue(failure.browserCode)
         }
     }
 }

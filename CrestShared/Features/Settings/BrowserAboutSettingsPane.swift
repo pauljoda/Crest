@@ -106,13 +106,15 @@ struct BrowserAboutSettingsPane: View {
                     .padding(.vertical, 5)
                     .background(.primary.opacity(0.045), in: .capsule)
 
+                // Selectable text is an AppKit view: a label with no value recurses when assistive apps read it.
                 Text("Build \(buildInformation.build) · \(buildInformation.bundleIdentifier)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityLabel(
-                        Text("Build \(buildInformation.build), bundle identifier: \(buildInformation.bundleIdentifier)")
+                    .accessibilityLabel("Build")
+                    .accessibilityValue(
+                        Text("\(buildInformation.build), bundle identifier: \(buildInformation.bundleIdentifier)")
                     )
             }
         }

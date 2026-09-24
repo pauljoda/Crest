@@ -5,11 +5,13 @@ struct BrowserCredentialPasswordValue: View {
 
     var body: some View {
         if let password {
+            // Selectable text is an AppKit view: a label with no value recurses when assistive apps read it.
             Text(password)
                 .font(.body.monospaced())
                 .textSelection(.enabled)
                 .lineLimit(1)
                 .accessibilityLabel("Password visible")
+                .accessibilityValue(password)
         } else {
             Text("••••••••••••")
                 .font(.body.monospaced())

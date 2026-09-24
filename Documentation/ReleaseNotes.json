@@ -2317,6 +2317,10 @@
     "tab-lifecycle-intents": {
       "category": "internal",
       "message": "Opening, closing, copying and moving tabs and keeping Quick Window and Peek pages are typed core intents, and the core decides whether a closed tab archives or goes back."
+    },
+    "assistive-app-selectable-text-crash": {
+      "category": "fixed",
+      "message": "Crest no longer crashes when VoiceOver or another assistive app reads an error page, the About pane or a revealed password."
     }
   }
 }
