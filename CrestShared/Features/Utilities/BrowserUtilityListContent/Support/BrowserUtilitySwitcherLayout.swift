@@ -45,7 +45,7 @@ enum BrowserUtilityFanExpansionStep: Equatable, Sendable {
 enum BrowserDownloadNotificationPolicy {
     static func progress(in downloads: [DownloadState]) -> Double? {
         downloads
-            .filter { $0.phase.isInProgress }
+            .filter { $0.phase.isLive }
             .max { $0.createdAt < $1.createdAt }
             .map(\.progress)
     }

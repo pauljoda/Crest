@@ -2141,6 +2141,10 @@
     "generator-fixed-sets": {
       "category": "internal",
       "message": "The contract generator emits self-describing fixed sets from their C# instances."
+    },
+    "download-sets-self-describing": {
+      "category": "internal",
+      "message": "Download phases, risk reasons and text fields are self-describing sets whose instances carry their own rules."
     }
   }
 }

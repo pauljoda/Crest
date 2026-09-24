@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xf1, 0x56, 0x19, 0xd2, 0xfc, 0x66, 0x4b, 0xb2, 0x3f, 0x80, 0x9e, 0x35, 0xfc, 0xc4, 0x59, 0xf6, 0x4a, 0xa0, 0x47, 0x6d, 0x86, 0x15, 0x4c, 0x2c, 0xe2, 0xd8, 0x06, 0x2f, 0xf3, 0x51, 0xc7, 0x1b
+        0xb5, 0x8a, 0xf5, 0xea, 0x8d, 0x77, 0x78, 0x76, 0xbc, 0x7e, 0xdf, 0xbc, 0x3d, 0x18, 0xf5, 0x81, 0x7b, 0x01, 0x6c, 0xf4, 0x92, 0x15, 0xc7, 0x48, 0xb1, 0x27, 0x9a, 0xc3, 0x7b, 0x92, 0xc8, 0xb6
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -1817,36 +1817,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static DownloadPhase ReadDownloadPhase(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (DownloadPhase)reader.ReadEnum(7);
-    }
-
-    public static void WriteDownloadPhase(WireWriter writer, DownloadPhase value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
-    public static DownloadRiskReason ReadDownloadRiskReason(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (DownloadRiskReason)reader.ReadEnum(3);
-    }
-
-    public static void WriteDownloadRiskReason(WireWriter writer, DownloadRiskReason value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
-    public static DownloadTextField ReadDownloadTextField(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (DownloadTextField)reader.ReadEnum(4);
-    }
-
-    public static void WriteDownloadTextField(WireWriter writer, DownloadTextField value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static ExternalLinkDestination ReadExternalLinkDestination(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (ExternalLinkDestination)reader.ReadEnum(3);
@@ -1915,5 +1885,45 @@ public static class ContractCodec {
     public static void WriteSystemPasswordWriteThroughAvailability(WireWriter writer, SystemPasswordWriteThroughAvailability value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
+    }
+
+    public static DownloadPhase ReadDownloadPhase(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return DownloadPhase.All[reader.ReadEnum(DownloadPhase.All.Count)];
+    }
+
+    public static void WriteDownloadPhase(WireWriter writer, DownloadPhase value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(DownloadPhase.All, value));
+    }
+
+    public static DownloadRiskReason ReadDownloadRiskReason(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return DownloadRiskReason.All[reader.ReadEnum(DownloadRiskReason.All.Count)];
+    }
+
+    public static void WriteDownloadRiskReason(WireWriter writer, DownloadRiskReason value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(DownloadRiskReason.All, value));
+    }
+
+    public static DownloadTextField ReadDownloadTextField(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return DownloadTextField.All[reader.ReadEnum(DownloadTextField.All.Count)];
+    }
+
+    public static void WriteDownloadTextField(WireWriter writer, DownloadTextField value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(DownloadTextField.All, value));
+    }
+
+    /// <summary>A fixed set member's wire tag: its index in the set's <c>All</c>.</summary>
+    private static int TagOf<T>(IReadOnlyList<T> all, T value) where T : class {
+        for (int tag = 0; tag < all.Count; tag++)
+            if (ReferenceEquals(all[tag], value)) return tag;
+        throw new ArgumentOutOfRangeException(nameof(value), value, "Not a member of its fixed set.");
     }
 }

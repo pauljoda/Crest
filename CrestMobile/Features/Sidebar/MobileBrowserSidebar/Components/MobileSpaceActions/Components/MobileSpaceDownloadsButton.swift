@@ -45,7 +45,7 @@ struct MobileSpaceDownloadsButton: View {
         if downloads.contains(where: { $0.phase.needsAttention }) {
             return "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
         }
-        if downloads.contains(where: { $0.phase.isInProgress }) {
+        if downloads.contains(where: { $0.phase.isLive }) {
             return "arrow.down.circle"
         }
         return "arrow.down.circle.fill"

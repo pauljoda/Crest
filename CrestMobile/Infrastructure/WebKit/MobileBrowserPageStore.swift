@@ -1126,7 +1126,7 @@ final class MobileBrowserPageStore:
         to destination: MobileBrowserFileExportDestination
     ) {
         guard let item = downloadCenter.item(itemID),
-            item.phase == .finished,
+            item.phase.isComplete,
             let destinationURL = item.destinationURL
         else { return }
         MobileBrowserDialogPresenter.exportDownloadedFile(

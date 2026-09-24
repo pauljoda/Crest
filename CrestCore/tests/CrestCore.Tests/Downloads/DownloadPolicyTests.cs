@@ -8,13 +8,13 @@ namespace CrestCore.Tests;
 public sealed class DownloadPolicyTests {
     private static DownloadRiskAssessment Assess(string filename, string? mime, bool extensionRunsCode = false,
         bool mimeRunsCode = false, bool? related = null, string? sanitized = null) =>
-        DownloadRiskPolicy.Assess(new(filename, sanitized ?? filename, mime, extensionRunsCode, mimeRunsCode, related));
+        DownloadRiskAssessment.Of(new(filename, sanitized ?? filename, mime, extensionRunsCode, mimeRunsCode, related));
 
     [Fact]
     public void OrdinaryDocumentsCarryNoRisk() {
         var assessment = Assess("report.pdf", "application/pdf", related: true);
         Assert.Empty(assessment.Reasons);
-        Assert.False(DownloadRiskPolicy.RequiresConfirmation(assessment, isUserInitiated: false));
+        Assert.False(assessment.RequiresConfirmation(isUserInitiated: false));
     }
 
     [Theory]
@@ -26,7 +26,7 @@ public sealed class DownloadPolicyTests {
     public void InstallerAndScriptExtensionsAreExecutableEvenWithoutPlatformTypes(string filename) {
         var assessment = Assess(filename, "application/octet-stream");
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
-        Assert.True(DownloadRiskPolicy.RequiresConfirmation(assessment, isUserInitiated: false));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
     }
 
     [Fact]
@@ -40,8 +40,8 @@ public sealed class DownloadPolicyTests {
     public void UserInitiatedInstallersRelyOnThePlatformProtection() {
         var assessment = Assess("Crest.dmg", "application/x-apple-diskimage", true, true, true);
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
-        Assert.False(DownloadRiskPolicy.RequiresConfirmation(assessment, isUserInitiated: true));
-        Assert.True(DownloadRiskPolicy.RequiresConfirmation(assessment, isUserInitiated: false));
+        Assert.False(assessment.RequiresConfirmation(isUserInitiated: true));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
     }
 
     [Theory]
@@ -53,14 +53,14 @@ public sealed class DownloadPolicyTests {
         var assessment = Assess(filename, "application/octet-stream", sanitized: "renamed.txt");
         Assert.Contains(DownloadRiskReason.DeceptiveFilename, assessment.Reasons);
         Assert.Equal("renamed.txt", assessment.SanitizedFilename);
-        Assert.True(DownloadRiskPolicy.RequiresConfirmation(assessment, isUserInitiated: true));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: true));
     }
 
     [Fact]
     public void ADangerousTypeThatDisagreesWithItsFilenameIsAMismatch() {
         var mismatch = Assess("holiday.jpg", "application/x-mach-binary", mimeRunsCode: true, related: false);
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller, DownloadRiskReason.DangerousTypeMismatch], mismatch.Reasons);
-        Assert.True(DownloadRiskPolicy.RequiresConfirmation(mismatch, isUserInitiated: true));
+        Assert.True(mismatch.RequiresConfirmation(isUserInitiated: true));
         Assert.DoesNotContain(DownloadRiskReason.DangerousTypeMismatch,
             Assess("holiday.jpg", "application/x-mach-binary", mimeRunsCode: true, related: null).Reasons);
         Assert.Empty(Assess("holiday.jpg", "image/png", related: false).Reasons);

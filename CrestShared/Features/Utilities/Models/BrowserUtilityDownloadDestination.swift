@@ -32,7 +32,7 @@ enum BrowserUtilityDownloadPrimaryActionPolicy {
         for state: DownloadPhase,
         availableDestinations: [BrowserUtilityDownloadDestination]
     ) -> BrowserUtilityDownloadDestination? {
-        guard state == .finished,
+        guard state.isComplete,
             availableDestinations.contains(.revealInFinder)
         else { return nil }
         return .revealInFinder

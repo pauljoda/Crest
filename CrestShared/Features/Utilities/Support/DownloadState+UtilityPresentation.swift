@@ -13,7 +13,7 @@ extension DownloadState {
             .localized(
                 "Automatic download blocked. Use Allow Download to retry, or change Automatic Downloads in this site’s permissions."
             )
-        case .canceled, .failed:
+        default:
             .verbatim(message ?? "")
         }
     }

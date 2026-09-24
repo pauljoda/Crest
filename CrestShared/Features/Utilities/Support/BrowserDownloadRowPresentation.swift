@@ -16,12 +16,12 @@ struct BrowserDownloadRowPresentation: Sendable {
     ) -> BrowserDownloadRowPresentation {
         let telemetry = item.telemetry
         let isActivelyDownloading =
-            item.phase == .downloading
+            item.phase.isTransferring
             && !telemetry.isPaused
         let statusText: BrowserUtilityText
-        if item.phase == .downloading, telemetry.isPaused {
+        if item.phase.isTransferring, telemetry.isPaused {
             statusText = .localized("Paused")
-        } else if item.phase == .finished {
+        } else if item.phase.isComplete {
             statusText = .localized("Completed")
         } else {
             statusText = item.utilityStatusText
@@ -29,7 +29,7 @@ struct BrowserDownloadRowPresentation: Sendable {
         let showsTransferMetrics =
             telemetry.bytesReceived > 0
             || telemetry.totalBytes != nil
-            || item.phase == .finished
+            || item.phase.isComplete
         return BrowserDownloadRowPresentation(
             bytesReceived: telemetry.bytesReceived,
             totalBytes: telemetry.totalBytes,

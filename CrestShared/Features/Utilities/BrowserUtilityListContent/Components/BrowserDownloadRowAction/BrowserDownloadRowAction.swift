@@ -7,22 +7,21 @@ struct BrowserDownloadRowAction: View {
     let perform: (BrowserUtilityDownloadAction) -> Void
 
     var body: some View {
-        switch item.phase {
-        case .blockedAutomaticDownload:
+        if item.phase.canRetry {
             actionButton("Allow Download", systemImage: "arrow.clockwise") {
                 perform(.retry(item.id))
             }
-        case .preparing, .awaitingApproval, .downloading:
+        } else if item.phase.isLive {
             actionButton("Cancel Download", systemImage: "xmark") {
                 perform(.cancel(item.id))
             }
-        case .finished:
+        } else if item.phase.isComplete {
             BrowserDownloadFinishedAction(
                 itemID: item.id,
                 destinations: destinations,
                 perform: perform
             )
-        case .canceled, .failed:
+        } else {
             actionButton("Remove Download", systemImage: "trash", role: .destructive) {
                 perform(.clear(item.id))
             }

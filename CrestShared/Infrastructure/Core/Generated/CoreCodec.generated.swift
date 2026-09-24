@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xf1, 0x56, 0x19, 0xd2, 0xfc, 0x66, 0x4b, 0xb2, 0x3f, 0x80, 0x9e, 0x35, 0xfc, 0xc4, 0x59, 0xf6, 0x4a, 0xa0, 0x47, 0x6d, 0x86, 0x15, 0x4c, 0x2c, 0xe2, 0xd8, 0x06, 0x2f, 0xf3, 0x51, 0xc7, 0x1b
+        0xb5, 0x8a, 0xf5, 0xea, 0x8d, 0x77, 0x78, 0x76, 0xbc, 0x7e, 0xdf, 0xbc, 0x3d, 0x18, 0xf5, 0x81, 0x7b, 0x01, 0x6c, 0xf4, 0x92, 0x15, 0xc7, 0x48, 0xb1, 0x27, 0x9a, 0xc3, 0x7b, 0x92, 0xc8, 0xb6
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2011,48 +2011,6 @@ extension CredentialUsernameSource {
     }
 }
 
-extension DownloadPhase {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = DownloadPhase(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown DownloadPhase \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
-extension DownloadRiskReason {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = DownloadRiskReason(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown DownloadRiskReason \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
-extension DownloadTextField {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = DownloadTextField(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown DownloadTextField \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension ExternalLinkDestination {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -2148,5 +2106,47 @@ extension SystemPasswordWriteThroughAvailability {
 
     func encode(into writer: inout WireWriter) {
         writer.writeEnum(rawValue)
+    }
+}
+
+extension DownloadPhase {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown DownloadPhase \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension DownloadRiskReason {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown DownloadRiskReason \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension DownloadTextField {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown DownloadTextField \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
     }
 }

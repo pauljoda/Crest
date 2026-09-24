@@ -158,9 +158,9 @@ enum BrowserUtilityListPreparation {
                 to: now
             ) ?? .distantPast
         case (.downloadsInProgress, let .download(item)):
-            item.phase.isInProgress
+            item.phase.isLive
         case (.downloadsFinished, let .download(item)):
-            item.phase == .finished
+            item.phase.isComplete
         case (.downloadsNeedsAttention, let .download(item)):
             item.phase.needsAttention
         default:

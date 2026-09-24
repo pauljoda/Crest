@@ -77,7 +77,7 @@ internal static class SwiftEmitter {
             code.Append("}\n");
         }
 
-        code.Append("\n// MARK: - Enums\n");
+        if (schema.Enums.Count > 0) code.Append("\n// MARK: - Enums\n");
         foreach (var item in schema.Enums) {
             code.Append('\n');
             if (item.IsFlags) {
@@ -107,18 +107,17 @@ internal static class SwiftEmitter {
             code.Append($"/// Core-only behavior, not emitted: {string.Join(", ", set.CoreOnly.Select(name => $"`{name}`"))}.\n");
         code.Append($"struct {set.Name}: Hashable, Sendable {{\n    let tag: Int\n");
         foreach (var property in properties) code.Append($"    let {property.Name}: {TypeName(property.Type)}\n");
-        code.Append('\n').Append("    private init(tag: Int");
-        foreach (var property in properties) code.Append($", {property.Name}: {TypeName(property.Type)}");
-        code.Append(") {\n        self.tag = tag\n");
+        code.Append('\n').Append(Wrapped("    private init(", ")", [
+            "tag: Int", .. properties.Select(property => $"{property.Name}: {TypeName(property.Type)}")]));
+        code.Append(" {\n        self.tag = tag\n");
         foreach (var property in properties) code.Append($"        self.{property.Name} = {property.Name}\n");
         code.Append("    }\n\n");
-        foreach (var member in set.Members) {
-            code.Append($"    static let {Local(member.Name)} = {set.Name}(tag: {member.Tag}");
-            for (int index = 0; index < properties.Count; index++)
-                code.Append($", {properties[index].Name}: {Literal(properties[index].Type, member.Values[index])}");
-            code.Append(")\n");
-        }
-        code.Append('\n').Append($"    static let all: [{set.Name}] = [{string.Join(", ", set.Members.Select(member => Local(member.Name)))}]\n");
+        foreach (var member in set.Members)
+            code.Append(Wrapped($"    static let {Local(member.Name)} = {set.Name}(", ")", [
+                $"tag: {member.Tag}",
+                .. properties.Select((property, index) => $"{property.Name}: {Literal(property.Type, member.Values[index])}")])).Append('\n');
+        code.Append('\n').Append(Wrapped($"    static let all: [{set.Name}] = [", "]", [.. set.Members.Select(member => Local(member.Name))]))
+            .Append('\n');
         code.Append('\n').Append($"    static func named(_ name: String?) -> {set.Name}? {{\n        all.first {{ $0.name == name }}\n    }}\n");
         code.Append('\n').Append($"    static func == (lhs: {set.Name}, rhs: {set.Name}) -> Bool {{\n        lhs.tag == rhs.tag\n    }}\n");
         code.Append('\n').Append("    func hash(into hasher: inout Hasher) {\n        hasher.combine(tag)\n    }\n}\n");
@@ -339,6 +338,17 @@ internal static class SwiftEmitter {
     #endregion
 
     #region Actions - Literals
+
+    private const int LineLength = 120;
+
+    /// `open` and `close` around the items on one line when it fits, or one
+    /// item per line, indented one level deeper than `open`.
+    private static string Wrapped(string open, string close, IReadOnlyList<string> items) {
+        string line = $"{open}{string.Join(", ", items)}{close}";
+        if (line.Length <= LineLength) return line;
+        string indent = new(' ', open.Length - open.TrimStart().Length);
+        return $"{open}\n{string.Join(",\n", items.Select(item => $"{indent}    {item}"))}\n{indent}{close}";
+    }
 
     /// A fixed set member's data value as a Swift literal.
     private static string Literal(FieldType type, object? value) => (type, value) switch {

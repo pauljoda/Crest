@@ -16,9 +16,6 @@ public sealed class DownloadLedger {
     #region Variables
 
     public const int MaximumItems = 10_000;
-    public const int MaximumFilenameLength = 1_024;
-    public const int MaximumDestinationLength = 8_192;
-    public const int MaximumMessageLength = 2_048;
 
     private readonly List<DownloadState> items = [];
 
@@ -33,7 +30,7 @@ public sealed class DownloadLedger {
     /// deterministic. A download restored by an engine starts acknowledged.
     public DownloadState Begin(Guid id, Guid profileId, string filename, DateTimeOffset createdAt, bool isAcknowledged) {
         if (id == Guid.Empty || profileId == Guid.Empty) throw new Rejected(new InvalidDownloadIdentity());
-        ValidateText(filename, MaximumFilenameLength, DownloadTextField.Filename);
+        DownloadTextField.Filename.Validate(filename);
         if (IndexOf(id) >= 0) throw new Rejected(new DuplicateDownload());
         if (items.Count >= MaximumItems) throw new Rejected(new DownloadLimitReached(MaximumItems));
         var item = new DownloadState(id, profileId, createdAt, filename, null, 0, DownloadTelemetry.Empty,
@@ -50,16 +47,16 @@ public sealed class DownloadLedger {
 
     /// The destination names the file, so the record's filename follows it.
     public DownloadState? SetDestination(Guid id, string destination, string filename) {
-        ValidateText(destination, MaximumDestinationLength, DownloadTextField.Destination);
-        ValidateText(filename, MaximumFilenameLength, DownloadTextField.Filename);
-        return UpdateActive(id, item => item with { Destination = destination, Filename = filename, Phase = DownloadPhase.Downloading });
+        DownloadTextField.Destination.Validate(destination);
+        DownloadTextField.Filename.Validate(filename);
+        return UpdateLive(id, item => item with { Destination = destination, Filename = filename, Phase = DownloadPhase.Downloading });
     }
 
     /// Progress never moves backwards while a transfer is live.
     public DownloadState? RecordTransfer(Guid id, DownloadTelemetry telemetry, double progress) {
         ArgumentNullException.ThrowIfNull(telemetry);
         if (!telemetry.IsValid || !double.IsFinite(progress)) throw new Rejected(new InvalidDownloadProgress());
-        return UpdateActive(id, item => item with {
+        return UpdateLive(id, item => item with {
             Telemetry = telemetry,
             Progress = Math.Max(item.Progress, Math.Clamp(progress, 0, 1))
         });
@@ -68,8 +65,8 @@ public sealed class DownloadLedger {
     /// A download with any risk reason waits for approval under its sanitized name.
     public DownloadState? AssessRisk(Guid id, DownloadRiskAssessment assessment) {
         ArgumentNullException.ThrowIfNull(assessment);
-        ValidateText(assessment.SanitizedFilename, MaximumFilenameLength, DownloadTextField.Filename);
-        return UpdateActive(id, item => item with {
+        DownloadTextField.Filename.Validate(assessment.SanitizedFilename);
+        return UpdateLive(id, item => item with {
             Filename = assessment.SanitizedFilename,
             Risk = assessment,
             Phase = assessment.Reasons.Count > 0 ? DownloadPhase.AwaitingApproval : item.Phase
@@ -77,11 +74,11 @@ public sealed class DownloadLedger {
     }
 
     public DownloadState? AwaitApproval(Guid id) =>
-        UpdateActive(id, item => item with { Phase = DownloadPhase.AwaitingApproval });
+        UpdateLive(id, item => item with { Phase = DownloadPhase.AwaitingApproval });
 
     public DownloadState? Finish(Guid id, long? finalByteCount) {
         if (finalByteCount < 0) throw new Rejected(new InvalidDownloadProgress());
-        return UpdateActive(id, item => item with {
+        return UpdateLive(id, item => item with {
             Progress = 1,
             Telemetry = item.Telemetry.Stopped(finalByteCount, completed: true),
             Phase = DownloadPhase.Finished
@@ -89,25 +86,24 @@ public sealed class DownloadLedger {
     }
 
     public DownloadState? Cancel(Guid id, string message) {
-        ValidateText(message, MaximumMessageLength, DownloadTextField.Message);
-        return UpdateActive(id, item => Stopped(item, DownloadPhase.Canceled, message));
+        DownloadTextField.Message.Validate(message);
+        return UpdateLive(id, item => Stopped(item, DownloadPhase.Canceled, message));
     }
 
     /// A blocked automatic download may also fail, when its retry can no longer
     /// be replayed.
     public DownloadState? Fail(Guid id, string message) {
-        ValidateText(message, MaximumMessageLength, DownloadTextField.Message);
-        return Update(id, item => item.IsActive || item.Phase == DownloadPhase.BlockedAutomaticDownload,
-            item => Stopped(item, DownloadPhase.Failed, message));
+        DownloadTextField.Message.Validate(message);
+        return Update(id, item => item.Phase.CanFail, item => Stopped(item, DownloadPhase.Failed, message));
     }
 
     public DownloadState? BlockAutomaticDownload(Guid id) =>
-        UpdateActive(id, item => Stopped(item, DownloadPhase.BlockedAutomaticDownload, null));
+        UpdateLive(id, item => Stopped(item, DownloadPhase.BlockedAutomaticDownload, null));
 
     /// Retrying a blocked automatic download starts the same record again from
     /// nothing and counts as news for the downloads badge.
     public DownloadState? Restart(Guid id) =>
-        Update(id, item => item.Phase == DownloadPhase.BlockedAutomaticDownload, item => item with {
+        Update(id, item => item.Phase.CanRetry, item => item with {
             Destination = null,
             Progress = 0,
             Telemetry = DownloadTelemetry.Empty,
@@ -162,7 +158,7 @@ public sealed class DownloadLedger {
                 ? Shorter(existing, retention.Lifetime)
                 : retention.Lifetime;
         }
-        return RemoveWhere(item => !item.IsActive && lifetimes.TryGetValue(item.ProfileId, out var lifetime)
+        return RemoveWhere(item => !item.Phase.IsLive && lifetimes.TryGetValue(item.ProfileId, out var lifetime)
             && lifetime is { } limit && now - item.CreatedAt > limit);
     }
 
@@ -182,18 +178,14 @@ public sealed class DownloadLedger {
     private static DownloadState Stopped(DownloadState item, DownloadPhase phase, string? message) =>
         item with { Telemetry = item.Telemetry.Stopped(), Phase = phase, Message = message };
 
-    private DownloadState? UpdateActive(Guid id, Func<DownloadState, DownloadState> transition) =>
-        Update(id, item => item.IsActive, transition);
+    private DownloadState? UpdateLive(Guid id, Func<DownloadState, DownloadState> transition) =>
+        Update(id, item => item.Phase.IsLive, transition);
 
     private DownloadState? Update(Guid id, Func<DownloadState, bool> accepts, Func<DownloadState, DownloadState> transition) {
         int index = IndexOf(id);
         if (index < 0 || !accepts(items[index])) return null;
         items[index] = transition(items[index]);
         return items[index];
-    }
-
-    private static void ValidateText(string? value, int maximumLength, DownloadTextField field) {
-        if (string.IsNullOrEmpty(value) || value.Length > maximumLength) throw new Rejected(new InvalidDownloadText(field));
     }
 
     #endregion

@@ -349,7 +349,7 @@ final class BrowserDownloadCenter: NSObject {
     ) async -> Bool {
         guard let item = item(itemID),
             item.profileID == assignment.profileID,
-            item.phase == .blockedAutomaticDownload
+            item.phase.canRetry
         else {
             return false
         }

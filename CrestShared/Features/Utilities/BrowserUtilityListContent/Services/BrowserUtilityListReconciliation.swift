@@ -59,9 +59,9 @@ enum BrowserUtilityListReconciliation {
         case .all:
             true
         case .downloadsInProgress:
-            item.phase.isInProgress
+            item.phase.isLive
         case .downloadsFinished:
-            item.phase == .finished
+            item.phase.isComplete
         case .downloadsNeedsAttention:
             item.phase.needsAttention
         default:

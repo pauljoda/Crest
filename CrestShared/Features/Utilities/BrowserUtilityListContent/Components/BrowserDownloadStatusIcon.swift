@@ -45,6 +45,8 @@ struct BrowserDownloadStatusIcon: View {
             Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+        default:
+            EmptyView()
         }
     }
 }

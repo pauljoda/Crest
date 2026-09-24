@@ -28,13 +28,22 @@ public sealed unsafe class ContractCodecTests {
         .Where(type => type is { IsClass: true, IsAbstract: false } && (root == typeof(Query<>) ? IsQuery(type) : root.IsAssignableFrom(type)))
         .OrderBy(type => type.Name, StringComparer.Ordinal);
 
-    /// Every record reachable from the roots, including query answers.
-    private static IEnumerable<Type> Records() {
+    /// A fixed set's members, the static instances its `All` lists, or null
+    /// for any other type.
+    private static IReadOnlyList<object>? SetMembers(Type type) =>
+        type.IsClass && type.GetConstructors().Length == 0
+            && type.GetProperty("All", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) is IEnumerable members
+            ? [.. members.Cast<object>()]
+            : null;
+
+    /// Every record reachable from the roots, including query answers, and
+    /// every fixed set they hold.
+    private static IEnumerable<Type> Reachable() {
         var found = new HashSet<Type>();
         var pending = new Queue<Type>(Roots.Append(typeof(Query<>)).SelectMany(RootMembers));
         foreach (var query in RootMembers(typeof(Query<>))) pending.Enqueue(Answer(query));
         while (pending.TryDequeue(out var type)) {
-            if (!type.IsClass || type.Assembly != Contracts || type.IsAbstract || !found.Add(type)) continue;
+            if (!type.IsClass || type.Assembly != Contracts || type.IsAbstract || !found.Add(type) || SetMembers(type) is not null) continue;
             foreach (var parameter in type.GetConstructors().Single().GetParameters()) {
                 var parameterType = Nullable.GetUnderlyingType(parameter.ParameterType) ?? parameter.ParameterType;
                 pending.Enqueue(parameterType.IsGenericType ? parameterType.GetGenericArguments()[0] : parameterType);
@@ -42,6 +51,10 @@ public sealed unsafe class ContractCodecTests {
         }
         return found;
     }
+
+    private static IEnumerable<Type> Records() => Reachable().Where(type => SetMembers(type) is null);
+
+    private static IEnumerable<Type> Sets() => Reachable().Where(type => SetMembers(type) is not null);
 
     private static Type Answer(Type query) {
         for (var current = query.BaseType; ; current = current!.BaseType)
@@ -61,6 +74,7 @@ public sealed unsafe class ContractCodecTests {
         if (type == typeof(DateTimeOffset)) return new DateTimeOffset(2026, 9, 23, 12, 30, 15, TimeSpan.Zero);
         if (type == typeof(TimeSpan)) return TimeSpan.FromSeconds(90.5);
         if (type.IsEnum) return Enum.GetValues(type).Cast<object>().Last();
+        if (SetMembers(type) is { } members) return members[^1];
         if (Roots.Contains(type)) return Sample(RootMembers(type).First(), null, optionals);
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IReadOnlyList<>)) {
             var element = type.GetGenericArguments()[0];
@@ -88,6 +102,10 @@ public sealed unsafe class ContractCodecTests {
         }
         var type = expected.GetType();
         Assert.Equal(type, actual.GetType());
+        if (SetMembers(type) is not null) {
+            Assert.Same(expected, actual);
+            return;
+        }
         if (type.Assembly != Contracts || !type.IsClass) {
             Assert.Equal(expected, actual);
             return;
@@ -136,6 +154,27 @@ public sealed unsafe class ContractCodecTests {
                 reader.EnsureEnd();
             }
             Assert.Equal(Enumerable.Range(0, tags.Count).Select(tag => (ulong)tag), tags);
+        }
+    }
+
+    [Fact]
+    public void EveryFixedSetMemberTravelsAsItsIndexInAll() {
+        var sets = Sets().ToList();
+        Assert.Contains(typeof(DownloadPhase), sets);
+        foreach (var type in sets) {
+            var members = SetMembers(type)!;
+            var write = typeof(ContractCodec).GetMethod($"Write{type.Name}")!;
+            var read = typeof(ContractCodec).GetMethod($"Read{type.Name}")!;
+            for (int tag = 0; tag < members.Count; tag++) {
+                var bytes = AppClient.Encode(writer => write.Invoke(null, [writer, members[tag]]));
+                Assert.Equal((ulong)tag, new WireReader(bytes).ReadVarint());
+                var reader = new WireReader(bytes);
+                Assert.Same(members[tag], read.Invoke(null, [reader]));
+                reader.EnsureEnd();
+            }
+            var beyond = AppClient.Encode(writer => writer.WriteEnum(members.Count));
+            var refused = Assert.Throws<TargetInvocationException>(() => read.Invoke(null, [new WireReader(beyond)]));
+            Assert.IsType<WireFormatException>(refused.InnerException);
         }
     }
 

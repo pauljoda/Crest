@@ -558,29 +558,6 @@ enum CredentialUsernameSource: Int, CaseIterable, Sendable {
     case hint = 2
 }
 
-enum DownloadPhase: Int, CaseIterable, Sendable {
-    case preparing = 0
-    case awaitingApproval = 1
-    case downloading = 2
-    case finished = 3
-    case blockedAutomaticDownload = 4
-    case canceled = 5
-    case failed = 6
-}
-
-enum DownloadRiskReason: Int, CaseIterable, Sendable {
-    case executableOrInstaller = 0
-    case deceptiveFilename = 1
-    case dangerousTypeMismatch = 2
-}
-
-enum DownloadTextField: Int, CaseIterable, Sendable {
-    case filename = 0
-    case destination = 1
-    case message = 2
-    case mimeType = 3
-}
-
 enum ExternalLinkDestination: Int, CaseIterable, Sendable {
     case quickWindow = 0
     case mostRecentSpace = 1
@@ -634,4 +611,203 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case isolatedLaunch = 2
     case systemVersionRequired = 3
     case managedBrowserCapabilityRequired = 4
+}
+
+// MARK: - Fixed sets
+
+/// The members of the core's `DownloadPhase`. A member's wire tag is its index in `all`.
+struct DownloadPhase: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let isLive: Bool
+    let isTransferring: Bool
+    let isComplete: Bool
+    let needsAttention: Bool
+    let canRetry: Bool
+    let canFail: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        isLive: Bool,
+        isTransferring: Bool,
+        isComplete: Bool,
+        needsAttention: Bool,
+        canRetry: Bool,
+        canFail: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.isLive = isLive
+        self.isTransferring = isTransferring
+        self.isComplete = isComplete
+        self.needsAttention = needsAttention
+        self.canRetry = canRetry
+        self.canFail = canFail
+    }
+
+    static let preparing = DownloadPhase(
+        tag: 0,
+        name: "preparing",
+        isLive: true,
+        isTransferring: false,
+        isComplete: false,
+        needsAttention: false,
+        canRetry: false,
+        canFail: true
+    )
+    static let awaitingApproval = DownloadPhase(
+        tag: 1,
+        name: "awaitingApproval",
+        isLive: true,
+        isTransferring: false,
+        isComplete: false,
+        needsAttention: false,
+        canRetry: false,
+        canFail: true
+    )
+    static let downloading = DownloadPhase(
+        tag: 2,
+        name: "downloading",
+        isLive: true,
+        isTransferring: true,
+        isComplete: false,
+        needsAttention: false,
+        canRetry: false,
+        canFail: true
+    )
+    static let finished = DownloadPhase(
+        tag: 3,
+        name: "finished",
+        isLive: false,
+        isTransferring: false,
+        isComplete: true,
+        needsAttention: false,
+        canRetry: false,
+        canFail: false
+    )
+    static let blockedAutomaticDownload = DownloadPhase(
+        tag: 4,
+        name: "blockedAutomaticDownload",
+        isLive: false,
+        isTransferring: false,
+        isComplete: false,
+        needsAttention: true,
+        canRetry: true,
+        canFail: true
+    )
+    static let canceled = DownloadPhase(
+        tag: 5,
+        name: "canceled",
+        isLive: false,
+        isTransferring: false,
+        isComplete: false,
+        needsAttention: false,
+        canRetry: false,
+        canFail: false
+    )
+    static let failed = DownloadPhase(
+        tag: 6,
+        name: "failed",
+        isLive: false,
+        isTransferring: false,
+        isComplete: false,
+        needsAttention: true,
+        canRetry: false,
+        canFail: false
+    )
+
+    static let all: [DownloadPhase] = [
+        preparing,
+        awaitingApproval,
+        downloading,
+        finished,
+        blockedAutomaticDownload,
+        canceled,
+        failed
+    ]
+
+    static func named(_ name: String?) -> DownloadPhase? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DownloadPhase, rhs: DownloadPhase) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `DownloadRiskReason`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `applies`.
+struct DownloadRiskReason: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let confirmsUserInitiated: Bool
+
+    private init(tag: Int, name: String, confirmsUserInitiated: Bool) {
+        self.tag = tag
+        self.name = name
+        self.confirmsUserInitiated = confirmsUserInitiated
+    }
+
+    static let executableOrInstaller = DownloadRiskReason(
+        tag: 0,
+        name: "executableOrInstaller",
+        confirmsUserInitiated: false
+    )
+    static let deceptiveFilename = DownloadRiskReason(tag: 1, name: "deceptiveFilename", confirmsUserInitiated: true)
+    static let dangerousTypeMismatch = DownloadRiskReason(
+        tag: 2,
+        name: "dangerousTypeMismatch",
+        confirmsUserInitiated: true
+    )
+
+    static let all: [DownloadRiskReason] = [executableOrInstaller, deceptiveFilename, dangerousTypeMismatch]
+
+    static func named(_ name: String?) -> DownloadRiskReason? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DownloadRiskReason, rhs: DownloadRiskReason) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `DownloadTextField`. A member's wire tag is its index in `all`.
+struct DownloadTextField: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let maximumLength: Int
+
+    private init(tag: Int, name: String, maximumLength: Int) {
+        self.tag = tag
+        self.name = name
+        self.maximumLength = maximumLength
+    }
+
+    static let filename = DownloadTextField(tag: 0, name: "filename", maximumLength: 1024)
+    static let destination = DownloadTextField(tag: 1, name: "destination", maximumLength: 8192)
+    static let message = DownloadTextField(tag: 2, name: "message", maximumLength: 2048)
+    static let mimeType = DownloadTextField(tag: 3, name: "mimeType", maximumLength: 255)
+
+    static let all: [DownloadTextField] = [filename, destination, message, mimeType]
+
+    static func named(_ name: String?) -> DownloadTextField? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DownloadTextField, rhs: DownloadTextField) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
 }

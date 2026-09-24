@@ -86,8 +86,8 @@ public sealed class Downloads {
 
     public DownloadRiskVerdict Answer(DownloadRisk query) {
         ArgumentNullException.ThrowIfNull(query);
-        var assessment = DownloadRiskPolicy.Assess(query.Facts);
-        return new(assessment, DownloadRiskPolicy.RequiresConfirmation(assessment, query.IsUserInitiated));
+        var assessment = DownloadRiskAssessment.Of(query.Facts);
+        return new(assessment, assessment.RequiresConfirmation(query.IsUserInitiated));
     }
 
     #endregion
