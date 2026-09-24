@@ -59,8 +59,8 @@ window of that workspace, and publishes `WindowChanged` for each window that
 changed. The session file never stores a selection; a stored document with the
 older session-level `selectedSpaceID` and per-Space `selectedTabID` still loads,
 gives its tabs to a window without a record during that launch, and loses them
-at the next save. `records.sweep` keeps every tab an open window or a saved
-window's record shows.
+at the next save. `SweepExpiredRecords` keeps every tab an open window or a
+saved window's record shows.
 `crest_access_*` owns process-local Space unlock grants, shared by the native
 desktop and mobile access controllers. The platform supplies device-authentication
 results; the core accepts only the current request for the exact Space/profile
@@ -83,7 +83,8 @@ above. `Documentation/Architecture/ControlPlane.md` describes that live path.
 native store APIs. Requests use `version: 1` and an
 `operation`, with a 16 KiB input and 64 KiB output limit. It retains no state or
 executor. Address intent returns domain values. History visits, range removal
-and retention are session commands (`history.*`, `records.sweep`), not policy
+and retention are session edits (the `history.visit` command and the
+`RemoveHistoryRange` and `SweepExpiredRecords` intents), not policy
 operations; retention uses a strict age cutoff and explicit history ranges
 include their start and exclude their end. `limits` answers every capacity the
 core enforces (pinned tabs, folders and depth, history entries, split members,

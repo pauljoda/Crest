@@ -23,7 +23,6 @@ final class BrowserStoreFamily {
     @ObservationIgnored private weak var spaceDataDeleter: (any BrowserSpaceDataDeleting)?
     @ObservationIgnored private weak var spaceCleanupStore: BrowserStore?
     @ObservationIgnored private(set) var spaceCleanupTask: Task<Void, Never>?
-    @ObservationIgnored private var lastCleanupSweepAt: Date?
     @ObservationIgnored weak var pageDismissalAuthorizer: (any BrowserPageDismissalAuthorizing)?
     /// The core that keeps this family's session in its file; nil in memory.
     @ObservationIgnored private let storage: CrestCore?
@@ -122,6 +121,14 @@ final class BrowserStoreFamily {
             return current
         }
         return current
+    }
+
+    /// The workspace the core's device gave this family's session.
+    var workspaceID: UUID {
+        guard let workspace = core.workspaceID else {
+            preconditionFailure("A family's session joins its core's device when the family is made.")
+        }
+        return workspace
     }
 
     /// Adds a window of this family, and answers the workspace it shows. A
@@ -245,6 +252,25 @@ final class BrowserStoreFamily {
         }
     }
 
+    /// Runs one session intent that `source`'s window issued. What it changed
+    /// reaches the session copy and the read model through the core's changes,
+    /// and every window then follows the accepted session. Answers whether the
+    /// session changed; a refusal changes nothing, and the window's sync
+    /// status reports it after `failure`.
+    @discardableResult
+    func send(_ intent: some Intent, from source: BrowserStore, failure: String = "Core command failed") -> Bool {
+        let previous = authoritativeSession
+        do {
+            try source.core.send(intent)
+        } catch {
+            source.localSyncErrorDescription = "\(failure): \(error)"
+            return false
+        }
+        guard authoritativeSession != previous else { return false }
+        reconcileStores(after: previous, from: source)
+        return true
+    }
+
     /// A record command without arguments of its own.
     func executeRecords(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
         from source: BrowserStore, at date: Date = .now) -> Bool {
@@ -363,21 +389,6 @@ final class BrowserStoreFamily {
         }
         borrowedFamilies.removeAll { $0.value == nil }
         for child in borrowedFamilies.compactMap(\.value) { _ = child.refreshBorrowed() }
-    }
-
-    /// Claims the next retention sweep for the whole family. There is no primary
-    /// store — every window's store publishes into the same session — so the
-    /// claim is what keeps several windows from sweeping the same session over
-    /// and over as each one becomes active.
-    func beginCleanupSweep(at now: Date) -> Bool {
-        guard
-            BrowserCurrentTabCleanupSchedule.allowsSweep(
-                lastSweptAt: lastCleanupSweepAt,
-                now: now
-            )
-        else { return false }
-        lastCleanupSweepAt = now
-        return true
     }
 
     /// Defence in depth for locked Spaces. The UI already refuses to reach one,

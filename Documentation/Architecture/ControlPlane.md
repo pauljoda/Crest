@@ -556,8 +556,9 @@ responsibilities.
 `crest_core_evaluate_policy` is a bounded, synchronous pure-function boundary:
 it performs no I/O, engine operation, callback, or executor wait. It evaluates the
 same `CrestCore.Domain` policies the session authority applies.
-Record removal is not a policy call: the `records.sweep` and `history.*`
-session commands apply the retention and range rules to the owned records.
+Record removal is not a policy call: the `SweepExpiredRecords`,
+`CleanUpCurrentTabs` and history session intents apply the retention and range
+rules to the owned records.
 Engine effects and the remaining command orchestration move behind the existing
 store/page interfaces in coherent sections. The original UI, layout, and
 interaction behavior remain the frontend.

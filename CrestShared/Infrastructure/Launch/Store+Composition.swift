@@ -47,13 +47,12 @@ extension BrowserStore {
         }
     }
 
-    /// Launch cleanup and retention, as the core's own `records.sweep` on this
-    /// family's session. No scene is on screen yet; the core keeps every tab an
-    /// open window shows and every tab a saved window's record shows. It claims
-    /// the family's sweep slot, so the first active scene does not repeat it.
-    func sweepAtLaunch(now: Date = .now) {
-        guard family.beginCleanupSweep(at: now) else { return }
-        _ = family.executeRecords(.recordsSweep, from: self, at: now)
+    /// Launch cleanup and retention: the core sweeps this family's session
+    /// before any scene is on screen, keeping every tab an open window shows
+    /// and every tab a saved window's record shows. The core remembers the
+    /// sweep, so the first active scene does not repeat it.
+    func sweepAtLaunch() {
+        sweepExpiredBrowsingData()
     }
 
     static func preview() -> BrowserStore {

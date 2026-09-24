@@ -14,7 +14,9 @@ namespace CrestCore.Tests;
 /// encoder: a session with every optional member set, and the installed session
 /// the upgrade test carries. Command answers were recorded from the core before
 /// it held typed records, for the same inputs, each issued from a window that
-/// showed what the step's `window` names.
+/// showed what the step's `window` names. A step whose command is a typed
+/// intent now runs as that intent at the time it recorded, and the answers of
+/// the steps after it and the saved session still match.
 public sealed class StoredFormatTests {
     private static JsonObject Fixture(string name) =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Session", "Fixtures", name)))!.AsObject();
@@ -76,7 +78,9 @@ public sealed class StoredFormatTests {
         var session = Fixture("maximal-session.json");
         var expected = Fixture("session-answers.json");
         var authority = Load(session);
-        using var app = new CrestApp();
+        var clock = new TestClock(DateTimeOffset.UnixEpoch);
+        var ids = new TestIds();
+        using var app = new CrestApp(new AppConfiguration(null), clock, ids);
         var workspace = app.AttachWorkspace(authority);
         var differences = new List<string>();
         void Compare(string name, JsonNode? actual) =>
@@ -93,9 +97,14 @@ public sealed class StoredFormatTests {
                     RestoresTabs: true));
                 request["windowId"] = issuer.ToString();
             }
-            var command = authority.PrepareCommand(Bytes(request));
-            Compare(name, JsonNode.Parse(command.Output));
-            if (step["commit"]!.GetValue<bool>()) command.Commit();
+            if (RecordedIntents.Typed(request, workspace, window) is { } intent) {
+                clock.Now = RecordedIntents.Time(request);
+                app.Send(intent);
+            } else {
+                var command = authority.PrepareCommand(Bytes(request));
+                Compare(name, JsonNode.Parse(command.Output));
+                if (step["commit"]!.GetValue<bool>()) command.Commit();
+            }
             if (window is { } opened) app.Send(new CloseWindow(opened));
         }
         var checkpoint = authority.Checkpoint();

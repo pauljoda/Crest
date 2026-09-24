@@ -5,22 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserDataRetentionTests: XCTestCase {
-    func testLargeHistoryRetentionPreservesExactCutoffRecordsAndOrder() throws {
-        let now = Date(timeIntervalSinceReferenceDate: 80_000_000)
-        let cutoff = now.addingTimeInterval(-86_400)
-        var session = BrowserSession.preview
-        let retained = Set([0, 511, 512, 1024])
-        session.spaces[0].browsingPreferences.dataRetention.history = .oneDay
-        session.spaces[0].history = (0..<1025).map { index in
-            Self.history(title: String(index), visitedAt: retained.contains(index) ? cutoff : cutoff.addingTimeInterval(-1))
-        }
-        let browser = BrowserStore(session: session)
-
-        XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
-        XCTAssertEqual(browser.session.spaces[0].history.map(\.title), ["0", "511", "512", "1024"])
-        XCTAssertFalse(browser.family.executeRecords(.recordsSweep, from: browser, at: now))
-    }
-
     func testHistoryRangeDeletionUsesLastVisitAndHalfOpenBoundsWithinItsSpace() throws {
         let start = Date(timeIntervalSinceReferenceDate: 10_000)
         let end = start.addingTimeInterval(10)
@@ -62,7 +46,7 @@ final class BrowserDataRetentionTests: XCTestCase {
     }
 
     func testSessionCleanupAppliesEachSpacesOwnHistoryAndArchiveWindows() throws {
-        let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
+        let now = Date.now
         let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
         let recentDate = now.addingTimeInterval(-(29 * 24 * 60 * 60))
         var session = BrowserSession.preview
@@ -89,7 +73,7 @@ final class BrowserDataRetentionTests: XCTestCase {
 
         let browser = BrowserStore(session: session)
 
-        XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
+        browser.sweepExpiredBrowsingData()
         let swept = browser.session
         XCTAssertEqual(
             try XCTUnwrap(swept.space(id: cleanedSpaceID)).history.map(\.title),
@@ -133,8 +117,7 @@ final class BrowserDataRetentionTests: XCTestCase {
                 archive: .thirtyDays,
                 downloads: .forever
             ),
-            in: spaceID,
-            now: now
+            in: spaceID
         )
         await browser.flushPendingSyncPersistence()
 

@@ -1352,7 +1352,7 @@ final class BrowserStoreTests: XCTestCase {
     }
 
     func testSceneActivationSweepArchivesExpiredCurrentTabsInALongLivedSession() throws {
-        let now = Date(timeIntervalSince1970: 1_000_000)
+        let now = Date.now
         let fixture = Self.makeCleanupSweepFixture(now: now)
         let store = BrowserStore(session: fixture.session)
 
@@ -1362,13 +1362,13 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertTrue(beforeSweep.contains(fixture.expiredTabID))
         XCTAssertTrue(beforeSweep.archivedTabs.isEmpty)
 
-        XCTAssertTrue(store.sweepExpiredCurrentTabs(now: now))
+        store.sweepExpiredBrowsingData()
 
         let swept = try XCTUnwrap(store.session.space(id: fixture.sweepingSpaceID))
         XCTAssertFalse(swept.contains(fixture.expiredTabID))
         XCTAssertEqual(swept.archivedTabs.map(\.id), [fixture.expiredTabID])
         XCTAssertEqual(swept.archivedTabs.first?.reason, .autoCleanup)
-        XCTAssertEqual(swept.archivedTabs.first?.archivedAt, now)
+        XCTAssertEqual(try XCTUnwrap(swept.archivedTabs.first?.archivedAt).timeIntervalSince(now), 0, accuracy: 60)
         // The stale selected tab and the start page stay put.
         XCTAssertTrue(swept.contains(fixture.selectedTabID))
         XCTAssertEqual(store.selectedTabID(in: fixture.sweepingSpaceID), fixture.selectedTabID)
@@ -1376,13 +1376,12 @@ final class BrowserStoreTests: XCTestCase {
     }
 
     func testSceneActivationSweepRespectsEverySpaceCleanupPolicy() throws {
-        let now = Date(timeIntervalSince1970: 2_000_000)
-        let fixture = Self.makeCleanupSweepFixture(now: now)
+        let fixture = Self.makeCleanupSweepFixture(now: .now)
         let store = BrowserStore(
             session: fixture.session
         )
 
-        store.sweepExpiredCurrentTabs(now: now)
+        store.sweepExpiredBrowsingData()
 
         let neverSpace = try XCTUnwrap(store.session.space(id: fixture.neverSpaceID))
         XCTAssertTrue(neverSpace.contains(fixture.neverPolicyTabID))
@@ -1390,37 +1389,6 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(
             try XCTUnwrap(store.session.space(id: fixture.sweepingSpaceID)).archivedTabs.count,
             1
-        )
-    }
-
-    func testCleanupSweepsCollapseAcrossWindowsUntilTheSpacingElapses() throws {
-        let now = Date(timeIntervalSince1970: 3_000_000)
-        let fixture = Self.makeCleanupSweepFixture(now: now)
-        let store = BrowserStore(
-            session: fixture.session
-        )
-        let secondWindow = store.makeWindowStore()
-
-        XCTAssertTrue(store.sweepExpiredCurrentTabs(now: now))
-        // Windows share one session, so the second window must not sweep again.
-        XCTAssertFalse(secondWindow.sweepExpiredCurrentTabs(now: now))
-        XCTAssertFalse(
-            store.sweepExpiredCurrentTabs(
-                now: now.addingTimeInterval(
-                    BrowserCurrentTabCleanupSchedule.minimumSweepSpacing - 1
-                )
-            )
-        )
-        XCTAssertTrue(
-            secondWindow.sweepExpiredCurrentTabs(
-                now: now.addingTimeInterval(
-                    BrowserCurrentTabCleanupSchedule.minimumSweepSpacing
-                )
-            )
-        )
-        XCTAssertEqual(
-            secondWindow.session.space(id: fixture.sweepingSpaceID)?.archivedTabs.map(\.id),
-            [fixture.expiredTabID]
         )
     }
 

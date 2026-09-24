@@ -61,7 +61,7 @@ extension BrowserStore {
     }
 
     func clearHistory(in spaceID: SpaceID) {
-        guard family.executeRecords(.historyClear, in: spaceID, from: self) else { return }
+        sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: spaceID.rawValue))
     }
 
     @discardableResult
@@ -69,32 +69,20 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        guard family.executeRecords(.historyClear, in: assignment.spaceID, from: self) else { return false }
-        return true
+        return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue))
     }
 
     func cleanupCurrentTabs() {
-        guard family.executeRecords(.recordsCleanup, from: self) else { return }
+        sendRecords(CleanUpCurrentTabs(workspaceID: family.workspaceID, spaceID: nil))
     }
 
     /// Applies every Space's tab and stored-record retention policies to a
-    /// session that is already running, rather than only at launch.
-    ///
-    /// Returns whether this call performed the sweep: windows share a store
-    /// family, so the first requester inside
-    /// `BrowserCurrentTabCleanupSchedule.minimumSweepSpacing` sweeps and the rest
-    /// no-op. The sweep only touches the session when a tab actually expired, so
-    /// a quiet scene never persists or stages sync traffic on its account.
-    @discardableResult
-    func sweepExpiredBrowsingData(now: Date = .now) -> Bool {
-        guard family.beginCleanupSweep(at: now) else { return false }
-        guard family.executeRecords(.recordsSweep, from: self, at: now) else { return true }
-        return true
-    }
-
-    @discardableResult
-    func sweepExpiredCurrentTabs(now: Date = .now) -> Bool {
-        sweepExpiredBrowsingData(now: now)
+    /// session that is already running, rather than only at launch. Windows
+    /// share one session, and the core sweeps it at most once a minute unless
+    /// a Space's retention changed, so every window may ask whenever it
+    /// becomes active. A sweep that expires nothing changes nothing.
+    func sweepExpiredBrowsingData() {
+        sendRecords(SweepExpiredRecords(workspaceID: family.workspaceID))
     }
 
     /// Sweeps once for the scene that just became active, then keeps sweeping on
@@ -123,16 +111,15 @@ extension BrowserStore {
 
     func cleanupCurrentTabs(in spaceID: SpaceID) {
         guard session.space(id: spaceID) != nil else { return }
-        guard family.executeRecords(.recordsCleanup, in: spaceID, from: self) else { return }
+        sendRecords(CleanUpCurrentTabs(workspaceID: family.workspaceID, spaceID: spaceID.rawValue))
     }
 
     func restoreArchivedTab(_ id: TabID) {
         guard selectedSpace != nil else { return }
-        guard
-            family.executeRecords(
-                .archiveRestore, in: selectedSpaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
-                from: self)
-        else { return }
+        sendRecords(
+            RestoreArchivedTab(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: selectedSpaceID.rawValue,
+                tabID: id.rawValue))
     }
 
     @discardableResult
@@ -144,12 +131,17 @@ extension BrowserStore {
             selectedSpaceID == assignment.spaceID,
             space.archivedTabs.contains(where: { $0.id == id })
         else { return false }
-        guard
-            family.executeRecords(
-                .archiveRestore, in: assignment.spaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
-                from: self)
-        else { return false }
-        return true
+        return sendRecords(
+            RestoreArchivedTab(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: assignment.spaceID.rawValue,
+                tabID: id.rawValue))
+    }
+
+    /// Runs a history, archive or retention intent from this window, and
+    /// answers whether it changed the session.
+    @discardableResult
+    private func sendRecords(_ intent: some Intent) -> Bool {
+        family.send(intent, from: self, failure: "Core record command failed")
     }
 }
 
@@ -168,12 +160,9 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        guard
-            family.executeRecords(
-                .historyRemoveURL, in: assignment.spaceID,
-                arguments: BrowserSessionArguments.HistoryRemoveURL(url: url.absoluteString), from: self)
-        else { return false }
-        return true
+        return sendRecords(
+            RemoveHistoryAddress(
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, address: url.absoluteString))
     }
 
     @discardableResult
@@ -183,14 +172,9 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        guard
-            family.executeRecords(
-                .historyRemoveRange, in: assignment.spaceID,
-                arguments: BrowserSessionArguments.HistoryRemoveRange(
-                    start: startDate.timeIntervalSinceReferenceDate, end: endDate.timeIntervalSinceReferenceDate),
-                from: self)
-        else { return false }
-        return true
+        return sendRecords(
+            RemoveHistoryRange(
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, start: startDate, end: endDate))
     }
 }
 
@@ -199,8 +183,7 @@ extension BrowserStore {
 extension BrowserStore {
     func updateDataRetentionPreferences(
         _ retention: BrowserSpaceDataRetentionPreferences,
-        in spaceID: SpaceID,
-        now: Date = .now
+        in spaceID: SpaceID
     ) {
         guard var preferences = session.space(id: spaceID)?.browsingPreferences,
             preferences.dataRetention != retention
@@ -210,8 +193,9 @@ extension BrowserStore {
         preferences.dataRetention = retention
         // Retention is one field of the same Space preferences record every
         // other settings surface writes, so it takes the same core command, and
-        // the core's own sweep then applies it.
+        // the core's own sweep then applies it: a changed retention is never
+        // held back by the last sweep.
         guard setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
-        _ = family.executeRecords(.recordsSweep, in: spaceID, from: self, at: now)
+        sweepExpiredBrowsingData()
     }
 }

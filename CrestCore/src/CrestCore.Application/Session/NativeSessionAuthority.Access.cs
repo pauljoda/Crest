@@ -14,12 +14,13 @@ public sealed partial class NativeSessionAuthority {
     /// an incoming record cannot remove protection this device never unlocked.
     internal SpaceAccessAuthority? Access { get { lock (Gate) return access; } }
 
-    /// Operations that must still work while a Space is locked. None of them
-    /// returns tab, folder, history or archive contents to the caller: the
-    /// deletion intents that sync and cleanup depend on, and retention or
-    /// current-tab maintenance sweeps.
+    /// Operations that must still work while a Space is locked. Neither
+    /// returns tab, folder, history or archive contents to the caller: they
+    /// are the deletion intents that sync and cleanup depend on. Retention and
+    /// current-tab sweeps are session intents, which reach a locked Space
+    /// themselves.
     private static readonly SessionOperation[] UnlockedOperations =
-        [SessionOperation.SpaceDeletionBegin, SessionOperation.SpaceRemove, SessionOperation.RecordsSweep, SessionOperation.RecordsCleanup];
+        [SessionOperation.SpaceDeletionBegin, SessionOperation.SpaceRemove];
 
     #endregion
 

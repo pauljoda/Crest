@@ -4,7 +4,6 @@ import Foundation
 /// spellings in `SessionOperation.cs`. App-wide `preferences.*` commands have
 /// their own request model, `BrowserAppPreferenceCommand`.
 enum BrowserSessionOperation: String, Codable, Sendable {
-    case archiveRestore = "archive.restore"
     case folderCollapse = "folder.collapse"
     case folderColor = "folder.color"
     case folderCreate = "folder.create"
@@ -12,13 +11,8 @@ enum BrowserSessionOperation: String, Codable, Sendable {
     case folderMove = "folder.move"
     case folderRename = "folder.rename"
     case folderSymbol = "folder.symbol"
-    case historyClear = "history.clear"
-    case historyRemoveRange = "history.remove_range"
-    case historyRemoveURL = "history.remove_url"
     case historyVisit = "history.visit"
     case launchPlan = "launch.plan"
-    case recordsCleanup = "records.cleanup"
-    case recordsSweep = "records.sweep"
     case spaceAccess = "space.access"
     case spaceBranding = "space.branding"
     case spaceBrowsingPreferences = "space.browsing_preferences"
@@ -44,7 +38,6 @@ enum BrowserSessionOperation: String, Codable, Sendable {
     case splitTint = "split.tint"
     case splitTitle = "split.title"
     case tabArchiveTransient = "tab.archive_transient"
-    case tabCleanup = "tab.cleanup"
     case tabClearCurrent = "tab.clear_current"
     case tabClose = "tab.close"
     case tabCloseDurable = "tab.close_durable"
@@ -58,7 +51,6 @@ enum BrowserSessionOperation: String, Codable, Sendable {
     case tabPromoteTransient = "tab.promote_transient"
     case tabRename = "tab.rename"
     case tabResidency = "tab.residency"
-    case tabRestoreArchive = "tab.restore_archive"
     case tabSavedLocation = "tab.saved_location"
     case tabTransfer = "tab.transfer"
     case tabsBatch = "tabs.batch"

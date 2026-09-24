@@ -61,6 +61,7 @@ enum Rejection: Equatable, Error, Sendable {
     case duplicateDownload(DuplicateDownload)
     case duplicatePage(DuplicatePage)
     case duplicateSearchEngineName(DuplicateSearchEngineName)
+    case duplicateTab(DuplicateTab)
     case engineAlreadyRegistered(EngineAlreadyRegistered)
     case engineLacksCapability(EngineLacksCapability)
     case engineNotRegistered(EngineNotRegistered)
@@ -68,6 +69,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidCredentialOrigin(InvalidCredentialOrigin)
     case invalidCredentialRecord(InvalidCredentialRecord)
     case invalidCredentialUsername(InvalidCredentialUsername)
+    case invalidDateRange(InvalidDateRange)
     case invalidDownloadIdentity(InvalidDownloadIdentity)
     case invalidDownloadProgress(InvalidDownloadProgress)
     case invalidDownloadSample(InvalidDownloadSample)
@@ -89,11 +91,14 @@ enum Rejection: Equatable, Error, Sendable {
     case storageUnreadable(StorageUnreadable)
     case syncStagingRefused(SyncStagingRefused)
     case tabAlreadyHasPage(TabAlreadyHasPage)
+    case tabLimitReached(TabLimitReached)
+    case unknownArchivedTab(UnknownArchivedTab)
     case unknownPage(UnknownPage)
     case unknownSpace(UnknownSpace)
     case unknownWorkspace(UnknownWorkspace)
     case unsavedWorkspace(UnsavedWorkspace)
     case windowNotOpen(WindowNotOpen)
+    case workspaceBusy(WorkspaceBusy)
 }
 
 /// What the core asks an engine binding to do, run by `EngineBinding.run`.
@@ -241,6 +246,16 @@ struct CanTearOff: Query, Equatable, Sendable {
 struct CancelDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
+}
+
+struct CleanUpCurrentTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID?
+}
+
+struct ClearHistory: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID?
 }
 
 struct ClosePage: Equatable, Sendable {
@@ -534,6 +549,10 @@ struct DuplicatePage: Equatable, Sendable {
 struct DuplicateSearchEngineName: Equatable, Sendable {
 }
 
+struct DuplicateTab: Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct EngineAlreadyRegistered: Equatable, Sendable {
     let kind: EngineKind
 }
@@ -639,6 +658,9 @@ struct InvalidCredentialRecord: Equatable, Sendable {
 }
 
 struct InvalidCredentialUsername: Equatable, Sendable {
+}
+
+struct InvalidDateRange: Equatable, Sendable {
 }
 
 struct InvalidDownloadIdentity: Equatable, Sendable {
@@ -835,6 +857,19 @@ struct RemoveDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
 
+struct RemoveHistoryAddress: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let address: String
+}
+
+struct RemoveHistoryRange: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let start: Date
+    let end: Date
+}
+
 struct RemoveProfileDownloads: Intent, Equatable, Sendable {
     let profileID: UUID
 }
@@ -847,6 +882,13 @@ struct ResizeSplitColumns: Intent, Equatable, Sendable {
 
 struct RestartDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
+}
+
+struct RestoreArchivedTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
 }
 
 struct SaveFailed: Equatable, Sendable {
@@ -1053,6 +1095,10 @@ struct StrongPasswordRecipe: Equatable, Sendable {
     let groups: [String]
 }
 
+struct SweepExpiredRecords: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+}
+
 struct SyncJournalChanged: Equatable, Sendable {
     let workspaceID: UUID
     let pendingRecords: Int
@@ -1120,6 +1166,10 @@ struct TabIconAccent: Equatable, Sendable {
     let blue: Double
 }
 
+struct TabLimitReached: Equatable, Sendable {
+    let limit: Int
+}
+
 struct TabState: Equatable, Sendable, Identifiable {
     let id: UUID
     let title: String
@@ -1157,6 +1207,10 @@ struct TranslationRule: Equatable, Sendable {
     let sourceLanguage: String
     let targetID: String
     let isEnabled: Bool
+}
+
+struct UnknownArchivedTab: Equatable, Sendable {
+    let tabID: UUID
 }
 
 struct UnknownPage: Equatable, Sendable {
@@ -1203,6 +1257,10 @@ struct WindowState: Equatable, Sendable, Identifiable {
     let shownSpaceID: UUID
     let shownTabs: [ShownTab]
     let splitColumnShares: [SplitColumnShares]
+}
+
+struct WorkspaceBusy: Equatable, Sendable {
+    let workspaceID: UUID
 }
 
 struct WorkspaceChanged: Equatable, Sendable {

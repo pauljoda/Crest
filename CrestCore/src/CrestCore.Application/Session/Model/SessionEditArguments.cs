@@ -32,7 +32,6 @@ internal sealed record SessionEditArguments {
 
     public int? Index { get; init; }
     public int? Offset { get; init; }
-    public double? Lifetime { get; init; }
     public bool? Select { get; init; }
     public bool? Detach { get; init; }
     public bool? ReturnToSavedUrl { get; init; }
@@ -93,7 +92,6 @@ internal sealed record SessionEditArguments {
             Action = Text("action") is { } action ? SavedLocationActionCodes.Parse(action) : null,
             Index = Read("index")?.GetValue<int>(),
             Offset = Read("offset")?.GetValue<int>(),
-            Lifetime = Read("lifetime")?.GetValue<double>(),
             Select = Flag("select"),
             Detach = Flag("detach"),
             ReturnToSavedUrl = Flag("returnToSavedURL"),
@@ -112,9 +110,8 @@ internal sealed record SessionEditArguments {
     }
 
     private static IReadOnlyList<string> FieldsFor(SessionOperation operation) => operation switch {
-        SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient or SessionOperation.TabRestoreArchive => ["tab"],
+        SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient => ["tab"],
         SessionOperation.TabCloseDurable => ["tabId", "returnToSavedURL"],
-        SessionOperation.TabCleanup => ["lifetime", "tabIds"],
         SessionOperation.TabOpen => ["tab", "index", "after", "select"],
         SessionOperation.TabCopy => ["tabId", "ids", "placement", "index", "select", "copyObservations"],
         SessionOperation.TabRename => ["tabId", "title"],

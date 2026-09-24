@@ -1,4 +1,5 @@
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -25,6 +26,10 @@ public sealed partial class CrestApp : IDisposable {
     private readonly Device device;
     /// The pages this device hosts, and the engines that host them.
     private readonly Pages pages;
+    /// The time session intents are stamped with.
+    private readonly IClock clock;
+    /// Where the identities the core gives new records come from.
+    private readonly IIdSource ids;
 
     #endregion
 
@@ -36,8 +41,15 @@ public sealed partial class CrestApp : IDisposable {
     /// A core configured by the host. With a storage directory it opens the
     /// session file there and loads the session it holds; throws `Rejected`
     /// when the file cannot be used.
-    public CrestApp(AppConfiguration configuration) {
+    public CrestApp(AppConfiguration configuration) : this(configuration, new SystemClock(), new SystemIdSource()) { }
+
+    /// A core that reads the time from `clock` and draws new identities from `ids`.
+    internal CrestApp(AppConfiguration configuration, IClock clock, IIdSource ids) {
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(ids);
+        this.clock = clock;
+        this.ids = ids;
         if (configuration.StorageDirectory is not { } directory) {
             device = new(storage: null, DeviceRecords.Empty, Announce, RequestTurn);
             pages = new(device, engines);
@@ -81,6 +93,9 @@ public sealed partial class CrestApp : IDisposable {
                     break;
                 case PageIntent page:
                     pages.Handle(page, changes, Issue);
+                    break;
+                case SessionIntent session:
+                    device.Workspace(session.WorkspaceId).Handle(session, clock.Now, ids);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");

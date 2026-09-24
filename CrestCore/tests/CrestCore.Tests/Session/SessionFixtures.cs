@@ -18,13 +18,22 @@ public sealed partial class BrowserContractsTests {
     /// window that issued them by `windowId`, and `Shown` answers what a window
     /// shows after every commit so far.
     private sealed class TestDevice : IDisposable {
-        private readonly CrestApp app = new();
+        private readonly CrestApp app;
         private readonly Dictionary<Guid, WindowState> windows = [];
 
-        public TestDevice(NativeSessionAuthority authority) => Workspace = app.AttachWorkspace(authority);
+        public TestDevice(NativeSessionAuthority authority) {
+            app = new(new AppConfiguration(null), Clock, Ids);
+            Workspace = app.AttachWorkspace(authority);
+        }
 
         /// The workspace of the session the device was made for.
         public Guid Workspace { get; }
+
+        /// The time the device's core stamps session intents with.
+        public TestClock Clock { get; } = new(DateTimeOffset.UtcNow);
+
+        /// The identities the device's core gives new records.
+        public TestIds Ids { get; } = new();
 
         /// Attaches another session and answers its workspace.
         public Guid Attach(NativeSessionAuthority authority) => app.AttachWorkspace(authority);
@@ -48,7 +57,11 @@ public sealed partial class BrowserContractsTests {
             [.. session["spaces"]!.AsArray().Where(item => item!["selectedTabID"] is not null)
                 .Select(item => (SpaceId(item!), (Guid?)Guid.Parse(item!["selectedTabID"]!["rawValue"]!.GetValue<string>())))]);
 
-        public void Send(WindowIntent intent) => Record(app.Send(intent));
+        public IReadOnlyList<Change> Send(Intent intent) {
+            var changes = app.Send(intent);
+            Record(changes);
+            return changes;
+        }
 
         public WindowState Shown(Guid window) {
             Record(app.Drain());

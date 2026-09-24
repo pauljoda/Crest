@@ -102,7 +102,7 @@ Removed:
   `MobileOnboardingSpaceCarousel` and `MobilePageMenuPrimaryAction`;
 - every `CREST_CORE_BACKED` branch and build setting.
 
-Launch cleanup and retention run as the core `records.sweep` command.
+Launch cleanup and retention run as the core's `SweepExpiredRecords` intent.
 `BrowserTabMultiSelectionTests` drives the command path
 (`prepareTabBatch` and `commitTabBatch`). `BrowserSession+FolderMigration.swift`
 stays, because its Codable path still loads legacy folder membership and

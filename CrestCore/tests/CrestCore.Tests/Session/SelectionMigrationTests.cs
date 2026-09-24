@@ -92,7 +92,8 @@ public sealed partial class BrowserContractsTests {
         var authority = new NativeSessionAuthority(Bytes(session));
         using var device = new TestDevice(authority);
         device.Open(fixture.Space, (fixture.Space, shownElsewhere));
-        authority.PrepareCommand(SpaceCommand(session, "records.sweep", new())).Commit();
+        device.Clock.Now = StoredSessionCodec.Date(800000100);
+        device.Send(new SweepExpiredRecords(device.Workspace));
         var tabs = JsonNode.Parse(authority.Checkpoint().Read("core"))!["spaces"]![0]!["tabs"]!.AsArray()
             .Select(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>())).ToArray();
         Assert.Contains(shownElsewhere, tabs);

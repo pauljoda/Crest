@@ -121,7 +121,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void AReaderOfTheChangesHoldsTheCoresStateAfterEveryCommand() {
         var authority = MaximalSession();
-        using var app = new CrestApp();
+        var clock = new TestClock(DateTimeOffset.UnixEpoch);
+        using var app = new CrestApp(new AppConfiguration(null), clock, new TestIds());
         var workspace = app.AttachWorkspace(authority);
         var reader = SessionReader.Opening(app.Drain());
         Assert.Equal(authority.Current, reader.State);
@@ -139,9 +140,15 @@ public sealed partial class BrowserContractsTests {
                     RestoresTabs: true)));
                 request["windowId"] = window.ToString();
             }
-            var command = authority.PrepareCommand(Bytes(request));
-            if (step["commit"]!.GetValue<bool>()) command.Commit();
-            var changes = app.Drain();
+            IReadOnlyList<Change> changes;
+            if (RecordedIntents.Typed(request, workspace, window) is { } intent) {
+                clock.Now = RecordedIntents.Time(request);
+                changes = app.Send(intent);
+            } else {
+                var command = authority.PrepareCommand(Bytes(request));
+                if (step["commit"]!.GetValue<bool>()) command.Commit();
+                changes = app.Drain();
+            }
             published.UnionWith(changes.Select(change => change.GetType()));
             reader.Apply(changes);
             Assert.Equal(authority.Current, reader.State);

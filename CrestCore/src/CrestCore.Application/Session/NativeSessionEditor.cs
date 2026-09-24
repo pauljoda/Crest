@@ -55,16 +55,8 @@ internal static class NativeSessionEditor {
             case SessionOperation.TabArchiveTransient:
                 edited.ArchiveTransient(args.RequiredTab, now);
                 break;
-            case SessionOperation.TabRestoreArchive:
-                result = edited.RestoreArchived(args.RequiredTab, now).Id;
-                selected = result;
-                break;
             case SessionOperation.TabCloseDurable:
                 selected = edited.CloseDurable(args.RequiredTabId, selected, args.FallbackTabId, args.ReturnToSavedUrl == true);
-                break;
-            case SessionOperation.TabCleanup:
-                selected = edited.CleanupCurrentTabs(selected,
-                    TimeSpan.FromSeconds(args.Lifetime ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput)), now, args.TabIds);
                 break;
             case SessionOperation.TabOpen: {
                     var tab = BrowserTab.Restore(args.RequiredTab);

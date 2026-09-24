@@ -17,5 +17,18 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// A tab moved between workspaces.
     public static SyncStaging Transfer { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
 
+    /// The person deleted records: history, or a folder.
+    public static SyncStaging Deletion { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.Immediate);
+
+    /// Records aged out under their Space's retention, or open tabs its
+    /// cleanup archived.
+    public static SyncStaging Expiry { get; } = new(SyncDeletionReason.Retention, SyncUrgency.Immediate);
+
+    /// Something another device should see soon: a new folder or a restored tab.
+    public static SyncStaging Creation { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.Immediate);
+
+    /// An organizing edit, staged once edits pause: a rename, a move or a split.
+    public static SyncStaging Edit { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.Coalesced);
+
     #endregion
 }

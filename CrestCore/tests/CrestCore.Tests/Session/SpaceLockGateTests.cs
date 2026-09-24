@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -69,10 +70,15 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
             SpaceCommand(current, "space.access", new() { ["value"] = "open" }))).Code);
         // Raising it, and retention maintenance, must still reach a locked
-        // Space: neither returns its contents to the caller.
+        // Space: neither returns its contents to the caller. Clearing its
+        // history is an edit the grant guards.
         core.PrepareCommand(SpaceCommand(current, "space.access",
             new() { ["value"] = "deviceOwnerAuthentication" })).Commit();
-        core.PrepareCommand(SpaceCommand(current, "records.sweep", new())).Commit();
+        using var device = new TestDevice(core);
+        Assert.Equal(identity.Space, Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
+            device.Send(new ClearHistory(device.Workspace, identity.Space))).Rejection).SpaceId);
+        device.Send(new SweepExpiredRecords(device.Workspace));
+        device.Send(new CleanUpCurrentTabs(device.Workspace, identity.Space));
         Grant(access, identity);
         core.PrepareCommand(Bytes(relocked)).Commit();
     }
@@ -95,8 +101,10 @@ public sealed partial class BrowserContractsTests {
         var operation = Guid.NewGuid().ToString();
         core.PrepareCommand(SpaceCommand(current, "space.deletion.begin",
             new() { ["operationID"] = operation })).Commit();
-        Assert.Equal("space_deletion_in_progress", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
-            SpaceCommand(current, "records.cleanup", new()))).Code);
+        using var device = new TestDevice(core);
+        var deleting = Identity(session).Space;
+        Assert.Equal(deleting, Assert.IsType<SpaceBeingDeleted>(Assert.Throws<Rejected>(() =>
+            device.Send(new CleanUpCurrentTabs(device.Workspace, deleting))).Rejection).SpaceId);
     }
 
     private static byte[] SpaceTabDelta(JsonNode session, int index, string title) {

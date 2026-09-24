@@ -9,10 +9,8 @@ internal enum SessionOperation {
     Unknown,
     UnknownHistory,
     UnknownPreferences,
-    UnknownRecords,
     UnknownSpace,
     UnknownTransient,
-    ArchiveRestore,
     FolderCollapse,
     FolderColor,
     FolderCreate,
@@ -20,16 +18,11 @@ internal enum SessionOperation {
     FolderMove,
     FolderRename,
     FolderSymbol,
-    HistoryClear,
-    HistoryRemoveRange,
-    HistoryRemoveUrl,
     HistoryVisit,
     LaunchPlan,
     PreferencesImport,
     PreferencesSet,
     PreferencesTranslationRule,
-    RecordsCleanup,
-    RecordsSweep,
     SpaceAccess,
     SpaceBranding,
     SpaceBrowsingPreferences,
@@ -55,7 +48,6 @@ internal enum SessionOperation {
     SplitTint,
     SplitTitle,
     TabArchiveTransient,
-    TabCleanup,
     TabClearCurrent,
     TabClose,
     TabCloseDurable,
@@ -69,7 +61,6 @@ internal enum SessionOperation {
     TabPromoteTransient,
     TabRename,
     TabResidency,
-    TabRestoreArchive,
     TabSavedLocation,
     TabTransfer,
     TabsBatch,
@@ -83,7 +74,6 @@ internal static class SessionOperationCodes {
     #region Actions - Decoding
 
     public static SessionOperation Parse(string? value) => value switch {
-        "archive.restore" => SessionOperation.ArchiveRestore,
         "folder.collapse" => SessionOperation.FolderCollapse,
         "folder.color" => SessionOperation.FolderColor,
         "folder.create" => SessionOperation.FolderCreate,
@@ -91,16 +81,11 @@ internal static class SessionOperationCodes {
         "folder.move" => SessionOperation.FolderMove,
         "folder.rename" => SessionOperation.FolderRename,
         "folder.symbol" => SessionOperation.FolderSymbol,
-        "history.clear" => SessionOperation.HistoryClear,
-        "history.remove_range" => SessionOperation.HistoryRemoveRange,
-        "history.remove_url" => SessionOperation.HistoryRemoveUrl,
         "history.visit" => SessionOperation.HistoryVisit,
         "launch.plan" => SessionOperation.LaunchPlan,
         "preferences.import" => SessionOperation.PreferencesImport,
         "preferences.set" => SessionOperation.PreferencesSet,
         "preferences.translation_rule" => SessionOperation.PreferencesTranslationRule,
-        "records.cleanup" => SessionOperation.RecordsCleanup,
-        "records.sweep" => SessionOperation.RecordsSweep,
         "space.access" => SessionOperation.SpaceAccess,
         "space.branding" => SessionOperation.SpaceBranding,
         "space.browsing_preferences" => SessionOperation.SpaceBrowsingPreferences,
@@ -126,7 +111,6 @@ internal static class SessionOperationCodes {
         "split.tint" => SessionOperation.SplitTint,
         "split.title" => SessionOperation.SplitTitle,
         "tab.archive_transient" => SessionOperation.TabArchiveTransient,
-        "tab.cleanup" => SessionOperation.TabCleanup,
         "tab.clear_current" => SessionOperation.TabClearCurrent,
         "tab.close" => SessionOperation.TabClose,
         "tab.close_durable" => SessionOperation.TabCloseDurable,
@@ -140,7 +124,6 @@ internal static class SessionOperationCodes {
         "tab.promote_transient" => SessionOperation.TabPromoteTransient,
         "tab.rename" => SessionOperation.TabRename,
         "tab.residency" => SessionOperation.TabResidency,
-        "tab.restore_archive" => SessionOperation.TabRestoreArchive,
         "tab.saved_location" => SessionOperation.TabSavedLocation,
         "tab.transfer" => SessionOperation.TabTransfer,
         "tabs.batch" => SessionOperation.TabsBatch,
@@ -150,7 +133,6 @@ internal static class SessionOperationCodes {
         "workspace.import" => SessionOperation.WorkspaceImport,
         _ when value?.StartsWith("history.", StringComparison.Ordinal) == true => SessionOperation.UnknownHistory,
         _ when value?.StartsWith("preferences.", StringComparison.Ordinal) == true => SessionOperation.UnknownPreferences,
-        _ when value?.StartsWith("records.", StringComparison.Ordinal) == true => SessionOperation.UnknownRecords,
         _ when value?.StartsWith("space.", StringComparison.Ordinal) == true => SessionOperation.UnknownSpace,
         _ when value?.StartsWith("transient.", StringComparison.Ordinal) == true => SessionOperation.UnknownTransient,
         _ => SessionOperation.Unknown
@@ -170,13 +152,10 @@ internal static class SessionOperationCodes {
     public static SyncStaging? Staging(SessionOperation operation, JsonObject request) {
         var explicitDelete = SyncDeletionReason.ExplicitDelete;
         var superseded = SyncDeletionReason.Superseded;
-        var retention = SyncDeletionReason.Retention;
         return operation switch {
-            SessionOperation.TabDelete or SessionOperation.FolderDelete or SessionOperation.HistoryClear
-                or SessionOperation.HistoryRemoveUrl or SessionOperation.HistoryRemoveRange => new(explicitDelete, SyncUrgency.Immediate),
-            SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup => new(retention, SyncUrgency.Immediate),
+            SessionOperation.TabDelete or SessionOperation.FolderDelete => new(explicitDelete, SyncUrgency.Immediate),
             SessionOperation.TabOpen or SessionOperation.TabCopy or SessionOperation.TabClose or SessionOperation.TabClearCurrent
-                or SessionOperation.TabCloseDurable or SessionOperation.ArchiveRestore or SessionOperation.TransientPromote
+                or SessionOperation.TabCloseDurable or SessionOperation.TransientPromote
                 or SessionOperation.FolderCreate or SessionOperation.SpaceCreate or SessionOperation.SpaceAccess
                 or SessionOperation.SpaceCredentialPreferences => new(superseded, SyncUrgency.Immediate),
             SessionOperation.SpaceRemove => new(explicitDelete, SyncUrgency.WithSave),
@@ -195,9 +174,6 @@ internal static class SessionOperationCodes {
 
     public static bool IsHistory(SessionOperation operation) => operation is
         SessionOperation.UnknownHistory
-        or SessionOperation.HistoryClear
-        or SessionOperation.HistoryRemoveRange
-        or SessionOperation.HistoryRemoveUrl
         or SessionOperation.HistoryVisit;
 
     /// App-wide behavior preferences and the launch plan that reads them.
@@ -210,14 +186,7 @@ internal static class SessionOperationCodes {
 
     public static bool IsRecord(SessionOperation operation) => operation is
         SessionOperation.UnknownHistory
-        or SessionOperation.UnknownRecords
-        or SessionOperation.ArchiveRestore
-        or SessionOperation.HistoryClear
-        or SessionOperation.HistoryRemoveRange
-        or SessionOperation.HistoryRemoveUrl
         or SessionOperation.HistoryVisit
-        or SessionOperation.RecordsCleanup
-        or SessionOperation.RecordsSweep
         or SessionOperation.SplitIcon
         or SessionOperation.SplitTint
         or SessionOperation.SplitTitle;

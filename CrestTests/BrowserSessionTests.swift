@@ -141,11 +141,10 @@ final class BrowserSessionTests: XCTestCase {
     }
 
     func testRestoringAnArchivedTabReturnsItOnlyToItsSpaceAndSelectsIt() throws {
-        let now = Date(timeIntervalSince1970: 100_000)
-        let store = makeStore(.cleanupFixture(now: now))
+        let store = makeStore(.cleanupFixture(now: .now))
         let personalID = try XCTUnwrap(store.session.spaces.last?.id)
 
-        XCTAssertTrue(store.sweepExpiredCurrentTabs(now: now))
+        store.sweepExpiredBrowsingData()
         let archivedBeforeRestore = try XCTUnwrap(store.selectedSpace).archivedTabs
         let archivedID = try XCTUnwrap(archivedBeforeRestore.first?.id)
         store.restoreArchivedTab(archivedID)

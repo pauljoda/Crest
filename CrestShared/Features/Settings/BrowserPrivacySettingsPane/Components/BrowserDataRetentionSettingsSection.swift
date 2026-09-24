@@ -110,7 +110,7 @@ struct BrowserDataRetentionSettingsSection: View {
         case .downloads: retention.downloads = change.proposed
         }
         let now = BrowserDataRetentionClock.now()
-        browser.updateDataRetentionPreferences(retention, in: spaceID, now: now)
+        browser.updateDataRetentionPreferences(retention, in: spaceID)
         downloadCenter.sweepExpiredRecords(
             using: browser.session,
             now: now,

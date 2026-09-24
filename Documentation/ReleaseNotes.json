@@ -2281,6 +2281,10 @@
     "observable-read-model": {
       "category": "internal",
       "message": "Each workspace, window, Space, tab and folder has its own observable model that updates only when a value changes, and favicons have one store."
+    },
+    "history-archive-intents": {
+      "category": "internal",
+      "message": "Clearing and removing history, restoring archived tabs and sweeping old records are typed core intents, and the core keeps its own clock."
     }
   }
 }

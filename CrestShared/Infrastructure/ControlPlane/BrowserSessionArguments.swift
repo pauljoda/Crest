@@ -15,8 +15,7 @@ enum BrowserSavedLocationAction: String, Encodable, Sendable {
 enum BrowserSessionArguments {
     // MARK: - Tabs
 
-    /// Commands that name one tab: `tab.delete`, `split.leave`,
-    /// `archive.restore`.
+    /// Commands that name one tab: `tab.delete`, `split.leave`.
     struct Tab: Encodable, Sendable {
         let tabId: UUID
     }
@@ -233,23 +232,12 @@ enum BrowserSessionArguments {
         @BrowserCoreNullable var value: Value?
     }
 
-    // MARK: - History and records
+    // MARK: - History
 
     /// `history.visit`.
     struct HistoryVisit: Encodable, Sendable {
         let url: String
         @BrowserCoreNullable var title: String?
-    }
-
-    /// `history.remove_url`.
-    struct HistoryRemoveURL: Encodable, Sendable {
-        let url: String
-    }
-
-    /// `history.remove_range`, as reference-date seconds.
-    struct HistoryRemoveRange: Encodable, Sendable {
-        let start: TimeInterval
-        let end: TimeInterval
     }
 
     // MARK: - Spaces
