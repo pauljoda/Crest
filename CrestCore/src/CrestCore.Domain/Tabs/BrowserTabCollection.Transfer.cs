@@ -6,21 +6,24 @@ public sealed partial class BrowserTabCollection {
     #region Actions - Transfer
 
     /// Moves ownership without closing, archiving, or creating a replacement tab.
-    /// All destination checks precede mutation of either collection.
+    /// All destination checks precede mutation of either collection. Refused with
+    /// `TabAlreadyExists` when the destination holds the tab or keeps it in its
+    /// archive, `TabLimitReached` or `PinnedTabsFull` when it has no room, and
+    /// `InvalidFolderPlacement` for a tab named to go before itself.
     public Guid? TransferTo(BrowserTabCollection destination, Guid id, Guid? selected, Guid? fallback,
         TabPlacement? requestedPlacement, Guid? requestedFolder, Guid? before,
         bool afterSelection, Guid? destinationSelection, DateTimeOffset now) {
-        if (ReferenceEquals(this, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameCollectionTransfer);
+        ArgumentNullException.ThrowIfNull(destination);
+        if (ReferenceEquals(this, destination)) throw new ArgumentException("A tab moves to another Space.", nameof(destination));
         var tab = Tab(id);
         if (destination.tabs.Any(t => t.Id == id) || destination.archive.Any(archived => archived.Tab.Id == id))
-            throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
-        if (destination.tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
+            throw new Rejected(new TabAlreadyExists(id));
+        if (destination.tabs.Count >= MaximumTabs) throw new Rejected(new TabLimitReached(MaximumTabs));
         var placement = requestedPlacement ?? tab.Placement;
         Guid? folder = placement.HoldsFolders && destination.folders.Any(f => f.Id == requestedFolder && f.Location == placement)
             ? requestedFolder : null;
-        if (!placement.Holds(destination.tabs.Count(t => t.Placement == placement) + 1))
-            throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
-        if (before == id) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
+        RequireRoom(placement, destination.tabs.Count(t => t.Placement == placement) + 1);
+        if (before == id) throw new Rejected(new InvalidFolderPlacement());
         bool Matches(BrowserTab tab) => tab.Placement == placement && tab.FolderId == folder;
         int insertion = before is { } anchor ? destination.tabs.FindIndex(t => t.Id == anchor && Matches(t)) : -1;
         if (insertion < 0) {

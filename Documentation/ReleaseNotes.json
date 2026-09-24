@@ -2361,6 +2361,10 @@
     "ios-close-policy-test-preferences": {
       "category": "internal",
       "message": "The iOS saved-tab close test sends its close preference to the test's own core, as the Mac test does."
+    },
+    "tab-batch-intents": {
+      "category": "internal",
+      "message": "Closing, deleting, copying, filing, splitting, keeping loaded and moving several selected tabs are typed core intents, saved before they return."
     }
   }
 }

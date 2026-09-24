@@ -187,15 +187,15 @@ struct BrowserTabSelectionMonitor: View {
                     actions.copyLinks(request)
                     return nil
                 case "d":
-                    actions.perform(request, action: .duplicate)
+                    actions.perform(browser.duplicating(request), for: request)
                     return nil
                 case "w":
-                    actions.perform(request, action: .close)
+                    actions.perform(browser.closing(request), for: request)
                     return nil
                 default: break
                 }
                 if BrowserShortcutHardwareKeyCode(rawValue: event.keyCode) == .delete {
-                    actions.perform(request, action: .delete)
+                    actions.perform(browser.deleting(request), for: request)
                     return nil
                 }
             }

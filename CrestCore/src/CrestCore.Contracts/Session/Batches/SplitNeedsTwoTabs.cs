@@ -1,7 +1,7 @@
 namespace CrestCore.Contracts;
 
-/// The split already holds `Limit` tabs.
-public sealed record SplitLimitReached(int Limit) : Rejection {
+/// The split would hold one tab, and a split holds two to `Limit` tabs.
+public sealed record SplitNeedsTwoTabs(int Limit) : Rejection {
     #region Variables
 
     /// What the person is told.

@@ -1,21 +1,12 @@
 import Foundation
 
-enum BrowserSelectionItemID: Codable, Hashable, Sendable {
-    case tab(TabID)
-    case folder(FolderID)
-
-    var tabID: TabID? {
-        if case .tab(let id) = self { return id }
-        return nil
-    }
-    var folderID: FolderID? {
-        if case .folder(let id) = self { return id }
-        return nil
-    }
-}
-
-/// Captures membership and placement at the start of a menu or drag.
+/// A window's multi-selection as it stood when a menu opened or a drag began:
+/// the Space it was made in, what the person picked that no picked folder
+/// holds, and every tab and folder that takes part. Views read it to label and
+/// lift the selection; the core decides every action on it through `core`.
 struct BrowserTabBatchRequest: Codable, Equatable, Sendable {
+    // MARK: - Types
+
     struct Member: Codable, Equatable, Sendable {
         let id: TabID
         let placement: TabPlacement
@@ -41,6 +32,8 @@ struct BrowserTabBatchRequest: Codable, Equatable, Sendable {
         }
     }
 
+    // MARK: - Variables
+
     let assignment: BrowserSpaceRuntimeAssignment
     let members: [Member]
     let folders: [FolderMember]
@@ -48,6 +41,17 @@ struct BrowserTabBatchRequest: Codable, Equatable, Sendable {
     var ids: [TabID] { members.map(\.id) }
     var folderIDs: Set<FolderID> { Set(folders.map(\.id)) }
     var hasFolders: Bool { !folders.isEmpty }
+
+    /// The selection as the core reads it: what the person picked, by kind,
+    /// and the tabs the window saw the selection hold.
+    var core: TabSelection {
+        TabSelection(
+            tabIDs: rootItems.compactMap(\.tabID).map(\.rawValue),
+            folderIDs: rootItems.compactMap(\.folderID).map(\.rawValue),
+            memberTabIDs: ids.map(\.rawValue))
+    }
+
+    // MARK: - Initializers
 
     init(ids: [TabID], in space: BrowserSpace) {
         self.init(items: ids.map(BrowserSelectionItemID.tab), in: space)
@@ -82,55 +86,4 @@ struct BrowserTabBatchRequest: Codable, Equatable, Sendable {
         }
         members = tabs.map(Member.init)
     }
-
-    func validate(in session: BrowserSession) throws -> BrowserSpace {
-        guard !rootItems.isEmpty, Set(rootItems).count == rootItems.count, Set(ids).count == ids.count,
-            let space = session.space(id: assignment.spaceID), assignment.matches(space)
-        else { throw BrowserTabBatchError.staleSelection }
-        guard
-            rootItems.allSatisfy({ item in
-                switch item {
-                case .tab(let id): space.tabs.contains { $0.id == id }
-                case .folder(let id): space.folders.contains { $0.id == id }
-                }
-            }), BrowserTabBatchRequest(items: rootItems, in: space) == self
-        else {
-            throw BrowserTabBatchError.staleSelection
-        }
-        let tabs = Dictionary(uniqueKeysWithValues: space.tabs.map { ($0.id, $0) })
-        for member in members {
-            guard let tab = tabs[member.id], Member(tab) == member, !tab.isStartPage else {
-                throw BrowserTabBatchError.staleSelection
-            }
-            if let group = space.splitGroup(containing: member.id),
-                !Set(space.splitGroupMembers(of: group).map(\.id)).isSubset(of: Set(ids))
-            {
-                throw BrowserTabBatchError.incompleteSplit
-            }
-        }
-        return space
-    }
-}
-
-enum BrowserTabBatchAction: Equatable, Sendable {
-    case file(TabPlacement, folder: FolderID? = nil, before: TabID? = nil, beforeFolder: FolderID? = nil)
-    case newFolder(BrowserFolderLocation)
-    case newFolderAround(TabID)
-    case moveToSpace(BrowserSpaceRuntimeAssignment)
-    case split(joining: TabID? = nil, at: Int? = nil)
-    case close
-    case delete
-    case duplicate
-    case keepLoaded(Bool)
-    case separateSplits
-}
-
-enum BrowserTabBatchError: Error, Equatable {
-    case staleSelection, lockedSpace, incompleteSplit, pinnedCapacity, splitCapacity
-    case folderActionUnavailable
-    case cannotPinSplit, cannotMoveSplitAcrossSpaces, currentTabsOnly, webPagesOnly, invalidDestination
-}
-
-struct BrowserTabBatchResult {
-    var copies: [(source: TabID, copy: TabID)] = []
 }

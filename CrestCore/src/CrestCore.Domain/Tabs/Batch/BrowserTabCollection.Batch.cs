@@ -2,168 +2,302 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Domain;
 
+/// What a person does to the tabs they selected together. Each action works on
+/// a detached copy of the Space's organization and checks every rule before it
+/// changes anything, so a refusal leaves the Space as it was.
 public sealed partial class BrowserTabCollection {
-    #region Actions - Batch
+    #region Actions - Closing
 
-    /// Operates on a detached command candidate. The authority publishes it only
-    /// after the complete batch, native projection and storage have succeeded.
-    public TabBatchResult ApplyBatch(TabBatchSelection request, TabBatchAction action, Guid? selected,
-        Guid? fallback, BrowserTabCollection? destination, Guid? destinationSelection, IIdSource ids, DateTimeOffset now) {
-        request.Validate(this);
-        var requested = request.Tabs.Select(t => t.Id).ToArray();
-        var selectedIds = requested.ToHashSet();
-        var members = requested.Select(Tab).ToArray();
-        var groups = members.Where(t => t.SplitGroupId is not null).Select(t => t.SplitGroupId!.Value).ToHashSet();
+    /// Archives the selected open tabs, and answers the tab the window shows
+    /// next: `fallback` in place of `shown` when it went, or none. Refused with
+    /// `CurrentTabsOnly` for a saved or pinned tab.
+    public Guid? CloseSelected(SelectedTabs selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
+        RequireSelectedTabs(selection);
+        if (selection.Members.FirstOrDefault(tab => tab.Placement.IsDurable) is { } durable)
+            throw new Rejected(new CurrentTabsOnly(durable.Id));
+        return DismissTabs(selection.MemberIds, shown, fallback, now, deleting: false, ensureSelection: false,
+            resetArchivePlacement: false);
+    }
+
+    /// Deletes the selected tabs into the archive as open tabs, and answers the
+    /// tab the window shows next: `fallback` in place of `shown` when it went,
+    /// or none.
+    public Guid? DeleteSelected(SelectedTabs selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
+        RequireSelectedTabs(selection);
+        var next = DismissTabs(selection.MemberIds, shown, fallback, now, deleting: true, ensureSelection: true,
+            resetArchivePlacement: true);
+        return shown is { } removed && selection.Holds(removed)
+            ? fallback is { } other && tabs.Any(tab => tab.Id == other) ? other : null
+            : next;
+    }
+
+    #endregion
+
+    #region Actions - Copying
+
+    /// Copies the selected tabs to the end of the open tabs, in order, and
+    /// answers each source with its copy. The copies of a split's members form
+    /// a split of their own that keeps the source split's name, icon and tint.
+    public IReadOnlyList<(Guid Source, Guid Copy)> DuplicateSelected(SelectedTabs selection, IIdSource ids, DateTimeOffset now) {
+        RequireSelectedTabs(selection);
+        List<(Guid Source, Guid Copy)> copies = [];
+        foreach (var tab in selection.Members)
+            copies.Add((tab.Id, DuplicateTab(tab.Id, ids, now, requestedIndex: tabs.Count).Id));
+        foreach (var group in SelectedGroups(selection)) {
+            Guid[] copied = [.. selection.Members.Where(tab => tab.SplitGroupId == group)
+                .Select(tab => copies.Single(pair => pair.Source == tab.Id).Copy)];
+            if (copied.Length < 2) continue;
+            var copiedGroup = ids.Next();
+            foreach (var tab in copied.Skip(1)) JoinSplitInPlace(tab, copied[0], null, copiedGroup, now);
+            CopySplitMetadata(group, copiedGroup, now);
+        }
+        return copies;
+    }
+
+    #endregion
+
+    #region Actions - Splits
+
+    /// Joins the selected tabs to the split of `target`, or of the first
+    /// selected tab, at member `index` and on, and answers the last tab that
+    /// joined, or `shown` when none had to, with the copies made for saved or
+    /// pinned tabs. A split copied into new tabs keeps its name, icon and tint.
+    /// Refused with `WebPagesOnly` for a Start Page target, and
+    /// `SplitNeedsTwoTabs` or `SplitLimitReached` for a split that would be
+    /// too small or too large.
+    public (Guid? Shown, IReadOnlyList<(Guid Source, Guid Copy)> Copies) SplitSelected(SelectedTabs selection, Guid? target,
+        int? index, Guid? shown, IIdSource ids, DateTimeOffset now) {
+        RequireSelectedTabs(selection);
+        var targetId = target ?? selection.MemberIds[0];
+        if (Tab(targetId).Content.IsStartPage) throw new Rejected(new WebPagesOnly(targetId));
+        var existing = SplitMembers(targetId).Select(tab => tab.Id).ToHashSet();
+        int size = existing.Union(selection.MemberIds).Count();
+        if (size < 2) throw new Rejected(new SplitNeedsTwoTabs(MaximumSplitMembers));
+        if (size > MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
         List<(Guid Source, Guid Copy)> copies = [];
         List<(Guid Source, Guid Copy)> groupCopies = [];
-        Guid? createdFolder = null;
-        void Require(bool valid, string code = BrowserRuleCodes.InvalidDestination) { if (!valid) throw new BrowserRuleException(code); }
-        Guid CreateFolder(TabPlacement placement) {
-            var folder = ids.Next(); AddFolder(folder, "New Folder", placement); createdFolder = folder; return folder;
-        }
-        if (request.Folders.Count > 0) {
-            switch (action.Kind) {
-                case TabBatchKind.File: FileBatchRoots(request, action, now); break;
-                case TabBatchKind.NewFolder:
-                    FileBatchRoots(request, action with { Folder = CreateFolder(action.Placement) }, now); break;
-                case TabBatchKind.KeepLoaded:
-                    Require(members.All(t => t.Content.IsWebPage), BrowserRuleCodes.WebPagesOnly);
-                    foreach (var tab in members) tab.SetResidency(action.KeepLoaded);
-                    break;
-                default: throw new BrowserRuleException(BrowserRuleCodes.FolderActionUnavailable);
+        var insertion = index;
+        foreach (var id in selection.MemberIds.Where(id => !existing.Contains(id))) {
+            var group = Tab(targetId).SplitGroupId;
+            var joined = JoinSplit(id, targetId, insertion, ids, now);
+            copies.AddRange(joined.Copies);
+            shown = joined.SelectedTab;
+            var targetCopy = joined.Copies.FirstOrDefault(pair => pair.Source == targetId);
+            if (targetCopy != default) {
+                targetId = targetCopy.Copy;
+                if (group is { } copiedFrom) groupCopies.Add((copiedFrom, Tab(targetId).SplitGroupId!.Value));
             }
-            return new(selected, destinationSelection, copies, groupCopies, createdFolder);
+            if (insertion is { } slot) insertion = checked(slot + 1);
         }
-        Require(requested.Length > 0, BrowserRuleCodes.StaleSelection);
-        switch (action.Kind) {
-            case TabBatchKind.File:
-                Require(action.Before is not { } anchor || !selectedIds.Contains(anchor));
-                if (!action.Placement.HoldsFolders) {
-                    Require(action.Placement.HoldsSplits || groups.Count == 0, BrowserRuleCodes.CannotPinSplit);
-                    Require(action.Placement.Holds(tabs.Count(t => t.Placement == action.Placement && !selectedIds.Contains(t.Id))
-                        + members.Length), BrowserRuleCodes.PinnedCapacity);
-                    Require(action.Folder is null && action.BeforeFolder is null
-                        && (action.Before is not { } before || tabs.Any(t => t.Id == before && t.Placement == action.Placement)));
-                    foreach (var tab in requested) MoveTab(tab, action.Placement, null, action.Before, false, now);
-                } else {
-                    OrderBatchMembers(requested);
-                    FileTabs(requested, action.Placement, action.Folder, now, action.Before, action.BeforeFolder);
-                }
-                break;
-            case TabBatchKind.NewFolder:
-            case TabBatchKind.NewFolderAround:
-                var wrapped = requested;
-                if (action.Kind == TabBatchKind.NewFolderAround) {
-                    Require(action.Target is not null && !selectedIds.Contains(action.Target.Value));
-                    var target = Tab(action.Target!.Value);
-                    Require(!target.Placement.IsDurable && target.FolderId is null
-                        && target.SplitGroupId is null && !target.Content.IsStartPage);
-                    wrapped = [target.Id, .. requested];
-                }
-                OrderBatchMembers(wrapped);
-                FileTabs(wrapped, action.Placement, CreateFolder(action.Placement), now);
-                break;
-            case TabBatchKind.MoveToSpace:
-                Require(groups.Count == 0, BrowserRuleCodes.CannotMoveSplitAcrossSpaces);
-                Require(destination is not null && !ReferenceEquals(this, destination));
-                var receiving = destination!;
-                Require(TabPlacement.All.All(placement => placement.Holds(receiving.Tabs.Count(t => t.Placement == placement)
-                    + members.Count(t => t.Placement == placement))), BrowserRuleCodes.PinnedCapacity);
-                var follow = selected is { } active && selectedIds.Contains(active) ? active : requested[0];
-                foreach (var tab in requested)
-                    selected = TransferTo(receiving, tab, selected, fallback, null, null, null, false, destinationSelection, now);
-                if (action.Follow) { receiving.Tab(follow).Activate(now); destinationSelection = follow; }
-                break;
-            case TabBatchKind.Split:
-                var targetId = action.Target ?? requested[0];
-                Require(!Tab(targetId).Content.IsStartPage);
-                var existing = SplitMembers(targetId).Select(t => t.Id).ToHashSet();
-                Require(existing.Union(selectedIds).Count() is >= 2 and <= MaximumSplitMembers, BrowserRuleCodes.SplitCapacity);
-                var insertion = action.Index;
-                foreach (var id in requested.Where(id => !existing.Contains(id))) {
-                    var oldGroup = Tab(targetId).SplitGroupId;
-                    var joined = JoinSplit(id, targetId, insertion, ids, now);
-                    copies.AddRange(joined.Copies); selected = joined.SelectedTab;
-                    var targetCopy = joined.Copies.FirstOrDefault(p => p.Source == targetId);
-                    if (targetCopy != default) {
-                        targetId = targetCopy.Copy;
-                        if (oldGroup is { } old) groupCopies.Add((old, Tab(targetId).SplitGroupId!.Value));
-                    }
-                    if (insertion is { } slot) insertion = checked(slot + 1);
-                }
-                break;
-            case TabBatchKind.Close:
-            case TabBatchKind.Delete:
-                bool deleting = action.Kind == TabBatchKind.Delete;
-                Require(deleting || members.All(t => !t.Placement.IsDurable), BrowserRuleCodes.CurrentTabsOnly);
-                var previous = selected;
-                selected = DismissTabs(requested, selected, fallback, now, deleting, deleting, deleting);
-                if (deleting && previous is { } removed && selectedIds.Contains(removed))
-                    selected = fallback is { } next && tabs.Any(t => t.Id == next) ? next : null;
-                break;
-            case TabBatchKind.Duplicate:
-                foreach (var tab in members)
-                    copies.Add((tab.Id, DuplicateTab(tab.Id, ids, now, requestedIndex: tabs.Count).Id));
-                foreach (var group in groups) {
-                    var copied = members.Where(t => t.SplitGroupId == group)
-                        .Select(t => copies.Single(p => p.Source == t.Id).Copy).ToArray();
-                    if (copied.Length < 2) continue;
-                    var newGroup = ids.Next();
-                    foreach (var tab in copied.Skip(1)) JoinSplitInPlace(tab, copied[0], null, newGroup, now);
-                    groupCopies.Add((group, newGroup));
-                }
-                break;
-            case TabBatchKind.KeepLoaded:
-                Require(members.All(t => t.Content.IsWebPage), BrowserRuleCodes.WebPagesOnly);
-                foreach (var tab in members) tab.SetResidency(action.KeepLoaded);
-                break;
-            case TabBatchKind.SeparateSplits:
-                foreach (var group in groups) DissolveSplit(group, now);
-                break;
-        }
-        return new(selected, destinationSelection, copies, groupCopies, createdFolder);
+        foreach (var (source, copy) in groupCopies) CopySplitMetadata(source, copy, now);
+        return (shown, copies);
     }
 
-    private void OrderBatchMembers(IReadOnlyList<Guid> requested) {
-        var members = requested.Select(Tab).ToArray(); var ids = requested.ToHashSet();
-        int insertion = tabs.FindIndex(t => ids.Contains(t.Id));
-        tabs.RemoveAll(t => ids.Contains(t.Id)); tabs.InsertRange(insertion, members);
+    /// Dissolves every split the selected tabs belong to.
+    public void SeparateSelected(SelectedTabs selection, DateTimeOffset now) {
+        RequireSelectedTabs(selection);
+        foreach (var group in SelectedGroups(selection)) DissolveSplit(group, now);
     }
 
-    private void FileBatchRoots(TabBatchSelection request, TabBatchAction action, DateTimeOffset now) {
-        var folderIds = request.Folders.Select(f => f.Id).ToHashSet();
-        var tabIds = request.Tabs.Select(t => t.Id).ToHashSet();
-        if (!action.Placement.HoldsFolders || action.Folder is { } parent && folderIds.Contains(parent)
-            || action.Before is { } before && tabIds.Contains(before)
-            || action.BeforeFolder is { } beforeFolder && folderIds.Contains(beforeFolder))
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
-        var tree = new FolderTree(folders);
-        if (action.Folder is { } owner && tree.Folder(owner).Location != action.Placement
-            || action.BeforeFolder is { } sibling && (tree.Folder(sibling).ParentId != action.Folder
-                || tree.Folder(sibling).Location != action.Placement)
-            || action.BeforeFolder is null && action.Before is { } anchor && (Tab(anchor).FolderId != action.Folder
-                || Tab(anchor).Placement != action.Placement || SplitMembers(anchor)[0].Id != anchor))
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
-        List<(BatchItem Item, Guid[] Tabs)> blocks = []; HashSet<Guid> included = [];
-        foreach (var root in request.Roots) {
+    #endregion
+
+    #region Actions - Residency
+
+    /// Keeps the selected tabs' pages loaded while they are not shown, or lets
+    /// them unload. A selected folder's tabs are included. Refused with
+    /// `WebPagesOnly` for a tab that shows no web page.
+    public void KeepSelectedLoaded(SelectedTabs selection, bool keeps) {
+        RequireWholeSplits(selection);
+        if (selection.Members.FirstOrDefault(tab => !tab.Content.IsWebPage) is { } other) throw new Rejected(new WebPagesOnly(other.Id));
+        foreach (var tab in selection.Members) tab.SetResidency(keeps);
+    }
+
+    #endregion
+
+    #region Actions - Moving
+
+    /// Moves the selected tabs into `destination`, another Space's
+    /// organization, each to the end of its own section there, and answers the
+    /// tab each Space's window shows next. The window gives up `shown` for
+    /// `fallback` when it moved; when `follows`, the destination shows the
+    /// shown tab if it moved, or else the first moved tab. Refused with
+    /// `CannotMoveSplitAcrossSpaces` for a split member and `PinnedTabsFull`
+    /// when the destination cannot hold them all.
+    public (Guid? Shown, Guid? DestinationShown) MoveSelected(SelectedTabs selection, BrowserTabCollection destination, Guid? shown,
+        Guid? fallback, Guid? destinationShown, bool follows, DateTimeOffset now) {
+        ArgumentNullException.ThrowIfNull(destination);
+        RequireSelectedTabs(selection);
+        if (selection.Members.FirstOrDefault(tab => tab.SplitGroupId is not null) is { } member)
+            throw new Rejected(new CannotMoveSplitAcrossSpaces(member.Id));
+        foreach (var placement in TabPlacement.All)
+            RequireRoom(placement, destination.tabs.Count(tab => tab.Placement == placement)
+                + selection.Members.Count(tab => tab.Placement == placement));
+        var followed = shown is { } active && selection.Holds(active) ? active : selection.MemberIds[0];
+        foreach (var id in selection.MemberIds)
+            shown = TransferTo(destination, id, shown, fallback, null, null, null, afterSelection: false, destinationShown, now);
+        if (!follows) return (shown, destinationShown);
+        destination.Tab(followed).Activate(now);
+        return (shown, followed);
+    }
+
+    #endregion
+
+    #region Actions - Filing
+
+    /// Moves the selection into `folder` or to the top level of `placement`'s
+    /// section, before the tab `before` or the folder `beforeFolder`, in
+    /// order: a selected folder moves whole, and a split member brings its
+    /// split along unless `leavesSplits`. In a section that holds no folders
+    /// the tabs move one by one, refused with `CannotPinSplit` for a member
+    /// that stays in its split and `PinnedTabsFull` for a full section.
+    public void FileSelected(SelectedTabs selection, TabPlacement placement, Guid? folder, Guid? before, Guid? beforeFolder,
+        bool leavesSplits, DateTimeOffset now) {
+        ArgumentNullException.ThrowIfNull(selection);
+        ArgumentNullException.ThrowIfNull(placement);
+        if (selection.HoldsFolders) {
+            FileRoots(selection, placement, folder, before, beforeFolder, leavesSplits, now);
+            return;
+        }
+        if (before is { } anchor && selection.Holds(anchor)) throw new Rejected(new InvalidFolderPlacement());
+        if (placement.HoldsFolders) {
+            var moving = SplitRuns(selection.MemberIds, leavesSplits);
+            OrderSelected(moving);
+            FileTabs(moving, placement, folder, now, before, beforeFolder, leavesSplits);
+            return;
+        }
+        if (!placement.HoldsSplits && !leavesSplits && selection.Members.FirstOrDefault(tab => tab.SplitGroupId is not null) is { } member)
+            throw new Rejected(new CannotPinSplit(member.Id));
+        RequireRoom(placement, tabs.Count(tab => tab.Placement == placement && !selection.Holds(tab.Id)) + selection.Members.Count);
+        if (folder is not null || beforeFolder is not null
+            || before is { } named && !tabs.Any(tab => tab.Id == named && tab.Placement == placement))
+            throw new Rejected(new InvalidFolderPlacement());
+        foreach (var id in selection.MemberIds) MoveTab(id, placement, null, before, leavesSplits, now);
+    }
+
+    /// Makes a folder named `title` in `color` at the top level of
+    /// `placement`'s section, with an identity from `ids`, and moves the
+    /// selection into it: a selected folder moves in whole.
+    public Guid FolderSelected(SelectedTabs selection, TabPlacement placement, string title, BrandColor color, IIdSource ids,
+        DateTimeOffset now) {
+        RequireWholeSplits(selection);
+        if (selection.HoldsFolders) {
+            var made = MakeFolder(placement, title, color, ids);
+            FileRoots(selection, placement, made, null, null, leavesSplits: false, now);
+            return made;
+        }
+        OrderSelected(selection.MemberIds);
+        var folder = MakeFolder(placement, title, color, ids);
+        FileTabs(selection.MemberIds, placement, folder, now);
+        return folder;
+    }
+
+    /// Makes an open-tabs folder named `title` in `color` in the place of the
+    /// open tab `tabId`, with an identity from `ids`, and moves that tab and
+    /// then the selection into it. Refused with `InvalidFolderPlacement` when
+    /// the tab is saved or pinned, in a folder or a split, a Start Page, or
+    /// selected.
+    public Guid FolderSelectedAround(SelectedTabs selection, Guid tabId, string title, BrandColor color, IIdSource ids,
+        DateTimeOffset now) {
+        RequireSelectedTabs(selection);
+        if (selection.Holds(tabId)) throw new Rejected(new InvalidFolderPlacement());
+        var target = Tab(tabId);
+        if (target.Placement.IsDurable || target.FolderId is not null || target.SplitGroupId is not null || target.Content.IsStartPage)
+            throw new Rejected(new InvalidFolderPlacement());
+        Guid[] wrapped = [target.Id, .. selection.MemberIds];
+        OrderSelected(wrapped);
+        var folder = MakeFolder(TabPlacement.Current, title, color, ids);
+        FileTabs(wrapped, TabPlacement.Current, folder, now);
+        return folder;
+    }
+
+    /// Moves each selected root into `folder` or to the top level of
+    /// `placement`'s section, the roots one block after another in order,
+    /// before the tab `before` or the folder `beforeFolder`. A folder block is
+    /// the folder with everything in it; a tab block is the tab with its split
+    /// unless `leavesSplits`. Refused with `InvalidFolderPlacement` for a
+    /// section without folders or an anchor that moves with the selection or
+    /// sits elsewhere, and `FolderCycle` for a destination folder the
+    /// selection holds.
+    private void FileRoots(SelectedTabs selection, TabPlacement placement, Guid? folder, Guid? before, Guid? beforeFolder,
+        bool leavesSplits, DateTimeOffset now) {
+        if (folder is { } parent && selection.Folders.Contains(parent)) throw new Rejected(new FolderCycle(parent));
+        if (!placement.HoldsFolders || before is { } tab && selection.Holds(tab)
+            || beforeFolder is { } sibling && selection.Folders.Contains(sibling))
+            throw new Rejected(new InvalidFolderPlacement());
+        if (folder is { } owner && KnownFolder(owner).Location != placement
+            || beforeFolder is { } next && (KnownFolder(next).ParentId != folder || KnownFolder(next).Location != placement)
+            || beforeFolder is null && before is { } anchor && (Tab(anchor).FolderId != folder || Tab(anchor).Placement != placement
+                || SplitMembers(anchor)[0].Id != anchor))
+            throw new Rejected(new InvalidFolderPlacement());
+        List<(SelectedTabs.Root Root, Guid[] Tabs)> blocks = [];
+        HashSet<Guid> included = [];
+        foreach (var root in selection.Roots) {
             if (root.IsFolder) blocks.Add((root, []));
             else if (!included.Contains(root.Id)) {
-                var members = SplitMembers(root.Id).Select(t => t.Id).ToArray();
-                included.UnionWith(members); blocks.Add((root, members));
+                var members = SplitRuns([root.Id], leavesSplits);
+                included.UnionWith(members);
+                blocks.Add((root, members));
             }
         }
-        var tabAnchor = action.Before; var folderAnchor = action.BeforeFolder;
+        var tabAnchor = before;
+        var folderAnchor = beforeFolder;
         foreach (var block in blocks.AsEnumerable().Reverse()) {
-            if (block.Item.IsFolder) {
-                var folder = block.Item.Id;
-                MoveFolder(folder, action.Placement, action.Folder, now, folderAnchor, tabAnchor);
-                folderAnchor = folder; tabAnchor = null;
+            if (block.Root.IsFolder) {
+                MoveFolder(block.Root.Id, placement, folder, now, folderAnchor, tabAnchor);
+                folderAnchor = block.Root.Id;
+                tabAnchor = null;
             } else {
-                FileTabs(block.Tabs, action.Placement, action.Folder, now, tabAnchor, folderAnchor);
-                tabAnchor = block.Tabs[0]; folderAnchor = null;
+                FileTabs(block.Tabs, placement, folder, now, tabAnchor, folderAnchor, leavesSplits);
+                tabAnchor = block.Tabs[0];
+                folderAnchor = null;
             }
         }
     }
+
+    /// A new folder at the top level of `placement`'s section.
+    private Guid MakeFolder(TabPlacement placement, string title, BrandColor color, IIdSource ids) {
+        var folder = ids.Next();
+        AddFolder(folder, title, placement);
+        SetFolderColor(folder, color);
+        return folder;
+    }
+
+    /// Gathers the tabs `requested` names where the first of them is, in that order.
+    private void OrderSelected(IReadOnlyList<Guid> requested) {
+        BrowserTab[] members = [.. requested.Select(Tab)];
+        var ids = requested.ToHashSet();
+        int insertion = tabs.FindIndex(tab => ids.Contains(tab.Id));
+        tabs.RemoveAll(tab => ids.Contains(tab.Id));
+        tabs.InsertRange(insertion, members);
+    }
+
+    /// The tabs `requested` names, each with its whole split run unless
+    /// `leavesSplits`, in order and once each.
+    private Guid[] SplitRuns(IReadOnlyList<Guid> requested, bool leavesSplits) =>
+        leavesSplits ? [.. requested] : [.. requested.SelectMany(id => SplitMembers(id).Select(tab => tab.Id)).Distinct()];
+
+    #endregion
+
+    #region Actions - Rules
+
+    /// Refuses a selection holding folders, for an action on tabs alone, and
+    /// one holding part of a split.
+    private void RequireSelectedTabs(SelectedTabs selection) {
+        RequireWholeSplits(selection);
+        if (selection.HoldsFolders) throw new Rejected(new SelectionHoldsFolders());
+    }
+
+    /// Refuses a selection holding some members of a split and not the rest.
+    private void RequireWholeSplits(SelectedTabs selection) {
+        ArgumentNullException.ThrowIfNull(selection);
+        foreach (var tab in selection.Members)
+            if (tab.SplitGroupId is { } group && SplitMembers(tab.Id).Any(member => !selection.Holds(member.Id)))
+                throw new Rejected(new IncompleteSplit(group));
+    }
+
+    /// The splits the selected tabs belong to, in the order they come.
+    private static IReadOnlyList<Guid> SelectedGroups(SelectedTabs selection) =>
+        [.. selection.Members.Select(tab => tab.SplitGroupId).OfType<Guid>().Distinct()];
 
     #endregion
 }

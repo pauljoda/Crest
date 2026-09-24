@@ -21,7 +21,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let store = harness.store
         store.selectSpace(original.spaces[0].id)
         let request = BrowserTabBatchRequest(ids: tabs.map(\.id), in: store.session.spaces[0])
-        try store.commitTabBatch(request, action: .delete)
+        try store.send(store.deleting(request), for: request)
         // The batch is on disk with its journal when the command returns.
         let (saved, committed) = try harness.stored()
         XCTAssertTrue(saved.spaces[0].tabs.allSatisfy { !ids.contains($0.id) })

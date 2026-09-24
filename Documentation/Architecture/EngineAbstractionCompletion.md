@@ -305,9 +305,8 @@ Remaining:
 - `BrowserSidebarReorderTargetResolver` reads `BrowserCoreLimits` for the
   split member limit instead of asking the core, because it runs on every drag
   frame. The core still rejects anything past the limit.
-- Some wire formats stay as they are for compatibility. The core parses
-  `TabBatchKind` in PascalCase. Sync document error codes are camelCase while
-  session rule codes are snake_case. Identifier casing differs by path: link
+- Some wire formats stay as they are for compatibility. Sync document error
+  codes are camelCase while session rule codes are snake_case. Identifier casing differs by path: link
   routes use lowercase UUID strings, and other paths use the native encoder's
   spelling.
 

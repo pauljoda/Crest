@@ -16,8 +16,8 @@ struct BrowserSidebarReorderCommit {
                 browser.tabMultiSelection.message = reason
                 return false
             }
-            guard let action = batchAction(target, request: request) else { return false }
-            return BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).perform(request, action: action)
+            guard let batch = batch(target, request: request) else { return false }
+            return BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).perform(batch, for: request)
         }
         switch item {
         case .tab(let tabItem):
@@ -31,10 +31,10 @@ struct BrowserSidebarReorderCommit {
 
     func batchReason(_ target: BrowserSidebarReorderTarget, request: BrowserTabBatchRequest) -> String? {
         if let reason = batchDragRestriction(target, request: request) { return reason }
-        guard let action = batchAction(target, request: request) else {
+        guard let batch = batch(target, request: request) else {
             return String(localized: "These tabs cannot be placed here.")
         }
-        return BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).reason(request, action: action)
+        return BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).reason(batch)
     }
 
     private func batchDragRestriction(_ target: BrowserSidebarReorderTarget, request: BrowserTabBatchRequest) -> String?
@@ -54,34 +54,33 @@ struct BrowserSidebarReorderCommit {
         }
     }
 
-    private func batchAction(_ target: BrowserSidebarReorderTarget, request: BrowserTabBatchRequest)
-        -> BrowserTabBatchAction?
-    {
+    /// What dropping the selection on `target` does.
+    private func batch(_ target: BrowserSidebarReorderTarget, request: BrowserTabBatchRequest) -> BrowserTabBatch? {
         switch target.kind {
-        case .space(let destination): return .moveToSpace(destination)
+        case .space(let destination): return browser.moving(request, to: destination)
         case .intoFolder(let id):
             guard let folder = browser.space(matching: request.assignment)?.folders.first(where: { $0.id == id }) else {
                 return nil
             }
-            return .file(folder.location.tabPlacement, folder: id)
+            return browser.filing(request, folder.location.tabPlacement, folder: id)
         case .insert(let section, let before, _):
             if case .folders(let parent) = section {
                 let location =
                     parent.flatMap { id in
                         browser.space(matching: request.assignment)?.folders.first { $0.id == id }?.location
                     } ?? .saved
-                return .file(location.tabPlacement, folder: parent, beforeFolder: before?.folderID)
+                return browser.filing(request, location.tabPlacement, folder: parent, beforeFolder: before?.folderID)
             }
             guard case .tabs(let placement, let folder) = section else { return nil }
-            return .file(
-                placement, folder: folder, before: anchorTabID(before, in: request.assignment),
+            return browser.filing(
+                request, placement, folder: folder, before: anchorTabID(before, in: request.assignment),
                 beforeFolder: before?.folderID)
         case .splitInsert(let assignment, let index):
             guard assignment == request.assignment,
                 let selected = browser.selectedTabID(in: assignment.spaceID)
             else { return nil }
-            return .split(joining: selected, at: index)
-        case .createCurrentFolder(let tabID): return .newFolderAround(tabID)
+            return browser.splitting(request, joining: selected, at: index)
+        case .createCurrentFolder(let tabID): return browser.filingInNewFolder(request, around: tabID)
         }
     }
 

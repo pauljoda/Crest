@@ -4,6 +4,5 @@ import Foundation
 /// spellings in `SessionOperation.cs`.
 enum BrowserSessionOperation: String, Codable, Sendable {
     case tabTransfer = "tab.transfer"
-    case tabsBatch = "tabs.batch"
     case workspaceImport = "workspace.import"
 }

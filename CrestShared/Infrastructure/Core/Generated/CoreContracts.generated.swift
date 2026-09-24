@@ -57,12 +57,15 @@ enum Change: Equatable, Sendable {
 
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
+    case alreadyInSpace(AlreadyInSpace)
     case alreadyInSplit(AlreadyInSplit)
     case authenticationBusy(AuthenticationBusy)
     case borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner)
     case cannotDeleteLastSpace(CannotDeleteLastSpace)
+    case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
     case credentialRecordLimitReached(CredentialRecordLimitReached)
+    case currentTabsOnly(CurrentTabsOnly)
     case defaultEngineAlreadyRegistered(DefaultEngineAlreadyRegistered)
     case downloadLimitReached(DownloadLimitReached)
     case duplicateCredential(DuplicateCredential)
@@ -76,6 +79,7 @@ enum Rejection: Equatable, Error, Sendable {
     case folderCycle(FolderCycle)
     case folderDepthLimitReached(FolderDepthLimitReached)
     case folderLimitReached(FolderLimitReached)
+    case incompleteSplit(IncompleteSplit)
     case invalidCredentialDate(InvalidCredentialDate)
     case invalidCredentialOrigin(InvalidCredentialOrigin)
     case invalidCredentialRecord(InvalidCredentialRecord)
@@ -106,12 +110,15 @@ enum Rejection: Equatable, Error, Sendable {
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
+    case selectionChanged(SelectionChanged)
+    case selectionHoldsFolders(SelectionHoldsFolders)
     case spaceAlreadyExists(SpaceAlreadyExists)
     case spaceBeingDeleted(SpaceBeingDeleted)
     case spaceLimitReached(SpaceLimitReached)
     case spaceLocked(SpaceLocked)
     case splitBoundary(SplitBoundary)
     case splitLimitReached(SplitLimitReached)
+    case splitNeedsTwoTabs(SplitNeedsTwoTabs)
     case staleCommand(StaleCommand)
     case staleCredentialComparison(StaleCredentialComparison)
     case staleUnlockRequest(StaleUnlockRequest)
@@ -142,8 +149,19 @@ enum Rejection: Equatable, Error, Sendable {
     var message: LocalizedStringResource? {
         switch self {
         case .cannotDeleteLastSpace(let value): value.message
+        case .cannotMoveSplitAcrossSpaces(let value): value.message
+        case .cannotPinSplit(let value): value.message
+        case .currentTabsOnly(let value): value.message
         case .duplicateSearchEngineName(let value): value.message
+        case .incompleteSplit(let value): value.message
+        case .pinnedTabsFull(let value): value.message
         case .searchEngineLimitReached(let value): value.message
+        case .selectionChanged(let value): value.message
+        case .selectionHoldsFolders(let value): value.message
+        case .spaceLocked(let value): value.message
+        case .splitLimitReached(let value): value.message
+        case .splitNeedsTwoTabs(let value): value.message
+        case .webPagesOnly(let value): value.message
         default: nil
         }
     }
@@ -213,6 +231,10 @@ struct AdoptLegacySession: Intent, Equatable, Sendable {
 
 struct AdoptWindowRecords: Intent, Equatable, Sendable {
     let records: Data?
+}
+
+struct AlreadyInSpace: Equatable, Sendable {
+    let spaceID: UUID
 }
 
 struct AlreadyInSplit: Equatable, Sendable {
@@ -359,8 +381,20 @@ struct CannotDeleteLastSpace: Equatable, Sendable {
     }
 }
 
+struct CannotMoveSplitAcrossSpaces: Equatable, Sendable {
+    let tabID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Split View groups stay in their Space. Separate the split before moving it to another Space.")
+    }
+}
+
 struct CannotPinSplit: Equatable, Sendable {
     let tabID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Split View groups cannot be pinned. Separate the split first.")
+    }
 }
 
 struct ChooseTabIcon: Intent, Equatable, Sendable {
@@ -398,6 +432,13 @@ struct CloseTab: Intent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
+}
+
+struct CloseTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
 }
 
 struct CloseWindow: Intent, Equatable, Sendable {
@@ -570,6 +611,14 @@ struct CrestCharge: Equatable, Sendable {
     let style: CrestMonogramStyle?
 }
 
+struct CurrentTabsOnly: Equatable, Sendable {
+    let tabID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Archive applies to current tabs. Use Unload Pages to close saved or pinned pages, or Delete Tabs to remove their saved entries.")
+    }
+}
+
 struct CustomSearchEngine: Equatable, Sendable, Identifiable {
     let id: UUID
     let name: String
@@ -605,6 +654,13 @@ struct DeleteTab: Intent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
+}
+
+struct DeleteTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
 }
 
 struct DismissShownTab: Intent, Equatable, Sendable {
@@ -736,6 +792,13 @@ struct DuplicateTab: Intent, Equatable, Sendable {
     let shows: Bool
 }
 
+struct DuplicateTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+}
+
 struct EngineAlreadyRegistered: Equatable, Sendable {
     let kind: EngineKind
 }
@@ -797,8 +860,9 @@ struct FallbackTabIndex: Equatable, Sendable {
 
 struct FileTabs: Intent, Equatable, Sendable {
     let workspaceID: UUID
+    let windowID: UUID
     let spaceID: UUID
-    let tabIDs: [UUID]
+    let selection: TabSelection
     let placement: TabPlacement
     let folderID: UUID?
     let beforeTabID: UUID?
@@ -852,6 +916,22 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let orderAnchorTabID: UUID?
 }
 
+struct FolderTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let placement: TabPlacement
+}
+
+struct FolderTabsAround: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let tabID: UUID
+}
+
 struct FoldersChanged: Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -880,6 +960,14 @@ struct HistoryEntryState: Equatable, Sendable, Identifiable {
 struct ImportAppPreferences: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let legacy: LegacyAppPreferences
+}
+
+struct IncompleteSplit: Equatable, Sendable {
+    let groupID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("The split changed. Select the whole group again.")
+    }
 }
 
 struct InvalidCredentialDate: Equatable, Sendable {
@@ -956,6 +1044,14 @@ struct KeepPageLoaded: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
+    let keeps: Bool
+}
+
+struct KeepTabsLoaded: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
     let keeps: Bool
 }
 
@@ -1122,6 +1218,15 @@ struct MoveTab: Intent, Equatable, Sendable {
     let folderID: UUID?
     let beforeTabID: UUID?
     let leavesSplit: Bool
+}
+
+struct MoveTabsToSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let destinationSpaceID: UUID
+    let follows: Bool
 }
 
 struct NameSplit: Intent, Equatable, Sendable {
@@ -1343,6 +1448,10 @@ struct PersistentWorkspaceRequired: Equatable, Sendable {
 
 struct PinnedTabsFull: Equatable, Sendable {
     let capacity: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("A Space can hold up to \(capacity) pinned tabs. Unpin tabs or select fewer tabs.")
+    }
 }
 
 struct PromoteTransientPage: Intent, Equatable, Sendable {
@@ -1486,8 +1595,27 @@ struct SelectSearchEngine: Intent, Equatable, Sendable {
     let customEngineID: UUID?
 }
 
+struct SelectionChanged: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("The selected items changed. Select them again before continuing.")
+    }
+}
+
+struct SelectionHoldsFolders: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Move selected folders into saved or current tabs, or another folder. Use a folder’s own menu for other folder actions.")
+    }
+}
+
 struct SendPermission: Equatable, Sendable {
     let refusal: Rejection?
+}
+
+struct SeparateSplits: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
 }
 
 struct SessionAdopted: Equatable, Sendable {
@@ -1680,6 +1808,10 @@ struct SpaceLockChanged: Equatable, Sendable {
 
 struct SpaceLocked: Equatable, Sendable {
     let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("The Space is locked or no longer active. Unlock it and select the tabs again.")
+    }
 }
 
 struct SpaceSettings: Equatable, Sendable {
@@ -1744,6 +1876,27 @@ struct SplitGroupsChanged: Equatable, Sendable {
 
 struct SplitLimitReached: Equatable, Sendable {
     let limit: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select fewer tabs or use a smaller split.")
+    }
+}
+
+struct SplitNeedsTwoTabs: Equatable, Sendable {
+    let limit: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select fewer tabs or use a smaller split.")
+    }
+}
+
+struct SplitTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let targetTabID: UUID?
+    let index: Int?
 }
 
 struct StaleCommand: Equatable, Sendable {
@@ -1875,6 +2028,12 @@ struct TabLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
+struct TabSelection: Equatable, Sendable {
+    let tabIDs: [UUID]
+    let folderIDs: [UUID]
+    let memberTabIDs: [UUID]
+}
+
 struct TabState: Equatable, Sendable, Identifiable {
     let id: UUID
     let title: String
@@ -1988,6 +2147,10 @@ struct UpdateSearchEngine: Intent, Equatable, Sendable {
 
 struct WebPagesOnly: Equatable, Sendable {
     let tabID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("This action requires webpage tabs. Deselect built-in pages first.")
+    }
 }
 
 struct WindowChanged: Equatable, Sendable {

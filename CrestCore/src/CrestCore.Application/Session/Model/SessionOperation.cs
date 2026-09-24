@@ -1,14 +1,12 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
-using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
 internal enum SessionOperation {
     Unknown,
     TabTransfer,
-    TabsBatch,
     WorkspaceImport,
 }
 
@@ -17,7 +15,6 @@ internal static class SessionOperationCodes {
 
     public static SessionOperation Parse(string? value) => value switch {
         "tab.transfer" => SessionOperation.TabTransfer,
-        "tabs.batch" => SessionOperation.TabsBatch,
         "workspace.import" => SessionOperation.WorkspaceImport,
         _ => SessionOperation.Unknown
     };
@@ -34,12 +31,9 @@ internal static class SessionOperationCodes {
     /// intent then carries its own staging, and this switch goes with the
     /// operation strings.
     public static SyncStaging? Staging(SessionOperation operation, JsonObject request) {
-        var explicitDelete = SyncDeletionReason.ExplicitDelete;
         var superseded = SyncDeletionReason.Superseded;
         return operation switch {
             SessionOperation.WorkspaceImport or SessionOperation.TabTransfer => new(superseded, SyncUrgency.WithSave),
-            SessionOperation.TabsBatch => new(Enum.TryParse<TabBatchKind>(request["arguments"]?["kind"]?.GetValue<string>(), out var kind)
-                && kind == TabBatchKind.Delete ? explicitDelete : superseded, SyncUrgency.WithSave),
             _ => new(superseded, SyncUrgency.Coalesced)
         };
     }

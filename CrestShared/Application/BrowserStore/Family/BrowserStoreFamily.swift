@@ -179,19 +179,9 @@ final class BrowserStoreFamily {
         try commitPreparedChange(command, previous: previous, from: source)
     }
 
-    func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: BrowserCoreTabBatch.Arguments, from store: BrowserStore,
-        at date: Date) throws -> (command: BrowserCoreSessionAuthority.PreparedChange, result: BrowserTabBatchResult) {
-        try core.prepareTabBatch(request, arguments: arguments, window: store.windowID.rawValue, at: date)
-    }
-
-    func commitTabBatch(_ command: BrowserCoreSessionAuthority.PreparedChange, from store: BrowserStore) throws {
-        try commitPreparedChange(command, previous: authoritativeSession, from: store)
-    }
-
     /// Commits a prepared command whose failure the caller handles. The core
-    /// saves Space deletion, imports, batches and cross-Space moves with the
-    /// journal it stages before this returns, because an upload follows and
-    /// Space deletion erases engine data between its two commands.
+    /// saves an import and a cross-Space move with the journal it stages
+    /// before this returns, because an upload follows.
     private func commitPreparedChange(_ command: BrowserCoreSessionAuthority.PreparedChange,
         previous: BrowserSession, from source: BrowserStore) throws {
         try core.commit(command)
@@ -235,14 +225,17 @@ final class BrowserStoreFamily {
         return (changes, true)
     }
 
-    /// Runs one session intent as `send` does, and throws the rule that
-    /// refused it or the save that failed, for a caller that handles either,
-    /// such as a deletion step the core saves before it returns.
-    func commit(_ intent: some Intent, from source: BrowserStore) throws(Rejection) {
+    /// Runs one session intent as `send` does, and answers the changes the
+    /// core published with it, or throws the rule that refused it or the save
+    /// that failed, for a caller that handles either, such as a deletion step
+    /// the core saves before it returns.
+    @discardableResult
+    func commit(_ intent: some Intent, from source: BrowserStore) throws(Rejection) -> [Change] {
         let previous = authoritativeSession
-        try source.core.send(intent)
-        guard authoritativeSession != previous else { return }
+        let changes = try source.core.send(intent)
+        guard authoritativeSession != previous else { return changes }
         reconcileStores(after: previous, from: source)
+        return changes
     }
 
     /// Whether the core would accept a session intent `source`'s window
@@ -259,26 +252,6 @@ final class BrowserStoreFamily {
     /// or could not answer.
     func refusal(of intent: some Intent, from source: BrowserStore) -> Rejection? {
         (try? source.core.query(CanSend(intent: intent)))?.refusal
-    }
-
-    /// A record command without arguments of its own.
-    func executeRecords(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
-        from source: BrowserStore, at date: Date = .now) -> Bool {
-        executeRecords(operation, in: spaceID, arguments: BrowserCoreNoArguments(), from: source, at: date)
-    }
-
-    func executeRecords<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
-        arguments: Arguments, from source: BrowserStore, at date: Date = .now) -> Bool {
-        let previous = authoritativeSession
-        do {
-            let changed = try core.executeRecords(
-                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
-            if changed { reconcileStores(after: previous, from: source) }
-            return changed
-        } catch {
-            source.localSyncErrorDescription = "Core record command failed: \(error)"
-            return false
-        }
     }
 
     func moveTab(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment, destination: BrowserSpaceRuntimeAssignment,

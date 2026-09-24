@@ -15,16 +15,6 @@ extension BrowserStore {
             from: self)
     }
 
-    /// What the pages of the tabs `ids` names show now, which a tab batch's
-    /// copies of them start from.
-    func copyObservations(for ids: Set<TabID>, in space: BrowserSpace) -> [BrowserCoreTabBatch.CopyObservation] {
-        space.tabs.filter { ids.contains($0.id) }.map { source in
-            let observed = tabCopying?.sourceForTabCopy(source, in: space) ?? source
-            return BrowserCoreTabBatch.CopyObservation(
-                tabId: source.id.rawValue, title: observed.title, url: observed.url?.absoluteString)
-        }
-    }
-
     /// The core has accepted each copy's identity and visible URL/title. The
     /// adapter now prepares its opaque navigation history before pages mount.
     func prepareAcceptedCopies(_ copies: [TabCopied], from space: BrowserSpace) {

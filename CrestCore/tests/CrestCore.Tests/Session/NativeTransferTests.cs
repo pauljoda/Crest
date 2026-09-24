@@ -131,7 +131,7 @@ public sealed partial class BrowserContractsTests {
         target["tabs"] = pinned;
         var full = new NativeSessionAuthority(Bytes(source));
         window = null;
-        Assert.Equal("pinned_limit", Assert.Throws<BrowserRuleException>(() => full.PrepareCommand(Request("pinned"))).Code);
+        Assert.IsType<PinnedTabsFull>(Assert.Throws<Rejected>(() => full.PrepareCommand(Request("pinned"))).Rejection);
         Assert.Equal(1UL, full.Revision);
     }
 }

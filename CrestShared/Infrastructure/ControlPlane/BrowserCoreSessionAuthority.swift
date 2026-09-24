@@ -34,10 +34,9 @@ final class BrowserCoreSessionAuthority {
 
     final class PreparedChange {
         fileprivate let handle: UInt64
-        /// TRANSITIONAL until S6.7: the session the command proposes. A tab
-        /// batch previews it, and an import's commit offers the images it gives
-        /// the tabs it brings in; every other tab it places already has its
-        /// image in `FaviconAssets`.
+        /// TRANSITIONAL until S6.7: the session the command proposes. An
+        /// import's commit offers the images it gives the tabs it brings in;
+        /// every other tab it places already has its image in `FaviconAssets`.
         let session: BrowserSession
 
         fileprivate init(handle: UInt64, session: BrowserSession) {
@@ -78,19 +77,6 @@ final class BrowserCoreSessionAuthority {
         let profileId: UUID
     }
 
-    /// One session command: its operation, the Space it runs in (null for a
-    /// command without one), its arguments and the window that issued it
-    /// (null for none).
-    private struct Command<Arguments: Encodable>: Encodable {
-        let version = 1
-        let operation: BrowserSessionOperation
-        @BrowserCoreNullable var spaceId: UUID?
-        @BrowserCoreNullable var profileId: UUID?
-        let arguments: Arguments
-        @BrowserCoreNullable var windowId: UUID?
-        let now: TimeInterval
-    }
-
     /// `tab.transfer` between two Spaces of this workspace.
     private struct TabTransferCommand: Encodable {
         let version = 1
@@ -124,13 +110,6 @@ final class BrowserCoreSessionAuthority {
         let arguments: BrowserCoreWorkspaceImport.Arguments
         @BrowserCoreNullable var windowId: UUID?
         let now: TimeInterval
-    }
-
-    /// A record command's answer, read only for whether it changed anything.
-    private struct RecordAnswer: Decodable {
-        struct Change: Decodable {}
-
-        let changes: [Change]
     }
 
     /// The edits that take the accepted records to a proposed session.
@@ -410,43 +389,6 @@ final class BrowserCoreSessionAuthority {
     }
 
     // MARK: - Actions - Commands
-
-    /// Runs a history command, and
-    /// answers whether it changed anything.
-    func executeRecords<Arguments: Encodable>(
-        _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
-        window: UUID?, at date: Date
-    ) throws -> Bool {
-        let space = spaceID.flatMap { projection.space(id: $0) }
-        let data = try JSONEncoder().encode(
-            Command(
-                operation: operation, spaceId: spaceID?.rawValue, profileId: space?.profile.id,
-                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
-        return try commitCommand(data) { !(try JSONDecoder().decode(RecordAnswer.self, from: $0).changes.isEmpty) }
-    }
-
-    func prepareTabBatch(
-        _ request: BrowserTabBatchRequest, arguments: BrowserCoreTabBatch.Arguments, window: UUID?,
-        at date: Date
-    ) throws -> (command: PreparedChange, result: BrowserTabBatchResult) {
-        let data = try JSONEncoder().encode(
-            Command(
-                operation: .tabsBatch, spaceId: request.assignment.spaceID.rawValue,
-                profileId: request.assignment.profileID, arguments: arguments, windowId: window,
-                now: date.timeIntervalSinceReferenceDate))
-        let handle = try prepareCommand(data)
-        do {
-            let response = try JSONDecoder().decode(BrowserCoreTabBatch.Response.self, from: readCommand(handle))
-            let prepared = try BrowserCoreTabBatch.applying(response, to: projection)
-            return (
-                PreparedChange(handle: handle, session: prepared.session),
-                prepared.result
-            )
-        } catch {
-            crest_session_release_command(handle)
-            throw error
-        }
-    }
 
     func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, window: UUID?) throws -> PreparedChange {
         let input = try JSONEncoder().encode(

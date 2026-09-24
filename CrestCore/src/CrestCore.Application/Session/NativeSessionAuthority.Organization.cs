@@ -43,14 +43,15 @@ public sealed partial class NativeSessionAuthority {
     private SessionEdit DeletingFolder(SessionState basis, DeleteFolder intent, DateTimeOffset now) =>
         Organizing(basis, intent.SpaceId, SyncStaging.Deletion, edited => edited.DeleteFolder(intent.FolderId, now));
 
-    /// Files the tabs. Tabs taken out of their splits leave split metadata no
-    /// tab uses, which goes with them.
-    private SessionEdit Filing(SessionState basis, FileTabs intent, DateTimeOffset now) =>
-        Organizing(basis, intent.SpaceId, SyncStaging.Edit, edited => {
-            edited.FileTabs(intent.TabIds, intent.Placement, intent.FolderId, now, intent.BeforeTabId, intent.BeforeFolderId,
-                intent.LeavesSplits);
-            if (intent.LeavesSplits) edited.PruneSplitMetadata();
-        });
+    /// Files the selection, saved with its journal before the intent returns
+    /// as every action on a selection is. Tabs taken out of their splits
+    /// leave split metadata no tab uses, which goes with them.
+    private SessionEdit Filing(SessionState basis, FileTabs intent, DateTimeOffset now) {
+        var batch = Selecting(basis, intent.WindowId, intent.SpaceId, intent.Selection);
+        batch.Edited.FileSelected(batch.Selected, intent.Placement, intent.FolderId, intent.BeforeTabId, intent.BeforeFolderId,
+            intent.LeavesSplits, now);
+        return batch.Result(basis, SyncStaging.Batch);
+    }
 
     #endregion
 

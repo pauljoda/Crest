@@ -167,7 +167,8 @@ extension BrowserStore {
     ) -> Bool {
         family.send(
             FileTabs(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabIDs: ids.map(\.rawValue),
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
+                selection: TabSelection(tabIDs: ids.map(\.rawValue), folderIDs: [], memberTabIDs: ids.map(\.rawValue)),
                 placement: location.tabPlacement, folderID: folderID?.rawValue, beforeTabID: anchor?.rawValue,
                 beforeFolderID: beforeFolderID?.rawValue, leavesSplits: detachesSplitMembers),
             from: self)

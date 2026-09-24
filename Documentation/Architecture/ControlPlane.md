@@ -799,16 +799,15 @@ Swift's typed identifiers such as `TabID` and `SpaceID` encode as
 `{"rawValue":…}` records, so argument models carry plain `UUID`s instead.
 
 `BrowserCoreErrorCode` names the rule an answer's `error` member reports. It
-covers `BrowserRuleCodes.cs`, `NativeSyncDocumentErrorCodes.cs` and the
-tab-batch rules. The set stays open: a code this build does not know still
-decodes and falls to the caller's generic failure. On the core side, each
+covers `BrowserRuleCodes.cs` and `NativeSyncDocumentErrorCodes.cs`. The set
+stays open: a code this build does not know still decodes and falls to the
+caller's generic failure. On the core side, each
 policy operation decodes its request into a typed record (`*PolicyRequests.cs`),
 and each area keeps its wire codes in one `*Codes.cs` file.
 
-A few spellings stay as they are for compatibility. The core parses
-`TabBatchKind` in PascalCase. Sync document error codes are camelCase while
-session rule codes are snake_case. Link routes carry lowercase UUID strings,
-while other paths use the native encoder's spelling.
+A few spellings stay as they are for compatibility. Sync document error codes
+are camelCase while session rule codes are snake_case. Link routes carry
+lowercase UUID strings, while other paths use the native encoder's spelling.
 
 ## Build workflow
 

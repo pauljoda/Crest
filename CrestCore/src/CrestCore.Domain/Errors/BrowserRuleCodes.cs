@@ -6,13 +6,11 @@ public static class BrowserRuleCodes {
 
     public const string AccessAlreadyAttached = "access_already_attached";
     public const string AlreadyClosing = "already_closing";
-    public const string AlreadyInSplit = "already_in_split";
     public const string BorrowedProfile = "borrowed_profile";
     public const string BorrowedProfileRequiresOwner = "borrowed_profile_requires_owner";
     public const string BorrowedSourceRequired = "borrowed_source_required";
     public const string DeletionRequiresCommand = "deletion_requires_command";
     public const string DifferentProfileOwner = "different_profile_owner";
-    public const string DuplicateFolder = "duplicate_folder";
     public const string DuplicateMediaSession = "duplicate_media_session";
     public const string DuplicatePersistedIdentity = "duplicate_persisted_identity";
     public const string DuplicateResidencyCandidate = "duplicate_residency_candidate";
@@ -21,11 +19,6 @@ public static class BrowserRuleCodes {
     public const string DuplicateSpaceProfile = "duplicate_space_profile";
     public const string DuplicateSyncRecord = "duplicate_sync_record";
     public const string DuplicateTab = "duplicate_tab";
-    public const string FolderActionUnavailable = "folder_action_unavailable";
-    public const string FolderCycle = "folder_cycle";
-    public const string FolderDepthLimit = "folder_depth_limit";
-    public const string FolderLimit = "folder_limit";
-    public const string IncompleteSplit = "incomplete_split";
     public const string InvalidAddress = "invalid_address";
     public const string InvalidContentBlockingPolicy = "invalid_content_blocking_policy";
     public const string InvalidDate = "invalid_date";
@@ -33,8 +26,6 @@ public static class BrowserRuleCodes {
     public const string InvalidDestination = "invalid_destination";
     public const string InvalidFocusedIndex = "invalid_focused_index";
     public const string InvalidFolderAnchor = "invalid_folder_anchor";
-    public const string InvalidFolderPlacement = "invalid_folder_placement";
-    public const string InvalidFolderSymbol = "invalid_folder_symbol";
     public const string InvalidFolderTree = "invalid_folder_tree";
     public const string InvalidHistoryRange = "invalid_history_range";
     public const string InvalidHistoryVisit = "invalid_history_visit";
@@ -69,7 +60,6 @@ public static class BrowserRuleCodes {
     public const string InvalidSyncRecord = "invalid_sync_record";
     public const string InvalidSyncSessionOwner = "invalid_sync_session_owner";
     public const string InvalidSyncTransaction = "invalid_sync_transaction";
-    public const string InvalidTabAnchor = "invalid_tab_anchor";
     public const string InvalidTabContent = "invalid_tab_content";
     public const string InvalidTabCount = "invalid_tab_count";
     public const string InvalidTerminationCount = "invalid_termination_count";
@@ -86,12 +76,10 @@ public static class BrowserRuleCodes {
     public const string PageNotReady = "page_not_ready";
     public const string PageNotUnloadable = "page_not_unloadable";
     public const string PersistentWorkspaceRequired = "persistent_workspace_required";
-    public const string PinnedLimit = "pinned_limit";
     public const string PinnedLimitReached = "pinned_limit_reached";
     public const string PrivateWorkspaceBoundary = "private_workspace_boundary";
     public const string ProfileLeaseRevoked = "profile_lease_revoked";
     public const string ResidencyCandidateLimit = "residency_candidate_limit";
-    public const string SameCollectionTransfer = "same_collection_transfer";
     public const string SameSessionTransfer = "same_session_transfer";
     public const string SameSpaceTransfer = "same_space_transfer";
     public const string SessionEditLimit = "session_edit_limit";
@@ -103,17 +91,13 @@ public static class BrowserRuleCodes {
     public const string SpaceDeletionInProgress = "space_deletion_in_progress";
     public const string SpaceLimitReached = "space_limit_reached";
     public const string SpaceLocked = "space_locked";
-    public const string SplitBoundary = "split_boundary";
-    public const string SplitLimit = "split_limit";
     public const string StaleAuthentication = "stale_authentication";
     public const string StaleBorrowedSource = "stale_borrowed_source";
-    public const string StaleSelection = "stale_selection";
     public const string SyncClockExhausted = "sync_clock_exhausted";
     public const string SyncIdentityMismatch = "sync_identity_mismatch";
     public const string SyncRecordLimit = "sync_record_limit";
     public const string SyncSizeLimit = "sync_size_limit";
     public const string SyncTransactionNotSealed = "sync_transaction_not_sealed";
-    public const string TabLimit = "tab_limit";
     public const string TemporaryWorkspaceRequired = "temporary_workspace_required";
     public const string UnknownArchive = "unknown_archive";
     public const string UnknownArchivedTab = "unknown_archived_tab";
@@ -122,9 +106,7 @@ public static class BrowserRuleCodes {
     public const string UnknownSearchProvider = "unknown_search_provider";
     public const string UnknownSpace = "unknown_space";
     public const string UnknownSplitCommand = "unknown_split_command";
-    public const string UnknownSplitGroup = "unknown_split_group";
     public const string UnknownSyncOperation = "unknown_sync_operation";
-    public const string UnknownTab = "unknown_tab";
     public const string UnknownWorkspaceCommand = "unknown_workspace_command";
     public const string UnsupportedAccessPolicy = "unsupported_access_policy";
     public const string UnsupportedUrl = "unsupported_url";
@@ -151,17 +133,6 @@ public static class BrowserRuleCodes {
     public const string InvalidLinkRouteEdit = "invalid_link_route_edit";
     public const string LinkPatternTooLong = "link_pattern_too_long";
     public const string LinkRouteLimit = "link_route_limit";
-
-    #endregion
-
-    #region Variables - Tab batches
-
-    public const string CannotMoveSplitAcrossSpaces = "cannot_move_split_across_spaces";
-    public const string CannotPinSplit = "cannot_pin_split";
-    public const string CurrentTabsOnly = "current_tabs_only";
-    public const string PinnedCapacity = "pinned_capacity";
-    public const string SplitCapacity = "split_capacity";
-    public const string WebPagesOnly = "web_pages_only";
 
     #endregion
 }

@@ -21,6 +21,14 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// A tab moved between workspaces.
     public static SyncStaging Transfer { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
 
+    /// A person acted on the tabs they selected together: saved with its
+    /// journal before the intent returns.
+    public static SyncStaging Batch { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
+
+    /// A person deleted the tabs they selected together: saved with its
+    /// journal, as deletions, before the intent returns.
+    public static SyncStaging BatchDeletion { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.WithSave);
+
     /// The person deleted records: history, or a folder.
     public static SyncStaging Deletion { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.Immediate);
 

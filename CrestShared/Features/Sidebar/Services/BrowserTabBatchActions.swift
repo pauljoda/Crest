@@ -1,99 +1,70 @@
 import Foundation
 
+/// Performs a window's actions on the selection its sidebar captured. Whether
+/// an action is offered, and what the person is told when one is refused, are
+/// the core's answers; closing pages first asks the person to leave them.
 @MainActor
 struct BrowserTabBatchActions {
+    // MARK: - Variables
+
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
 
-    func validate(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) throws {
-        try authorize(request, action: action)
-        _ = try browser.prepareTabBatch(request, action: action)
-    }
+    // MARK: - Actions - Performing
 
-    private func authorize(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) throws {
-        guard
-            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: request.assignment, in: browser, accessController: spaceAccess) != nil
-        else { throw BrowserTabBatchError.lockedSpace }
-        if case .moveToSpace(let destination) = action,
-            BrowserSidebarAccessPolicy.unlockedSpace(matching: destination, in: browser, accessController: spaceAccess)
-                == nil
-        {
-            throw BrowserTabBatchError.lockedSpace
-        }
-    }
+    /// Whether the core would take the action now.
+    func isAvailable(_ batch: BrowserTabBatch) -> Bool { browser.canSend(batch) }
 
-    func reason(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) -> String? {
-        do {
-            try validate(request, action: action)
-            return nil
-        } catch { return message(for: error) }
-    }
+    /// What the person is told the action would be refused for, or nil when
+    /// the core would take it.
+    func reason(_ batch: BrowserTabBatch) -> String? { browser.refusal(of: batch)?.explanation }
 
+    /// Performs the action, and answers whether the core took it; a refusal
+    /// is shown in the selection's message instead.
     @discardableResult
-    func perform(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) -> Bool {
-        if action == .close || action == .delete {
-            do { try validate(request, action: action) }
-            catch { browser.tabMultiSelection.message = message(for: error); return false }
-            let assignments = request.ids.map { BrowserTabRuntimeAssignment(tabID: $0,
-                spaceID: request.assignment.spaceID, profileID: request.assignment.profileID) }
-            return browser.performPageDismissal(of: assignments) { commit(request, action: action) }
+    func perform(_ batch: BrowserTabBatch, for request: BrowserTabBatchRequest) -> Bool {
+        guard batch.closesPages else { return send(batch, for: request) }
+        if let reason = reason(batch) {
+            browser.tabMultiSelection.message = reason
+            return false
         }
-        return commit(request, action: action)
+        let assignments = request.ids.map {
+            BrowserTabRuntimeAssignment(
+                tabID: $0, spaceID: request.assignment.spaceID, profileID: request.assignment.profileID)
+        }
+        return browser.performPageDismissal(of: assignments) { send(batch, for: request) }
     }
 
-    private func commit(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) -> Bool {
+    private func send(_ batch: BrowserTabBatch, for request: BrowserTabBatchRequest) -> Bool {
         do {
-            try authorize(request, action: action)
-            try browser.commitTabBatch(request, action: action)
+            try browser.send(batch, for: request)
             return true
         } catch {
-            browser.tabMultiSelection.message = message(for: error)
+            browser.tabMultiSelection.message = error.explanation
             return false
         }
     }
 
-    func message(for error: Error) -> String {
-        switch error as? BrowserTabBatchError {
-        case .folderActionUnavailable:
-            String(
-                localized:
-                    "Move selected folders into saved or current tabs, or another folder. Use a folder’s own menu for other folder actions."
-            )
-        case .pinnedCapacity:
-            String(localized: "A Space can hold up to 12 pinned tabs. Unpin tabs or select fewer tabs.")
-        case .splitCapacity:
-            String(localized: "Split View needs 2 to 4 tabs. Select fewer tabs or use a smaller split.")
-        case .cannotPinSplit: String(localized: "Split View groups cannot be pinned. Separate the split first.")
-        case .cannotMoveSplitAcrossSpaces:
-            String(
-                localized:
-                    "Split View groups stay in their Space. Separate the split before moving it to another Space.")
-        case .incompleteSplit: String(localized: "The split changed. Select the whole group again.")
-        case .currentTabsOnly:
-            String(
-                localized:
-                    "Archive applies to current tabs. Use Unload Pages to close saved or pinned pages, or Delete Tabs to remove their saved entries."
-            )
-        case .webPagesOnly: String(localized: "This action requires webpage tabs. Deselect built-in pages first.")
-        case .lockedSpace:
-            String(localized: "The Space is locked or no longer active. Unlock it and select the tabs again.")
-        case .staleSelection: String(localized: "The selected items changed. Select them again before continuing.")
-        default: String(localized: "These items cannot be placed here. Choose another destination.")
-        }
-    }
-
+    /// Copies the selected pages' addresses, when every selected tab is a
+    /// page the core would keep loaded.
     func copyLinks(_ request: BrowserTabBatchRequest) {
-        do {
-            try validate(request, action: .keepLoaded(false))
-            let links = BrowserTabOrganizationAction(browser: browser, spaceAccess: spaceAccess)
-            let urls = request.ids.compactMap { id in
-                links.linkURL(
+        if let reason = reason(browser.keepingLoaded(request, false)) {
+            browser.tabMultiSelection.message = reason
+            return
+        }
+        let links = BrowserTabOrganizationAction(browser: browser, spaceAccess: spaceAccess)
+        var urls: [URL] = []
+        for id in request.ids {
+            guard
+                let url = links.linkURL(
                     for: BrowserTabRuntimeAssignment(
                         tabID: id, spaceID: request.assignment.spaceID, profileID: request.assignment.profileID))
+            else {
+                browser.tabMultiSelection.message = Rejection.webPagesOnly(WebPagesOnly(tabID: id.rawValue)).explanation
+                return
             }
-            guard urls.count == request.ids.count else { throw BrowserTabBatchError.webPagesOnly }
-            BrowserPageLinkClipboard.copy(urls)
-        } catch { browser.tabMultiSelection.message = message(for: error) }
+            urls.append(url)
+        }
+        BrowserPageLinkClipboard.copy(urls)
     }
 }

@@ -16,4 +16,11 @@ public sealed record FolderState(
     Guid? ParentId = null,
     bool IsCollapsed = false,
     DateTimeOffset? CollapseModifiedAt = null,
-    Guid? OrderAnchorTabId = null);
+    Guid? OrderAnchorTabId = null) {
+    #region Static Variables
+
+    /// The color a folder the core makes for a person's tabs is drawn in.
+    public static BrandColor DefaultColor { get; } = new(0.43, 0.48, 0.54);
+
+    #endregion
+}
