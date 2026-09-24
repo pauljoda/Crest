@@ -1,18 +1,9 @@
 namespace CrestCore.Domain;
 
-/// Quick Window lifetime, archive-on-dismissal and retargeting rules shared by
-/// the Mac window and the mobile overlay.
+/// Quick Window archive-on-dismissal and retargeting rules shared by the Mac
+/// window and the mobile overlay.
 public static class QuickWindowPolicy {
     #region Actions - Archive
-
-    /// Seconds of inactivity before the window archives itself; null never does.
-    public static double? ArchiveLifetime(QuickWindowArchivePolicy policy) => policy switch {
-        QuickWindowArchivePolicy.After1Hour => 60 * 60,
-        QuickWindowArchivePolicy.After6Hours => 6 * 60 * 60,
-        QuickWindowArchivePolicy.After12Hours => 12 * 60 * 60,
-        QuickWindowArchivePolicy.After24Hours => 24 * 60 * 60,
-        _ => null
-    };
 
     /// Dismissing a Quick Window files its page in the archive once, unless the
     /// page was promoted into a tab or there is no page to keep.

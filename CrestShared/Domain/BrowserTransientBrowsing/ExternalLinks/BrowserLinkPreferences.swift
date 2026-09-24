@@ -8,7 +8,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     var automaticallyOpensPeek: Bool
     var peekClickModifier: LinkPeekModifier
     var dragsLinksToPeek: Bool
-    var quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy
+    var quickWindowArchivePolicy: QuickWindowArchivePolicy
     var remembersQuickWindowSpaceBySite: Bool
     var routes: [BrowserLinkRoute]
     var rememberedQuickWindowSpacesBySite: [String: SpaceID]
@@ -45,7 +45,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         focusesNewTabsOpenedFromLinks: Bool,
         automaticallyOpensPeek: Bool,
         peekClickModifier: LinkPeekModifier,
-        quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy,
+        quickWindowArchivePolicy: QuickWindowArchivePolicy,
         remembersQuickWindowSpaceBySite: Bool,
         routes: [BrowserLinkRoute],
         rememberedQuickWindowSpacesBySite: [String: SpaceID],
@@ -96,7 +96,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         dragsLinksToPeek = try container.decodeIfPresent(Bool.self, forKey: .dragsLinksToPeek) ?? true
         quickWindowArchivePolicy =
             try container.decodeIfPresent(
-                BrowserQuickWindowArchivePolicy.self,
+                QuickWindowArchivePolicy.self,
                 forKey: .quickWindowArchivePolicy
             ) ?? .after6Hours
         remembersQuickWindowSpaceBySite =

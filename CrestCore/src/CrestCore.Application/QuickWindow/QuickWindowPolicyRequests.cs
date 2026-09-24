@@ -11,13 +11,6 @@ namespace CrestCore.Application;
 internal static class QuickWindowPolicyRequests {
     #region Actions - Decoding
 
-    public sealed record ArchiveLifetime(QuickWindowArchivePolicy Policy) {
-        public static ArchiveLifetime Decode(JsonElement request) {
-            Members(request, "policy");
-            return new(QuickWindowCodes.ArchivePolicy(Element(request, "policy")));
-        }
-    }
-
     public sealed record Dismissal(bool WasArchived, bool WasPromoted, bool HasPage) {
         public static Dismissal Decode(JsonElement request) {
             Members(request, "wasArchived", "wasPromoted", "hasPage");

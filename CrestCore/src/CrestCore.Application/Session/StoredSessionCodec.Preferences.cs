@@ -9,15 +9,6 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    private static readonly StoredSpellings<CurrentTabCleanup> CurrentTabCleanups = new([
-        (CurrentTabCleanup.After12Hours, "after12Hours"), (CurrentTabCleanup.After24Hours, "after24Hours"),
-        (CurrentTabCleanup.After7Days, "after7Days"), (CurrentTabCleanup.After30Days, "after30Days"),
-        (CurrentTabCleanup.Never, "never")
-    ]);
-    private static readonly StoredSpellings<DataRetention> DataRetentions = new([
-        (DataRetention.OneDay, "oneDay"), (DataRetention.OneWeek, "oneWeek"), (DataRetention.ThirtyDays, "thirtyDays"),
-        (DataRetention.NinetyDays, "ninetyDays"), (DataRetention.OneYear, "oneYear"), (DataRetention.Forever, "forever")
-    ]);
     private static readonly StoredSpellings<ContentBlockingPolicy> ContentBlockingPolicies = new([
         (ContentBlockingPolicy.Balanced, "balanced"), (ContentBlockingPolicy.Off, "off")
     ]);
@@ -46,9 +37,9 @@ internal static partial class StoredSessionCodec {
     internal static BrowsingPreferences DecodeBrowsingPreferences(JsonNode? node) {
         var value = Object(node);
         var retention = value[Key.DataRetention] as JsonObject;
-        DataRetention Kept(string key) => DataRetentions.Parse(TolerantText(retention?[key])) ?? DataRetention.Forever;
+        DataRetention Kept(string key) => DataRetention.Named(TolerantText(retention?[key])) ?? DataRetention.Forever;
         var cleanup = value[Key.CurrentTabCleanupPolicy] is { } stored
-            ? CurrentTabCleanups.Parse(TolerantText(stored)) ?? CurrentTabCleanup.Never : CurrentTabCleanup.After12Hours;
+            ? CurrentTabCleanup.Named(TolerantText(stored)) ?? CurrentTabCleanup.Never : CurrentTabCleanup.After12Hours;
         return new(TolerantText(value[Key.SelectedSearchProviderId]) ?? TolerantText(value[Key.LegacySearchProvider])
                 ?? SearchProvider.Google.Name,
             Items(value[Key.CustomSearchProviders]).OfType<JsonObject>().Select(CustomSearchProvider).OfType<CustomSearchProvider>().ToArray(),
@@ -73,12 +64,12 @@ internal static partial class StoredSessionCodec {
             return (JsonNode?)value;
         }).ToArray()),
         [Key.SearchSuggestionsEnabled] = preferences.SearchSuggestionsEnabled,
-        [Key.CurrentTabCleanupPolicy] = CurrentTabCleanups.Name(preferences.CurrentTabCleanup),
+        [Key.CurrentTabCleanupPolicy] = preferences.CurrentTabCleanup.Name,
         [Key.ContentBlockingPolicy] = ContentBlockingPolicies.Name(preferences.ContentBlocking),
         [Key.DataRetention] = new JsonObject {
-            [Key.History] = DataRetentions.Name(preferences.DataRetention.History),
-            [Key.Archive] = DataRetentions.Name(preferences.DataRetention.Archive),
-            [Key.Downloads] = DataRetentions.Name(preferences.DataRetention.Downloads)
+            [Key.History] = preferences.DataRetention.History.Name,
+            [Key.Archive] = preferences.DataRetention.Archive.Name,
+            [Key.Downloads] = preferences.DataRetention.Downloads.Name
         }
     };
 

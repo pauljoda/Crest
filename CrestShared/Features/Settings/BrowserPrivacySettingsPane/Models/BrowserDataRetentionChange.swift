@@ -2,8 +2,8 @@ import Foundation
 
 struct BrowserDataRetentionChange: Equatable, Identifiable, Sendable {
     let category: BrowserDataRetentionCategory
-    let previous: BrowserDataRetentionDuration
-    let proposed: BrowserDataRetentionDuration
+    let previous: DataRetention
+    let proposed: DataRetention
 
     var id: BrowserDataRetentionCategory { category }
 

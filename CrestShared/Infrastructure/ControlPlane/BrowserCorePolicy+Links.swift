@@ -119,14 +119,6 @@ extension BrowserCorePolicy {
         let forgetsRememberedSites: Bool
     }
 
-    private struct ArchiveLifetimeRequest: Encodable {
-        let policy: BrowserQuickWindowArchivePolicy
-    }
-
-    private struct ArchiveLifetimeAnswer: Decodable {
-        @BrowserCoreOptional var lifetime: TimeInterval?
-    }
-
     private struct QuickWindowDismissalRequest: Encodable {
         let wasArchived: Bool
         let wasPromoted: Bool
@@ -224,14 +216,6 @@ extension BrowserCorePolicy {
     }
 
     // MARK: - Actions - Quick Windows
-
-    /// Seconds before an inactive Quick Window archives itself. Nil never
-    /// archives, which is also the answer when the core cannot decide.
-    static func quickWindowArchiveLifetime(_ policy: BrowserQuickWindowArchivePolicy) -> TimeInterval? {
-        evaluate(
-            .quickWindowArchiveLifetime, ArchiveLifetimeRequest(policy: policy), answer: ArchiveLifetimeAnswer.self)?
-            .lifetime
-    }
 
     /// Whether dismissing a Quick Window files its page in the archive. A core
     /// that cannot answer archives nothing: no durable record is written

@@ -2225,6 +2225,10 @@
     "browser-preference-set": {
       "category": "internal",
       "message": "Each app preference records its own value in the core."
+    },
+    "retention-choice-sets": {
+      "category": "internal",
+      "message": "Tab cleanup, data retention and Quick Window archive choices carry their own lifetimes and titles."
     }
   }
 }

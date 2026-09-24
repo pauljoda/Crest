@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xc8, 0xe8, 0x87, 0x65, 0xee, 0x0f, 0xda, 0xa8, 0x67, 0x4a, 0x23, 0x2a, 0x11, 0x0a, 0xc1, 0xee, 0x79, 0xbf, 0x93, 0x74, 0x26, 0xf1, 0x0b, 0xec, 0x24, 0x22, 0xd1, 0xa9, 0x61, 0x46, 0x63, 0x9b
+        0x43, 0xb6, 0x6c, 0x47, 0xa0, 0x96, 0x0d, 0x92, 0x5a, 0xd5, 0x58, 0xb9, 0xe9, 0x38, 0x1c, 0x97, 0xe5, 0x50, 0x8e, 0x88, 0xce, 0x78, 0xbf, 0x67, 0xe6, 0x5e, 0x03, 0x1a, 0x8a, 0x6d, 0x1e, 0x2f
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -3076,6 +3076,34 @@ extension CapabilityStatus {
     }
 }
 
+extension CurrentTabCleanup {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown CurrentTabCleanup \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension DataRetention {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown DataRetention \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
 extension DevicePlatform {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readEnum()
@@ -3249,6 +3277,20 @@ extension PasskeyAccessStatus {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown PasskeyAccessStatus \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension QuickWindowArchivePolicy {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown QuickWindowArchivePolicy \(tag)")
         }
         self = Self.all[tag]
     }

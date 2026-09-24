@@ -146,7 +146,7 @@ public static class NativeSessionMaintenance {
         return records.Where((_, index) => !expired.Contains(index)).ToArray();
     }
 
-    private static double? Lifetime(DataRetention retention) => RetentionPolicy.Lifetime(retention)?.TotalSeconds;
+    private static double? Lifetime(DataRetention retention) => retention.Lifetime?.TotalSeconds;
 
     #endregion
 

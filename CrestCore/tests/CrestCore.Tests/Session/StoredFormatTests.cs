@@ -53,6 +53,11 @@ public sealed class StoredFormatTests {
         Assert.Equal(["startupBehavior", "offersTranslation", "automaticallyTranslates", "checksSpelling",
             "automaticallyEntersPictureInPicture", "savedTabClosePolicy", "savedTabFaviconReturnsToSavedURL", "splitFocusFollowsMouse"],
             BrowserPreference.All.Select(preference => preference.Name));
+        Assert.Equal(["after12Hours", "after24Hours", "after7Days", "after30Days", "never"],
+            CurrentTabCleanup.All.Select(cleanup => cleanup.Name));
+        Assert.Equal(["oneDay", "oneWeek", "thirtyDays", "ninetyDays", "oneYear", "forever"], DataRetention.All.Select(retention => retention.Name));
+        Assert.Equal(["after1Hour", "after6Hours", "after12Hours", "after24Hours", "never"],
+            QuickWindowArchivePolicy.All.Select(policy => policy.Name));
     }
 
     [Theory]

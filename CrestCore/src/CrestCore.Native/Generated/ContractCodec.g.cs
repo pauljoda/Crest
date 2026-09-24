@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xc8, 0xe8, 0x87, 0x65, 0xee, 0x0f, 0xda, 0xa8, 0x67, 0x4a, 0x23, 0x2a, 0x11, 0x0a, 0xc1, 0xee, 0x79, 0xbf, 0x93, 0x74, 0x26, 0xf1, 0x0b, 0xec, 0x24, 0x22, 0xd1, 0xa9, 0x61, 0x46, 0x63, 0x9b
+        0x43, 0xb6, 0x6c, 0x47, 0xa0, 0x96, 0x0d, 0x92, 0x5a, 0xd5, 0x58, 0xb9, 0xe9, 0x38, 0x1c, 0x97, 0xe5, 0x50, 0x8e, 0x88, 0xce, 0x78, 0xbf, 0x67, 0xe6, 0x5e, 0x03, 0x1a, 0x8a, 0x6d, 0x1e, 0x2f
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2747,6 +2747,28 @@ public static class ContractCodec {
         writer.WriteEnum(TagOf(CapabilityStatus.All, value));
     }
 
+    public static CurrentTabCleanup ReadCurrentTabCleanup(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return CurrentTabCleanup.All[reader.ReadEnum(CurrentTabCleanup.All.Count)];
+    }
+
+    public static void WriteCurrentTabCleanup(WireWriter writer, CurrentTabCleanup value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(CurrentTabCleanup.All, value));
+    }
+
+    public static DataRetention ReadDataRetention(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return DataRetention.All[reader.ReadEnum(DataRetention.All.Count)];
+    }
+
+    public static void WriteDataRetention(WireWriter writer, DataRetention value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(DataRetention.All, value));
+    }
+
     public static DevicePlatform ReadDevicePlatform(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return DevicePlatform.All[reader.ReadEnum(DevicePlatform.All.Count)];
@@ -2888,6 +2910,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(PasskeyAccessStatus.All, value));
+    }
+
+    public static QuickWindowArchivePolicy ReadQuickWindowArchivePolicy(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return QuickWindowArchivePolicy.All[reader.ReadEnum(QuickWindowArchivePolicy.All.Count)];
+    }
+
+    public static void WriteQuickWindowArchivePolicy(WireWriter writer, QuickWindowArchivePolicy value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(QuickWindowArchivePolicy.All, value));
     }
 
     public static ShortcutCommand ReadShortcutCommand(WireReader reader) {

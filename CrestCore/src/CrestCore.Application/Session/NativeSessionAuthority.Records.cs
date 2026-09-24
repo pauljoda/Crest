@@ -47,7 +47,7 @@ public sealed partial class NativeSessionAuthority {
                 } else if (operation is SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup) {
                     // Cleanup keeps every tab a window shows, and at launch every
                     // tab a saved window will show.
-                    if (RetentionPolicy.TabLifetime(space.BrowsingPreferences.CurrentTabCleanup) is { } lifetime)
+                    if (space.BrowsingPreferences.CurrentTabCleanup.Lifetime is { } lifetime)
                         editArguments = new() { Lifetime = lifetime.TotalSeconds, TabIds = kept?.ToArray() };
                 } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
@@ -95,7 +95,7 @@ public sealed partial class NativeSessionAuthority {
         return space;
     }
 
-    private static double? RetentionLifetime(DataRetention retention) => RetentionPolicy.Lifetime(retention)?.TotalSeconds;
+    private static double? RetentionLifetime(DataRetention retention) => retention.Lifetime?.TotalSeconds;
 
     private static SpaceState EditHistory(SessionOperation operation, JsonObject args, double now, SpaceState space,
         JsonObject change) {

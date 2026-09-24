@@ -12,8 +12,6 @@ public static partial class NativePolicyEvaluator {
 
     /// Null when the operation is not a Quick Window policy.
     private static JsonObject? EvaluateQuickWindow(PolicyOperation operation, JsonElement request) => operation switch {
-        PolicyOperation.QuickWindowArchiveLifetime => QuickWindowCodes.LifetimeAnswer(
-            QuickWindowPolicy.ArchiveLifetime(Requests.ArchiveLifetime.Decode(request).Policy)),
         PolicyOperation.QuickWindowDismissal => QuickWindowDismissal(Requests.Dismissal.Decode(request)),
         PolicyOperation.QuickWindowRetarget => RetargetQuickWindow(Requests.Retarget.Decode(request)),
         _ => null

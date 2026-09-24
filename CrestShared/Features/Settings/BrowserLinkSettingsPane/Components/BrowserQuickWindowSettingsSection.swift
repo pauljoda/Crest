@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct BrowserQuickWindowSettingsSection: View {
-    @Binding var archivePolicy: BrowserQuickWindowArchivePolicy
+    @Binding var archivePolicy: QuickWindowArchivePolicy
     @Binding var remembersSpaceBySite: Bool
 
     var body: some View {
         Section("Quick Window", systemImage: "macwindow.badge.plus") {
             Picker("Auto-archive", selection: $archivePolicy) {
-                ForEach(BrowserQuickWindowArchivePolicy.allCases) { policy in
+                ForEach(QuickWindowArchivePolicy.all, id: \.self) { policy in
                     Text(policy.title).tag(policy)
                 }
             }

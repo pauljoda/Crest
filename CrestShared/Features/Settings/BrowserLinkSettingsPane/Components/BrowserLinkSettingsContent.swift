@@ -81,7 +81,7 @@ struct BrowserLinkSettingsContent: View {
         }
     }
 
-    private var archivePolicyBinding: Binding<BrowserQuickWindowArchivePolicy> {
+    private var archivePolicyBinding: Binding<QuickWindowArchivePolicy> {
         Binding {
             links.preferences.quickWindowArchivePolicy
         } set: { value in

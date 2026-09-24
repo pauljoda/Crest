@@ -1,9 +1,9 @@
 import Foundation
 
 struct BrowserSpaceDataRetentionPreferences: Codable, Equatable, Sendable {
-    var history: BrowserDataRetentionDuration
-    var archive: BrowserDataRetentionDuration
-    var downloads: BrowserDataRetentionDuration
+    var history: DataRetention
+    var archive: DataRetention
+    var downloads: DataRetention
 
     static let `default` = BrowserSpaceDataRetentionPreferences(
         history: .forever,

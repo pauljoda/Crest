@@ -1104,6 +1104,122 @@ struct CapabilityStatus: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CurrentTabCleanup`. A member's wire tag is its index in `all`.
+struct CurrentTabCleanup: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let lifetime: TimeInterval?
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.lifetime = lifetime
+    }
+
+    static let after12Hours = CurrentTabCleanup(
+        tag: 0,
+        name: "after12Hours",
+        title: LocalizedStringResource("After 12 Hours"),
+        lifetime: 43200
+    )
+    static let after24Hours = CurrentTabCleanup(
+        tag: 1,
+        name: "after24Hours",
+        title: LocalizedStringResource("After 24 Hours"),
+        lifetime: 86400
+    )
+    static let after7Days = CurrentTabCleanup(
+        tag: 2,
+        name: "after7Days",
+        title: LocalizedStringResource("After 7 Days"),
+        lifetime: 604800
+    )
+    static let after30Days = CurrentTabCleanup(
+        tag: 3,
+        name: "after30Days",
+        title: LocalizedStringResource("After 30 Days"),
+        lifetime: 2592000
+    )
+    static let never = CurrentTabCleanup(tag: 4, name: "never", title: LocalizedStringResource("Never"), lifetime: nil)
+
+    static let all: [CurrentTabCleanup] = [after12Hours, after24Hours, after7Days, after30Days, never]
+
+    static func named(_ name: String?) -> CurrentTabCleanup? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CurrentTabCleanup, rhs: CurrentTabCleanup) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `DataRetention`. A member's wire tag is its index in `all`.
+struct DataRetention: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let lifetime: TimeInterval?
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.lifetime = lifetime
+    }
+
+    static let oneDay = DataRetention(tag: 0, name: "oneDay", title: LocalizedStringResource("1 Day"), lifetime: 86400)
+    static let oneWeek = DataRetention(
+        tag: 1,
+        name: "oneWeek",
+        title: LocalizedStringResource("1 Week"),
+        lifetime: 604800
+    )
+    static let thirtyDays = DataRetention(
+        tag: 2,
+        name: "thirtyDays",
+        title: LocalizedStringResource("30 Days"),
+        lifetime: 2592000
+    )
+    static let ninetyDays = DataRetention(
+        tag: 3,
+        name: "ninetyDays",
+        title: LocalizedStringResource("90 Days"),
+        lifetime: 7776000
+    )
+    static let oneYear = DataRetention(
+        tag: 4,
+        name: "oneYear",
+        title: LocalizedStringResource("1 Year"),
+        lifetime: 31536000
+    )
+    static let forever = DataRetention(
+        tag: 5,
+        name: "forever",
+        title: LocalizedStringResource("Forever"),
+        lifetime: nil
+    )
+
+    static let all: [DataRetention] = [oneDay, oneWeek, thirtyDays, ninetyDays, oneYear, forever]
+
+    static func named(_ name: String?) -> DataRetention? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DataRetention, rhs: DataRetention) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `DevicePlatform`. A member's wire tag is its index in `all`.
 struct DevicePlatform: Hashable, Sendable {
     let tag: Int
@@ -1946,6 +2062,66 @@ struct PasskeyAccessStatus: Hashable, Sendable {
     }
 
     static func == (lhs: PasskeyAccessStatus, rhs: PasskeyAccessStatus) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `QuickWindowArchivePolicy`. A member's wire tag is its index in `all`.
+struct QuickWindowArchivePolicy: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let lifetime: TimeInterval?
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.lifetime = lifetime
+    }
+
+    static let after1Hour = QuickWindowArchivePolicy(
+        tag: 0,
+        name: "after1Hour",
+        title: LocalizedStringResource("After 1 Hour"),
+        lifetime: 3600
+    )
+    static let after6Hours = QuickWindowArchivePolicy(
+        tag: 1,
+        name: "after6Hours",
+        title: LocalizedStringResource("After 6 Hours"),
+        lifetime: 21600
+    )
+    static let after12Hours = QuickWindowArchivePolicy(
+        tag: 2,
+        name: "after12Hours",
+        title: LocalizedStringResource("After 12 Hours"),
+        lifetime: 43200
+    )
+    static let after24Hours = QuickWindowArchivePolicy(
+        tag: 3,
+        name: "after24Hours",
+        title: LocalizedStringResource("After 24 Hours"),
+        lifetime: 86400
+    )
+    static let never = QuickWindowArchivePolicy(
+        tag: 4,
+        name: "never",
+        title: LocalizedStringResource("Never"),
+        lifetime: nil
+    )
+
+    static let all: [QuickWindowArchivePolicy] = [after1Hour, after6Hours, after12Hours, after24Hours, never]
+
+    static func named(_ name: String?) -> QuickWindowArchivePolicy? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: QuickWindowArchivePolicy, rhs: QuickWindowArchivePolicy) -> Bool {
         lhs.tag == rhs.tag
     }
 

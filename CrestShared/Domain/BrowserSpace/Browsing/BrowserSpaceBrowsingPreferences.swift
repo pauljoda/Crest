@@ -5,7 +5,7 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
     private var selectedSearchProviderID: String
     private(set) var customSearchProviders: [BrowserCustomSearchProvider]
     var searchSuggestionsEnabled: Bool
-    var currentTabCleanupPolicy: BrowserCurrentTabCleanupPolicy
+    var currentTabCleanupPolicy: CurrentTabCleanup
     var contentBlockingPolicy: BrowserContentBlockingPolicy
     var dataRetention: BrowserSpaceDataRetentionPreferences
 
@@ -28,7 +28,7 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
 
     init(
         searchProvider: SearchProvider,
-        currentTabCleanupPolicy: BrowserCurrentTabCleanupPolicy,
+        currentTabCleanupPolicy: CurrentTabCleanup,
         contentBlockingPolicy: BrowserContentBlockingPolicy = .balanced,
         dataRetention: BrowserSpaceDataRetentionPreferences = .default,
         customSearchProviders: [BrowserCustomSearchProvider] = [],
@@ -76,7 +76,7 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
             (try? container.decodeIfPresent(Bool.self, forKey: .searchSuggestionsEnabled))
             ?? false
         currentTabCleanupPolicy = try container.decode(
-            BrowserCurrentTabCleanupPolicy.self,
+            CurrentTabCleanup.self,
             forKey: .currentTabCleanupPolicy
         )
         contentBlockingPolicy =

@@ -44,13 +44,7 @@ public sealed class NativePresentationPolicyTests {
     }
 
     [Fact]
-    public void QuickWindowsArchiveOnceAfterTheirLifetimeAndRetargetOnlyOnChange() {
-        Assert.Equal(6 * 60 * 60, Evaluate(new() { ["operation"] = "quick_window.archive_lifetime", ["policy"] = "after6Hours" })
-            ["lifetime"]!.GetValue<double>());
-        Assert.Null(Evaluate(new() { ["operation"] = "quick_window.archive_lifetime", ["policy"] = "never" })["lifetime"]);
-        Assert.Equal(ProtocolErrorCodes.InvalidArchivePolicy, Assert.Throws<ProtocolException>(() =>
-            Evaluate(new() { ["operation"] = "quick_window.archive_lifetime", ["policy"] = "after2Hours" })).Code);
-
+    public void QuickWindowsArchiveOnceAndRetargetOnlyOnChange() {
         static bool Archives(bool archived, bool promoted, bool page) => Evaluate(new() {
             ["operation"] = "quick_window.dismissal",
             ["wasArchived"] = archived,

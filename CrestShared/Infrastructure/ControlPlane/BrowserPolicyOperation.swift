@@ -45,7 +45,6 @@ enum BrowserPolicyOperation: String, Codable, Sendable {
     case linksRouteUpdate = "links.route_update"
     case linksSpaceRemoved = "links.space_removed"
     case pagePresentation = "page.presentation"
-    case quickWindowArchiveLifetime = "quick_window.archive_lifetime"
     case quickWindowDismissal = "quick_window.dismissal"
     case quickWindowRetarget = "quick_window.retarget"
     case workspaceCommandRoute = "workspace.command_route"

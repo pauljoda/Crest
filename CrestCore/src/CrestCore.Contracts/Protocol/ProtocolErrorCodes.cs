@@ -45,7 +45,6 @@ public static class ProtocolErrorCodes {
 
     #region Variables - Links, Quick Windows and presentation
 
-    public const string InvalidArchivePolicy = "invalid_archive_policy";
     public const string InvalidBranding = "invalid_branding";
     public const string InvalidLinkRouteMatch = "invalid_link_route_match";
     public const string InvalidPagePresentation = "invalid_page_presentation";

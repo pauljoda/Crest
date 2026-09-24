@@ -65,6 +65,10 @@ extension ArchiveReason: CoreNamedValue {}
 
 extension CapabilityStatus: CoreNamedValue {}
 
+extension CurrentTabCleanup: CoreNamedValue {}
+
+extension DataRetention: CoreNamedValue {}
+
 extension DevicePlatform: CoreNamedValue {}
 
 extension EngineCapability: CoreNamedValue {}
@@ -80,6 +84,8 @@ extension LinkRouteMatch: CoreNamedValue {}
 extension MemoryPressureLevel: CoreNamedValue {}
 
 extension NumberedSelectionTarget: CoreNamedValue {}
+
+extension QuickWindowArchivePolicy: CoreNamedValue {}
 
 extension ShortcutCommand: CoreNamedValue {}
 

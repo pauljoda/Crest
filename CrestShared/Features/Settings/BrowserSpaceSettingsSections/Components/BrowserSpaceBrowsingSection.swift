@@ -94,7 +94,7 @@ struct BrowserSpaceBrowsingSection: View {
         browser.browsingPreferenceBinding(\.searchProvider, in: space)
     }
 
-    private var cleanupPolicyBinding: Binding<BrowserCurrentTabCleanupPolicy> {
+    private var cleanupPolicyBinding: Binding<CurrentTabCleanup> {
         browser.browsingPreferenceBinding(\.currentTabCleanupPolicy, in: space)
     }
 
@@ -130,8 +130,8 @@ struct BrowserSpaceBrowsingSection: View {
             title: "Archive current tabs",
             presentation: pickerPresentation,
             selection: cleanupPolicyBinding,
-            choices: BrowserCurrentTabCleanupPolicy.allCases,
-            choiceTitle: { $0.title },
+            choices: CurrentTabCleanup.all,
+            choiceTitle: { String(localized: $0.title) },
             accessibilityIdentifier: "space-tab-cleanup-policy",
             dismissKeyboard: dismissKeyboard,
             choiceLabel: { policy in
@@ -147,4 +147,8 @@ struct BrowserSpaceBrowsingSection: View {
 private enum BrowserSearchEngineSheet: String, Identifiable {
     case manager
     var id: String { rawValue }
+}
+
+extension CurrentTabCleanup: Identifiable {
+    var id: String { name }
 }
