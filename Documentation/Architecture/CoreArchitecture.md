@@ -140,13 +140,23 @@ for `EnginePage` lists every direct engine call.
 | `Engines` | The registered engine bindings and their capabilities | Never | Never |
 | `Downloads`, `Permissions` | The existing ledgers, with the permission records saved as today | As today | Never |
 
-The core publishes typed changes and never resends unchanged state. Changes
-caused by an intent come back with the call, so the caller reads the new
-state straight away. Changes the core starts itself, such as a finished save,
+The core publishes typed changes and never resends unchanged state. It
+derives them by comparing each accepted state with the one before, never
+from hand-written change lists, so no change can be forgotten. Changes are
+named for the state they change and carry resolved values: a tab arrives with
+its icon mode already decided, so no UI works out a rule again. The model is
+keyed by workspace, because persistent, private, borrowed and Quick Window
+sessions all live at once. Changes caused by an intent come back with the
+call, after any changes still pending from earlier, so an older change can
+never land after a newer one and the caller reads the new state straight
+away. Changes the core starts itself, such as a finished save,
 a sync merge or an engine event, arrive through a wake-up call that the UI
 answers by draining the pending batch, at most once per main-queue turn. The
 Apple UIs keep a generated read model that they update from those changes, so
-reading state never calls into the core. The Windows UI reads the core's
+reading state never calls into the core. The read model is observable per
+entity (each window, Space, tab and folder is its own observable object that
+notifies only when a value really changes), so a tab's new title redraws that
+tab's row and nothing else. The Windows UI reads the core's
 records directly.
 
 Swift and the core always ship in one build, so the binary wire between them
@@ -158,7 +168,10 @@ or a large import, computes on the core's worker against a snapshot and
 commits on the UI thread with a revision check. The core owns the SQLite
 schema and transactions, and the host supplies only a directory. Saves run on
 the worker after the change is published, except where ordering matters:
-sync commits and Space deletion are saved before the intent returns. The core
+sync commits, Space deletion, imports, batches, cross-Space moves and
+transfers are saved before the intent returns. The core also stages sync
+itself: each intent knows its deletion reason and urgency, and a durable
+change writes the session and its journal together. The core
 publishes `Saved(revision)`, so the CloudKit transport stores its server
 token only after the merge it covers is on disk.
 
