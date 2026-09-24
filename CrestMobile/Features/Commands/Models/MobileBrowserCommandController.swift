@@ -5,6 +5,7 @@ struct MobileBrowserCommandController {
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
     var spaceAccess = BrowserSpaceAccessController()
+    var preferences: BrowserAppPreferenceStore = .shared
 
     var orderedTabs: [BrowserTab] {
         browser.selectedSpace?.tabs ?? []
@@ -52,7 +53,7 @@ struct MobileBrowserCommandController {
         if selectedTab.placement.isDurable {
             guard let space = browser.selectedSpace,
                 BrowserDurableTabCloseAction(
-                    browser: browser, spaceAccess: spaceAccess,
+                    browser: browser, spaceAccess: spaceAccess, preferences: preferences,
                     closePage: { pages.closeDurablePage($0, discardState: $1) }
                 ).perform(
                     BrowserTabRuntimeAssignment(

@@ -2357,6 +2357,10 @@
     "forward-after-script-page": {
       "category": "fixed",
       "message": "Forward works again after going back from a page that a site's script opened on its own."
+    },
+    "ios-close-policy-test-preferences": {
+      "category": "internal",
+      "message": "The iOS saved-tab close test sends its close preference to the test's own core, as the Mac test does."
     }
   }
 }
