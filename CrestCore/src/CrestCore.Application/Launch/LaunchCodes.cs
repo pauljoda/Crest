@@ -9,7 +9,7 @@ namespace CrestCore.Application;
 /// Wire spellings for the launch plan. Startup behaviors use the persisted
 /// preference's raw values.
 internal static class LaunchCodes {
-    #region Variables
+    #region Static Variables
 
     /// The members of a `launch.plan` policy request.
     public static readonly string[] RequestMembers = ["version", "operation", "platform", "environment", "hasActiveLaunchGate"];

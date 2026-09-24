@@ -10,17 +10,7 @@ import Foundation
 /// isolated profiles kept translation and saved-tab choices in their own suite.
 /// A value that was never saved is nil.
 struct BrowserLegacyAppPreferences: Equatable, Sendable {
-    // MARK: - Variables
-
-    var startupBehavior: String?
-    var offersTranslation: Bool?
-    var automaticallyTranslates: Bool?
-    var translationRules: String?
-    var checksSpelling: Bool?
-    var automaticallyEntersPictureInPicture: Bool?
-    var savedTabClosePolicy: String?
-    var savedTabFaviconReturnsToSavedURL: Bool?
-    var splitFocusFollowsMouse: Bool?
+    // MARK: - Static Variables
 
     static let startupKey = "crest.startup.behavior"
     static let automaticTranslationKey = "crest.translation.automaticallyTranslate"
@@ -32,6 +22,18 @@ struct BrowserLegacyAppPreferences: Equatable, Sendable {
     static let savedTabCloseKey = "crest.tabs.durable.closePolicy"
     static let savedTabFaviconKey = "crest.tabs.saved.returnToRootOnFaviconClick"
     static let splitFocusKey = "crest.split-view.focus-follows-mouse"
+
+    // MARK: - Variables
+
+    var startupBehavior: String?
+    var offersTranslation: Bool?
+    var automaticallyTranslates: Bool?
+    var translationRules: String?
+    var checksSpelling: Bool?
+    var automaticallyEntersPictureInPicture: Bool?
+    var savedTabClosePolicy: String?
+    var savedTabFaviconReturnsToSavedURL: Bool?
+    var splitFocusFollowsMouse: Bool?
 
     /// The same values read locally, which the projection keeps showing if the
     /// import cannot commit.

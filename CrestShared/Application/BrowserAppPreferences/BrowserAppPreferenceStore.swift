@@ -10,9 +10,11 @@ import Observation
 @Observable
 @MainActor
 final class BrowserAppPreferenceStore {
-    // MARK: - Variables
+    // MARK: - Static Variables
 
     static let shared = BrowserAppPreferenceStore()
+
+    // MARK: - Variables
 
     private var browser: BrowserStore?
     /// The unbound value, and the bound fallback while the session has no

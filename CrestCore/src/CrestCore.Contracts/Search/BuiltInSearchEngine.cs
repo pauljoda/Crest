@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// each one's templates. A member travels as its index in `All`, so `All` only
 /// grows at the end.
 public sealed class BuiltInSearchEngine {
-    #region Variables
+    #region Static Variables
 
     public static readonly BuiltInSearchEngine Google = new(name: "google");
     public static readonly BuiltInSearchEngine DuckDuckGo = new(name: "duckDuckGo");
@@ -15,6 +15,10 @@ public sealed class BuiltInSearchEngine {
 
     /// The built-in engines, in the order the settings offer them.
     public static IReadOnlyList<BuiltInSearchEngine> All { get; } = [Google, DuckDuckGo, Bing, Ecosia, Brave];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

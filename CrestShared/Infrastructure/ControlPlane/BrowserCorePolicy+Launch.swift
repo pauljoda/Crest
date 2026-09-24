@@ -84,7 +84,7 @@ extension BrowserCorePolicy {
         let startupBehavior: BrowserStartupBehavior
     }
 
-    // MARK: - Variables
+    // MARK: - Static Variables
 
     static var devicePlatform: DevicePlatform {
         #if os(macOS)

@@ -5,7 +5,7 @@ namespace CrestCore.Application;
 /// How an accepted revision reaches the sync journal: why the records it
 /// removed are deleted, and how soon it stages.
 internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgency) {
-    #region Variables
+    #region Static Variables
 
     /// A launch stages the session it loaded; what the file lost while the app
     /// was closed was removed by retention.

@@ -7,11 +7,16 @@ namespace CrestCore.Domain;
 
 /// A Space's search choice and its custom engines.
 public sealed class SearchPreferences {
-    #region Variables
+    #region Static Variables
 
     public const int MaximumCustomProviders = 32;
 
     public static SearchPreferences Default { get; } = new(SearchProvider.Google, [], false);
+
+    #endregion
+
+    #region Variables
+
     public SearchProvider Selected { get; }
     /// The selected engine's stored spelling.
     public string SelectedId => Selected.Name;

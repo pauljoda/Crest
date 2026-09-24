@@ -2337,6 +2337,10 @@
     "search-engine-intents": {
       "category": "internal",
       "message": "Adding, editing, choosing and removing search engines are typed core intents, and the chosen engine is stored as a typed value."
+    },
+    "static-variables-slice": {
+      "category": "internal",
+      "message": "Types made in the Spaces, access, preference and search work keep their static members in their own section."
     }
   }
 }

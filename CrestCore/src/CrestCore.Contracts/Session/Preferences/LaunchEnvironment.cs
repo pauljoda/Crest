@@ -20,7 +20,7 @@ public sealed record LaunchEnvironment(
     bool ForcesMobileSetup,
     bool RunsPerformanceHarness,
     bool UsesUpdateTestFeed) {
-    #region Variables
+    #region Static Variables
 
     /// An installed launch that asks for nothing special.
     public static LaunchEnvironment Installed { get; } = new(false, false, false, false, false, false, false, false, false, false,

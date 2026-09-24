@@ -9,7 +9,7 @@ namespace CrestCore.Domain;
 /// the house palette that accent names; a private one wears the private look
 /// and never offers to save or sync passwords.
 public sealed class SpaceTemplate {
-    #region Variables
+    #region Static Variables
 
     /// A new Space keeps what it browses until the person chooses otherwise.
     private static readonly DataRetentionPreferences KeepsEverything = new(DataRetention.Forever, DataRetention.Forever,
@@ -54,6 +54,10 @@ public sealed class SpaceTemplate {
         credentials: new(IsEnabled: false, SyncsCrestPasswordsWithICloud: false, AlsoOffersSaveToSystemPasswords: false));
 
     public static IReadOnlyList<SpaceTemplate> All { get; } = [Ordinary, Private];
+
+    #endregion
+
+    #region Variables
 
     /// Whether this is the template of a private workspace's Spaces.
     public bool IsPrivate { get; }

@@ -17,7 +17,7 @@ extension BrowserCorePolicy {
         let branding: BrowserSpaceBranding
     }
 
-    // MARK: - Variables
+    // MARK: - Static Variables
 
     private static let pagePresentations = OSAllocatedUnfairLock(
         initialState: [BrowserPagePresentationInput: BrowserPagePresentation]())

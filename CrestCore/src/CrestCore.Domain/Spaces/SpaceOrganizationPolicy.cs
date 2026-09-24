@@ -4,7 +4,7 @@ namespace CrestCore.Domain;
 
 /// Shared rules for Space commands, independent of native models and storage.
 public static class SpaceOrganizationPolicy {
-    #region Variables
+    #region Static Variables
 
     /// What a Space named with nothing but blanks is called.
     private const string UntitledName = "Untitled Space";
