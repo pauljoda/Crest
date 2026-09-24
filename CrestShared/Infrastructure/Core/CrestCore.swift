@@ -65,16 +65,7 @@ final class CrestCore {
         case CREST_OK:
             self.handle = handle
         case CREST_REJECTED:
-            let length = refusal.length
-            var reader = WireReader(refusal.bytes.map { Array(UnsafeBufferPointer(start: $0, count: length)) } ?? [])
-            let rejection: Rejection
-            do {
-                rejection = try Rejection(from: &reader)
-                try reader.finish()
-            } catch {
-                preconditionFailure("The core's rejection does not decode (\(error)). Rebuild the core.")
-            }
-            throw rejection
+            throw Self.rejection(in: refusal)
         default:
             Self.buildBug(status, "create the core")
         }
@@ -163,21 +154,26 @@ final class CrestCore {
         var buffer = crest_buffer_t()
         let status = writer.bytes.withUnsafeBufferPointer { entry(handle, $0.baseAddress, $0.count, &buffer) }
         defer { crest_buffer_free(&buffer) }
-        var reader = WireReader(buffer.bytes.map { Array(UnsafeBufferPointer(start: $0, count: buffer.length)) } ?? [])
         switch status {
         case CREST_OK:
-            return reader
+            return WireReader(buffer.bytes.map { Array(UnsafeBufferPointer(start: $0, count: buffer.length)) } ?? [])
         case CREST_REJECTED:
-            let rejection: Rejection
-            do {
-                rejection = try Rejection(from: &reader)
-                try reader.finish()
-            } catch {
-                preconditionFailure("The core's rejection does not decode (\(error)). Rebuild the core.")
-            }
-            throw rejection
+            throw Self.rejection(in: buffer)
         default:
             Self.buildBug(status, action())
+        }
+    }
+
+    /// The one rejection a refused call left in `buffer`.
+    nonisolated static func rejection(in buffer: crest_buffer_t) -> Rejection {
+        let length = buffer.length
+        var reader = WireReader(buffer.bytes.map { Array(UnsafeBufferPointer(start: $0, count: length)) } ?? [])
+        do {
+            let rejection = try Rejection(from: &reader)
+            try reader.finish()
+            return rejection
+        } catch {
+            preconditionFailure("The core's rejection does not decode (\(error)). Rebuild the core.")
         }
     }
 

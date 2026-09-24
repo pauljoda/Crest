@@ -68,6 +68,12 @@ public sealed unsafe partial class BrowserContractsTests {
 
     private static JsonObject StoredCore(Dictionary<string, byte[]> parts) => JsonNode.Parse(parts["core"])!.AsObject();
 
+    /// Gives an empty file `document` as its first session, as a launch does
+    /// when the installed release kept that session whole, with `journal`.
+    private static AdoptLegacySession Adoption(JsonObject document, JsonObject? journal = null) =>
+        new(new LegacySession(Core: null, WholeGraph: Bytes(document), History: [], journal is null ? null : Bytes(journal)),
+            Seed: Bytes(document));
+
     private static IReadOnlyList<Change> DrainUntil(CrestApp app, Func<IReadOnlyList<Change>, bool> done) {
         var drained = new List<Change>();
         var deadline = DateTime.UtcNow.AddSeconds(10);
@@ -113,7 +119,7 @@ public sealed unsafe partial class BrowserContractsTests {
         var document = SavedSession().Document["session"]!.AsObject();
         using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
             Assert.Null(app.Session);
-            app.InstallSession(Bytes(document), []);
+            app.Send(Adoption(document));
             var session = app.Session!;
             for (int edit = 1; edit <= 20; edit++) session.Commit(session.Revision, RenameDelta(document, $"Edit {edit}"));
             var announced = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 21));
@@ -133,7 +139,7 @@ public sealed unsafe partial class BrowserContractsTests {
         using var directory = new StorageDirectory();
         var document = SavedSession().Document["session"]!.AsObject();
         using var app = new CrestApp(new AppConfiguration(directory.Path));
-        app.InstallSession(Bytes(document), []);
+        app.Send(Adoption(document));
         _ = DrainUntil(app, changes => changes.OfType<Saved>().Any());
         // Every write the core makes from here on leaves a `log.` row naming its part.
         using (var connection = SqliteConnection.Open(directory.File, Sqlite.OpenReadWrite)) {
@@ -158,7 +164,7 @@ public sealed unsafe partial class BrowserContractsTests {
         var record = SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid());
         var journal = JournalDocument(record);
         using var app = new CrestApp(new AppConfiguration(directory.Path));
-        app.InstallSession(Bytes(document), Bytes(journal));
+        app.Send(Adoption(document, journal));
         var session = app.Session!;
         var sync = app.SessionSync!;
         var loaded = sync.Snapshot;
@@ -194,7 +200,7 @@ public sealed unsafe partial class BrowserContractsTests {
         var record = SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid());
         var journal = JournalDocument(record);
         using var app = new CrestApp(new AppConfiguration(directory.Path));
-        app.InstallSession(Bytes(document), Bytes(journal));
+        app.Send(Adoption(document, journal));
         var session = app.Session!;
         session.Commit(1, RenameDelta(document, "Edited before staging"));
         var acknowledge = JournalCommand(journal, "acknowledge",
@@ -285,8 +291,10 @@ public sealed unsafe partial class BrowserContractsTests {
         Assert.Equal(CoreStatus.Empty, app.Session().Status);
         Volatile.Write(ref wakes, 0);
         Assert.Equal(CoreStatus.Ok, app.SetWake(&CountWake, 42));
-        Assert.Equal(CoreStatus.Ok, app.Install(Bytes(SavedSession().Document["session"]!), []));
-        Assert.Equal(CoreStatus.InvalidState, app.Install(Bytes(SavedSession().Document["session"]!), []));
+        var adoption = Adoption(SavedSession().Document["session"]!.AsObject());
+        Assert.Equal([typeof(SessionAdopted)], app.Send(adoption).Select(change => change.GetType()));
+        // The file holds a session now, so a second adoption finds nothing to do.
+        Assert.Empty(app.Send(adoption));
 
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (Volatile.Read(ref wakes) == 0 && DateTime.UtcNow < deadline) Thread.Sleep(5);

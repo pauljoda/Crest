@@ -83,11 +83,6 @@ enum BrowserCoreSync {
         }
     }
 
-    /// A journal mutation's `arguments` for `recover`.
-    struct RecoveryArguments: Encodable {
-        let deviceID: UUID
-    }
-
     /// A materialization of a proposed session against sync records, as the
     /// journal's session preparation and the sync authority read it.
     struct SessionPreparation: Encodable {

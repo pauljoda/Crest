@@ -2,7 +2,6 @@ namespace CrestCore.Application;
 
 internal enum NativeSyncOperation {
     Unknown,
-    Recover,
     Merge,
     Replace,
     Overwrite,
@@ -23,7 +22,6 @@ internal static class NativeSyncOperationCodes {
     #region Actions - Encoding
 
     public static NativeSyncOperation Parse(string? value) => value switch {
-        "recover" => NativeSyncOperation.Recover,
         "merge" => NativeSyncOperation.Merge,
         "replace" => NativeSyncOperation.Replace,
         "overwrite" => NativeSyncOperation.Overwrite,
@@ -42,7 +40,6 @@ internal static class NativeSyncOperationCodes {
     };
 
     public static string Name(NativeSyncOperation operation) => operation switch {
-        NativeSyncOperation.Recover => "recover",
         NativeSyncOperation.Merge => "merge",
         NativeSyncOperation.Replace => "replace",
         NativeSyncOperation.Overwrite => "overwrite",

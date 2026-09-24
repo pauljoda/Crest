@@ -25,10 +25,24 @@ internal sealed record StoredSession(SessionState? Session, NativeSyncJournal? J
     public static StoredSession Decode(IReadOnlyDictionary<string, byte[]> parts) {
         try {
             return new(DecodeSession(parts, out var legacySelection), DecodeJournal(parts), legacySelection);
-        } catch (Rejected) {
-            throw;
-        } catch (Exception error) when (error is BrowserRuleException or JsonException or InvalidOperationException
-            or FormatException or KeyNotFoundException or ArgumentException or NullReferenceException) {
+        } catch (Exception error) when (IsUndecodable(error)) {
+            throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
+        }
+    }
+
+    /// Whether `error` is how a stored value that does not decode fails, as
+    /// opposed to a rejection or a fault in the core.
+    internal static bool IsUndecodable(Exception error) => error is BrowserRuleException or JsonException
+        or InvalidOperationException or FormatException or KeyNotFoundException or ArgumentException or NullReferenceException;
+
+    /// A sync journal on its own. Throws `Rejected` when it does not decode or
+    /// was written by a newer release.
+    internal static NativeSyncJournal DecodeJournal(ReadOnlySpan<byte> journal) {
+        try {
+            var version = JsonNode.Parse(journal, documentOptions: DocumentOptions)![SchemaVersionField]!.GetValue<int>();
+            if (version > JournalSchemaVersion) throw new Rejected(new StorageFromNewerApp());
+            return new NativeSyncJournal(journal);
+        } catch (Exception error) when (IsUndecodable(error)) {
             throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
         }
     }
@@ -53,16 +67,12 @@ internal sealed record StoredSession(SessionState? Session, NativeSyncJournal? J
             .Select(StoredSessionCodec.DecodeHistoryEntry).ToArray();
     }
 
-    private static NativeSyncJournal? DecodeJournal(IReadOnlyDictionary<string, byte[]> parts) {
-        if (!parts.TryGetValue(StoragePart.Journal.Name, out var journal)) return null;
-        var version = JsonNode.Parse(journal, documentOptions: DocumentOptions)![SchemaVersionField]!.GetValue<int>();
-        if (version > JournalSchemaVersion) throw new Rejected(new StorageFromNewerApp());
-        return new NativeSyncJournal(journal);
-    }
+    private static NativeSyncJournal? DecodeJournal(IReadOnlyDictionary<string, byte[]> parts) =>
+        parts.TryGetValue(StoragePart.Journal.Name, out var journal) ? DecodeJournal(journal) : null;
 
     /// The Space and per-Space tabs an older session part stored, kept so the
     /// first window without a record of its own can adopt them once.
-    private static JsonObject? DecodeLegacySelection(JsonObject document) {
+    internal static JsonObject? DecodeLegacySelection(JsonObject document) {
         var spaces = document[StoredSessionCodec.Key.Spaces] as JsonArray ?? [];
         var tabs = spaces.OfType<JsonObject>()
             .Where(space => space[StoredSessionCodec.Key.LegacySelectedTab] is not null)

@@ -17,9 +17,6 @@ public unsafe struct CrestBuffer {
 public static unsafe partial class Exports {
     #region Variables
 
-    /// Intents and queries are small; anything larger is a caller bug.
-    public const int MaximumMessageBytes = 16 * 1024 * 1024;
-
     private static readonly ConcurrentDictionary<ulong, CrestApp> Apps = new();
 
     #endregion
@@ -29,26 +26,10 @@ public static unsafe partial class Exports {
     [UnmanagedCallersOnly(EntryPoint = "crest_app_create", CallConvs = [typeof(CallConvCdecl)])]
     public static int AppCreate(byte* fingerprint, nuint length, byte* configuration, nuint configurationLength,
         ulong* app, CrestBuffer* rejection) {
-        if (app == null || rejection == null) return CoreStatus.InvalidArgument;
+        if (app == null) return CoreStatus.InvalidArgument;
         *app = 0;
-        *rejection = default;
-        if (fingerprint == null && length != 0 || configuration == null && configurationLength != 0) return CoreStatus.InvalidArgument;
-        if (configurationLength > MaximumMessageBytes) return CoreStatus.LimitExceeded;
-        try {
-            if (length != (nuint)ContractCodec.Fingerprint.Length
-                || !new ReadOnlySpan<byte>(fingerprint, (int)length).SequenceEqual(ContractCodec.Fingerprint))
-                return CoreStatus.VersionMismatch;
-            var reader = new WireReader(new ReadOnlySpan<byte>(configuration, (int)configurationLength).ToArray());
-            var settings = Finished(ContractCodec.ReadAppConfiguration(reader), reader);
-            CrestApp created;
-            try {
-                created = new CrestApp(settings);
-            } catch (Rejected refused) {
-                var writer = new WireWriter();
-                ContractCodec.WriteRejection(writer, refused.Rejection);
-                *rejection = Allocate(writer.WrittenSpan);
-                return CoreStatus.Rejected;
-            }
+        return Configured(fingerprint, length, configuration, configurationLength, rejection, settings => {
+            var created = new CrestApp(settings);
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!Apps.TryAdd(id, created)) {
                 created.Dispose();
@@ -56,12 +37,18 @@ public static unsafe partial class Exports {
             }
             *app = id;
             return CoreStatus.Ok;
-        } catch (WireFormatException) {
-            return CoreStatus.InvalidMessage;
-        } catch {
-            return CoreStatus.InternalError;
-        }
+        });
     }
+
+    /// Replaces the session file in the configured directory with its
+    /// recovery checkpoint. No app may have the directory open.
+    [UnmanagedCallersOnly(EntryPoint = "crest_app_restore", CallConvs = [typeof(CallConvCdecl)])]
+    public static int AppRestore(byte* fingerprint, nuint length, byte* configuration, nuint configurationLength,
+        CrestBuffer* rejection) =>
+        Configured(fingerprint, length, configuration, configurationLength, rejection, settings => {
+            CrestApp.RestoreRecoveryCheckpoint(settings);
+            return CoreStatus.Ok;
+        });
 
     /// Saves what the app's session file still owes and closes it. Clear the
     /// wake callback first.
@@ -101,7 +88,7 @@ public static unsafe partial class Exports {
 
     [UnmanagedCallersOnly(EntryPoint = "crest_app_dispatch", CallConvs = [typeof(CallConvCdecl)])]
     public static int AppDispatch(ulong app, byte* intent, nuint length, CrestBuffer* output) =>
-        Call(app, intent, length, output, (crest, reader, writer) => {
+        Call(app, intent, length, output, ContractCodec.MaximumIntentBytes, (crest, reader, writer) => {
             var changes = crest.Send(Finished(ContractCodec.ReadIntent(reader), reader));
             writer.WriteCount(changes.Count);
             foreach (var change in changes) ContractCodec.WriteChange(writer, change);
@@ -109,7 +96,7 @@ public static unsafe partial class Exports {
 
     [UnmanagedCallersOnly(EntryPoint = "crest_app_query", CallConvs = [typeof(CallConvCdecl)])]
     public static int AppQuery(ulong app, byte* query, nuint length, CrestBuffer* output) =>
-        Call(app, query, length, output, (crest, reader, writer) =>
+        Call(app, query, length, output, ContractCodec.MaximumQueryBytes, (crest, reader, writer) =>
             ContractCodec.WriteAnswer(writer, crest, Finished(ContractCodec.ReadQuery(reader), reader)));
 
     [UnmanagedCallersOnly(EntryPoint = "crest_buffer_free", CallConvs = [typeof(CallConvCdecl)])]
@@ -123,14 +110,45 @@ public static unsafe partial class Exports {
 
     #region Actions - Messages
 
+    /// Checks the schema fingerprint, decodes one `AppConfiguration` and runs
+    /// `body` with it, answering the encoded rejection with REJECTED.
+    private static int Configured(byte* fingerprint, nuint length, byte* configuration, nuint configurationLength,
+        CrestBuffer* rejection, Func<AppConfiguration, int> body) {
+        if (rejection == null) return CoreStatus.InvalidArgument;
+        *rejection = default;
+        if (fingerprint == null && length != 0 || configuration == null && configurationLength != 0) return CoreStatus.InvalidArgument;
+        if (configurationLength > MessageLimitAttribute.DefaultBytes) return CoreStatus.LimitExceeded;
+        try {
+            if (length != (nuint)ContractCodec.Fingerprint.Length
+                || !new ReadOnlySpan<byte>(fingerprint, (int)length).SequenceEqual(ContractCodec.Fingerprint))
+                return CoreStatus.VersionMismatch;
+            var reader = new WireReader(new ReadOnlySpan<byte>(configuration, (int)configurationLength).ToArray());
+            var settings = Finished(ContractCodec.ReadAppConfiguration(reader), reader);
+            try {
+                return body(settings);
+            } catch (Rejected refused) {
+                var writer = new WireWriter();
+                ContractCodec.WriteRejection(writer, refused.Rejection);
+                *rejection = Allocate(writer.WrittenSpan);
+                return CoreStatus.Rejected;
+            }
+        } catch (WireFormatException) {
+            return CoreStatus.InvalidMessage;
+        } catch {
+            return CoreStatus.InternalError;
+        }
+    }
+
     /// Decodes one message, runs it and hands the caller the encoded answer, or
-    /// the encoded rejection with REJECTED.
-    private static int Call(ulong app, byte* input, nuint length, CrestBuffer* output,
+    /// the encoded rejection with REJECTED. A message longer than its type's
+    /// limit, which its leading tag names, is refused before it is read.
+    private static int Call(ulong app, byte* input, nuint length, CrestBuffer* output, Func<int, int> maximumBytes,
         Action<CrestApp, WireReader, WireWriter> run) {
         if (output == null) return CoreStatus.InvalidArgument;
         *output = default;
         if (input == null && length != 0) return CoreStatus.InvalidArgument;
-        if (length > MaximumMessageBytes) return CoreStatus.LimitExceeded;
+        int tag = WireReader.PeekTag(new ReadOnlySpan<byte>(input, (int)Math.Min(length, (nuint)WireReader.MaximumTagBytes)));
+        if (length > (nuint)maximumBytes(tag)) return CoreStatus.LimitExceeded;
         try {
             if (!Apps.TryGetValue(app, out var crest)) return CoreStatus.InvalidHandle;
             var reader = new WireReader(new ReadOnlySpan<byte>(input, (int)length).ToArray());

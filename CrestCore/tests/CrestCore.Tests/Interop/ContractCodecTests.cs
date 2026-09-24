@@ -75,6 +75,7 @@ public sealed unsafe class ContractCodecTests {
         if (type == typeof(Guid)) return Guid.Parse("00112233-4455-6677-8899-aabbccddeeff");
         if (type == typeof(DateTimeOffset)) return new DateTimeOffset(2026, 9, 23, 12, 30, 15, TimeSpan.Zero);
         if (type == typeof(TimeSpan)) return TimeSpan.FromSeconds(90.5);
+        if (type == typeof(byte[])) return new byte[] { 0, 0x7f, 0x80, 0xff };
         if (type.IsEnum) return Enum.GetValues(type).Cast<object>().Last();
         if (SetMembers(type) is { } members) return members[^1];
         if (Roots.Contains(type)) return Sample(RootMembers(type).First(), null, optionals);
@@ -246,12 +247,30 @@ public sealed unsafe class ContractCodecTests {
     }
 
     [Fact]
+    public void AMessageLongerThanItsTypesLimitIsRefusedBeforeItIsRead() {
+        using var app = new AppClient();
+        var acknowledge = AppClient.Encode(writer => ContractCodec.WriteIntent(writer, new AcknowledgeDownloads(Guid.NewGuid())));
+        var oversized = new byte[MessageLimitAttribute.DefaultBytes + 1];
+        acknowledge.CopyTo(oversized);
+        Assert.Equal(CoreStatus.LimitExceeded, app.Dispatch(oversized).Status);
+        Assert.Equal(CoreStatus.LimitExceeded, app.Ask(oversized).Status);
+
+        // Carrying an installed session may take as much as one stored session part.
+        var installed = new byte[MessageLimitAttribute.DefaultBytes];
+        AdoptLegacySession Adoption(byte[] core) => new(new LegacySession(core, null, [], null), "{}"u8.ToArray());
+        Assert.Empty(app.Send(Adoption(installed)));
+        var adoption = AppClient.Encode(writer => ContractCodec.WriteIntent(writer, Adoption(new byte[64 * 1024 * 1024])));
+        Assert.Equal(CoreStatus.LimitExceeded, app.Dispatch(adoption).Status);
+    }
+
+    [Fact]
     public void TheReaderRefusesBytesNoWriterProduces() {
         Assert.Throws<WireFormatException>(() => new WireReader(new byte[] { 0x80, 0x00 }).ReadVarint());
         Assert.Throws<WireFormatException>(() => new WireReader(Enumerable.Repeat((byte)0xff, 11).ToArray()).ReadVarint());
         Assert.Throws<WireFormatException>(() => new WireReader(new byte[] { 2 }).ReadBool());
         Assert.Throws<WireFormatException>(() => new WireReader(new byte[] { 2, 0xc3, 0x28 }).ReadString());
         Assert.Throws<WireFormatException>(() => new WireReader(new byte[] { 5, 1, 2 }).ReadCount());
+        Assert.Throws<WireFormatException>(() => new WireReader(new byte[] { 3, 1, 2 }).ReadBytes());
         Assert.Throws<WireFormatException>(() => new WireReader(new byte[] { 7 }).ReadEnum(7));
         Assert.Throws<WireFormatException>(() => new WireReader(BitConverter.GetBytes(double.NaN)).ReadDate());
     }

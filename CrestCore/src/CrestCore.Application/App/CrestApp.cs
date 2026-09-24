@@ -56,6 +56,9 @@ public sealed partial class CrestApp : IDisposable {
                 case DownloadIntent download:
                     downloads.Handle(download, changes);
                     break;
+                case AdoptLegacySession adoption:
+                    Adopt(adoption, changes);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");
             }

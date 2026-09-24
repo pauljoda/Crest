@@ -45,17 +45,6 @@ public static unsafe partial class Exports {
         }
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_app_install_session", CallConvs = [typeof(CallConvCdecl)])]
-    public static int AppInstallSession(ulong app, byte* session, nuint sessionLength, byte* journal, nuint journalLength) {
-        if (!ValidSessionInput(session, sessionLength) || journal == null && journalLength != 0) return CoreStatus.InvalidArgument;
-        if (journalLength > NativeSyncJournal.MaximumBytes) return CoreStatus.LimitExceeded;
-        try {
-            if (!Apps.TryGetValue(app, out var crest)) return CoreStatus.InvalidHandle;
-            crest.InstallSession(new ReadOnlySpan<byte>(session, (int)sessionLength), new ReadOnlySpan<byte>(journal, (int)journalLength));
-            return CoreStatus.Ok;
-        } catch (Exception error) { return DurableError(error); }
-    }
-
     #endregion
 
     #region Actions - Durable commits

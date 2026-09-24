@@ -335,7 +335,10 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let saved = try XCTUnwrap(try harness.storedPart("core"))
         let restored = try JSONDecoder().decode(BrowserSession.self, from: saved)
         XCTAssertEqual(restored.spaces[0].tabs[0].customTitle, "Core command")
-        XCTAssertNil(BrowserLegacySessionSelection.decode(saved), "A save never stores a window's selection")
+        let stored = try XCTUnwrap(JSONSerialization.jsonObject(with: saved) as? [String: Any])
+        let spaces = try XCTUnwrap(stored["spaces"] as? [[String: Any]])
+        XCTAssertNil(stored["selectedSpaceID"], "A save never stores a window's selection")
+        XCTAssertTrue(spaces.allSatisfy { $0["selectedTabID"] == nil })
     }
 
     /// An installed release kept the viewed Space and each Space's tab inside
@@ -355,27 +358,23 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         installed.defaultSpaceID = installed.spaces[0].id
         let space = installed.spaces[1]
         let tab = try XCTUnwrap(space.tabs.first { $0.id != BrowserStoreSelection.fallbackTabID(in: space) })
-        let writer = UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: icons)
-        writer.save(installed)
-        await writer.flushPendingSaves()
+        try BrowserInstalledRelease.write(installed, to: defaults, favicons: icons)
         // Spell the installed release's selection into its stored core.
         func json<Value: Encodable>(_ value: Value) throws -> Any {
             try JSONSerialization.jsonObject(with: JSONEncoder().encode(value), options: .fragmentsAllowed)
         }
-        let storedCore = try XCTUnwrap(defaults.data(forKey: UserDefaultsBrowserSessionPersistence.coreKey))
+        let storedCore = try XCTUnwrap(defaults.data(forKey: BrowserLegacySessionDefaults.coreKey))
         var core = try XCTUnwrap(JSONSerialization.jsonObject(with: storedCore) as? [String: Any])
         var spaces = try XCTUnwrap(core["spaces"] as? [[String: Any]])
         core["selectedSpaceID"] = try json(space.id)
         spaces[1]["selectedTabID"] = try json(tab.id)
         core["spaces"] = spaces
-        defaults.set(
-            try JSONSerialization.data(withJSONObject: core), forKey: UserDefaultsBrowserSessionPersistence.coreKey)
+        defaults.set(try JSONSerialization.data(withJSONObject: core), forKey: BrowserLegacySessionDefaults.coreKey)
 
         let crest = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
         let stored = try BrowserStore.migratedStorage(
-            core: crest, legacy: UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: icons),
-            journal: UserDefaultsBrowserSyncJournalPersistence(defaults: defaults), favicons: icons,
-            seed: .freshInstallSeed, environment: .current)
+            core: crest, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: [defaults]),
+            favicons: icons, seed: .freshInstallSeed, environment: .current)
         let session = stored.authority.projection
         XCTAssertEqual(session, installed)
         let launch = try XCTUnwrap(stored.legacySelection).launchSelection(in: session)

@@ -67,6 +67,13 @@ public sealed class WireWriter {
         buffer.Advance(length);
     }
 
+    public void WriteBytes(byte[] value) {
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCount(value.Length);
+        value.CopyTo(buffer.GetSpan(value.Length));
+        buffer.Advance(value.Length);
+    }
+
     public void WriteGuid(Guid value) {
         if (!value.TryWriteBytes(buffer.GetSpan(16), bigEndian: true, out int written) || written != 16)
             throw new InvalidOperationException("A GUID did not write 16 bytes.");

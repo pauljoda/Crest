@@ -10,7 +10,9 @@
  * Every buffer the core returns was allocated by the core; release it with
  * crest_buffer_free. Statuses other than OK and REJECTED are caller or build
  * bugs: INVALID_MESSAGE (bytes that do not decode, or trailing bytes),
- * INVALID_HANDLE, VERSION_MISMATCH and INTERNAL_ERROR.
+ * LIMIT_EXCEEDED (a message longer than its type's limit: 16 MiB, or one
+ * stored session part, 64 MiB, for the intent that carries an installed
+ * session), INVALID_HANDLE, VERSION_MISMATCH and INTERNAL_ERROR.
  */
 #include "crest_core.h"
 
@@ -35,6 +37,17 @@ typedef struct {
  * StorageRestoreInterrupted); nothing was written to it. */
 CREST_API crest_status_t CREST_CALL crest_app_create(const uint8_t* fingerprint, size_t length,
     const uint8_t* configuration, size_t configuration_length, uint64_t* out_app, crest_buffer_t* out_rejection);
+/* Replaces session.sqlite in the configured storage directory with the
+ * recovery checkpoint the last good launch kept, while no app has that
+ * directory open. The checkpoint is validated read-only and its journal gets a
+ * new device identity before the file is touched; the file and its sidecars
+ * are preserved in a Recovery- directory beside it, and the cloud-recovery
+ * marker is left for the cloud transport. REJECTED: out_rejection holds one
+ * rejection (RecoveryCheckpointUnusable); a restore interrupted after it began
+ * setting the file aside leaves the directory refused with
+ * StorageRestoreInterrupted until a restore completes. */
+CREST_API crest_status_t CREST_CALL crest_app_restore(const uint8_t* fingerprint, size_t length,
+    const uint8_t* configuration, size_t configuration_length, crest_buffer_t* out_rejection);
 /* Saves any accepted revision still pending, then closes the session file.
  * Clear the wake callback first. */
 CREST_API crest_status_t CREST_CALL crest_app_destroy(uint64_t app);
@@ -66,13 +79,6 @@ CREST_API crest_status_t CREST_CALL crest_app_drain(uint64_t app, crest_buffer_t
  * stored in the session, when it stored one. */
 CREST_API crest_status_t CREST_CALL crest_app_session(uint64_t app,
     uint64_t* out_session, uint64_t* out_revision, uint64_t* out_sync, uint64_t* out_projection);
-/* TRANSITIONAL, removed when the core migrates the legacy session itself (3b):
- * writes the first session (stored-format JSON with each Space's history) and,
- * when journal_length is not zero, its sync journal in one transaction, then
- * loads it as a launch would. INVALID_STATE when the app has no storage or the
- * file already holds a session; STORAGE_FAILED when the write fails. */
-CREST_API crest_status_t CREST_CALL crest_app_install_session(uint64_t app,
-    const uint8_t* session, size_t session_length, const uint8_t* journal, size_t journal_length);
 
 #ifdef __cplusplus
 } /* extern "C" */

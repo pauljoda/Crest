@@ -22,6 +22,7 @@ enum Change: Equatable, Sendable {
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
     case saved(Saved)
+    case sessionAdopted(SessionAdopted)
     case storageFailed(StorageFailed)
 }
 
@@ -43,6 +44,8 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
+    case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
+    case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
     case staleCredentialComparison(StaleCredentialComparison)
     case storageFromNewerApp(StorageFromNewerApp)
@@ -57,6 +60,7 @@ extension CoreState {
         case .downloadUpdated(let change): apply(change)
         case .downloadsRemoved(let change): apply(change)
         case .saved(let change): apply(change)
+        case .sessionAdopted(let change): apply(change)
         case .storageFailed(let change): apply(change)
         }
     }
@@ -66,6 +70,11 @@ extension CoreState {
 
 struct AcknowledgeDownloads: Intent, Equatable, Sendable {
     let profileID: UUID
+}
+
+struct AdoptLegacySession: Intent, Equatable, Sendable {
+    let installed: LegacySession
+    let seed: Data
 }
 
 struct AppConfiguration: Equatable, Sendable {
@@ -408,6 +417,18 @@ struct KeyCombination: Equatable, Sendable {
     let modifiers: ShortcutModifiers
 }
 
+struct LegacyHistory: Equatable, Sendable {
+    let spaceID: UUID
+    let entries: Data
+}
+
+struct LegacySession: Equatable, Sendable {
+    let core: Data?
+    let wholeGraph: Data?
+    let history: [LegacyHistory]
+    let journal: Data?
+}
+
 struct LinkRoute: Equatable, Sendable, Identifiable {
     let id: UUID
     let isEnabled: Bool
@@ -465,6 +486,10 @@ struct RecordDownloadTransfer: Intent, Equatable, Sendable {
     let progress: Double
 }
 
+struct RecoveryCheckpointUnusable: Equatable, Sendable {
+    let reason: StorageFailure
+}
+
 struct RemoveDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
@@ -477,12 +502,20 @@ struct RestartDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
 
+struct SaveFailed: Equatable, Sendable {
+    let reason: StorageFailure
+}
+
 struct Saved: Equatable, Sendable {
     let revision: Int64
 }
 
 struct SearchEngineLimitReached: Equatable, Sendable {
     let limit: Int
+}
+
+struct SessionAdopted: Equatable, Sendable {
+    let favicons: [TabFavicon]
 }
 
 struct SetDownloadDestination: Intent, Equatable, Sendable {
@@ -548,6 +581,11 @@ struct SystemPasswordWriteThrough: Query, Equatable, Sendable {
 
 struct SystemPasswordWriteThroughSupport: Equatable, Sendable {
     let availability: SystemPasswordWriteThroughAvailability
+}
+
+struct TabFavicon: Equatable, Sendable {
+    let tabID: UUID
+    let image: Data
 }
 
 // MARK: - Enums

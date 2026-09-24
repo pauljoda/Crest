@@ -1,5 +1,7 @@
 using System.Text;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Generator;
 
 /// Emits `ContractCodec`, the core's reader and writer for every contract type.
@@ -30,6 +32,7 @@ internal static class CSharpCodecEmitter {
         code.Append("        ").Append(string.Join(", ", schema.Fingerprint.Select(value => $"0x{value:x2}"))).Append('\n');
         code.Append("    ];\n");
         foreach (var root in Enum.GetValues<ContractRoot>()) EmitRoot(code, schema, root);
+        foreach (var root in new[] { ContractRoot.Intent, ContractRoot.Query }) EmitLimits(code, schema, root);
         EmitAnswers(code, schema);
         foreach (var record in schema.Records) EmitRecord(code, record);
         foreach (var item in schema.Enums) EmitEnum(code, item);
@@ -58,6 +61,17 @@ internal static class CSharpCodecEmitter {
         }
         code.Append($"            default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, \"Not a contract {root}.\");\n");
         code.Append("        }\n    }\n");
+    }
+
+    /// The most bytes one encoded message with a tag may take, which the
+    /// dispatcher checks before it reads the message. A tag no type uses takes
+    /// the default and then fails to decode.
+    private static void EmitLimits(StringBuilder code, ContractSchema schema, ContractRoot root) {
+        code.Append('\n').Append($"    /// <summary>The most bytes one encoded {root.ToString().ToLowerInvariant()} with this tag may take.</summary>\n");
+        code.Append($"    public static int Maximum{root}Bytes(int tag) => tag switch {{\n");
+        foreach (var member in schema.Members(root).Where(member => member.MaximumBytes != MessageLimitAttribute.DefaultBytes))
+            code.Append($"        {member.Tag} => {member.MaximumBytes},\n");
+        code.Append($"        _ => {MessageLimitAttribute.DefaultBytes}\n    }};\n");
     }
 
     /// Writes the answer to a decoded query, so each query reaches `CrestApp`
@@ -171,6 +185,7 @@ internal static class CSharpCodecEmitter {
         PrimitiveField { Kind: Primitive.Guid } => "Guid",
         PrimitiveField { Kind: Primitive.Date } => "DateTimeOffset",
         PrimitiveField { Kind: Primitive.Duration } => "TimeSpan",
+        PrimitiveField { Kind: Primitive.Bytes } => "byte[]",
         EnumField item => item.Type.Name,
         SetField set => set.Type.Name,
         RecordField record => record.Type.Name,

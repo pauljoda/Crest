@@ -17,9 +17,7 @@ extension BrowserStore {
         }
         let favicons: any BrowserFaviconStoring = BrowserFaviconFileStore.production() ?? InMemoryBrowserFaviconStore()
         let stored = try migratedStorage(
-            core: core, legacy: UserDefaultsBrowserSessionPersistence(),
-            journal: UserDefaultsBrowserSyncJournalPersistence(), favicons: favicons, seed: .freshInstallSeed,
-            environment: launchEnvironment)
+            core: core, legacy: .installed, favicons: favicons, seed: .freshInstallSeed, environment: launchEnvironment)
         return production(stored: stored, core: core, favicons: favicons, credentialVault: KeychainCredentialVault())
     }
 
@@ -107,13 +105,11 @@ extension BrowserStore {
         guard let directory = core.storageDirectory, let defaults = UserDefaults(suiteName: namespace) else {
             return nil
         }
-        let legacy = UserDefaultsBrowserSessionPersistence(
-            defaults: defaults, faviconStore: InMemoryBrowserFaviconStore())
         let favicons = BrowserFaviconFileStore(
             rootDirectory: directory.appendingPathComponent("Favicons", isDirectory: true))
         let stored = try migratedStorage(
-            core: core, legacy: legacy, journal: InMemoryBrowserSyncJournalPersistence(), favicons: favicons,
-            seed: isolatedFixtureSession(for: launchEnvironment), environment: launchEnvironment)
+            core: core, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: []),
+            favicons: favicons, seed: isolatedFixtureSession(for: launchEnvironment), environment: launchEnvironment)
         return production(
             stored: stored, core: core, favicons: favicons,
             credentialVault: KeychainCredentialVault(servicePrefix: namespace))
@@ -144,80 +140,46 @@ extension BrowserStore {
     static func launchCore(for launchEnvironment: BrowserLaunchEnvironment) throws -> CrestCore {
         let directory: URL?
         do { directory = try sessionDirectory(for: launchEnvironment) } catch {
-            throw BrowserSessionStartupFailure(storeURL: nil, underlying: error)
+            throw BrowserSessionStartupFailure(storageDirectory: nil, underlying: error)
         }
         do { return try CrestCore(configuration: AppConfiguration(storageDirectory: directory?.path)) } catch {
-            throw BrowserSessionStartupFailure(
-                storeURL: directory?.appendingPathComponent(BrowserSessionRecovery.fileName), underlying: error)
+            throw BrowserSessionStartupFailure(storageDirectory: directory, underlying: error)
         }
     }
 
     /// Takes over the session `core` keeps. On the first launch whose file
-    /// holds none, it carries the installed release's defaults session and
-    /// sync journal into the file, or installs `seed` when there is nothing to
-    /// carry. The legacy values are left in place, so this is also the seam an
-    /// upgrade test drives with its own directory, defaults suite and favicon
-    /// store.
+    /// holds none, the core carries the installed release's defaults session,
+    /// history and sync journal into the file, or installs `seed` when there is
+    /// nothing it can carry; the images that session held inside its tabs land
+    /// in `favicons`. The legacy values are left in place, so this is also the
+    /// seam an upgrade test drives with its own directory, defaults suite and
+    /// favicon store.
     static func migratedStorage(
-        core: CrestCore, legacy: UserDefaultsBrowserSessionPersistence, journal: any BrowserSyncJournalPersisting,
-        favicons: any BrowserFaviconStoring, seed: @autoclosure () -> BrowserSession,
-        environment: BrowserLaunchEnvironment
+        core: CrestCore, legacy: BrowserLegacySessionDefaults, favicons: any BrowserFaviconStoring,
+        seed: @autoclosure () -> BrowserSession, environment: BrowserLaunchEnvironment
     ) throws -> BrowserCoreStoredSession {
         guard let directory = core.storageDirectory else {
             preconditionFailure("A core that keeps nothing on disk has no stored session to open.")
         }
-        let url = directory.appendingPathComponent(BrowserSessionRecovery.fileName)
         do {
             if let stored = try BrowserCoreStoredSession.load(core: core, favicons: favicons) {
-                try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
+                try BrowserSessionRecovery.prepareCloudRecovery(in: directory, environment: environment)
                 return stored
             }
-            let first: BrowserSession
-            let legacySelection: BrowserLegacySessionSelection?
-            if let installed = try migrationSession(legacy, storeURL: url) {
-                first = installed
-                legacySelection = legacy.loadLegacySelection()
-                try core.installSession(
-                    JSONEncoder().encode(BrowserCoreSessionAuthority.compact(installed)),
-                    journal: (try journal.load() ?? BrowserSyncJournal()).encodedSnapshot())
-            } else {
-                first = seed()
-                legacySelection = nil
-                try core.installSession(JSONEncoder().encode(BrowserCoreSessionAuthority.compact(first)), journal: nil)
+            let adoption = AdoptLegacySession(installed: legacy.values, seed: try JSONEncoder().encode(seed()))
+            for case .sessionAdopted(let adopted) in try core.send(adoption) {
+                for favicon in adopted.favicons {
+                    favicons.reconcile(favicon.image, tabID: TabID(rawValue: favicon.tabID))
+                }
             }
-            for tab in first.spaces.flatMap(\.tabs) { favicons.reconcile(tab.faviconData, tabID: tab.id) }
-            try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
-            guard
-                let stored = try BrowserCoreStoredSession.load(
-                    core: core, favicons: favicons, legacySelection: legacySelection)
-            else { throw BrowserCoreStoredSession.LoadError.noSession }
+            try BrowserSessionRecovery.prepareCloudRecovery(in: directory, environment: environment)
+            guard let stored = try BrowserCoreStoredSession.load(core: core, favicons: favicons) else {
+                throw BrowserCoreStoredSession.LoadError.noSession
+            }
             return stored
         } catch {
-            throw BrowserSessionStartupFailure(storeURL: url, underlying: error)
+            throw BrowserSessionStartupFailure(storageDirectory: directory, underlying: error)
         }
-    }
-
-    /// The installed release's session, or nil when this upgrade has none it may
-    /// carry.
-    ///
-    /// A core that would not decode has already been copied aside by the legacy
-    /// store, and those bytes are the only remaining record of that session.
-    /// Migrating the disposable seed that stands in for it would let sync read
-    /// the empty result as a deletion of every real Space, so the launch asks
-    /// the cloud transport for a full pull instead: the seed is replaced by the
-    /// Spaces CloudKit still holds rather than tombstoning them. Refusing to
-    /// launch at all is not an option here — there is no checkpoint to restore
-    /// on a first upgrade, so the retry would never succeed.
-    private static func migrationSession(
-        _ legacy: UserDefaultsBrowserSessionPersistence,
-        storeURL: URL
-    ) throws -> BrowserSession? {
-        let session = legacy.load()
-        guard legacy.status != .preservedUnreadableSession else {
-            try Data().write(to: BrowserSessionRecovery.cloudMarker(for: storeURL), options: .atomic)
-            return nil
-        }
-        return session
     }
 
     private static func isolatedFixtureSession(

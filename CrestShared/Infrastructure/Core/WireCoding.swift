@@ -8,7 +8,8 @@ enum WireError: Error, Equatable {
 }
 
 /// Writes the positional contract wire format. Lengths, counts, tags and enums
-/// are LEB128 varints; numbers are fixed-width little-endian; a UUID is its 16
+/// are LEB128 varints; numbers are fixed-width little-endian; strings and byte
+/// strings are a length followed by their bytes; a UUID is its 16
 /// RFC 4122 bytes; dates and intervals are f64 seconds, dates since 2001.
 struct WireWriter {
     // MARK: - Variables
@@ -68,6 +69,11 @@ struct WireWriter {
         let utf8 = Array(value.utf8)
         writeCount(utf8.count)
         bytes.append(contentsOf: utf8)
+    }
+
+    mutating func writeData(_ value: Data) {
+        writeCount(value.count)
+        bytes.append(contentsOf: value)
     }
 
     mutating func writeUUID(_ value: UUID) {
@@ -192,6 +198,11 @@ struct WireReader {
             throw WireError.malformed("a string is not UTF-8")
         }
         return value
+    }
+
+    mutating func readData() throws(WireError) -> Data {
+        let length = try readBounded(UInt64(remaining), "byte length")
+        return Data(try take(length))
     }
 
     mutating func readUUID() throws(WireError) -> UUID {

@@ -2,8 +2,9 @@ import Foundation
 
 /// The selection earlier releases stored inside the session: the viewed Space and
 /// each Space's selected tab. Selection is window state now, so the session no
-/// longer carries it. Storage reads it from the stored bytes once so a window
-/// without its own record can adopt it, and nothing writes it again.
+/// longer carries it. The core answers it with the session it loaded or carried
+/// once, so a window without its own record can adopt it, and nothing writes it
+/// again.
 struct BrowserLegacySessionSelection: Decodable, Equatable, Sendable {
     // MARK: - Types
 
@@ -32,13 +33,6 @@ struct BrowserLegacySessionSelection: Decodable, Equatable, Sendable {
         selectedTabIDsBySpace = Dictionary(
             spaces.compactMap { space in space.selectedTabID.map { (space.id, $0) } },
             uniquingKeysWith: { first, _ in first })
-    }
-
-    /// Nil when the bytes are not a session, or carry no selection to fold.
-    static func decode(_ data: Data?) -> BrowserLegacySessionSelection? {
-        guard let data, let selection = try? JSONDecoder().decode(Self.self, from: data), !selection.isEmpty
-        else { return nil }
-        return selection
     }
 
     // MARK: - Actions - Folding

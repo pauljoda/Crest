@@ -36,26 +36,20 @@ struct BrowserCoreStoredSession {
 
     let authority: BrowserCoreSessionAuthority
     let sync: BrowserCoreSyncAuthority
-    /// The selection an older release stored in the session, for the first
-    /// window that has no record of its own.
+    /// The selection an older release stored in the session the core loaded or
+    /// carried, for the first window that has no record of its own.
     let legacySelection: BrowserLegacySessionSelection?
 
     // MARK: - Initializers
 
     /// Takes over the session `core` keeps, or answers nil when its file holds
-    /// none yet. `legacySelection` stands in for the one the file stored when
-    /// this launch migrated the session.
-    static func load(
-        core: CrestCore, favicons: any BrowserFaviconStoring, legacySelection: BrowserLegacySessionSelection? = nil
-    ) throws -> BrowserCoreStoredSession? {
+    /// none yet.
+    static func load(core: CrestCore, favicons: any BrowserFaviconStoring) throws -> BrowserCoreStoredSession? {
         guard let handles = core.storedSessionHandles() else { return nil }
-        return try BrowserCoreStoredSession(handles: handles, favicons: favicons, legacySelection: legacySelection)
+        return try BrowserCoreStoredSession(handles: handles, favicons: favicons)
     }
 
-    private init(
-        handles: CrestCore.StoredSessionHandles, favicons: any BrowserFaviconStoring,
-        legacySelection: BrowserLegacySessionSelection?
-    ) throws {
+    private init(handles: CrestCore.StoredSessionHandles, favicons: any BrowserFaviconStoring) throws {
         let projection: Projection
         do {
             defer { crest_session_release_command(handles.projection) }
@@ -88,7 +82,7 @@ struct BrowserCoreStoredSession {
         authority = BrowserCoreSessionAuthority(
             adopting: handles.session, revision: handles.revision, projection: session)
         self.sync = sync
-        self.legacySelection = legacySelection ?? projection.legacySelection
+        legacySelection = projection.legacySelection
     }
 
     // MARK: - Actions - Reading

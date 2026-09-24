@@ -5,16 +5,6 @@ import OSLog
 extension CrestCore {
     // MARK: - Types
 
-    /// Why a call that writes the session file failed.
-    enum StorageError: Error, Equatable {
-        /// The core could not write the file; nothing was published.
-        case saveFailed
-        /// The core would not read the session or journal it was given.
-        case unreadable
-        /// The file already holds a session, or the core keeps no file.
-        case unavailable
-    }
-
     /// TRANSITIONAL until session intents land: handles to the persistent
     /// session the core keeps, for the JSON session commands. The caller owns
     /// each one.
@@ -76,24 +66,27 @@ extension CrestCore {
         }
     }
 
-    /// TRANSITIONAL until the core migrates the legacy session itself (3b):
-    /// writes the first session, in the stored format with each Space's
-    /// history, and the journal that goes with it, in one transaction.
-    func installSession(_ session: Data, journal: Data?) throws(StorageError) {
-        let journal = journal ?? Data()
-        let status = session.withUnsafeBytes { sessionBytes in
-            journal.withUnsafeBytes { journalBytes in
-                crest_app_install_session(
-                    handle, sessionBytes.bindMemory(to: UInt8.self).baseAddress, session.count,
-                    journalBytes.bindMemory(to: UInt8.self).baseAddress, journal.count)
+    /// Replaces the session file in `configuration`'s directory with the
+    /// recovery checkpoint the last good launch kept. No core may have that
+    /// directory open. Throws the rejection naming why it cannot.
+    nonisolated static func restoreRecoveryCheckpoint(configuration: AppConfiguration) throws(Rejection) {
+        var writer = WireWriter()
+        configuration.encode(into: &writer)
+        var refusal = crest_buffer_t()
+        let status = CoreCodec.fingerprint.withUnsafeBufferPointer { fingerprint in
+            writer.bytes.withUnsafeBufferPointer { settings in
+                crest_app_restore(
+                    fingerprint.baseAddress, fingerprint.count, settings.baseAddress, settings.count, &refusal)
             }
         }
+        defer { crest_buffer_free(&refusal) }
         switch status {
-        case CREST_OK: return
-        case CREST_STORAGE_FAILED: throw .saveFailed
-        case CREST_INVALID_STATE: throw .unavailable
-        case CREST_INVALID_MESSAGE, CREST_INVALID_ARGUMENT, CREST_LIMIT_EXCEEDED: throw .unreadable
-        default: Self.buildBug(status, "install the first session")
+        case CREST_OK:
+            return
+        case CREST_REJECTED:
+            throw rejection(in: refusal)
+        default:
+            buildBug(status, "restore its recovery checkpoint")
         }
     }
 }

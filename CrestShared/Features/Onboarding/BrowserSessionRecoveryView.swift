@@ -24,9 +24,9 @@ struct BrowserSessionRecoveryView<Value>: View {
                     .buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("session-recovery-retry")
                 #if os(macOS)
-                if let url = launch.failure?.storeURL {
+                if let directory = launch.failure?.storageDirectory {
                     Button("Show Saved Files") {
-                        NSWorkspace.shared.open(url.deletingLastPathComponent())
+                        NSWorkspace.shared.open(directory)
                     }
                 }
                 #endif

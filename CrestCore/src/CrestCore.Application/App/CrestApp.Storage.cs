@@ -33,23 +33,38 @@ public sealed partial class CrestApp {
         lock (gate) return Session is { } session && launchProjection is { } bytes ? session.Projection(bytes) : null;
     }
 
-    /// TRANSITIONAL until the core migrates the legacy session itself (3b):
-    /// writes the first session, in the stored format with each Space's
-    /// history, and the journal that goes with it, into a file that holds no
-    /// session yet, then loads it as a launch would. Throws
-    /// `InvalidOperationException` when there is no file or it already holds
-    /// a session, and `StorageException` when the write fails.
-    public void InstallSession(ReadOnlySpan<byte> session, ReadOnlySpan<byte> journal) {
-        var target = storage ?? throw new InvalidOperationException("This core keeps nothing in storage.");
-        if (session.IsEmpty || session.Length > NativeSessionAuthority.MaximumBytes)
-            throw new BrowserRuleException(BrowserRuleCodes.SessionSizeLimit);
-        var decoded = StoredSessionCodec.DecodeSession(JsonNode.Parse(session, documentOptions: new() { MaxDepth = 64 }));
-        var decodedJournal = journal.IsEmpty ? null : new NativeSyncJournal(journal);
-        lock (gate) {
-            if (Session is not null) throw new InvalidOperationException("The session file already holds a session.");
-            target.Install(decoded, decodedJournal);
-            Establish(decoded, decodedJournal, legacySelection: null);
+    /// Gives a file that holds no session its first one, before returning:
+    /// the installed release's, or the seed. See `AdoptLegacySession`.
+    private void Adopt(AdoptLegacySession adoption, ChangeFeed changes) {
+        if (storage is not { } target || Session is not null) return;
+        // A file that holds a session this core could not take over is refused
+        // at creation, so one found here was written by an adoption whose
+        // takeover failed: it is as unreadable now as it was then.
+        if (target.HoldsSession) throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
+        var first = FirstSession.For(adoption);
+        try {
+            if (first.RequestsCloudRecovery) target.RequestCloudRecovery();
+            target.Install(first.Session, first.Journal);
+        } catch (StorageException error) {
+            throw new Rejected(new SaveFailed(error.Reason));
+        } catch (IOException) {
+            throw new Rejected(new SaveFailed(StorageFailure.Unavailable));
+        } catch (UnauthorizedAccessException) {
+            throw new Rejected(new SaveFailed(StorageFailure.ReadOnly));
         }
+        Establish(first.Session, first.Journal, first.LegacySelection);
+        changes.Publish(new SessionAdopted(first.Favicons));
+    }
+
+    /// Replaces the session file in `configuration`'s directory with the
+    /// recovery checkpoint the last good launch kept, while no core has that
+    /// file open. Throws `Rejected` naming why it cannot; see
+    /// `SessionStorage.Restore`.
+    public static void RestoreRecoveryCheckpoint(AppConfiguration configuration) {
+        ArgumentNullException.ThrowIfNull(configuration);
+        if (configuration.StorageDirectory is not { } directory)
+            throw new Rejected(new RecoveryCheckpointUnusable(StorageFailure.Unavailable));
+        SessionStorage.Restore(directory);
     }
 
     /// Makes a stored session the core's persistent session. The recovery

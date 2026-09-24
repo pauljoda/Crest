@@ -328,8 +328,22 @@ static size_t storage_configuration(const char* directory, uint8_t* output, size
     memcpy(output + 2, directory, length);
     return length + 2;
 }
+/* A byte string: its LEB128 length, then the bytes. */
+static size_t put_bytes(uint8_t* output, size_t at, size_t capacity, const char* bytes, size_t length) {
+    size_t remaining = length;
+    do {
+        assert(at < capacity);
+        uint8_t next = (uint8_t)(remaining & 0x7f);
+        remaining >>= 7;
+        output[at++] = remaining == 0 ? next : (uint8_t)(next | 0x80);
+    } while (remaining != 0);
+    assert(at + length <= capacity);
+    memcpy(output + at, bytes, length);
+    return at + length;
+}
 /* The core opens and owns session.sqlite: an empty file answers EMPTY, the
- * first session is installed once, and the save it starts wakes the host. */
+ * first session is adopted once, and the save it starts wakes the host. A
+ * directory without a recovery checkpoint cannot be restored. */
 static void storage_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     /* The core creates the directory it is given. */
@@ -347,8 +361,26 @@ static void storage_boundary(void) {
         "{\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},\"profile\":{\"id\":\"%s\"},\"name\":\"Stored\","
         "\"tabs\":[],\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}", space_id, profile_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    assert(crest_app_install_session(app, (const uint8_t*)json, (size_t)size, NULL, 0) == CREST_OK);
-    assert(crest_app_install_session(app, (const uint8_t*)json, (size_t)size, NULL, 0) == CREST_INVALID_STATE);
+    /* AdoptLegacySession: the installed release kept the session whole
+     * (Core absent, WholeGraph present, no history parts, no journal), and the
+     * same session is the seed. */
+    uint8_t adoption[1100];
+    size_t adopted = 0;
+    adoption[adopted++] = CREST_INTENT_ADOPT_LEGACY_SESSION;
+    adoption[adopted++] = 0;
+    adoption[adopted++] = 1;
+    adopted = put_bytes(adoption, adopted, sizeof(adoption), json, (size_t)size);
+    adoption[adopted++] = 0;
+    adoption[adopted++] = 0;
+    adopted = put_bytes(adoption, adopted, sizeof(adoption), json, (size_t)size);
+    assert(crest_app_dispatch(app, adoption, adopted, &buffer) == CREST_OK);
+    /* One change, SessionAdopted, carrying no images. */
+    assert(buffer.length == 3 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SESSION_ADOPTED && buffer.bytes[2] == 0);
+    crest_buffer_free(&buffer);
+    /* The file holds a session now: a second adoption changes nothing. */
+    assert(crest_app_dispatch(app, adoption, adopted, &buffer) == CREST_OK);
+    assert(buffer.length == 1 && buffer.bytes[0] == 0);
+    crest_buffer_free(&buffer);
     for (int attempt = 0; attempt < 1000 && storage_wakes == 0; attempt++) {
         struct timespec pause = { 0, 5000000 };
         nanosleep(&pause, NULL);
@@ -380,6 +412,9 @@ static void storage_boundary(void) {
     assert(file != NULL && fputs("not a session", file) >= 0 && fclose(file) == 0);
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_REJECTED
         && app == 0 && buffer.bytes != NULL && buffer.bytes[0] == CREST_REJECTION_STORAGE_UNREADABLE);
+    crest_buffer_free(&buffer);
+    assert(crest_app_restore(fingerprint, sizeof(fingerprint), configuration, configured, &buffer) == CREST_REJECTED
+        && buffer.bytes != NULL && buffer.bytes[0] == CREST_REJECTION_RECOVERY_CHECKPOINT_UNUSABLE);
     crest_buffer_free(&buffer);
     char command[320];
     snprintf(command, sizeof(command), "rm -rf '%s'", directory);

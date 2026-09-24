@@ -4,7 +4,8 @@ using System.Text;
 namespace CrestCore.Native;
 
 /// Reads the positional contract wire format. Lengths, counts, tags and enums
-/// are LEB128 varints; numbers are fixed-width little-endian; a GUID is 16
+/// are LEB128 varints; numbers are fixed-width little-endian; strings and
+/// byte strings are a length followed by their bytes; a GUID is 16
 /// bytes in RFC 4122 order; dates and durations are f64 seconds, dates since
 /// 1 January 2001. Every length is checked against the bytes that remain, and
 /// anything malformed throws `WireFormatException`.
@@ -12,6 +13,9 @@ public sealed class WireReader(ReadOnlyMemory<byte> bytes) {
     #region Variables
 
     public static readonly DateTimeOffset ReferenceDate = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    /// The most bytes a union's tag takes: a varint of at most 31 bits.
+    public const int MaximumTagBytes = 5;
 
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
@@ -25,6 +29,16 @@ public sealed class WireReader(ReadOnlyMemory<byte> bytes) {
 
     /// A union's tag.
     public int ReadTag() => checked((int)ReadBounded(int.MaxValue, "tag"));
+
+    /// The tag a message starts with, read without consuming anything, or -1
+    /// when its first bytes are not a tag.
+    public static int PeekTag(ReadOnlySpan<byte> prefix) {
+        try {
+            return new WireReader(prefix.ToArray()).ReadTag();
+        } catch (Exception error) when (error is WireFormatException or OverflowException) {
+            return -1;
+        }
+    }
 
     /// A list's count. Every element occupies at least one byte.
     public int ReadCount() => checked((int)ReadBounded((ulong)Remaining, "count"));
@@ -99,6 +113,9 @@ public sealed class WireReader(ReadOnlyMemory<byte> bytes) {
             throw new WireFormatException("A string is not UTF-8.");
         }
     }
+
+    /// A byte string: its length, then the bytes as they are.
+    public byte[] ReadBytes() => Take(checked((int)ReadBounded((ulong)Remaining, "byte length"))).ToArray();
 
     public Guid ReadGuid() => new(Take(16), bigEndian: true);
 

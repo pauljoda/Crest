@@ -12,7 +12,7 @@ namespace CrestCore.Generator;
 /// whose wire tag is the type's index in ordinal name order.
 internal enum ContractRoot { Intent, Change, Rejection, Query }
 
-internal enum Primitive { Bool, Int, Long, Double, String, Guid, Date, Duration }
+internal enum Primitive { Bool, Int, Long, Double, String, Guid, Date, Duration, Bytes }
 
 /// The wire shape of one constructor parameter.
 internal abstract record FieldType;
@@ -46,8 +46,9 @@ internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fi
     public string Name => Type.Name;
 }
 
-/// One concrete type of a root, with its tag and, for a query, its answer.
-internal sealed record ContractMember(ContractRecord Record, int Tag, FieldType? Answer) {
+/// One concrete type of a root, with its tag, for a query its answer, and for
+/// an intent or a query the most bytes one encoded message may take.
+internal sealed record ContractMember(ContractRecord Record, int Tag, FieldType? Answer, int? MaximumBytes) {
     public string Name => Record.Name;
 }
 
@@ -161,8 +162,19 @@ internal sealed class ContractSchema {
             var answer = root == ContractRoot.Query
                 ? ResolveRequired(QueryAnswer(type)!, null, $"{type.Name} answer")
                 : null;
-            return new ContractMember(DescribeRecord(type), tag, answer);
+            return new ContractMember(DescribeRecord(type), tag, answer, MessageLimit(type, root));
         })];
+    }
+
+    /// An intent's or a query's byte limit: its own, or the default. Nothing
+    /// else crosses as a message on its own, so nothing else may name one.
+    private static int? MessageLimit(Type type, ContractRoot root) {
+        var limit = type.GetCustomAttribute<MessageLimitAttribute>(inherit: false);
+        if (root is not (ContractRoot.Intent or ContractRoot.Query))
+            return limit is null ? null : throw new ContractSchemaException($"{type.Name}: only an intent or a query has a message limit.");
+        if (limit is { Bytes: <= 0 })
+            throw new ContractSchemaException($"{type.Name}: a message limit must be a positive number of bytes.");
+        return limit?.Bytes ?? MessageLimitAttribute.DefaultBytes;
     }
 
     private static Type? QueryAnswer(Type type) {
@@ -213,6 +225,7 @@ internal sealed class ContractSchema {
         if (type == typeof(Guid)) return new PrimitiveField(Primitive.Guid);
         if (type == typeof(DateTimeOffset)) return new PrimitiveField(Primitive.Date);
         if (type == typeof(TimeSpan)) return new PrimitiveField(Primitive.Duration);
+        if (type == typeof(byte[])) return new PrimitiveField(Primitive.Bytes);
         if (type == typeof(Intent)) return new RootField(ContractRoot.Intent);
         if (type == typeof(Change)) return new RootField(ContractRoot.Change);
         if (type == typeof(Rejection)) return new RootField(ContractRoot.Rejection);
@@ -492,7 +505,7 @@ internal sealed class ContractSchema {
         PrimitiveField { Kind: Primitive.Bool } => 1,
         PrimitiveField { Kind: Primitive.Int } => 4,
         PrimitiveField { Kind: Primitive.Guid } => 16,
-        PrimitiveField { Kind: Primitive.String } => 1,
+        PrimitiveField { Kind: Primitive.String or Primitive.Bytes } => 1,
         PrimitiveField => 8,
         EnumField or SetField or RootField or ListField or OptionalField => 1,
         RecordField record => RecordMinimumSize(record.Type, visiting),
@@ -538,7 +551,8 @@ internal sealed class ContractSchema {
         foreach (var root in Enum.GetValues<ContractRoot>())
             foreach (var member in Members(root))
                 text.Append(root.ToString().ToLowerInvariant()).Append(' ').Append(member.Tag).Append(' ').Append(member.Name)
-                    .Append(member.Answer is { } answer ? $" -> {Describe(answer)}" : "").Append('\n');
+                    .Append(member.Answer is { } answer ? $" -> {Describe(answer)}" : "")
+                    .Append(member.MaximumBytes is { } limit ? $" limit={limit.ToString(CultureInfo.InvariantCulture)}" : "").Append('\n');
         return text.ToString();
     }
 

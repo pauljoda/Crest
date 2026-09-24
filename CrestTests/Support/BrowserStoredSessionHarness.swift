@@ -20,12 +20,12 @@ final class BrowserStoredSessionHarness {
     let favicons: InMemoryBrowserFaviconStore
     let core: CrestCore
     let store: BrowserStore
-    var url: URL { directory.appendingPathComponent(BrowserSessionRecovery.fileName) }
+    var url: URL { directory.appendingPathComponent("session.sqlite") }
 
     // MARK: - Initializers
 
-    /// Installs `session` and `journal` as the first session of a new file,
-    /// then opens it with a window showing `selection`.
+    /// Gives a new file `session` and `journal` as its first session, then
+    /// opens it with a window showing `selection`.
     init(
         session: BrowserSession, journal: BrowserSyncJournal? = nil, selection: BrowserStoreSelection? = nil,
         favicons: InMemoryBrowserFaviconStore = InMemoryBrowserFaviconStore()
@@ -33,9 +33,7 @@ final class BrowserStoredSessionHarness {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         self.favicons = favicons
         core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
-        try core.installSession(
-            JSONEncoder().encode(BrowserCoreSessionAuthority.compact(session)), journal: journal?.encodedSnapshot())
-        for tab in session.spaces.flatMap(\.tabs) { favicons.reconcile(tab.faviconData, tabID: tab.id) }
+        try BrowserInstalledRelease.adopt(session, journal: journal, into: core, favicons: favicons)
         store = try Self.open(core, favicons: favicons, selection: selection)
     }
 

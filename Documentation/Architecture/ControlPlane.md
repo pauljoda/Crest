@@ -280,7 +280,7 @@ before any window is on screen.
 Older documents stored a session-level `selectedSpaceID` and per-Space
 `selectedTabID`. They still load: the core's stored-format codec
 (`StoredSessionCodec`) ignores the fields on the way in and never writes them,
-and the native storage reads them once
+and the core answers them once with the session it loads or carries
 (`BrowserLegacySessionSelection`) so the first window without its own record
 adopts them; a record that predates captured Spaces folds them in and captures
 from then on. Sync never carried selection and still does not.
@@ -415,8 +415,8 @@ cloud Spaces clears the seed marker.
 `crest_sync_session_prepare` returns a matched session result and immutable journal
 handle after all merge rules succeed. `crest_session_replace_durably` validates
 the replacement before any durable write and excludes competing core writes until
-the save finishes. Legacy defaults are migrated once, through
-`crest_app_install_session`, and retained for rollback. Local saves, incoming sync
+the save finishes. Legacy defaults are migrated once, through the
+`AdoptLegacySession` intent, and retained for rollback. Local saves, incoming sync
 and upload acknowledgments all write through the core's one connection, and a
 journal is always written in one transaction with the newest accepted session.
 
@@ -441,13 +441,19 @@ move every one of those paths into a container and strand the installed data,
 so the product package must be signed with the Mac target's own entitlements.
 
 `BrowserStore.migratedStorage` performs the carry and is the seam the upgrade
-test drives with its own directory, defaults suite and favicon store. It installs
-the legacy session only when the core's file holds none, so a later launch never
-replaces accepted data with the retained legacy copy. A core the installed
-release itself could not decode is copied aside by the legacy store, migrates
-nothing, and requests a full cloud pull, so the disposable seed that stands in
-is replaced by the Spaces CloudKit still holds instead of being published as
-their deletion.
+test drives with its own directory, defaults suite and favicon store. When the
+core's file holds no session, Swift reads the installed release's values raw
+(`BrowserLegacySessionDefaults`: the session core, every Space's history key,
+the journal from its suite, or the whole-graph blob of releases before the
+split) and sends them with the first-launch seed as `AdoptLegacySession`. The
+core decodes them, including the tab groups releases before folders stored,
+and writes the result before the intent returns; `SessionAdopted` hands back
+the tab images a whole-graph blob carried, for the favicon store. A file that
+already holds a session adopts nothing, so a later launch never replaces
+accepted data with the retained legacy copy. An installed session the core
+cannot decode is left where it is: the core leaves the cloud-recovery marker
+beside the file and installs the seed, so the seed is replaced by the Spaces
+CloudKit still holds instead of being published as their deletion.
 
 WebKit cookies and website data, WebKit extension packages and their granted
 permissions, and WebKit tab interaction-state archives are engine-specific and
@@ -490,7 +496,8 @@ Live cross-engine CloudKit validation must compare record identities and version
 including fresh-profile adoption and repeated merges. An unreadable transactional
 store opens native recovery UI before browser services or sync are constructed.
 Successful launches preserve a complete SQLite checkpoint when session and journal
-data are available. Restoring it validates every session part, retains the original
+data are available. Restoring it (`crest_app_restore`, while no core has the
+directory open) validates every session part read-only, retains the original
 database and sidecars in a separate recovery directory, and uses an interruption
 marker so a partial restore cannot become a fresh-install seed. A session saved by
 a newer storage version requires an app update instead of offering rollback.
@@ -811,8 +818,12 @@ command or provider. Frequent page observations use incremental tab projections
 and stable observed row objects. Oversized structural snapshots stream in bounded
 chunks and become visible only after complete digest validation. Creation limits
 follow the existing import policy: 64 Spaces and 5,000 tabs per Space.
-Session inputs and checkpoint parts are limited to 64 MiB, and pure sync
-evaluation (`crest_core_evaluate_sync`) to 16 MiB. Large binary metadata must
+Session inputs and checkpoint parts are limited to 64 MiB. Typed intents and
+queries are limited to 16 MiB, except the one that carries an installed session
+into the file (`AdoptLegacySession`), which may take one session part; the
+limit is data on the contract type, and the dispatcher checks it before reading
+the message. Pure sync evaluation (`crest_core_evaluate_sync`) is limited to
+16 MiB. Large binary metadata must
 move to a separate blob provider before either budget grows. Nobody has
 validated full UI behavior at the import limits yet, or run the iOS build on a
 physical device.

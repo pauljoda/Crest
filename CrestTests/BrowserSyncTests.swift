@@ -2401,65 +2401,6 @@ final class BrowserSyncTests: XCTestCase {
         }
     }
 
-    func testJournalPersistsAndRejectsCorruptData() throws {
-        let suiteName = "BrowserSyncTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let persistence = UserDefaultsBrowserSyncJournalPersistence(
-            defaults: defaults,
-            key: "journal"
-        )
-        var journal = BrowserSyncJournal(deviceID: fixedUUID(70))
-        try journal.stage(session: oneSpaceSession(), at: fixedDate(1))
-
-        try persistence.save(journal)
-        XCTAssertEqual(try persistence.load(), journal)
-
-        defaults.set(Data("not-json".utf8), forKey: "journal")
-        XCTAssertThrowsError(try persistence.load()) { error in
-            XCTAssertEqual(error as? BrowserSyncJournalPersistenceError, .decodingFailed)
-        }
-    }
-
-    func testDefaultJournalPersistenceUsesDedicatedDefaultsSuite() throws {
-        let key = "BrowserSyncTests.\(UUID().uuidString)"
-        let isolatedDefaults = try XCTUnwrap(
-            UserDefaults(suiteName: "com.pauldavis.crest.sync-journal")
-        )
-        let standardDefaults = UserDefaults.standard
-        defer {
-            isolatedDefaults.removeObject(forKey: key)
-            standardDefaults.removeObject(forKey: key)
-        }
-        var journal = BrowserSyncJournal(deviceID: fixedUUID(701))
-        try journal.stage(session: oneSpaceSession(), at: fixedDate(1))
-
-        try UserDefaultsBrowserSyncJournalPersistence(key: key).save(journal)
-
-        XCTAssertNotNil(isolatedDefaults.data(forKey: key))
-        XCTAssertNil(standardDefaults.data(forKey: key))
-    }
-
-    func testDefaultJournalPersistenceMigratesLegacyStandardJournal() throws {
-        let key = "BrowserSyncTests.\(UUID().uuidString)"
-        let isolatedDefaults = try XCTUnwrap(
-            UserDefaults(suiteName: "com.pauldavis.crest.sync-journal")
-        )
-        let standardDefaults = UserDefaults.standard
-        defer {
-            isolatedDefaults.removeObject(forKey: key)
-            standardDefaults.removeObject(forKey: key)
-        }
-        var journal = BrowserSyncJournal(deviceID: fixedUUID(702))
-        try journal.stage(session: oneSpaceSession(), at: fixedDate(1))
-        standardDefaults.set(try JSONEncoder().encode(journal), forKey: key)
-
-        let loaded = try UserDefaultsBrowserSyncJournalPersistence(key: key).load()
-
-        XCTAssertEqual(loaded, journal)
-        XCTAssertNotNil(isolatedDefaults.data(forKey: key))
-    }
-
     func testCoordinatorRecoversACorruptLocalJournalAndPersistsFreshState() throws {
         let persistence = CorruptBrowserSyncJournalPersistence()
         let coordinator = BrowserSyncCoordinator(
@@ -3543,7 +3484,7 @@ private final class CorruptBrowserSyncJournalPersistence: BrowserSyncJournalPers
     private(set) var savedJournal: BrowserSyncJournal?
 
     func load() throws -> BrowserSyncJournal? {
-        throw BrowserSyncJournalPersistenceError.decodingFailed
+        throw CocoaError(.fileReadCorruptFile)
     }
 
     func save(_ journal: BrowserSyncJournal) throws {

@@ -326,6 +326,7 @@ internal static class SwiftEmitter {
         Primitive.Guid => "UUID",
         Primitive.Date => "Date",
         Primitive.Duration => "TimeInterval",
+        Primitive.Bytes => "Data",
         _ => throw new ContractSchemaException($"Unknown primitive {kind}.")
     };
 

@@ -22,8 +22,16 @@ internal sealed class SessionStorage : IDisposable {
     public const string FileName = "session.sqlite";
     private const string RecoveryFileName = "session.recovery.sqlite";
     private const string RestoreMarkerSuffix = ".restore-pending";
+    /// Beside the file while the cloud transport owes a full pull: the file
+    /// holds a seed that stands in for an unreadable installed session, or a
+    /// restored journal that its newer cursor cannot describe. The transport
+    /// removes it once it has opted in.
+    private const string CloudRecoverySuffix = ".cloud-recovery";
+    private const string PreservedDirectoryPrefix = "Recovery-";
     private const string TemporaryExtension = ".sqlite";
     private static readonly string[] SidecarSuffixes = ["-wal", "-shm"];
+    /// The rollback journal SQLite keeps beside a checkpoint copy while it writes.
+    private const string RollbackJournalSuffix = "-journal";
     private const int StorageVersion = 1;
     private const UnixFileMode OwnerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
 
@@ -43,6 +51,13 @@ internal sealed class SessionStorage : IDisposable {
     private bool pendingIsNew, stopping, closed;
 
     public string Directory { get; }
+
+    /// Whether the file holds a session.
+    public bool HoldsSession {
+        get {
+            lock (writing) return written.ContainsKey(StoragePart.Core.Name);
+        }
+    }
 
     #endregion
 
@@ -105,6 +120,8 @@ internal sealed class SessionStorage : IDisposable {
         if (OperatingSystem.IsWindows()) System.IO.Directory.CreateDirectory(directory);
         else System.IO.Directory.CreateDirectory(directory, OwnerOnly);
     }
+
+    private static string[] WithSidecars(string path) => [path, .. SidecarSuffixes.Select(suffix => path + suffix)];
 
     /// Reads and decodes an existing file through a read-only connection. A
     /// cleanly closed WAL database has no sidecar, and a read-only connection
@@ -285,6 +302,63 @@ internal sealed class SessionStorage : IDisposable {
                 foreach (var file in SidecarSuffixes.Select(suffix => temporary + suffix).Prepend(temporary)) File.Delete(file);
             }
         }
+    }
+
+    /// Leaves the cloud-recovery marker beside the file, before the seed that
+    /// stands in for an unreadable installed session is written.
+    public void RequestCloudRecovery() => RequestCloudRecovery(Path.Combine(Directory, FileName));
+
+    private static void RequestCloudRecovery(string path) => File.WriteAllBytes(path + CloudRecoverySuffix, []);
+
+    /// Replaces the file in `directory` with its recovery checkpoint while no
+    /// core has it open. The checkpoint is validated read-only first, and the
+    /// file is touched only once a copy of it with every part decoded is ready:
+    /// that copy's journal gets a new device identity, so it never reissues a
+    /// version it issued after the checkpoint. The file and its sidecars are
+    /// preserved in a `Recovery-` directory beside it, and the restore marker
+    /// names that directory until the copy is in place, so an interrupted
+    /// restore refuses the directory instead of starting a fresh session. The
+    /// cloud-recovery marker stays for the transport. Throws `Rejected`.
+    public static void Restore(string directory) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        string path = Path.Combine(directory, FileName);
+        string checkpoint = Path.Combine(directory, RecoveryFileName);
+        string candidate = Path.Combine(directory, Guid.NewGuid().ToString("D").ToUpperInvariant() + TemporaryExtension);
+        try {
+            if (!File.Exists(checkpoint)) throw new Rejected(new RecoveryCheckpointUnusable(StorageFailure.Unavailable));
+            var journal = RestorableJournal(checkpoint);
+            File.Copy(checkpoint, candidate);
+            using (var copy = SqliteConnection.Open(candidate, Sqlite.OpenReadWrite))
+                copy.Write(StoragePart.Journal.Name, journal.Recovered(Guid.NewGuid()).Read());
+            string preserved = Path.Combine(directory, PreservedDirectoryPrefix + Guid.NewGuid().ToString("D").ToUpperInvariant());
+            CreateDirectory(preserved);
+            foreach (var file in WithSidecars(path).Where(File.Exists))
+                File.Copy(file, Path.Combine(preserved, Path.GetFileName(file)));
+            File.WriteAllText(path + RestoreMarkerSuffix, preserved);
+            RequestCloudRecovery(path);
+            foreach (var sidecar in WithSidecars(path).Skip(1)) File.Delete(sidecar);
+            File.Move(candidate, path, overwrite: true);
+            File.Delete(path + RestoreMarkerSuffix);
+        } catch (StorageException error) {
+            throw new Rejected(new RecoveryCheckpointUnusable(error.Reason));
+        } catch (IOException) {
+            throw new Rejected(new RecoveryCheckpointUnusable(StorageFailure.Unavailable));
+        } catch (UnauthorizedAccessException) {
+            throw new Rejected(new RecoveryCheckpointUnusable(StorageFailure.ReadOnly));
+        } finally {
+            foreach (var file in WithSidecars(candidate).Append(candidate + RollbackJournalSuffix)) File.Delete(file);
+        }
+    }
+
+    /// The journal of a checkpoint this build wrote whose every part decodes.
+    private static NativeSyncJournal RestorableJournal(string checkpoint) {
+        try {
+            var validated = Validate(checkpoint);
+            if (validated is { Session: { Session: not null, Journal: { } journal } }) return journal;
+        } catch (Rejected) {
+            // A checkpoint no build could have written is as unusable as a damaged one.
+        }
+        throw new Rejected(new RecoveryCheckpointUnusable(StorageFailure.Damaged));
     }
 
     #endregion

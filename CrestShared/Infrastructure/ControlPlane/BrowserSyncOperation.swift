@@ -3,7 +3,6 @@ import Foundation
 /// One sync journal mutation, sync query or stateless sync evaluation. Raw
 /// values are the core's spellings in `NativeSyncOperation.cs`.
 enum BrowserSyncOperation: String, Codable, Sendable {
-    case recover
     case merge
     case replace
     case overwrite

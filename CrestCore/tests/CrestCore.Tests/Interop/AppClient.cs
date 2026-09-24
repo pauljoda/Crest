@@ -52,6 +52,27 @@ internal sealed unsafe class AppClient : IDisposable {
         return (status, rejection);
     }
 
+    /// Restores the recovery checkpoint in `configuration`'s directory and
+    /// answers the rejection it refused with, if any.
+    public static (int Status, Rejection? Rejection) Restore(AppConfiguration configuration) {
+        var fingerprint = ContractCodec.Fingerprint;
+        var encoded = Encode(writer => ContractCodec.WriteAppConfiguration(writer, configuration));
+        CrestBuffer buffer;
+        int status;
+        fixed (byte* bytes = fingerprint)
+        fixed (byte* settings = encoded)
+            status = ((delegate* unmanaged[Cdecl]<byte*, nuint, byte*, nuint, CrestBuffer*, int>)&Exports.AppRestore)(
+                bytes, (nuint)fingerprint.Length, settings, (nuint)encoded.Length, &buffer);
+        Rejection? rejection = null;
+        if (buffer.Bytes != null) {
+            var reader = new WireReader(new ReadOnlySpan<byte>(buffer.Bytes, (int)buffer.Length).ToArray());
+            rejection = ContractCodec.ReadRejection(reader);
+            reader.EnsureEnd();
+        }
+        ((delegate* unmanaged[Cdecl]<CrestBuffer*, void>)&Exports.BufferFree)(&buffer);
+        return (status, rejection);
+    }
+
     public int Destroy() => ((delegate* unmanaged[Cdecl]<ulong, int>)&Exports.AppDestroy)(Handle);
 
     public void Dispose() => Destroy();
@@ -84,13 +105,6 @@ internal sealed unsafe class AppClient : IDisposable {
         int status = ((delegate* unmanaged[Cdecl]<ulong, ulong*, ulong*, ulong*, ulong*, int>)&Exports.AppSession)(
             Handle, &session, &revision, &sync, &projection);
         return (status, session, revision, sync, projection);
-    }
-
-    public int Install(ReadOnlySpan<byte> session, ReadOnlySpan<byte> journal) {
-        fixed (byte* sessionBytes = session)
-        fixed (byte* journalBytes = journal)
-            return ((delegate* unmanaged[Cdecl]<ulong, byte*, nuint, byte*, nuint, int>)&Exports.AppInstallSession)(
-                Handle, sessionBytes, (nuint)session.Length, journalBytes, (nuint)journal.Length);
     }
 
     #endregion

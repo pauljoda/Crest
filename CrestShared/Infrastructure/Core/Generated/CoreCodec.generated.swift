@@ -7,26 +7,27 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xce, 0xf7, 0x3d, 0x10, 0xc0, 0xb2, 0x01, 0x36, 0x85, 0x91, 0x2c, 0xf4, 0x6a, 0x5d, 0xef, 0xa7, 0x30, 0xe2, 0xd9, 0xb6, 0xef, 0xd9, 0x8c, 0x05, 0x6b, 0xe5, 0x3a, 0xbb, 0xe3, 0xb9, 0x1a, 0x29
+        0xcd, 0xf1, 0x8f, 0x5e, 0xc9, 0xdf, 0xdc, 0x18, 0x1c, 0xcf, 0xc8, 0x17, 0x5e, 0x18, 0x47, 0x47, 0x12, 0x35, 0x0d, 0x50, 0x1e, 0x92, 0x56, 0xcb, 0x60, 0x61, 0x52, 0xa0, 0x70, 0xc8, 0x0b, 0xeb
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
         let tag = try reader.readTag()
         switch tag {
         case 0: return try AcknowledgeDownloads(from: &reader)
-        case 1: return try AssessDownloadRisk(from: &reader)
-        case 2: return try AwaitDownloadApproval(from: &reader)
-        case 3: return try BeginDownload(from: &reader)
-        case 4: return try BlockAutomaticDownload(from: &reader)
-        case 5: return try CancelDownload(from: &reader)
-        case 6: return try ExpireDownloads(from: &reader)
-        case 7: return try FailDownload(from: &reader)
-        case 8: return try FinishDownload(from: &reader)
-        case 9: return try RecordDownloadTransfer(from: &reader)
-        case 10: return try RemoveDownload(from: &reader)
-        case 11: return try RemoveProfileDownloads(from: &reader)
-        case 12: return try RestartDownload(from: &reader)
-        case 13: return try SetDownloadDestination(from: &reader)
+        case 1: return try AdoptLegacySession(from: &reader)
+        case 2: return try AssessDownloadRisk(from: &reader)
+        case 3: return try AwaitDownloadApproval(from: &reader)
+        case 4: return try BeginDownload(from: &reader)
+        case 5: return try BlockAutomaticDownload(from: &reader)
+        case 6: return try CancelDownload(from: &reader)
+        case 7: return try ExpireDownloads(from: &reader)
+        case 8: return try FailDownload(from: &reader)
+        case 9: return try FinishDownload(from: &reader)
+        case 10: return try RecordDownloadTransfer(from: &reader)
+        case 11: return try RemoveDownload(from: &reader)
+        case 12: return try RemoveProfileDownloads(from: &reader)
+        case 13: return try RestartDownload(from: &reader)
+        case 14: return try SetDownloadDestination(from: &reader)
         default: throw WireError.malformed("Unknown Intent tag \(tag)")
         }
     }
@@ -62,7 +63,8 @@ extension Change {
         case 0: self = .downloadUpdated(try DownloadUpdated(from: &reader))
         case 1: self = .downloadsRemoved(try DownloadsRemoved(from: &reader))
         case 2: self = .saved(try Saved(from: &reader))
-        case 3: self = .storageFailed(try StorageFailed(from: &reader))
+        case 3: self = .sessionAdopted(try SessionAdopted(from: &reader))
+        case 4: self = .storageFailed(try StorageFailed(from: &reader))
         default: throw WireError.malformed("Unknown Change tag \(tag)")
         }
     }
@@ -78,8 +80,11 @@ extension Change {
         case .saved(let value):
             writer.writeTag(2)
             value.encode(into: &writer)
-        case .storageFailed(let value):
+        case .sessionAdopted(let value):
             writer.writeTag(3)
+            value.encode(into: &writer)
+        case .storageFailed(let value):
+            writer.writeTag(4)
             value.encode(into: &writer)
         }
     }
@@ -105,11 +110,13 @@ extension Rejection {
         case 13: self = .invalidPasswordLength(try InvalidPasswordLength(from: &reader))
         case 14: self = .invalidRetentionLifetime(try InvalidRetentionLifetime(from: &reader))
         case 15: self = .invalidSearchEngine(try InvalidSearchEngine(from: &reader))
-        case 16: self = .searchEngineLimitReached(try SearchEngineLimitReached(from: &reader))
-        case 17: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
-        case 18: self = .storageFromNewerApp(try StorageFromNewerApp(from: &reader))
-        case 19: self = .storageRestoreInterrupted(try StorageRestoreInterrupted(from: &reader))
-        case 20: self = .storageUnreadable(try StorageUnreadable(from: &reader))
+        case 16: self = .recoveryCheckpointUnusable(try RecoveryCheckpointUnusable(from: &reader))
+        case 17: self = .saveFailed(try SaveFailed(from: &reader))
+        case 18: self = .searchEngineLimitReached(try SearchEngineLimitReached(from: &reader))
+        case 19: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
+        case 20: self = .storageFromNewerApp(try StorageFromNewerApp(from: &reader))
+        case 21: self = .storageRestoreInterrupted(try StorageRestoreInterrupted(from: &reader))
+        case 22: self = .storageUnreadable(try StorageUnreadable(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
@@ -164,20 +171,26 @@ extension Rejection {
         case .invalidSearchEngine(let value):
             writer.writeTag(15)
             value.encode(into: &writer)
-        case .searchEngineLimitReached(let value):
+        case .recoveryCheckpointUnusable(let value):
             writer.writeTag(16)
             value.encode(into: &writer)
-        case .staleCredentialComparison(let value):
+        case .saveFailed(let value):
             writer.writeTag(17)
             value.encode(into: &writer)
-        case .storageFromNewerApp(let value):
+        case .searchEngineLimitReached(let value):
             writer.writeTag(18)
             value.encode(into: &writer)
-        case .storageRestoreInterrupted(let value):
+        case .staleCredentialComparison(let value):
             writer.writeTag(19)
             value.encode(into: &writer)
-        case .storageUnreadable(let value):
+        case .storageFromNewerApp(let value):
             writer.writeTag(20)
+            value.encode(into: &writer)
+        case .storageRestoreInterrupted(let value):
+            writer.writeTag(21)
+            value.encode(into: &writer)
+        case .storageUnreadable(let value):
+            writer.writeTag(22)
             value.encode(into: &writer)
         }
     }
@@ -195,6 +208,24 @@ extension AcknowledgeDownloads {
 
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(0)
+        encode(into: &writer)
+    }
+}
+
+extension AdoptLegacySession {
+    init(from reader: inout WireReader) throws(WireError) {
+        let installed = try LegacySession(from: &reader)
+        let seed = try reader.readData()
+        self.init(installed: installed, seed: seed)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        installed.encode(into: &writer)
+        writer.writeData(seed)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(1)
         encode(into: &writer)
     }
 }
@@ -234,7 +265,7 @@ extension AssessDownloadRisk {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(1)
+        writer.writeTag(2)
         encode(into: &writer)
     }
 }
@@ -250,7 +281,7 @@ extension AwaitDownloadApproval {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(2)
+        writer.writeTag(3)
         encode(into: &writer)
     }
 }
@@ -293,7 +324,7 @@ extension BeginDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(3)
+        writer.writeTag(4)
         encode(into: &writer)
     }
 }
@@ -309,7 +340,7 @@ extension BlockAutomaticDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(4)
+        writer.writeTag(5)
         encode(into: &writer)
     }
 }
@@ -327,7 +358,7 @@ extension CancelDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(5)
+        writer.writeTag(6)
         encode(into: &writer)
     }
 }
@@ -1285,7 +1316,7 @@ extension ExpireDownloads {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(6)
+        writer.writeTag(7)
         encode(into: &writer)
     }
 }
@@ -1365,7 +1396,7 @@ extension FailDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(7)
+        writer.writeTag(8)
         encode(into: &writer)
     }
 }
@@ -1394,7 +1425,7 @@ extension FinishDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(8)
+        writer.writeTag(9)
         encode(into: &writer)
     }
 }
@@ -1518,6 +1549,78 @@ extension KeyCombination {
         writer.writeString(key)
         writer.writeBool(isSpecialKey)
         modifiers.encode(into: &writer)
+    }
+}
+
+extension LegacyHistory {
+    init(from reader: inout WireReader) throws(WireError) {
+        let spaceID = try reader.readUUID()
+        let entries = try reader.readData()
+        self.init(spaceID: spaceID, entries: entries)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(spaceID)
+        writer.writeData(entries)
+    }
+}
+
+extension LegacySession {
+    init(from reader: inout WireReader) throws(WireError) {
+        let core: Data?
+        if try reader.readPresence() {
+            let coreValue = try reader.readData()
+            core = coreValue
+        } else {
+            core = nil
+        }
+        let wholeGraph: Data?
+        if try reader.readPresence() {
+            let wholeGraphValue = try reader.readData()
+            wholeGraph = wholeGraphValue
+        } else {
+            wholeGraph = nil
+        }
+        let historyCount = try reader.readCount()
+        var history: [LegacyHistory] = []
+        history.reserveCapacity(historyCount)
+        for _ in 0..<historyCount {
+            let historyElement = try LegacyHistory(from: &reader)
+            history.append(historyElement)
+        }
+        let journal: Data?
+        if try reader.readPresence() {
+            let journalValue = try reader.readData()
+            journal = journalValue
+        } else {
+            journal = nil
+        }
+        self.init(core: core, wholeGraph: wholeGraph, history: history, journal: journal)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = core {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = wholeGraph {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeCount(history.count)
+        for element0 in history {
+            element0.encode(into: &writer)
+        }
+        if let present0 = journal {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -1749,8 +1852,19 @@ extension RecordDownloadTransfer {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(9)
+        writer.writeTag(10)
         encode(into: &writer)
+    }
+}
+
+extension RecoveryCheckpointUnusable {
+    init(from reader: inout WireReader) throws(WireError) {
+        let reason = try StorageFailure(from: &reader)
+        self.init(reason: reason)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        reason.encode(into: &writer)
     }
 }
 
@@ -1765,7 +1879,7 @@ extension RemoveDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(10)
+        writer.writeTag(11)
         encode(into: &writer)
     }
 }
@@ -1781,7 +1895,7 @@ extension RemoveProfileDownloads {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(11)
+        writer.writeTag(12)
         encode(into: &writer)
     }
 }
@@ -1797,8 +1911,19 @@ extension RestartDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(12)
+        writer.writeTag(13)
         encode(into: &writer)
+    }
+}
+
+extension SaveFailed {
+    init(from reader: inout WireReader) throws(WireError) {
+        let reason = try StorageFailure(from: &reader)
+        self.init(reason: reason)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        reason.encode(into: &writer)
     }
 }
 
@@ -1824,6 +1949,26 @@ extension SearchEngineLimitReached {
     }
 }
 
+extension SessionAdopted {
+    init(from reader: inout WireReader) throws(WireError) {
+        let faviconsCount = try reader.readCount()
+        var favicons: [TabFavicon] = []
+        favicons.reserveCapacity(faviconsCount)
+        for _ in 0..<faviconsCount {
+            let faviconsElement = try TabFavicon(from: &reader)
+            favicons.append(faviconsElement)
+        }
+        self.init(favicons: favicons)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(favicons.count)
+        for element0 in favicons {
+            element0.encode(into: &writer)
+        }
+    }
+}
+
 extension SetDownloadDestination {
     init(from reader: inout WireReader) throws(WireError) {
         let downloadID = try reader.readUUID()
@@ -1839,7 +1984,7 @@ extension SetDownloadDestination {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(13)
+        writer.writeTag(14)
         encode(into: &writer)
     }
 }
@@ -2033,6 +2178,19 @@ extension SystemPasswordWriteThroughSupport {
 
     func encode(into writer: inout WireWriter) {
         availability.encode(into: &writer)
+    }
+}
+
+extension TabFavicon {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tabID = try reader.readUUID()
+        let image = try reader.readData()
+        self.init(tabID: tabID, image: image)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(tabID)
+        writer.writeData(image)
     }
 }
 

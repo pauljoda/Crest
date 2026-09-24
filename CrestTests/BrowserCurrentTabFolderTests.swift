@@ -342,29 +342,6 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertEqual(browser.session, before)
     }
 
-    func testLegacyExtensionFoldersMigrateOnceIntoTheSharedTree() throws {
-        let browser = makeBrowser()
-        let space = try XCTUnwrap(browser.selectedSpace)
-        let id = FolderID()
-        let legacy = BrowserLegacyTabGroup(
-            id: .init(rawValue: 42), folderID: id, spaceID: space.id,
-            tabs: Array(space.currentTabs.prefix(2).map(\.id)), title: "Legacy", color: .orange, isCollapsed: true)
-        var document = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: JSONEncoder().encode(browser.session)) as? [String: Any])
-        document["currentTabFolders"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([legacy]))
-        var migrated = try JSONDecoder().decode(
-            BrowserSession.self, from: JSONSerialization.data(withJSONObject: document))
-        migrated = try BrowserCoreSync.repair(migrated)
-        XCTAssertEqual(migrated.spaces[0].folders.first?.id, id)
-        XCTAssertEqual(migrated.spaces[0].folders.first?.location, .current)
-        XCTAssertEqual(migrated.spaces[0].folders.first?.color, legacy.color.brandColor)
-        XCTAssertEqual(migrated.spaces[0].tabs.filter { $0.folderID == id }.map(\.id), legacy.tabs)
-        let encoded = try JSONEncoder().encode(migrated)
-        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        XCTAssertNil(object["currentTabFolders"])
-        XCTAssertEqual(try JSONDecoder().decode(BrowserSession.self, from: encoded), migrated)
-    }
-
     func testNestedCurrentFoldersSyncToAnotherDeviceWithMetadataAndMembership() throws {
         let root = BrowserFolder(
             title: "Research", location: .current, color: .ocean, isCollapsed: true,

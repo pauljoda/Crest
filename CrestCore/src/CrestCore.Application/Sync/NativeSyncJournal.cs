@@ -94,6 +94,16 @@ public sealed class NativeSyncJournal {
 
     #region Actions - Journal updates
 
+    /// The journal of a restored checkpoint, owned by a new device identity so
+    /// it never reissues a version it issued after the checkpoint was taken.
+    /// Its records, clock and pending uploads are unchanged.
+    public NativeSyncJournal Recovered(Guid deviceId) {
+        if (deviceId == Id(metadata["deviceID"])) throw new BrowserRuleException(BrowserRuleCodes.InvalidRecoveryIdentity);
+        var fields = metadata.DeepClone().AsObject();
+        fields["deviceID"] = deviceId.ToString("D").ToUpperInvariant();
+        return new(fields, new(records, StringComparer.Ordinal), new(pending, StringComparer.Ordinal));
+    }
+
     public NativeSyncJournal Apply(ReadOnlySpan<byte> bytes) {
         var request = Parse(bytes);
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
@@ -104,12 +114,6 @@ public sealed class NativeSyncJournal {
         ulong clock = fields["logicalClock"]!.GetValue<ulong>();
         var operation = NativeSyncOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var args = request["arguments"]!.AsObject();
-        if (operation == NativeSyncOperation.Recover) {
-            var identity = Id(args["deviceID"]);
-            if (identity == Id(fields["deviceID"])) throw new BrowserRuleException(BrowserRuleCodes.InvalidRecoveryIdentity);
-            fields["deviceID"] = identity.ToString("D").ToUpperInvariant();
-            return new(fields, next, queued);
-        }
         JsonObject Version() {
             if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRuleCodes.SyncClockExhausted);
             return new() { ["logicalClock"] = ++clock, ["deviceID"] = fields["deviceID"]!.DeepClone() };

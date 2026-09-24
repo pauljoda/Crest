@@ -2177,6 +2177,10 @@
     "engine-capability-sets": {
       "category": "internal",
       "message": "Engine capabilities, statuses and adapter roles are typed sets instead of strings."
+    },
+    "core-legacy-migration-restore": {
+      "category": "internal",
+      "message": "The core carries an installed release's session into its file on first launch and restores the recovery checkpoint itself."
     }
   }
 }

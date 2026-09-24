@@ -14,26 +14,27 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xce, 0xf7, 0x3d, 0x10, 0xc0, 0xb2, 0x01, 0x36, 0x85, 0x91, 0x2c, 0xf4, 0x6a, 0x5d, 0xef, 0xa7, 0x30, 0xe2, 0xd9, 0xb6, 0xef, 0xd9, 0x8c, 0x05, 0x6b, 0xe5, 0x3a, 0xbb, 0xe3, 0xb9, 0x1a, 0x29
+        0xcd, 0xf1, 0x8f, 0x5e, 0xc9, 0xdf, 0xdc, 0x18, 0x1c, 0xcf, 0xc8, 0x17, 0x5e, 0x18, 0x47, 0x47, 0x12, 0x35, 0x0d, 0x50, 0x1e, 0x92, 0x56, 0xcb, 0x60, 0x61, 0x52, 0xa0, 0x70, 0xc8, 0x0b, 0xeb
     ];
 
     public static Intent ReadIntent(WireReader reader) {
         int tag = reader.ReadTag();
         switch (tag) {
             case 0: return ReadAcknowledgeDownloads(reader);
-            case 1: return ReadAssessDownloadRisk(reader);
-            case 2: return ReadAwaitDownloadApproval(reader);
-            case 3: return ReadBeginDownload(reader);
-            case 4: return ReadBlockAutomaticDownload(reader);
-            case 5: return ReadCancelDownload(reader);
-            case 6: return ReadExpireDownloads(reader);
-            case 7: return ReadFailDownload(reader);
-            case 8: return ReadFinishDownload(reader);
-            case 9: return ReadRecordDownloadTransfer(reader);
-            case 10: return ReadRemoveDownload(reader);
-            case 11: return ReadRemoveProfileDownloads(reader);
-            case 12: return ReadRestartDownload(reader);
-            case 13: return ReadSetDownloadDestination(reader);
+            case 1: return ReadAdoptLegacySession(reader);
+            case 2: return ReadAssessDownloadRisk(reader);
+            case 3: return ReadAwaitDownloadApproval(reader);
+            case 4: return ReadBeginDownload(reader);
+            case 5: return ReadBlockAutomaticDownload(reader);
+            case 6: return ReadCancelDownload(reader);
+            case 7: return ReadExpireDownloads(reader);
+            case 8: return ReadFailDownload(reader);
+            case 9: return ReadFinishDownload(reader);
+            case 10: return ReadRecordDownloadTransfer(reader);
+            case 11: return ReadRemoveDownload(reader);
+            case 12: return ReadRemoveProfileDownloads(reader);
+            case 13: return ReadRestartDownload(reader);
+            case 14: return ReadSetDownloadDestination(reader);
             default: throw new WireFormatException($"Unknown Intent tag {tag}.");
         }
     }
@@ -46,56 +47,60 @@ public static class ContractCodec {
                 writer.WriteTag(0);
                 WriteAcknowledgeDownloads(writer, member);
                 break;
-            case AssessDownloadRisk member:
+            case AdoptLegacySession member:
                 writer.WriteTag(1);
+                WriteAdoptLegacySession(writer, member);
+                break;
+            case AssessDownloadRisk member:
+                writer.WriteTag(2);
                 WriteAssessDownloadRisk(writer, member);
                 break;
             case AwaitDownloadApproval member:
-                writer.WriteTag(2);
+                writer.WriteTag(3);
                 WriteAwaitDownloadApproval(writer, member);
                 break;
             case BeginDownload member:
-                writer.WriteTag(3);
+                writer.WriteTag(4);
                 WriteBeginDownload(writer, member);
                 break;
             case BlockAutomaticDownload member:
-                writer.WriteTag(4);
+                writer.WriteTag(5);
                 WriteBlockAutomaticDownload(writer, member);
                 break;
             case CancelDownload member:
-                writer.WriteTag(5);
+                writer.WriteTag(6);
                 WriteCancelDownload(writer, member);
                 break;
             case ExpireDownloads member:
-                writer.WriteTag(6);
+                writer.WriteTag(7);
                 WriteExpireDownloads(writer, member);
                 break;
             case FailDownload member:
-                writer.WriteTag(7);
+                writer.WriteTag(8);
                 WriteFailDownload(writer, member);
                 break;
             case FinishDownload member:
-                writer.WriteTag(8);
+                writer.WriteTag(9);
                 WriteFinishDownload(writer, member);
                 break;
             case RecordDownloadTransfer member:
-                writer.WriteTag(9);
+                writer.WriteTag(10);
                 WriteRecordDownloadTransfer(writer, member);
                 break;
             case RemoveDownload member:
-                writer.WriteTag(10);
+                writer.WriteTag(11);
                 WriteRemoveDownload(writer, member);
                 break;
             case RemoveProfileDownloads member:
-                writer.WriteTag(11);
+                writer.WriteTag(12);
                 WriteRemoveProfileDownloads(writer, member);
                 break;
             case RestartDownload member:
-                writer.WriteTag(12);
+                writer.WriteTag(13);
                 WriteRestartDownload(writer, member);
                 break;
             case SetDownloadDestination member:
-                writer.WriteTag(13);
+                writer.WriteTag(14);
                 WriteSetDownloadDestination(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Intent.");
@@ -108,7 +113,8 @@ public static class ContractCodec {
             case 0: return ReadDownloadUpdated(reader);
             case 1: return ReadDownloadsRemoved(reader);
             case 2: return ReadSaved(reader);
-            case 3: return ReadStorageFailed(reader);
+            case 3: return ReadSessionAdopted(reader);
+            case 4: return ReadStorageFailed(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -129,8 +135,12 @@ public static class ContractCodec {
                 writer.WriteTag(2);
                 WriteSaved(writer, member);
                 break;
-            case StorageFailed member:
+            case SessionAdopted member:
                 writer.WriteTag(3);
+                WriteSessionAdopted(writer, member);
+                break;
+            case StorageFailed member:
+                writer.WriteTag(4);
                 WriteStorageFailed(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
@@ -156,11 +166,13 @@ public static class ContractCodec {
             case 13: return ReadInvalidPasswordLength(reader);
             case 14: return ReadInvalidRetentionLifetime(reader);
             case 15: return ReadInvalidSearchEngine(reader);
-            case 16: return ReadSearchEngineLimitReached(reader);
-            case 17: return ReadStaleCredentialComparison(reader);
-            case 18: return ReadStorageFromNewerApp(reader);
-            case 19: return ReadStorageRestoreInterrupted(reader);
-            case 20: return ReadStorageUnreadable(reader);
+            case 16: return ReadRecoveryCheckpointUnusable(reader);
+            case 17: return ReadSaveFailed(reader);
+            case 18: return ReadSearchEngineLimitReached(reader);
+            case 19: return ReadStaleCredentialComparison(reader);
+            case 20: return ReadStorageFromNewerApp(reader);
+            case 21: return ReadStorageRestoreInterrupted(reader);
+            case 22: return ReadStorageUnreadable(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -233,24 +245,32 @@ public static class ContractCodec {
                 writer.WriteTag(15);
                 WriteInvalidSearchEngine(writer, member);
                 break;
-            case SearchEngineLimitReached member:
+            case RecoveryCheckpointUnusable member:
                 writer.WriteTag(16);
+                WriteRecoveryCheckpointUnusable(writer, member);
+                break;
+            case SaveFailed member:
+                writer.WriteTag(17);
+                WriteSaveFailed(writer, member);
+                break;
+            case SearchEngineLimitReached member:
+                writer.WriteTag(18);
                 WriteSearchEngineLimitReached(writer, member);
                 break;
             case StaleCredentialComparison member:
-                writer.WriteTag(17);
+                writer.WriteTag(19);
                 WriteStaleCredentialComparison(writer, member);
                 break;
             case StorageFromNewerApp member:
-                writer.WriteTag(18);
+                writer.WriteTag(20);
                 WriteStorageFromNewerApp(writer, member);
                 break;
             case StorageRestoreInterrupted member:
-                writer.WriteTag(19);
+                writer.WriteTag(21);
                 WriteStorageRestoreInterrupted(writer, member);
                 break;
             case StorageUnreadable member:
-                writer.WriteTag(20);
+                writer.WriteTag(22);
                 WriteStorageUnreadable(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -352,6 +372,17 @@ public static class ContractCodec {
         }
     }
 
+    /// <summary>The most bytes one encoded intent with this tag may take.</summary>
+    public static int MaximumIntentBytes(int tag) => tag switch {
+        1 => 67108864,
+        _ => 16777216
+    };
+
+    /// <summary>The most bytes one encoded query with this tag may take.</summary>
+    public static int MaximumQueryBytes(int tag) => tag switch {
+        _ => 16777216
+    };
+
     public static void WriteAnswer(WireWriter writer, CrestApp app, object query) {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(query);
@@ -434,6 +465,20 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.ProfileId);
+    }
+
+    public static AdoptLegacySession ReadAdoptLegacySession(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new AdoptLegacySession(
+            ReadLegacySession(reader),
+            reader.ReadBytes());
+    }
+
+    public static void WriteAdoptLegacySession(WireWriter writer, AdoptLegacySession value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteLegacySession(writer, value.Installed);
+        writer.WriteBytes(value.Seed);
     }
 
     public static AppConfiguration ReadAppConfiguration(WireReader reader) {
@@ -1474,6 +1519,56 @@ public static class ContractCodec {
         WriteShortcutModifiers(writer, value.Modifiers);
     }
 
+    public static LegacyHistory ReadLegacyHistory(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new LegacyHistory(
+            reader.ReadGuid(),
+            reader.ReadBytes());
+    }
+
+    public static void WriteLegacyHistory(WireWriter writer, LegacyHistory value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteBytes(value.Entries);
+    }
+
+    public static LegacySession ReadLegacySession(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new LegacySession(
+            reader.ReadPresence() ? (byte[]?)reader.ReadBytes() : null,
+            reader.ReadPresence() ? (byte[]?)reader.ReadBytes() : null,
+            reader.ReadList(() => ReadLegacyHistory(reader)),
+            reader.ReadPresence() ? (byte[]?)reader.ReadBytes() : null);
+    }
+
+    public static void WriteLegacySession(WireWriter writer, LegacySession value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Core is { } presentCore) {
+            writer.WritePresence(true);
+            writer.WriteBytes(presentCore);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.WholeGraph is { } presentWholeGraph) {
+            writer.WritePresence(true);
+            writer.WriteBytes(presentWholeGraph);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteCount(value.History.Count);
+        foreach (var itemHistory in value.History) {
+            WriteLegacyHistory(writer, itemHistory);
+        }
+        if (value.Journal is { } presentJournal) {
+            writer.WritePresence(true);
+            writer.WriteBytes(presentJournal);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static LinkRoute ReadLinkRoute(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new LinkRoute(
@@ -1639,6 +1734,18 @@ public static class ContractCodec {
         writer.WriteDouble(value.Progress);
     }
 
+    public static RecoveryCheckpointUnusable ReadRecoveryCheckpointUnusable(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new RecoveryCheckpointUnusable(
+            ReadStorageFailure(reader));
+    }
+
+    public static void WriteRecoveryCheckpointUnusable(WireWriter writer, RecoveryCheckpointUnusable value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteStorageFailure(writer, value.Reason);
+    }
+
     public static RemoveDownload ReadRemoveDownload(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new RemoveDownload(
@@ -1675,6 +1782,18 @@ public static class ContractCodec {
         writer.WriteGuid(value.DownloadId);
     }
 
+    public static SaveFailed ReadSaveFailed(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SaveFailed(
+            ReadStorageFailure(reader));
+    }
+
+    public static void WriteSaveFailed(WireWriter writer, SaveFailed value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteStorageFailure(writer, value.Reason);
+    }
+
     public static Saved ReadSaved(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new Saved(
@@ -1697,6 +1816,21 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteInt32(value.Limit);
+    }
+
+    public static SessionAdopted ReadSessionAdopted(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SessionAdopted(
+            reader.ReadList(() => ReadTabFavicon(reader)));
+    }
+
+    public static void WriteSessionAdopted(WireWriter writer, SessionAdopted value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Favicons.Count);
+        foreach (var itemFavicons in value.Favicons) {
+            WriteTabFavicon(writer, itemFavicons);
+        }
     }
 
     public static SetDownloadDestination ReadSetDownloadDestination(WireReader reader) {
@@ -1875,6 +2009,20 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         WriteSystemPasswordWriteThroughAvailability(writer, value.Availability);
+    }
+
+    public static TabFavicon ReadTabFavicon(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabFavicon(
+            reader.ReadGuid(),
+            reader.ReadBytes());
+    }
+
+    public static void WriteTabFavicon(WireWriter writer, TabFavicon value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.TabId);
+        writer.WriteBytes(value.Image);
     }
 
     public static CredentialCaptureAction ReadCredentialCaptureAction(WireReader reader) {

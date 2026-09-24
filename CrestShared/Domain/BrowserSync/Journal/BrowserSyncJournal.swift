@@ -46,15 +46,6 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         return journal
     }
 
-    /// A restored checkpoint must not reuse versions issued after the backup.
-    /// Existing versions and pending uploads remain unchanged.
-    func recoveredForNewDevice() throws -> Self {
-        let owner = try core ?? BrowserCoreSyncJournal(self)
-        return try Self.acceptingCoreSnapshot(
-            owner.applying(
-                .recover, preferences: preferences, arguments: BrowserCoreSync.RecoveryArguments(deviceID: UUID())))
-    }
-
     private mutating func applyCore<Arguments: Encodable>(_ operation: BrowserSyncOperation, arguments: Arguments)
         throws
     {
