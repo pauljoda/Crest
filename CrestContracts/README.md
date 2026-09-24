@@ -51,7 +51,7 @@ builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
 The native Crest apps use the `crest_session_*`, `crest_sync_*`,
-`crest_access_*`, `crest_app_*` and `crest_permissions_*` entry points,
+`crest_app_*` and `crest_permissions_*` entry points,
 plus `crest_core_evaluate_policy` and `crest_core_evaluate_sync`.
 The session holds browsing data only; which Space and tab a window shows is the
 device's window state. `crest_session_attach_device` attaches a session to an
@@ -64,21 +64,21 @@ older session-level `selectedSpaceID` and per-Space `selectedTabID` still loads,
 gives its tabs to a window without a record during that launch, and loses them
 at the next save. `SweepExpiredRecords` keeps every tab an open window or a
 saved window's record shows.
-`crest_access_*` owns process-local Space unlock grants, shared by the native
-desktop and mobile access controllers. The platform supplies device-authentication
-results; the core accepts only the current request for the exact Space/profile
-identity. Relocking invalidates pending results. Grants are never persisted or
-synced. This small synchronous boundary uses 16-byte UUIDs and integer results,
-without message serialization or an executor wait. A session attached with
-`crest_session_attach_access` rejects commands and native value edits
+Process-local Space unlock grants belong to the app: `BeginUnlockingSpace`,
+`FinishUnlockingSpace`, `LockSpace` and `LockAllSpaces` go through
+`crest_app_dispatch`, and each publishes `SpaceLockChanged` for the Space
+profiles it changed. The platform presents the authentication prompt and
+answers with its result; the core accepts only the pending request for the
+exact Space/profile identity, and relocking cancels it. Grants are never
+persisted or synced. The device attaches the grants to every session it shows,
+which then rejects commands and native value edits
 (`crest_session_replace_durably` without a journal) that would reach a locked Space with
-`space_locked`; journal-bound sync replacements are not gated. Native UI, page,
-credential and extension callers continue to consult the same access controller.
+`space_locked`; journal-bound sync replacements are not gated.
 
 The asynchronous message-based kernel (`crest_core_create` through
 `crest_core_destroy`, envelopes and adapter message routing) has been retired.
 Its browsing, records, deletion, transfer, residency and content-blocking rules
-are now owned by the synchronous session, sync, access and policy entry points
+are now owned by the synchronous session, sync, app and policy entry points
 above. `Documentation/Architecture/ControlPlane.md` describes that live path.
 `CrestCore.Contracts.Protocol` retains the shared JSON parsing helpers.
 
@@ -221,7 +221,7 @@ This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 
 `tests/native_abi.c` is a native consumer of the actual shared library. It
-exercises the policy, access, app, engine, permissions and session entry points,
+exercises the policy, app, engine, permissions and session entry points,
 checking buffer
 ownership, non-consuming size probes, stale commands and invalid handles. The
 managed suite covers the session, sync and domain rules.

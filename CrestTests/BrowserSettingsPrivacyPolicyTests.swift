@@ -53,11 +53,14 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
     }
 
     func testPrivateSpaceSettingsStayProtectedUntilTheSpaceIsUnlocked() async throws {
-        var space = try XCTUnwrap(BrowserSession.preview.spaces.first)
-        space.accessPolicy = .deviceOwnerAuthentication
+        var session = BrowserSession.preview
+        session.spaces[0].accessPolicy = .deviceOwnerAuthentication
+        let browser = BrowserStore(session: session)
+        let space = browser.session.spaces[0]
         let access = BrowserSpaceAccessController(
             authenticator: SettingsPrivacyAuthenticatorStub(result: true)
         )
+        browser.attachSpaceAccess(access)
 
         XCTAssertFalse(
             BrowserSettingsPrivacyPolicy.canRevealSpaceData(
@@ -79,12 +82,15 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
     }
 
     func testLockedSpacesForExportIncludesOnlyStillLockedPrivateSpaces() async throws {
-        var spaces = BrowserSession.preview.spaces
-        spaces[0].accessPolicy = .deviceOwnerAuthentication
-        spaces[1].accessPolicy = .deviceOwnerAuthentication
+        var session = BrowserSession.preview
+        session.spaces[0].accessPolicy = .deviceOwnerAuthentication
+        session.spaces[1].accessPolicy = .deviceOwnerAuthentication
+        let browser = BrowserStore(session: session)
+        let spaces = browser.session.spaces
         let access = BrowserSpaceAccessController(
             authenticator: SettingsPrivacyAuthenticatorStub(result: true)
         )
+        browser.attachSpaceAccess(access)
 
         let unlocked = await access.unlock(spaces[0])
 
@@ -117,6 +123,7 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
         let access = BrowserSpaceAccessController(
             authenticator: SettingsPrivacyAuthenticatorStub(result: true)
         )
+        browser.attachSpaceAccess(access)
         let credentials = BrowserCredentialSpaceStore(browser: browser)
 
         await credentials.load(in: space.id, accessController: access)

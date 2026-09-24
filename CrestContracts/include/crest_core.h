@@ -47,30 +47,6 @@ typedef int32_t crest_status_t;
 /* Returns the ABI major supported by this image. */
 CREST_API uint32_t CREST_CALL crest_core_abi_version(void);
 
-/* Process-local Space access authority. UUID pointers reference exactly 16
- * RFC 4122/network-order bytes and are borrowed only during the call. Boolean
- * arguments are 0 or 1. Calls are synchronous and serialized per authority;
- * no JSON, callbacks, native authentication, persistence or sync is involved.
- * Destroy only after draining calls. A failed query reports locked.
- * Begin returns request=0 if already open, BUSY if another prompt is pending.
- * Complete consumes a matching request on success or denial; INVALID_STATE
- * rejects stale, repeated or wrong-identity replies without granting access.
- * Inactive-scene lock-all is skipped during a prompt; explicit lock-all is not.
- */
-CREST_API crest_status_t CREST_CALL crest_access_create(uint64_t* out_handle);
-CREST_API crest_status_t CREST_CALL crest_access_is_locked(
-    uint64_t handle, const uint8_t* space_uuid, const uint8_t* profile_uuid,
-    int32_t requires_authentication, int32_t* out_locked);
-CREST_API crest_status_t CREST_CALL crest_access_begin(
-    uint64_t handle, const uint8_t* space_uuid, const uint8_t* profile_uuid,
-    int32_t requires_authentication, uint64_t* out_request);
-CREST_API crest_status_t CREST_CALL crest_access_complete(
-    uint64_t handle, const uint8_t* space_uuid, const uint8_t* profile_uuid,
-    uint64_t request, int32_t succeeded);
-CREST_API crest_status_t CREST_CALL crest_access_lock_space(uint64_t handle, const uint8_t* space_uuid);
-CREST_API crest_status_t CREST_CALL crest_access_lock_all(uint64_t handle, int32_t inactive_scene, int32_t* out_applied);
-CREST_API crest_status_t CREST_CALL crest_access_destroy(uint64_t handle);
-
 /* Process-local site permission ledger: per-Space saved and session choices,
  * their lookup, ordering and persistence rules. The native store keeps the
  * saved document the ledger returns; session choices are never in it and
@@ -153,12 +129,6 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
  * caller has drained its own references/calls.
  */
 CREST_API crest_status_t CREST_CALL crest_session_create(const uint8_t* session, size_t length, uint64_t* out_session);
-/* Attach the process-local Space access authority this session must consult.
-   A command that reads or mutates a Space whose stored policy requires
-   authentication is rejected while that Space holds no grant; locking, sync
-   materialization, deletion intents and retention sweeps are unaffected.
-   Attaching the same authority again succeeds; a different one is rejected. */
-CREST_API crest_status_t CREST_CALL crest_session_attach_access(uint64_t session, uint64_t access);
 /* Borrow a canonical profile into a new memory-only session, which attaching
    it to a device publishes whole. A refresh brings the borrowed Space's settings
    up to date with its owner and publishes nothing when they already are. */

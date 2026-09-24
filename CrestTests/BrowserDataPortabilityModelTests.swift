@@ -118,6 +118,7 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
         let spaceAccess = BrowserSpaceAccessController(
             authenticator: TestAuthenticator()
         )
+        browser.attachSpaceAccess(spaceAccess)
         return Context(
             space: space,
             browser: browser,

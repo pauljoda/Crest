@@ -289,14 +289,15 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
             folders: [],
             tabs: []
         )
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space, otherSpace]),
+            browsingMode: .privateBrowsing
+        )
+        let access = BrowserSpaceAccessController(authenticator: AcceptingAuthenticator())
+        browser.attachSpaceAccess(access)
         return Context(
-            browser: BrowserStore(
-                session: BrowserSession(spaces: [space, otherSpace]),
-                browsingMode: .privateBrowsing
-            ),
-            access: BrowserSpaceAccessController(
-                authenticator: AcceptingAuthenticator()
-            ),
+            browser: browser,
+            access: access,
             space: space,
             otherSpace: otherSpace,
             tab: tab

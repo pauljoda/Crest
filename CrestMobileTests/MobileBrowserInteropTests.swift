@@ -1097,8 +1097,10 @@ final class MobileBrowserInteropTests: XCTestCase {
         let openTab = BrowserTab(title: "Open", url: nil, placement: .current)
         let openSpace = makeStateSpace(tabs: [openTab])
         var session = presented([protectedSpace, openSpace], showing: openSpace.id)
+        let browser = BrowserStore.hostingPages(session.session)
+        browser.unlockForTesting(protectedSpace)
         let pages = MobileBrowserPageStore(
-            browser: .hostingPages(session.session),
+            browser: browser,
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -1148,7 +1150,9 @@ final class MobileBrowserInteropTests: XCTestCase {
         let openTab = BrowserTab(title: "Open", url: nil, placement: .current)
         let openSpace = makeStateSpace(tabs: [openTab])
         var session = presented([protectedSpace, openSpace], showing: openSpace.id)
-        let pages = MobileBrowserPageStore(browser: .hostingPages(session.session))
+        let browser = BrowserStore.hostingPages(session.session)
+        browser.unlockForTesting(protectedSpace)
+        let pages = MobileBrowserPageStore(browser: browser)
 
         pages.select(session: session)
         session = presented(session.spaces, showing: protectedSpace.id, tabs: shownTabs(of: session))
@@ -1181,7 +1185,9 @@ final class MobileBrowserInteropTests: XCTestCase {
             tabs: [tab], accessPolicy: .deviceOwnerAuthentication
         )
         var session = presented([space], showing: space.id)
-        let pages = MobileBrowserPageStore(browser: .hostingPages(session.session))
+        let browser = BrowserStore.hostingPages(session.session)
+        browser.unlockForTesting(space)
+        let pages = MobileBrowserPageStore(browser: browser)
         pages.select(session: session)
         let original = try XCTUnwrap(pages.activePage)
         let scene = try XCTUnwrap(
@@ -1249,8 +1255,10 @@ final class MobileBrowserInteropTests: XCTestCase {
             accessPolicy: .deviceOwnerAuthentication
         )
         var session = presented([protectedSpace], showing: protectedSpace.id)
+        let browser = BrowserStore.hostingPages(session.session)
+        browser.unlockForTesting(protectedSpace)
         let pages = MobileBrowserPageStore(
-            browser: .hostingPages(session.session),
+            browser: browser,
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -1331,8 +1339,10 @@ final class MobileBrowserInteropTests: XCTestCase {
             accessPolicy: .deviceOwnerAuthentication
         )
         var session = presented([protectedSpace], showing: protectedSpace.id)
+        let browser = BrowserStore.hostingPages(session.session)
+        browser.unlockForTesting(protectedSpace)
         let pages = MobileBrowserPageStore(
-            browser: .hostingPages(session.session),
+            browser: browser,
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )

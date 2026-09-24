@@ -548,7 +548,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             authenticator: BrowserPreviewAuthenticator(result: true)
         )
         // The core refuses a locked Space's pages through the same grants.
-        browser.family.attachSpaceAccess(spaceAccess)
+        browser.attachSpaceAccess(spaceAccess)
         let model = BrowserQuickWindowModel(
             request: request,
             browser: browser,

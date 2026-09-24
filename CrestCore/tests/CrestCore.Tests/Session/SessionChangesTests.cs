@@ -127,6 +127,7 @@ public sealed partial class BrowserContractsTests {
         var engine = RecordedIntents.PageEngine(app);
         var workspace = app.AttachWorkspace(authority);
         var reader = SessionReader.Opening(app.Drain());
+        TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
         Assert.Equal(authority.Current, reader.State);
         var published = new HashSet<Type>();
         foreach (var step in JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Session", "Fixtures",
@@ -147,6 +148,10 @@ public sealed partial class BrowserContractsTests {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
                 changes = [.. intents.SelectMany(app.Send)];
+                var granted = new List<Change>();
+                TestGrants.UnlockGuarded(intent => { var sent = app.Send(intent); granted.AddRange(sent); return sent; }, workspace,
+                    authority.Current);
+                changes = [.. changes, .. granted];
                 if (RecordedIntents.FollowingCommand(request) is { } following) {
                     authority.PrepareCommand(Bytes(following)).Commit();
                     changes = [.. changes, .. app.Drain()];
@@ -234,6 +239,7 @@ public sealed partial class BrowserContractsTests {
         using var app = new CrestApp();
         var workspace = app.AttachWorkspace(authority);
         var reader = SessionReader.Opening(app.Drain());
+        TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
         var space = authority.Current.Spaces[0];
         var window = Guid.NewGuid();
         app.Send(new OpenWindow(window, workspace, Saved: false, CopyingWindowId: null, space.Id, [new(space.Id, space.Tabs[0].Id)],
@@ -263,6 +269,7 @@ public sealed partial class BrowserContractsTests {
         var authority = MaximalSession();
         using var app = new CrestApp();
         var workspace = app.AttachWorkspace(authority);
+        TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
         var space = authority.Current.Spaces[0];
         var destination = authority.Current.Spaces[1];
         var window = Guid.NewGuid();

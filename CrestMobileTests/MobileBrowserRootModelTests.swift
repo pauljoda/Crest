@@ -172,10 +172,10 @@ final class MobileBrowserRootModelTests: XCTestCase {
         var space = makeSpace(index: 10)
         space.accessPolicy = .deviceOwnerAuthentication
         let access = BrowserSpaceAccessController(authenticator: MobileRootDeviceAuthenticator())
-        let unlocked = await access.unlock(space)
-        XCTAssertTrue(unlocked)
         let fixture = makeFixture(
             spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab, spaceAccess: access)
+        let unlocked = await access.unlock(space)
+        XCTAssertTrue(unlocked)
         fixture.model.presentationChanged(to: .compact)
         fixture.model.openSettings()
         let firstState = fixture.model.settings.state
@@ -596,14 +596,14 @@ final class MobileBrowserRootModelTests: XCTestCase {
         protectedSpace.accessPolicy = .deviceOwnerAuthentication
         let authenticator = MobileRootDeviceAuthenticator()
         let access = BrowserSpaceAccessController(authenticator: authenticator)
-        let initialUnlockSucceeded = await access.unlock(protectedSpace)
-        XCTAssertTrue(initialUnlockSucceeded)
         let fixture = makeFixture(
             spaces: [protectedSpace],
             selectedSpaceID: protectedSpace.id,
             startupBehavior: .lastActiveTab,
             spaceAccess: access
         )
+        let initialUnlockSucceeded = await access.unlock(protectedSpace)
+        XCTAssertTrue(initialUnlockSucceeded)
         fixture.model.presentationChanged(to: .compact)
         await fixture.model.prepareBrowser()
         fixture.model.activateSelectedTab()
@@ -637,12 +637,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
         var space = makeSpace(index: 52)
         space.accessPolicy = .deviceOwnerAuthentication
         let access = BrowserSpaceAccessController(authenticator: MobileRootDeviceAuthenticator())
-        let unlocked = await access.unlock(space)
-        XCTAssertTrue(unlocked)
         let fixture = makeFixture(
             spaces: [space], selectedSpaceID: space.id,
             startupBehavior: .lastActiveTab, spaceAccess: access
         )
+        let unlocked = await access.unlock(space)
+        XCTAssertTrue(unlocked)
         fixture.model.presentationChanged(to: .regular)
         await fixture.model.prepareBrowser()
         let page = try XCTUnwrap(fixture.model.selectedPage)
@@ -741,6 +741,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             contentRuleListProvider: EmptyMobileRootContentRuleListProvider()
         )
         let navigation = MobileBrowserNavigationState()
+        browser.attachSpaceAccess(spaceAccess)
         let model = MobileBrowserRootModel(
             browser: browser,
             pages: pages,

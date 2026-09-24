@@ -2325,6 +2325,10 @@
     "space-intents": {
       "category": "internal",
       "message": "Creating, naming, branding, ordering and deleting Spaces are typed core intents, and the core makes each new Space itself."
+    },
+    "space-access-intents": {
+      "category": "internal",
+      "message": "Locking and unlocking Spaces are typed core intents, and a late unlock result can no longer complete a newer request."
     }
   }
 }

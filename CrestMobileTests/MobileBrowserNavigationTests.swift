@@ -151,7 +151,9 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertNil(pages.activePage)
         XCTAssertFalse(pages.containsResidentPage(for: tab.id))
 
-        // The same mounted detail must still restore an authorized tab.
+        // The same mounted detail must still restore an authorized tab, once
+        // the person authenticated to take the protection away.
+        browser.unlockForTesting(locked)
         browser.updateSpaceAccessPolicy(.open, in: locked.id)
         window.layoutIfNeeded()
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))

@@ -10,24 +10,6 @@
 #include <time.h>
 #include <unistd.h>
 
-static void access_boundary(void) {
-    uint64_t access = 0, request = 0;
-    uint8_t space[16] = {1}, profile[16] = {2}, replacement[16] = {3};
-    int32_t locked = 0, applied = 0;
-    assert(crest_access_create(&access) == CREST_OK && access != 0);
-    assert(crest_access_is_locked(access, NULL, profile, 1, &locked) == CREST_INVALID_ARGUMENT && locked == 1);
-    assert(crest_access_is_locked(access, space, profile, 2, &locked) == CREST_INVALID_ARGUMENT && locked == 1);
-    assert(crest_access_begin(access, space, profile, 1, &request) == CREST_OK && request != 0);
-    assert(crest_access_complete(access, space, replacement, request, 1) == CREST_INVALID_STATE);
-    assert(crest_access_lock_all(access, 1, &applied) == CREST_OK && applied == 0);
-    assert(crest_access_complete(access, space, profile, request, 1) == CREST_OK);
-    assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_OK && locked == 0);
-    assert(crest_access_lock_space(access, space) == CREST_OK);
-    assert(crest_access_complete(access, space, profile, request, 1) == CREST_INVALID_STATE);
-    assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_OK && locked == 1);
-    assert(crest_access_destroy(access) == CREST_OK);
-    assert(crest_access_is_locked(access, space, profile, 1, &locked) == CREST_INVALID_HANDLE && locked == 1);
-}
 static void app_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     uint8_t stale[CREST_CONTRACTS_FINGERPRINT_LENGTH];
@@ -281,52 +263,6 @@ static void engine_boundary(void) {
     assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 }
-/* A session that consults the access authority refuses commands against a
- * locked Space until that exact Space/profile pair holds a grant. */
-static void locked_space_boundary(void) {
-    static const char* tab_id = "66666666-6666-6666-6666-666666666666";
-    char json[1024];
-    int size = snprintf(json, sizeof(json),
-        "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},"
-        "\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"accessPolicy\":\"deviceOwnerAuthentication\","
-        "\"tabs\":[{\"id\":{\"rawValue\":\"%s\"},\"title\":\"Page\",\"url\":\"https://example.com/\","
-        "\"placement\":\"current\",\"lastActivatedAt\":800000000}"
-        "],\"selectedTabID\":{\"rawValue\":\"%s\"},\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}",
-        space_id, space_id, profile_id, tab_id, tab_id);
-    assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 0, access = 0, command = 0, request = 0;
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK);
-    assert(crest_access_create(&access) == CREST_OK);
-    assert(crest_session_attach_access(session, access + 1000) == CREST_INVALID_HANDLE);
-    assert(crest_session_attach_access(session, access) == CREST_OK);
-    assert(crest_session_attach_access(session, access) == CREST_OK);
-
-    /* A tab batch reads the Space's records, so the gate refuses it before
-     * preparation; once granted, it prepares and answers its own refusal. */
-    char edit[1024];
-    size = snprintf(edit, sizeof(edit),
-        "{\"version\":1,\"operation\":\"tabs.batch\",\"spaceId\":{\"rawValue\":\"%s\"},"
-        "\"profileId\":\"%s\",\"now\":800000002,\"arguments\":{}}",
-        space_id, profile_id);
-    assert(size > 0 && (size_t)size < sizeof(edit));
-    assert(crest_session_prepare_command(session, (const uint8_t*)edit, (size_t)size, &command)
-        == CREST_INVALID_MESSAGE && command == 0);
-
-    uint8_t space[16], profile[16];
-    memset(space, 0x44, sizeof(space)); memset(profile, 0x55, sizeof(profile));
-    assert(crest_access_begin(access, space, profile, 1, &request) == CREST_OK && request != 0);
-    assert(crest_access_complete(access, space, profile, request, 1) == CREST_OK);
-    assert(crest_session_prepare_command(session, (const uint8_t*)edit, (size_t)size, &command) == CREST_OK
-        && command != 0);
-    assert(crest_session_release_command(command) == CREST_OK);
-
-    assert(crest_access_lock_space(access, space) == CREST_OK);
-    command = 0;
-    assert(crest_session_prepare_command(session, (const uint8_t*)edit, (size_t)size, &command)
-        == CREST_INVALID_MESSAGE && command == 0);
-    assert(crest_access_destroy(access) == CREST_OK);
-    assert(crest_session_destroy(session) == CREST_OK);
-}
 /* App-wide behavior preferences are session state; the launch plan reads the
  * saved startup choice from the session and is released without committing. */
 static void preferences_boundary(void) {
@@ -390,7 +326,7 @@ static void links_boundary(void) {
     crest_buffer_free(&buffer);
     assert(crest_app_destroy(app) == CREST_OK);
     uint8_t output[512]; size_t length = 0;
-    const char *borrowed = "{\"version\":1,\"operation\":\"workspace.command_route\",\"command\":\"space.branding\",\"borrowed\":true}";
+    const char *borrowed = "{\"version\":1,\"operation\":\"workspace.command_route\",\"command\":\"space.browsing_preferences\",\"borrowed\":true}";
     assert(crest_core_evaluate_policy((const uint8_t*)borrowed, strlen(borrowed), output, sizeof(output) - 1, &length) == CREST_OK);
     output[length] = 0;
     assert(strstr((const char*)output, "\"route\":\"source\""));
@@ -547,14 +483,12 @@ int main(void) {
     assert(crest_core_abi_version() == CREST_ABI_VERSION);
     policy_boundary();
     links_boundary();
-    access_boundary();
     app_boundary();
     permissions_boundary();
     session_boundary();
     engine_boundary();
     storage_boundary();
-    locked_space_boundary();
     preferences_boundary();
-    puts("Native ABI buffer ownership, size retry, handle, session, engine and lock checks passed.");
+    puts("Native ABI buffer ownership, size retry, handle, session and engine checks passed.");
     return 0;
 }

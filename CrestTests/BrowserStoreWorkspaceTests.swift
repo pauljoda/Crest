@@ -93,16 +93,16 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         temporary.addSpace()
         XCTAssertEqual(temporary.session.spaces.map(\.id), [assignment.spaceID])
 
-        source.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: assignment.spaceID)
-        XCTAssertEqual(temporary.selectedSpace?.accessPolicy, .deviceOwnerAuthentication)
         temporary.updateSpaceIdentity(assignment.spaceID, name: "Canonical rename", symbol: "book", accent: .orange)
-        temporary.updateSpaceAccessPolicy(.open, in: assignment.spaceID)
         var preferences = try XCTUnwrap(temporary.selectedSpace).browsingPreferences
         preferences.searchProvider = .duckDuckGo
         temporary.updateBrowsingPreferences(preferences, in: assignment.spaceID)
+        // Asking for authentication locks the Space, which this process has
+        // not unlocked, so it comes last.
+        temporary.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: assignment.spaceID)
 
         XCTAssertEqual(source.selectedSpace?.name, "Canonical rename")
-        XCTAssertEqual(source.selectedSpace?.accessPolicy, .open)
+        XCTAssertEqual(source.selectedSpace?.accessPolicy, .deviceOwnerAuthentication)
         XCTAssertEqual(source.selectedSpace?.browsingPreferences.searchProvider, .duckDuckGo)
         XCTAssertEqual(source.session.tabIDs, originalTabs)
         XCTAssertTrue(try XCTUnwrap(temporary.selectedSpace).tabs.isEmpty)

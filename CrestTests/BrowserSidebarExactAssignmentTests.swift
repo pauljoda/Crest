@@ -8,6 +8,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
     func testRetainedRowPresentationNeverAuthorizesAStaleSpace() {
         let context = makeContext()
         let access = BrowserSpaceAccessController(authenticator: AcceptingAuthenticator())
+        context.store.attachSpaceAccess(access)
         var row = BrowserSidebarTabRowConfiguration(
             tab: context.sourceTab, spaceID: context.source.id, profileID: context.source.profile.id,
             isSelected: true, canClose: true, browser: context.store, spaceAccess: access,
@@ -311,6 +312,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         let access = BrowserSpaceAccessController(
             authenticator: AcceptingAuthenticator()
         )
+        context.store.attachSpaceAccess(access)
         let assignment = BrowserSpaceRuntimeAssignment(space: context.source)
         let historyURL = try XCTUnwrap(
             URL(string: "https://sidebar-history.crest.test/selection")
@@ -350,13 +352,15 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         let access = BrowserSpaceAccessController(
             authenticator: AcceptingAuthenticator()
         )
+        context.store.attachSpaceAccess(access)
         let assignment = BrowserSpaceRuntimeAssignment(space: context.source)
         let historyURL = try XCTUnwrap(
             URL(string: "https://sidebar-history.crest.test/relock")
         )
-        context.store.seedVisit(to: historyURL, titled: "Relock", in: assignment.spaceID)
         let didUnlock = await access.unlock(context.source)
         XCTAssertTrue(didUnlock)
+        // The core records nothing into a Space this process holds locked.
+        context.store.seedVisit(to: historyURL, titled: "Relock", in: assignment.spaceID)
         let confirmation = try XCTUnwrap(
             BrowserSidebarSpacePresentationPolicy.clearHistoryConfirmation(
                 for: context.source,

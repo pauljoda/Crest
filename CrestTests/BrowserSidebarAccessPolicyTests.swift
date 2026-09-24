@@ -132,14 +132,15 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
             name: "Destination",
             isProtected: destinationIsProtected
         )
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [source, destination]),
+            browsingMode: .privateBrowsing
+        )
+        let access = BrowserSpaceAccessController(authenticator: AcceptingAuthenticator())
+        browser.attachSpaceAccess(access)
         return Context(
-            browser: BrowserStore(
-                session: BrowserSession(spaces: [source, destination]),
-                browsingMode: .privateBrowsing
-            ),
-            access: BrowserSpaceAccessController(
-                authenticator: AcceptingAuthenticator()
-            ),
+            browser: browser,
+            access: access,
             source: source,
             destination: destination
         )

@@ -19,14 +19,28 @@ public sealed partial class NativeSessionAuthority {
     #region Actions - Access
 
     /// Locking is process-local, so the grants and the session records that name
-    /// the policy have to meet in the same process. A borrowed workspace inherits
-    /// its source's authority; nothing else can substitute one.
-    public void AttachAccess(SpaceAccessAuthority authority) {
+    /// the policy have to meet in the same process: the device attaches its
+    /// grants to every session it shows. A borrowed workspace inherits its
+    /// source's authority; nothing else can substitute one.
+    internal void AttachAccess(SpaceAccessAuthority authority) {
         ArgumentNullException.ThrowIfNull(authority);
         lock (Gate) {
             if (access is not null && !ReferenceEquals(access, authority))
                 throw new BrowserRuleException(BrowserRuleCodes.AccessAlreadyAttached);
             access = authority;
+        }
+    }
+
+    /// The Space profile a request to unlock `spaceId` names, and whether its
+    /// policy asks for authentication. Throws `Rejected` with `UnknownSpace`
+    /// for a Space the session does not hold, and `SpaceBeingDeleted` for one
+    /// that is going away.
+    internal (SpaceAccessAssignment Assignment, bool RequiresAuthentication) Unlockable(Guid spaceId) {
+        lock (Gate) {
+            var space = session.Spaces.FirstOrDefault(candidate => candidate.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
+            if (PendingDeletion(session, spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true)
+                throw new Rejected(new SpaceBeingDeleted(spaceId));
+            return (new(space.Id, space.ProfileId), RequiresAuthentication(space));
         }
     }
 

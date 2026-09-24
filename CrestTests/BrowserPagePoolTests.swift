@@ -122,6 +122,7 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertFalse(action.perform(assignment, url: url))
         XCTAssertEqual(browser.selectedTab, draft)
 
+        browser.unlockForTesting(locked)
         browser.session = BrowserSession(spaces: [space])
         let previousURL = try XCTUnwrap(URL(string: "about:blank#already-navigated"))
         browser.navigateSelectedTab(to: previousURL)
@@ -1917,7 +1918,9 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let other = BrowserTab(title: "Other", url: nil, placement: .current)
         let otherSpace = makeSpace(tabs: [other], selectedTabID: other.id)
-        let pool = BrowserPagePool(browser: hosting(protectedSpace, otherSpace))
+        let browser = hosting(protectedSpace, otherSpace)
+        browser.unlockForTesting(protectedSpace)
+        let pool = BrowserPagePool(browser: browser)
         pool.select(tab: secret, space: protectedSpace)
         let secretPage = try XCTUnwrap(pool.activePage)
         let mount = mountForFocus(secretPage)
@@ -2196,7 +2199,9 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let openTab = BrowserTab(title: "Open", url: nil, placement: .current)
         let openSpace = makeSpace(tabs: [openTab], selectedTabID: openTab.id)
-        let pool = BrowserPagePool(browser: hosting(openSpace, protectedSpace))
+        let browser = hosting(openSpace, protectedSpace)
+        browser.unlockForTesting(protectedSpace)
+        let pool = BrowserPagePool(browser: browser)
 
         pool.select(tab: openTab, space: openSpace)
         pool.select(tab: first, space: protectedSpace)
@@ -2577,8 +2582,10 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let openTab = BrowserTab(title: "Open", url: nil, placement: .current)
         let openSpace = makeSpace(tabs: [openTab], selectedTabID: openTab.id)
+        let browser = hosting(openSpace, protectedSpace)
+        browser.unlockForTesting(protectedSpace)
         let pool = BrowserPagePool(
-            browser: hosting(openSpace, protectedSpace),
+            browser: browser,
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -2625,7 +2632,9 @@ final class BrowserPagePoolTests: XCTestCase {
         let space = makeSpace(
             tabs: [tab], selectedTabID: tab.id, accessPolicy: .deviceOwnerAuthentication
         )
-        let pool = BrowserPagePool(browser: hosting(space))
+        let browser = hosting(space)
+        browser.unlockForTesting(space)
+        let pool = BrowserPagePool(browser: browser)
         pool.select(tab: tab, space: space)
         let original = try XCTUnwrap(pool.activePage)
         try await load(firstURL, in: original)

@@ -626,6 +626,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let spaceAccess = BrowserSpaceAccessController(
             authenticator: BrowserPreviewAuthenticator(result: true)
         )
+        browser.attachSpaceAccess(spaceAccess)
         return (
             source,
             destination,
@@ -696,6 +697,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let spaceAccess = BrowserSpaceAccessController(
             authenticator: BrowserPreviewAuthenticator(result: true)
         )
+        browser.attachSpaceAccess(spaceAccess)
         return (
             source,
             destination,

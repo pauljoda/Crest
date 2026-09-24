@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -31,6 +32,8 @@ internal sealed partial class Device {
     /// The saved windows' records, open or not.
     private readonly Dictionary<Guid, SavedWindow> saved = [];
     private readonly SessionStorage? storage;
+    /// The grants every session this device shows consults.
+    private readonly SpaceAccessAuthority access;
     private readonly Action<Change> announce;
     /// Asks the host for a drain on its next turn.
     private readonly Action requestTurn;
@@ -46,13 +49,17 @@ internal sealed partial class Device {
     #region Constructors
 
     /// A device whose saved windows `storage` keeps, starting from `records`;
-    /// without storage every window lives in memory. `requestTurn` asks the
-    /// host for a drain on its next turn.
-    public Device(SessionStorage? storage, DeviceRecords records, Action<Change> announce, Action requestTurn) {
+    /// without storage every window lives in memory. Each session it shows
+    /// consults `access`. `requestTurn` asks the host for a drain on its next
+    /// turn.
+    public Device(SessionStorage? storage, DeviceRecords records, SpaceAccessAuthority access, Action<Change> announce,
+        Action requestTurn) {
         ArgumentNullException.ThrowIfNull(records);
+        ArgumentNullException.ThrowIfNull(access);
         ArgumentNullException.ThrowIfNull(announce);
         ArgumentNullException.ThrowIfNull(requestTurn);
         this.storage = storage;
+        this.access = access;
         this.announce = announce;
         this.requestTurn = requestTurn;
         foreach (var record in records.Windows) saved[record.Id] = record;
@@ -66,7 +73,8 @@ internal sealed partial class Device {
 
     /// Attaches a session a window may show, publishes it whole, and answers
     /// the identity the device gave its workspace; a session already attached
-    /// keeps its own and publishes nothing.
+    /// keeps its own and publishes nothing. The session's Spaces answer to the
+    /// device's grants from then on.
     public Guid Attach(NativeSessionAuthority authority) {
         ArgumentNullException.ThrowIfNull(authority);
         Guid workspaceId;
@@ -76,6 +84,7 @@ internal sealed partial class Device {
             workspaceId = Guid.NewGuid();
             workspaces[workspaceId] = authority;
         }
+        authority.AttachAccess(access);
         authority.AttachDevice(this, workspaceId);
         announce(new WorkspaceOpened(workspaceId, authority.Kind, authority.Current));
         return workspaceId;

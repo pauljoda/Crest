@@ -37,6 +37,7 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
         let addedID = try plan.addSpace()
         let authenticator = OnboardingCompletionAuthenticator()
         let access = BrowserSpaceAccessController(authenticator: authenticator)
+        browser.attachSpaceAccess(access)
         let persistence = InMemoryBrowserOnboardingProgressPersistence()
         let progress = BrowserOnboardingProgressStore(persistence: persistence)
         let before = browser.session
@@ -63,12 +64,16 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
         XCTAssertTrue(persistence.hasCompletedSetup)
     }
 
+    /// A first Space whose profile sync replaced is refused by the core's
+    /// guide confirmation (`SetupPolicyTests`); a locked Space's records never
+    /// take a local replacement, so that case is not driven from here.
     func testCancelledTaskAndChangedFirstSpaceCannotCommitAfterAuthentication() async throws {
-        enum Interruption: CaseIterable { case cancellation, reorder, profile, removal }
+        enum Interruption: CaseIterable { case cancellation, reorder, removal }
         for interruption in Interruption.allCases {
             let browser = protectedBrowser()
             let authenticator = OnboardingCompletionAuthenticator()
             let access = BrowserSpaceAccessController(authenticator: authenticator)
+            browser.attachSpaceAccess(access)
             let progress = BrowserOnboardingProgressStore(persistence: InMemoryBrowserOnboardingProgressPersistence())
             let task = Task {
                 await BrowserOnboardingCompletion.complete(
@@ -78,13 +83,20 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
             switch interruption {
             case .cancellation: task.cancel()
             case .reorder: browser.moveSpaces(from: IndexSet(integer: 0), to: browser.session.spaces.count)
-            case .profile:
+            case .removal:
+                // Another window deletes the Space, which a lock never holds back.
                 let first = try XCTUnwrap(browser.session.spaces.first)
-                browser.session.spaces[0] = BrowserSpace(
-                    id: first.id, profile: BrowsingProfile(), name: first.name, symbol: first.symbol,
-                    accent: first.accent, folders: first.folders, tabs: first.tabs,
-                    accessPolicy: first.accessPolicy)
-            case .removal: browser.session.spaces.removeFirst()
+                let operation = UUID()
+                try browser.family.commit(
+                    BeginDeletingSpace(
+                        workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
+                        spaceID: first.id.rawValue, operationID: operation),
+                    from: browser)
+                try browser.family.commit(
+                    FinishDeletingSpace(
+                        workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
+                        spaceID: first.id.rawValue, operationID: operation),
+                    from: browser)
             }
             let beforeResolution = browser.session
             authenticator.resolve(true)
@@ -101,6 +113,7 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
         let addedID = try plan.addSpace()
         let authenticator = OnboardingCompletionAuthenticator()
         let access = BrowserSpaceAccessController(authenticator: authenticator)
+        browser.attachSpaceAccess(access)
         let progress = BrowserOnboardingProgressStore(persistence: InMemoryBrowserOnboardingProgressPersistence())
         let task = Task {
             await BrowserOnboardingCompletion.complete(

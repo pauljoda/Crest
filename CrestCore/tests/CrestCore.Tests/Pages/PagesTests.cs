@@ -107,9 +107,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void NoPageOpensInALockedSpaceOrOneBeingDeleted() {
         var session = GuardedSession(withOpenSecondSpace: true);
-        var access = new SpaceAccessAuthority();
         var authority = new NativeSessionAuthority(Bytes(session));
-        authority.AttachAccess(access);
         var (app, _, binding, workspace, window) = PageHost(authority);
         using var disposal = app;
         var locked = Identity(session);
@@ -117,7 +115,7 @@ public sealed partial class BrowserContractsTests {
         var borrowed = app.AttachWorkspace(authority.CreateBorrowed(open, ProfileId(session["spaces"]![1]!)));
 
         Assert.Equal(new SpaceLocked(locked.Space), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window)));
-        Grant(access, locked);
+        Unlock(app.Send, workspace, locked.Space);
         app.Send(new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window));
 
         // A Space being deleted opens no page, nor does a workspace that borrows it.

@@ -97,17 +97,15 @@ public sealed partial class BrowserContractsTests {
 
     [Fact]
     public void APageInALockedSpaceRecordsNothing() {
-        var session = GuardedSession();
-        var access = new SpaceAccessAuthority();
+        var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        authority.AttachAccess(access);
-        var identity = Identity(session);
-        Grant(access, identity);
-        var (app, engine, page, _) = NavigatingPage(authority, session);
+        var (app, engine, page, workspace) = NavigatingPage(authority, session);
         using var disposal = app;
+        // The Space asks for authentication from now on, and this process
+        // holds no grant for it.
+        app.Send(new SetSpaceAccess(workspace, SpaceId(session["spaces"]![0]!), SpaceAccessPolicy.DeviceOwnerAuthentication));
         var before = authority.Current;
 
-        access.Lock(identity.Space);
         Assert.Empty(Navigate(app, engine, page, "https://example.com/secret", "Secret"));
         Assert.Same(before, authority.Current);
     }

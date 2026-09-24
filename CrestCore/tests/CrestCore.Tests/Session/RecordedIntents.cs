@@ -34,6 +34,28 @@ internal sealed class TestIds : IIdSource {
     #endregion
 }
 
+/// Grants a test gives as the device owner authenticating would.
+internal static class TestGrants {
+    #region Actions - Unlocking
+
+    /// Unlocks `space` of `workspace` through `send`, when it is locked.
+    public static void Unlock(Func<Intent, IReadOnlyList<Change>> send, Guid workspace, Guid space) {
+        var request = Guid.NewGuid();
+        if (send(new BeginUnlockingSpace(workspace, space, request)).OfType<SpaceLockChanged>().Any(change => change.IsAuthenticating))
+            send(new FinishUnlockingSpace(space, request, Authenticated: true));
+    }
+
+    /// Unlocks every Space of `session` that asks for authentication, as a
+    /// person does before editing it.
+    public static void UnlockGuarded(Func<Intent, IReadOnlyList<Change>> send, Guid workspace, SessionState session) {
+        foreach (var space in session.Spaces.Where(space => space.Settings.AccessPolicy != SpaceAccessPolicy.Open
+            && session.SpaceDeletions.All(deletion => deletion.SpaceId != space.Id)))
+            Unlock(send, workspace, space.Id);
+    }
+
+    #endregion
+}
+
 /// A recorded `history.visit`, which a page's engine reports now: a document
 /// in the Space `SpaceId` finished at `Url`, titled `Title`, at `At`.
 internal sealed record RecordedNavigation(Guid SpaceId, string Url, string Title, DateTimeOffset At);

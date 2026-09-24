@@ -203,18 +203,20 @@ shared store command the WebKit menu route uses.
 Page creation and lifetime belong to the native composition and its engine
 ports.
 
-Space unlocking uses a process-local `SpaceAccessAuthority` in the .NET domain.
-The native access controller presents Apple's authentication prompt and publishes
-UI changes; it no longer owns an independent set of unlocked profiles. Grants
-match both Space and profile identity. Only the current request may complete;
-relocking cancels it, and a late result cannot consume a newer request. Scene
-deactivation caused by the system prompt preserves that pending request. Explicit
-locking always revokes access. These grants never enter checkpoints or sync.
-The small C ABI uses fixed UUID bytes and synchronous calls, without JSON or a
-message executor. Durable access-policy changes still use session commands, and
-native page, credential and extension callers retain their existing access gates.
-Each store family attaches that authority to its core session with
-`crest_session_attach_access`, and a borrowed workspace inherits its source's.
+Space unlocking uses one process-local `SpaceAccessAuthority` in the app,
+driven by the `BeginUnlockingSpace`, `FinishUnlockingSpace`, `LockSpace` and
+`LockAllSpaces` intents, each of which publishes `SpaceLockChanged` for the
+Space profiles it changed. The native access controller presents Apple's
+authentication prompt, answers with its result and reads each lock from the
+read model; it owns no set of unlocked profiles. Grants match both Space and
+profile identity. Only the current request may complete; relocking cancels it,
+and a late result cannot consume a newer request. Scene deactivation caused by
+the system prompt preserves that pending request. Explicit locking always
+revokes access. These grants never enter checkpoints or sync. The durable
+access policy is the `SetSpaceAccess` intent, and native page, credential and
+extension callers retain their existing access gates. The device attaches the
+grants to every session it shows, and a borrowed workspace inherits its
+source's.
 The session authority then rejects a prepared command against a Space whose
 stored policy requires authentication and holds no grant, with `space_locked`,
 before any preparation runs. Raising a Space's protection, its deletion intents,
@@ -611,7 +613,7 @@ and `BrowserWindow` aggregates have been removed. Their former rules now belong 
 | One Space's tab, folder and split edit | `NativeSessionEditor`, called by the session commands |
 | History, archive and retention sweeps | `NativeSessionMaintenance` and `NativeSessionAuthority.Records` |
 | Address, search and link decisions | `SearchProvider`, `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
-| Space locking and device authentication | `SpaceAccessAuthority` behind `crest_access_*` |
+| Space locking and device authentication | `SpaceAccessAuthority` behind the Space access intents |
 | Cross-workspace transfer and borrowed workspaces | `NativeTabTransfer` and `NativeSessionAuthority.Borrowing`/`Transfer` |
 | Sync projection, ordering, conflict and deletion | `NativeSyncAuthority` and the `crest_sync_*` entry points |
 | Correlated completion invariants | Prepare/reserve/commit revisions on the session and sync handles |
@@ -759,14 +761,14 @@ Split View code read; a refused or unanswered edit leaves the value as it was.
 WebKit reads its spelling default once per process, so launch reconciles that
 engine copy with the record. Appearance preferences, link preferences,
 shortcut overrides, sync choices and per-Space download locations stay native.
-The C ABI is synchronous: `crest_session_*`, `crest_sync_*`, `crest_access_*`,
+The C ABI is synchronous: `crest_session_*`, `crest_sync_*`,
 `crest_app_*`, `crest_permissions_*`, `crest_core_evaluate_policy` and
 `crest_core_evaluate_sync`, declared in `CrestContracts/include/crest_core.h`
 and `crest_app.h` and described in `CrestContracts/README.md`.
-`CrestContracts/tests/native_abi.c` exercises the policy, access, app,
+`CrestContracts/tests/native_abi.c` exercises the policy, app,
 permissions and session entry points against the built library.
 
-Once a store family attaches the access authority, `NativeSessionAuthority`
+Once the device attaches the access authority, `NativeSessionAuthority`
 rejects a prepared command that would read or mutate a locked Space. It also
 rejects a native value edit, such as the delta `crest_session_replace_durably`
 applies without a journal, that would change or remove a locked Space's records. Sync

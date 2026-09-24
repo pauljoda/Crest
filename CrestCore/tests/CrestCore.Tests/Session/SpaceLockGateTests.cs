@@ -19,18 +19,22 @@ public sealed partial class BrowserContractsTests {
     private static SpaceAccessAssignment Identity(JsonNode session) => new(
         Guid.Parse(session["spaces"]![0]!["id"]!["rawValue"]!.GetValue<string>()),
         Guid.Parse(session["spaces"]![0]!["profile"]!["id"]!.GetValue<string>()));
-    private static void Grant(SpaceAccessAuthority access, SpaceAccessAssignment identity)
-        => Assert.True(access.Complete(access.Begin(identity, true), identity, true));
+    private static void Grant(SpaceAccessAuthority access, SpaceAccessAssignment identity) {
+        var request = Guid.NewGuid();
+        Assert.Equal([identity], access.Begin(identity, true, request));
+        access.Finish(identity.Space, request, authenticated: true);
+    }
+
+    private static void Unlock(Func<Intent, IReadOnlyList<Change>> send, Guid workspace, Guid space) =>
+        TestGrants.Unlock(send, workspace, space);
 
     [Fact]
     public void LockedSpaceCommandsAreRejectedBeforePreparationUntilAGrantExistsAndAgainAfterRelocking() {
         var session = GuardedSession();
-        var access = new SpaceAccessAuthority();
         var core = new NativeSessionAuthority(Bytes(session));
-        core.AttachAccess(access);
+        using var device = new TestDevice(core);
         var identity = Identity(session);
         var tab = Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>());
-        using var device = new TestDevice(core);
         var move = new MoveTab(device.Workspace, identity.Space, tab, TabPlacement.Current, null, null, LeavesSplit: false);
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(move)).Rejection);
         var folder = Guid.Parse(session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.GetValue<string>());
@@ -60,12 +64,11 @@ public sealed partial class BrowserContractsTests {
             }
         }))).Code);
 
-        Grant(access, identity);
+        Unlock(device.Send, device.Workspace, identity.Space);
         device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Granted"));
         Assert.Equal(2UL, core.Revision);
 
-        access.Lock(identity.Space);
-        var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
+        device.Send(new LockSpace(identity.Space));
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(move)).Rejection);
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"))).Rejection);
@@ -80,7 +83,7 @@ public sealed partial class BrowserContractsTests {
             device.Send(new ClearHistory(device.Workspace, identity.Space))).Rejection).SpaceId);
         device.Send(new SweepExpiredRecords(device.Workspace));
         device.Send(new CleanUpCurrentTabs(device.Workspace, identity.Space));
-        Grant(access, identity);
+        Unlock(device.Send, device.Workspace, identity.Space);
         device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"));
         Assert.Equal("After relock", core.Current.Spaces[0].Tabs[0].CustomTitle);
     }
@@ -88,9 +91,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void SyncMaterializationAndDeletionStillReachALockedSpaceWhileItsCommandsStayRejected() {
         var session = GuardedSession(withOpenSecondSpace: true);
-        var access = new SpaceAccessAuthority();
         var core = new NativeSessionAuthority(Bytes(session));
-        core.AttachAccess(access);
+        using var device = new TestDevice(core);
         // Materialized records commit as a session replacement, never as a
         // command, so background convergence does not need a grant.
         using (var reserved = core.ReserveReplacement(RenameDelta(session, "Merged from another device")))
@@ -100,7 +102,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(3UL, core.Revision);
         var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
         Assert.Equal("Merged again", current["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
-        using var device = new TestDevice(core);
         var deleting = Identity(session).Space;
         device.Send(new BeginDeletingSpace(device.Workspace, Guid.NewGuid(), deleting, Guid.NewGuid()));
         Assert.Equal(deleting, Assert.IsType<SpaceBeingDeleted>(Assert.Throws<Rejected>(() =>
@@ -210,18 +211,16 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ALockedSpaceCannotBeBorrowedOrTransferredIntoATemporaryWorkspace() {
         var session = GuardedSession();
-        var access = new SpaceAccessAuthority();
         var owner = new NativeSessionAuthority(Bytes(session));
-        owner.AttachAccess(access);
+        using var device = new TestDevice(owner);
         var identity = Identity(session);
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
             () => owner.CreateBorrowed(identity.Space, identity.Profile)).Code);
-        Grant(access, identity);
+        Unlock(device.Send, device.Workspace, identity.Space);
         var child = owner.CreateBorrowed(identity.Space, identity.Profile);
         // The borrowed workspace inherits the same authority, so relocking the
         // source also stops edits inside the Blank Window that borrowed it.
-        access.Lock(identity.Space);
-        using var device = new TestDevice(owner);
+        device.Send(new LockSpace(identity.Space));
         var borrowed = device.Attach(child);
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(new MoveTab(borrowed, identity.Space,
             Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>()), TabPlacement.Current, null, null,

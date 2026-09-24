@@ -311,6 +311,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
             persistence: InMemoryBrowserOnboardingProgressPersistence(hasCompletedSetup: true))
         let authenticator = SuspendedGuideAuthenticator()
         let access = BrowserSpaceAccessController(authenticator: authenticator)
+        browser.attachSpaceAccess(access)
         var completionCount = 0
 
         flow.completeSetup(progress: progress, spaceAccess: access) { completionCount += 1 }

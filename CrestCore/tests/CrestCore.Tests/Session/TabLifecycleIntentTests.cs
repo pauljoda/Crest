@@ -103,6 +103,7 @@ public sealed partial class BrowserContractsTests {
     public void ClosingArchivesAnOpenTabAndPutsASavedTabsPageAwayReturningTheWindowToItsPreviousTab() {
         var core = MaximalSession();
         using var device = new TestDevice(core);
+        TestGrants.UnlockGuarded(device.Send, device.Workspace, core.Current);
         var space = core.Current.Spaces[0];
         Guid Id(string value) => Guid.Parse(value);
         Guid left = Id("428CAA9C-9A7A-4386-B120-F6096032C167"), right = Id("942AC076-B0D8-454B-9EEB-3791E6113F77"),
@@ -155,6 +156,7 @@ public sealed partial class BrowserContractsTests {
     public void DeletingArchivesATabAsAnOpenOneAndClearingArchivesOnlyOpenTabs() {
         var core = MaximalSession();
         using var device = new TestDevice(core);
+        TestGrants.UnlockGuarded(device.Send, device.Workspace, core.Current);
         var space = core.Current.Spaces[0];
         var article = Guid.Parse("B61250D4-3D4E-4DD6-8871-0BB326669142");
         var window = device.Open(space.Id, (space.Id, article));

@@ -430,14 +430,6 @@ final class BrowserStoreFamily {
         for store in stores.compactMap(\.value) { store.receiveFamilySessionChange(from: session, to: session) }
     }
 
-    /// Defence in depth for locked Spaces. The UI already refuses to reach one,
-    /// but after this the core's own records reject any command that would read
-    /// or write a Space this process holds no access grant for.
-    func attachSpaceAccess(_ controller: BrowserSpaceAccessController) {
-        do { try core.attachAccess(controller.coreAccess) }
-        catch { preconditionFailure("Cannot attach Space access to the core session: \(error)") }
-    }
-
     func beginDeletingSpace(_ id: SpaceID) -> Bool {
         activeSpaceDeletions.insert(id).inserted
     }

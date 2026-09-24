@@ -33,6 +33,14 @@ final class CoreState {
     /// Why the core could not stage the session's latest edits for sync, until
     /// a later stage succeeds.
     var syncStagingFailure: SyncStagingFailure?
+    /// This process's access to each Space profile that holds a grant or is
+    /// waiting on the device owner, as the core last published it. A profile
+    /// missing here holds no grant. Stored before it is announced; see
+    /// `BrowserStoreFirstObservable`.
+    var spaceAccess: [BrowserSpaceRuntimeAssignment: SpaceLockChanged] {
+        observed(\.spaceAccessStorage, as: \.spaceAccess)
+    }
+    @ObservationIgnored var spaceAccessStorage: [BrowserSpaceRuntimeAssignment: SpaceLockChanged] = [:]
     /// TRANSITIONAL until S6.7 deletes the Swift session copy: the copy of
     /// each attached workspace, which its session changes update.
     @ObservationIgnored var sessionCopies: [UUID: SessionCopy] = [:]

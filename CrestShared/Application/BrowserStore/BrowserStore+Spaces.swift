@@ -3,10 +3,11 @@ import Foundation
 // MARK: - Spaces and Import
 
 extension BrowserStore {
-    /// Composition wires the app's one access authority into every store family
-    /// it owns, including private browsing.
+    /// Composition gives the app's one access controller every store whose
+    /// workspace shows Spaces it may unlock, including private browsing. The
+    /// core's own records refuse a locked Space whatever the views believe.
     func attachSpaceAccess(_ controller: BrowserSpaceAccessController) {
-        family.attachSpaceAccess(controller)
+        controller.attach(self)
     }
 
     func addSpace() {

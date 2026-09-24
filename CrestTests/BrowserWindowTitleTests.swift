@@ -100,11 +100,13 @@ final class BrowserWindowTitleTests: XCTestCase {
             folders: [], tabs: [alpha, beta]
         )
         let browser = browser ?? BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let spaceAccess = BrowserSpaceAccessController(authenticator: TitleAuthenticator())
+        browser.attachSpaceAccess(spaceAccess)
         return BrowserRootModel(
             browser: browser,
             pages: BrowserPagePool(browser: browser),
             chrome: BrowserChromeState(),
-            spaceAccess: BrowserSpaceAccessController(authenticator: TitleAuthenticator()),
+            spaceAccess: spaceAccess,
             windowState: nil, startupBehavior: .lastActiveTab,
             persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
         )

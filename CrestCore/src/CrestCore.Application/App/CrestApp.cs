@@ -26,6 +26,8 @@ public sealed partial class CrestApp : IDisposable {
     private readonly Device device;
     /// The pages this device hosts, and the engines that host them.
     private readonly Pages pages;
+    /// Which Spaces this process may show.
+    private readonly SpaceAccess access;
     /// The time session intents are stamped with.
     private readonly IClock clock;
     /// Where the identities the core gives new records come from.
@@ -50,14 +52,19 @@ public sealed partial class CrestApp : IDisposable {
         ArgumentNullException.ThrowIfNull(ids);
         this.clock = clock;
         this.ids = ids;
+        // One grant authority for the process: every session the device shows
+        // consults it, so a borrowed workspace unlocks with its source.
+        var grants = new SpaceAccessAuthority();
         if (configuration.StorageDirectory is not { } directory) {
-            device = new(storage: null, DeviceRecords.Empty, Announce, RequestTurn);
+            device = new(storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn);
             pages = new(device, engines, clock, ids);
+            access = new(device, grants);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
-        device = new(storage, storage.Device, Announce, RequestTurn);
+        device = new(storage, storage.Device, grants, Announce, RequestTurn);
         pages = new(device, engines, clock, ids);
+        access = new(device, grants);
         try {
             if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
         } catch (Exception error) {
@@ -96,6 +103,9 @@ public sealed partial class CrestApp : IDisposable {
                     break;
                 case SessionIntent session:
                     device.Workspace(session.WorkspaceId).Handle(session, clock.Now, ids, pages.Transient);
+                    break;
+                case SpaceAccessIntent grant:
+                    access.Handle(grant, changes);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");

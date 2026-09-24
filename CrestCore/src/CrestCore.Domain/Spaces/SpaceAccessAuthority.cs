@@ -1,14 +1,16 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
-/// Process-local grants for exact Space/profile identities. The platform owns
-/// authentication UI; only a matching, still-pending result can grant access.
-/// Callers serialize access. Nothing in this authority is persisted or synced.
+/// Process-local grants for exact Space and profile identities. The platform
+/// owns the authentication prompt; only the result of the request still
+/// pending can grant access. Callers serialize access. Nothing in this
+/// authority is saved or synced.
 public sealed class SpaceAccessAuthority {
     #region Variables
 
     private readonly HashSet<SpaceAccessAssignment> unlocked = [];
-    private (ulong Request, SpaceAccessAssignment Assignment)? pending;
-    private ulong nextRequest;
+    private (Guid Request, SpaceAccessAssignment Assignment)? pending;
 
     #endregion
 
@@ -17,6 +19,12 @@ public sealed class SpaceAccessAuthority {
     public bool IsLocked(SpaceAccessAssignment assignment, bool requiresAuthentication) =>
         requiresAuthentication && !unlocked.Contains(assignment);
 
+    /// Whether this process holds the grant for `assignment`.
+    public bool IsUnlocked(SpaceAccessAssignment assignment) => unlocked.Contains(assignment);
+
+    /// Whether a request to unlock `assignment` is waiting.
+    public bool IsAuthenticating(SpaceAccessAssignment assignment) => pending?.Assignment == assignment;
+
     /// Command gate for the session authority. A Space whose durable policy
     /// requires authentication stays unreadable and unwritable in this process
     /// until a matching grant exists, independent of what any view believes.
@@ -24,37 +32,51 @@ public sealed class SpaceAccessAuthority {
         if (IsLocked(assignment, requiresAuthentication)) throw new BrowserRuleException(BrowserRuleCodes.SpaceLocked);
     }
 
-    /// Zero means no authentication is needed. Nonzero request IDs never repeat
-    /// within this authority, including after cancellation and retry.
-    public ulong Begin(SpaceAccessAssignment assignment, bool requiresAuthentication) {
-        if (!IsLocked(assignment, requiresAuthentication)) return 0;
-        if (pending is not null) throw new BrowserRuleException(BrowserRuleCodes.AuthenticationBusy);
-        var request = checked(nextRequest + 1);
-        nextRequest = request;
+    /// Makes `request` the one waiting to unlock `assignment`, and answers the
+    /// assignments whose access changed: none when the Space needs no
+    /// authentication. Throws `Rejected` with `AuthenticationBusy` while
+    /// another request is waiting.
+    public IReadOnlyList<SpaceAccessAssignment> Begin(SpaceAccessAssignment assignment, bool requiresAuthentication, Guid request) {
+        if (!IsLocked(assignment, requiresAuthentication)) return [];
+        if (pending is not null) throw new Rejected(new AuthenticationBusy());
         pending = (request, assignment);
-        return request;
+        return [assignment];
     }
 
-    /// Null means stale or mismatched. A mismatched reply cannot consume a
-    /// different pending request. A matching denial consumes it without a grant.
-    public bool? Complete(ulong request, SpaceAccessAssignment assignment, bool succeeded) {
-        if (pending is not { } current || request != current.Request || assignment != current.Assignment) return null;
+    /// Ends the waiting request `request` for `space`, granting its profile
+    /// when the device owner authenticated. Throws `Rejected` with
+    /// `StaleUnlockRequest` for any other request, which cannot consume the
+    /// one waiting.
+    public IReadOnlyList<SpaceAccessAssignment> Finish(Guid space, Guid request, bool authenticated) {
+        if (pending is not { } current || current.Request != request || current.Assignment.Space != space)
+            throw new Rejected(new StaleUnlockRequest(request));
         pending = null;
-        if (succeeded) unlocked.Add(assignment);
-        return succeeded;
+        if (authenticated) unlocked.Add(current.Assignment);
+        return [current.Assignment];
     }
 
-    public void Lock(Guid space) {
-        unlocked.RemoveWhere(assignment => assignment.Space == space);
-        if (pending?.Assignment.Space == space) pending = null;
+    /// Explicit locking always revokes: every grant for `space`, and the
+    /// request waiting for it.
+    public IReadOnlyList<SpaceAccessAssignment> Lock(Guid space) {
+        var revoked = unlocked.Where(assignment => assignment.Space == space).ToList();
+        unlocked.ExceptWith(revoked);
+        if (pending?.Assignment is { } waiting && waiting.Space == space) {
+            pending = null;
+            if (!revoked.Contains(waiting)) revoked.Add(waiting);
+        }
+        return revoked;
     }
 
-    public bool LockAll(bool inactiveScene) {
-        // A system authentication prompt temporarily makes its scene inactive.
-        if (inactiveScene && pending is not null) return false;
+    /// Revokes every grant and cancels the waiting request. A scene the
+    /// system's authentication prompt made inactive locks nothing while that
+    /// request waits.
+    public IReadOnlyList<SpaceAccessAssignment> LockAll(bool sceneWentInactive) {
+        if (sceneWentInactive && pending is not null) return [];
+        var revoked = unlocked.ToList();
+        if (pending?.Assignment is { } waiting && !revoked.Contains(waiting)) revoked.Add(waiting);
         pending = null;
         unlocked.Clear();
-        return true;
+        return revoked;
     }
 
     #endregion

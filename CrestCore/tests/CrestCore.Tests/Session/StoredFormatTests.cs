@@ -84,6 +84,7 @@ public sealed class StoredFormatTests {
         using var app = new CrestApp(new AppConfiguration(null), clock, ids);
         var engine = RecordedIntents.PageEngine(app);
         var workspace = app.AttachWorkspace(authority);
+        TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
         var differences = new List<string>();
         void Compare(string name, JsonNode? actual) =>
             differences.AddRange(StoredJson.Differences(expected[name], actual, StoredJson.Comparison.AsSwiftReads, name));
@@ -103,6 +104,7 @@ public sealed class StoredFormatTests {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
                 foreach (var intent in intents) app.Send(intent);
+                TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
                 if (RecordedIntents.FollowingCommand(request) is { } following) authority.PrepareCommand(Bytes(following)).Commit();
             } else if (RecordedIntents.Navigation(request) is { } navigation) {
                 clock.Now = navigation.At;

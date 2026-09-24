@@ -36,6 +36,7 @@ enum Change: Equatable, Sendable {
     case pageRemoved(PageRemoved)
     case saved(Saved)
     case sessionAdopted(SessionAdopted)
+    case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
     case spacesChanged(SpacesChanged)
     case splitGroupsChanged(SplitGroupsChanged)
@@ -57,6 +58,7 @@ enum Change: Equatable, Sendable {
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
     case alreadyInSplit(AlreadyInSplit)
+    case authenticationBusy(AuthenticationBusy)
     case borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner)
     case cannotDeleteLastSpace(CannotDeleteLastSpace)
     case cannotPinSplit(CannotPinSplit)
@@ -109,6 +111,7 @@ enum Rejection: Equatable, Error, Sendable {
     case splitLimitReached(SplitLimitReached)
     case staleCommand(StaleCommand)
     case staleCredentialComparison(StaleCredentialComparison)
+    case staleUnlockRequest(StaleUnlockRequest)
     case storageFromNewerApp(StorageFromNewerApp)
     case storageRestoreInterrupted(StorageRestoreInterrupted)
     case storageUnreadable(StorageUnreadable)
@@ -161,6 +164,7 @@ extension CoreState {
         case .pageRemoved(let change): apply(change)
         case .saved(let change): apply(change)
         case .sessionAdopted(let change): apply(change)
+        case .spaceLockChanged(let change): apply(change)
         case .spaceSettingsChanged(let change): apply(change)
         case .spacesChanged(let change): apply(change)
         case .splitGroupsChanged(let change): apply(change)
@@ -248,6 +252,9 @@ struct AssessDownloadRisk: Intent, Equatable, Sendable {
     let assessment: DownloadRiskAssessment
 }
 
+struct AuthenticationBusy: Equatable, Sendable {
+}
+
 struct AwaitDownloadApproval: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
@@ -270,6 +277,12 @@ struct BeginDownload: Intent, Equatable, Sendable {
     let filename: String
     let createdAt: Date
     let isAcknowledged: Bool
+}
+
+struct BeginUnlockingSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let requestID: UUID
 }
 
 struct BlockAutomaticDownload: Intent, Equatable, Sendable {
@@ -787,6 +800,12 @@ struct FinishDownload: Intent, Equatable, Sendable {
     let finalByteCount: Int64?
 }
 
+struct FinishUnlockingSpace: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let requestID: UUID
+    let authenticated: Bool
+}
+
 struct FolderAlreadyExists: Equatable, Sendable {
     let folderID: UUID
 }
@@ -966,6 +985,14 @@ struct LinkRoutingPreferences: Equatable, Sendable {
     let chosenSpaceID: UUID?
     let remembersSpaceBySite: Bool
     let rememberedSpaceID: UUID?
+}
+
+struct LockAllSpaces: Intent, Equatable, Sendable {
+    let sceneWentInactive: Bool
+}
+
+struct LockSpace: Intent, Equatable, Sendable {
+    let spaceID: UUID
 }
 
 struct MostRecentCredential: Query, Equatable, Sendable {
@@ -1481,6 +1508,13 @@ struct SpaceLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
+struct SpaceLockChanged: Equatable, Sendable {
+    let spaceID: UUID
+    let profileID: UUID
+    let isUnlocked: Bool
+    let isAuthenticating: Bool
+}
+
 struct SpaceLocked: Equatable, Sendable {
     let spaceID: UUID
 }
@@ -1553,6 +1587,10 @@ struct StaleCommand: Equatable, Sendable {
 }
 
 struct StaleCredentialComparison: Equatable, Sendable {
+}
+
+struct StaleUnlockRequest: Equatable, Sendable {
+    let requestID: UUID
 }
 
 struct StepSplitMember: Intent, Equatable, Sendable {

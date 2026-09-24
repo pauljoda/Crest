@@ -23,7 +23,10 @@ public sealed partial class BrowserContractsTests {
         var spaces = JsonNode.Parse(app.SessionProjection()!.Output)!["session"]!["spaces"]!.AsArray();
         // The file's session joined the device when the app opened it.
         app.Drain();
-        return (app, app.AttachWorkspace(app.Session!), spaces);
+        var workspace = app.AttachWorkspace(app.Session!);
+        TestGrants.UnlockGuarded(app.Send, workspace, app.Session!.Current);
+        app.Drain();
+        return (app, workspace, spaces);
     }
 
     private static Guid TabId(JsonNode space, int index) => SpaceId(space["tabs"]![index]!);
