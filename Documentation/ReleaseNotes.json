@@ -2265,6 +2265,10 @@
     "session-change-feed": {
       "category": "internal",
       "message": "The core publishes the session as typed changes, commands no longer carry a revision, and switching tabs is faster."
+    },
+    "crest-normalization-core": {
+      "category": "internal",
+      "message": "The core keeps a crest's figure and composition the way every device draws them, so Space branding stays steady across sync."
     }
   }
 }

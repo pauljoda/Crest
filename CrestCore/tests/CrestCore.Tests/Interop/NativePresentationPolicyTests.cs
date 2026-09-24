@@ -92,7 +92,10 @@ public sealed class NativePresentationPolicyTests {
                 ["charge"] = new JsonObject { ["future"] = true },
                 ["symbolColorIndex"] = 5,
                 ["trimColorIndex"] = 2,
-                ["palette"] = new JsonArray()
+                ["palette"] = new JsonArray(),
+                ["plateScale"] = 3.0,
+                ["chargeOffset"] = -1.0,
+                ["sealTeeth"] = 40
             }
         };
         var result = Evaluate(new() { ["operation"] = "branding.normalize", ["branding"] = branding })["branding"]!;
@@ -109,6 +112,18 @@ public sealed class NativePresentationPolicyTests {
         Assert.Equal(0, crest["symbolColorIndex"]!.GetValue<int>());
         Assert.Equal(2, crest["trimColorIndex"]!.GetValue<int>());
         Assert.Equal("none", crest["charge"]!["kind"]!.GetValue<string>());
+        Assert.Equal(1.15, crest["plateScale"]!.GetValue<double>());
+        Assert.Equal(-0.2, crest["chargeOffset"]!.GetValue<double>());
+        Assert.Equal(24, crest["sealTeeth"]!.GetValue<int>());
+
+        // A custom figure that is the crest's own symbol is no custom figure; a
+        // monogram keeps two capitals.
+        JsonNode Figure(JsonObject charge) => Evaluate(new() {
+            ["operation"] = "branding.normalize",
+            ["branding"] = new JsonObject { ["crest"] = new JsonObject { ["symbol"] = "mountain", ["charge"] = charge } }
+        })["branding"]!["crest"]!;
+        Assert.Null(Figure(new() { ["kind"] = "heraldic", ["value"] = "mountain" })["charge"]);
+        Assert.Equal("PD", Figure(new() { ["kind"] = "monogram", ["value"] = " pdx " })["charge"]!["value"]!.GetValue<string>());
 
         var empty = Evaluate(new() { ["operation"] = "branding.normalize", ["branding"] = new JsonObject { ["colors"] = new JsonArray() } });
         Assert.Single(empty["branding"]!["colors"]!.AsArray());
