@@ -31,6 +31,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private static var pendingExternalURLs: [URL] = []
     private static var pendingAuthenticationSessions: [(url: URL, id: UUID)] = []
     private let host: any CrestChromiumEngineHost
+    /// Chromium's binding, the default engine, which knows each live page by
+    /// the name the engine gives it.
+    private let chromium: ChromiumEngineBinding
     private let application: BrowserMacApplication
     private var downloads: ChromiumDownloadAdapter?
     private var windows: [BrowserWindowID: NSWindow] = [:]
@@ -142,10 +145,11 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     private init(host: any CrestChromiumEngineHost) throws {
         self.host = host
-        let pageEngines = ChromiumPageEngines()
+        let chromium = ChromiumEngineBinding()
+        self.chromium = chromium
         application = try BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
             profileRemover: ChromiumProfileRemover(host: host),
-            makePageEngine: { pageEngines.make(profileID: $0) },
+            defaultEngine: chromium,
             // Site Controls is where a keyboard-triggered extension popup opens
             // when the extension has no pinned tile to anchor to.
             siteControlAnchor: BrowserSiteControlAnchor {
@@ -154,7 +158,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
                 return anchor
             },
             reviewPersistenceID: "chromium-native-ui-review")
-        pageEngines.hostCommands = application
+        chromium.hostCommands = application
         restorationDefaults = Self.restorationDefaults()
         restorableWindowIDs = Self.storedRestorableWindowIDs(in: restorationDefaults)
         super.init()
@@ -784,7 +788,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     @objc(routeSidePanel:page:request:)
     static func routeSidePanel(_ extensionID: String, page pageID: String,
                                request: CrestSidePanelRequest) {
-        guard let instance, !instance.quitting, let page = ChromiumNativePage.live(pageID),
+        guard let instance, !instance.quitting, let page = instance.chromium.page(pageID),
             let window = page.surface.window else { return }
         guard let host = sidePanelHost(for: window) else {
             // A Quick Window or setup page has no card row to hold a panel,
@@ -805,14 +809,14 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     @objc(routeDevTools:)
     static func routeDevTools(_ pageID: String) {
         guard let instance, !instance.quitting else { return }
-        ChromiumNativePage.live(pageID)?.refreshDevTools()
+        instance.chromium.page(pageID)?.refreshDevTools()
     }
 
     /// The inspector for a page is closing, whichever way it was closed.
     @objc(closeDevToolsPanel:)
     static func closeDevToolsPanel(_ pageID: String) {
         guard let instance, !instance.quitting else { return }
-        ChromiumNativePage.live(pageID)?.developerPanelDidClose()
+        instance.chromium.page(pageID)?.developerPanelDidClose()
     }
 
     @objc static func deferQuit() -> Bool {

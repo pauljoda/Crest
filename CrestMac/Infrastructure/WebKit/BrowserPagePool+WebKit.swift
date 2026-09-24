@@ -40,8 +40,10 @@ extension BrowserPagePool {
         opener: BrowserPage,
         selecting: Bool = true
     ) -> WKWebView? {
-        adoptPopupPage(requestedURL: requestedURL, opener: opener, selecting: selecting) { space in
-            makeWebKitPageEngine(for: space, adoptedConfiguration: configuration)
+        adoptPopupPage(requestedURL: requestedURL, opener: opener, selecting: selecting) { [weak self] space in
+            // The pool is alive while it adopts, and the core asks for the page before this returns.
+            guard let self else { preconditionFailure("A pool built a popup page after it went away.") }
+            return makeWebKitPageEngine(for: space, adoptedConfiguration: configuration)
         }?.webKitView
     }
 

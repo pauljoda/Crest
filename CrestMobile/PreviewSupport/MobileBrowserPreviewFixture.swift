@@ -71,7 +71,9 @@ struct MobileBrowserPreviewFixture {
             core: browser.core,
             ruleListStore: nil
         )
+        browser.core.engines.register(WebKitEngineBinding(), isDefault: true)
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
             permissionCenter: BrowserSitePermissionCenter(),

@@ -11,7 +11,6 @@
         let native: ChromiumNativePage
         private weak var page: BrowserPage?
         var engine: any BrowserPageEngine { native }
-        var engineIdentifier: String? { native.id }
 
         /// The engine reports hovered links itself.
         private(set) lazy var linkHover: BrowserLinkHoverController? =
@@ -247,21 +246,6 @@
             case .split: .split
             case .drag: .drag
             }
-        }
-    }
-
-    /// Builds each page's Chromium adapter with the host commands the
-    /// composition supplies once it exists.
-    @MainActor
-    final class ChromiumPageEngines {
-        // MARK: - Variables
-
-        weak var hostCommands: (any BrowserEngineHostCommands)?
-
-        // MARK: - Actions - Pages
-
-        func make(profileID: UUID) -> any BrowserPageEngineAdapter {
-            ChromiumPageAdapter(ChromiumNativePage(profileID: profileID, hostCommands: hostCommands))
         }
     }
 

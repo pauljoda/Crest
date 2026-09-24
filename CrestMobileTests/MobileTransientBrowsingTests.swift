@@ -8,7 +8,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
         let session = BrowserSession.preview
         let work = try XCTUnwrap(session.spaces.first)
         let personal = try XCTUnwrap(session.spaces.last)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         let blankURL = try XCTUnwrap(URL(string: "about:blank"))
 
         let workLease = try XCTUnwrap(
@@ -54,9 +54,10 @@ final class MobileTransientBrowsingTests: XCTestCase {
     func testMobileMemoryWarningReleasesTransientPagesBeforeTheActiveTab() throws {
         let session = BrowserSession.preview
         let work = try XCTUnwrap(session.spaces.first)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let browser = BrowserStore.hostingPages(session)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let url = try XCTUnwrap(URL(string: "about:blank"))
-        pages.select(session: BrowserStore(session: session).presented)
+        pages.select(session: browser.presented)
         let lease = try XCTUnwrap(
             pages.makeTransientPageLease(url: url, in: work)
         )
@@ -75,6 +76,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
         let space = try XCTUnwrap(BrowserSession.preview.spaces.first)
         let url = try XCTUnwrap(URL(string: "about:blank"))
         var pages: MobileBrowserPageStore? = MobileBrowserPageStore(
+            browser: .hostingPages(),
             usesEphemeralWebsiteDataStores: true
         )
         let lease = try XCTUnwrap(
@@ -95,12 +97,12 @@ final class MobileTransientBrowsingTests: XCTestCase {
     }
 
     func testMobileCrossSpaceMoveRebuildsTheTabWithTheDestinationProfile() throws {
-        let browser = BrowserStore(session: BrowserSession.preview)
+        let browser = BrowserStore.hostingPages(BrowserSession.preview)
         let source = try XCTUnwrap(browser.session.spaces.first)
         let destination = try XCTUnwrap(browser.session.spaces.last)
         let tab = try XCTUnwrap(source.currentTabs.first)
         browser.activateSessionTab(tab.id, in: source.id)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
 
         pages.select(session: browser.presented)
         let sourcePage = try XCTUnwrap(pages.activePage)
@@ -199,8 +201,9 @@ final class MobileTransientBrowsingTests: XCTestCase {
     }
 
     func testPrivatePeekKeepsItsEphemeralSpaceWhenPromoted() throws {
-        let browser = BrowserStore.privateBrowsing()
+        let browser = BrowserStore.privateBrowsing(core: .hostingPages())
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )

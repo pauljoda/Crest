@@ -91,7 +91,7 @@ enum BrowserRootPreviewFixture {
         let browser = makeBrowser()
         return BrowserRootModel(
             browser: browser,
-            pages: BrowserPagePool(),
+            pages: BrowserPagePool(browser: browser),
             chrome: makeChrome(state: state),
             spaceAccess: BrowserSpaceAccessController(),
             windowState: makeWindowState(browser: browser),

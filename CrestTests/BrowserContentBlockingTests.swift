@@ -83,6 +83,7 @@ final class BrowserContentBlockingTests: XCTestCase {
         var session = BrowserSession(spaces: [firstSpace])
         let window = WindowState.preview(showing: firstSpace.id, tabs: [firstSpace.id: firstTab.id])
         let pool = BrowserPagePool(
+            browser: .hostingPages(session),
             browsingMode: .privateBrowsing,
             contentRuleListProvider: provider
         )
@@ -158,24 +159,29 @@ final class BrowserContentBlockingTests: XCTestCase {
             )
 
             let space = try XCTUnwrap(BrowserSession.preview.spaces.first)
+            let browser = BrowserStore.hostingPages(.preview)
             let configuration = BrowserPageConfiguration.make(
                 for: space.profile,
                 websiteDataStore: .nonPersistent(),
                 contentRuleList: crestRuleList
             )
             configuration.userContentController.add(extensionRuleList)
-            let page = BrowserPage(
-                configuration: configuration,
-                dialogPresenter: BrowserDialogPresenter(),
-                downloadCenter: BrowserDownloadCenter(),
-                permissionCenter: BrowserSitePermissionCenter(),
-                spaceID: space.id,
-                profileID: space.profile.id,
-                spaceName: space.name,
-                contentRuleList: crestRuleList,
-                openNewTab: { _ in }
-            )
-            defer { page.prepareForSpaceDeletion() }
+            let page = try XCTUnwrap(
+                browser.openPage(in: space.id, for: nil) { corePage in
+                    BrowserPage(
+                        corePage: corePage,
+                        configuration: configuration,
+                        dialogPresenter: BrowserDialogPresenter(),
+                        downloadCenter: BrowserDownloadCenter(),
+                        permissionCenter: BrowserSitePermissionCenter(),
+                        spaceID: space.id,
+                        profileID: space.profile.id,
+                        spaceName: space.name,
+                        contentRuleList: crestRuleList,
+                        openNewTab: { _ in }
+                    )
+                }?.built as? BrowserPage)
+            defer { page.release(keepingState: false) }
 
             page.applyContentBlocking(policy: .off, balancedRuleList: crestRuleList)
             let startingNavigationCount = page.completedNavigationCount
@@ -227,6 +233,7 @@ final class BrowserContentBlockingTests: XCTestCase {
         )
         let session = BrowserSession(spaces: [space])
         let pool = BrowserPagePool(
+            browser: .hostingPages(session),
             browsingMode: .privateBrowsing,
             contentRuleListProvider: provider
         )

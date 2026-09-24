@@ -79,13 +79,14 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
             folders: [],
             tabs: [tab]
         )
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
+            showing: space.id, tabs: [space.id: tab.id],
+            browsingMode: .privateBrowsing
+        )
         return Context(
-            browser: BrowserStore(
-                session: BrowserSession(spaces: [space]),
-                showing: space.id, tabs: [space.id: tab.id],
-                browsingMode: .privateBrowsing
-            ),
-            pages: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true),
+            browser: browser,
+            pages: MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true),
             access: BrowserSpaceAccessController(
                 authenticator: AcceptingAuthenticator()
             ),

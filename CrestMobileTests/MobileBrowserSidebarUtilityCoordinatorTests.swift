@@ -125,12 +125,12 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
             folders: [],
             tabs: []
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [source, destination]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: selectedTab.id],
             browsingMode: .privateBrowsing
         )
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let downloadItemID = pages.downloadCenter.begin(
             profileID: source.profile.id,
             filename: "Crest.ipa",

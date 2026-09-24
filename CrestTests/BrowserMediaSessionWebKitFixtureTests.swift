@@ -27,6 +27,7 @@ final class BrowserMediaSessionWebKitFixtureTests: XCTestCase {
         )
         let store = BrowserMediaSessionStore()
         let pool = BrowserPagePool(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: true,
             mediaSessionStore: store
         )
@@ -104,7 +105,7 @@ final class BrowserMediaSessionWebKitFixtureTests: XCTestCase {
         try await waitUntil("navigation to retire the owning document") {
             store.sessions.isEmpty
         }
-        page.prepareForSpaceDeletion()
+        page.release(keepingState: false)
     }
 
     func testPlayerControlsAndMediaLifetimeDetermineEligibility() async throws {

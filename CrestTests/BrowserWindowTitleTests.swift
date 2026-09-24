@@ -104,12 +104,10 @@ final class BrowserWindowTitleTests: XCTestCase {
             id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle", accent: .indigo,
             folders: [], tabs: [alpha, beta]
         )
+        let browser = browser ?? BrowserStore.hostingPages(BrowserSession(spaces: [space]))
         return BrowserRootModel(
-            browser: browser
-                ?? BrowserStore(
-                    session: BrowserSession(spaces: [space])
-                ),
-            pages: BrowserPagePool(),
+            browser: browser,
+            pages: BrowserPagePool(browser: browser),
             chrome: BrowserChromeState(),
             spaceAccess: BrowserSpaceAccessController(authenticator: TitleAuthenticator()),
             windowState: nil, startupBehavior: .lastActiveTab,

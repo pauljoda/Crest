@@ -138,7 +138,7 @@ struct BrowserSettingsView: View {
     let browser = BrowserStore.preview()
     BrowserSettingsView(
         browser: browser,
-        pages: BrowserPagePool(),
+        pages: BrowserPagePool(browser: browser),
         cloudSync: BrowserCloudSyncController(browser: browser, configuration: nil),
         shortcuts: .inMemory(),
         onboardingCoordinator: BrowserOnboardingCoordinator()

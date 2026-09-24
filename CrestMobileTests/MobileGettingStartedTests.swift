@@ -5,8 +5,8 @@ import XCTest
 @MainActor
 final class MobileGettingStartedTests: XCTestCase {
     func testMobileNativeRuntimeSurvivesSelectionAndUnloadsIndependentlyOfWebKit() async throws {
-        let browser = BrowserStore.preview()
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let browser = BrowserStore.hostingPages()
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         defer { pages.reconcile(validTabIDs: []) }
         let id = try XCTUnwrap(browser.openGettingStarted())
         pages.select(session: browser.presented)

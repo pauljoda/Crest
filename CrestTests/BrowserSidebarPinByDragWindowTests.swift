@@ -124,13 +124,14 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
             folders: [],
             tabs: [pinned, saved, presented, joiner]
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id, tabs: [space.id: presented.id]
         )
         let model = BrowserRootModel(
             browser: browser,
             pages: BrowserPagePool(
+                browser: browser,
                 browsingMode: .privateBrowsing,
                 usesEphemeralWebsiteDataStores: true
             ),

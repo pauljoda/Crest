@@ -19,7 +19,7 @@ final class MobileBrowserColdStartTests: XCTestCase {
         session.spaces[0].tabs[1].placement = .current
         session.spaces[0].tabs[0].splitGroupID = group
         session.spaces[0].tabs[1].splitGroupID = group
-        let root = BrowserStore(session: session)
+        let root = BrowserStore.hostingPages(session)
         let id = BrowserWindowID()
         let layouts = BrowserWindowLayouts(defaults: nil)
         layouts.save(BrowserWindowState(id: id, sidebarIsPresented: false))
@@ -27,7 +27,7 @@ final class MobileBrowserColdStartTests: XCTestCase {
             id: id,
             rootBrowser: root,
             permissionCenter: BrowserSitePermissionCenter(),
-            pageStoreRegistry: MobileBrowserPageStoreRegistry(primary: MobileBrowserPageStore()),
+            pageStoreRegistry: MobileBrowserPageStoreRegistry(primary: MobileBrowserPageStore(browser: root)),
             spaceAccess: BrowserSpaceAccessController(),
             tabStateArchive: nil,
             windowLayouts: layouts,

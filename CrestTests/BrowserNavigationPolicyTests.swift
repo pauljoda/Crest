@@ -536,7 +536,8 @@ final class BrowserDownloadNavigationLifecycleTests: XCTestCase {
             tabs: [tab]
         )
         var peekRequest: BrowserPeekRequest?
-        let pool = BrowserPagePool(openPeek: { peekRequest = $0 })
+        let pool = BrowserPagePool(
+            browser: .hostingPages(BrowserSession(spaces: [space])), openPeek: { peekRequest = $0 })
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
         let recorder = DownloadPolicyRecorder()

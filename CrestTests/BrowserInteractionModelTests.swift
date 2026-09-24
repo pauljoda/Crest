@@ -982,8 +982,8 @@ final class BrowserInteractionModelTests: XCTestCase {
     }
 
     func testRootNewTabActionKeepsTheSelectedStartPageCohesive() throws {
-        let browser = BrowserStore.preview()
-        let pages = BrowserPagePool()
+        let browser = BrowserStore.hostingPages()
+        let pages = BrowserPagePool(browser: browser)
         let chrome = BrowserChromeState()
         let model = BrowserRootModel(
             browser: browser,

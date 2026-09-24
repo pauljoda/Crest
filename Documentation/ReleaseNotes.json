@@ -2249,6 +2249,10 @@
     "core-engine-registry-pages": {
       "category": "internal",
       "message": "The core keeps a registry of engines and knows which page each tab and window hosts."
+    },
+    "pages-through-core": {
+      "category": "internal",
+      "message": "Every page is opened, moved and released through the core, which refuses pages for locked or deleting Spaces."
     }
   }
 }

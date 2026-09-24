@@ -41,7 +41,12 @@ enum BrowserSiteSettingsPreviewFixture {
             tabs: [tab]
         )
         let permissionCenter = BrowserSitePermissionCenter()
+        let core = CrestCore()
+        core.engines.register(WebKitEngineBinding(), isDefault: true)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space]), showing: space.id, tabs: [space.id: tab.id], core: core)
         let pages = BrowserPagePool(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
             permissionCenter: permissionCenter

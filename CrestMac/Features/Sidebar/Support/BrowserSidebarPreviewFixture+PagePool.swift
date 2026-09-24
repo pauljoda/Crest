@@ -8,8 +8,9 @@ extension BrowserSidebarPreviewFixture {
     /// pinned extension seam read it directly. Nothing is loaded into it, and
     /// the data stores are ephemeral, so no preview leaves anything behind.
     @MainActor
-    static func makePages() -> BrowserPagePool {
+    static func makePages(for browser: BrowserStore) -> BrowserPagePool {
         BrowserPagePool(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )

@@ -14,6 +14,8 @@ import WebKit
 @MainActor
 final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPagePermissionProviding {
     var opensModifiedLinksInForeground = false
+    /// The core's page, which `release(keepingState:)` ends.
+    @ObservationIgnored let corePage: CorePage
     private(set) var tabID: TabID
     let spaceID: SpaceID
     let profileID: UUID
@@ -143,6 +145,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     }
 
     init(
+        corePage: CorePage,
         tab: BrowserTab,
         space: BrowserSpace,
         downloadCenter: BrowserDownloadCenter = BrowserDownloadCenter(),
@@ -173,6 +176,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         opensExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
+        self.corePage = corePage
         tabID = tab.id
         spaceID = space.id
         profileID = space.profile.id
@@ -500,7 +504,16 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         }
     }
 
-    func prepareForSpaceDeletion() {
+    /// Ends the page: every page ends here, whether its tab closed, it was
+    /// unloaded, its Space went, or a transient request let it go. The web view
+    /// comes down first, then the core hears the page is gone. `keepingState`
+    /// says the owner kept what it needs to bring the page back.
+    func release(keepingState: Bool) {
+        tearDownWebView()
+        corePage.release(keepingState: keepingState)
+    }
+
+    private func tearDownWebView() {
         faviconSession.stop()
         sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.setPresentationAvailable(false)

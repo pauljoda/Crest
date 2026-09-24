@@ -5,9 +5,10 @@ import XCTest
 
 @MainActor
 final class MobileBrowserCredentialTests: XCTestCase {
-    func testMobilePageInstallsTheSharedCredentialBridgeInEveryFrame() {
+    func testMobilePageInstallsTheSharedCredentialBridgeInEveryFrame() throws {
         let space = makeSpace(index: 1)
-        let page = MobileBrowserPage(tab: space.tabs[0], space: space, openNewTab: { _ in })
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         let scripts = page.webView.configuration.userContentController.userScripts
 
         XCTAssertTrue(
@@ -20,7 +21,8 @@ final class MobileBrowserCredentialTests: XCTestCase {
 
     func testMobilePageReceivesASuccessfulIsolatedWorldFormSubmission() async throws {
         let space = makeSpace(index: 7)
-        let page = MobileBrowserPage(tab: space.tabs[0], space: space, openNewTab: { _ in })
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         let request = URLRequest(url: URL(string: "https://forms.crest.test/login")!)
         page.webView.loadSimulatedRequest(
             request,
@@ -62,6 +64,17 @@ final class MobileBrowserCredentialTests: XCTestCase {
 
     private func origin(_ value: String) throws -> CredentialOrigin {
         try XCTUnwrap(CredentialOrigin(url: try XCTUnwrap(URL(string: value))))
+    }
+
+    /// Opens the page for `space`'s first tab through `browser`'s core, as a
+    /// page store opens one. Keep `browser` alive while the page is in use.
+    private func openPage(in space: BrowserSpace, through browser: BrowserStore) throws -> MobileBrowserPage {
+        let tab = try XCTUnwrap(space.tabs.first)
+        return try XCTUnwrap(
+            browser.openPage(in: space.id, for: tab.id) { corePage in
+                MobileBrowserPage(corePage: corePage, tab: tab, space: space, openNewTab: { _ in })
+            }?.built as? MobileBrowserPage
+        )
     }
 
     private func makeSpace(index: Int) -> BrowserSpace {

@@ -2,9 +2,10 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-/// One page this device hosts: its owner, the engine that hosts it and where
-/// it stands there. Its engine page lives in the profile of the Space it
-/// opened in, so the page only ever moves between Spaces of that profile.
+/// One page this device hosts: its owner, the window that hosts it, the engine
+/// that hosts it and where it stands there. Its engine page lives in the
+/// profile of the Space it opened in, so the page only ever moves between
+/// Spaces of that profile.
 internal sealed class Page {
     #region Variables
 
@@ -12,15 +13,15 @@ internal sealed class Page {
     public Engine Engine { get; }
     public Guid ProfileId { get; }
 
-    /// The window the page was opened from. Windows share their pages, so a
-    /// window that shows it later claims it with the engine, not here.
-    public Guid OpenedFrom { get; }
-
     public Guid WorkspaceId { get; private set; }
     public Guid SpaceId { get; private set; }
 
     /// The tab that owns the page, or null for a Quick Window or Peek page.
     public Guid? TabId { get; private set; }
+
+    /// The window that hosts the page. A window that shares its pages with
+    /// others shows this page without owning it.
+    public Guid WindowId { get; private set; }
 
     public PagePhase Phase { get; private set; } = PagePhase.Opening;
 
@@ -30,14 +31,14 @@ internal sealed class Page {
 
     #region Constructors
 
-    public Page(Guid id, Engine engine, Guid profileId, Guid openedFrom, Guid workspaceId, Guid spaceId, Guid? tabId) {
+    public Page(Guid id, Engine engine, Guid profileId, Guid workspaceId, Guid spaceId, Guid? tabId, Guid windowId) {
         Id = id;
         Engine = engine;
         ProfileId = profileId;
-        OpenedFrom = openedFrom;
         WorkspaceId = workspaceId;
         SpaceId = spaceId;
         TabId = tabId;
+        WindowId = windowId;
     }
 
     #endregion
@@ -52,11 +53,12 @@ internal sealed class Page {
         return true;
     }
 
-    /// Gives the page a new owner in a Space of its profile.
-    public void Move(Guid workspaceId, Guid spaceId, Guid? tabId) {
+    /// Gives the page a new owner in a Space of its profile, hosted by `windowId`.
+    public void Move(Guid workspaceId, Guid spaceId, Guid? tabId, Guid windowId) {
         WorkspaceId = workspaceId;
         SpaceId = spaceId;
         TabId = tabId;
+        WindowId = windowId;
     }
 
     #endregion

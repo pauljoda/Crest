@@ -45,9 +45,10 @@ final class BrowserTabRuntime {
         }
     }
 
-    func prepareForRelease() {
+    /// Ends every page the tab holds; see `BrowserPage.release(keepingState:)`.
+    func release(keepingState: Bool) {
         for page in allPages {
-            page.prepareForSpaceDeletion()
+            page.release(keepingState: keepingState)
         }
     }
 }

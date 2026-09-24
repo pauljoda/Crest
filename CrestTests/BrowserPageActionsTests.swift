@@ -115,7 +115,7 @@ final class BrowserPageActionsTests: XCTestCase {
         let first = BrowserTab(title: "Preview", url: nil, placement: .current)
         let second = BrowserTab(title: "Other", url: nil, placement: .current)
         let space = makeSpace(tabs: [first, second])
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
         pool.select(tab: first, space: space)
         let page = try XCTUnwrap(pool.activePage)
         let webView = page.webView
@@ -159,7 +159,8 @@ final class BrowserPageActionsTests: XCTestCase {
         let space = makeSpace(
             tabs: [first, second]
         )
-        let pool = BrowserPagePool(pageZoomPreferences: preferences)
+        let pool = BrowserPagePool(
+            browser: .hostingPages(BrowserSession(spaces: [space])), pageZoomPreferences: preferences)
 
         pool.select(tab: first, space: space)
         let firstPage = try XCTUnwrap(pool.activePage)
@@ -222,7 +223,7 @@ final class BrowserPageActionsTests: XCTestCase {
     func testFindUsesNativeWebKitSearchAndClearsItsStateOnDismiss() async throws {
         let tab = BrowserTab(title: "Find", url: nil, placement: .current)
         let space = makeSpace(tabs: [tab])
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
 
@@ -320,7 +321,7 @@ final class BrowserPageActionsTests: XCTestCase {
     func testReaderModeCreatesAReversibleSanitizedViewInTheExistingSpacePage() async throws {
         let tab = BrowserTab(title: "Reader", url: nil, placement: .current)
         let space = makeSpace(tabs: [tab])
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
         let originalWebView = page.webView
@@ -385,7 +386,7 @@ final class BrowserPageActionsTests: XCTestCase {
     func testLoadedPageCreatesARealPDFDocument() async throws {
         let tab = BrowserTab(title: "PDF", url: nil, placement: .current)
         let space = makeSpace(tabs: [tab])
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
         page.webView.frame = CGRect(x: 0, y: 0, width: 800, height: 600)
@@ -407,7 +408,7 @@ final class BrowserPageActionsTests: XCTestCase {
     func testLoadedPageCreatesARealWebKitWebArchive() async throws {
         let tab = BrowserTab(title: "Archive", url: nil, placement: .current)
         let space = makeSpace(tabs: [tab])
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
         page.webView.loadHTMLString(

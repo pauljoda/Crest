@@ -5,8 +5,9 @@ import XCTest
 @MainActor
 final class BrowserPageAssignmentTests: XCTestCase {
     func testCurrentSelectionRequiresACompletePresentedRuntime() throws {
-        let session = presented(BrowserSession.preview)
-        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let browser = BrowserStore.hostingPages(.preview)
+        let session = browser.presented
+        let pool = BrowserPagePool(browser: browser, usesEphemeralWebsiteDataStores: true)
         XCTAssertFalse(pool.isPresentingSelection(in: session))
 
         pool.select(session: session)
@@ -42,7 +43,7 @@ final class BrowserPageAssignmentTests: XCTestCase {
         let shown = {
             BrowserPresentedSession(session: session, window: .preview(showing: space.id, tabs: [space.id: shownTab]))
         }
-        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let pool = BrowserPagePool(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         pool.select(session: shown())
         XCTAssertTrue(pool.isPresentingSelection(in: shown()))
 
@@ -57,10 +58,11 @@ final class BrowserPageAssignmentTests: XCTestCase {
     }
 
     func testActivePageMatchingRequiresTheExactTabSpaceAndProfileAssignment() throws {
-        let session = presented(BrowserSession.preview)
+        let browser = BrowserStore.hostingPages(.preview)
+        let session = browser.presented
         let tab = try XCTUnwrap(session.selectedTab)
         let space = try XCTUnwrap(session.selectedSpace)
-        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let pool = BrowserPagePool(browser: browser, usesEphemeralWebsiteDataStores: true)
         pool.select(session: session)
         let page = try XCTUnwrap(pool.activePage)
 
@@ -125,7 +127,8 @@ final class BrowserPageAssignmentTests: XCTestCase {
             folders: [],
             tabs: members + [outsider]
         )
-        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let pool = BrowserPagePool(
+            browser: .hostingPages(BrowserSession(spaces: [space])), usesEphemeralWebsiteDataStores: true)
         pool.select(tab: members[0], space: space)
 
         for member in members {
@@ -170,10 +173,5 @@ final class BrowserPageAssignmentTests: XCTestCase {
         )
 
         pool.reconcile(validTabIDs: [])
-    }
-
-    /// The preview session as a new window over it shows it.
-    private func presented(_ session: BrowserSession) -> BrowserPresentedSession {
-        BrowserStore(session: session).presented
     }
 }

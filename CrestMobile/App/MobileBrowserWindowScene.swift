@@ -75,6 +75,7 @@ struct MobileBrowserWindowScene: View {
         sceneSurface
             .modifier(BrowserChromeAppearancePersistence())
             .environment(model.browser.core)
+            .environment(model.browser.core.engines)
             .environment(\.browserInteractionCapabilities, BrowserInteractionCapabilities(supportsTouch: true))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(

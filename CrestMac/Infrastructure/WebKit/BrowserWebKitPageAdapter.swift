@@ -14,7 +14,6 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     let webKit: BrowserWebKitPageEngine
     let webView: BrowserDesktopWebView
     var engine: any BrowserPageEngine { webKit }
-    var engineIdentifier: String? { nil }
 
     /// False when this page shares the opener's `WKUserContentController`, which
     /// every popup does: WebKit copies the opener's configuration and the copy

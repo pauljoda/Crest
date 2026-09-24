@@ -461,9 +461,11 @@ final class BrowserPeekModelTests: XCTestCase {
             session: BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: sourceTabID],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing
+            browsingMode: .privateBrowsing,
+            core: .hostingPages()
         )
         let pages = BrowserPagePool(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
             popupTabHost: browser.popupTabHost,

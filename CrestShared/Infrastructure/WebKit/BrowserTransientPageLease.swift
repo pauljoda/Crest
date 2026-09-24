@@ -70,14 +70,14 @@ final class BrowserTransientPageLease {
     func releaseForMemoryPressure() {
         guard let page else { return }
         reloadURL = page.url ?? reloadURL
-        page.prepareForSpaceDeletion()
+        page.release(keepingState: false)
         self.page = nil
         wasReleasedForMemoryPressure = true
     }
 
     func release() {
         isInvalidated = true
-        page?.prepareForSpaceDeletion()
+        page?.release(keepingState: false)
         page = nil
     }
 

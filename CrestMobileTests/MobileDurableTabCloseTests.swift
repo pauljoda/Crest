@@ -51,12 +51,13 @@ final class MobileDurableTabCloseTests: XCTestCase {
             id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle", accent: .indigo,
             folders: [], tabs: [tab]
         )
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
+            showing: space.id, tabs: [space.id: tab.id]
+        )
         return Context(
-            browser: BrowserStore(
-                session: BrowserSession(spaces: [space]),
-                showing: space.id, tabs: [space.id: tab.id]
-            ),
-            pages: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true), tab: tab
+            browser: browser,
+            pages: MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true), tab: tab
         )
     }
 

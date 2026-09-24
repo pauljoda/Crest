@@ -45,6 +45,7 @@ final class MobileBrowserWindowSceneModel {
         )
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let pages = MobileBrowserPageStore(
+            browser: browser,
             // The window's own store is where a tab's web view actually lives, so
             // this is the residency a squeeze has to reach.
             monitorsMemoryPressure: monitorsMemoryPressure,
@@ -92,6 +93,7 @@ final class MobileBrowserWindowSceneModel {
         )
         let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
         let privatePages = MobileBrowserPageStore(
+            browser: privateBrowser,
             browsingMode: .privateBrowsing,
             permissionCenter: privateDownloads?.center.permissionCenter ?? BrowserSitePermissionCenter(),
             downloads: privateDownloads,

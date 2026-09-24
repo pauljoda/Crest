@@ -417,11 +417,13 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         )
         let firstBrowser = BrowserStore.privateBrowsing()
         let firstPages = BrowserPagePool(
+            browser: firstBrowser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )
         let secondBrowser = BrowserStore.privateBrowsing()
         let secondPages = BrowserPagePool(
+            browser: secondBrowser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )
@@ -521,9 +523,11 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing
+            browsingMode: .privateBrowsing,
+            core: .hostingPages()
         )
         let pages = BrowserPagePool(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
             popupTabHost: browser.popupTabHost,

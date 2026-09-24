@@ -146,7 +146,10 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let staleWindow = BrowserPresentedSession(
             session: saved,
             window: .preview(showing: target.id, tabs: fallbackTabs(try XCTUnwrap(saved.space(id: target.id)))))
-        let pages = BrowserPagePool()
+        // The window's pages open through the core, which hosts them on WebKit
+        // and refuses a page in a Space whose deletion is pending.
+        harness.core.engines.register(WebKitEngineBinding(), isDefault: true)
+        let pages = BrowserPagePool(browser: store)
         pages.select(session: staleWindow)
         XCTAssertNil(pages.activePage, "A restored window must not reopen a pending profile")
         let relaunched = try await harness.relaunch()

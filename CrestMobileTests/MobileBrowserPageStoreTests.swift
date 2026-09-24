@@ -14,7 +14,8 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let unloaded = BrowserTab(title: "Pinned", url: root, placement: .pinned)
         var space = makeSpace(index: 321, savesCredentials: false)
         space.tabs = [target, selected, unloaded]
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space])), usesEphemeralWebsiteDataStores: true)
         defer { pages.reconcile(validTabIDs: []) }
         pages.select(session: presented(BrowserSession(spaces: [space]), showing: target.id))
         let page = try XCTUnwrap(pages.activePage)
@@ -44,10 +45,10 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let target = BrowserTab(title: "Pinned", url: root, placement: .pinned)
         session.spaces[0].tabs = [target, source]
         let space = try XCTUnwrap(session.spaces.first)
-        let browser = BrowserStore(
-            session: session,
+        let browser = BrowserStore.hostingPages(
+            session,
             showing: space.id, tabs: [space.id: source.id])
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         browser.tabCopying = pages
         pages.select(session: browser.presented)
         let originalPage = try XCTUnwrap(pages.activePage)
@@ -88,10 +89,10 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     }
 
     func testStartPageCommandPaletteIssuesOneNavigationForAFreshPage() throws {
-        let store = BrowserStore(
-            session: makeSession(index: 0)
+        let store = BrowserStore.hostingPages(
+            makeSession(index: 0)
         )
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: store, usesEphemeralWebsiteDataStores: true)
         let url = try XCTUnwrap(URL(string: "https://example.com/search"))
 
         store.navigateSelectedTab(to: url)
@@ -105,8 +106,8 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     }
 
     func testForegroundModifiedLinkCreatesSelectsAndLoadsOneCurrentSpacePage() throws {
-        let store = BrowserStore(
-            session: makeSession(index: 90)
+        let store = BrowserStore.hostingPages(
+            makeSession(index: 90)
         )
         let pages = makeLinkRoutingPageStore(browser: store)
         let sourceSpaceID = try XCTUnwrap(store.selectedSpace?.id)
@@ -123,8 +124,8 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     }
 
     func testBackgroundModifiedLinkLoadsBeforeSelectionAndIsReused() throws {
-        let store = BrowserStore(
-            session: makeSession(index: 91)
+        let store = BrowserStore.hostingPages(
+            makeSession(index: 91)
         )
         let pages = makeLinkRoutingPageStore(browser: store)
         pages.select(session: store.presented)
@@ -152,7 +153,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     func testDisablingCredentialAccessResetsAPendingFillRequest() throws {
         var session = makeSession(index: 3)
         let space = try XCTUnwrap(session.spaces.first)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         pages.select(session: presented(session))
         let page = try XCTUnwrap(pages.activePage)
         let loginOrigin = try XCTUnwrap(
@@ -188,7 +189,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testDisabledCredentialAccessRejectsAFillAndStopsFormCapture() async throws {
         let session = makeSession(index: 4, savesCredentials: false)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         pages.select(session: presented(session))
         let page = try XCTUnwrap(pages.activePage)
         let request = URLRequest(
@@ -236,7 +237,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     func testTransientPeekPagesFollowTheirSpacesCredentialPreference() throws {
         var session = makeSession(index: 5)
         let space = try XCTUnwrap(session.spaces.first)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         let lease = try XCTUnwrap(
             pages.makeTransientPageLease(
                 url: try XCTUnwrap(URL(string: "about:blank")),
@@ -256,7 +257,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     func testDownloadOnlyTransientPageDismissesInsteadOfRemainingEmpty() async throws {
         let session = makeSession(index: 51)
         let space = try XCTUnwrap(session.spaces.first)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         var dismissalCount = 0
         let lease = try XCTUnwrap(
             pages.makeTransientPageLease(
@@ -277,7 +278,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     func testDownloadFromLoadedTransientPageKeepsItsExistingContent() async throws {
         let session = makeSession(index: 52)
         let space = try XCTUnwrap(session.spaces.first)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         var dismissalCount = 0
         let lease = try XCTUnwrap(
             pages.makeTransientPageLease(
@@ -299,6 +300,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     func testPrivateBrowsingKeepsCredentialAccessOffEvenWhenTheSpaceAllowsSaving() throws {
         let session = makeSession(index: 6)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session, browsingMode: .privateBrowsing),
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )
@@ -313,7 +315,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     func testCriticalPressureEventReleasesTheActiveTransientLeaseAWarningKeeps() throws {
         let session = makeSession(index: 7)
         let space = try XCTUnwrap(session.spaces.first)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session), usesEphemeralWebsiteDataStores: true)
         let url = try XCTUnwrap(URL(string: "about:blank"))
         pages.select(session: presented(session))
         let activeLease = try XCTUnwrap(
@@ -345,7 +347,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testSelectingAMemberPresentsTheWholeRunWithThatMemberFocused() throws {
         let split = makeSplitSession(memberCount: 3, selectedIndex: 1)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
 
         pages.select(session: split.session)
 
@@ -369,7 +371,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
             session: BrowserSession(spaces: [try XCTUnwrap(split.session.selectedSpace), otherSpace]),
             window: split.session.window
         )
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: session)
         pages.select(session: session)
 
         XCTAssertNil(
@@ -390,7 +392,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
     func testResidentPageAccessorRefusesNonMembersAndMismatchedAssignments() throws {
         let split = makeSplitSession(memberCount: 2, selectedIndex: 0)
         let space = try XCTUnwrap(split.session.selectedSpace)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
         pages.select(session: split.session)
         pages.prepareResidentPage(for: split.memberIDs[1], in: split.session)
 
@@ -432,7 +434,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testCriticalPressureLeavesEveryCardAloneWhileAnOffScreenPageCanGo() async throws {
         let split = makeSplitSession(memberCount: 2, selectedIndex: 0)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
         pages.select(session: split.session)
         pages.prepareResidentPage(
             for: split.memberIDs[1],
@@ -464,7 +466,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testWarningPressureNeverReachesACardEvenWithNothingElseToGive() async throws {
         let split = makeSplitSession(memberCount: 4, selectedIndex: 0)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
         pages.select(session: split.session)
         for (offset, memberID) in split.memberIDs.dropFirst().enumerated() {
             pages.prepareResidentPage(
@@ -487,7 +489,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testCriticalFallbackEvictsTheOldestCardBeyondTheFocusedNeighbours() async throws {
         let split = makeSplitSession(memberCount: 4, selectedIndex: 0)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
         pages.select(session: split.session)
         for (offset, memberID) in split.memberIDs.dropFirst().enumerated() {
             pages.prepareResidentPage(
@@ -532,7 +534,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testAnEvictedCardIsRebuiltWhenTheCarouselApproachesItAgain() async throws {
         let split = makeSplitSession(memberCount: 4, selectedIndex: 0)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
         pages.select(session: split.session)
         for (offset, memberID) in split.memberIDs.dropFirst().enumerated() {
             pages.prepareResidentPage(
@@ -565,7 +567,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testAGroupCollapsingToOneCardMakesItsFormerMembersEvictableAgain() async throws {
         let split = makeSplitSession(memberCount: 2, selectedIndex: 0)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
         pages.select(session: split.session)
         pages.prepareResidentPage(
             for: split.memberIDs[1],
@@ -592,7 +594,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testACardLeavingPresentationKeepsTheIdleAgeItAlreadyHad() async throws {
         let split = makeSplitSession(memberCount: 3, selectedIndex: 0)
-        let pages = makeSplitPageStore()
+        let pages = makeSplitPageStore(for: split.session)
         pages.select(session: split.session)
         // Prepared long ago, then joined by a background tab prepared just now.
         pages.prepareResidentPage(
@@ -663,8 +665,9 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         )
     }
 
-    private func makeSplitPageStore() -> MobileBrowserPageStore {
+    private func makeSplitPageStore(for session: BrowserPresentedSession) -> MobileBrowserPageStore {
         MobileBrowserPageStore(
+            browser: .hostingPages(session.session),
             usesEphemeralWebsiteDataStores: true,
             // Deterministic: every off-focus page is unloadable, so these tests
             // measure the store's own eligibility rules rather than WebKit's
@@ -684,6 +687,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         browser: BrowserStore
     ) -> MobileBrowserPageStore {
         MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true,
             openModifiedLink: { url, spaceID, selecting in
                 guard

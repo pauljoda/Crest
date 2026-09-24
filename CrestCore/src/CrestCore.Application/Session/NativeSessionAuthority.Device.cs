@@ -26,6 +26,12 @@ public sealed partial class NativeSessionAuthority {
     /// Pages in this workspace keep nothing once they close.
     internal bool IsPrivateBrowsing => privateBrowsing;
 
+    /// Whether `spaceId` is being deleted here or, for a borrowed workspace, in
+    /// the workspace it borrows from, which owns the Space's profile.
+    internal bool IsDeleting(Guid spaceId) {
+        lock (Gate) return PendingDeletion(session, spaceId) is not null || borrowedSource?.IsDeleting(spaceId) == true;
+    }
+
     #endregion
 
     #region Actions - Device

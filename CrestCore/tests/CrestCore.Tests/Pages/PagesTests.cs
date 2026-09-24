@@ -114,14 +114,17 @@ public sealed partial class BrowserContractsTests {
         using var disposal = app;
         var locked = Identity(session);
         var open = SpaceId(session["spaces"]![1]!);
+        var borrowed = app.AttachWorkspace(authority.CreateBorrowed(authority.Revision, open, ProfileId(session["spaces"]![1]!)));
 
         Assert.Equal(new SpaceLocked(locked.Space), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window)));
         Grant(access, locked);
         app.Send(new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window));
 
+        // A Space being deleted opens no page, nor does a workspace that borrows it.
         authority.PrepareCommand(authority.Revision, SpaceCommand(session, "space.deletion.begin",
             new() { ["operationID"] = Guid.NewGuid().ToString("D") }, session["spaces"]![1]!)).Commit();
         Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, open, null, window)));
+        Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), borrowed, open, null, window)));
         Assert.Single(binding.Commands);
     }
 
@@ -134,25 +137,53 @@ public sealed partial class BrowserContractsTests {
         var (space, other) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
         var (tab, otherTab) = (TabId(session["spaces"]![0]!, 0), TabId(session["spaces"]![1]!, 0));
         var borrowed = app.AttachWorkspace(owner.CreateBorrowed(owner.Revision, space, ProfileId(session["spaces"]![0]!)));
+        var borrowedWindow = Guid.NewGuid();
+        app.Send(new OpenWindow(borrowedWindow, borrowed, Saved: false, null, null, [], RestoresTabs: true));
         var transient = Guid.NewGuid();
         var resident = Guid.NewGuid();
         app.Send(new OpenPage(transient, workspace, space, null, window));
         app.Send(new OpenPage(resident, workspace, space, tab, window));
 
         // A tab adopting a transient page takes it only while it owns none.
-        Assert.Equal(new TabAlreadyHasPage(tab, resident), Refusal(app, new MovePage(transient, workspace, space, tab)));
+        Assert.Equal(new TabAlreadyHasPage(tab, resident), Refusal(app, new MovePage(transient, workspace, space, tab, window)));
         app.Send(new ReleasePage(resident, KeepsState: false));
-        var adopted = Assert.IsType<PageChanged>(Assert.Single(app.Send(new MovePage(transient, workspace, space, tab)))).Page;
+        var adopted = Assert.IsType<PageChanged>(Assert.Single(app.Send(new MovePage(transient, workspace, space, tab, window)))).Page;
         Assert.Equal(new PageState(transient, workspace, space, tab, EngineKind.WebKit, PagePhase.Opening), adopted);
 
         // The borrowed workspace shows the same Space in the same profile.
-        var moved = Assert.IsType<PageChanged>(Assert.Single(app.Send(new MovePage(transient, borrowed, space, tab)))).Page;
+        var moved = Assert.IsType<PageChanged>(Assert.Single(app.Send(new MovePage(transient, borrowed, space, tab, borrowedWindow)))).Page;
         Assert.Equal(borrowed, moved.WorkspaceId);
-        Assert.Empty(app.Send(new MovePage(transient, borrowed, space, tab)));
+        Assert.Empty(app.Send(new MovePage(transient, borrowed, space, tab, borrowedWindow)));
 
-        Assert.Equal(new PageProfileMismatch(transient, other), Refusal(app, new MovePage(transient, workspace, other, otherTab)));
-        Assert.Equal(new UnknownPage(resident), Refusal(app, new MovePage(resident, workspace, space, null)));
+        Assert.Equal(new PageProfileMismatch(transient, other),
+            Refusal(app, new MovePage(transient, workspace, other, otherTab, window)));
+        Assert.Equal(new UnknownPage(resident), Refusal(app, new MovePage(resident, workspace, space, null, window)));
+        Assert.Equal(new WindowNotOpen(borrowed), Refusal(app, new MovePage(transient, borrowed, space, tab, borrowed)));
         Assert.Equal(2, binding.Commands.OfType<CreatePage>().Count());
+    }
+
+    [Fact]
+    public void EachWindowHostsOnePageForATabAndAMovedPageBelongsToItsNewWindow() {
+        var session = TwoSpaceSession();
+        var (app, _, _, workspace, first) = PageHost(new NativeSessionAuthority(Bytes(session)));
+        using var disposal = app;
+        var (space, tab) = (SpaceId(session["spaces"]![0]!), TabId(session["spaces"]![0]!, 0));
+        var second = Guid.NewGuid();
+        app.Send(new OpenWindow(second, workspace, Saved: false, null, null, [], RestoresTabs: true));
+        var (firstPage, secondPage, transient) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+
+        // Two windows that keep pages of their own, as iPad scenes do, each
+        // host a page for the tab; one window hosts only one.
+        app.Send(new OpenPage(firstPage, workspace, space, tab, first));
+        app.Send(new OpenPage(secondPage, workspace, space, tab, second));
+        Assert.Equal(new TabAlreadyHasPage(tab, firstPage), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, space, tab, first)));
+
+        // A page moved into a window takes the tab's place there.
+        app.Send(new ReleasePage(secondPage, KeepsState: false));
+        app.Send(new OpenPage(transient, workspace, space, null, first));
+        app.Send(new MovePage(transient, workspace, space, tab, second));
+        Assert.Equal(new TabAlreadyHasPage(tab, transient), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, space, tab, second)));
+        Assert.Equal(new TabAlreadyHasPage(tab, transient), Refusal(app, new MovePage(firstPage, workspace, space, tab, second)));
     }
 
     [Fact]

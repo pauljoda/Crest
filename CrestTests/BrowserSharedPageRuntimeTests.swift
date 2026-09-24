@@ -9,7 +9,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
     func testSnapshotEngineCompletesOnlyCommittedNavigations() throws {
         let tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab])
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: hosting(space))
         defer { pool.reconcile(validTabIDs: []) }
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
@@ -46,8 +46,9 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let tabs = [BrowserTab.startPage(), BrowserTab.startPage()]
         let space = makeSpace(tabs: tabs)
         let runtimeStore = BrowserPageRuntimeStore()
-        let first = BrowserPagePool(runtimeStore: runtimeStore)
-        let second = BrowserPagePool(runtimeStore: runtimeStore)
+        let browser = hosting(space)
+        let first = BrowserPagePool(browser: browser, runtimeStore: runtimeStore)
+        let second = BrowserPagePool(browser: browser.makeWindowStore(), runtimeStore: runtimeStore)
         first.select(tab: tabs[0], space: space)
         let original = try XCTUnwrap(first.activePage)
         second.select(tab: tabs[1], space: space)
@@ -70,8 +71,9 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab])
         let runtimeStore = BrowserPageRuntimeStore()
-        let first = BrowserPagePool(runtimeStore: runtimeStore)
-        let second = BrowserPagePool(runtimeStore: runtimeStore)
+        let browser = hosting(space)
+        let first = BrowserPagePool(browser: browser, runtimeStore: runtimeStore)
+        let second = BrowserPagePool(browser: browser.makeWindowStore(), runtimeStore: runtimeStore)
         first.select(tab: tab, space: space)
         second.select(tab: tab, space: space)
         second.setWindowFocused(true)
@@ -92,8 +94,8 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
     func testLiveTransferPreservesPageAndRejectsDifferentProfiles() throws {
         let tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab])
-        let source = BrowserPagePool()
-        let destination = BrowserPagePool()
+        let source = BrowserPagePool(browser: hosting(space))
+        let destination = BrowserPagePool(browser: hosting(space, on: source.browser.core))
         source.select(tab: tab, space: space)
         let page = try XCTUnwrap(source.activePage)
         let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
@@ -113,10 +115,12 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let tabs = (0..<4).map { _ in BrowserTab.startPage() }
         let space = makeSpace(tabs: tabs)
         let runtimeStore = BrowserPageRuntimeStore()
+        let browser = hosting(space)
         var decisions = 0
         var laterDecision: CheckedContinuation<Void, Never>?
         defer { laterDecision?.resume() }
         let first = BrowserPagePool(
+            browser: browser,
             runtimeStore: runtimeStore,
             residencyDecisionProvider: { _, _ in
                 decisions += 1
@@ -126,7 +130,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
                 return BrowserPageResidencyDecision(
                     isSelected: false, keepsPageLoaded: false, isPlayingMedia: false, isCapturingMedia: false)
             })
-        let second = BrowserPagePool(runtimeStore: runtimeStore)
+        let second = BrowserPagePool(browser: browser.makeWindowStore(), runtimeStore: runtimeStore)
         first.select(tab: tabs[0], space: space, at: Date(timeIntervalSince1970: 1))
         first.select(tab: tabs[1], space: space, at: Date(timeIntervalSince1970: 2))
         second.select(tab: tabs[0], space: space, at: Date(timeIntervalSince1970: 3))
@@ -156,9 +160,10 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab])
         let owner = BrowserPageRuntimeStore()
-        let first = BrowserPagePool(runtimeStore: owner)
-        let second = BrowserPagePool(runtimeStore: owner)
-        let blank = BrowserPagePool()
+        let browser = hosting(space)
+        let first = BrowserPagePool(browser: browser, runtimeStore: owner)
+        let second = BrowserPagePool(browser: browser.makeWindowStore(), runtimeStore: owner)
+        let blank = BrowserPagePool(browser: hosting(space, on: browser.core))
         defer {
             first.reconcile(validTabIDs: [])
             blank.closeWindowWorkspace()
@@ -227,9 +232,11 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         owner.publishesPageMetadataCentrally = true
         let blankOwner = BrowserPageRuntimeStore()
         blankOwner.publishesPageMetadataCentrally = true
+        let browser = hosting(space)
         var links: [String] = []
         var updates: [String] = []
         let first = BrowserPagePool(
+            browser: browser,
             runtimeStore: owner,
             openModifiedLink: { _, _, _ in
                 links.append("first")
@@ -240,6 +247,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
                 return nil
             })
         let second = BrowserPagePool(
+            browser: browser.makeWindowStore(),
             runtimeStore: owner,
             openModifiedLink: { _, _, _ in
                 links.append("second")
@@ -250,6 +258,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
                 return nil
             })
         let blank = BrowserPagePool(
+            browser: hosting(space, on: browser.core),
             runtimeStore: blankOwner,
             openModifiedLink: { _, _, _ in
                 links.append("blank")
@@ -287,8 +296,8 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
     func testNativeTabMovePreservesItsLoadedModelAcrossWorkspaceOwners() throws {
         let tab = BrowserTab(title: "Getting Started", url: nil, nativeContent: .gettingStarted, placement: .current)
         let space = makeSpace(tabs: [tab])
-        let source = BrowserPagePool()
-        let destination = BrowserPagePool()
+        let source = BrowserPagePool(browser: hosting(space))
+        let destination = BrowserPagePool(browser: hosting(space, on: source.browser.core))
         source.select(tab: tab, space: space)
         let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
         let runtime = try XCTUnwrap(source.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
@@ -307,8 +316,9 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         var tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab])
-        let source = BrowserPagePool(usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
-        let destination = BrowserPagePool()
+        let source = BrowserPagePool(
+            browser: hosting(space), usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
+        let destination = BrowserPagePool(browser: hosting(space, on: source.browser.core))
         defer {
             source.reconcile(validTabIDs: [])
             destination.closeWindowWorkspace()
@@ -344,6 +354,12 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(20))
         }
         XCTFail("Timed out waiting for the live page update.")
+    }
+
+    /// A window over a session holding `space`, on `core` when another
+    /// workspace of the test already hosts pages there.
+    private func hosting(_ space: BrowserSpace, on core: CrestCore = .hostingPages()) -> BrowserStore {
+        .hostingPages(BrowserSession(spaces: [space]), core: core)
     }
 
     private func makeSpace(tabs: [BrowserTab]) -> BrowserSpace {

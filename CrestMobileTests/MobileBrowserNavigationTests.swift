@@ -38,6 +38,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testDeactivatingMobilePagePresentationRetainsButStopsPresentingItsPage() throws {
         let space = makeSpace(index: 92)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: true
         )
         let session = presented(BrowserSession(spaces: [space]), showing: space.id)
@@ -58,14 +59,19 @@ final class MobileBrowserNavigationTests: XCTestCase {
         async throws
     {
         let space = makeSpace(index: 99)
-        let session = presented(BrowserSession(spaces: [space]), showing: space.id)
+        let otherSpace = makeSpace(index: 98)
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space, otherSpace]))
+        let session = presented(browser.session, showing: space.id)
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         let tabID = try XCTUnwrap(space.tabs.first?.id)
         pages.select(session: session)
         var retainedPage: MobileBrowserPage? = try XCTUnwrap(pages.activePage)
 
+        // A window releases a Space's runtime once its deletion has begun.
+        try beginDeleting(space.id, in: browser)
         let release = Task {
             await pages.releaseWindowRuntime(for: space)
         }
@@ -89,6 +95,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 94)
         let session = BrowserSession(spaces: [firstSpace, secondSpace])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session),
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -117,12 +124,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let tab = BrowserTab(title: "Protected", url: URL(string: "about:blank"), placement: .current)
         locked.tabs = [tab]
         locked.accessPolicy = .deviceOwnerAuthentication
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [locked]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [locked]),
             showing: locked.id,
             tabs: shownTabs(in: [locked])
         )
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let access = BrowserSpaceAccessController()
         let detail = MobileBrowserDetailView(
             browser: browser, pages: pages, spaceAccess: access,
@@ -161,13 +168,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobilePageCanRequestDesktopAndReturnToRecommendedContent() throws {
         let space = makeSpace(index: 75)
-        let tab = try XCTUnwrap(space.tabs.first)
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            loadsInitialURL: false,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser, loadsInitialURL: false)
 
         XCTAssertFalse(page.isRequestingDesktopSite)
         XCTAssertEqual(
@@ -191,8 +193,9 @@ final class MobileBrowserNavigationTests: XCTestCase {
     }
 
     func testPrivateMobilePagesUseDistinctEphemeralStoresAndNoCredentialBridge() throws {
-        let browser = BrowserStore.privateBrowsing()
+        let browser = BrowserStore.privateBrowsing(core: .hostingPages())
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )
@@ -230,8 +233,9 @@ final class MobileBrowserNavigationTests: XCTestCase {
     }
 
     func testXCTestStandardMobilePagesNeverUseTheInstalledWebsiteDataStore() throws {
-        let browser = BrowserStore.preview()
+        let browser = BrowserStore.hostingPages()
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -246,9 +250,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testPrivateDownloadConfirmationStaysOwnedByThePrivateSpace() async throws {
         let standardPages = MobileBrowserPageStore(
+            browser: .hostingPages(),
             usesEphemeralWebsiteDataStores: true
         )
         let privatePages = MobileBrowserPageStore(
+            browser: .privateBrowsing(core: .hostingPages()),
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )
@@ -414,12 +420,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testNewTabExposesSearchWithoutChangingThePhoneSidebarMode() throws {
         for floating in [false, true] {
             let space = makeSpace(index: 334)
-            let browser = BrowserStore(
-                session: BrowserSession(spaces: [space]),
+            let browser = BrowserStore.hostingPages(
+                BrowserSession(spaces: [space]),
                 showing: space.id,
                 tabs: shownTabs(in: [space])
             )
-            let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+            let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
             let model = makeModel(browser: browser, pages: pages)
             model.navigation.adapt(to: .compact)
             if floating {
@@ -483,7 +489,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testSidebarSideChangesKeepTheMobilePageHostAndDocument() async throws {
         let space = makeSpace(index: 270)
-        let page = MobileBrowserPage(tab: space.tabs[0], space: space, openNewTab: { _ in })
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         page.webView.loadHTMLString(
             "<body style='height:4000px'><input id='draft' value='keep me'><script>window.documentToken='resident';</script></body>",
             baseURL: nil)
@@ -545,12 +552,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testWebContentKeepsNativeBackNavigationOutsideTheRevealStrip() throws {
         let space = makeSpace(index: 66)
-        let page = MobileBrowserPage(
-            tab: try XCTUnwrap(space.tabs.first),
-            space: space,
-            loadsInitialURL: false,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser, loadsInitialURL: false)
 
         XCTAssertTrue(page.webView.allowsBackForwardNavigationGestures)
         XCTAssertEqual(
@@ -598,12 +601,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             tabs: tabs
         )
         let secondSpace = makeSpace(index: 52)
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [firstSpace, secondSpace]),
             showing: firstSpace.id,
             tabs: shownTabs(in: [firstSpace, secondSpace], tabs: [firstSpace.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
@@ -641,12 +645,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: [first, second]
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: first.id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
@@ -684,12 +689,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: [pinned, previous]
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: pinned.id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
@@ -722,12 +728,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: [source]
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: source.id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         pages.select(session: browser.presented)
@@ -746,13 +753,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertFalse(MobileFullTabPresentationPolicy.allowsInteractiveDismissal)
 
         let space = makeSpace(index: 46)
-        let tab = try XCTUnwrap(space.tabs.first)
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            loadsInitialURL: false,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser, loadsInitialURL: false)
         let refreshControl = try XCTUnwrap(page.webView.scrollView.refreshControl)
 
         XCTAssertTrue(refreshControl.allControlEvents.contains(.valueChanged))
@@ -766,13 +768,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileMediaRequiresUserIntentStaysInlineAndAllowsSystemPictureInPicture() throws {
         let space = makeSpace(index: 45)
-        let tab = try XCTUnwrap(space.tabs.first)
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            loadsInitialURL: false,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser, loadsInitialURL: false)
         let configuration = page.webView.configuration
 
         XCTAssertTrue(configuration.allowsInlineMediaPlayback)
@@ -854,12 +851,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
     {
         let firstSpace = makeSpace(index: 13)
         let secondSpace = makeSpace(index: 14)
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [firstSpace, secondSpace]),
             showing: firstSpace.id,
             tabs: shownTabs(in: [firstSpace, secondSpace])
         )
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
 
         XCTAssertEqual(commands.selectNextSpace(), secondSpace.id)
@@ -948,7 +945,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testToolbarSwipeSelectsTheAdjacentCardAndClampsAtBothEnds() throws {
         let split = makeSplitFixture(selectedIndex: 0)
         let browser = try makeSplitBrowser(split)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let model = makeModel(browser: browser, pages: pages)
         pages.select(session: browser.presented)
 
@@ -966,12 +963,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testToolbarSwipeOutsideASplitChangesNeitherCardNorSpace() throws {
         let firstSpace = makeSpace(index: 15)
         let secondSpace = makeSpace(index: 16)
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [firstSpace, secondSpace]),
             showing: firstSpace.id,
             tabs: shownTabs(in: [firstSpace, secondSpace])
         )
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let model = makeModel(browser: browser, pages: pages)
         let selectedTabID = browser.selectedTab?.id
 
@@ -987,7 +984,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testSplitCardFocusMovesSelectionAndPresentationTogether() throws {
         let split = makeSplitFixture(selectedIndex: 0)
         let browser = try makeSplitBrowser(split)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let model = makeModel(browser: browser, pages: pages)
         pages.select(session: browser.presented)
 
@@ -1001,7 +998,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testKeyboardSplitCardFocusCyclesWrapsAndSeparatesTheGroup() throws {
         let split = makeSplitFixture(selectedIndex: 0)
         let browser = try makeSplitBrowser(split)
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(browser: browser, usesEphemeralWebsiteDataStores: true)
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
         pages.select(session: browser.presented)
 
@@ -1051,8 +1048,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
     private func makeSplitBrowser(
         _ split: (space: BrowserSpace, members: [BrowserTab])
     ) throws -> BrowserStore {
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [split.space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [split.space]),
             showing: split.space.id,
             tabs: shownTabs(in: [split.space])
         )
@@ -1085,12 +1082,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testPageStoreRetainsTabsButNeverReusesAProfileAcrossSpaces() throws {
         let firstSpace = makeSpace(index: 1)
         let secondSpace = makeSpace(index: 2)
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [firstSpace, secondSpace]),
             showing: firstSpace.id,
             tabs: shownTabs(in: [firstSpace, secondSpace])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -1120,6 +1118,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let space = makeSpace(index: 28)
         var session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session),
             usesEphemeralWebsiteDataStores: true,
             contentRuleListProvider: provider
         )
@@ -1175,6 +1174,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let space = contentBlockingSpace(tabs: [activeTab, backgroundTab])
         let session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session, browsingMode: .privateBrowsing),
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
             contentRuleListProvider: provider
@@ -1234,6 +1234,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let space = contentBlockingSpace(tabs: [activeTab, backgroundTab])
         var session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session, browsingMode: .privateBrowsing),
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true,
             contentRuleListProvider: provider
@@ -1330,6 +1331,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let permissionCenter = BrowserSitePermissionCenter()
         let remover = RecordingMobileWebsiteDataStoreRemover()
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [deletedSpace, retainedSpace])),
             usesEphemeralWebsiteDataStores: false,
             permissionCenter: permissionCenter,
             profileRemover: remover
@@ -1387,11 +1389,15 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let space = makeSpace(index: 35)
         let tabID = try XCTUnwrap(space.tabs.first?.id)
         let remover = RecordingMobileWebsiteDataStoreRemover()
+        let primaryBrowser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
         let primaryPages = MobileBrowserPageStore(
+            browser: primaryBrowser,
             usesEphemeralWebsiteDataStores: false,
             profileRemover: remover
         )
+        // Another window of the same workspace, which keeps pages of its own.
         let secondaryPages = MobileBrowserPageStore(
+            browser: primaryBrowser.makeWindowStore(),
             usesEphemeralWebsiteDataStores: true,
             profileRemover: remover
         )
@@ -1420,12 +1426,15 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testSpaceCannotRecreateItsPageWhileProfileDeletionIsSuspended() async throws {
         let deletedSpace = makeSpace(index: 33)
+        let retainedSpace = makeSpace(index: 34)
         let remover = SuspendingMobileWebsiteDataStoreRemover()
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [deletedSpace, retainedSpace]))
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: false,
             profileRemover: remover
         )
-        let deletedSession = presented(BrowserSession(spaces: [deletedSpace]), showing: deletedSpace.id)
+        let deletedSession = presented(browser.session, showing: deletedSpace.id)
         pages.select(session: deletedSession)
         XCTAssertNotNil(pages.activePage)
         XCTAssertFalse(
@@ -1434,8 +1443,9 @@ final class MobileBrowserNavigationTests: XCTestCase {
             ).isPersistent
         )
 
+        // Deleting the Space records the deletion before its data goes, as the app does.
         let deletion = Task {
-            try await pages.deleteData(for: deletedSpace)
+            try await browser.deleteSpace(deletedSpace.id, dataDeleter: pages)
         }
         await remover.waitUntilRemovalStarts()
 
@@ -1460,12 +1470,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: [reddit, crest]
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: reddit.id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         let switchTime = Date(timeIntervalSince1970: 1_000)
@@ -1509,12 +1520,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: [pinned, current]
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: pinned.id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -1567,6 +1579,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt
         )
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [replacement])),
             usesEphemeralWebsiteDataStores: true
         )
         pages.select(
@@ -1602,12 +1615,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: tabs
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -1645,12 +1659,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: tabs
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         let squeeze = Date()
@@ -1698,12 +1713,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
             folders: [],
             tabs: pinned + current
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space], tabs: [space.id: current[0].id])
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -1723,13 +1739,10 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertEqual(pages.activePage?.tabID, current[2].id)
     }
 
-    func testMobilePageStopsAfterTwoAutomaticWebContentReloads() {
+    func testMobilePageStopsAfterTwoAutomaticWebContentReloads() throws {
         let space = makeSpace(index: 9)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         // Only a page the user can see is reloaded automatically, so the recovery
         // cap is a property of an on-screen page.
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
@@ -1751,6 +1764,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testMobilePageStoreRoutesZoomCommandsToTheActivePage() throws {
         let space = makeSpace(index: 10)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: true
         )
 
@@ -1784,6 +1798,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         space.tabs.append(backgroundTab)
         let session = BrowserSession(spaces: [space])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session),
             usesEphemeralWebsiteDataStores: true,
             pageZoomPreferences: preferences
         )
@@ -1846,11 +1861,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileFindUsesWebKitAndClearsItsStateWhenDismissed() async throws {
         let space = makeSpace(index: 11)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
 
         page.webView.loadHTMLString(
             "<html><body><p>Crest needle text</p></body></html>",
@@ -1883,11 +1895,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileReaderModeUsesTheRetainedInspectableSpacePage() async throws {
         let space = makeSpace(index: 15)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         let originalDataStore = page.webView.configuration.websiteDataStore
         let paragraph = String(
             repeating:
@@ -1930,11 +1939,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileLoadedPageCreatesARealPDFDocument() async throws {
         let space = makeSpace(index: 12)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         page.webView.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
         page.webView.loadHTMLString(
             "<html><body><h1>Crest PDF Export</h1><p>Rendered by WebKit.</p></body></html>",
@@ -1953,11 +1959,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileLoadedPageCreatesARealWebKitWebArchive() async throws {
         let space = makeSpace(index: 13)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         page.webView.loadHTMLString(
             "<html><body><h1>Crest Mobile Web Archive</h1><p>Rendered by WebKit.</p></body></html>",
             baseURL: URL(string: "https://archive.crest.test")
@@ -1994,6 +1997,38 @@ final class MobileBrowserNavigationTests: XCTestCase {
             }
             try await Task.sleep(for: .milliseconds(25))
         }
+    }
+
+    /// Opens the page for `space`'s first tab through `browser`'s core, as a
+    /// page store opens one. Keep `browser` alive while the page is in use.
+    private func openPage(
+        in space: BrowserSpace,
+        through browser: BrowserStore,
+        loadsInitialURL: Bool = true
+    ) throws -> MobileBrowserPage {
+        let tab = try XCTUnwrap(space.tabs.first)
+        return try XCTUnwrap(
+            browser.openPage(in: space.id, for: tab.id) { corePage in
+                MobileBrowserPage(
+                    corePage: corePage,
+                    tab: tab,
+                    space: space,
+                    loadsInitialURL: loadsInitialURL,
+                    openNewTab: { _ in }
+                )
+            }?.built as? MobileBrowserPage
+        )
+    }
+
+    /// Records that `spaceID`'s deletion began, as deleting a Space does before
+    /// any window releases it, so the core refuses the Space new pages.
+    private func beginDeleting(_ spaceID: SpaceID, in browser: BrowserStore) throws {
+        try browser.family.executeSpaceDurably(
+            .spaceDeletionBegin,
+            in: spaceID,
+            arguments: BrowserSessionArguments.SpaceDeletion(operationID: UUID()),
+            from: browser
+        )
     }
 
     private func makeSpace(index: Int) -> BrowserSpace {

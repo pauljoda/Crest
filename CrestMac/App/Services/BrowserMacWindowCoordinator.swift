@@ -91,7 +91,7 @@ final class BrowserMacWindowCoordinator {
         }
         let transient = BrowserTransientBrowsingCoordinator()
         let windowPages = pages.makeWindowPool(
-            browser: windowBrowser, windowID: request.id, sharesRuntimes: request.kind == .normal,
+            browser: windowBrowser, sharesRuntimes: request.kind == .normal,
             transientBrowsing: transient, spaceAccess: spaceAccess)
         let model = BrowserMacWindowModel(
             request: request, browser: windowBrowser, pages: windowPages,

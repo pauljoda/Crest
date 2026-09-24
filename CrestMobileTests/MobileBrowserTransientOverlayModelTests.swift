@@ -301,9 +301,11 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             session: BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing
+            browsingMode: .privateBrowsing,
+            core: .hostingPages()
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )
@@ -692,9 +694,11 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             session: BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing
+            browsingMode: .privateBrowsing,
+            core: .hostingPages()
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )
@@ -763,9 +767,11 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             session: BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing
+            browsingMode: .privateBrowsing,
+            core: .hostingPages()
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: .privateBrowsing,
             usesEphemeralWebsiteDataStores: true
         )

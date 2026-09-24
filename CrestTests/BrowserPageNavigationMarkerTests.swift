@@ -7,7 +7,7 @@ import XCTest
 final class BrowserPageNavigationMarkerTests: XCTestCase {
     func testSameDocumentNavigationRetiresPendingURLAcrossHistoryTraversal() async throws {
         let page = try makePage()
-        defer { page.prepareForSpaceDeletion() }
+        defer { page.release(keepingState: false) }
         let root = try XCTUnwrap(URL(string: "https://history.crest.test/feed"))
         let post = try XCTUnwrap(URL(string: "https://history.crest.test/post"))
         page.webView.loadSimulatedRequest(
@@ -40,7 +40,7 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
 
     func testLinkHistoryRetainsSameDocumentEntriesAndDiscardsForwardBranch() async throws {
         let page = try makePage()
-        defer { page.prepareForSpaceDeletion() }
+        defer { page.release(keepingState: false) }
         let root = try XCTUnwrap(URL(string: "https://history.crest.test/root"))
         page.webView.loadSimulatedRequest(
             URLRequest(url: root), responseHTML: "<html><title>History</title><body>History</body></html>")
@@ -153,7 +153,7 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
             folders: [],
             tabs: [tab]
         )
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
         pool.select(tab: tab, space: space)
         return try XCTUnwrap(pool.activePage)
     }

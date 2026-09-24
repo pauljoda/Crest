@@ -42,11 +42,16 @@
             coordinator.page.dispose()
         }
 
+        /// The flags page is a Settings surface, not a page a tab or a transient
+        /// request owns, so it is Chromium's alone and the core never hears of it.
         @MainActor
         final class Coordinator {
             let page: ChromiumNativePage
 
-            init(profileID: UUID) { page = ChromiumNativePage(profileID: profileID) }
+            init(profileID: UUID) {
+                page = ChromiumNativePage(
+                    id: UUID(), profileID: profileID, isPrivateBrowsing: false, hostCommands: nil, binding: nil)
+            }
         }
     }
 #endif

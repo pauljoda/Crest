@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x71, 0xb4, 0x4f, 0x86, 0x70, 0xa4, 0xeb, 0x31, 0xbf, 0x95, 0x2b, 0xfe, 0x04, 0x0e, 0x7d, 0x22, 0xc8, 0x18, 0x34, 0xcf, 0x55, 0x6d, 0x15, 0x09, 0x65, 0x87, 0x35, 0xfc, 0x26, 0x56, 0xfd, 0x24
+        0x86, 0x31, 0x4d, 0x97, 0x9d, 0x04, 0xc4, 0xfb, 0x21, 0x43, 0x89, 0x3b, 0x34, 0x43, 0x97, 0x17, 0x3f, 0x67, 0x1d, 0xba, 0x2d, 0x25, 0x8c, 0x6a, 0x42, 0xb5, 0x56, 0x00, 0x97, 0xa1, 0x41, 0x74
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -2132,7 +2132,8 @@ public static class ContractCodec {
             reader.ReadGuid(),
             reader.ReadGuid(),
             reader.ReadGuid(),
-            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadGuid());
     }
 
     public static void WriteMovePage(WireWriter writer, MovePage value) {
@@ -2147,6 +2148,7 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+        writer.WriteGuid(value.WindowId);
     }
 
     public static OpenPage ReadOpenPage(WireReader reader) {

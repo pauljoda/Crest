@@ -19,13 +19,19 @@ final class MobileBrowserInteropTests: XCTestCase {
             folders: [],
             tabs: [tab]
         )
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            websiteDataStore: .nonPersistent(),
-            allowsCredentialAccess: false,
-            loadsInitialURL: false,
-            openNewTab: { _ in }
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try XCTUnwrap(
+            browser.openPage(in: space.id, for: tab.id) { corePage in
+                MobileBrowserPage(
+                    corePage: corePage,
+                    tab: tab,
+                    space: space,
+                    websiteDataStore: .nonPersistent(),
+                    allowsCredentialAccess: false,
+                    loadsInitialURL: false,
+                    openNewTab: { _ in }
+                )
+            }?.built as? MobileBrowserPage
         )
         let operatingSystemMajorVersion = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
 
@@ -68,11 +74,17 @@ final class MobileBrowserInteropTests: XCTestCase {
         let center = BrowserDownloadCenter(
             approveRiskyDownload: { _, _, _, _ in true }
         )
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            downloadCenter: center,
-            openNewTab: { _ in }
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try XCTUnwrap(
+            browser.openPage(in: space.id, for: tab.id) { corePage in
+                MobileBrowserPage(
+                    corePage: corePage,
+                    tab: tab,
+                    space: space,
+                    downloadCenter: center,
+                    openNewTab: { _ in }
+                )
+            }?.built as? MobileBrowserPage
         )
         defer {
             server.stop()
@@ -114,9 +126,10 @@ final class MobileBrowserInteropTests: XCTestCase {
         let destination = URL.documentsDirectory
             .appendingPathComponent("Downloads", isDirectory: true)
             .appendingPathComponent(filename)
-        let browser = BrowserStore.privateBrowsing()
+        let browser = BrowserStore.privateBrowsing(core: .hostingPages())
         let permissionCenter = BrowserSitePermissionCenter()
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: .privateBrowsing,
             permissionCenter: permissionCenter
         )
@@ -227,11 +240,17 @@ final class MobileBrowserInteropTests: XCTestCase {
             },
             approveRiskyDownload: { _, _, _, _ in true }
         )
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            downloadCenter: center,
-            openNewTab: { _ in }
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try XCTUnwrap(
+            browser.openPage(in: space.id, for: tab.id) { corePage in
+                MobileBrowserPage(
+                    corePage: corePage,
+                    tab: tab,
+                    space: space,
+                    downloadCenter: center,
+                    openNewTab: { _ in }
+                )
+            }?.built as? MobileBrowserPage
         )
         defer {
             server.stop()
@@ -562,12 +581,13 @@ final class MobileBrowserInteropTests: XCTestCase {
         let peekURL = try XCTUnwrap(URL(string: "about:blank"))
         var routedURLs: [URL] = []
         let space = makePopupSpace()
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space])
         )
         let pages = MobileBrowserPageStore(
+            browser: store,
             popupTabHost: store.popupTabHost,
             openNewTab: { routedURLs.append($0) }
         )
@@ -715,6 +735,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let space = makeStateSpace(tabs: [stateful, other])
         var session = presented([space], showing: space.id)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session.session),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -770,6 +791,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let tab = BrowserTab(title: "Unloadable", url: nil, placement: .current)
         let space = makeStateSpace(tabs: [tab])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -808,6 +830,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
         var session = presented([space], showing: space.id)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session.session),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -865,6 +888,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
         await archive.flushPendingWrites()
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -888,6 +912,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let tab = BrowserTab(title: "Private", url: nil, placement: .current)
         let space = makeStateSpace(tabs: [tab])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space]), browsingMode: .privateBrowsing),
             browsingMode: .privateBrowsing,
             tabStateArchive: archive
         )
@@ -922,6 +947,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             tabID: survivingTabID
         )
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: false,
             profileRemover: MobileRecordingWebsiteDataStoreRemover(),
             tabStateArchive: archive
@@ -955,6 +981,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let other = BrowserTab(title: "Other", url: nil, placement: .current)
         let space = makeStateSpace(tabs: [stateful, other])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -991,6 +1018,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let other = BrowserTab(title: "Other", url: nil, placement: .current)
         let space = makeStateSpace(tabs: [stateful, other])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [space]), browsingMode: .privateBrowsing),
             browsingMode: .privateBrowsing,
             tabStateArchive: archive
         )
@@ -1070,6 +1098,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let openSpace = makeStateSpace(tabs: [openTab])
         var session = presented([protectedSpace, openSpace], showing: openSpace.id)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session.session),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -1119,7 +1148,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let openTab = BrowserTab(title: "Open", url: nil, placement: .current)
         let openSpace = makeStateSpace(tabs: [openTab])
         var session = presented([protectedSpace, openSpace], showing: openSpace.id)
-        let pages = MobileBrowserPageStore()
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session.session))
 
         pages.select(session: session)
         session = presented(session.spaces, showing: protectedSpace.id, tabs: shownTabs(of: session))
@@ -1152,7 +1181,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             tabs: [tab], accessPolicy: .deviceOwnerAuthentication
         )
         var session = presented([space], showing: space.id)
-        let pages = MobileBrowserPageStore()
+        let pages = MobileBrowserPageStore(browser: .hostingPages(session.session))
         pages.select(session: session)
         let original = try XCTUnwrap(pages.activePage)
         let scene = try XCTUnwrap(
@@ -1221,6 +1250,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
         var session = presented([protectedSpace], showing: protectedSpace.id)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session.session),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -1268,6 +1298,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let tab = BrowserTab(title: "Ordinary", url: nil, placement: .current)
         let openSpace = makeStateSpace(tabs: [tab])
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(BrowserSession(spaces: [openSpace])),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -1301,6 +1332,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
         var session = presented([protectedSpace], showing: protectedSpace.id)
         let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session.session),
             usesEphemeralWebsiteDataStores: false,
             tabStateArchive: archive
         )
@@ -1419,12 +1451,13 @@ final class MobileBrowserInteropTests: XCTestCase {
         tabStateArchive: (any BrowserTabStateArchiving)? = nil
     ) throws -> MobilePopupAdoptionContext {
         let space = makePopupSpace()
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id,
             tabs: shownTabs(in: [space])
         )
         let pages = MobileBrowserPageStore(
+            browser: store,
             browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: tabStateArchive == nil,
             tabStateArchive: tabStateArchive,

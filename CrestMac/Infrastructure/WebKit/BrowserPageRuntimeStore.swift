@@ -13,7 +13,6 @@ final class BrowserPageRuntimeStore {
 
     @ObservationIgnored var spacesReleasingData: Set<SpaceID> = []
     @ObservationIgnored var spacesDeletingData: Set<SpaceID> = []
-    @ObservationIgnored var blockedSpaces: Set<SpaceID> = []
     @ObservationIgnored var runtimes: [TabID: BrowserTabRuntime] = [:]
     @ObservationIgnored var inactiveSinceByTabID: [TabID: Date] = [:]
     @ObservationIgnored var memoryPressureTask: Task<Void, Never>?
@@ -185,7 +184,6 @@ final class BrowserPageWindowRouting {
 @MainActor
 final class BrowserPageProfileDataStores {
     let serverTrustOverrides = BrowserServerTrustOverrideStore()
-    var blockedSpaces: Set<SpaceID> = []
     /// Each private profile's WebKit website data store, by profile.
     var ephemeral: [UUID: WKWebsiteDataStore] = [:]
 

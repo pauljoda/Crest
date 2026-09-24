@@ -33,11 +33,12 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
             folders: [],
             tabs: [secondTab]
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [firstSpace, secondSpace]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [firstSpace, secondSpace]),
             showing: firstSpace.id, tabs: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         pages.select(session: browser.presented)

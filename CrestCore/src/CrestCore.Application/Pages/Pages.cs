@@ -2,10 +2,15 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-/// The pages this device hosts: which tab or transient request owns each, and
-/// which engine hosts it. Never saved or synced. The platform decides when a
-/// page opens or goes; the core decides whether it may, and on which engine,
-/// and asks the engine to create and close it.
+/// The pages this device hosts: which tab or transient request owns each, the
+/// window that hosts it and the engine that hosts it. Never saved or synced.
+/// The platform decides when a page opens or goes; the core decides whether it
+/// may, and on which engine, and asks the engine to create and close it.
+///
+/// A window hosts one page for a tab. The Mac's windows over one workspace
+/// share one runtime store, so a second window shows the page the first opened
+/// and never opens its own; each iPad scene keeps pages of its own, so two
+/// scenes showing one tab each host a page for it.
 internal sealed class Pages(Device device, Engines engines) {
     #region Variables
 
@@ -35,9 +40,9 @@ internal sealed class Pages(Device device, Engines engines) {
         var workspace = device.Workspace(intent.WorkspaceId);
         device.Opened(intent.WindowId);
         var space = Hosting(workspace, intent.SpaceId);
-        RequireUnowned(intent.WorkspaceId, intent.TabId, moving: null);
+        RequireUnowned(intent.WorkspaceId, intent.WindowId, intent.TabId, moving: null);
         var engine = engines.Default ?? throw new Rejected(new EngineNotRegistered());
-        var page = new Page(intent.PageId, engine, space.ProfileId, intent.WindowId, intent.WorkspaceId, space.Id, intent.TabId);
+        var page = new Page(intent.PageId, engine, space.ProfileId, intent.WorkspaceId, space.Id, intent.TabId, intent.WindowId);
         open[page.Id] = page;
         changes.Publish(new PageOpened(page.State));
         issue(engine, new CreatePage(page.Id, page.ProfileId, workspace.IsPrivateBrowsing));
@@ -45,11 +50,13 @@ internal sealed class Pages(Device device, Engines engines) {
 
     private void Move(MovePage intent, ChangeFeed changes) {
         var page = Known(intent.PageId);
-        var space = Hosting(device.Workspace(intent.WorkspaceId), intent.SpaceId);
+        var workspace = device.Workspace(intent.WorkspaceId);
+        device.Opened(intent.WindowId);
+        var space = Hosting(workspace, intent.SpaceId);
         if (space.ProfileId != page.ProfileId) throw new Rejected(new PageProfileMismatch(page.Id, space.Id));
-        RequireUnowned(intent.WorkspaceId, intent.TabId, moving: page);
+        RequireUnowned(intent.WorkspaceId, intent.WindowId, intent.TabId, moving: page);
         var before = page.State;
-        page.Move(intent.WorkspaceId, space.Id, intent.TabId);
+        page.Move(intent.WorkspaceId, space.Id, intent.TabId, intent.WindowId);
         if (page.State != before) changes.Publish(new PageChanged(page.State));
     }
 
@@ -90,21 +97,23 @@ internal sealed class Pages(Device device, Engines engines) {
     private Page Known(Guid pageId) => open.TryGetValue(pageId, out var page) ? page : throw new Rejected(new UnknownPage(pageId));
 
     /// The Space a page may live in: one the workspace holds, that is not
-    /// being deleted and that this process may show.
+    /// being deleted, here or in the workspace a borrowed one borrows from, and
+    /// that this process may show.
     private static SpaceState Hosting(NativeSessionAuthority workspace, Guid spaceId) {
-        var session = workspace.Current;
-        var space = session.Spaces.FirstOrDefault(space => space.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
-        if (session.SpaceDeletions.Any(deletion => deletion.SpaceId == spaceId)) throw new Rejected(new SpaceBeingDeleted(spaceId));
+        var space = workspace.Current.Spaces.FirstOrDefault(space => space.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
+        if (workspace.IsDeleting(spaceId)) throw new Rejected(new SpaceBeingDeleted(spaceId));
         if (workspace.IsLocked(space)) throw new Rejected(new SpaceLocked(spaceId));
         return space;
     }
 
-    /// A tab owns one page at a time. Whether the workspace holds the tab is
-    /// not checked yet: selection can present a tab before the core's session
-    /// has it, and an `UnknownTab` rejection arrives with the session intents.
-    private void RequireUnowned(Guid workspaceId, Guid? tabId, Page? moving) {
+    /// A window hosts one page for a tab at a time. Whether the workspace holds
+    /// the tab is not checked yet: selection can present a tab before the
+    /// core's session has it, and an `UnknownTab` rejection arrives with the
+    /// session intents.
+    private void RequireUnowned(Guid workspaceId, Guid windowId, Guid? tabId, Page? moving) {
         if (tabId is not { } tab) return;
-        if (open.Values.FirstOrDefault(page => page != moving && page.WorkspaceId == workspaceId && page.TabId == tab) is { } owner)
+        if (open.Values.FirstOrDefault(page => page != moving && page.WorkspaceId == workspaceId && page.WindowId == windowId
+            && page.TabId == tab) is { } owner)
             throw new Rejected(new TabAlreadyHasPage(tab, owner.Id));
     }
 

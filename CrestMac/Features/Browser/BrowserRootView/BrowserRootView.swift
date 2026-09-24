@@ -89,7 +89,7 @@ struct BrowserRootView: View {
     let browser = BrowserRootPreviewFixture.makeBrowser()
     BrowserRootView(
         browser: browser,
-        pages: BrowserPagePool(),
+        pages: BrowserPagePool(browser: browser),
         chrome: BrowserRootPreviewFixture.makeChrome(state: .docked),
         transientBrowsing: BrowserTransientBrowsingCoordinator(),
         windowState: BrowserRootPreviewFixture.makeWindowState(
@@ -106,7 +106,7 @@ struct BrowserRootView: View {
     let browser = BrowserRootPreviewFixture.makeBrowser()
     BrowserRootView(
         browser: browser,
-        pages: BrowserPagePool(),
+        pages: BrowserPagePool(browser: browser),
         chrome: BrowserRootPreviewFixture.makeChrome(state: .collapsed),
         transientBrowsing: BrowserTransientBrowsingCoordinator(),
         windowState: BrowserRootPreviewFixture.makeWindowState(
@@ -123,7 +123,7 @@ struct BrowserRootView: View {
     let browser = BrowserRootPreviewFixture.makeBrowser()
     BrowserRootView(
         browser: browser,
-        pages: BrowserPagePool(),
+        pages: BrowserPagePool(browser: browser),
         chrome: BrowserRootPreviewFixture.makeChrome(state: .commandPalette),
         transientBrowsing: BrowserTransientBrowsingCoordinator(),
         windowState: BrowserRootPreviewFixture.makeWindowState(

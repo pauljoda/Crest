@@ -11,12 +11,8 @@ import XCTest
 final class MobileBrowserPageMessageRoutingTests: XCTestCase {
     func testCredentialMessagesFromAWebViewSharingTheBridgeAreIgnored() async throws {
         let space = makeSpace(index: 1)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            websiteDataStore: WKWebsiteDataStore.nonPersistent(),
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         page.webView.loadSimulatedRequest(
             URLRequest(url: try XCTUnwrap(URL(string: "https://opener.crest.test/home"))),
             responseHTML: "<!doctype html><p>Opener</p>"
@@ -66,12 +62,8 @@ final class MobileBrowserPageMessageRoutingTests: XCTestCase {
 
     func testAPageStillHandlesCredentialMessagesFromItsOwnWebView() async throws {
         let space = makeSpace(index: 2)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            websiteDataStore: WKWebsiteDataStore.nonPersistent(),
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         page.webView.loadSimulatedRequest(
             URLRequest(url: try XCTUnwrap(URL(string: "https://login.crest.test/oauth"))),
             responseHTML: Self.loginDocument
@@ -106,6 +98,23 @@ final class MobileBrowserPageMessageRoutingTests: XCTestCase {
           <button type="button">Sign In</button>
         </form>
         """
+
+    /// Opens the page for `space`'s first tab through `browser`'s core, as a
+    /// page store opens one. Keep `browser` alive while the page is in use.
+    private func openPage(in space: BrowserSpace, through browser: BrowserStore) throws -> MobileBrowserPage {
+        let tab = try XCTUnwrap(space.tabs.first)
+        return try XCTUnwrap(
+            browser.openPage(in: space.id, for: tab.id) { corePage in
+                MobileBrowserPage(
+                    corePage: corePage,
+                    tab: tab,
+                    space: space,
+                    websiteDataStore: WKWebsiteDataStore.nonPersistent(),
+                    openNewTab: { _ in }
+                )
+            }?.built as? MobileBrowserPage
+        )
+    }
 
     private func makeSpace(index: Int) -> BrowserSpace {
         let tab = BrowserTab.startPage(

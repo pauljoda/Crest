@@ -8,14 +8,10 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
 
     // MARK: - Reclaimed web-content processes
 
-    func testTerminationOffScreenNeitherReloadsNorSpendsTheRecoveryBudget() {
+    func testTerminationOffScreenNeitherReloadsNorSpendsTheRecoveryBudget() throws {
         let space = makeSpace(index: 1)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            websiteDataStore: WKWebsiteDataStore.nonPersistent(),
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         XCTAssertNil(page.webView.window, "A resident background page is attached to no window.")
 
         page.recordWebContentTermination()
@@ -34,7 +30,8 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
             session: BrowserSession(spaces: [space]),
             window: .preview(showing: space.id, tabs: [space.id: space.tabs[0].id])
         )
-        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let pages = MobileBrowserPageStore(
+            browser: .hostingPages(session.session), usesEphemeralWebsiteDataStores: true)
         pages.select(session: session)
         let page = try XCTUnwrap(pages.activePage)
 
@@ -57,12 +54,8 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
 
     func testTheAppInitiatedMarkerIsConsumedByTheNavigationItAuthorized() throws {
         let space = makeSpace(index: 4)
-        let page = MobileBrowserPage(
-            tab: space.tabs[0],
-            space: space,
-            websiteDataStore: WKWebsiteDataStore.nonPersistent(),
-            openNewTab: { _ in }
-        )
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        let page = try openPage(in: space, through: browser)
         let fileURL = URL(fileURLWithPath: "/tmp/crest-mobile-fixture.html")
         let replay = MobileReplayNavigationAction(url: fileURL)
 
@@ -84,6 +77,23 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
                 isAppInitiated: page.isAppInitiated(replay)
             ),
             .blocked
+        )
+    }
+
+    /// Opens the page for `space`'s first tab through `browser`'s core, as a
+    /// page store opens one. Keep `browser` alive while the page is in use.
+    private func openPage(in space: BrowserSpace, through browser: BrowserStore) throws -> MobileBrowserPage {
+        let tab = try XCTUnwrap(space.tabs.first)
+        return try XCTUnwrap(
+            browser.openPage(in: space.id, for: tab.id) { corePage in
+                MobileBrowserPage(
+                    corePage: corePage,
+                    tab: tab,
+                    space: space,
+                    websiteDataStore: WKWebsiteDataStore.nonPersistent(),
+                    openNewTab: { _ in }
+                )
+            }?.built as? MobileBrowserPage
         )
     }
 

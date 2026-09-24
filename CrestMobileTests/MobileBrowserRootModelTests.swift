@@ -727,8 +727,8 @@ final class MobileBrowserRootModelTests: XCTestCase {
         startupBehavior: BrowserStartupBehavior,
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController()
     ) -> MobileBrowserRootFixture {
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: spaces),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: spaces),
             showing: selectedSpaceID,
             // Every Space shows its first tab, as a window restoring them would.
             tabs: Dictionary(
@@ -736,6 +736,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             browsingMode: browsingMode
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: true,
             contentRuleListProvider: EmptyMobileRootContentRuleListProvider()

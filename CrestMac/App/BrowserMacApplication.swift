@@ -34,14 +34,15 @@ final class BrowserMacApplication {
     let siteControlAnchor: BrowserSiteControlAnchor?
 
     /// - Parameters:
-    ///   - makePageEngine: The engine behind each page; nil composes WebKit.
+    ///   - defaultEngine: The engine new pages open on; nil makes it WebKit,
+    ///     which every composition registers.
     ///   - siteControlAnchor: A view an engine anchors its popups to behind
     ///     each window's Site Controls button.
     ///   - reviewPersistenceID: The isolated store a review build of this
     ///     composition keeps, so each engine's review app has its own.
     init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil,
         profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
-        makePageEngine: BrowserPageEngineMaker? = nil,
+        defaultEngine: (any EngineBinding)? = nil,
         siteControlAnchor: BrowserSiteControlAnchor? = nil,
         reviewPersistenceID: String = "core-native-ui-review") throws {
         self.siteControlAnchor = siteControlAnchor
@@ -73,6 +74,8 @@ final class BrowserMacApplication {
         // both browsing modes shares it, and standard and private windows each
         // share one download center over it.
         let core = try BrowserStore.launchCore(for: launchEnvironment)
+        core.engines.register(WebKitEngineBinding(), isDefault: defaultEngine == nil)
+        if let defaultEngine { core.engines.register(defaultEngine, isDefault: true) }
         let browser = try BrowserStore.production(core: core, launchEnvironment: launchEnvironment)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
@@ -147,12 +150,12 @@ final class BrowserMacApplication {
             core.addShowcaseDownloads(profileID: profileID)
         }
         let pages = BrowserPagePool(
+            browser: browser,
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesEphemeralProfileStorage,
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter,
             mediaSessionStore: mediaSessions,
-            core: core,
             passkeyAccess: passkeyAccess,
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
@@ -170,7 +173,6 @@ final class BrowserMacApplication {
                 )
             },
             profileRemover: profileRemover,
-            makePageEngine: makePageEngine,
             tabStateArchive: tabStateArchive,
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in browser.openNewTab(url: url) },
@@ -204,16 +206,15 @@ final class BrowserMacApplication {
             }
         )
         let privatePages = BrowserPagePool(
+            browser: privateBrowser,
             // A private window can hold as many live web views as a standard one,
             // and they are the least surprising ones to lose: a private page comes
             // back by reload because it deliberately archives no session state.
             monitorsMemoryPressure: !usesIsolatedLaunch,
             browsingMode: .privateBrowsing,
             permissionCenter: BrowserSitePermissionCenter(),
-            core: core,
             passkeyAccess: passkeyAccess,
             profileRemover: profileRemover,
-            makePageEngine: makePageEngine,
             // The private pool answers to the private store, so a popup from a
             // private page can only ever land in a private tab.
             popupTabHost: privateBrowser.popupTabHost,
@@ -343,6 +344,7 @@ final class BrowserMacApplication {
             .environment(softwareUpdates)
             .environment(passkeyAccess)
             .environment(browser.core)
+            .environment(browser.core.engines)
             .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
             .environment(\.browserSiteControlAnchor, siteControlAnchor)
             .modifier(BrowserSoftwareUpdateDetailsPresentation())
@@ -367,6 +369,7 @@ final class BrowserMacApplication {
         .environment(softwareUpdates)
         .environment(passkeyAccess)
         .environment(privateBrowser.core)
+        .environment(privateBrowser.core.engines)
         .environment(
             \.browserSidebarWidgetRuntime,
             sidebarWidgets

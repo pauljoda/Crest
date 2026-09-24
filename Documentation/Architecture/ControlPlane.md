@@ -159,14 +159,20 @@ created for a WebKit page. Chromium snapshots come from its compositor, and
 idle-tab decisions use Chromium playback, capture and picture-in-picture state.
 Missing media observations keep the page resident until its engine can answer.
 
-The process composition registers its native engine with each core session
-using the v1 capability descriptor. Registration
-is local, immutable for that session, and excluded from persistence and sync.
-A restored session accepts the destination device's engine without changing shared
-browser records. Required page/navigation contracts must be supported at version
-1; unverified, unavailable and unknown capabilities do not authorize a feature.
-The native page port exposes this declaration without crossing the ABI for each
-interaction. Document export, printing, full-page capture and inspector commands
+The process composition registers its engine bindings with the app's core
+through `crest_engine.h`: WebKit always, and Chromium as the default in the
+Chromium product. Registration carries the capabilities the engine supports, is
+local to the process, and is excluded from persistence and sync, so a restored
+session accepts the destination device's engine without changing shared browser
+records. Every engine must support the required page, navigation and profile
+contracts; unverified, unavailable and unknown capabilities do not authorize a
+feature. The native page port exposes this declaration without crossing the ABI
+for each interaction. The core owns page identity: a pool or page store opens
+each page through the core (`OpenPage`) from its window, hands a page to another
+owner (`MovePage`) and releases it (`ReleasePage`), and the core refuses a page
+in a locked Space, in one being deleted or for a tab that already has one. It
+asks the page's engine to create and close the engine's page, and the binding
+reports what the engine did. Document export, printing, full-page capture and inspector commands
 now use native engine services. Save panels and print sheets remain native UI.
 The command route and developer capture controls consult the registered services;
 Chromium exports PDFs, full-page PNG captures and MHTML archives through a fixed,
@@ -544,7 +550,7 @@ compositions of that UI, not separate browser interfaces.
 | --- | --- |
 | `CrestCore.Domain` | Workspace, Space, profile identity, tab organization, history, archive and sync rules |
 | `CrestCore.Application` | Accepted session ownership, semantic commands, storage reservations, sync projection and materialization |
-| `CrestCore.Contracts` | Strict JSON parsing, adapter descriptors and protocol validation |
+| `CrestCore.Contracts` | Typed contract records, strict JSON parsing and protocol validation |
 | `CrestCore.Native` | Exception-contained NativeAOT C exports and numeric handles |
 | `CrestShared/Infrastructure/ControlPlane` | Original UI adapters, accepted session projections and checkpoint handles |
 | `CrestShared/Infrastructure/Engines` | Registered native page, host-command and service contracts |

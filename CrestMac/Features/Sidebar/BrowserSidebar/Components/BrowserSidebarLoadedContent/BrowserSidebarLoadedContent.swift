@@ -389,7 +389,7 @@ final class BrowserSidebarWidgetDeckScrollObserverView: NSView {
     @Previewable @Namespace var commandSurfaceNamespace
     @Previewable @Namespace var tabPromotionNamespace
     let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    let pages = BrowserSidebarPreviewFixture.makePages()
+    let pages = BrowserSidebarPreviewFixture.makePages(for: browser)
     let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
     BrowserSidebar(
         browser: browser,

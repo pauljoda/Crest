@@ -9,11 +9,11 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             BrowserStartupBehavior.showStartPage,
             .lastActiveTab,
         ] {
-            let rootBrowser = BrowserStore(
-                session: .preview
+            let rootBrowser = BrowserStore.hostingPages(
+                .preview
             )
             let registry = MobileBrowserPageStoreRegistry(
-                primary: MobileBrowserPageStore()
+                primary: MobileBrowserPageStore(browser: rootBrowser)
             )
             let model = MobileBrowserWindowSceneModel(
                 id: BrowserWindowID(),
@@ -39,9 +39,9 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
     }
 
     func testSetupLoadsItsNativeRuntimeBeforeOpeningTheDefaultStartupBrowser() async throws {
-        let rootBrowser = BrowserStore(session: .preview)
+        let rootBrowser = BrowserStore.hostingPages(.preview)
         let registry = MobileBrowserPageStoreRegistry(
-            primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
+            primary: MobileBrowserPageStore(browser: rootBrowser, usesEphemeralWebsiteDataStores: true))
         let model = MobileBrowserWindowSceneModel(
             id: BrowserWindowID(), rootBrowser: rootBrowser, permissionCenter: BrowserSitePermissionCenter(),
             pageStoreRegistry: registry, spaceAccess: BrowserSpaceAccessController(), tabStateArchive: nil,
@@ -75,11 +75,12 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
     }
 
     func testIsolatedWindowModelUsesOnlyEphemeralWebsiteData() throws {
-        let rootBrowser = BrowserStore(
-            session: .preview
+        let rootBrowser = BrowserStore.hostingPages(
+            .preview
         )
         let registry = MobileBrowserPageStoreRegistry(
             primary: MobileBrowserPageStore(
+                browser: rootBrowser,
                 usesEphemeralWebsiteDataStores: true
             )
         )
@@ -114,11 +115,11 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Windows", symbol: "globe", accent: .indigo,
             folders: [], tabs: [sharedTab, otherTab])
-        let root = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let root = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id, tabs: [space.id: sharedTab.id])
         let registry = MobileBrowserPageStoreRegistry(
-            primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
+            primary: MobileBrowserPageStore(browser: root, usesEphemeralWebsiteDataStores: true))
         let permissionCenter = BrowserSitePermissionCenter()
         let spaceAccess = BrowserSpaceAccessController()
         let windowLayouts = BrowserWindowLayouts(defaults: nil)

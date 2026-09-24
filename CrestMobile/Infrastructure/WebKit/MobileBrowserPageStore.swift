@@ -86,6 +86,9 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private var peekPageLeases:
         [UUID: (request: BrowserPeekRequest, lease: MobileBrowserTransientPageLease)] = [:]
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
+    /// The window this store hosts pages for. Its pages open through the core
+    /// from this window, in its workspace.
+    @ObservationIgnored let browser: BrowserStore
     @ObservationIgnored private var spacesReleasingData: Set<SpaceID> = []
     @ObservationIgnored private var spacesDeletingData: Set<SpaceID> = []
     /// Where unloaded tabs leave their WebKit session state. Its archive is nil
@@ -93,6 +96,7 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private let tabState: BrowserTabStateCoordinator
 
     init(
+        browser: BrowserStore,
         monitorsMemoryPressure: Bool = false,
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
@@ -121,6 +125,7 @@ final class MobileBrowserPageStore:
             await page.residencyDecision(isSelected: isSelected)
         }
     ) {
+        self.browser = browser
         self.residencyDecisionProvider = residencyDecisionProvider
         self.browsingMode = browsingMode
         self.usesEphemeralWebsiteDataStores =
@@ -141,11 +146,11 @@ final class MobileBrowserPageStore:
         self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
         // Windows share their browsing mode's downloads; a store made on its
-        // own, such as a preview's, gets a memory-only core of its own.
+        // own, such as a preview's, keeps them over its window's core.
         let downloads =
             downloads
             ?? MobileBrowserDownloads(
-                core: CrestCore(),
+                core: browser.core,
                 browsingMode: browsingMode,
                 permissionCenter: permissionCenter,
                 loadCredential: loadHTTPAuthenticationCredential,
@@ -254,10 +259,9 @@ final class MobileBrowserPageStore:
 
     func loadOpenedLink(_ registration: BrowserModifiedLinkRegistration, request: URLRequest, selecting: Bool) {
         let space = registration.space
-        guard registration.tab.nativeContent == nil, !spacesReleasingData.contains(space.id),
-            !spacesDeletingData.contains(space.id)
+        guard registration.tab.nativeContent == nil,
+            let page = makeResidentPage(for: registration.tab, in: space, loadsInitialURL: false)
         else { return }
-        let page = makeResidentPage(for: registration.tab, in: space, loadsInitialURL: false)
         pagesByTabID[registration.tab.id] = page
         residencyRevision &+= 1
         observeBackgroundPage(page, in: space)
@@ -316,9 +320,7 @@ final class MobileBrowserPageStore:
         loadsInitialURL: Bool = true
     ) -> Bool {
         guard let space = session.selectedSpace,
-            let tab = session.selectedTab,
-            !spacesReleasingData.contains(space.id),
-            !spacesDeletingData.contains(space.id)
+            let tab = session.selectedTab
         else {
             return false
         }
@@ -356,15 +358,18 @@ final class MobileBrowserPageStore:
                 profileID: mismatched.profileID,
                 tabID: tab.id
             )
-            mismatched.prepareForSpaceDeletion()
+            mismatched.release(keepingState: false)
             inactiveSinceByTabID[tab.id] = nil
         }
 
-        let page = makeResidentPage(
-            for: tab,
-            in: space,
-            loadsInitialURL: loadsInitialURL
-        )
+        // The core refuses a page in a locked Space or one being deleted.
+        guard
+            let page = makeResidentPage(
+                for: tab,
+                in: space,
+                loadsInitialURL: loadsInitialURL
+            )
+        else { return false }
         pagesByTabID[tab.id] = page
         residencyRevision &+= 1
         activate(page, presenting: presented, at: time)
@@ -396,9 +401,7 @@ final class MobileBrowserPageStore:
         at time: Date = .now
     ) -> MobileBrowserPage? {
         guard let space = session.selectedSpace,
-            let tab = space.tabs.first(where: { $0.id == tabID }),
-            !spacesReleasingData.contains(space.id),
-            !spacesDeletingData.contains(space.id)
+            let tab = space.tabs.first(where: { $0.id == tabID })
         else { return nil }
 
         if tab.nativeContent != nil {
@@ -426,11 +429,11 @@ final class MobileBrowserPageStore:
                 profileID: mismatched.profileID,
                 tabID: tabID
             )
-            mismatched.prepareForSpaceDeletion()
+            mismatched.release(keepingState: false)
             inactiveSinceByTabID[tabID] = nil
         }
 
-        let page = makeResidentPage(for: tab, in: space)
+        guard let page = makeResidentPage(for: tab, in: space) else { return nil }
         pagesByTabID[tabID] = page
         stampPreparedPageIfNeeded(tabID, at: time)
         residencyRevision &+= 1
@@ -528,7 +531,7 @@ final class MobileBrowserPageStore:
         for tabID in reconciliation.tabIDsToArchive {
             archiveTabState(for: tabID)
         }
-        releasePages(for: reconciliation.invalidTabIDs)
+        releasePages(for: reconciliation.invalidTabIDs, keepingStateOf: reconciliation.tabIDsToArchive)
         for context in reconciliation.navigationContexts {
             context.page.updateNavigationContext(
                 tab: context.tab,
@@ -627,7 +630,7 @@ final class MobileBrowserPageStore:
         guard browsingMode.isPrivate else { return }
         nativeTabs.reconcile(validTabIDs: [])
         for page in pagesByTabID.values {
-            page.prepareForSpaceDeletion()
+            page.release(keepingState: false)
         }
         pagesByTabID.removeAll()
         backgroundPageSnapshots.removeAll()
@@ -697,30 +700,24 @@ final class MobileBrowserPageStore:
         onUserActivity: @escaping () -> Void = {},
         onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> MobileBrowserTransientPageLease? {
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        guard canHostTransientPage(matching: assignment) else { return nil }
         let transientTab = BrowserTab(
             title: url.host() ?? url.absoluteString,
             url: url,
             placement: .current
         )
-        let initialPage = makeTransientPage(
-            tab: transientTab,
-            in: space
-        )
+        // The core decides whether the Space may host a page, for the first
+        // page and for every page memory pressure makes the lease rebuild.
+        guard let initialPage = makeTransientPage(tab: transientTab, in: space) else { return nil }
         // Only the first page replays the staged request; a rebuilt page
         // after memory pressure reloads its last URL like any other.
         if let engineNavigation,
             !initialPage.pageEngine.stageNavigation(engineNavigation, expecting: url) {
-            initialPage.prepareForSpaceDeletion()
+            initialPage.release(keepingState: false)
             return nil
         }
         initialPage.opensModifiedLinksInForeground = opensModifiedLinksInForeground
         let rebuild: () -> MobileBrowserPage? = { [weak self] in
-            guard let self,
-                canHostTransientPage(matching: assignment)
-            else { return nil }
-            let page = makeTransientPage(tab: transientTab, in: space)
+            guard let self, let page = makeTransientPage(tab: transientTab, in: space) else { return nil }
             page.opensModifiedLinksInForeground = opensModifiedLinksInForeground
             return page
         }
@@ -738,33 +735,47 @@ final class MobileBrowserPageStore:
         return lease
     }
 
+    /// Opens a transient request's page through the core; `tab` is the
+    /// request's own stand-in, which no Space holds. Nil when the core refuses it.
     private func makeTransientPage(
         tab: BrowserTab,
         in space: BrowserSpace
-    ) -> MobileBrowserPage {
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            downloadCenter: downloadCenter,
-            permissionCenter: permissionCenter,
-            serverTrustOverrides: serverTrustOverrides,
-            websiteDataStore: websiteDataStore(for: space.profile),
-            contentRuleLists: contentRuleLists(for: space),
-            allowsCredentialAccess: !browsingMode.isPrivate,
-            isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
-            defaultPageZoom: pageZoomPreferences.defaultZoom,
-            loadsInitialURL: false,
-            loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
-                try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
-            },
-            saveHTTPAuthenticationCredential: { [saveHTTPAuthenticationCredential] request in
-                try await saveHTTPAuthenticationCredential(request, space.id)
-            },
-            linkDestinationHost: linkDestinationHost,
-            openNewTab: openNewTab,
-            openModifiedLink: openModifiedLink,
-            openPeek: openPeek
-        )
+    ) -> MobileBrowserPage? {
+        opened(
+            browser.openPage(in: space.id, for: nil) { [self] corePage in
+                MobileBrowserPage(
+                    corePage: corePage,
+                    tab: tab,
+                    space: space,
+                    downloadCenter: downloadCenter,
+                    permissionCenter: permissionCenter,
+                    serverTrustOverrides: serverTrustOverrides,
+                    websiteDataStore: websiteDataStore(for: space.profile),
+                    contentRuleLists: contentRuleLists(for: space),
+                    allowsCredentialAccess: !browsingMode.isPrivate,
+                    isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
+                    defaultPageZoom: pageZoomPreferences.defaultZoom,
+                    loadsInitialURL: false,
+                    loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
+                        try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
+                    },
+                    saveHTTPAuthenticationCredential: { [saveHTTPAuthenticationCredential] request in
+                        try await saveHTTPAuthenticationCredential(request, space.id)
+                    },
+                    linkDestinationHost: linkDestinationHost,
+                    openNewTab: openNewTab,
+                    openModifiedLink: openModifiedLink,
+                    openPeek: openPeek
+                )
+            })
+    }
+
+    /// The page the core opened and WebKit built, now hosted by this store.
+    private func opened(_ opening: Engines.OpenedPage?) -> MobileBrowserPage? {
+        guard let opening else { return nil }
+        guard let page = opening.built as? MobileBrowserPage else {
+            preconditionFailure("WebKit built something other than a mobile page.")
+        }
         page.host = self
         return page
     }
@@ -775,17 +786,19 @@ final class MobileBrowserPageStore:
         as tabID: TabID,
         in space: BrowserSpace
     ) -> Bool {
-        guard !spacesReleasingData.contains(space.id),
-            !spacesDeletingData.contains(space.id),
-            let page = lease.page
-        else { return false }
+        guard let page = lease.page else { return false }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard lease.assignment == assignment,
             page.spaceID == assignment.spaceID,
             page.profileID == assignment.profileID,
-            let tab = space.tabs.first(where: { $0.id == tabID })
+            let tab = space.tabs.first(where: { $0.id == tabID }),
+            // The core gives the tab the page only while the tab has none.
+            browser.adoptPage(page.corePage, in: space.id, as: tabID)
         else { return false }
-        guard lease.relinquishPage() === page else { return false }
+        guard lease.relinquishPage() === page else {
+            _ = browser.adoptPage(page.corePage, in: space.id, as: nil)
+            return false
+        }
         page.opensModifiedLinksInForeground = false
         transientLeases.removeValue(forKey: lease.id)
         page.adopt(tabID: tabID, tab: tab)
@@ -793,13 +806,6 @@ final class MobileBrowserPageStore:
         residencyRevision &+= 1
         activate(page, at: .now)
         return true
-    }
-
-    private func canHostTransientPage(
-        matching assignment: BrowserSpaceRuntimeAssignment
-    ) -> Bool {
-        !spacesReleasingData.contains(assignment.spaceID)
-            && !spacesDeletingData.contains(assignment.spaceID)
     }
 
     /// Adopts the web view WebKit pre-made for a popup as a new selected tab in
@@ -821,18 +827,22 @@ final class MobileBrowserPageStore:
         selecting: Bool = true
     ) -> WKWebView? {
         guard tabID(for: opener) != nil,
-            !spacesReleasingData.contains(opener.spaceID),
-            !spacesDeletingData.contains(opener.spaceID),
+            !browser.deletingSpaceIDs.contains(opener.spaceID),
             let registration = popupTabHost.openTab(requestedURL, opener.spaceID, selecting),
             registration.space.id == opener.spaceID,
             registration.space.profile.id == opener.profileID
         else { return nil }
 
-        let page = makeResidentPage(
-            for: registration.tab,
-            in: registration.space,
-            adoptedConfiguration: configuration
-        )
+        guard
+            let page = makeResidentPage(
+                for: registration.tab,
+                in: registration.space,
+                adoptedConfiguration: configuration
+            )
+        else {
+            popupTabHost.closeTab(registration.tab.id, registration.space.id)
+            return nil
+        }
         page.markOpenedAsPopup()
         pagesByTabID[registration.tab.id] = page
         residencyRevision &+= 1
@@ -943,7 +953,7 @@ final class MobileBrowserPageStore:
         // was left.
         if preservingTabState { archiveTabState(for: tabID) }
         guard let page = pagesByTabID.removeValue(forKey: tabID) else { return }
-        page.prepareForSpaceDeletion()
+        page.release(keepingState: preservingTabState)
         inactiveSinceByTabID[tabID] = nil
         if activePage?.tabID == tabID { activePage = nil }
         // A hand unload is a request to put the page away, so the card goes with
@@ -1204,7 +1214,8 @@ final class MobileBrowserPageStore:
         return dataStore
     }
 
-    /// Builds a page for `tab` in `space`. `adoptedConfiguration` is WebKit's own
+    /// Opens a page for `tab` in `space` through the core and builds it; nil when
+    /// the core refuses the tab a page. `adoptedConfiguration` is WebKit's own
     /// popup configuration, which must be used exactly as handed over; passing it
     /// replaces the configuration the page would otherwise assemble and leaves
     /// the first navigation to WebKit.
@@ -1213,49 +1224,54 @@ final class MobileBrowserPageStore:
         in space: BrowserSpace,
         adoptedConfiguration: WKWebViewConfiguration? = nil,
         loadsInitialURL: Bool = true
-    ) -> MobileBrowserPage {
-        // Restoring WebKit's session state performs its own navigation, so the
-        // page must not also start the tab's URL: whichever path runs, exactly one
-        // navigation begins.
-        let archivedState =
-            loadsInitialURL && adoptedConfiguration == nil
-            ? tab.url.flatMap {
-                archivedInteractionState(
-                    for: tab,
-                    spaceID: space.id,
-                    profileID: space.profile.id,
-                    expecting: $0
-                )
-            }
-            : nil
-        let page = MobileBrowserPage(
-            tab: tab,
-            space: space,
-            downloadCenter: downloadCenter,
-            permissionCenter: permissionCenter,
-            serverTrustOverrides: serverTrustOverrides,
-            mediaSessionStore: mediaSessionStore,
-            websiteDataStore: websiteDataStore(for: space.profile),
-            adoptedConfiguration: adoptedConfiguration,
-            contentRuleLists: contentRuleLists(for: space),
-            allowsCredentialAccess: !browsingMode.isPrivate,
-            isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
-            defaultPageZoom: pageZoomPreferences.defaultZoom,
-            loadsInitialURL: loadsInitialURL
-                && adoptedConfiguration == nil
-                && archivedState == nil,
-            loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
-                try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
-            },
-            saveHTTPAuthenticationCredential: { [saveHTTPAuthenticationCredential] request in
-                try await saveHTTPAuthenticationCredential(request, space.id)
-            },
-            linkDestinationHost: linkDestinationHost,
-            openNewTab: openNewTab,
-            openModifiedLink: openModifiedLink,
-            openPeek: openPeek
-        )
-        page.host = self
+    ) -> MobileBrowserPage? {
+        var archivedState: Data?
+        let opening = browser.openPage(in: space.id, for: tab.id) { [self] corePage in
+            // Restoring WebKit's session state performs its own navigation, so the
+            // page must not also start the tab's URL: whichever path runs, exactly one
+            // navigation begins. Read only once the core opened the page, so a
+            // refused page leaves the archive as it was.
+            archivedState =
+                loadsInitialURL && adoptedConfiguration == nil
+                ? tab.url.flatMap {
+                    archivedInteractionState(
+                        for: tab,
+                        spaceID: space.id,
+                        profileID: space.profile.id,
+                        expecting: $0
+                    )
+                }
+                : nil
+            return MobileBrowserPage(
+                corePage: corePage,
+                tab: tab,
+                space: space,
+                downloadCenter: downloadCenter,
+                permissionCenter: permissionCenter,
+                serverTrustOverrides: serverTrustOverrides,
+                mediaSessionStore: mediaSessionStore,
+                websiteDataStore: websiteDataStore(for: space.profile),
+                adoptedConfiguration: adoptedConfiguration,
+                contentRuleLists: contentRuleLists(for: space),
+                allowsCredentialAccess: !browsingMode.isPrivate,
+                isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
+                defaultPageZoom: pageZoomPreferences.defaultZoom,
+                loadsInitialURL: loadsInitialURL
+                    && adoptedConfiguration == nil
+                    && archivedState == nil,
+                loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
+                    try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
+                },
+                saveHTTPAuthenticationCredential: { [saveHTTPAuthenticationCredential] request in
+                    try await saveHTTPAuthenticationCredential(request, space.id)
+                },
+                linkDestinationHost: linkDestinationHost,
+                openNewTab: openNewTab,
+                openModifiedLink: openModifiedLink,
+                openPeek: openPeek
+            )
+        }
+        guard let page = opened(opening) else { return nil }
         // Anything WebKit will not take falls through to the plain load the page
         // was told to skip.
         if let archivedState, let url = tab.url,
@@ -1325,9 +1341,12 @@ final class MobileBrowserPageStore:
         page.restoreWebContentIfNeeded()
     }
 
+    /// Releases the pages of `tabIDs`, saying for `kept` that their state was
+    /// archived first.
     @discardableResult
     private func releasePages(
-        for tabIDs: Set<TabID>
+        for tabIDs: Set<TabID>,
+        keepingStateOf kept: Set<TabID> = []
     ) -> [BrowserSpaceDataReleaseProbe] {
         var releasedAnyPage = false
         var probes: [BrowserSpaceDataReleaseProbe] = []
@@ -1335,7 +1354,7 @@ final class MobileBrowserPageStore:
             forgetBackgroundPageObservation(for: tabID)
             if let page = pagesByTabID.removeValue(forKey: tabID) {
                 probes.append(BrowserSpaceDataReleaseProbe(page))
-                page.prepareForSpaceDeletion()
+                page.release(keepingState: kept.contains(tabID))
                 releasedAnyPage = true
             }
         }
@@ -1436,7 +1455,7 @@ final class MobileBrowserPageStore:
             archiveTabState(for: tabID)
         }
         guard let page = pagesByTabID.removeValue(forKey: tabID) else { return }
-        page.prepareForSpaceDeletion()
+        page.release(keepingState: preservingTabState)
         residencyRevision &+= 1
         inactiveSinceByTabID[tabID] = nil
     }

@@ -37,7 +37,6 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
 
     func register(_ pool: BrowserPagePool) {
         pools[ObjectIdentifier(pool)] = WeakPool(pool)
-        for spaceID in spacesDeletingData { pool.setRuntimeCreationBlocked(true, in: spaceID) }
     }
 
     func register(
@@ -73,18 +72,15 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
         return BrowserPagePoolWindowRuntime(browser: browser, pages: pages)
     }
 
+    /// Releases every window's pages in the Space, then its data. The Space's
+    /// deletion is already recorded in the session, so the core opens no new
+    /// page there while this runs.
     func deleteData(for space: BrowserSpace) async throws {
         guard spacesDeletingData.insert(space.id).inserted else { return }
         defer { spacesDeletingData.remove(space.id) }
 
         pools = pools.filter { $0.value.value != nil }
         let livePools = [primary] + pools.values.compactMap(\.value).filter { $0 !== primary }
-        for pool in livePools { pool.setRuntimeCreationBlocked(true, in: space.id) }
-        defer {
-            for pool in livePools + pools.values.compactMap(\.value) {
-                pool.setRuntimeCreationBlocked(false, in: space.id)
-            }
-        }
         for pool in livePools where pool !== primary {
             await pool.releaseWindowRuntime(for: space)
         }

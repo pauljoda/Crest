@@ -7,8 +7,8 @@ import XCTest
 @MainActor
 final class BrowserGettingStartedTests: XCTestCase {
     func testNativeStateSurvivesSelectionAndEndsAtExplicitUnload() throws {
-        let browser = BrowserStore.preview()
-        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let browser = BrowserStore.hostingPages()
+        let pages = BrowserPagePool(browser: browser, usesEphemeralWebsiteDataStores: true)
         defer { pages.reconcile(validTabIDs: []) }
         let id = try XCTUnwrap(browser.openGettingStarted())
         pages.select(session: browser.presented)
@@ -73,8 +73,8 @@ final class BrowserGettingStartedTests: XCTestCase {
     }
 
     func testNativePressurePreservesPresentedCardsAndWindowTeardownReleasesState() async throws {
-        let browser = BrowserStore.preview()
-        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let browser = BrowserStore.hostingPages()
+        let pages = BrowserPagePool(browser: browser, usesEphemeralWebsiteDataStores: true)
         defer { pages.reconcile(validTabIDs: []) }
         let guide = try XCTUnwrap(browser.openGettingStarted())
         pages.select(session: browser.presented)
@@ -89,13 +89,13 @@ final class BrowserGettingStartedTests: XCTestCase {
     }
 
     func testNativeGuideReusesItsTabAndNeverAllocatesWebKit() throws {
-        let browser = BrowserStore.preview()
+        let browser = BrowserStore.hostingPages()
         let first = try XCTUnwrap(browser.openGettingStarted())
         XCTAssertEqual(browser.openGettingStarted(), first)
         XCTAssertEqual(browser.selectedSpace?.tabs.filter { $0.nativeContent == .gettingStarted }.count, 1)
         XCTAssertNil(browser.selectedTab?.url)
         XCTAssertFalse(try XCTUnwrap(browser.selectedTab).isStartPage)
-        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let pages = BrowserPagePool(browser: browser, usesEphemeralWebsiteDataStores: true)
         defer { pages.reconcile(validTabIDs: []) }
         pages.select(session: browser.presented)
         XCTAssertEqual(pages.activeTabID, first)

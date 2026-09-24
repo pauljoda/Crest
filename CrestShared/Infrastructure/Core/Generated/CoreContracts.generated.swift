@@ -576,6 +576,7 @@ struct MovePage: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID?
+    let windowID: UUID
 }
 
 struct OpenPage: Intent, Equatable, Sendable {

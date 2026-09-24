@@ -70,7 +70,10 @@ final class BrowserPagePool:
         set { runtimeStore.revision = newValue }
     }
     let runtimeStore: BrowserPageRuntimeStore
-    let windowID: BrowserWindowID
+    /// The window this pool hosts pages for. Its pages open through the core
+    /// from this window, in its workspace.
+    @ObservationIgnored let browser: BrowserStore
+    var windowID: BrowserWindowID { browser.windowID }
     @ObservationIgnored private weak var presentationWindow: NSWindow?
     private(set) var isWindowFocused = true
     var publishesPageMetadataCentrally: Bool { runtimeStore.publishesPageMetadataCentrally }
@@ -124,9 +127,6 @@ final class BrowserPagePool:
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
     @ObservationIgnored private let profileRemover: any BrowserEngineProfileRemoving
-    /// Builds the engine behind each new page. Nil builds a WebKit page from
-    /// this pool's own configuration, content rules and website data stores.
-    @ObservationIgnored private let makePageEngine: BrowserPageEngineMaker?
     /// Built-in content blocking, which only the WebKit engine applies.
     @ObservationIgnored let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
@@ -152,8 +152,8 @@ final class BrowserPagePool:
     @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
 
     init(
+        browser: BrowserStore,
         runtimeStore: BrowserPageRuntimeStore? = nil,
-        windowID: BrowserWindowID = BrowserWindowID(),
         profileDataStores: BrowserPageProfileDataStores? = nil,
         monitorsMemoryPressure: Bool = false,
         browsingMode: BrowserBrowsingMode = .standard,
@@ -165,7 +165,6 @@ final class BrowserPagePool:
             (any BrowserHostedWebNotificationCentering)? = nil,
         mediaSessionStore: BrowserMediaSessionStore? = nil,
         downloadCenter: BrowserDownloadCenter? = nil,
-        core: CrestCore = CrestCore(),
         passkeyAccess: BrowserPasskeyAccessController? = nil,
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
@@ -173,7 +172,6 @@ final class BrowserPagePool:
             @escaping HTTPAuthenticationCredentialSaver = { _, _ in },
         profileRemover:
             any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
-        makePageEngine: BrowserPageEngineMaker? = nil,
         contentRuleListProvider: (any BrowserContentRuleListProviding)? = nil,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
         popupTabHost: BrowserPopupTabHost = .unavailable,
@@ -193,6 +191,8 @@ final class BrowserPagePool:
         }
     ) {
         let dialogPresenter = BrowserDialogPresenter()
+        let core = browser.core
+        self.browser = browser
         self.residencyDecisionProvider = residencyDecisionProvider
         self.browsingMode = browsingMode
         self.usesEphemeralWebsiteDataStores =
@@ -204,7 +204,6 @@ final class BrowserPagePool:
                 archive: self.usesEphemeralWebsiteDataStores ? nil : tabStateArchive
             )
         self.runtimeStore = owner
-        self.windowID = windowID
         self.profileDataStores = profileDataStores ?? BrowserPageProfileDataStores()
         self.monitorsMemoryPressure = monitorsMemoryPressure
         let contentRuleListProvider =
@@ -220,7 +219,6 @@ final class BrowserPagePool:
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
         self.profileRemover = profileRemover
-        self.makePageEngine = makePageEngine
         contentBlocking = BrowserContentBlockingController(provider: contentRuleListProvider)
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
@@ -331,6 +329,8 @@ final class BrowserPagePool:
             source.runtimeStore.removePresentation(of: tab.id)
             return true
         }
+        // The page keeps its engine page and moves to this window's workspace.
+        guard browser.adoptPage(runtime.page.corePage, in: space.id, as: tab.id) else { return false }
         source.tabRuntimes.removeValue(forKey: tab.id)
         source.inactiveSinceByTabID[tab.id] = nil
         source.tabState.discardState(matching: assignment)
@@ -353,10 +353,10 @@ final class BrowserPagePool:
         as tab: BrowserTab,
         in space: BrowserSpace
     ) -> Bool {
+        // The core's tear-off question already refused a Space being deleted
+        // or locked, and moving the page asks the core again.
         guard assignment.tabID == tab.id, assignment.spaceID == space.id,
-            assignment.profileID == space.profile.id,
-            !isRuntimeCreationBlocked(in: space.id),
-            !source.isRuntimeCreationBlocked(in: space.id)
+            assignment.profileID == space.profile.id
         else { return false }
         guard source.runtimeStore !== runtimeStore else { return true }
         guard tabRuntimes[tab.id] == nil, !nativeTabs.tabIDs.contains(tab.id) else { return false }
@@ -371,21 +371,6 @@ final class BrowserPagePool:
         releaseWindowPresentation()
         reconcile(validTabIDs: [])
         releaseAllTransientPages()
-    }
-
-    func setRuntimeCreationBlocked(_ blocked: Bool, in spaceID: SpaceID) {
-        if blocked {
-            runtimeStore.blockedSpaces.insert(spaceID)
-            profileDataStores.blockedSpaces.insert(spaceID)
-        } else {
-            runtimeStore.blockedSpaces.remove(spaceID)
-            profileDataStores.blockedSpaces.remove(spaceID)
-        }
-    }
-
-    private func isRuntimeCreationBlocked(in spaceID: SpaceID) -> Bool {
-        spacesReleasingData.contains(spaceID) || spacesDeletingData.contains(spaceID)
-            || runtimeStore.blockedSpaces.contains(spaceID) || profileDataStores.blockedSpaces.contains(spaceID)
     }
 
     func bindRuntimeRouting(_ runtime: BrowserTabRuntime, tabID: TabID) {
@@ -420,7 +405,6 @@ final class BrowserPagePool:
 
     func makeWindowPool(
         browser: BrowserStore,
-        windowID: BrowserWindowID,
         sharesRuntimes: Bool,
         transientBrowsing: BrowserTransientBrowsingCoordinator,
         spaceAccess: BrowserSpaceAccessController
@@ -428,14 +412,14 @@ final class BrowserPagePool:
         let owner = sharesRuntimes ? runtimeStore : BrowserPageRuntimeStore()
         owner.publishesPageMetadataCentrally = true
         let pool = BrowserPagePool(
-            runtimeStore: owner, windowID: windowID, profileDataStores: profileDataStores,
+            browser: browser, runtimeStore: owner, profileDataStores: profileDataStores,
             monitorsMemoryPressure: monitorsMemoryPressure, browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             pageZoomPreferences: pageZoomPreferences,
 
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter, mediaSessionStore: mediaSessionStore,
-            downloadCenter: downloadCenter, core: downloadCenter.core, passkeyAccess: passkeyAccess,
+            downloadCenter: downloadCenter, passkeyAccess: passkeyAccess,
             loadHTTPAuthenticationCredential: { [weak browser] protectionSpace, spaceID in
                 try await browser?.httpAuthenticationCredential(for: protectionSpace, in: spaceID)
             },
@@ -444,7 +428,7 @@ final class BrowserPagePool:
                     username: request.username, password: request.password, protectionSpace: request.protectionSpace,
                     in: spaceID, replacing: request.replacing)
             },
-            profileRemover: profileRemover, makePageEngine: makePageEngine,
+            profileRemover: profileRemover,
             contentRuleListProvider: contentRuleListProvider,
             popupTabHost: browser.popupTabHost,
             openNewTab: { [weak browser] url in browser?.openNewTab(url: url) },
@@ -617,7 +601,7 @@ final class BrowserPagePool:
             Self.lifecycleSignposter.endInterval("Select Browser Page", interval)
         }
 
-        guard let space, !isRuntimeCreationBlocked(in: space.id) else {
+        guard let space else {
             deactivatePagePresentation(at: time)
             return []
         }
@@ -633,8 +617,10 @@ final class BrowserPagePool:
         // the destination page can hide the previous native surface first.
         requestAutomaticPictureInPicture(forDeparturesBefore: members.map(\.id))
         for member in members { nativeTabs.load(tab: member, space: space, at: time) }
-        let memberPages = members.filter { $0.nativeContent == nil }.map {
-            (tab: $0, page: page(for: $0, space: space))
+        // A card the core refuses a page, such as one in a locked Space,
+        // presents without one.
+        let memberPages = members.filter { $0.nativeContent == nil }.compactMap { member in
+            page(for: member, space: space).map { (tab: member, page: $0) }
         }
         activate(tab.id, presenting: members.map(\.id), at: time)
         return memberPages
@@ -654,11 +640,11 @@ final class BrowserPagePool:
         selecting: Bool
     ) {
         guard let url = request.url,
-            let registration = openModifiedLink(url, spaceID, selecting)
+            let registration = openModifiedLink(url, spaceID, selecting),
+            let page = page(for: registration.tab, space: registration.space)
         else {
             return
         }
-        let page = page(for: registration.tab, space: registration.space)
         observeBackgroundPage(
             page,
             for: registration.tab.id,
@@ -857,7 +843,7 @@ final class BrowserPagePool:
         for tabID in reconciliation.tabIDsToArchive {
             archiveTabState(for: tabID)
         }
-        releasePages(for: reconciliation.invalidTabIDs)
+        releasePages(for: reconciliation.invalidTabIDs, keepingStateOf: reconciliation.tabIDsToArchive)
         for context in reconciliation.navigationContexts {
             context.page.updateNavigationContext(
                 tab: context.tab,
@@ -1071,18 +1057,15 @@ final class BrowserPagePool:
         onUserActivity: @escaping () -> Void = {},
         onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> BrowserTransientPageLease? {
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        guard canHostTransientPage(matching: assignment) else { return nil }
         var pendingNavigation = engineNavigation
+        // The core decides whether the Space may host a page, for the first
+        // page and for every page memory pressure makes the lease rebuild.
         let makeTransientPage = { [weak self] () -> BrowserPage? in
-            guard let self,
-                canHostTransientPage(matching: assignment)
-            else { return nil }
-            let page = makePage(space: space)
+            guard let self, let page = makePage(space: space) else { return nil }
             if let navigation = pendingNavigation {
                 pendingNavigation = nil
                 guard page.pageEngine.stageNavigation(navigation, expecting: url) else {
-                    page.prepareForSpaceDeletion()
+                    page.release(keepingState: false)
                     return nil
                 }
             }
@@ -1110,9 +1093,7 @@ final class BrowserPagePool:
         as tabID: TabID,
         in space: BrowserSpace
     ) -> Bool {
-        guard !isRuntimeCreationBlocked(in: space.id),
-            let page = lease.page
-        else { return false }
+        guard let page = lease.page else { return false }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard lease.assignment == assignment,
             page.spaceID == assignment.spaceID,
@@ -1121,11 +1102,16 @@ final class BrowserPagePool:
         // Move the renderer before Quick Window dismissal destroys its old
         // host. SwiftUI attaches the retained native view on a later update.
         // An engine that cannot move a live page between windows leaves the
-        // caller to load the tab afresh instead.
+        // caller to load the tab afresh instead, and so does the core when
+        // the tab may not take the page.
         guard page.pageEngine.registration.supports(.workspaceTransfer),
-            page.pageEngine.transferOwnership(to: windowID)
+            page.pageEngine.transferOwnership(to: windowID),
+            browser.adoptPage(page.corePage, in: space.id, as: tabID)
         else { return false }
-        guard lease.relinquishPage() === page else { return false }
+        guard lease.relinquishPage() === page else {
+            _ = browser.adoptPage(page.corePage, in: space.id, as: nil)
+            return false
+        }
         page.opensModifiedLinksInForeground = false
         transientLeases.removeValue(forKey: lease.id)
         retainResidentPage(page, for: tabID)
@@ -1141,18 +1127,12 @@ final class BrowserPagePool:
         return true
     }
 
-    private func canHostTransientPage(
-        matching assignment: BrowserSpaceRuntimeAssignment
-    ) -> Bool {
-        !isRuntimeCreationBlocked(in: assignment.spaceID)
-    }
-
     func navigatePopupInCurrentPage(
         _ request: URLRequest,
         opener: BrowserPage
     ) -> Bool {
         guard request.url != nil,
-            !isRuntimeCreationBlocked(in: opener.spaceID),
+            !browser.deletingSpaceIDs.contains(opener.spaceID),
             transientLeases.values.contains(where: {
                 $0.value?.page === opener
             })
@@ -1164,8 +1144,9 @@ final class BrowserPagePool:
     /// The Space a download belongs to when the engine names its source page.
     func engineDownloadAssignment(pageID: String, profileID: UUID) -> BrowserSpaceRuntimeAssignment? {
         let pages = tabRuntimes.values.flatMap(\.allPages) + transientLeases.values.compactMap { $0.value?.page }
-        guard let page = pages.first(where: { $0.engineAdapter.engineIdentifier == pageID }),
-            page.profileID == profileID, !isRuntimeCreationBlocked(in: page.spaceID) else { return nil }
+        guard let page = pages.first(where: { $0.corePage.id == UUID(uuidString: pageID) }),
+            page.profileID == profileID, !browser.deletingSpaceIDs.contains(page.spaceID)
+        else { return nil }
         return BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
     }
 
@@ -1176,7 +1157,7 @@ final class BrowserPagePool:
         let destination: SpaceID
         if let sourceID = adoption.sourcePageID {
             guard let opener = tabRuntimes.values.compactMap(\.page)
-                .first(where: { $0.engineAdapter.engineIdentifier == sourceID }),
+                .first(where: { $0.corePage.id == UUID(uuidString: sourceID) }),
                 opener.profileID == profile else { return false }
             destination = opener.spaceID
         } else {
@@ -1189,14 +1170,17 @@ final class BrowserPagePool:
                 destination = opener.spaceID
             } else { return false }
         }
-        guard !isRuntimeCreationBlocked(in: destination),
+        guard !browser.deletingSpaceIDs.contains(destination),
             let registration = popupTabHost.openTab(adoption.url, destination, adoption.foreground),
             registration.space.profile.id == profile else { return false }
-        let page = makePage(space: registration.space, tabID: registration.tab.id)
+        guard let page = makePage(space: registration.space, tabID: registration.tab.id) else {
+            popupTabHost.closeTab(registration.tab.id, registration.space.id)
+            return false
+        }
         page.markOpenedAsPopup()
         page.updateNavigationContext(tab: registration.tab, automaticallyOpensPeek: false)
         guard page.engineAdapter.adoptEngineCreatedPage(adoption.token) else {
-            page.prepareForSpaceDeletion()
+            page.release(keepingState: false)
             popupTabHost.closeTab(registration.tab.id, registration.space.id)
             return false
         }
@@ -1208,8 +1192,8 @@ final class BrowserPagePool:
     }
 
     /// Adopts a page the opener's engine created for a popup as a new tab in
-    /// the opener's Space, selected unless `selecting` is false. `makeEngine`
-    /// builds the popup's engine adapter once the tab exists.
+    /// the opener's Space, selected unless `selecting` is false. `makeWebKitEngine`
+    /// builds the popup's WebKit adapter once the tab exists.
     ///
     /// Declines — leaving the coordinator to route the destination into an
     /// ordinary tab — when the opener is not a resident page of this pool.
@@ -1219,20 +1203,25 @@ final class BrowserPagePool:
         requestedURL: URL?,
         opener: BrowserPage,
         selecting: Bool,
-        makeEngine: (BrowserSpace) -> any BrowserPageEngineAdapter
+        makeWebKitEngine: @escaping @MainActor (BrowserSpace) -> any BrowserPageEngineAdapter
     ) -> BrowserPage? {
         guard tabID(for: opener) != nil,
-            !isRuntimeCreationBlocked(in: opener.spaceID),
+            !browser.deletingSpaceIDs.contains(opener.spaceID),
             let registration = popupTabHost.openTab(requestedURL, opener.spaceID, selecting),
             registration.space.id == opener.spaceID,
             registration.space.profile.id == opener.profileID
         else { return nil }
 
-        let page = makePage(
-            space: registration.space,
-            tabID: registration.tab.id,
-            engine: makeEngine(registration.space)
-        )
+        guard
+            let page = makePage(
+                space: registration.space,
+                tabID: registration.tab.id,
+                webKit: { makeWebKitEngine(registration.space) }
+            )
+        else {
+            popupTabHost.closeTab(registration.tab.id, registration.space.id)
+            return nil
+        }
         page.markOpenedAsPopup()
         page.updateNavigationContext(
             tab: registration.tab,
@@ -1282,7 +1271,7 @@ final class BrowserPagePool:
         guard page.pictureInPicture?.canRestoreSource == true,
             let tabID = tabID(for: page),
             tabRuntimes[tabID]?.routingWindowID == windowID,
-            !isRuntimeCreationBlocked(in: page.spaceID),
+            !browser.deletingSpaceIDs.contains(page.spaceID),
             let window = presentationWindow,
             let session = selectPictureInPictureSource(
                 BrowserTabRuntimeAssignment(tabID: tabID, spaceID: page.spaceID, profileID: page.profileID))
@@ -1343,7 +1332,7 @@ final class BrowserPagePool:
         if preservingTabState { archiveTabState(for: tabID) }
         guard let runtime = tabRuntimes.removeValue(forKey: tabID) else { return }
         forgetBackgroundPageObservation(for: tabID)
-        runtime.prepareForRelease()
+        runtime.release(keepingState: preservingTabState)
         inactiveSinceByTabID[tabID] = nil
         runtimeStore.removePresentation(of: tabID)
         residencyRevision &+= 1
@@ -1558,7 +1547,9 @@ final class BrowserPagePool:
         )
     }
 
-    private func page(for tab: BrowserTab, space: BrowserSpace) -> BrowserPage {
+    /// The tab's resident page, or a new one the core opened for it; nil when
+    /// the core refuses the tab a page.
+    private func page(for tab: BrowserTab, space: BrowserSpace) -> BrowserPage? {
         if let existingPage = tabRuntimes[tab.id]?.page {
             if existingPage.spaceID == space.id,
                 existingPage.profileID == space.profile.id
@@ -1580,14 +1571,11 @@ final class BrowserPagePool:
                 profileID: existingPage.profileID,
                 tabID: tab.id
             )
-            tabRuntimes.removeValue(forKey: tab.id)?.prepareForRelease()
+            tabRuntimes.removeValue(forKey: tab.id)?.release(keepingState: false)
             forgetBackgroundPageObservation(for: tab.id)
             inactiveSinceByTabID[tab.id] = nil
         }
-        let page = makePage(
-            space: space,
-            tabID: tab.id
-        )
+        guard let page = makePage(space: space, tabID: tab.id) else { return nil }
         page.updateNavigationContext(
             tab: tab,
             automaticallyOpensPeek: BrowserLinkPreferenceStore.shared
@@ -1598,21 +1586,32 @@ final class BrowserPagePool:
         return page
     }
 
-    /// Builds a page for `space` on `engine`, or on the composition's engine,
-    /// or on WebKit when the composition injected none.
+    /// Opens a page through the core for `tabID` in `space`, or for a
+    /// transient request when `tabID` is nil, on the engine the core chooses,
+    /// and hosts it. `webKit` builds the page when WebKit hosts it, and this
+    /// pool's own WebKit configuration builds it otherwise. Nil when the core
+    /// refuses the page.
     private func makePage(
         space: BrowserSpace,
         tabID: TabID? = nil,
-        engine: (any BrowserPageEngineAdapter)? = nil
-    ) -> BrowserPage {
+        webKit: (@MainActor () -> any BrowserPageEngineAdapter)? = nil
+    ) -> BrowserPage? {
         let interval = Self.lifecycleSignposter.beginInterval("Create Browser Page")
         defer {
             Self.lifecycleSignposter.endInterval("Create Browser Page", interval)
         }
 
+        guard
+            let opened = browser.openPage(
+                in: space.id, for: tabID,
+                webKit: { [weak self] _ in webKit?() ?? self?.makeWebKitPageEngine(for: space) })
+        else { return nil }
+        guard let engine = opened.built as? any BrowserPageEngineAdapter else {
+            preconditionFailure("An engine built something other than a desktop page adapter.")
+        }
         let routing = BrowserPageWindowRouting(pool: self)
-        let engine = engine ?? makePageEngine?(space.profile.id) ?? makeWebKitPageEngine(for: space)
         let page = BrowserPage(
+            corePage: opened.page,
             engine: engine,
             dialogPresenter: dialogPresenter,
             downloadCenter: downloadCenter,
@@ -1794,9 +1793,12 @@ final class BrowserPagePool:
         )
     }
 
+    /// Releases the pages of `tabIDs`, saying for `kept` that their state was
+    /// archived first.
     @discardableResult
     private func releasePages(
-        for tabIDs: Set<TabID>
+        for tabIDs: Set<TabID>,
+        keepingStateOf kept: Set<TabID> = []
     ) -> [BrowserSpaceDataReleaseProbe] {
         var releasedAnyPage = false
         var probes: [BrowserSpaceDataReleaseProbe] = []
@@ -1806,7 +1808,7 @@ final class BrowserPagePool:
             guard let runtime else { continue }
             forgetBackgroundPageObservation(for: tabID)
             probes.append(contentsOf: runtime.allPages.map { BrowserSpaceDataReleaseProbe($0) })
-            runtime.prepareForRelease()
+            runtime.release(keepingState: kept.contains(tabID))
             releasedAnyPage = true
         }
         if releasedAnyPage { residencyRevision &+= 1 }
@@ -1893,7 +1895,7 @@ final class BrowserPagePool:
         }
         guard let runtime = tabRuntimes.removeValue(forKey: tabID) else { return }
         forgetBackgroundPageObservation(for: tabID)
-        runtime.prepareForRelease()
+        runtime.release(keepingState: preservingTabState)
         residencyRevision &+= 1
         inactiveSinceByTabID[tabID] = nil
     }

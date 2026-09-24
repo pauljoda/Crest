@@ -15,6 +15,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         category: "WebKitLifecycle"
     )
 
+    /// The core's page, which `release(keepingState:)` ends.
+    @ObservationIgnored let corePage: CorePage
     /// The engine's per-page adapter. Everything the page asks of its engine
     /// goes through it or through `pageEngine`.
     @ObservationIgnored let engineAdapter: any BrowserPageEngineAdapter
@@ -181,6 +183,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     // MARK: - Initializers
 
     init(
+        corePage: CorePage,
         engine engineAdapter: any BrowserPageEngineAdapter,
         dialogPresenter: BrowserDialogPresenter,
         downloadCenter: BrowserDownloadCenter,
@@ -230,6 +233,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         self.spaceID = spaceID
         self.profileID = profileID
         self.spaceName = spaceName
+        self.corePage = corePage
         self.engineAdapter = engineAdapter
         pageEngine = engineAdapter.engine
         sitePermissionSession = BrowserPageSitePermissionSession(
@@ -428,7 +432,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         }
     }
 
-    func prepareForSpaceDeletion() {
+    /// Ends the page: every page ends here, whether its tab closed, it was
+    /// unloaded, its Space went, or a transient request let it go. The page's
+    /// hosting comes down first, then the core hears the page is gone and asks
+    /// its engine to close what it holds. `keepingState` says the owner kept
+    /// what it needs to bring the page back.
+    func release(keepingState: Bool) {
         faviconSession?.stop()
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
@@ -445,6 +454,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         downloadCenter.resetAutomaticDownloadSequence(for: pageEngine)
         engineAdapter.detach(from: self)
         mediaSessionCoordinator = nil
+        corePage.release(keepingState: keepingState)
     }
 
     func retryAfterProcessFailure() {

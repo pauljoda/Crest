@@ -81,7 +81,7 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         XCTAssertFalse(fixture.coordinator.activateExistingWindow(for: temporary.browser))
         XCTAssertFalse(window.isVisible)
 
-        let primaryPages = BrowserPagePool(monitorsMemoryPressure: false)
+        let primaryPages = BrowserPagePool(browser: fixture.browser.makeWindowStore(), monitorsMemoryPressure: false)
         let registry = BrowserPagePoolRegistry(primary: primaryPages)
         registry.register(temporary.pages, browser: temporary.browser, for: temporary.id)
         let context = try XCTUnwrap(
@@ -233,10 +233,10 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         let space = BrowserSpace(
             id: SpaceID(), profile: BrowsingProfile(), name: "Window lifecycle", symbol: "globe",
             accent: .indigo, folders: [], tabs: [tab])
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
+        let browser = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space]),
             showing: space.id, tabs: [space.id: tab.id])
-        let pages = BrowserPagePool(monitorsMemoryPressure: false)
+        let pages = BrowserPagePool(browser: browser, monitorsMemoryPressure: false)
         return (
             browser,
             BrowserMacWindowCoordinator(

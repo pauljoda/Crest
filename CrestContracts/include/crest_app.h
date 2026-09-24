@@ -51,7 +51,9 @@ CREST_API crest_status_t CREST_CALL crest_app_restore(const uint8_t* fingerprint
 /* Saves any accepted revision still pending, then closes the session file.
  * Clear the wake callback first. */
 CREST_API crest_status_t CREST_CALL crest_app_destroy(uint64_t app);
-/* OK: buffer = published changes (a count, then each change). REJECTED: buffer = one rejection. */
+/* OK: buffer = published changes (a count, then each change). REJECTED: buffer = one rejection.
+ * Engine commands the intent caused (crest_engine.h) have run when it returns,
+ * unless the dispatch itself runs inside a binding's command. */
 CREST_API crest_status_t CREST_CALL crest_app_dispatch(uint64_t app, const uint8_t* intent, size_t length, crest_buffer_t* out);
 /* OK: buffer = the answer. REJECTED: buffer = one rejection. */
 CREST_API crest_status_t CREST_CALL crest_app_query(uint64_t app, const uint8_t* query, size_t length, crest_buffer_t* out);

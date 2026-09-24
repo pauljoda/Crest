@@ -5,8 +5,10 @@ import WebKit
 /// The page's WebKit-only state, read by its WebKit delegate conformances and
 /// bridges. Each is empty when another engine hosts the page.
 extension BrowserPage {
-    /// A page hosted by a desktop `WKWebView` built from `configuration`.
+    /// A page hosted by a desktop `WKWebView` built from `configuration`, for
+    /// a page the core opened on WebKit.
     convenience init(
+        corePage: CorePage,
         configuration: WKWebViewConfiguration,
         dialogPresenter: BrowserDialogPresenter,
         downloadCenter: BrowserDownloadCenter,
@@ -43,6 +45,7 @@ extension BrowserPage {
         opensExternalURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
     ) {
         self.init(
+            corePage: corePage,
             engine: BrowserWebKitPageAdapter(
                 configuration: configuration,
                 contentRuleList: contentRuleList,

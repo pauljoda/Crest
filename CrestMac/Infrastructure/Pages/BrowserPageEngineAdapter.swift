@@ -1,20 +1,14 @@
 import AppKit
 import Foundation
 
-/// Builds the engine adapter behind a new page for a profile. The composition
-/// chooses the engine; the pool and its pages never name one.
-typealias BrowserPageEngineMaker = @MainActor (_ profileID: UUID) -> any BrowserPageEngineAdapter
-
 /// The desktop half of an engine adapter for one page: the wiring the engine
 /// needs into the page it hosts, and the page controllers only that engine can
-/// build. `BrowserPage` holds one and reaches its engine only through it and
-/// the `BrowserPageEngine` port.
+/// build. The engine's binding builds it when the core asks the engine to
+/// create a page. `BrowserPage` holds one and reaches its engine only through
+/// it and the `BrowserPageEngine` port.
 @MainActor
 protocol BrowserPageEngineAdapter: AnyObject {
     var engine: any BrowserPageEngine { get }
-    /// The name the engine uses for this page in its own requests, when it
-    /// addresses pages by name.
-    var engineIdentifier: String? { get }
 
     var linkHover: BrowserLinkHoverController? { get }
     var linkDrag: BrowserLinkDragController? { get }

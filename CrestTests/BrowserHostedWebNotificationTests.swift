@@ -38,6 +38,7 @@ final class BrowserHostedWebNotificationTests: XCTestCase {
             authorization: .authorized
         )
         let pool = BrowserPagePool(
+            browser: .hostingPages(BrowserSession(spaces: [space])),
             usesEphemeralWebsiteDataStores: true,
             permissionCenter: permissionCenter,
             hostedNotificationCenter: systemCenter

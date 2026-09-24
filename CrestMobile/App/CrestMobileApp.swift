@@ -72,6 +72,7 @@ private final class BrowserMobileApplication {
         // One core per process, keeping the session file and shared by every
         // window of both browsing modes.
         let core = try BrowserStore.launchCore(for: launchEnvironment)
+        core.engines.register(WebKitEngineBinding(), isDefault: true)
         let browser = try BrowserStore.production(core: core, launchEnvironment: launchEnvironment)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
@@ -133,6 +134,7 @@ private final class BrowserMobileApplication {
             permissionCenter: BrowserSitePermissionCenter()
         )
         let pages = MobileBrowserPageStore(
+            browser: browser,
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             permissionCenter: permissionCenter,

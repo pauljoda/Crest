@@ -154,10 +154,10 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space])
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space])
         )
-        let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
+        let pool = BrowserPagePool(browser: store, popupTabHost: store.popupTabHost)
 
         do {
             pool.select(session: store.presented)
@@ -226,10 +226,11 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         )
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space])
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
+            browser: store,
             popupTabHost: store.popupTabHost,
             openNewTab: { url in
                 _ = store.openNewTab(url: url)
@@ -285,10 +286,10 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space])
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space])
         )
-        let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
+        let pool = BrowserPagePool(browser: store, popupTabHost: store.popupTabHost)
         let siteOrigin = try XCTUnwrap(BrowserSiteOrigin(url: origin))
 
         do {
@@ -332,10 +333,10 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space])
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space])
         )
-        let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
+        let pool = BrowserPagePool(browser: store, popupTabHost: store.popupTabHost)
 
         do {
             pool.select(session: store.presented)
@@ -395,10 +396,11 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         )
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space])
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
+            browser: store,
             popupTabHost: store.popupTabHost,
             openNewTab: { url in
                 _ = store.openNewTab(url: url)
@@ -470,10 +472,11 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         )
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space])
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
+            browser: store,
             popupTabHost: store.popupTabHost,
             openNewTab: { url in
                 _ = store.openNewTab(url: url)
@@ -549,10 +552,11 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 contentBlockingPolicy: .off
             )
         )
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space])
+        let store = BrowserStore.hostingPages(
+            BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
+            browser: store,
             popupTabHost: store.popupTabHost
         )
 

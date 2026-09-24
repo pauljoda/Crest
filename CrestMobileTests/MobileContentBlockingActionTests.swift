@@ -8,6 +8,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
         let fixture = makeFixture()
         let browser = fixture.browser
         let pages = MobileBrowserPageStore(
+            browser: browser,
             usesEphemeralWebsiteDataStores: true
         )
         pages.select(session: browser.presented)
@@ -105,8 +106,8 @@ final class MobileContentBlockingActionTests: XCTestCase {
             tabs: [secondTab]
         )
         return ContentBlockingFixture(
-            browser: BrowserStore(
-                session: BrowserSession(spaces: [firstSpace, secondSpace]),
+            browser: BrowserStore.hostingPages(
+                BrowserSession(spaces: [firstSpace, secondSpace]),
                 showing: firstSpace.id, tabs: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
             ),
             firstSpaceID: firstSpace.id,

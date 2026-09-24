@@ -4,17 +4,24 @@
     import PDFKit
 
     /// Owns the WebContents behind the original Crest page card. The shell and
-    /// portable session retain their tab identities; this object owns only a page.
+    /// portable session retain their tab identities; this object owns only a
+    /// page, which the engine names with the identity the core gave it.
     @Observable @MainActor
     final class ChromiumNativePage: BrowserPageEngine {
         let registration = BrowserEngineRegistration.chromium
-        let id = UUID().uuidString
+        /// The core's identity for this page.
+        let pageID: UUID
+        /// The name the engine uses for this page: the core's identity.
+        let id: String
         let surface = ChromiumNativePageView()
-        var isPrivateBrowsing = false
+        var isPrivateBrowsing: Bool
         private let profileID: UUID
         /// The browser operations this page may ask for, such as the Space a
         /// Chrome Web Store listing installs into. Weak: the composition owns it.
         private weak var hostCommands: (any BrowserEngineHostCommands)?
+        /// The binding that built the page, which reports what the engine does
+        /// with it.
+        private weak var binding: ChromiumEngineBinding?
         var observer: (ChromiumPageReport) -> Void
         var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
         var contextMenuActions: (URL?, String?) -> [[String: String]] = { _, _ in [] }
@@ -40,31 +47,18 @@
         private var created = false
         private var disposed = false
 
-        /// The live pages the engine can name. A side-panel request arrives with
-        /// only a page identifier, so the page it belongs to has to be reachable
-        /// without a view context. The entries are weak: a page belongs to its
-        /// window's pool and this lookup must not keep one alive.
-        private final class Reference { weak var page: ChromiumNativePage? }
-        private static var registry: [String: Reference] = [:]
-        static func live(_ id: String) -> ChromiumNativePage? {
-            guard let page = registry[id]?.page else {
-                registry[id] = nil
-                return nil
-            }
-            return page.disposed ? nil : page
-        }
-
         init(
-            profileID: UUID, hostCommands: (any BrowserEngineHostCommands)? = nil,
-            observer: @escaping (ChromiumPageReport) -> Void = { _ in }
+            id: UUID, profileID: UUID, isPrivateBrowsing: Bool, hostCommands: (any BrowserEngineHostCommands)?,
+            binding: ChromiumEngineBinding?, observer: @escaping (ChromiumPageReport) -> Void = { _ in }
         ) {
+            pageID = id
+            self.id = id.uuidString
             self.profileID = profileID
+            self.isPrivateBrowsing = isPrivateBrowsing
             self.hostCommands = hostCommands
+            self.binding = binding
             self.observer = observer
             surface.page = self
-            let reference = Reference()
-            reference.page = self
-            Self.registry[id] = reference
         }
 
         var nativeView: NSView { surface }
@@ -200,7 +194,7 @@
             guard !creating else { return }
             let sourceProfile = isPrivateBrowsing ? CrestChromiumRoot.privateSourceProfileID : nil
             guard !isPrivateBrowsing || sourceProfile != nil else {
-                observer(ChromiumPageReport(.creationFailed))
+                failCreation()
                 return
             }
             creating = true
@@ -212,8 +206,14 @@
                 })
             {
                 creating = false
-                observer(ChromiumPageReport(.creationFailed))
+                failCreation()
             }
+        }
+
+        /// The page could not be created: its owner hears it, and the core does.
+        private func failCreation() {
+            observer(ChromiumPageReport(.creationFailed))
+            binding?.pageCreationFailed(self)
         }
 
         func adopt(_ token: String) -> Bool {
@@ -477,7 +477,6 @@
             if let pendingNavigation { discardNavigation(pendingNavigation.token) }
             pendingNavigation = nil
             disposed = true
-            Self.registry[id] = nil
             surface.devToolsView = nil
             for subview in surface.subviews { subview.removeFromSuperview() }
             host?.disposePages([id], windows: [], releaseProfiles: [])
@@ -670,8 +669,12 @@
                 attachIfPossible()
                 setZoom(zoom)
                 navigatePendingURL()
+                binding?.pageCreated(self)
             } else if event == .creationFailed {
                 creating = false
+                binding?.pageCreationFailed(self)
+            } else if event == .closed {
+                binding?.pageClosed(self)
             } else if event == .storeInstall || event == .storeRemove {
                 performStoreRequest(event, values)
             }

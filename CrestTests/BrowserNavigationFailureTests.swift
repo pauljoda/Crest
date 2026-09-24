@@ -214,7 +214,7 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
             folders: [],
             tabs: [tab]
         )
-        let pool = BrowserPagePool()
+        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
         pool.select(tab: tab, space: space)
         return try XCTUnwrap(pool.activePage)
     }

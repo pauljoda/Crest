@@ -25,6 +25,8 @@ final class CrestCore {
 
     /// The read model. Only the changes the core returns update it.
     let state = CoreState()
+    /// The engines this core hosts pages on, which the composition registers.
+    @ObservationIgnored private(set) lazy var engines = Engines(core: self)
     /// Where the core keeps `session.sqlite`; nil when it keeps everything in
     /// memory.
     let storageDirectory: URL?
