@@ -135,7 +135,6 @@ public static class BrowserRuleCodes {
     public const string StaleAuthentication = "stale_authentication";
     public const string StaleBorrowedSource = "stale_borrowed_source";
     public const string StaleSelection = "stale_selection";
-    public const string StaleSessionRevision = "stale_session_revision";
     public const string SyncClockExhausted = "sync_clock_exhausted";
     public const string SyncIdentityMismatch = "sync_identity_mismatch";
     public const string SyncRecordLimit = "sync_record_limit";

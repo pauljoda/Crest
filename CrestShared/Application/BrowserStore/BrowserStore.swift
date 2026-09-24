@@ -117,14 +117,13 @@ final class BrowserStore {
         sendWindowIntent(ResizeSplitColumns(windowID: windowID.rawValue, groupID: groupID.rawValue, shares: fractions))
     }
 
-    /// Runs one intent about this window. A tab use the core recorded keeps
-    /// the family's session in step. Answers false when a rule refused it.
+    /// Runs one intent about this window. What it changed, including a tab
+    /// use the core recorded, reaches the family's session copy through the
+    /// core's changes. Answers false when a rule refused it.
     @discardableResult
     private func sendWindowIntent(_ intent: some Intent) -> Bool {
-        let changes: [Change]
-        do { changes = try core.send(intent) } catch { return false }
+        do { try core.send(intent) } catch { return false }
         lastWindow = window
-        for case .tabActivated(let activated) in changes { family.recordActivation(activated) }
         return true
     }
 
@@ -148,7 +147,7 @@ final class BrowserStore {
             syncCoordinator: syncCoordinator,
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
-            family: BrowserStoreFamily(session: session, browsingMode: browsingMode),
+            family: BrowserStoreFamily(session: session, browsingMode: browsingMode, core: core),
             linkPreferences: linkPreferences,
             core: core
         )

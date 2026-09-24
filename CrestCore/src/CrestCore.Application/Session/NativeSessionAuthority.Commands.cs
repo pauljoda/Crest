@@ -9,39 +9,41 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Actions - Commands
 
-    /// Prepares against owned records. The native caller decodes the resulting
-    /// projection before committing, so a failed read cannot leave its UI behind.
-    public NativeSessionCommand PrepareCommand(ulong expected, ReadOnlySpan<byte> bytes) {
+    /// Prepares against the accepted records, which the command remembers: it
+    /// commits only while they are still the accepted ones. The session's
+    /// changes are published when it commits.
+    public NativeSessionCommand PrepareCommand(ReadOnlySpan<byte> bytes) {
         lock (Gate) {
             RequireWritable();
-            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             var request = Parse(bytes);
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
             RequireAccessibleCommand(request);
             var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
-            if (operation == SessionOperation.WorkspaceImport) return PrepareWorkspaceCommand(expected, request);
-            if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(expected, request, operation);
+            if (operation == SessionOperation.WorkspaceImport) return PrepareWorkspaceCommand(request);
+            if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(request, operation);
             if (bytes.Length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
-            if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(expected, request);
+            if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(request);
             if (SessionOperationCodes.IsRecord(operation))
-                return PrepareRecordCommand(expected, request);
+                return PrepareRecordCommand(request);
             if (SessionOperationCodes.IsTransient(operation))
-                return PrepareTransientCommand(expected, request);
-            if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(expected, request);
+                return PrepareTransientCommand(request);
+            if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(request);
             if (SessionOperationCodes.IsSpace(operation))
-                return PrepareSpaceCommand(expected, request);
+                return PrepareSpaceCommand(request);
             if (operation is SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient)
                 throw new BrowserRuleException(BrowserRuleCodes.TransientRequiresCommand);
-            var (next, answer, followUp) = EditSpace(request, operation);
-            return new NativeSessionCommand(this, expected, next, Output(answer), followUp: followUp);
+            var (next, answer, followUp, events) = EditSpace(request, operation);
+            return new NativeSessionCommand(this, session, next, Output(answer), followUp: followUp, events: events);
         }
     }
 
     /// One tab, folder or split edit in the Space the request names: the next
-    /// session, the answer for the requesting window and what that window shows
-    /// next. A tab the window shows that the edit dismisses gives way to the
-    /// tab it showed before, from its history.
-    private (SessionState Next, JsonObject Answer, WindowFollowUp FollowUp) EditSpace(JsonObject request, SessionOperation operation) {
+    /// session, the answer for the requesting window, what that window shows
+    /// next and what the edit did that the sessions cannot tell. A tab the
+    /// window shows that the edit dismisses gives way to the tab it showed
+    /// before, from its history.
+    private (SessionState Next, JsonObject Answer, WindowFollowUp FollowUp, SessionTabEvents Events) EditSpace(JsonObject request,
+        SessionOperation operation) {
         var spaceId = Id(request["spaceId"]);
         if (PendingDeletion(session, spaceId) is not null)
             throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
@@ -57,7 +59,7 @@ public sealed partial class NativeSessionAuthority {
         var edited = result.Edited.Capture(original);
         var next = Replacing(session, edited);
         Validate(next);
-        return (next, result.Answer(edited), followUp);
+        return (next, result.Answer(edited), followUp, result.Events);
     }
 
     /// The window that issued `request`, as it is now, or null for a command
@@ -93,24 +95,21 @@ public sealed partial class NativeSessionAuthority {
     /// A command that changes nothing and answers `output`, read and released
     /// with the command API like any other.
     internal NativeSessionCommand Projection(byte[] output) {
-        lock (Gate) return new(this, Revision, session, output);
+        lock (Gate) return new(this, session, session, output);
     }
 
-    internal ulong CommitCommand(NativeSessionCommand command) {
-        ulong revision;
+    /// Accepts a prepared command, saved behind, and publishes what it changed.
+    /// Throws `Rejected` with `StaleCommand` when the session accepted anything
+    /// after the command was prepared.
+    internal void CommitCommand(NativeSessionCommand command) {
+        SessionState previous;
         lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
-            command.RequireAccepted();
-            if (command.ExpectedRevision != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
-            var nextRevision = checked(Revision + 1);
-            session = command.Session;
+            command.RequireAccepted(session);
             if (command.TransientCompletion is { } completed) completedTransients.Add(completed);
-            borrowedSourceRevision = command.BorrowedSourceRevision ?? borrowedSourceRevision;
-            Revision = revision = nextRevision;
-            storage?.Enqueue(session, Revision);
+            previous = Accept(command.Session);
         }
-        Published(command.Session, command.FollowUp);
-        return revision;
+        Published(previous, command.Session, command.FollowUp, command.Events);
     }
 
     #endregion

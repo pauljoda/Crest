@@ -196,7 +196,7 @@ public sealed partial class BrowserContractsTests {
         var request = JournalCommand(document, "acknowledge", new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
         using var transaction = sync.Prepare(1, request)!;
         Assert.True(transaction.Seal());
-        using var replacement = owner.ReserveReplacement(1, RenameDelta(session, "Durable synced tab"));
+        using var replacement = owner.ReserveReplacement(RenameDelta(session, "Durable synced tab"));
         replacement.BindSync(transaction);
         Assert.Same(initial, sync.Snapshot);
         Assert.Equal(1UL, owner.Revision);

@@ -91,6 +91,32 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         self.keepsPageLoaded = keepsPageLoaded
     }
 
+    /// TRANSITIONAL until S6.1 retires the Swift session copy: a tab as the
+    /// core publishes it, read the way the decoder reads the core's stored
+    /// form, wearing `faviconData`, the image the copy keeps for it. Edit
+    /// clocks take the spelling that form gives a whole millisecond.
+    init(core state: TabState, faviconData: Data?) {
+        id = TabID(rawValue: state.id)
+        title = state.title
+        nativeContent = state.nativeContent.map { BrowserNativeTabContent(kind: $0.kind, resourceID: $0.resourceID) }
+        url = state.nativeContent == nil ? state.url.flatMap(URL.init(string:)) : nil
+        savedURL = state.nativeContent == nil ? state.savedURL.flatMap(URL.init(string:)) : nil
+        symbol = state.symbol
+        self.faviconData = faviconData
+        faviconPayloadIdentity = Self.payloadIdentity(for: faviconData)
+        faviconURL = state.faviconURL.flatMap(URL.init(string:))
+        iconAccent = state.iconAccent.map { BrowserTabIconAccent(red: $0.red, green: $0.green, blue: $0.blue) }
+        storedIconMode = state.storedIconMode
+        placement = state.placement
+        folderID = state.folderID.map(FolderID.init(rawValue:))
+        splitGroupID = state.splitGroupID.map(SplitGroupID.init(rawValue:))
+        lastActivatedAt = state.lastActivatedAt
+        positionModifiedAt = state.positionModifiedAt.map(Self.storedEditClock)
+        customTitle = state.customTitle
+        titleModifiedAt = state.titleModifiedAt.map(Self.storedEditClock)
+        keepsPageLoaded = state.keepsPageLoaded
+    }
+
     static func startPage(
         id: TabID = TabID(),
         placement: TabPlacement = .current,
@@ -149,6 +175,15 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     private static func normalizedTimestamp(_ date: Date) -> Date {
         let milliseconds = (date.timeIntervalSince1970 * 1_000).rounded()
         return Date(timeIntervalSince1970: milliseconds / 1_000)
+    }
+
+    /// TRANSITIONAL until S6.1: an edit clock as the core's stored form spells
+    /// it. A whole millisecond takes this type's own arithmetic, so the copy
+    /// holds the same bits a decoded session does; any other time stays as it
+    /// came.
+    private static func storedEditClock(_ date: Date) -> Date {
+        let normalized = normalizedTimestamp(date)
+        return abs(normalized.timeIntervalSince(date)) < 0.000_001 ? normalized : date
     }
 
     /// The name every tab surface renders. A rename wins over the page title;

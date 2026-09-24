@@ -35,15 +35,16 @@ final class BrowserStoreFamily {
     /// only the windows over the session the core keeps in its file do.
     var keepsWindowRecords: Bool { storage != nil }
 
+    /// A family over a memory-only session, which `crest`'s windows show.
     init(
         session: BrowserSession, browsingMode: BrowserBrowsingMode = .standard,
         temporarySourceAssignment: BrowserSpaceRuntimeAssignment? = nil,
-        temporarySettingsBrowser: BrowserStore? = nil
+        temporarySettingsBrowser: BrowserStore? = nil, core crest: CrestCore
     ) {
         precondition(temporarySourceAssignment == nil, "Borrowed workspaces must be created by their core owner")
         core = BrowserCoreSessionAuthority(session: session,
             workspaceKind: browsingMode.isPrivate ? .private : .persistent,
-            privateBrowsing: browsingMode.isPrivate)
+            privateBrowsing: browsingMode.isPrivate, core: crest)
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
         storage = nil
@@ -124,24 +125,19 @@ final class BrowserStoreFamily {
         return current
     }
 
-    /// Adds a window of this family, attaching the session to that window's
-    /// core the first time, and answers the workspace it shows.
+    /// Adds a window of this family, and answers the workspace it shows. A
+    /// session shows in the windows of the one core it was attached to.
     func register(_ store: BrowserStore) -> UUID {
         if let sync = store.syncCoordinator {
             do { try core.attachSync(sync.core) }
             catch { preconditionFailure("Cannot attach sync to the core session: \(error)") }
         }
+        guard let workspace = core.workspaceID, core.device === store.core else {
+            preconditionFailure("A session shows in the windows of the core it was attached to.")
+        }
         stores.removeAll { $0.value == nil }
         stores.append(WeakStore(value: store))
-        return core.attach(to: store.core)
-    }
-
-    /// A window showed a tab, and the core recorded when as its own revision.
-    func recordActivation(_ activated: TabActivated) {
-        guard activated.workspaceID == core.workspaceID else { return }
-        let previous = authoritativeSession
-        core.recordActivation(activated)
-        reconcileStores(after: previous, from: nil)
+        return workspace
     }
 
     #if DEBUG
@@ -244,26 +240,21 @@ final class BrowserStoreFamily {
     /// A core answer read from the owned session without changing it.
     func readCore<Request: Encodable>(_ request: Request) -> Data? { try? core.read(request) }
 
+    /// Runs a tab, folder or split command. `image` is the image a page
+    /// reported, which the tab the core assigns it to wears.
     func execute<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
-        arguments: Arguments, from source: BrowserStore, at date: Date) -> BrowserCoreSessionEditing.Result? {
+        arguments: Arguments, from source: BrowserStore, at date: Date, image: Data? = nil)
+        -> BrowserCoreSessionEditing.Result? {
         let previous = authoritativeSession
         do {
             let result = try core.execute(
-                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
+                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date, image: image)
             reconcileStores(after: previous, from: source)
             return result
         } catch {
             source.localSyncErrorDescription = "Core command failed: \(error)"
             return nil
         }
-    }
-
-    func applyFavicon(_ assignment: BrowserCoreSessionEditing.Result.FaviconAssignment?,
-        bytes: Data?, in spaceID: SpaceID) -> TabID? {
-        let previous = authoritativeSession
-        let tabID = core.applyFavicon(assignment, bytes: bytes, in: spaceID)
-        if tabID != nil { reconcileStores(after: previous, from: nil) }
-        return tabID
     }
 
     /// A record command without arguments of its own.
@@ -330,8 +321,7 @@ final class BrowserStoreFamily {
     /// Returns once every edit this family has accepted is on disk, or once a
     /// save has failed. A family in memory has nothing to wait for.
     func flushPendingSaves() async {
-        guard let storage else { return }
-        await storage.saved(through: Int64(core.acceptedRevision))
+        await storage?.flushPendingSaves()
     }
 
     /// A save the core started itself failed: every window shows it the way
@@ -387,10 +377,9 @@ final class BrowserStoreFamily {
     }
 
     /// Every window follows the accepted session. The core's device already
-    /// moved the window that issued the command and repaired the others; its
-    /// changes are applied first, so each window reads what it shows now.
+    /// moved the window that issued the command and repaired the others, and
+    /// the session copy already holds what the core published for it.
     private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?) {
-        core.device?.drain()
         persistFavicons(from: previous, to: authoritativeSession)
         stores.removeAll { $0.value == nil }
         for store in stores.compactMap(\.value) {

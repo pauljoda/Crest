@@ -35,9 +35,9 @@ public sealed partial class NativeSessionAuthority {
     private static SpaceState Configured(SpaceState space, SpaceSettings settings) =>
         settings == space.Settings ? space : space with { Settings = settings };
 
-    private NativeSessionCommand PrepareSpaceCommand(ulong expected, JsonObject request) {
+    private NativeSessionCommand PrepareSpaceCommand(JsonObject request) {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
-        BorrowedCommandRouting.RequireLocal(operation, workspaceKind == BrowserWorkspaceKind.Temporary);
+        BorrowedCommandRouting.RequireLocal(operation, workspaceKind == WorkspaceKind.Borrowed);
         var args = request["arguments"]!.AsObject();
         var followUp = new WindowFollowUp(IssuingWindow(request));
         var spaces = session.Spaces.ToList();
@@ -47,7 +47,7 @@ public sealed partial class NativeSessionAuthority {
         if (operation is SessionOperation.SpaceCreate or SessionOperation.SpaceResetPrivate) {
             var template = StoredSessionCodec.DecodeSpace(args["template"]);
             if (operation == SessionOperation.SpaceResetPrivate) {
-                if (workspaceKind != BrowserWorkspaceKind.Private) throw new BrowserRuleException(BrowserRuleCodes.NotPrivateWorkspace);
+                if (workspaceKind != WorkspaceKind.Private) throw new BrowserRuleException(BrowserRuleCodes.NotPrivateWorkspace);
                 if (spaces.Any(s => s.Id == template.Id || s.ProfileId == template.ProfileId))
                     throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
                 spaces.Clear(); deletions.Clear(); defaultSpace = null;
@@ -60,10 +60,10 @@ public sealed partial class NativeSessionAuthority {
             var space = template with {
                 Settings = template.Settings with {
                     Name = operation == SessionOperation.SpaceResetPrivate ? NewPrivateSpaceName
-                        : $"{(workspaceKind == BrowserWorkspaceKind.Private ? NewPrivateSpaceName : NewSpaceName)} {spaces.Count + 1}"
+                        : $"{(workspaceKind == WorkspaceKind.Private ? NewPrivateSpaceName : NewSpaceName)} {spaces.Count + 1}"
                 }
             };
-            if (workspaceKind == BrowserWorkspaceKind.Private)
+            if (workspaceKind == WorkspaceKind.Private)
                 space = space with {
                     Settings = space.Settings with {
                         Symbol = PrivateSpaceSymbol,
@@ -171,7 +171,7 @@ public sealed partial class NativeSessionAuthority {
         var projection = StoredSessionCodec.Encode(next with {
             Spaces = spaces.Select(s => created == s.Id ? s : Settings(s)).ToArray()
         });
-        return new NativeSessionCommand(this, expected, next, Output(new JsonObject { ["session"] = projection }), followUp: followUp);
+        return new NativeSessionCommand(this, session, next, Output(new JsonObject { ["session"] = projection }), followUp: followUp);
     }
 
     #endregion

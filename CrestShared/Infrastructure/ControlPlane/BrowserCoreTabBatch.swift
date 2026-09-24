@@ -18,9 +18,16 @@ enum BrowserCoreTabBatch {
         case separateSplits = "SeparateSplits"
     }
 
+    /// One Space the batch edited: its organization and the archive entries
+    /// the batch made, and the copies it made there.
+    struct Change: Decodable {
+        var space: BrowserSpace
+        var copies: [BrowserCoreSessionEditing.Result.Copy]
+    }
+
     struct Response: Decodable {
         var error: BrowserCoreErrorCode?
-        var changes: [BrowserCoreSessionEditing.Result]?
+        var changes: [Change]?
     }
 
     /// The `tabs.batch` arguments: the multi-selection as the window captured
@@ -131,6 +138,11 @@ enum BrowserCoreTabBatch {
 
     // MARK: - Actions - Projection
 
+    /// The batch's copies, and the session it proposes.
+    ///
+    /// TRANSITIONAL until S5.2 stages sync in the core: the proposed session is
+    /// only what the sync stager reads before the batch commits. The session
+    /// copy follows the core's changes once it has.
     static func applying(_ response: Response, to session: BrowserSession) throws
         -> (session: BrowserSession, result: BrowserTabBatchResult)
     {
@@ -152,7 +164,10 @@ enum BrowserCoreTabBatch {
             for i in change.space.archivedTabs.indices {
                 change.space.archivedTabs[i].tab.faviconData = originals[change.space.archivedTabs[i].id]?.faviconData
             }
-            BrowserCoreSessionEditing.apply(change, to: &next, at: index)
+            next.spaces[index].tabs = change.space.tabs
+            next.spaces[index].folders = change.space.folders
+            next.spaces[index].splitGroups = change.space.splitGroups
+            next.spaces[index].archivedTabs.append(contentsOf: change.space.archivedTabs)
             copies += change.copies.map { (TabID(rawValue: $0.source), TabID(rawValue: $0.copy)) }
         }
         return (next, BrowserTabBatchResult(copies: copies))

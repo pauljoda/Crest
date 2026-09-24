@@ -4,6 +4,8 @@ using CrestCore.Application;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
+using Xunit;
+
 namespace CrestCore.Tests;
 
 /// Shared saved-session fixture for the native session, records, sync and
@@ -72,6 +74,15 @@ public sealed partial class BrowserContractsTests {
     }
 
     private static Guid SpaceId(JsonNode space) => Guid.Parse(space["id"]!["rawValue"]!.GetValue<string>());
+
+    /// Asserts that `commit` is refused because the session accepted another
+    /// change after the command was prepared.
+    private static void AssertStale(Action commit) => Assert.IsType<StaleCommand>(Assert.Throws<Rejected>(commit).Rejection);
+
+    /// The changes an intent answered without the saves the storage worker
+    /// finished meanwhile, which join the pending batch whenever the worker
+    /// gets to them.
+    private static IReadOnlyList<Change> Own(IReadOnlyList<Change> changes) => [.. changes.Where(change => change is not Saved)];
 
     /// A Space's branding and browsing preferences as the Swift encoder wrote them.
     private const string SavedBranding = """

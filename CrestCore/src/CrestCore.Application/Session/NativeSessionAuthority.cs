@@ -8,12 +8,15 @@ using Key = CrestCore.Application.StoredSessionCodec.Key;
 namespace CrestCore.Application;
 
 /// Owns the native app's durable session as typed records. Native views propose
-/// value deltas; only an accepted revision becomes visible. Published documents
-/// are immutable, so storage can serialize an older checkpoint on its worker while
-/// the UI continues editing the current revision. The session holds browsing data
-/// only: which Space and tab a window shows is window state, so selection fields in
-/// an older session are dropped here and never written. Commands read what the
-/// window shows as context and answer with a hint.
+/// value deltas; only an accepted state becomes visible, and the device publishes
+/// what each accepted state changed. Accepted states are immutable, so storage can
+/// serialize an older checkpoint on its worker while the UI continues editing the
+/// current one. A command remembers the state it was prepared against and commits
+/// only while that state is still the accepted one; nothing outside the core names
+/// a revision. The session holds browsing data only: which Space and tab a window
+/// shows is window state, so selection fields in an older session are dropped here
+/// and never written. Commands read what the window shows as context and answer
+/// with a hint.
 public sealed partial class NativeSessionAuthority {
     #region Variables
 
@@ -25,11 +28,16 @@ public sealed partial class NativeSessionAuthority {
     private const string PrivateBrowsingField = "corePrivateBrowsing";
     private SessionState session;
     private NativeSessionReplacement? replacement;
-    private readonly BrowserWorkspaceKind workspaceKind;
+    private readonly WorkspaceKind workspaceKind;
     private readonly bool privateBrowsing;
     /// The file a persistent session the core loaded keeps; null in memory.
     private readonly SessionStorage? storage;
-    public ulong Revision { get; private set; } = 1;
+    /// Counts the accepted states, so storage saves them in order and `Saved`
+    /// can name the newest on disk.
+    internal ulong Revision { get; private set; } = 1;
+
+    /// What kind of workspace this session is.
+    internal WorkspaceKind Kind => workspaceKind;
 
     #endregion
 
@@ -38,12 +46,12 @@ public sealed partial class NativeSessionAuthority {
     public NativeSessionAuthority(ReadOnlySpan<byte> bytes) {
         var input = Parse(bytes);
         workspaceKind = input[WorkspaceKindField]?.GetValue<string>() switch {
-            null or "persistent" => BrowserWorkspaceKind.Persistent,
-            "private" => BrowserWorkspaceKind.Private,
+            null or "persistent" => WorkspaceKind.Persistent,
+            "private" => WorkspaceKind.Private,
             "temporary" => throw new BrowserRuleException(BrowserRuleCodes.BorrowedSourceRequired),
             _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidWorkspaceKind)
         };
-        privateBrowsing = input[PrivateBrowsingField]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
+        privateBrowsing = input[PrivateBrowsingField]?.GetValue<bool>() ?? workspaceKind == WorkspaceKind.Private;
         session = StoredSessionCodec.DecodeSession(input);
         Validate(session);
     }
@@ -51,7 +59,7 @@ public sealed partial class NativeSessionAuthority {
     /// The persistent session the core loaded from `storage` and repaired.
     /// Every revision it accepts is saved there.
     internal NativeSessionAuthority(SessionState stored, SessionStorage storage) {
-        workspaceKind = BrowserWorkspaceKind.Persistent;
+        workspaceKind = WorkspaceKind.Persistent;
         session = stored;
         Validate(session);
         this.storage = storage;
@@ -112,10 +120,9 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Session revisions
 
-    private SessionState Prepare(ulong expected, ReadOnlySpan<byte> bytes, IReadOnlyList<SpaceDeletionState>? authorizedDeletions = null,
+    private SessionState Prepare(ReadOnlySpan<byte> bytes, IReadOnlyList<SpaceDeletionState>? authorizedDeletions = null,
         bool nativeValueEdit = false) {
         RequireWritable();
-        if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         // Only the preference commands change the app preferences, so a value
@@ -185,52 +192,35 @@ public sealed partial class NativeSessionAuthority {
         if (replacement is not null) throw new BrowserRuleException(BrowserRuleCodes.SessionTransactionInProgress);
         if (borrowedSource is not null) {
             _ = RequireBorrowedSource();
-            if (requireCurrentBorrowedPolicy) RequireBorrowedRevision(borrowedSourceRevision);
+            if (requireCurrentBorrowedPolicy) RequireCurrentBorrowedPolicy(session);
         }
+    }
+
+    /// Makes `next` the accepted state, saved behind as a new revision, and
+    /// answers the state it replaced. The caller holds the gate.
+    private SessionState Accept(SessionState next) {
+        var previous = session;
+        session = next;
+        Revision = checked(Revision + 1);
+        storage?.Enqueue(session, Revision);
+        return previous;
     }
 
     /// `nativeValueEdit` marks a proposal that originates in the native views
     /// rather than in sync materialization, so it answers to the Space access
     /// gate exactly as a semantic command does.
-    public ulong Commit(ulong expected, ReadOnlySpan<byte> delta, bool nativeValueEdit = false) {
-        SessionState next;
-        ulong revision;
+    public void Commit(ReadOnlySpan<byte> delta, bool nativeValueEdit = false) {
+        SessionState previous, next;
         lock (Gate) {
-            next = Prepare(expected, delta, nativeValueEdit: nativeValueEdit);
-            revision = checked(Revision + 1);
-            session = next; Revision = revision;
-            storage?.Enqueue(session, Revision);
+            next = Prepare(delta, nativeValueEdit: nativeValueEdit);
+            previous = Accept(next);
         }
-        Published(next, followUp: null);
-        return revision;
+        Published(previous, next, followUp: null, SessionTabEvents.None);
     }
 
-    public static (ulong Source, ulong Destination) CommitPair(
-        NativeSessionAuthority source, ulong sourceRevision, ReadOnlySpan<byte> sourceDelta,
-        NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> destinationDelta) {
-        if (ReferenceEquals(source, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameSessionTransfer);
-        SessionState a, b;
-        ulong ar, br;
-        lock (Gate) {
-            a = source.Prepare(sourceRevision, sourceDelta);
-            b = destination.Prepare(destinationRevision, destinationDelta);
-            ar = checked(source.Revision + 1); br = checked(destination.Revision + 1);
-            source.session = a; destination.session = b;
-            source.Revision = ar; destination.Revision = br;
-            source.storage?.Enqueue(a, ar);
-            destination.storage?.Enqueue(b, br);
-        }
-        source.Published(a, followUp: null);
-        destination.Published(b, followUp: null);
-        return (ar, br);
-    }
-
-    /// The stored parts of the accepted revision `expected`.
-    internal NativeSessionCheckpoint Checkpoint(ulong expected) {
-        lock (Gate) {
-            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
-            return new(session);
-        }
+    /// The stored parts of the accepted state.
+    internal NativeSessionCheckpoint Checkpoint() {
+        lock (Gate) return new(session);
     }
 
     #endregion

@@ -30,10 +30,10 @@ public sealed partial class BrowserContractsTests {
         using var device = new TestDevice(core);
         var window = device.Showing(session);
         var args = BatchArguments(space, "Duplicate");
-        var stale = core.PrepareCommand(1, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
-        core.PrepareCommand(1, SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest shared name" })).Commit();
-        Assert.Throws<BrowserRuleException>(() => stale.Commit());
-        var command = core.PrepareCommand(2, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
+        var stale = core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
+        core.PrepareCommand(SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest shared name" })).Commit();
+        AssertStale(stale.Commit);
+        var command = core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
         var output = JsonNode.Parse(command.Output)!;
         Assert.Null(output["error"]);
         var change = output["changes"]![0]!;
@@ -42,11 +42,11 @@ public sealed partial class BrowserContractsTests {
         var copy = change["space"]!["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == copiedId)!;
         Assert.Equal("Latest shared name", copy["customTitle"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(space["tabs"]![0]!["iconAccent"], copy["iconAccent"]));
-        var before = core.Checkpoint(2).Read("core");
+        var before = core.Checkpoint().Read("core");
         using (command.Reserve()) { }
-        Assert.Equal(before, core.Checkpoint(2).Read("core"));
-        core.PrepareCommand(2, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window)).Commit();
-        Assert.Equal(2, JsonNode.Parse(core.Checkpoint(3).Read("core"))!["spaces"]![0]!["tabs"]!.AsArray().Count);
+        Assert.Equal(before, core.Checkpoint().Read("core"));
+        core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window)).Commit();
+        Assert.Equal(2, JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!["tabs"]!.AsArray().Count);
     }
 
     [Fact]
@@ -64,13 +64,13 @@ public sealed partial class BrowserContractsTests {
         var window = device.Showing(session);
         var args = BatchArguments(source, "MoveToSpace");
         args["destinationSpaceId"] = destination["id"]!.DeepClone(); args["destinationProfileId"] = destination["profile"]!["id"]!.DeepClone();
-        var before = core.Checkpoint(1).Read("core");
-        var rejected = core.PrepareCommand(1, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
+        var before = core.Checkpoint().Read("core");
+        var rejected = core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
         Assert.Equal("pinned_capacity", JsonNode.Parse(rejected.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => rejected.Commit());
-        Assert.Equal(before, core.Checkpoint(1).Read("core"));
-        core.PrepareCommand(1, SpaceCommand(session, "tab.move", new() { ["tabId"] = fixture.Tab.ToString(), ["placement"] = "current", ["detach"] = false })).Commit();
-        var staleSelection = core.PrepareCommand(2, SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
+        Assert.Equal(before, core.Checkpoint().Read("core"));
+        core.PrepareCommand(SpaceCommand(session, "tab.move", new() { ["tabId"] = fixture.Tab.ToString(), ["placement"] = "current", ["detach"] = false })).Commit();
+        var staleSelection = core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
         Assert.Equal("stale_selection", JsonNode.Parse(staleSelection.Output)!["error"]!.GetValue<string>());
         Assert.Throws<BrowserRuleException>(() => staleSelection.Commit());
     }

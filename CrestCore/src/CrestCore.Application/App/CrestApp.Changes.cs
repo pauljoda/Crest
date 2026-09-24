@@ -36,14 +36,15 @@ public sealed partial class CrestApp {
     }
 
     /// Queues a change for the next drain. The host is woken only when the
-    /// batch goes from empty to not empty; a drain is already due otherwise.
+    /// batch goes from empty to not empty; a drain is already due otherwise,
+    /// and an intent this thread is running drains it before it returns.
     /// A newer save replaces an undrained older one.
     private void Announce(Change change) {
         bool wakes;
         lock (pendingGate) {
             if (change is Saved && pending.Count > 0 && pending[^1] is Saved) pending[^1] = change;
             else pending.Add(change);
-            wakes = pending.Count == 1;
+            wakes = pending.Count == 1 && !gate.IsHeldByCurrentThread;
         }
         if (wakes) Wake();
     }

@@ -17,7 +17,7 @@ public sealed partial class BrowserContractsTests {
         Assert.NotNull(session["selectedSpaceID"]); Assert.NotNull(session["spaces"]![0]!["selectedTabID"]);
         var authority = new NativeSessionAuthority(Bytes(session));
 
-        var saved = JsonNode.Parse(authority.Checkpoint(1).Read("core"))!;
+        var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         Assert.Null(saved["selectedSpaceID"]);
         Assert.Null(saved["spaces"]![0]!["selectedTabID"]);
 
@@ -25,7 +25,7 @@ public sealed partial class BrowserContractsTests {
         var metadata = session.DeepClone().AsObject(); metadata.Remove("spaces");
         var space = session["spaces"]![0]!.DeepClone().AsObject();
         foreach (var section in new[] { "tabs", "folders", "history", "archivedTabs" }) space.Remove(section);
-        using (var replacement = authority.ReserveReplacement(1, Bytes(new JsonObject {
+        using (var replacement = authority.ReserveReplacement(Bytes(new JsonObject {
             ["version"] = 1,
             ["metadata"] = metadata,
             ["spaces"] = new JsonArray(new JsonObject { ["id"] = space["id"]!.DeepClone(), ["metadata"] = space })
@@ -39,7 +39,7 @@ public sealed partial class BrowserContractsTests {
         // document still carries no selection.
         using var device = new TestDevice(authority);
         device.Send(new ShowTab(device.Open(fixture.Space), fixture.Space, fixture.Tab));
-        var touched = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!["spaces"]![0]!;
+        var touched = JsonNode.Parse(authority.Checkpoint().Read("core"))!["spaces"]![0]!;
         Assert.True(touched["tabs"]![0]!["lastActivatedAt"]!.GetValue<double>() > 800000000.25);
         Assert.Null(touched["selectedTabID"]);
     }
@@ -65,14 +65,14 @@ public sealed partial class BrowserContractsTests {
         device.Send(new ShowTab(other, fixture.Space, fixture.Tab));
         var revision = authority.Revision;
 
-        authority.PrepareCommand(revision, SpaceCommand(session, "tab.close", new() { ["tabId"] = closing.ToString() }, window: closer)).Commit();
+        authority.PrepareCommand(SpaceCommand(session, "tab.close", new() { ["tabId"] = closing.ToString() }, window: closer)).Commit();
         Assert.Equal(earlier, device.Tab(closer, fixture.Space));
         Assert.Equal(fixture.Space, device.Space(closer));
         // A window showing another tab changes nothing.
         Assert.Equal(fixture.Tab, device.Tab(other, fixture.Space));
 
         // A tab another window closes leaves this one showing nothing there.
-        authority.PrepareCommand(revision + 1, SpaceCommand(session, "tab.close", new() { ["tabId"] = earlier.ToString() }, window: other)).Commit();
+        authority.PrepareCommand(SpaceCommand(session, "tab.close", new() { ["tabId"] = earlier.ToString() }, window: other)).Commit();
         Assert.Null(device.Tab(closer, fixture.Space));
     }
 
@@ -92,8 +92,8 @@ public sealed partial class BrowserContractsTests {
         var authority = new NativeSessionAuthority(Bytes(session));
         using var device = new TestDevice(authority);
         device.Open(fixture.Space, (fixture.Space, shownElsewhere));
-        authority.PrepareCommand(1, SpaceCommand(session, "records.sweep", new())).Commit();
-        var tabs = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!["spaces"]![0]!["tabs"]!.AsArray()
+        authority.PrepareCommand(SpaceCommand(session, "records.sweep", new())).Commit();
+        var tabs = JsonNode.Parse(authority.Checkpoint().Read("core"))!["spaces"]![0]!["tabs"]!.AsArray()
             .Select(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>())).ToArray();
         Assert.Contains(shownElsewhere, tabs);
         Assert.DoesNotContain(unshown, tabs);

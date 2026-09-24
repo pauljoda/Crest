@@ -10,7 +10,6 @@ extension CrestCore {
     /// each one.
     struct StoredSessionHandles {
         let session: UInt64
-        let revision: UInt64
         let sync: UInt64
         /// A command whose answer is the session as loaded and repaired.
         let projection: UInt64
@@ -18,9 +17,16 @@ extension CrestCore {
 
     // MARK: - Actions - Saves
 
+    /// Returns once every edit the core accepted before the call is on disk,
+    /// or once a save the core started itself has failed. Drains keep running
+    /// while it waits, so the main actor stays free.
+    func flushPendingSaves() async {
+        guard let revision = try? query(PendingSave()).revision else { return }
+        await saved(through: revision)
+    }
+
     /// Returns once `revision` or a newer one is on disk, or once a save the
-    /// core started itself has failed. Drains keep running while it waits, so
-    /// the main actor stays free.
+    /// core started itself has failed.
     func saved(through revision: Int64) async {
         guard state.savedRevision < revision else { return }
         await withCheckedContinuation { continuation in
@@ -52,13 +58,12 @@ extension CrestCore {
     /// core keeps, or nil when its file holds none yet.
     func storedSessionHandles() -> StoredSessionHandles? {
         var session: UInt64 = 0
-        var revision: UInt64 = 0
         var sync: UInt64 = 0
         var projection: UInt64 = 0
-        let status = crest_app_session(handle, &session, &revision, &sync, &projection)
+        let status = crest_app_session(handle, &session, &sync, &projection)
         switch status {
         case CREST_OK:
-            return StoredSessionHandles(session: session, revision: revision, sync: sync, projection: projection)
+            return StoredSessionHandles(session: session, sync: sync, projection: projection)
         case CREST_EMPTY:
             return nil
         default:

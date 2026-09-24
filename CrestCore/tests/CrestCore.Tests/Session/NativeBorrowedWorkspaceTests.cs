@@ -13,7 +13,7 @@ public sealed partial class BrowserContractsTests {
         var session = SavedSession().Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session));
         var child = Borrow(owner, session);
-        var projected = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
+        var projected = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         var source = session["spaces"]![0]!; var space = projected["spaces"]![0]!;
         Assert.True(JsonNode.DeepEquals(source["profile"], space["profile"]));
         foreach (var section in new[] { "tabs", "folders", "history", "archivedTabs", "splitGroups" })
@@ -21,7 +21,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Null(space["selectedTabID"]);
         var metadata = space.DeepClone(); metadata["name"] = "Not the owner";
         Assert.Equal("borrowed_profile_requires_owner", Assert.Throws<BrowserRuleException>(() =>
-            child.Commit(1, Bytes(new JsonObject {
+            child.Commit(Bytes(new JsonObject {
                 ["version"] = 1,
                 ["spaces"] = new JsonArray(new JsonObject { ["id"] = space["id"]!.DeepClone(), ["metadata"] = metadata })
             }))).Code);
@@ -29,25 +29,24 @@ public sealed partial class BrowserContractsTests {
         var fabricated = projected.DeepClone(); fabricated["coreWorkspaceKind"] = "temporary";
         Assert.Equal("borrowed_source_required", Assert.Throws<BrowserRuleException>(() =>
             new NativeSessionAuthority(Bytes(fabricated))).Code);
-        Assert.Throws<BrowserRuleException>(() => owner.CreateBorrowed(1,
-            Guid.Parse(source["id"]!["rawValue"]!.GetValue<string>()), Guid.NewGuid()));
+        Assert.Throws<BrowserRuleException>(() => owner.CreateBorrowed(Guid.Parse(source["id"]!["rawValue"]!.GetValue<string>()), Guid.NewGuid()));
     }
 
     [Fact]
     public void BorrowedPolicyRefreshPreservesLocalRecordsAndRejectsPreparedEditsAfterOwnerChanges() {
         var session = SavedSession().Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session)); var child = Borrow(owner, session);
-        var initial = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
+        var initial = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         var localTab = session["spaces"]![0]!["tabs"]![0]!.DeepClone();
         localTab["folderID"] = null; localTab["splitGroupID"] = null; localTab["placement"] = "current";
-        child.Commit(1, Bytes(new JsonObject {
+        child.Commit(Bytes(new JsonObject {
             ["version"] = 1,
             ["spaces"] = new JsonArray(new JsonObject {
                 ["id"] = initial["spaces"]![0]!["id"]!.DeepClone(),
                 ["tabs"] = new JsonObject { ["replace"] = new JsonArray(localTab) }
             })
         }));
-        var local = JsonNode.Parse(child.Checkpoint(2).Read("core"))!;
+        var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         var request = Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "tab.rename",
@@ -56,20 +55,19 @@ public sealed partial class BrowserContractsTests {
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
             ["arguments"] = new JsonObject { ["tabId"] = localTab["id"]!["rawValue"]!.DeepClone(), ["title"] = "Prepared locally" }
         });
-        var pending = child.PrepareCommand(2, request);
-        owner.PrepareCommand(1, SpaceCommand(session, "space.identity",
+        var pending = child.PrepareCommand(request);
+        owner.PrepareCommand(SpaceCommand(session, "space.identity",
             new() { ["name"] = "New canonical name", ["symbol"] = "book", ["accent"] = "teal" })).Commit();
         Assert.Equal("stale_borrowed_source", Assert.Throws<BrowserRuleException>(() => pending.Commit()).Code);
-        Assert.Equal("stale_borrowed_source", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(2, request)).Code);
-        var refresh = child.PrepareBorrowedRefresh(2);
+        Assert.Equal("stale_borrowed_source", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(request)).Code);
+        var refresh = child.PrepareBorrowedRefresh();
         Assert.Equal(2UL, child.Revision);
-        Assert.Equal("New canonical name", JsonNode.Parse(refresh.Output)!["session"]!["spaces"]![0]!["name"]!.GetValue<string>());
         refresh.Commit();
-        var after = JsonNode.Parse(child.Checkpoint(3).Read("core"))!;
+        var after = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         Assert.True(JsonNode.DeepEquals(local["spaces"]![0]!["tabs"], after["spaces"]![0]!["tabs"]));
         Assert.Equal("New canonical name", after["spaces"]![0]!["name"]!.GetValue<string>());
-        child.PrepareCommand(3, request).Commit();
-        Assert.DoesNotContain("Prepared locally", System.Text.Encoding.UTF8.GetString(owner.Checkpoint(2).Read("core")));
+        child.PrepareCommand(request).Commit();
+        Assert.DoesNotContain("Prepared locally", System.Text.Encoding.UTF8.GetString(owner.Checkpoint().Read("core")));
     }
 
     [Fact]
@@ -80,17 +78,17 @@ public sealed partial class BrowserContractsTests {
         extra["tabs"] = new JsonArray(); extra["selectedTabID"] = null;
         session["spaces"]!.AsArray().Add(extra);
         var owner = new NativeSessionAuthority(Bytes(session)); var child = Borrow(owner, session);
-        var state = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
-        var old = child.Checkpoint(1);
-        var prepared = child.PrepareBorrowedRefresh(1);
-        owner.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin",
+        var state = JsonNode.Parse(child.Checkpoint().Read("core"))!;
+        var old = child.Checkpoint();
+        var prepared = child.PrepareBorrowedRefresh();
+        owner.PrepareCommand(SpaceCommand(session, "space.deletion.begin",
             new() { ["operationID"] = Guid.NewGuid().ToString() })).Commit();
         Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => prepared.Commit()).Code);
-        Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => child.PrepareBorrowedRefresh(1)).Code);
-        Assert.Equal(old.Read("core"), child.Checkpoint(1).Read("core"));
+        Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => child.PrepareBorrowedRefresh()).Code);
+        Assert.Equal(old.Read("core"), child.Checkpoint().Read("core"));
 
         var anotherOwner = new NativeSessionAuthority(Bytes(session)); var another = Borrow(anotherOwner, session);
-        var pending = another.PrepareBorrowedRefresh(1);
+        var pending = another.PrepareBorrowedRefresh();
         anotherOwner.Release();
         Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => pending.Commit()).Code);
         Assert.Equal(1UL, another.Revision);

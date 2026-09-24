@@ -168,13 +168,10 @@ static void session_boundary(void) {
         "\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"tabs\":[],\"folders\":[],"
         "\"history\":[],\"archivedTabs\":[]}]}", space_id, space_id, profile_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 999, revision = 999;
-    assert(crest_session_create(NULL, 0, &session, &revision) == CREST_INVALID_ARGUMENT
-        && session == 0 && revision == 0);
-    assert(crest_session_create((const uint8_t*)"{}", 2, &session, &revision) == CREST_INVALID_MESSAGE
-        && session == 0);
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK
-        && session != 0 && revision == 1);
+    uint64_t session = 999;
+    assert(crest_session_create(NULL, 0, &session) == CREST_INVALID_ARGUMENT && session == 0);
+    assert(crest_session_create((const uint8_t*)"{}", 2, &session) == CREST_INVALID_MESSAGE && session == 0);
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK && session != 0);
     memset(json, 0xaa, sizeof(json)); /* The core must own its session copy. */
 
     assert(crest_session_destroy(session) == CREST_OK);
@@ -230,16 +227,19 @@ static void engine_boundary(void) {
         "{\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"tabs\":[],"
         "\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}", space_id, profile_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 0, revision = 0;
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK);
+    uint64_t session = 0;
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK);
     uint8_t workspace[16];
     assert(crest_session_attach_device(session, app, workspace) == CREST_OK);
-    /* OpenWindow: the window, the workspace, not saved, nothing to copy or show, RestoresTabs. */
+    /* OpenWindow: the window, the workspace, not saved, nothing to copy or show,
+     * RestoresTabs. It answers the pending WorkspaceOpened first, then its
+     * own WindowChanged. */
     uint8_t opening[38] = { CREST_INTENT_OPEN_WINDOW };
     memset(opening + 1, 0x42, 16);
     memcpy(opening + 17, workspace, 16);
     opening[37] = 1;
     assert(crest_app_dispatch(app, opening, sizeof(opening), &buffer) == CREST_OK);
+    assert(buffer.bytes[0] == 2 && buffer.bytes[1] == CREST_CHANGE_WORKSPACE_OPENED);
     crest_buffer_free(&buffer);
 
     /* OpenPage: the page, the workspace, the Space (all 0x44), no tab, the
@@ -294,8 +294,8 @@ static void locked_space_boundary(void) {
         "],\"selectedTabID\":{\"rawValue\":\"%s\"},\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}",
         space_id, space_id, profile_id, tab_id, tab_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 0, revision = 0, access = 0, command = 0, request = 0;
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK);
+    uint64_t session = 0, access = 0, command = 0, request = 0;
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK);
     assert(crest_access_create(&access) == CREST_OK);
     assert(crest_session_attach_access(session, access + 1000) == CREST_INVALID_HANDLE);
     assert(crest_session_attach_access(session, access) == CREST_OK);
@@ -310,20 +310,20 @@ static void locked_space_boundary(void) {
         "\"tabs\":[{\"spaceId\":\"%s\",\"tabId\":\"%s\"}]}}",
         space_id, profile_id, tab_id, space_id, space_id, tab_id);
     assert(size > 0 && (size_t)size < sizeof(edit));
-    assert(crest_session_prepare_command(session, revision, (const uint8_t*)edit, (size_t)size, &command)
+    assert(crest_session_prepare_command(session, (const uint8_t*)edit, (size_t)size, &command)
         == CREST_INVALID_MESSAGE && command == 0);
 
     uint8_t space[16], profile[16];
     memset(space, 0x44, sizeof(space)); memset(profile, 0x55, sizeof(profile));
     assert(crest_access_begin(access, space, profile, 1, &request) == CREST_OK && request != 0);
     assert(crest_access_complete(access, space, profile, request, 1) == CREST_OK);
-    assert(crest_session_prepare_command(session, revision, (const uint8_t*)edit, (size_t)size, &command) == CREST_OK
+    assert(crest_session_prepare_command(session, (const uint8_t*)edit, (size_t)size, &command) == CREST_OK
         && command != 0);
     assert(crest_session_release_command(command) == CREST_OK);
 
     assert(crest_access_lock_space(access, space) == CREST_OK);
     command = 0;
-    assert(crest_session_prepare_command(session, revision, (const uint8_t*)edit, (size_t)size, &command)
+    assert(crest_session_prepare_command(session, (const uint8_t*)edit, (size_t)size, &command)
         == CREST_INVALID_MESSAGE && command == 0);
     assert(crest_access_destroy(access) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_OK);
@@ -341,19 +341,23 @@ static void preferences_boundary(void) {
         "],\"selectedTabID\":{\"rawValue\":\"%s\"},\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}",
         space_id, space_id, profile_id, tab_id, tab_id);
     assert(size > 0 && (size_t)size < sizeof(json));
-    uint64_t session = 0, revision = 0, command = 0, accepted = 0;
-    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK);
+    uint64_t session = 0, command = 0, stale = 0;
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK);
     const char *set = "{\"version\":1,\"operation\":\"preferences.set\","
         "\"arguments\":{\"preference\":\"startupBehavior\",\"value\":\"lastActiveTab\"}}";
-    assert(crest_session_prepare_command(session, revision, (const uint8_t*)set, strlen(set), &command) == CREST_OK);
-    assert(crest_session_commit_command(command, &accepted) == CREST_OK && accepted == revision + 1);
+    assert(crest_session_prepare_command(session, (const uint8_t*)set, strlen(set), &command) == CREST_OK);
+    assert(crest_session_prepare_command(session, (const uint8_t*)set, strlen(set), &stale) == CREST_OK);
+    assert(crest_session_commit_command(command) == CREST_OK);
     assert(crest_session_release_command(command) == CREST_OK);
+    /* A command prepared before another one committed is refused. */
+    assert(crest_session_commit_command(stale) == CREST_INVALID_STATE);
+    assert(crest_session_release_command(stale) == CREST_OK);
     const char *plan = "{\"version\":1,\"operation\":\"launch.plan\",\"platform\":\"desktop\",\"environment\":{"
         "\"testRuntime\":false,\"previewRuntime\":false,\"isolatedSession\":false,\"namedProfile\":false,"
         "\"isolatedCloudSync\":false,\"resetSession\":false,\"showcase\":false,\"inMemoryCredentials\":false,"
         "\"onboardingWelcome\":false,\"desktopSetup\":false,\"mobileSetup\":false,\"performanceHarness\":false,"
         "\"updateTestFeed\":false},\"hasActiveLaunchGate\":false}";
-    assert(crest_session_prepare_command(session, accepted, (const uint8_t*)plan, strlen(plan), &command) == CREST_OK);
+    assert(crest_session_prepare_command(session, (const uint8_t*)plan, strlen(plan), &command) == CREST_OK);
     char answer[512]; size_t length = 0;
     assert(crest_session_read_command(command, (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
     answer[length] = 0;
@@ -362,7 +366,7 @@ static void preferences_boundary(void) {
     const char *unknown = "{\"version\":1,\"operation\":\"preferences.set\","
         "\"arguments\":{\"preference\":\"sidebarDensity\",\"value\":1}}";
     command = 0;
-    assert(crest_session_prepare_command(session, accepted, (const uint8_t*)unknown, strlen(unknown), &command)
+    assert(crest_session_prepare_command(session, (const uint8_t*)unknown, strlen(unknown), &command)
         != CREST_OK && command == 0);
     assert(crest_session_destroy(session) == CREST_OK);
 }
@@ -429,10 +433,10 @@ static void storage_boundary(void) {
     snprintf(directory, sizeof(directory), "/tmp/crest-native-abi-%ld-%ld", (long)getpid(), (long)time(NULL));
     uint8_t configuration[160];
     size_t configured = storage_configuration(directory, configuration, sizeof(configuration));
-    uint64_t app = 0, session = 0, revision = 0, sync = 0, projection = 0;
+    uint64_t app = 0, session = 0, sync = 0, projection = 0;
     crest_buffer_t buffer = { NULL, 0 };
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK && app != 0);
-    assert(crest_app_session(app, &session, &revision, &sync, &projection) == CREST_EMPTY && session == 0);
+    assert(crest_app_session(app, &session, &sync, &projection) == CREST_EMPTY && session == 0);
     assert(crest_app_set_wake(app, count_wake, (void*)&storage_wakes) == CREST_OK);
     char json[512];
     int size = snprintf(json, sizeof(json),
@@ -452,8 +456,10 @@ static void storage_boundary(void) {
     adoption[adopted++] = 0;
     adopted = put_bytes(adoption, adopted, sizeof(adoption), json, (size_t)size);
     assert(crest_app_dispatch(app, adoption, adopted, &buffer) == CREST_OK);
-    /* One change, SessionAdopted, carrying no images. */
-    assert(buffer.length == 3 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SESSION_ADOPTED && buffer.bytes[2] == 0);
+    /* Two changes: WorkspaceOpened for the session the file now holds, then
+     * SessionAdopted, carrying no images. */
+    assert(buffer.bytes[0] == 2 && buffer.bytes[1] == CREST_CHANGE_WORKSPACE_OPENED);
+    assert(buffer.bytes[buffer.length - 2] == CREST_CHANGE_SESSION_ADOPTED && buffer.bytes[buffer.length - 1] == 0);
     crest_buffer_free(&buffer);
     /* The file holds a session now: a second adoption changes nothing. */
     assert(crest_app_dispatch(app, adoption, adopted, &buffer) == CREST_OK);
@@ -469,7 +475,7 @@ static void storage_boundary(void) {
     assert(buffer.length == 10 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SAVED && buffer.bytes[2] == 1);
     crest_buffer_free(&buffer);
     assert(crest_app_set_wake(app, NULL, NULL) == CREST_OK);
-    assert(crest_app_session(app, &session, &revision, &sync, &projection) == CREST_OK && session != 0 && revision == 1);
+    assert(crest_app_session(app, &session, &sync, &projection) == CREST_OK && session != 0);
     /* The stored session's workspace, which a saved window shows. */
     uint8_t workspace[16] = { 0 }, again[16] = { 0 };
     assert(crest_session_attach_device(session, app, workspace) == CREST_OK);
@@ -491,7 +497,7 @@ static void storage_boundary(void) {
 
     /* A second launch loads what the first one saved. */
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK);
-    assert(crest_app_session(app, &session, &revision, &sync, &projection) == CREST_OK && revision == 1);
+    assert(crest_app_session(app, &session, &sync, &projection) == CREST_OK && session != 0);
     assert(crest_session_release_command(projection) == CREST_OK);
     assert(crest_sync_authority_release(sync) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_OK);

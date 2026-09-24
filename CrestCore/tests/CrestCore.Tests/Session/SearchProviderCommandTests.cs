@@ -20,7 +20,7 @@ public sealed partial class BrowserContractsTests {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
         var kagi = Guid.NewGuid();
-        var added = authority.PrepareCommand(1, SpaceCommand(session, "space.search_provider.upsert", new() {
+        var added = authority.PrepareCommand(SpaceCommand(session, "space.search_provider.upsert", new() {
             ["provider"] = Engine(kagi, "  Kagi ", " https://kagi.com/search?q=%s ", ""),
             ["selects"] = true
         }));
@@ -34,11 +34,11 @@ public sealed partial class BrowserContractsTests {
             preferences["customSearchProviders"]!.ToJsonString());
 
         var other = Guid.NewGuid();
-        authority.PrepareCommand(2, SpaceCommand(session, "space.search_provider.upsert", new() {
+        authority.PrepareCommand(SpaceCommand(session, "space.search_provider.upsert", new() {
             ["provider"] = Engine(other, "Example", "https://example.com/?q={searchTerms}"),
             ["selects"] = false
         })).Commit();
-        var edited = authority.PrepareCommand(3, SpaceCommand(session, "space.search_provider.upsert", new() {
+        var edited = authority.PrepareCommand(SpaceCommand(session, "space.search_provider.upsert", new() {
             ["provider"] = Engine(kagi, "Kagi Search", "https://kagi.com/search?q=%s", "https://kagi.com/api/autosuggest?q=%s")
         }));
         edited.Commit();
@@ -47,7 +47,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(["Kagi Search", "Example"], engines.Select(e => e!["name"]!.GetValue<string>()));
         Assert.Equal("https://kagi.com/api/autosuggest?q=%s", engines[0]!["suggestionURLTemplate"]!.GetValue<string>());
 
-        var removed = authority.PrepareCommand(4, SpaceCommand(session, "space.search_provider.remove", new() { ["id"] = kagi.ToString("D") }));
+        var removed = authority.PrepareCommand(SpaceCommand(session, "space.search_provider.remove", new() { ["id"] = kagi.ToString("D") }));
         removed.Commit();
         preferences = JsonNode.Parse(removed.Output)!["session"]!["spaces"]![0]!["browsingPreferences"]!;
         Assert.Equal("google", preferences["selectedSearchProviderID"]!.GetValue<string>());
@@ -58,16 +58,16 @@ public sealed partial class BrowserContractsTests {
     public void RejectedCustomSearchEnginesLeaveTheSpaceUnchanged() {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        authority.PrepareCommand(1, SpaceCommand(session, "space.search_provider.upsert", new() {
+        authority.PrepareCommand(SpaceCommand(session, "space.search_provider.upsert", new() {
             ["provider"] = Engine(Guid.NewGuid(), "Café", "https://example.org/?q=%s")
         })).Commit();
-        var duplicate = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2, SpaceCommand(session,
+        var duplicate = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(SpaceCommand(session,
             "space.search_provider.upsert", new() { ["provider"] = Engine(Guid.NewGuid(), "CAFE", "https://example.com/?q=%s") })));
         Assert.Equal(BrowserRuleCodes.DuplicateSearchName, duplicate.Code);
-        var unsafeTemplate = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2, SpaceCommand(session,
+        var unsafeTemplate = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(SpaceCommand(session,
             "space.search_provider.upsert", new() { ["provider"] = Engine(Guid.NewGuid(), "Local", "https://localhost/?q=%s") })));
         Assert.Equal(BrowserRuleCodes.UnsafeSearchTemplate, unsafeTemplate.Code);
-        var saved = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!;
+        var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         Assert.Single(saved["spaces"]![0]!["browsingPreferences"]!["customSearchProviders"]!.AsArray());
     }
 }

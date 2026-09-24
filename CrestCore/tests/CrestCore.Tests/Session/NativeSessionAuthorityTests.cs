@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -42,58 +43,42 @@ public sealed partial class BrowserContractsTests {
             ["now"] = 800000001.0
         };
 
-        var error = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(1, Bytes(request)));
+        var error = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(Bytes(request)));
         Assert.Equal(expectedCode, error.Code);
     }
     [Fact]
     public void DurableReplacementReservesPublicationAndCancellationKeepsTheAcceptedRevision() {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        var original = authority.Checkpoint(1).Read("core");
-        using (var cancelled = authority.ReserveReplacement(1, RenameDelta(session, "Not saved"))) {
-            Assert.Equal(original, authority.Checkpoint(1).Read("core"));
-            Assert.Throws<BrowserRuleException>(() => authority.Commit(1, RenameDelta(session, "Racing edit")));
-            Assert.Throws<BrowserRuleException>(() => authority.ReserveReplacement(1, RenameDelta(session, "Racing merge")));
+        var original = authority.Checkpoint().Read("core");
+        using (var cancelled = authority.ReserveReplacement(RenameDelta(session, "Not saved"))) {
+            Assert.Equal(original, authority.Checkpoint().Read("core"));
+            Assert.Throws<BrowserRuleException>(() => authority.Commit(RenameDelta(session, "Racing edit")));
+            Assert.Throws<BrowserRuleException>(() => authority.ReserveReplacement(RenameDelta(session, "Racing merge")));
         }
         Assert.Equal(1UL, authority.Revision);
-        using var accepted = authority.ReserveReplacement(1, RenameDelta(session, "Durable"));
+        using var accepted = authority.ReserveReplacement(RenameDelta(session, "Durable"));
         var persisted = accepted.Checkpoint.Read("core");
-        Assert.Equal(2UL, accepted.Commit());
-        Assert.Equal(persisted, authority.Checkpoint(2).Read("core"));
+        accepted.Commit();
+        Assert.Equal(2UL, authority.Revision);
+        Assert.Equal(persisted, authority.Checkpoint().Read("core"));
         Assert.Throws<BrowserRuleException>(() => accepted.Commit());
-        authority.Commit(2, RenameDelta(session, "Next local edit"));
+        authority.Commit(RenameDelta(session, "Next local edit"));
         Assert.Equal(3UL, authority.Revision);
     }
 
     [Fact]
-    public void NativeAuthorityRejectsStaleEditsAndKeepsEarlierCheckpointStable() {
+    public void NativeAuthorityKeepsEarlierCheckpointStable() {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        var before = authority.Checkpoint(1);
+        var before = authority.Checkpoint();
         var original = before.Read("core");
-        authority.Commit(1, RenameDelta(session, "Updated native title"));
+        authority.Commit(RenameDelta(session, "Updated native title"));
         Assert.Equal(original, before.Read("core"));
-        var after = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!;
+        var after = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         Assert.Equal("Updated native title", after["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(session["spaces"]![0]!["branding"], after["spaces"]![0]!["branding"]));
         Assert.Empty(after["spaces"]![0]!["history"]!.AsArray());
-        Assert.Throws<BrowserRuleException>(() => authority.Commit(1, RenameDelta(session, "Stale")));
-        Assert.Equal(2UL, authority.Revision);
-    }
-    [Fact]
-    public void NativeWorkspacePairRejectsBothWhenDestinationRevisionIsStale() {
-        var session = SavedSession().Document["session"]!;
-        var source = new NativeSessionAuthority(Bytes(session));
-        var destination = new NativeSessionAuthority(Bytes(session));
-        var sourceBefore = source.Checkpoint(1).Read("core");
-        destination.Commit(1, RenameDelta(session, "Concurrent destination edit"));
-        Assert.Throws<BrowserRuleException>(() => NativeSessionAuthority.CommitPair(
-            source, 1, RenameDelta(session, "Source proposal"), destination, 1, RenameDelta(session, "Destination proposal")));
-        Assert.Equal(1UL, source.Revision);
-        Assert.Equal(sourceBefore, source.Checkpoint(1).Read("core"));
-        var result = NativeSessionAuthority.CommitPair(
-            source, 1, RenameDelta(session, "Source accepted"), destination, 2, RenameDelta(session, "Destination accepted"));
-        Assert.Equal((2UL, 3UL), result);
     }
 
     [Fact]
@@ -109,15 +94,15 @@ public sealed partial class BrowserContractsTests {
             ["now"] = 800000001.0,
             ["arguments"] = new JsonObject { ["tabId"] = fixture.Tab.ToString(), ["title"] = title },
         });
-        var before = authority.Checkpoint(1).Read("core");
-        var first = authority.PrepareCommand(1, Request("Accepted"));
-        var competing = authority.PrepareCommand(1, Request("Stale"));
-        Assert.Equal(before, authority.Checkpoint(1).Read("core"));
+        var before = authority.Checkpoint().Read("core");
+        var first = authority.PrepareCommand(Request("Accepted"));
+        var competing = authority.PrepareCommand(Request("Stale"));
+        Assert.Equal(before, authority.Checkpoint().Read("core"));
         Assert.Null(JsonNode.Parse(first.Output)!["space"]!["selectedTabID"]);
-        Assert.Equal(2UL, first.Commit());
-        Assert.Throws<BrowserRuleException>(() => competing.Commit());
-        Assert.Throws<BrowserRuleException>(() => first.Commit());
-        var checkpoint = authority.Checkpoint(2);
+        first.Commit();
+        Assert.IsType<StaleCommand>(Assert.Throws<Rejected>(() => competing.Commit()).Rejection);
+        Assert.IsType<StaleCommand>(Assert.Throws<Rejected>(() => first.Commit()).Rejection);
+        var checkpoint = authority.Checkpoint();
         var saved = JsonNode.Parse(checkpoint.Read("core"))!["spaces"]![0]!;
         Assert.Equal("Accepted", saved["tabs"]![0]!["customTitle"]!.GetValue<string>());
         Assert.Null(saved["selectedTabID"]);
@@ -154,13 +139,13 @@ public sealed partial class BrowserContractsTests {
                 ["title"] = "Live title"
             })
         };
-        var rejected = core.PrepareCommand(1, SpaceCommand(session, "tab.copy", Arguments(Guid.NewGuid())));
-        core.PrepareCommand(1, SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest name" })).Commit();
-        Assert.Throws<BrowserRuleException>(() => rejected.Commit());
+        var rejected = core.PrepareCommand(SpaceCommand(session, "tab.copy", Arguments(Guid.NewGuid())));
+        core.PrepareCommand(SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest name" })).Commit();
+        AssertStale(rejected.Commit);
         var id = Guid.NewGuid();
-        var accepted = core.PrepareCommand(2, SpaceCommand(session, "tab.copy", Arguments(id)));
+        var accepted = core.PrepareCommand(SpaceCommand(session, "tab.copy", Arguments(id)));
         accepted.Commit();
-        var space = JsonNode.Parse(core.Checkpoint(3).Read("core"))!["spaces"]![0]!;
+        var space = JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!;
         var copy = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == id)!;
         var original = space["tabs"]!.AsArray().Single(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>()) == fixture.Tab)!;
         Assert.Equal("Latest name", copy["customTitle"]!.GetValue<string>());
@@ -198,7 +183,7 @@ public sealed partial class BrowserContractsTests {
             }
         };
         var linked = Guid.NewGuid();
-        var command = core.PrepareCommand(1, SpaceCommand(session, "split.open_link", LinkArgs(linked)));
+        var command = core.PrepareCommand(SpaceCommand(session, "split.open_link", LinkArgs(linked)));
         command.Commit();
         var output = JsonNode.Parse(command.Output)!; var updated = output["space"]!;
         Assert.Equal(5, updated["tabs"]!.AsArray().Count);
@@ -207,12 +192,12 @@ public sealed partial class BrowserContractsTests {
         Assert.NotEqual(original["splitGroupID"]!.ToJsonString(), group.ToJsonString());
         var groupId = Guid.Parse(group["rawValue"]!.GetValue<string>());
         Assert.Equal("Saved pair", updated["splitGroups"]!.AsArray().Single(g => Guid.Parse(g!["id"]!["rawValue"]!.GetValue<string>()) == groupId)!["customTitle"]!.GetValue<string>());
-        var before = core.Checkpoint(2).Read("core");
-        Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(2, SpaceCommand(session, "split.move", new() { ["groupId"] = groupId.ToString(), ["placement"] = "pinned" })));
-        Assert.Equal(before, core.Checkpoint(2).Read("core"));
-        core.PrepareCommand(2, SpaceCommand(session, "split.move", new() { ["groupId"] = groupId.ToString(), ["placement"] = "saved", ["folderId"] = original["folderID"]!["rawValue"]!.DeepClone() })).Commit();
-        core.PrepareCommand(3, SpaceCommand(session, "split.dissolve", new() { ["groupId"] = groupId.ToString() })).Commit();
-        var final = JsonNode.Parse(core.Checkpoint(4).Read("core"))!["spaces"]![0]!;
+        var before = core.Checkpoint().Read("core");
+        Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(SpaceCommand(session, "split.move", new() { ["groupId"] = groupId.ToString(), ["placement"] = "pinned" })));
+        Assert.Equal(before, core.Checkpoint().Read("core"));
+        core.PrepareCommand(SpaceCommand(session, "split.move", new() { ["groupId"] = groupId.ToString(), ["placement"] = "saved", ["folderId"] = original["folderID"]!["rawValue"]!.DeepClone() })).Commit();
+        core.PrepareCommand(SpaceCommand(session, "split.dissolve", new() { ["groupId"] = groupId.ToString() })).Commit();
+        var final = JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!;
         Assert.Equal(5, final["tabs"]!.AsArray().Count);
         Assert.All(final["tabs"]!.AsArray(), t => Assert.Equal("saved", t!["placement"]!.GetValue<string>()));
         Assert.Single(final["splitGroups"]!.AsArray());
@@ -223,20 +208,20 @@ public sealed partial class BrowserContractsTests {
     public void SpaceCommandsPreserveCollectionsAndCannotApplyToReplacedProfiles() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        var original = authority.Checkpoint(1);
-        var pending = authority.PrepareCommand(1, SpaceCommand(session, "space.identity", new() { ["name"] = "  Research  ", ["symbol"] = "  ", ["accent"] = "teal" }));
+        var original = authority.Checkpoint();
+        var pending = authority.PrepareCommand(SpaceCommand(session, "space.identity", new() { ["name"] = "  Research  ", ["symbol"] = "  ", ["accent"] = "teal" }));
         Assert.Equal(1UL, authority.Revision);
         var projection = JsonNode.Parse(pending.Output)!["session"]!;
         Assert.Empty(projection["spaces"]![0]!["tabs"]!.AsArray());
         pending.Commit();
-        var saved = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!;
+        var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         Assert.Equal("Research", saved["spaces"]![0]!["name"]!.GetValue<string>());
         Assert.Equal("square.grid.2x2", saved["spaces"]![0]!["symbol"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(JsonNode.Parse(original.Read("core"))!["spaces"]![0]!["tabs"], saved["spaces"]![0]!["tabs"]));
-        Assert.Equal(original.Read(fixture.Space.ToString()), authority.Checkpoint(2).Read(fixture.Space.ToString()));
+        Assert.Equal(original.Read(fixture.Space.ToString()), authority.Checkpoint().Read(fixture.Space.ToString()));
         var invalid = JsonNode.Parse(SpaceCommand(session, "space.access", new() { ["value"] = "open" }))!;
         invalid["profileId"] = Guid.NewGuid().ToString();
-        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2, Bytes(invalid)));
+        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(Bytes(invalid)));
         Assert.Equal(2UL, authority.Revision);
     }
 
@@ -252,10 +237,9 @@ public sealed partial class BrowserContractsTests {
         using var device = new TestDevice(authority);
         var window = device.Showing(session);
         var args = new JsonObject { ["operationID"] = Guid.NewGuid().ToString("D") };
-        authority.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject(), window: window)).Commit();
-        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2,
-            SpaceCommand(session, "space.deletion.begin", new() { ["operationID"] = Guid.NewGuid().ToString("D") }, second)));
-        var command = authority.PrepareCommand(2, SpaceCommand(session, "space.remove", args.DeepClone().AsObject()));
+        authority.PrepareCommand(SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject(), window: window)).Commit();
+        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(SpaceCommand(session, "space.deletion.begin", new() { ["operationID"] = Guid.NewGuid().ToString("D") }, second)));
+        var command = authority.PrepareCommand(SpaceCommand(session, "space.remove", args.DeepClone().AsObject()));
         command.Commit();
         var output = JsonNode.Parse(command.Output)!;
         var projection = output["session"]!;
@@ -266,8 +250,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Null(projection["selectedSpaceID"]);
         Assert.True(JsonNode.DeepEquals(second["id"], projection["defaultSpaceID"]));
         Assert.Null(projection["spaceDeletions"]);
-        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(3,
-            SpaceCommand(projection, "space.deletion.begin", args.DeepClone().AsObject())));
+        Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(SpaceCommand(projection, "space.deletion.begin", args.DeepClone().AsObject())));
     }
 
     [Fact]
@@ -281,11 +264,11 @@ public sealed partial class BrowserContractsTests {
         using var device = new TestDevice(authority);
         var window = device.Showing(session);
         var args = new JsonObject { ["operationID"] = Guid.NewGuid().ToString("D") };
-        var command = authority.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject(), window: window));
+        var command = authority.PrepareCommand(SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject(), window: window));
         using (var cancelled = command.Reserve()) {
             Assert.Equal(1UL, authority.Revision);
-            Assert.Null(JsonNode.Parse(authority.Checkpoint(1).Read("core"))!["spaceDeletions"]);
-            Assert.Throws<BrowserRuleException>(() => authority.Commit(1, RenameDelta(session, "Racing write")));
+            Assert.Null(JsonNode.Parse(authority.Checkpoint().Read("core"))!["spaceDeletions"]);
+            Assert.Throws<BrowserRuleException>(() => authority.Commit(RenameDelta(session, "Racing write")));
         }
         Assert.Equal(SpaceId(session["spaces"]![0]!), device.Space(window));
         using var saved = command.Reserve();
@@ -297,12 +280,10 @@ public sealed partial class BrowserContractsTests {
         var restored = JsonNode.Parse(bytes)!;
         Assert.Single(restored["spaceDeletions"]!.AsArray());
         Assert.Null(restored["selectedSpaceID"]);
-        Assert.Throws<BrowserRuleException>(() => restarted.Commit(1, RenameDelta(restored, "Late page callback")));
-        Assert.Throws<BrowserRuleException>(() => restarted.PrepareCommand(1,
-            SpaceCommand(restored, "space.identity", new() { ["name"] = "Revived", ["symbol"] = "globe", ["accent"] = "teal" })));
-        Assert.Throws<BrowserRuleException>(() => restarted.PrepareCommand(1,
-            SpaceCommand(restored, "space.remove", new() { ["operationID"] = Guid.NewGuid().ToString() })));
-        var completion = restarted.PrepareCommand(1, SpaceCommand(restored, "space.remove", args.DeepClone().AsObject()));
+        Assert.Throws<BrowserRuleException>(() => restarted.Commit(RenameDelta(restored, "Late page callback")));
+        Assert.Throws<BrowserRuleException>(() => restarted.PrepareCommand(SpaceCommand(restored, "space.identity", new() { ["name"] = "Revived", ["symbol"] = "globe", ["accent"] = "teal" })));
+        Assert.Throws<BrowserRuleException>(() => restarted.PrepareCommand(SpaceCommand(restored, "space.remove", new() { ["operationID"] = Guid.NewGuid().ToString() })));
+        var completion = restarted.PrepareCommand(SpaceCommand(restored, "space.remove", args.DeepClone().AsObject()));
         using var finishing = completion.Reserve();
         Assert.Null(JsonNode.Parse(finishing.Checkpoint.Read("core"))!["spaceDeletions"]);
         finishing.Commit();
@@ -318,7 +299,7 @@ public sealed partial class BrowserContractsTests {
         template["selectedTabID"] = template["tabs"]![0]!["id"]!.DeepClone();
         session["coreWorkspaceKind"] = "private";
         var authority = new NativeSessionAuthority(Bytes(session));
-        var command = authority.PrepareCommand(1, SpaceCommand(session, "space.create", new() { ["template"] = template }));
+        var command = authority.PrepareCommand(SpaceCommand(session, "space.create", new() { ["template"] = template }));
         command.Commit();
         var projection = JsonNode.Parse(command.Output)!["session"]!;
         var added = projection["spaces"]![1]!;
@@ -328,18 +309,17 @@ public sealed partial class BrowserContractsTests {
         Assert.False(added["credentialPreferences"]!["syncsCrestPasswordsWithICloud"]!.GetValue<bool>());
         Assert.Null(projection["coreWorkspaceKind"]);
         var deletion = new JsonObject { ["operationID"] = Guid.NewGuid().ToString("D") };
-        authority.PrepareCommand(2, SpaceCommand(projection, "space.deletion.begin", deletion)).Commit();
+        authority.PrepareCommand(SpaceCommand(projection, "space.deletion.begin", deletion)).Commit();
         var fresh = template.DeepClone();
         fresh["id"] = SwiftId(Guid.NewGuid()); fresh["profile"]!["id"] = Guid.NewGuid().ToString("D");
-        var reset = authority.PrepareCommand(3, SpaceCommand(projection, "space.reset_private", new() { ["template"] = fresh }));
+        var reset = authority.PrepareCommand(SpaceCommand(projection, "space.reset_private", new() { ["template"] = fresh }));
         reset.Commit();
         var cleared = JsonNode.Parse(reset.Output)!["session"]!;
         Assert.Single(cleared["spaces"]!.AsArray());
         Assert.Null(cleared["spaceDeletions"]);
         Assert.Equal("Private", cleared["spaces"]![0]!["name"]!.GetValue<string>());
         var borrowed = Borrow(authority, cleared);
-        Assert.Throws<BrowserRuleException>(() => borrowed.PrepareCommand(1,
-            SpaceCommand(session, "space.identity", new() { ["name"] = "Changed", ["symbol"] = "globe", ["accent"] = "teal" })));
+        Assert.Throws<BrowserRuleException>(() => borrowed.PrepareCommand(SpaceCommand(session, "space.identity", new() { ["name"] = "Changed", ["symbol"] = "globe", ["accent"] = "teal" })));
     }
 
     [Fact]

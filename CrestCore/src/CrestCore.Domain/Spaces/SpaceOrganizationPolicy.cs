@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Shared rules for Space commands, independent of native models and storage.
@@ -13,8 +15,8 @@ public static class SpaceOrganizationPolicy {
         return result;
     }
 
-    public static void RequireOwnedProfiles(BrowserWorkspaceKind kind) {
-        if (kind == BrowserWorkspaceKind.Temporary) throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfile);
+    public static void RequireOwnedProfiles(WorkspaceKind kind) {
+        if (kind == WorkspaceKind.Borrowed) throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfile);
     }
 
     public static void RequireRemovable(int count) {

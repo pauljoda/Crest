@@ -8,7 +8,7 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Actions - Batch
 
-    private NativeSessionCommand PrepareTabBatch(ulong expected, JsonObject request) {
+    private NativeSessionCommand PrepareTabBatch(JsonObject request) {
         try {
             // A batch acts on the tabs the person multi-selected in the Space
             // their window shows; any other Space means the selection is stale.
@@ -77,9 +77,10 @@ public sealed partial class NativeSessionAuthority {
             }
             var next = Replacing(session, [.. organized.Select(pair => pair.Space)]);
             Validate(next);
-            return new(this, expected, next, Output(new JsonObject { ["changes"] = changes }), followUp: followUp);
+            return new(this, session, next, Output(new JsonObject { ["changes"] = changes }), followUp: followUp,
+                events: new([.. result.Copies.Select(pair => new SessionTabCopy(pair.Source, pair.Copy))], null));
         } catch (BrowserRuleException error) {
-            return new(this, expected, session, Output(new JsonObject { ["error"] = error.Code }), error.Code);
+            return new(this, session, session, Output(new JsonObject { ["error"] = error.Code }), error.Code);
         }
     }
 

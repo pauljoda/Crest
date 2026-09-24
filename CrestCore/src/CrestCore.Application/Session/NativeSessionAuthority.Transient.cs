@@ -20,7 +20,7 @@ public sealed partial class NativeSessionAuthority {
             throw new BrowserRuleException(BrowserRuleCodes.TransientAlreadyCompleted);
     }
 
-    private NativeSessionCommand PrepareTransientCommand(ulong expected, JsonObject request) {
+    private NativeSessionCommand PrepareTransientCommand(JsonObject request) {
         var args = request["arguments"]!.AsObject();
         var completion = Id(args["requestId"]);
         RequirePendingTransient(completion);
@@ -37,10 +37,10 @@ public sealed partial class NativeSessionAuthority {
                 new(spaceId, profileId), args["sourceAccessible"]!.GetValue<bool>(),
                 args["destinationAccessible"]!.GetValue<bool>(), args["supportsLiveAdoption"]!.GetValue<bool>());
         } else if (operation != SessionOperation.TransientArchive) throw new BrowserRuleException(BrowserRuleCodes.UnknownTransientCommand);
-        var (next, answer, followUp) = EditSpace(request, operation == SessionOperation.TransientPromote
+        var (next, answer, followUp, events) = EditSpace(request, operation == SessionOperation.TransientPromote
             ? SessionOperation.TabPromoteTransient : SessionOperation.TabArchiveTransient);
         answer["adoptLivePage"] = adopt && args["tab"] is not null;
-        return new(this, expected, next, Output(answer), transientCompletion: completion, followUp: followUp);
+        return new(this, session, next, Output(answer), transientCompletion: completion, followUp: followUp, events: events);
     }
 
     #endregion

@@ -50,7 +50,7 @@ public sealed partial class BrowserContractsTests {
 
         using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
             Assert.Null(app.Session);
-            var adopted = Assert.IsType<SessionAdopted>(Assert.Single(app.Send(new AdoptLegacySession(installed, SeedDocument()))));
+            var adopted = Assert.Single(app.Send(new AdoptLegacySession(installed, SeedDocument())).OfType<SessionAdopted>());
             // The split layout kept images in the platform's own store.
             Assert.Empty(adopted.Favicons);
 
@@ -63,8 +63,8 @@ public sealed partial class BrowserContractsTests {
             Assert.NotEmpty(spaces.SelectMany(space => space!["splitGroups"]!.AsArray()));
             Assert.NotEmpty(spaces.SelectMany(space => space!["archivedTabs"]!.AsArray()));
             // A window without a record of its own still adopts the tabs the release showed.
-            var window = Assert.IsType<WindowChanged>(Assert.Single(app.Send(new OpenWindow(Guid.NewGuid(),
-                app.AttachWorkspace(app.Session!), Saved: true, null, null, [], RestoresTabs: true)))).Window;
+            var window = Assert.IsType<WindowChanged>(Assert.Single(Own(app.Send(new OpenWindow(Guid.NewGuid(),
+                app.AttachWorkspace(app.Session!), Saved: true, null, null, [], RestoresTabs: true))))).Window;
             Assert.Contains(new ShownTab(SpaceId(spaces[1]!), SpaceId(spaces[1]!["tabs"]![2]!)), window.ShownTabs);
 
             // The journal keeps its device identity, clock, records and the uploads still owed.
@@ -81,7 +81,8 @@ public sealed partial class BrowserContractsTests {
         // defaults have since changed.
         var changed = new LegacySession(SeedDocument(), WholeGraph: null, [], installed.Journal);
         using var relaunched = new CrestApp(new AppConfiguration(directory.Path));
-        Assert.Empty(relaunched.Send(new AdoptLegacySession(changed, SeedDocument())));
+        relaunched.Drain();
+        Assert.Empty(Own(relaunched.Send(new AdoptLegacySession(changed, SeedDocument()))));
         AssertSameSession(expected, Projection(relaunched)["session"]!);
         Assert.Equal(journal["records"]!.AsArray().Count, JsonNode.Parse(relaunched.SessionSync!.Snapshot.Read())!["records"]!.AsArray().Count);
     }
@@ -135,8 +136,8 @@ public sealed partial class BrowserContractsTests {
             });
 
         using var app = new CrestApp(new AppConfiguration(directory.Path));
-        var adopted = Assert.IsType<SessionAdopted>(Assert.Single(app.Send(new AdoptLegacySession(
-            new LegacySession(Core: null, Bytes(document), [], Journal: null), SeedDocument()))));
+        var adopted = Assert.Single(app.Send(new AdoptLegacySession(
+            new LegacySession(Core: null, Bytes(document), [], Journal: null), SeedDocument())).OfType<SessionAdopted>());
 
         var favicon = Assert.Single(adopted.Favicons);
         Assert.Equal(open, favicon.TabId);
@@ -193,7 +194,7 @@ public sealed partial class BrowserContractsTests {
             var unreadable = new LegacySession(Bytes(JsonValue.Create("a core a later build may read")!), installed.Core, installed.History,
                 installed.Journal);
             using var app = new CrestApp(new AppConfiguration(directory.Path));
-            Assert.IsType<SessionAdopted>(Assert.Single(app.Send(new AdoptLegacySession(unreadable, Bytes(seed)))));
+            Assert.Single(app.Send(new AdoptLegacySession(unreadable, Bytes(seed))).OfType<SessionAdopted>());
             var projection = Projection(app);
             Assert.Equal(Guid.Parse(seed["disposableSeedMarker"]!.GetValue<string>()),
                 Guid.Parse(projection["session"]!["disposableSeedMarker"]!.GetValue<string>()));

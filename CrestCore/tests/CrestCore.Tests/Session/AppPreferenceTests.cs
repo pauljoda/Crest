@@ -40,7 +40,7 @@ public sealed partial class BrowserContractsTests {
     private static string Startup(NativeSessionAuthority authority, string platform = "desktop", bool gate = false,
         params string[] enabled) {
         var revision = authority.Revision;
-        var plan = JsonNode.Parse(authority.PrepareCommand(revision, LaunchRequest(platform, gate, enabled)).Output)!;
+        var plan = JsonNode.Parse(authority.PrepareCommand(LaunchRequest(platform, gate, enabled)).Output)!;
         Assert.Equal(revision, authority.Revision);
         return plan["startupBehavior"]!.GetValue<string>();
     }
@@ -63,8 +63,8 @@ public sealed partial class BrowserContractsTests {
         var authority = new NativeSessionAuthority(Bytes(session));
         Assert.Equal("showStartPage", Startup(authority));
 
-        authority.PrepareCommand(1, PreferenceCommand("preferences.import", new() { ["legacy"] = LegacyPreferences() })).Commit();
-        var saved = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!;
+        authority.PrepareCommand(PreferenceCommand("preferences.import", new() { ["legacy"] = LegacyPreferences() })).Commit();
+        var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         var stored = saved["appPreferences"]!;
         Assert.Equal("lastActiveTab", stored["startupBehavior"]!.GetValue<string>());
         Assert.False(stored["offersTranslation"]!.GetValue<bool>());
@@ -78,13 +78,13 @@ public sealed partial class BrowserContractsTests {
 
         // A later launch finds the record and never imports over it again.
         var restored = new NativeSessionAuthority(Bytes(saved));
-        var repeated = restored.PrepareCommand(1, PreferenceCommand("preferences.import", new() {
+        var repeated = restored.PrepareCommand(PreferenceCommand("preferences.import", new() {
             ["legacy"] = new JsonObject { ["startupBehavior"] = "showStartPage", ["checksSpelling"] = false }
         }));
         Assert.Equal("lastActiveTab", JsonNode.Parse(repeated.Output)!["preferences"]!["startupBehavior"]!.GetValue<string>());
         repeated.Commit();
         Assert.Equal("lastActiveTab", Startup(restored));
-        Assert.True(JsonNode.Parse(restored.Checkpoint(2).Read("core"))!["appPreferences"]!["checksSpelling"]!
+        Assert.True(JsonNode.Parse(restored.Checkpoint().Read("core"))!["appPreferences"]!["checksSpelling"]!
             .GetValue<bool>());
     }
 
@@ -92,7 +92,7 @@ public sealed partial class BrowserContractsTests {
     public void UnreadableLegacyValuesKeepTheirDefaults() {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        var imported = authority.PrepareCommand(1, PreferenceCommand("preferences.import", new() {
+        var imported = authority.PrepareCommand(PreferenceCommand("preferences.import", new() {
             ["legacy"] = new JsonObject {
                 ["startupBehavior"] = "retiredChoice",
                 ["translationRules"] = "not json",
@@ -113,9 +113,9 @@ public sealed partial class BrowserContractsTests {
     public void OnlyPreferenceCommandsChangeTheRecord() {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        authority.PrepareCommand(1, PreferenceCommand("preferences.set", SetPreference("checksSpelling", true))).Commit();
-        authority.PrepareCommand(2, PreferenceCommand("preferences.set", SetPreference("startupBehavior", "lastActiveTab"))).Commit();
-        var rule = authority.PrepareCommand(3, PreferenceCommand("preferences.translation_rule", new() {
+        authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", true))).Commit();
+        authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("startupBehavior", "lastActiveTab"))).Commit();
+        var rule = authority.PrepareCommand(PreferenceCommand("preferences.translation_rule", new() {
             ["sourceID"] = "es-MX",
             ["targetID"] = "fr",
             ["isEnabled"] = true
@@ -124,17 +124,14 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("fr", JsonNode.Parse(rule.Output)!["preferences"]!["translationRules"]!["sources"]!["es-MX"]!["targetID"]!
             .GetValue<string>());
 
-        Assert.Equal(BrowserRuleCodes.UnknownPreference, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(4,
-            PreferenceCommand("preferences.set", SetPreference("sidebarDensity", 1)))).Code);
-        Assert.Equal(BrowserRuleCodes.InvalidPreferenceValue, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(4,
-            PreferenceCommand("preferences.set", SetPreference("startupBehavior", "retiredChoice")))).Code);
-        Assert.Equal(BrowserRuleCodes.InvalidPreferenceValue, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(4,
-            PreferenceCommand("preferences.set", SetPreference("checksSpelling", "true")))).Code);
+        Assert.Equal(BrowserRuleCodes.UnknownPreference, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("sidebarDensity", 1)))).Code);
+        Assert.Equal(BrowserRuleCodes.InvalidPreferenceValue, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("startupBehavior", "retiredChoice")))).Code);
+        Assert.Equal(BrowserRuleCodes.InvalidPreferenceValue, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", "true")))).Code);
 
         // A native value edit whose header omits the record keeps the owned one.
         var header = session.DeepClone().AsObject(); header.Remove("spaces");
-        authority.Commit(4, Bytes(new JsonObject { ["version"] = 1, ["metadata"] = header, ["spaces"] = new JsonArray() }));
-        var saved = JsonNode.Parse(authority.Checkpoint(5).Read("core"))!["appPreferences"]!;
+        authority.Commit(Bytes(new JsonObject { ["version"] = 1, ["metadata"] = header, ["spaces"] = new JsonArray() }));
+        var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!["appPreferences"]!;
         Assert.True(saved["checksSpelling"]!.GetValue<bool>());
         Assert.Equal("lastActiveTab", Startup(authority));
     }
@@ -177,10 +174,10 @@ public sealed partial class BrowserContractsTests {
         var owner = new NativeSessionAuthority(Bytes(session));
         var borrowed = Borrow(owner, session);
         Assert.Equal(BrowserRuleCodes.BorrowedProfileRequiresOwner, Assert.Throws<BrowserRuleException>(() =>
-            borrowed.PrepareCommand(borrowed.Revision, PreferenceCommand("preferences.set", SetPreference("checksSpelling", true)))).Code);
+            borrowed.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", true)))).Code);
         var privateSession = session.DeepClone(); privateSession["coreWorkspaceKind"] = "private";
         var privateAuthority = new NativeSessionAuthority(Bytes(privateSession));
         Assert.Equal(BrowserRuleCodes.PersistentWorkspaceRequired, Assert.Throws<BrowserRuleException>(() =>
-            privateAuthority.PrepareCommand(1, PreferenceCommand("preferences.set", SetPreference("checksSpelling", true)))).Code);
+            privateAuthority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", true)))).Code);
     }
 }

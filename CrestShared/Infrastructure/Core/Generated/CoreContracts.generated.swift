@@ -24,18 +24,30 @@ protocol EngineEvent: Sendable {
 
 /// Everything an intent can change. `CoreState.apply` keeps the read model current.
 enum Change: Equatable, Sendable {
+    case appPreferencesChanged(AppPreferencesChanged)
+    case archiveChanged(ArchiveChanged)
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
+    case foldersChanged(FoldersChanged)
+    case historyChanged(HistoryChanged)
     case pageChanged(PageChanged)
     case pageOpened(PageOpened)
     case pageRemoved(PageRemoved)
     case saved(Saved)
     case sessionAdopted(SessionAdopted)
+    case spaceSettingsChanged(SpaceSettingsChanged)
+    case spacesChanged(SpacesChanged)
+    case splitGroupsChanged(SplitGroupsChanged)
     case storageFailed(StorageFailed)
-    case tabActivated(TabActivated)
+    case tabCopied(TabCopied)
+    case tabFaviconAssigned(TabFaviconAssigned)
+    case tabsChanged(TabsChanged)
     case windowChanged(WindowChanged)
     case windowClosed(WindowClosed)
     case windowRecordsAdopted(WindowRecordsAdopted)
+    case workspaceChanged(WorkspaceChanged)
+    case workspaceClosed(WorkspaceClosed)
+    case workspaceOpened(WorkspaceOpened)
 }
 
 /// The rule that refused an intent or a query.
@@ -68,6 +80,7 @@ enum Rejection: Equatable, Error, Sendable {
     case searchEngineLimitReached(SearchEngineLimitReached)
     case spaceBeingDeleted(SpaceBeingDeleted)
     case spaceLocked(SpaceLocked)
+    case staleCommand(StaleCommand)
     case staleCredentialComparison(StaleCredentialComparison)
     case storageFromNewerApp(StorageFromNewerApp)
     case storageRestoreInterrupted(StorageRestoreInterrupted)
@@ -90,18 +103,30 @@ extension CoreState {
     /// Applies one change through the hand-written applier for its type.
     func apply(_ change: Change) {
         switch change {
+        case .appPreferencesChanged(let change): apply(change)
+        case .archiveChanged(let change): apply(change)
         case .downloadUpdated(let change): apply(change)
         case .downloadsRemoved(let change): apply(change)
+        case .foldersChanged(let change): apply(change)
+        case .historyChanged(let change): apply(change)
         case .pageChanged(let change): apply(change)
         case .pageOpened(let change): apply(change)
         case .pageRemoved(let change): apply(change)
         case .saved(let change): apply(change)
         case .sessionAdopted(let change): apply(change)
+        case .spaceSettingsChanged(let change): apply(change)
+        case .spacesChanged(let change): apply(change)
+        case .splitGroupsChanged(let change): apply(change)
         case .storageFailed(let change): apply(change)
-        case .tabActivated(let change): apply(change)
+        case .tabCopied(let change): apply(change)
+        case .tabFaviconAssigned(let change): apply(change)
+        case .tabsChanged(let change): apply(change)
         case .windowChanged(let change): apply(change)
         case .windowClosed(let change): apply(change)
         case .windowRecordsAdopted(let change): apply(change)
+        case .workspaceChanged(let change): apply(change)
+        case .workspaceClosed(let change): apply(change)
+        case .workspaceOpened(let change): apply(change)
         }
     }
 }
@@ -123,6 +148,37 @@ struct AdoptWindowRecords: Intent, Equatable, Sendable {
 
 struct AppConfiguration: Equatable, Sendable {
     let storageDirectory: String?
+}
+
+struct AppPreferences: Equatable, Sendable {
+    let startup: StartupBehavior
+    let offersTranslation: Bool
+    let automaticallyTranslates: Bool
+    let translationRules: [TranslationRule]
+    let checksSpelling: Bool
+    let automaticallyEntersPictureInPicture: Bool
+    let savedTabClose: SavedTabClosePolicy
+    let savedTabFaviconReturnsToSavedURL: Bool
+    let splitFocusFollowsMouse: Bool
+}
+
+struct AppPreferencesChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let preferences: AppPreferences?
+}
+
+struct ArchiveChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let archived: [ArchivedTabState]
+    let removed: [UUID]
+    let order: [UUID]?
+}
+
+struct ArchivedTabState: Equatable, Sendable {
+    let tab: TabState
+    let archivedAt: Date
+    let reason: ArchiveReason
 }
 
 struct AssessDownloadRisk: Intent, Equatable, Sendable {
@@ -151,6 +207,22 @@ struct BlockAutomaticDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
 
+struct BrandColor: Equatable, Sendable {
+    let red: Double
+    let green: Double
+    let blue: Double
+    let alpha: Double
+}
+
+struct BrowsingPreferences: Equatable, Sendable {
+    let selectedSearchProviderID: String
+    let customSearchProviders: [CustomSearchProvider]
+    let searchSuggestionsEnabled: Bool
+    let currentTabCleanup: CurrentTabCleanup
+    let contentBlocking: ContentBlockingPolicy
+    let dataRetention: DataRetentionPreferences
+}
+
 struct CanTearOff: Query, Equatable, Sendable {
     typealias Answer = TearOffPermission
 
@@ -173,6 +245,10 @@ struct ClosePage: Equatable, Sendable {
 
 struct CloseWindow: Intent, Equatable, Sendable {
     let windowID: UUID
+}
+
+struct ColorPalette: Equatable, Sendable {
+    let colors: [BrandColor]
 }
 
 struct ContentRuleList: Equatable, Sendable {
@@ -244,6 +320,12 @@ struct CredentialPendingCandidate: Equatable, Sendable {
     let submittedAt: Double
 }
 
+struct CredentialPreferences: Equatable, Sendable {
+    let isEnabled: Bool
+    let syncsCrestPasswordsWithICloud: Bool
+    let alsoOffersSaveToSystemPasswords: Bool
+}
+
 struct CredentialRecord: Equatable, Sendable, Identifiable {
     let id: UUID
     let username: String?
@@ -298,6 +380,13 @@ struct CredentialUsernameHint: Equatable, Sendable {
     let capturedAt: Double
 }
 
+struct CrestCharge: Equatable, Sendable {
+    let kind: CrestChargeKind
+    let symbol: CrestSymbol?
+    let text: String?
+    let style: CrestMonogramStyle?
+}
+
 struct CustomSearchEngine: Equatable, Sendable, Identifiable {
     let id: UUID
     let name: String
@@ -310,6 +399,19 @@ struct CustomSearchEngineAdmission: Query, Equatable, Sendable {
 
     let engine: CustomSearchEngine
     let existing: [CustomSearchEngine]
+}
+
+struct CustomSearchProvider: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let name: String
+    let searchURLTemplate: String
+    let suggestionURLTemplate: String?
+}
+
+struct DataRetentionPreferences: Equatable, Sendable {
+    let history: DataRetention
+    let archive: DataRetention
+    let downloads: DataRetention
 }
 
 struct DefaultEngineAlreadyRegistered: Equatable, Sendable {
@@ -485,6 +587,43 @@ struct FinishDownload: Intent, Equatable, Sendable {
     let finalByteCount: Int64?
 }
 
+struct FolderState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let location: TabPlacement
+    let title: String
+    let symbol: String?
+    let color: BrandColor?
+    let parentID: UUID?
+    let isCollapsed: Bool
+    let collapseModifiedAt: Date?
+    let orderAnchorTabID: UUID?
+}
+
+struct FoldersChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let updated: [FolderState]
+    let removed: [UUID]
+    let order: [UUID]?
+}
+
+struct HistoryChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let recorded: [HistoryEntryState]
+    let removed: [UUID]
+    let order: [UUID]?
+}
+
+struct HistoryEntryState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let url: String
+    let title: String
+    let firstVisitedAt: Date
+    let lastVisitedAt: Date
+    let visitCount: Int
+}
+
 struct InvalidCredentialDate: Equatable, Sendable {
 }
 
@@ -579,6 +718,11 @@ struct MovePage: Intent, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct NativeTabContent: Equatable, Sendable {
+    let kind: String
+    let resourceID: UUID?
+}
+
 struct OpenPage: Intent, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
@@ -647,6 +791,15 @@ struct PasskeyAccessVerdict: Equatable, Sendable {
     let status: PasskeyAccessStatus
 }
 
+struct PendingSave: Query, Equatable, Sendable {
+    typealias Answer = PendingSaveRevision
+
+}
+
+struct PendingSaveRevision: Equatable, Sendable {
+    let revision: Int64?
+}
+
 struct QuickWindowSite: Query, Equatable, Sendable {
     typealias Answer = QuickWindowSiteKey
 
@@ -707,6 +860,14 @@ struct SessionAdopted: Equatable, Sendable {
     let favicons: [TabFavicon]
 }
 
+struct SessionState: Equatable, Sendable {
+    let spaces: [SpaceState]
+    let defaultSpaceID: UUID?
+    let disposableSeedMarker: UUID?
+    let spaceDeletions: [SpaceDeletionState]
+    let appPreferences: AppPreferences?
+}
+
 struct SetDownloadDestination: Intent, Equatable, Sendable {
     let downloadID: UUID
     let destination: String
@@ -739,13 +900,124 @@ struct SpaceBeingDeleted: Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct SpaceBranding: Equatable, Sendable {
+    let colors: ColorPalette
+    let bannerPattern: SpaceBannerPattern
+    let bannerStrength: Double
+    let readabilityFade: Double
+    let keepsControlsReadable: Bool
+    let themeMode: SpaceThemeMode
+    let gradientAngle: Double
+    let showsTexture: Bool
+    let iconStyle: SpaceIconStyle
+    let symbolColor: BrandColor?
+    let crest: SpaceCrest
+    let renderingVersion: Int
+    let folderColorIntensity: Double
+    let textColorMode: SpaceTextColorMode
+    let hasCustomAppearance: Bool?
+}
+
+struct SpaceCrest: Equatable, Sendable {
+    let backplate: CrestBackplate
+    let fieldDivision: CrestFieldDivision
+    let ordinary: CrestOrdinary
+    let trim: CrestTrim
+    let symbol: CrestSymbol
+    let chargeLayout: CrestChargeLayout
+    let backplateColorIndex: Int
+    let secondaryFieldColorIndex: Int
+    let ordinaryColorIndex: Int
+    let trimColorIndex: Int
+    let symbolColorIndex: Int
+    let startingPresetID: String?
+    let edgeColorIndex: Int
+    let palette: ColorPalette?
+    let charge: CrestCharge?
+    let plateScale: Double
+    let edgeWidth: Double
+    let divisionCount: Int
+    let finish: CrestFinish
+    let ordinaryWidth: Double
+    let trimWeight: Double
+    let trimDetail: Int
+    let chargeScale: Double
+    let chargeOffset: Double
+    let chargeWeight: CrestChargeWeight
+    let sheenAngle: Double
+    let sealTeeth: Int
+    let showsOutline: Bool
+    let depth: CrestDepth
+}
+
+struct SpaceDeletionState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let spaceID: UUID
+    let profileID: UUID
+}
+
 struct SpaceLocked: Equatable, Sendable {
     let spaceID: UUID
+}
+
+struct SpaceSettings: Equatable, Sendable {
+    let name: String
+    let symbol: String
+    let accent: SpaceAccent
+    let branding: SpaceBranding?
+    let browsingPreferences: BrowsingPreferences
+    let credentialPreferences: CredentialPreferences
+    let accessPolicy: SpaceAccessPolicy
+    let isSavedTabsExpanded: Bool
+    let savedTabsExpansionModifiedAt: Date?
+}
+
+struct SpaceSettingsChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let settings: SpaceSettings
+}
+
+struct SpaceState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let profileID: UUID
+    let settings: SpaceSettings
+    let folders: [FolderState]
+    let tabs: [TabState]
+    let splitGroups: [SplitGroupState]
+    let archivedTabs: [ArchivedTabState]
+    let history: [HistoryEntryState]
+}
+
+struct SpacesChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let added: [SpaceState]
+    let removed: [UUID]
+    let order: [UUID]?
 }
 
 struct SplitColumnShares: Equatable, Sendable {
     let groupID: UUID
     let shares: [Double]
+}
+
+struct SplitGroupState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let customTitle: String?
+    let titleModifiedAt: Date?
+    let customIconSymbol: String?
+    let iconModifiedAt: Date?
+    let tint: BrandColor?
+    let tintModifiedAt: Date?
+}
+
+struct SplitGroupsChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groups: [SplitGroupState]
+}
+
+struct StaleCommand: Equatable, Sendable {
 }
 
 struct StaleCredentialComparison: Equatable, Sendable {
@@ -801,17 +1073,15 @@ struct SystemPasswordWriteThroughSupport: Equatable, Sendable {
     let availability: SystemPasswordWriteThroughAvailability
 }
 
-struct TabActivated: Equatable, Sendable {
-    let workspaceID: UUID
-    let spaceID: UUID
-    let tabID: UUID
-    let at: Date
-    let revision: Int64
-}
-
 struct TabAlreadyHasPage: Equatable, Sendable {
     let tabID: UUID
     let pageID: UUID
+}
+
+struct TabCopied: Equatable, Sendable {
+    let workspaceID: UUID
+    let sourceTabID: UUID
+    let copyTabID: UUID
 }
 
 struct TabFavicon: Equatable, Sendable {
@@ -819,9 +1089,55 @@ struct TabFavicon: Equatable, Sendable {
     let image: Data
 }
 
+struct TabFaviconAssigned: Equatable, Sendable {
+    let workspaceID: UUID
+    let tabID: UUID
+    let adopts: Bool
+}
+
+struct TabIconAccent: Equatable, Sendable {
+    let red: Double
+    let green: Double
+    let blue: Double
+}
+
+struct TabState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let title: String
+    let url: String?
+    let nativeContent: NativeTabContent?
+    let savedURL: String?
+    let symbol: String
+    let faviconURL: String?
+    let iconAccent: TabIconAccent?
+    let storedIconMode: TabIconMode?
+    let placement: TabPlacement
+    let folderID: UUID?
+    let splitGroupID: UUID?
+    let lastActivatedAt: Date
+    let positionModifiedAt: Date?
+    let customTitle: String?
+    let titleModifiedAt: Date?
+    let keepsPageLoaded: Bool
+}
+
+struct TabsChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let updated: [TabState]
+    let removed: [UUID]
+    let order: [UUID]?
+}
+
 struct TearOffPermission: Equatable, Sendable {
     let allowed: Bool
     let reason: TearOffRefusal?
+}
+
+struct TranslationRule: Equatable, Sendable {
+    let sourceLanguage: String
+    let targetID: String
+    let isEnabled: Bool
 }
 
 struct UnknownPage: Equatable, Sendable {
@@ -868,6 +1184,23 @@ struct WindowState: Equatable, Sendable, Identifiable {
     let shownSpaceID: UUID
     let shownTabs: [ShownTab]
     let splitColumnShares: [SplitColumnShares]
+}
+
+struct WorkspaceChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let defaultSpaceID: UUID?
+    let isDisposableSeed: Bool
+    let spaceDeletions: [SpaceDeletionState]
+}
+
+struct WorkspaceClosed: Equatable, Sendable {
+    let workspaceID: UUID
+}
+
+struct WorkspaceOpened: Equatable, Sendable {
+    let workspaceID: UUID
+    let kind: WorkspaceKind
+    let session: SessionState
 }
 
 // MARK: - Enums
@@ -919,6 +1252,169 @@ enum CredentialUsernameSource: Int, CaseIterable, Sendable {
     case hint = 2
 }
 
+enum CrestBackplate: Int, CaseIterable, Sendable {
+    case none = 0
+    case circle = 1
+    case shield = 2
+    case frenchShield = 3
+    case diamond = 4
+    case seal = 5
+    case hexagon = 6
+    case octagon = 7
+    case roundedSquare = 8
+    case oval = 9
+    case banner = 10
+    case badge = 11
+}
+
+enum CrestChargeKind: Int, CaseIterable, Sendable {
+    case heraldic = 0
+    case system = 1
+    case emoji = 2
+    case monogram = 3
+    case none = 4
+}
+
+enum CrestChargeLayout: Int, CaseIterable, Sendable {
+    case single = 0
+    case paired = 1
+    case trio = 2
+    case quad = 3
+    case ring = 4
+}
+
+enum CrestChargeWeight: Int, CaseIterable, Sendable {
+    case light = 0
+    case regular = 1
+    case bold = 2
+}
+
+enum CrestDepth: Int, CaseIterable, Sendable {
+    case none = 0
+    case soft = 1
+    case lifted = 2
+}
+
+enum CrestFieldDivision: Int, CaseIterable, Sendable {
+    case plain = 0
+    case perPale = 1
+    case perFess = 2
+    case perBend = 3
+    case perChevron = 4
+    case quarterly = 5
+    case perSaltire = 6
+    case gyronny = 7
+    case barry = 8
+    case paly = 9
+    case checky = 10
+}
+
+enum CrestFinish: Int, CaseIterable, Sendable {
+    case flat = 0
+    case sheen = 1
+    case embossed = 2
+}
+
+enum CrestMonogramStyle: Int, CaseIterable, Sendable {
+    case serif = 0
+    case sans = 1
+}
+
+enum CrestOrdinary: Int, CaseIterable, Sendable {
+    case none = 0
+    case pale = 1
+    case fess = 2
+    case bend = 3
+    case chevron = 4
+    case cross = 5
+    case saltire = 6
+    case chief = 7
+    case bordure = 8
+    case pall = 9
+    case pile = 10
+    case canton = 11
+    case roundel = 12
+}
+
+enum CrestSymbol: Int, CaseIterable, Sendable {
+    case dragon = 0
+    case direwolf = 1
+    case lion = 2
+    case stag = 3
+    case raven = 4
+    case griffin = 5
+    case eagle = 6
+    case bear = 7
+    case boar = 8
+    case fox = 9
+    case horse = 10
+    case unicorn = 11
+    case wyvern = 12
+    case hydra = 13
+    case serpent = 14
+    case kraken = 15
+    case seahorse = 16
+    case scorpion = 17
+    case bat = 18
+    case falcon = 19
+    case rose = 20
+    case lily = 21
+    case pine = 22
+    case willow = 23
+    case swords = 24
+    case axes = 25
+    case sword = 26
+    case trident = 27
+    case anchor = 28
+    case castle = 29
+    case scales = 30
+    case dragonHead = 31
+    case hound = 32
+    case paw = 33
+    case hare = 34
+    case bird = 35
+    case fish = 36
+    case bee = 37
+    case shell = 38
+    case sun = 39
+    case risingSun = 40
+    case crescent = 41
+    case star = 42
+    case sparkles = 43
+    case lightning = 44
+    case flame = 45
+    case snowflake = 46
+    case drop = 47
+    case mountain = 48
+    case tree = 49
+    case oak = 50
+    case leaf = 51
+    case fern = 52
+    case flower = 53
+    case waves = 54
+    case tower = 55
+    case book = 56
+    case key = 57
+    case hammer = 58
+    case compass = 59
+    case sailboat = 60
+    case crown = 61
+    case horn = 62
+    case crossedBanners = 63
+}
+
+enum CrestTrim: Int, CaseIterable, Sendable {
+    case none = 0
+    case shield = 1
+    case line = 2
+    case doubleLine = 3
+    case laurel = 4
+    case sunburst = 5
+    case doubleRing = 6
+    case seal = 7
+    case beaded = 8
+}
+
 enum PasskeyAuthorizationState: Int, CaseIterable, Sendable {
     case authorized = 0
     case denied = 1
@@ -929,6 +1425,11 @@ enum PasskeyDeviceConfiguration: Int, CaseIterable, Sendable {
     case configured = 0
     case notConfigured = 1
     case unknown = 2
+}
+
+enum SavedTabClosePolicy: Int, CaseIterable, Sendable {
+    case resumeLastLocation = 0
+    case returnToSavedURL = 1
 }
 
 struct ShortcutModifiers: OptionSet, Sendable {
@@ -943,6 +1444,51 @@ enum SitePermissionVerdict: Int, CaseIterable, Sendable {
     case ask = 0
     case grant = 1
     case deny = 2
+}
+
+enum SpaceAccent: Int, CaseIterable, Sendable {
+    case indigo = 0
+    case orange = 1
+    case teal = 2
+    case rose = 3
+}
+
+enum SpaceAccessPolicy: Int, CaseIterable, Sendable {
+    case open = 0
+    case deviceOwnerAuthentication = 1
+}
+
+enum SpaceBannerPattern: Int, CaseIterable, Sendable {
+    case solid = 0
+    case split = 1
+    case bands = 2
+    case diagonal = 3
+    case chevron = 4
+    case quartered = 5
+    case stripes = 6
+    case checkered = 7
+    case lozenges = 8
+}
+
+enum SpaceIconStyle: Int, CaseIterable, Sendable {
+    case simpleSymbol = 0
+    case layeredCrest = 1
+}
+
+enum SpaceTextColorMode: Int, CaseIterable, Sendable {
+    case automatic = 0
+    case light = 1
+    case dark = 2
+}
+
+enum SpaceThemeMode: Int, CaseIterable, Sendable {
+    case banner = 0
+    case gradient = 1
+}
+
+enum StartupBehavior: Int, CaseIterable, Sendable {
+    case showStartPage = 0
+    case lastActiveTab = 1
 }
 
 enum StorageFailure: Int, CaseIterable, Sendable {
@@ -973,6 +1519,12 @@ enum TearOffRefusal: Int, CaseIterable, Sendable {
     case spaceLocked = 1
     case tabGone = 2
     case severalTabs = 3
+}
+
+enum WorkspaceKind: Int, CaseIterable, Sendable {
+    case persistent = 0
+    case `private` = 1
+    case borrowed = 2
 }
 
 // MARK: - Fixed sets

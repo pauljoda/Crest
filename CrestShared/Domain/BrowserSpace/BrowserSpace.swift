@@ -120,7 +120,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         symbol = try container.decode(String.self, forKey: .symbol)
         // A palette this build has never heard of is a legacy tint, not a reason
         // to lose the Space. Branding carries the colors that are actually drawn.
-        accent = container.decodeTolerantly(.accent, default: .indigo)
+        accent = (try? container.decodeIfPresent(SpaceAccent.self, forKey: .accent)) ?? .indigo
         branding =
             try container.decodeIfPresent(
                 BrowserSpaceBranding.self,

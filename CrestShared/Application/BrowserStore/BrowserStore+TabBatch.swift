@@ -31,7 +31,7 @@ extension BrowserStore {
         let accepted = try prepareOwnedTabBatch(request, action: action, at: date)
         try family.commitTabBatch(accepted.command,
             deletionReason: action == .delete ? .explicitDelete : .superseded, from: self, at: date)
-        let prepared = (session: accepted.command.session, result: accepted.result)
+        let prepared = (session: session, result: accepted.result)
         for pair in prepared.result.copies {
             guard let original = source.tabs.first(where: { $0.id == pair.source }),
                 var copy = prepared.session.space(id: source.id)?.tabs.first(where: { $0.id == pair.copy }) else { continue }

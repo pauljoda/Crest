@@ -60,6 +60,13 @@ internal sealed class SessionStorage : IDisposable {
     /// What the device store held when the file was opened.
     public DeviceRecords Device { get; }
 
+    /// The newest revision handed to the worker and not yet on disk, or null.
+    public ulong? PendingRevision {
+        get {
+            lock (queue) return pending?.Revision;
+        }
+    }
+
     /// Whether the file holds a session.
     public bool HoldsSession {
         get {

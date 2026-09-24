@@ -51,7 +51,9 @@ CREST_API crest_status_t CREST_CALL crest_app_restore(const uint8_t* fingerprint
 /* Saves any accepted revision still pending, then closes the session file.
  * Clear the wake callback first. */
 CREST_API crest_status_t CREST_CALL crest_app_destroy(uint64_t app);
-/* OK: buffer = published changes (a count, then each change). REJECTED: buffer = one rejection.
+/* OK: buffer = published changes (a count, then each change): the pending
+ * batch first, as crest_app_drain would answer it, then the intent's own.
+ * REJECTED: buffer = one rejection.
  * Engine commands the intent caused (crest_engine.h) have run when it returns,
  * unless the dispatch itself runs inside a binding's command. */
 CREST_API crest_status_t CREST_CALL crest_app_dispatch(uint64_t app, const uint8_t* intent, size_t length, crest_buffer_t* out);
@@ -59,12 +61,13 @@ CREST_API crest_status_t CREST_CALL crest_app_dispatch(uint64_t app, const uint8
 CREST_API crest_status_t CREST_CALL crest_app_query(uint64_t app, const uint8_t* query, size_t length, crest_buffer_t* out);
 CREST_API void CREST_CALL crest_buffer_free(crest_buffer_t* buffer);
 
-/* Changes the core starts itself, such as Saved and StorageFailed, wait in a
- * pending batch. The wake callback carries nothing: it runs on whichever core
- * thread published the change, never while the core holds a lock, and only
- * when the batch goes from empty to not empty. Answer it by draining, on the
- * host's own thread. NULL removes the callback; when set_wake returns, no
- * earlier callback is still running. */
+/* Changes the core starts itself, such as Saved, StorageFailed, what a session
+ * command changed, and the WorkspaceOpened and WorkspaceClosed of each session
+ * attached to the app, wait in a pending batch. The wake callback carries
+ * nothing: it runs on whichever core thread published the change, never while
+ * the core holds a lock, and only when the batch goes from empty to not empty.
+ * Answer it by draining, on the host's own thread. NULL removes the callback;
+ * when set_wake returns, no earlier callback is still running. */
 typedef void (CREST_CALL *crest_wake_t)(void* context);
 CREST_API crest_status_t CREST_CALL crest_app_set_wake(uint64_t app, crest_wake_t callback, void* context);
 /* OK: buffer = the pending changes, oldest first (a count, then each change). */
@@ -80,7 +83,7 @@ CREST_API crest_status_t CREST_CALL crest_app_drain(uint64_t app, crest_buffer_t
  * repaired tab's native images came from, and the selection an older release
  * stored in the session, when it stored one. */
 CREST_API crest_status_t CREST_CALL crest_app_session(uint64_t app,
-    uint64_t* out_session, uint64_t* out_revision, uint64_t* out_sync, uint64_t* out_projection);
+    uint64_t* out_session, uint64_t* out_sync, uint64_t* out_projection);
 
 #ifdef __cplusplus
 } /* extern "C" */

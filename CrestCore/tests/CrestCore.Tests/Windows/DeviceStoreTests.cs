@@ -21,6 +21,8 @@ public sealed partial class BrowserContractsTests {
         var session = core ?? installedCore;
         if (app.Session is null) app.Send(new AdoptLegacySession(installed with { Core = Bytes(session) }, SeedDocument()));
         var spaces = JsonNode.Parse(app.SessionProjection()!.Output)!["session"]!["spaces"]!.AsArray();
+        // The file's session joined the device when the app opened it.
+        app.Drain();
         return (app, app.AttachWorkspace(app.Session!), spaces);
     }
 
@@ -43,12 +45,12 @@ public sealed partial class BrowserContractsTests {
             group = Guid.Parse(spaces[0]!["splitGroups"]![0]!["id"]!["rawValue"]!.GetValue<string>());
             app.Send(new OpenWindow(window, workspace, Saved: true, CopyingWindowId: null, ShowingSpaceId: null, ShowingTabs: [], RestoresTabs: true));
             var touched = app.Send(new ShowTab(window, second, tab));
-            Assert.Equal(tab, Assert.IsType<TabActivated>(touched[0]).TabId);
+            Assert.Equal(tab, Assert.Single(Assert.Single(touched.OfType<TabsChanged>()).Updated).Id);
             Assert.Equal(second, Shown(touched).ShownSpaceId);
             var members = spaces[0]!["tabs"]!.AsArray().Count(item => item!["splitGroupID"]?["rawValue"]?.GetValue<string>() == group.ToString().ToUpperInvariant());
             var resized = Shown(app.Send(new ResizeSplitColumns(window, group, [.. Enumerable.Repeat(1.0, members)])));
             Assert.Equal(1.0 / members, resized.SplitColumnShares.Single().Shares[0], precision: 12);
-            Assert.Equal([new WindowClosed(window)], app.Send(new CloseWindow(window)));
+            Assert.Equal([new WindowClosed(window)], Own(app.Send(new CloseWindow(window))));
         }
 
         var parts = StoredParts(directory.File);
@@ -88,7 +90,7 @@ public sealed partial class BrowserContractsTests {
         // Space, and the window that shows another Space is left alone.
         var session = app.Session!;
         var space = session.Current.Spaces[1];
-        session.Commit(session.Revision, Bytes(new JsonObject {
+        session.Commit(Bytes(new JsonObject {
             ["version"] = 1,
             ["spaces"] = new JsonArray(new JsonObject {
                 ["id"] = SwiftId(second),
@@ -109,7 +111,7 @@ public sealed partial class BrowserContractsTests {
         var back = Shown(app.Send(new ShowSpace(showing, second)));
         Assert.Equal(Window.FallbackTab(session.Current.Spaces[1]), ShownTab(back, second));
         // A tab that is gone publishes nothing, and a window that is not open is refused.
-        Assert.Empty(app.Send(new ShowTab(showing, second, shownTab)));
+        Assert.Empty(Own(app.Send(new ShowTab(showing, second, shownTab))));
         Assert.Equal(new WindowNotOpen(Guid.Empty), Assert.Throws<Rejected>(() => app.Send(new ShowSpace(Guid.Empty, first))).Rejection);
     }
 
@@ -167,13 +169,13 @@ public sealed partial class BrowserContractsTests {
         {
             var (app, _, _) = DeviceApp(directory, core);
             using var disposal = app;
-            var adopted = Assert.IsType<WindowRecordsAdopted>(Assert.Single(app.Send(new AdoptWindowRecords(Bytes(records)))));
+            var adopted = Assert.IsType<WindowRecordsAdopted>(Assert.Single(Own(app.Send(new AdoptWindowRecords(Bytes(records))))));
             Assert.Equal([new WindowLayout(older, null, null), new WindowLayout(captured, 277.5, false)], adopted.Layouts);
-            Assert.Empty(app.Send(new AdoptWindowRecords(Bytes(records))));
+            Assert.Empty(Own(app.Send(new AdoptWindowRecords(Bytes(records)))));
         }
         var (relaunched, workspace, _) = DeviceApp(directory, core);
         using var relaunchedDisposal = relaunched;
-        Assert.Empty(relaunched.Send(new AdoptWindowRecords(Bytes(records))));
+        Assert.Empty(Own(relaunched.Send(new AdoptWindowRecords(Bytes(records)))));
         // A record that remembered its Spaces shows nothing where it chose nothing.
         var capturedWindow = Shown(relaunched.Send(new OpenWindow(captured, workspace, true, null, null, [], true)));
         Assert.Equal(second, capturedWindow.ShownSpaceId);
@@ -212,10 +214,10 @@ public sealed partial class BrowserContractsTests {
         app.Send(new ShowTab(window, space, earlier));
         app.Send(new ShowTab(window, space, dismissed));
         // A window that no longer shows the tab is left alone.
-        Assert.Empty(app.Send(new DismissShownTab(window, space, earlier)));
+        Assert.Empty(Own(app.Send(new DismissShownTab(window, space, earlier))));
 
         var returned = app.Send(new DismissShownTab(window, space, dismissed));
-        Assert.Equal(earlier, Assert.IsType<TabActivated>(returned[0]).TabId);
+        Assert.Equal(earlier, Assert.Single(Assert.Single(returned.OfType<TabsChanged>()).Updated).Id);
         Assert.Equal(earlier, ShownTab(Shown(returned), space));
         // With nothing left to return to, it shows nothing there.
         Assert.Null(ShownTab(Shown(app.Send(new DismissShownTab(window, space, earlier))), space));

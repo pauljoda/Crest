@@ -10,20 +10,16 @@ public sealed partial class NativeSessionAuthority {
 
     private readonly NativeSessionAuthority? borrowedSource;
     private readonly Guid borrowedSpace, borrowedProfile;
-    private ulong borrowedSourceRevision;
     private bool released;
-
-    internal ulong? BorrowedRevision => borrowedSource is null ? null : borrowedSource.Revision;
 
     #endregion
 
     #region Constructors
 
     private NativeSessionAuthority(SessionState initial, NativeSessionAuthority source, Guid space, Guid profile) {
-        session = initial; workspaceKind = BrowserWorkspaceKind.Temporary;
+        session = initial; workspaceKind = WorkspaceKind.Borrowed;
         privateBrowsing = source.privateBrowsing; access = source.access;
         borrowedSource = source; borrowedSpace = space; borrowedProfile = profile;
-        borrowedSourceRevision = source.Revision;
         Validate(session);
     }
 
@@ -31,11 +27,10 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Borrowing
 
-    public NativeSessionAuthority CreateBorrowed(ulong expected, Guid spaceId, Guid profileId) {
+    public NativeSessionAuthority CreateBorrowed(Guid spaceId, Guid profileId) {
         lock (Gate) {
             RequireWritable();
             SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
-            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             RequireAccessible(spaceId);
             var original = TransferSpace(spaceId, profileId);
             var borrowed = original with { Folders = [], Tabs = [], SplitGroups = [], ArchivedTabs = [], History = [] };
@@ -75,26 +70,28 @@ public sealed partial class NativeSessionAuthority {
             throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfileRequiresOwner);
     }
 
-    internal void RequireBorrowedRevision(ulong? expected) {
+    /// Throws unless `value`, a state of a borrowed session, shows its Space
+    /// with the settings its owner holds now; a refresh brings it up to date.
+    /// Any other session always passes.
+    internal void RequireCurrentBorrowedPolicy(SessionState value) {
         if (borrowedSource is null) return;
-        _ = RequireBorrowedSource();
-        if (expected != borrowedSource.Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleBorrowedSource);
+        var original = RequireBorrowedSource();
+        if (value.Spaces.Count != 1 || BorrowedSpace(original, value.Spaces[0]) != value.Spaces[0])
+            throw new BrowserRuleException(BrowserRuleCodes.StaleBorrowedSource);
     }
 
-    public NativeSessionCommand PrepareBorrowedRefresh(ulong expected) {
+    /// A command that brings the borrowed Space's settings up to date with its
+    /// owner, and changes nothing when they already are.
+    public NativeSessionCommand PrepareBorrowedRefresh() {
         lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
-            if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             var original = RequireBorrowedSource(); var local = session.Spaces.Single();
-            var next = session with { Spaces = [BorrowedSpace(original, local)] };
+            var refreshed = BorrowedSpace(original, local);
+            var next = refreshed == local ? session : session with { Spaces = [refreshed] };
             Validate(next);
-            return new(this, expected, next, SettingsProjection(next));
+            return new(this, session, next, []);
         }
     }
-
-    private static byte[] SettingsProjection(SessionState value) => Output(new JsonObject {
-        ["session"] = StoredSessionCodec.Encode(value with { Spaces = value.Spaces.Select(Settings).ToArray() })
-    });
 
     /// Takes no more edits, and the windows over this session close with it.
     public void Release() {

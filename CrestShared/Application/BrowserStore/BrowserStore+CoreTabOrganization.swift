@@ -33,9 +33,10 @@ extension BrowserStore {
     /// The core has accepted each copy's identity and visible URL/title. The
     /// adapter now prepares its opaque navigation history before pages mount.
     func prepareAcceptedCopies(_ result: BrowserCoreSessionEditing.Result, from space: BrowserSpace) {
+        let copies = session.space(id: space.id)?.tabs ?? []
         for pair in result.copies {
             guard let source = space.tabs.first(where: { $0.id.rawValue == pair.source }),
-                var copy = result.space.tabs.first(where: { $0.id.rawValue == pair.copy })
+                var copy = copies.first(where: { $0.id.rawValue == pair.copy })
             else { continue }
             tabCopying?.prepareTabCopy(from: source, to: &copy, in: space)
         }

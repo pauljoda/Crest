@@ -61,7 +61,7 @@ internal sealed partial class Device {
         lock (gate) Publish(Changing([window], shown => shown.ShowSpace(space)), changes);
     }
 
-    /// Showing a tab records its use first, as its own revision of the
+    /// Showing a tab records its use first, as its own change to the
     /// workspace, so cleanup never archives what a window just showed. A
     /// workspace that takes no edits records nothing and still shows it.
     private void Show(ShowTab intent, ChangeFeed changes) {
@@ -71,7 +71,7 @@ internal sealed partial class Device {
         if (intent.TabId is { } tabId) {
             if (space.Tabs.All(tab => tab.Id != tabId)) return;
             if (authority.Touch(intent.SpaceId, tabId, DateTimeOffset.UtcNow) is { } touched)
-                changes.Publish(new TabActivated(window.WorkspaceId, intent.SpaceId, tabId, touched.At, checked((long)touched.Revision)));
+                Publish(SessionChanges.Publish(window.WorkspaceId, touched.Previous, touched.Next), changes);
         }
         lock (gate) Publish(Changing([window], shown => shown.ShowTab(intent.SpaceId, intent.TabId, moves: true)), changes);
     }
@@ -88,7 +88,7 @@ internal sealed partial class Device {
             fallback = window.DismissalFallback(space.Id, intent.TabId, space.Tabs.Select(tab => tab.Id).ToHashSet());
         }
         if (fallback is { } tabId && authority.Touch(space.Id, tabId, DateTimeOffset.UtcNow) is { } touched)
-            changes.Publish(new TabActivated(window.WorkspaceId, space.Id, tabId, touched.At, checked((long)touched.Revision)));
+            Publish(SessionChanges.Publish(window.WorkspaceId, touched.Previous, touched.Next), changes);
         lock (gate) Publish(Changing([window], shown => shown.ShowTab(space.Id, fallback, moves: false)), changes);
     }
 
@@ -102,7 +102,7 @@ internal sealed partial class Device {
         }), changes);
     }
 
-    private static void Publish(List<Change> published, ChangeFeed changes) {
+    private static void Publish(IEnumerable<Change> published, ChangeFeed changes) {
         foreach (var change in published) changes.Publish(change);
     }
 

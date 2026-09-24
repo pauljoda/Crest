@@ -74,8 +74,12 @@ public sealed unsafe partial class BrowserContractsTests {
         new(new LegacySession(Core: null, WholeGraph: Bytes(document), History: [], journal is null ? null : Bytes(journal)),
             Seed: Bytes(document));
 
-    private static IReadOnlyList<Change> DrainUntil(CrestApp app, Func<IReadOnlyList<Change>, bool> done) {
-        var drained = new List<Change>();
+    /// Drains `app` until `done` holds for what arrived, starting from the
+    /// changes an intent already `answered`: a change the core started
+    /// before that intent returned travels in its answer instead.
+    private static IReadOnlyList<Change> DrainUntil(CrestApp app, Func<IReadOnlyList<Change>, bool> done,
+        IReadOnlyList<Change>? answered = null) {
+        var drained = new List<Change>(answered ?? []);
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (!done(drained) && DateTime.UtcNow < deadline) {
             drained.AddRange(app.Drain());
@@ -121,7 +125,7 @@ public sealed unsafe partial class BrowserContractsTests {
             Assert.Null(app.Session);
             app.Send(Adoption(document));
             var session = app.Session!;
-            for (int edit = 1; edit <= 20; edit++) session.Commit(session.Revision, RenameDelta(document, $"Edit {edit}"));
+            for (int edit = 1; edit <= 20; edit++) session.Commit(RenameDelta(document, $"Edit {edit}"));
             var announced = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 21));
             var saved = announced.OfType<Saved>().Select(change => change.Revision).ToArray();
             Assert.Equal(21, saved[^1]);
@@ -139,8 +143,7 @@ public sealed unsafe partial class BrowserContractsTests {
         using var directory = new StorageDirectory();
         var document = SavedSession().Document["session"]!.AsObject();
         using var app = new CrestApp(new AppConfiguration(directory.Path));
-        app.Send(Adoption(document));
-        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any());
+        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(), app.Send(Adoption(document)));
         // Every write the core makes from here on leaves a `log.` row naming its part.
         using (var connection = SqliteConnection.Open(directory.File, Sqlite.OpenReadWrite)) {
             foreach (var operation in new[] { "INSERT", "UPDATE" })
@@ -148,7 +151,7 @@ public sealed unsafe partial class BrowserContractsTests {
                     + "BEGIN INSERT INTO checkpoint(part, data) VALUES ('log.' || NEW.part || '.' || hex(randomblob(8)), x'01'); END");
         }
         var session = app.Session!;
-        session.Commit(1, RenameDelta(document, "Only the title"));
+        session.Commit(RenameDelta(document, "Only the title"));
         _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 2));
 
         var written = StoredParts(directory.File).Keys.Where(part => part.StartsWith("log.", StringComparison.Ordinal))
@@ -164,19 +167,17 @@ public sealed unsafe partial class BrowserContractsTests {
         var record = SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid());
         var journal = JournalDocument(record);
         using var app = new CrestApp(new AppConfiguration(directory.Path));
-        app.Send(Adoption(document, journal));
+        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(), app.Send(Adoption(document, journal)));
         var session = app.Session!;
         var sync = app.SessionSync!;
         var loaded = sync.Snapshot;
-        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any());
         var before = StoredParts(directory.File);
         var acknowledge = JournalCommand(journal, "acknowledge",
             new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
         using var transaction = sync.Prepare(1, acknowledge)!;
         Assert.True(transaction.Seal());
 
-        var rename = session.PrepareCommand(1,
-            SpaceCommand(document, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Saved with its journal" }));
+        var rename = session.PrepareCommand(SpaceCommand(document, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Saved with its journal" }));
 
         RefuseWrites(directory.File, "journal");
         Assert.Throws<StorageException>(() => rename.Commit(Durability.BeforeReturn, transaction));
@@ -185,9 +186,10 @@ public sealed unsafe partial class BrowserContractsTests {
         AssertSameParts(before, StoredParts(directory.File));
 
         AcceptWrites(directory.File);
-        Assert.Equal(2UL, rename.Commit(Durability.BeforeReturn, transaction));
+        rename.Commit(Durability.BeforeReturn, transaction);
+        Assert.Equal(2UL, session.Revision);
         var after = StoredParts(directory.File);
-        Assert.True(after["core"].AsSpan().SequenceEqual(session.Checkpoint(2).Read("core")));
+        Assert.True(after["core"].AsSpan().SequenceEqual(session.Checkpoint().Read("core")));
         Assert.True(after["journal"].AsSpan().SequenceEqual(transaction.Journal.Read()));
         Assert.Same(transaction.Journal, sync.Snapshot);
     }
@@ -202,7 +204,7 @@ public sealed unsafe partial class BrowserContractsTests {
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         app.Send(Adoption(document, journal));
         var session = app.Session!;
-        session.Commit(1, RenameDelta(document, "Edited before staging"));
+        session.Commit(RenameDelta(document, "Edited before staging"));
         var acknowledge = JournalCommand(journal, "acknowledge",
             new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
         using var transaction = app.SessionSync!.Prepare(2, acknowledge)!;
@@ -292,20 +294,28 @@ public sealed unsafe partial class BrowserContractsTests {
         Volatile.Write(ref wakes, 0);
         Assert.Equal(CoreStatus.Ok, app.SetWake(&CountWake, 42));
         var adoption = Adoption(SavedSession().Document["session"]!.AsObject());
-        Assert.Equal([typeof(SessionAdopted)], app.Send(adoption).Select(change => change.GetType()));
+        // The session the file now holds joins the device within the intent,
+        // which answers it. Its first save runs behind the intent: a save that
+        // lands before the intent answers travels in that answer, and one that
+        // lands after wakes the host once for a drain.
+        var answer = app.Send(adoption);
+        Assert.Equal([typeof(WorkspaceOpened), typeof(SessionAdopted)],
+            answer.Where(change => change is not Saved).Select(change => change.GetType()));
+        if (answer.OfType<Saved>().SingleOrDefault() is { } early) {
+            Assert.Equal(new Saved(1), early);
+        } else {
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (Volatile.Read(ref wakes) == 0 && DateTime.UtcNow < deadline) Thread.Sleep(5);
+            Assert.Equal(1, Volatile.Read(ref wakes));
+            Assert.Equal([new Saved(1)], app.Drain());
+        }
+        Assert.Empty(app.Drain());
         // The file holds a session now, so a second adoption finds nothing to do.
         Assert.Empty(app.Send(adoption));
-
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (Volatile.Read(ref wakes) == 0 && DateTime.UtcNow < deadline) Thread.Sleep(5);
-        Assert.Equal(1, Volatile.Read(ref wakes));
-        Assert.Equal([new Saved(1)], app.Drain());
-        Assert.Empty(app.Drain());
         Assert.Equal(CoreStatus.Ok, app.SetWake(null, 0));
 
-        var (status, session, revision, sync, projection) = app.Session();
+        var (status, session, sync, projection) = app.Session();
         Assert.Equal(CoreStatus.Ok, status);
-        Assert.Equal(1UL, revision);
         Assert.NotEqual(0UL, session);
         Assert.NotEqual(0UL, sync);
         Assert.NotEqual(0UL, projection);

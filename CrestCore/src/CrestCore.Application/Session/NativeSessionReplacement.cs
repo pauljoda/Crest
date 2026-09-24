@@ -2,20 +2,22 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-/// A validated revision reserved while it is saved. Other writers are
-/// refused until it is committed or disposed; disposing an uncommitted
-/// reservation leaves the session as it was.
+/// A validated state reserved while it is saved. Other writers are refused
+/// until it is committed or disposed; disposing an uncommitted reservation
+/// leaves the session as it was.
 internal sealed class NativeSessionReplacement : IDisposable {
     #region Variables
 
     private readonly NativeSessionAuthority owner;
     private bool completed;
     internal SessionState Session { get; }
+    /// The revision storage saves the state as.
     internal ulong Revision { get; }
-    internal ulong? BorrowedSourceRevision { get; }
     internal Guid? TransientCompletion { get; }
     /// What the command chose for the window that issued it to show next.
     internal WindowFollowUp? FollowUp { get; }
+    /// What the command did that the states cannot tell.
+    internal SessionTabEvents Events { get; }
     internal NativeSessionCheckpoint Checkpoint { get; }
     internal NativeSyncTransaction? SyncTransaction { get; private set; }
 
@@ -24,12 +26,12 @@ internal sealed class NativeSessionReplacement : IDisposable {
     #region Constructors
 
     internal NativeSessionReplacement(NativeSessionAuthority owner, SessionState session,
-        ulong revision, NativeSessionCheckpoint checkpoint, ulong? borrowedSourceRevision = null, Guid? transientCompletion = null,
-        WindowFollowUp? followUp = null) {
+        ulong revision, NativeSessionCheckpoint checkpoint, Guid? transientCompletion = null,
+        WindowFollowUp? followUp = null, SessionTabEvents? events = null) {
         this.owner = owner; Session = session; Revision = revision; Checkpoint = checkpoint;
-        BorrowedSourceRevision = borrowedSourceRevision;
         TransientCompletion = transientCompletion;
         FollowUp = followUp;
+        Events = events ?? SessionTabEvents.None;
     }
 
     #endregion
@@ -44,21 +46,17 @@ internal sealed class NativeSessionReplacement : IDisposable {
         }
     }
 
-    /// Publishes the reserved revision, then tells the device.
-    internal ulong Commit() {
-        var revision = Complete();
-        owner.Published(Session, FollowUp);
-        return revision;
-    }
+    /// Accepts the reserved state, then tells the device.
+    internal void Commit() => owner.Published(Complete(), Session, FollowUp, Events);
 
-    /// Publishes the reserved revision. The caller tells the device once it
-    /// holds no lock.
-    internal ulong Complete() {
+    /// Accepts the reserved state and answers the one it replaced. The caller
+    /// tells the device once it holds no lock.
+    internal SessionState Complete() {
         lock (NativeSessionAuthority.Gate) {
             if (completed) throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
-            var revision = owner.CompleteReplacement(this, true);
+            var previous = owner.CompleteReplacement(this, true)!;
             completed = true;
-            return revision;
+            return previous;
         }
     }
 

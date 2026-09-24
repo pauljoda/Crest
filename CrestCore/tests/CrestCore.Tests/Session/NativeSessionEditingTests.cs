@@ -13,7 +13,7 @@ public sealed partial class BrowserContractsTests {
     /// caller reads it.
     private static JsonNode Edited(JsonNode space, string operation, JsonObject arguments) {
         var authority = new NativeSessionAuthority(Bytes(new JsonObject { ["spaces"] = new JsonArray(space.DeepClone()) }));
-        return JsonNode.Parse(authority.PrepareCommand(1, Bytes(new JsonObject {
+        return JsonNode.Parse(authority.PrepareCommand(Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = operation,
             ["spaceId"] = space["id"]!.DeepClone(),
@@ -78,7 +78,7 @@ public sealed partial class BrowserContractsTests {
         var window = device.Open(f.Space, (f.Space, f.Tab));
         var elsewhere = device.Open(f.Space, (f.Space, f.Tab));
         var newId = Guid.NewGuid();
-        var opening = authority.PrepareCommand(1, SpaceCommand(session, "tab.open", new() {
+        var opening = authority.PrepareCommand(SpaceCommand(session, "tab.open", new() {
             ["select"] = true,
             ["tab"] = new JsonObject {
                 ["id"] = SwiftId(newId),
@@ -101,7 +101,7 @@ public sealed partial class BrowserContractsTests {
         Assert.True(JsonNode.DeepEquals(original["branding"], space["branding"]));
         // Closing the tab the window shows returns it to the tab it showed
         // before; the Space itself records no selection.
-        var closing = authority.PrepareCommand(2, SpaceCommand(session, "tab.close", new() { ["tabId"] = newId.ToString() }, window: window));
+        var closing = authority.PrepareCommand(SpaceCommand(session, "tab.close", new() { ["tabId"] = newId.ToString() }, window: window));
         closing.Commit();
         var closed = JsonNode.Parse(closing.Output)!["space"]!;
         Assert.Single(closed["tabs"]!.AsArray());

@@ -11,7 +11,7 @@ public sealed partial class NativeSessionAuthority {
     // The caller sends intent and the window that issued it. Existing history
     // and archive entries come from the authority; only changed read models
     // cross back, and the device moves the window when the command commits.
-    private NativeSessionCommand PrepareRecordCommand(ulong expected, JsonObject request) {
+    private NativeSessionCommand PrepareRecordCommand(JsonObject request) {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var args = request["arguments"]!.AsObject();
         var now = request["now"]!.GetValue<double>();
@@ -69,7 +69,7 @@ public sealed partial class NativeSessionAuthority {
         }).ToArray();
         var next = session with { Spaces = spaces };
         Validate(next); ValidateBorrowedSession(next);
-        return new(this, expected, next, Output(new JsonObject { ["changes"] = changes }), followUp: followUp);
+        return new(this, session, next, Output(new JsonObject { ["changes"] = changes }), followUp: followUp);
     }
 
     private static JsonArray Identities(IEnumerable<Guid> ids) => new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());

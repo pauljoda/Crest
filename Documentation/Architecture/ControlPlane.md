@@ -243,12 +243,21 @@ renaming, residency preferences, folders, split groups, archive restoration and
 automatic tab cleanup execute through the core. Address intent is a policy
 operation, and history visits, history-range deletion and history and archive
 retention are the `history.*` and `records.*` session commands.
-Each store family has one `BrowserCoreSessionAuthority`. The .NET authority owns
-committed session records and revisions, and Swift keeps an accepted read
-projection for the existing UI. Commands carry arguments and what the window
-shows, and never resend unchanged history or favicon bytes. Revision checks
-reject stale commands. Transfers between families commit both graphs before either native
-window reconciles its selection.
+Each store family has one `BrowserCoreSessionAuthority`, attached to the core's
+device when it is created. The .NET authority owns the committed session
+records, and Swift keeps a read copy for the existing UI that only the core's
+session changes update: attaching publishes `WorkspaceOpened` with the whole
+session, and each accepted state publishes what changed since the one before
+(`SpacesChanged`, `SpaceSettingsChanged`, `TabsChanged`, `FoldersChanged`,
+`SplitGroupsChanged`, `HistoryChanged`, `ArchiveChanged`, `WorkspaceChanged`,
+`AppPreferencesChanged`), derived by comparing the two states, keyed by
+workspace and idempotent. `TabCopied` and `TabFaviconAssigned` tell the copy
+which tab wears which native image. Commands carry arguments and what the
+window shows, never a revision, and never resend unchanged history or favicon
+bytes. A command commits only while the session still holds the state it was
+prepared against; otherwise it is refused as `StaleCommand`. Transfers between
+families commit both graphs before either native window reconciles its
+selection.
 
 The core owns `session.sqlite`. The host passes only the storage directory
 (`AppConfiguration`) when it creates the core, and the core validates, opens and
@@ -258,8 +267,11 @@ first, skipping parts whose bytes did not change, so editing continues while an
 older revision is written. Commits whose effects outside the core depend on the
 file save before they return: sync commits with their journal, Space deletion,
 imports, batches, cross-Space moves and workspace transfers. The core publishes
-`Saved(revision)` and `StorageFailed(reason)` through its wake-and-drain path;
-quitting and backgrounding wait for `Saved`. Favicons stay in the native side
+`Saved(revision)` and `StorageFailed(reason)` through its wake-and-drain path,
+and the `PendingSave` query names the newest revision not yet on disk;
+quitting and backgrounding wait for `Saved`. An intent answers the changes
+still pending before its own, so an older change never lands after a newer
+one. Favicons stay in the native side
 store. Saved parts hold browsing data only; see "Windows belong to the device"
 below. Private, temporary and borrowed families stay in memory.
 
@@ -273,8 +285,8 @@ which answers its workspace identity. A window opens with `OpenWindow`, closes
 with `CloseWindow`, and changes what it shows with `ShowSpace`, `ShowTab`,
 `DismissShownTab` and `ResizeSplitColumns`; the core publishes `WindowChanged`
 and Swift renders each window from `CrestCore.state.windows`. Showing a tab
-records its `lastActivatedAt` as a revision of its own and publishes
-`TabActivated`, which the family's projection follows. The device also keeps
+records its `lastActivatedAt` as a change of its own and publishes the
+`TabsChanged` the family's copy follows. The device also keeps
 each window's recently shown tabs, which choose the tab a dismissed one gives
 way to. The `CanTearOff` query decides whether a dragged tab may leave its
 window, and `FallbackTab` answers the tab a draft Space would show first.
@@ -309,8 +321,9 @@ The store's tab opening, touching, closing, deletion, current-tab clearing,
 renaming and residency actions send commands directly to that authority.
 Folder creation, appearance, renaming, collapse, deletion, moves and tab filing use the same path.
 Requests contain arguments and what the window shows rather than an encoded Space.
-The core prepares the edit against its owned records, the native adapter decodes
-the resulting projection, and a revision-checked commit publishes both sides.
+The core prepares the edit against its owned records, the answer reports what
+the command made, and the commit publishes the session's changes to every
+window's copy.
 Abandoned preparations do not change state. Favicon bytes stay native, and
 existing history and archive records do not cross the command boundary.
 
@@ -353,8 +366,9 @@ The core binds the source Space and profile identity, inherits its engine and
 private-browsing registration, and creates empty local browsing collections.
 Policy refresh reads the source authority directly and preserves local tabs,
 folders, history, archive and split groups. A native snapshot cannot
-create a borrower or replace its canonical policy. Prepared commands reject a
-changed source revision; source deletion, replacement or release revokes access.
+create a borrower or replace its canonical policy. A borrowed session takes no
+command while its Space's settings differ from its source's, until a refresh
+brings them up to date; source deletion, replacement or release revokes access.
 The Swift family publishes accepted projections and schedules native window
 reconciliation. It no longer merges borrowed profile policy itself.
 
@@ -390,7 +404,7 @@ dismissal; the SwiftUI app continues to use its existing scene.
 Cross-Space tab moves and same-profile temporary-window transfers prepare from
 the core's owned records. The core decides placement and split cleanup, and
 answers each window's follow-up selection (the source window's fallback, the
-destination window's moved tab). A workspace transfer reserves both revisions
+destination window's moved tab). A workspace transfer reserves both states
 until the persistent owner's session and sync journal are saved; cancellation
 leaves both graphs unchanged. Private browsing and stale profile identities
 cannot cross that boundary, and matching IDs cannot transfer between unrelated
@@ -558,9 +572,10 @@ compositions of that UI, not separate browser interfaces.
 | `CrestEngines/Chromium/Apple` | Native SwiftUI composition and Objective-C engine port |
 | `CrestEngines/Chromium/Overlay` | Chromium BrowserWindow, profiles, TabStripModel adoption and native observations |
 
-Each store family owns one `NativeSessionAuthority`. Swift holds the accepted
-projection and native assets; commands prepare against the core's current
-revision. The native caller decodes the projection before committing it. Durable
+Each store family owns one `NativeSessionAuthority`. Swift holds a copy the
+core's session changes keep current, and native assets; a command remembers
+the state it was prepared against and commits only while it is still the
+accepted one. The native caller reads the answer before committing it. Durable
 commands reserve publication while the Apple storage adapter writes the matching
 session and sync journal. Failed storage releases the reservation without
 publishing a partial edit. The core's device moves the window that issued a

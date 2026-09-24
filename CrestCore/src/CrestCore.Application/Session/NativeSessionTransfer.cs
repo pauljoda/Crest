@@ -1,3 +1,4 @@
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -41,24 +42,23 @@ public sealed class NativeSessionTransfer : IDisposable {
         }
     }
 
-    /// Publishes both reserved revisions together, then tells the device.
-    internal (ulong Source, ulong Destination) Commit() {
-        (ulong Source, ulong Destination) result;
+    /// Accepts both reserved states together, then tells the device.
+    internal void Commit() {
+        SessionState previousSource, previousDestination;
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is null || b is null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             // At most one side is persistent. Publish its journal first; the
             // two reserved session commits then cannot fail or interleave.
             a.SyncTransaction?.Commit(); b.SyncTransaction?.Commit();
-            result = (a.Complete(), b.Complete()); completed = true;
+            previousSource = a.Complete(); previousDestination = b.Complete(); completed = true;
         }
-        source.Published(a.Session, a.FollowUp);
-        destination.Published(b.Session, b.FollowUp);
-        return result;
+        source.Published(previousSource, a.Session, a.FollowUp, a.Events);
+        destination.Published(previousDestination, b.Session, b.FollowUp, b.Events);
     }
 
-    /// Reserves both revisions, saves the side that keeps a file with the sync
+    /// Reserves both states, saves the side that keeps a file with the sync
     /// journal, then publishes both. A failed save cancels both reservations.
-    public (ulong Source, ulong Destination) CommitDurably(NativeSyncTransaction? sync = null) {
+    public void CommitDurably(NativeSyncTransaction? sync = null) {
         Reserve(sync);
         try {
             source.Storage?.Save(a!.Session, a.Revision, a.SyncTransaction?.Journal, a.Checkpoint);
@@ -67,7 +67,7 @@ public sealed class NativeSessionTransfer : IDisposable {
             Dispose();
             throw;
         }
-        return Commit();
+        Commit();
     }
 
     public void Dispose() {

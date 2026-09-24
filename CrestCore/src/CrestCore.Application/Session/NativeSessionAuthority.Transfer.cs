@@ -16,7 +16,7 @@ public sealed partial class NativeSessionAuthority {
         return space;
     }
 
-    private NativeSessionCommand PrepareTabTransfer(ulong expected, JsonObject request) {
+    private NativeSessionCommand PrepareTabTransfer(JsonObject request) {
         var sourceId = Id(request["spaceId"]); var destinationId = Id(request["destinationSpaceId"]);
         if (sourceId == destinationId) throw new BrowserRuleException(BrowserRuleCodes.SameSpaceTransfer);
         var source = TransferSpace(sourceId, Id(request["profileId"]));
@@ -29,17 +29,15 @@ public sealed partial class NativeSessionAuthority {
         Validate(next);
         followUp.ShowTab(sourceId, result.SourceSelection).ShowTab(destinationId, result.DestinationSelection);
         if (arguments.Select) followUp.ShowSpace(destinationId);
-        return new(this, expected, next, Output(result.Encode()), followUp: followUp);
+        return new(this, session, next, Output(result.Encode()), followUp: followUp);
     }
 
-    public static NativeSessionTransfer PrepareTransfer(NativeSessionAuthority source, ulong sourceRevision,
-        NativeSessionAuthority destination, ulong destinationRevision, ReadOnlySpan<byte> bytes) {
+    public static NativeSessionTransfer PrepareTransfer(NativeSessionAuthority source, NativeSessionAuthority destination,
+        ReadOnlySpan<byte> bytes) {
         lock (Gate) {
             source.RequireWritable(); destination.RequireWritable();
             if (ReferenceEquals(source, destination)) throw new BrowserRuleException(BrowserRuleCodes.SameSessionTransfer);
-            if (sourceRevision != source.Revision || destinationRevision != destination.Revision)
-                throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
-            if (source.workspaceKind != BrowserWorkspaceKind.Temporary && destination.workspaceKind != BrowserWorkspaceKind.Temporary)
+            if (source.workspaceKind != WorkspaceKind.Borrowed && destination.workspaceKind != WorkspaceKind.Borrowed)
                 throw new BrowserRuleException(BrowserRuleCodes.TemporaryWorkspaceRequired);
             if (source.privateBrowsing != destination.privateBrowsing) throw new BrowserRuleException(BrowserRuleCodes.PrivateWorkspaceBoundary);
             if (!ReferenceEquals(source.borrowedSource ?? source, destination.borrowedSource ?? destination))
@@ -68,8 +66,8 @@ public sealed partial class NativeSessionAuthority {
             var nextSource = Replacing(source.session, result.Source);
             var nextDestination = Replacing(destination.session, result.Destination);
             Validate(nextSource); Validate(nextDestination);
-            return new(source, new(source, sourceRevision, nextSource, [], followUp: sourceFollowUp), destination,
-                new(destination, destinationRevision, nextDestination, [], followUp: destinationFollowUp), Output(result.Encode()));
+            return new(source, new(source, source.session, nextSource, [], followUp: sourceFollowUp), destination,
+                new(destination, destination.session, nextDestination, [], followUp: destinationFollowUp), Output(result.Encode()));
         }
     }
 

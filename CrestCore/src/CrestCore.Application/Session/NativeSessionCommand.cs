@@ -3,46 +3,56 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
+/// A prepared session command: the session it was prepared against, the one
+/// it proposes and the answer its window reads. Committing it after the
+/// session accepted anything else is refused with `StaleCommand`, so a command
+/// never overwrites a change it did not see.
 public sealed class NativeSessionCommand {
     #region Variables
 
     private readonly NativeSessionAuthority owner;
-    internal ulong ExpectedRevision { get; }
+    /// The accepted session the command was prepared against.
+    internal SessionState Base { get; }
     internal SessionState Session { get; }
     public byte[] Output { get; }
     private readonly string? rejection;
-    internal ulong? BorrowedSourceRevision { get; }
     internal Guid? TransientCompletion { get; }
     /// What the command chose for the window that issued it to show next.
     internal WindowFollowUp? FollowUp { get; }
+    /// The tabs the command copied and the image it assigned, which the
+    /// session's own changes cannot tell.
+    internal SessionTabEvents Events { get; }
 
     #endregion
 
     #region Constructors
 
-    internal NativeSessionCommand(NativeSessionAuthority owner, ulong revision,
+    internal NativeSessionCommand(NativeSessionAuthority owner, SessionState basis,
         SessionState session, byte[] output, string? rejection = null, Guid? transientCompletion = null,
-        WindowFollowUp? followUp = null) {
-        this.owner = owner; ExpectedRevision = revision; Session = session; Output = output; this.rejection = rejection;
-        BorrowedSourceRevision = owner.BorrowedRevision;
+        WindowFollowUp? followUp = null, SessionTabEvents? events = null) {
+        this.owner = owner; Base = basis; Session = session; Output = output; this.rejection = rejection;
         TransientCompletion = transientCompletion;
         FollowUp = followUp;
+        Events = events ?? SessionTabEvents.None;
     }
 
     #endregion
 
     #region Actions - Commands
 
-    internal void RequireAccepted() {
+    /// Throws unless the command was accepted, the session still holds what it
+    /// was prepared against, and a borrowed session still follows its owner.
+    internal void RequireAccepted(SessionState current) {
         if (rejection is not null) throw new BrowserRuleException(rejection);
-        owner.RequireBorrowedRevision(BorrowedSourceRevision);
+        if (!ReferenceEquals(current, Base)) throw new Rejected(new StaleCommand());
+        owner.RequireCurrentBorrowedPolicy(Session);
         owner.RequirePendingTransient(TransientCompletion);
     }
 
-    public ulong Commit() => owner.CommitCommand(this);
+    public void Commit() => owner.CommitCommand(this);
 
     /// Commits with `durability`, saving `transaction`'s journal with the session.
-    public ulong Commit(Durability durability, NativeSyncTransaction? transaction = null) =>
+    public void Commit(Durability durability, NativeSyncTransaction? transaction = null) =>
         owner.Commit(this, durability, transaction);
 
     internal NativeSessionReplacement Reserve() => owner.ReserveCommand(this);

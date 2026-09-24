@@ -21,4 +21,11 @@ final class CoreState {
     var savedRevision: Int64 = 0
     /// Why the core's last save failed, until a later save succeeds.
     var storageFailure: StorageFailure?
+    /// TRANSITIONAL until S6.1: the Swift session copy of each attached
+    /// workspace, which its session changes update.
+    @ObservationIgnored var sessionCopies: [UUID: SessionCopy] = [:]
+    /// TRANSITIONAL until S6.1: the image bytes of tabs a change in the batch
+    /// being applied removed, by tab, for a later change that places the tab
+    /// again, in this workspace or another.
+    @ObservationIgnored var detachedImages: [UUID: Data] = [:]
 }

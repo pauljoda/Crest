@@ -114,14 +114,14 @@ public sealed partial class BrowserContractsTests {
         using var disposal = app;
         var locked = Identity(session);
         var open = SpaceId(session["spaces"]![1]!);
-        var borrowed = app.AttachWorkspace(authority.CreateBorrowed(authority.Revision, open, ProfileId(session["spaces"]![1]!)));
+        var borrowed = app.AttachWorkspace(authority.CreateBorrowed(open, ProfileId(session["spaces"]![1]!)));
 
         Assert.Equal(new SpaceLocked(locked.Space), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window)));
         Grant(access, locked);
         app.Send(new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window));
 
         // A Space being deleted opens no page, nor does a workspace that borrows it.
-        authority.PrepareCommand(authority.Revision, SpaceCommand(session, "space.deletion.begin",
+        authority.PrepareCommand(SpaceCommand(session, "space.deletion.begin",
             new() { ["operationID"] = Guid.NewGuid().ToString("D") }, session["spaces"]![1]!)).Commit();
         Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, open, null, window)));
         Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), borrowed, open, null, window)));
@@ -136,7 +136,7 @@ public sealed partial class BrowserContractsTests {
         using var disposal = app;
         var (space, other) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
         var (tab, otherTab) = (TabId(session["spaces"]![0]!, 0), TabId(session["spaces"]![1]!, 0));
-        var borrowed = app.AttachWorkspace(owner.CreateBorrowed(owner.Revision, space, ProfileId(session["spaces"]![0]!)));
+        var borrowed = app.AttachWorkspace(owner.CreateBorrowed(space, ProfileId(session["spaces"]![0]!)));
         var borrowedWindow = Guid.NewGuid();
         app.Send(new OpenWindow(borrowedWindow, borrowed, Saved: false, null, null, [], RestoresTabs: true));
         var transient = Guid.NewGuid();
@@ -195,13 +195,14 @@ public sealed partial class BrowserContractsTests {
         var profile = ProfileId(session["spaces"]![0]!);
         var (first, second) = (Guid.NewGuid(), Guid.NewGuid());
         int deliveredWhenNestedSendReturned = -1;
+        IReadOnlyList<Change> released = [];
         binding.OnCommand = command => {
             if (command != new CreatePage(first, profile, IsPrivate: false)) return;
             // Inside a delivery, an intent and a report only add to the queue.
             app.Send(new OpenPage(second, workspace, space, null, window));
             deliveredWhenNestedSendReturned = binding.Commands.Count;
             app.Report(engine, new PageCreated(first));
-            app.Send(new ReleasePage(first, KeepsState: false));
+            released = app.Send(new ReleasePage(first, KeepsState: false));
         };
 
         app.Send(new OpenPage(first, workspace, space, null, window));
@@ -212,7 +213,10 @@ public sealed partial class BrowserContractsTests {
             new CreatePage(second, profile, IsPrivate: false),
             new ClosePage(first, KeepsState: false)
         ], binding.Commands);
-        Assert.Equal(PagePhase.Live, Assert.IsType<PageChanged>(Assert.Single(app.Drain())).Page.Phase);
+        // The report was pending when the release ran, so the release answers
+        // it before its own changes.
+        Assert.Equal(PagePhase.Live, Assert.IsType<PageChanged>(released[0]).Page.Phase);
+        Assert.Empty(app.Drain());
     }
 
     [Fact]

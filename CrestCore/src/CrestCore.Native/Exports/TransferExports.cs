@@ -17,14 +17,13 @@ public static unsafe partial class Exports {
     #region Actions - Native exports
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_prepare_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionPrepareTransfer(ulong source, ulong sourceRevision, ulong destination, ulong destinationRevision,
-        byte* bytes, nuint count, ulong* transfer) {
+    public static int SessionPrepareTransfer(ulong source, ulong destination, byte* bytes, nuint count, ulong* transfer) {
         if (transfer == null) return CoreStatus.InvalidArgument;
         *transfer = 0;
         if (!ValidSessionInput(bytes, count)) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(source, out var a) || !Sessions.TryGetValue(destination, out var b)) return CoreStatus.InvalidHandle;
         try {
-            var value = NativeSessionAuthority.PrepareTransfer(a, sourceRevision, b, destinationRevision, new(bytes, (int)count));
+            var value = NativeSessionAuthority.PrepareTransfer(a, b, new(bytes, (int)count));
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionTransfers.TryAdd(id, value)) { value.Dispose(); return CoreStatus.InternalError; }
             *transfer = id; return CoreStatus.Ok;
@@ -43,15 +42,12 @@ public static unsafe partial class Exports {
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommitTransfer(ulong handle, ulong transaction, ulong* sourceRevision, ulong* destinationRevision) {
-        if (sourceRevision == null || destinationRevision == null) return CoreStatus.InvalidArgument;
-        *sourceRevision = 0; *destinationRevision = 0;
+    public static int SessionCommitTransfer(ulong handle, ulong transaction) {
         if (!SessionTransfers.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
         NativeSyncTransaction? sync = null;
         if (transaction != 0 && !SyncTransactions.TryGetValue(transaction, out sync)) return CoreStatus.InvalidHandle;
         try {
-            var result = value.CommitDurably(sync);
-            *sourceRevision = result.Source; *destinationRevision = result.Destination;
+            value.CommitDurably(sync);
             return CoreStatus.Ok;
         } catch (Exception e) { return DurableError(e); }
     }

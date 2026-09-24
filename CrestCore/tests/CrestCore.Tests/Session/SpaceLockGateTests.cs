@@ -33,10 +33,10 @@ public sealed partial class BrowserContractsTests {
         var visit = SpaceCommand(session, "history.visit",
             new() { ["url"] = "https://example.com/secret", ["title"] = "Secret" });
         foreach (var request in new[] { rename, folder, visit })
-            Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(1, request)).Code);
+            Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(request)).Code);
         Assert.Equal(1UL, core.Revision);
         // A locked Space must not even be named as an import destination.
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(1, Bytes(new JsonObject {
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "workspace.import",
             ["mode"] = "manual",
@@ -57,24 +57,24 @@ public sealed partial class BrowserContractsTests {
         }))).Code);
 
         Grant(access, identity);
-        core.PrepareCommand(1, rename).Commit();
+        core.PrepareCommand(rename).Commit();
         Assert.Equal(2UL, core.Revision);
 
         access.Lock(identity.Space);
-        var current = JsonNode.Parse(core.Checkpoint(2).Read("core"))!;
+        var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
         var relocked = JsonNode.Parse(SpaceCommand(current, "tab.rename", new() { ["tabId"] = current["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "After relock" }))!;
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
-            () => core.PrepareCommand(2, Bytes(relocked))).Code);
+            () => core.PrepareCommand(Bytes(relocked))).Code);
         // Taking protection away is the decision authentication guards.
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
-            2, SpaceCommand(current, "space.access", new() { ["value"] = "open" }))).Code);
+            SpaceCommand(current, "space.access", new() { ["value"] = "open" }))).Code);
         // Raising it, and retention maintenance, must still reach a locked
         // Space: neither returns its contents to the caller.
-        core.PrepareCommand(2, SpaceCommand(current, "space.access",
+        core.PrepareCommand(SpaceCommand(current, "space.access",
             new() { ["value"] = "deviceOwnerAuthentication" })).Commit();
-        core.PrepareCommand(3, SpaceCommand(current, "records.sweep", new())).Commit();
+        core.PrepareCommand(SpaceCommand(current, "records.sweep", new())).Commit();
         Grant(access, identity);
-        core.PrepareCommand(4, Bytes(relocked)).Commit();
+        core.PrepareCommand(Bytes(relocked)).Commit();
     }
 
     [Fact]
@@ -85,17 +85,18 @@ public sealed partial class BrowserContractsTests {
         core.AttachAccess(access);
         // Materialized records commit as a session replacement, never as a
         // command, so background convergence does not need a grant.
-        using (var reserved = core.ReserveReplacement(1, RenameDelta(session, "Merged from another device")))
-            Assert.Equal(2UL, reserved.Commit());
-        core.Commit(2, RenameDelta(session, "Merged again"));
+        using (var reserved = core.ReserveReplacement(RenameDelta(session, "Merged from another device")))
+            reserved.Commit();
+        Assert.Equal(2UL, core.Revision);
+        core.Commit(RenameDelta(session, "Merged again"));
         Assert.Equal(3UL, core.Revision);
-        var current = JsonNode.Parse(core.Checkpoint(3).Read("core"))!;
+        var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
         Assert.Equal("Merged again", current["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
         var operation = Guid.NewGuid().ToString();
-        core.PrepareCommand(3, SpaceCommand(current, "space.deletion.begin",
+        core.PrepareCommand(SpaceCommand(current, "space.deletion.begin",
             new() { ["operationID"] = operation })).Commit();
         Assert.Equal("space_deletion_in_progress", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
-            4, SpaceCommand(current, "records.cleanup", new()))).Code);
+            SpaceCommand(current, "records.cleanup", new()))).Code);
     }
 
     private static byte[] SpaceTabDelta(JsonNode session, int index, string title) {
@@ -130,31 +131,31 @@ public sealed partial class BrowserContractsTests {
         var identity = Identity(session);
         // A value edit proposes records instead of naming an operation, so the
         // gate reads what the delta would actually change.
-        foreach (var attempt in new Func<object>[] {
-            () => core.Commit(1, SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true),
-            () => core.ReserveReplacement(1, SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true)
-        }) Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => attempt()).Code);
+        foreach (var attempt in new Action[] {
+            () => core.Commit(SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true),
+            () => core.ReserveReplacement(SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true)
+        }) Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(attempt).Code);
         // Removing protection is the decision authentication guards, whether it
         // arrives as a command or as a proposed record.
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
-            () => core.Commit(1, AccessPolicyDelta(session, "open"), nativeValueEdit: true)).Code);
+            () => core.Commit(AccessPolicyDelta(session, "open"), nativeValueEdit: true)).Code);
         Assert.Equal(1UL, core.Revision);
 
         // The unlocked Space in the same session stays editable, and raising
         // protection further on the locked one is allowed as it is for commands.
-        core.Commit(1, SpaceTabDelta(session, 1, "Second space tab"), nativeValueEdit: true);
-        core.Commit(2, AccessPolicyDelta(session, "futureStrongerPolicy"), nativeValueEdit: true);
+        core.Commit(SpaceTabDelta(session, 1, "Second space tab"), nativeValueEdit: true);
+        core.Commit(AccessPolicyDelta(session, "futureStrongerPolicy"), nativeValueEdit: true);
         Assert.Equal(3UL, core.Revision);
 
         // Sync materialization commits as a journal-bound replacement rather
         // than a value edit, so background convergence is still unaffected.
-        var current = JsonNode.Parse(core.Checkpoint(3).Read("core"))!;
-        core.Commit(3, SpaceTabDelta(current, 0, "Merged from another device"));
+        var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
+        core.Commit(SpaceTabDelta(current, 0, "Merged from another device"));
         Assert.Equal(4UL, core.Revision);
 
         Grant(access, identity);
-        current = JsonNode.Parse(core.Checkpoint(4).Read("core"))!;
-        core.Commit(4, SpaceTabDelta(current, 0, "Mine again"), nativeValueEdit: true);
+        current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
+        core.Commit(SpaceTabDelta(current, 0, "Mine again"), nativeValueEdit: true);
         Assert.Equal(5UL, core.Revision);
     }
 
@@ -206,14 +207,14 @@ public sealed partial class BrowserContractsTests {
         owner.AttachAccess(access);
         var identity = Identity(session);
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
-            () => owner.CreateBorrowed(1, identity.Space, identity.Profile)).Code);
+            () => owner.CreateBorrowed(identity.Space, identity.Profile)).Code);
         Grant(access, identity);
-        var child = owner.CreateBorrowed(1, identity.Space, identity.Profile);
+        var child = owner.CreateBorrowed(identity.Space, identity.Profile);
         // The borrowed workspace inherits the same authority, so relocking the
         // source also stops edits inside the Blank Window that borrowed it.
         access.Lock(identity.Space);
-        var local = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(1, Bytes(new JsonObject {
+        var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "tab.rename",
             ["now"] = 800000100.0,
@@ -237,7 +238,7 @@ public sealed partial class BrowserContractsTests {
 
         var core = new NativeSessionAuthority(Bytes(session));
         var metadata = second.DeepClone();
-        Assert.Equal("duplicate_space_profile", Assert.Throws<BrowserRuleException>(() => core.Commit(1, Bytes(new JsonObject {
+        Assert.Equal("duplicate_space_profile", Assert.Throws<BrowserRuleException>(() => core.Commit(Bytes(new JsonObject {
             ["version"] = 1,
             ["spaces"] = new JsonArray(new JsonObject {
                 ["id"] = second["id"]!.DeepClone(),

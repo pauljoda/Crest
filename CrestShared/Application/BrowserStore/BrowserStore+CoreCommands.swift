@@ -12,8 +12,10 @@ extension BrowserStore {
         let arguments = BrowserSessionArguments.FolderCreate(
             folderId: id.rawValue, title: nil, placement: .current, parentId: nil, color: .folderDefault,
             symbol: "folder", tabIds: tabIDs.map(\.rawValue), detach: detachesSplitMembers)
-        let result = family.execute(.folderCreate, in: spaceID, arguments: arguments, from: self, at: .now)
-        return result?.space.folders.contains(where: { $0.id == id }) == true ? id : nil
+        guard family.execute(.folderCreate, in: spaceID, arguments: arguments, from: self, at: .now) != nil else {
+            return nil
+        }
+        return session.space(id: spaceID)?.folders.contains(where: { $0.id == id }) == true ? id : nil
     }
 
     /// Records what a page reports about its tab, and answers whether the tab
@@ -30,10 +32,9 @@ extension BrowserStore {
             tabId: tabID.rawValue, url: url?.absoluteString, title: title,
             hasFavicon: !(faviconData?.isEmpty ?? true), faviconChanged: faviconData != tab.faviconData,
             iconAccent: iconAccent)
-        let result = family.execute(.tabObserve, in: spaceID, arguments: arguments, from: self, at: .now)
-        guard let result, result.changed else { return false }
-        _ = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
-        return true
+        let result = family.execute(
+            .tabObserve, in: spaceID, arguments: arguments, from: self, at: .now, image: faviconData)
+        return result?.changed == true
     }
 
     func setSessionTabIcon(
@@ -43,11 +44,8 @@ extension BrowserStore {
         let arguments = BrowserSessionArguments.TabIcon(
             tabId: tabID.rawValue, mode: mode, hasFavicon: !(faviconData?.isEmpty ?? true), iconAccent: iconAccent,
             emoji: emoji)
-        guard let result = family.execute(.tabIcon, in: spaceID, arguments: arguments, from: self, at: .now),
-            result.changed
-        else { return false }
-        _ = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
-        return true
+        return family.execute(.tabIcon, in: spaceID, arguments: arguments, from: self, at: .now, image: faviconData)?
+            .changed == true
     }
 
     func cacheSessionTabFavicon(
@@ -56,11 +54,9 @@ extension BrowserStore {
     ) -> Bool {
         let arguments = BrowserSessionArguments.TabFaviconCache(
             tabId: tabID.rawValue, url: url.absoluteString, hasFavicon: !faviconData.isEmpty, iconAccent: iconAccent)
-        guard let result = family.execute(.tabFaviconCache, in: spaceID, arguments: arguments, from: self, at: .now),
-            result.changed
-        else { return false }
-        _ = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
-        return true
+        return family.execute(
+            .tabFaviconCache, in: spaceID, arguments: arguments, from: self, at: .now, image: faviconData
+        )?.changed == true
     }
 
     func setSessionSavedLocation(_ action: BrowserSavedLocationAction, tabID: TabID, in spaceID: SpaceID) -> Bool {

@@ -29,13 +29,6 @@ enum BrowserSpaceThemeMode: String, Codable, CaseIterable, Equatable, Sendable {
     case gradient
 }
 
-enum SpaceAccent: String, Codable, CaseIterable, Equatable, Sendable {
-    case indigo
-    case orange
-    case teal
-    case rose
-}
-
 enum BrowserSpaceBrandColorRole: Int, CaseIterable, Equatable, Identifiable, Sendable {
     case background
     case primary

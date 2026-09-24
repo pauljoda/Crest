@@ -2,11 +2,15 @@ import CrestCoreABI
 import Foundation
 import Observation
 
-/// One core session per store family. `projection` is the accepted native read
-/// model, including native favicon assets; it cannot publish an unaccepted edit.
-/// It holds browsing data only. What each window shows is the core device's:
-/// a command names the window that issued it, and the device moves that
-/// window when the command commits and repairs the others.
+/// One core session per store family, attached to the core's device from the
+/// moment it exists. `projection` is the Swift copy of the session the core
+/// holds, with native favicon assets; only the session changes the core
+/// publishes update it (see `BrowserCoreSessionBridge.swift`), so it can never
+/// show an unaccepted edit. It holds browsing data only. What each window shows
+/// is the core device's: a command names the window that issued it, and the
+/// device moves that window when the command commits and repairs the others.
+/// A command commits only while the core still holds the session it was
+/// prepared against; nothing here names a revision.
 @Observable @MainActor
 final class BrowserCoreSessionAuthority {
     // MARK: - Types
@@ -20,6 +24,8 @@ final class BrowserCoreSessionAuthority {
 
     final class PreparedTransfer {
         fileprivate let handle: UInt64
+        /// TRANSITIONAL until S5.2 stages sync in the core: the sessions the
+        /// transfer proposes, which the sync stager reads before it commits.
         let source: BrowserSession
         let destination: BrowserSession
 
@@ -34,6 +40,8 @@ final class BrowserCoreSessionAuthority {
 
     final class PreparedChange {
         fileprivate let handle: UInt64
+        /// TRANSITIONAL until S5.2 stages sync in the core: the session the
+        /// command proposes, which the sync stager reads before it commits.
         let session: BrowserSession
 
         fileprivate init(handle: UInt64, session: BrowserSession) {
@@ -42,6 +50,26 @@ final class BrowserCoreSessionAuthority {
         }
 
         deinit { crest_session_release_command(handle) }
+    }
+
+    /// TRANSITIONAL until S6.1: image bytes the issuer of a command holds and
+    /// the core never sees. `assigned` is the image a page reported, for the
+    /// tab the core assigns one to; `placed` are the images of tabs the command
+    /// places, by tab, for tabs the copy did not hold before.
+    struct OfferedImages {
+        var assigned: Data?
+        var placed: [UUID: Data] = [:]
+
+        /// The images every tab and archived tab of `session` wears.
+        init(assigned: Data? = nil, placedFrom sessions: BrowserSession...) {
+            self.assigned = assigned
+            for session in sessions {
+                for space in session.spaces {
+                    for tab in space.tabs { placed[tab.id.rawValue] = tab.faviconData }
+                    for archived in space.archivedTabs { placed[archived.id.rawValue] = archived.tab.faviconData }
+                }
+            }
+        }
     }
 
     /// The session a new core session starts from, with its workspace kind
@@ -118,30 +146,16 @@ final class BrowserCoreSessionAuthority {
         let now: TimeInterval
     }
 
-    private struct BorrowedCreation: Decodable {
-        let session: BrowserSession
-    }
-
-    private struct MetadataProjection: Decodable {
+    /// A Space command's answer: the session with each Space's settings.
+    private struct SpaceAnswer: Decodable {
         var session: BrowserSession
     }
 
-    private struct RecordChanges: Decodable {
-        struct Change: Decodable {
-            let spaceId: UUID
-            let profileId: UUID
-            let historyEntry: BrowserHistoryEntry?
-            let removedHistory: [UUID]?
-            let removedArchiveIndices: [Int]?
-            let tabEdit: BrowserCoreSessionEditing.Result?
-            let splitGroups: [BrowserSplitGroupMetadata]?
-        }
+    /// A record command's answer, read only for whether it changed anything.
+    private struct RecordAnswer: Decodable {
+        struct Change: Decodable {}
 
         let changes: [Change]
-    }
-
-    private struct PreferencesResult: Decodable {
-        let preferences: BrowserAppPreferences
     }
 
     /// The edits that take the accepted records to a proposed session.
@@ -208,146 +222,135 @@ final class BrowserCoreSessionAuthority {
     // MARK: - Variables
 
     private(set) var projection: BrowserSession
-    @ObservationIgnored private var revision: UInt64
     @ObservationIgnored private let owner: SessionHandle
-    @ObservationIgnored private var borrowedSource: BrowserCoreSessionAuthority?
-    @ObservationIgnored private var borrowedSourceRevision: UInt64?
+    @ObservationIgnored private let borrowedSource: BrowserCoreSessionAuthority?
     /// The core whose device shows this session in its windows, and the
-    /// workspace it gave the session; nil until a window opens over it.
+    /// workspace it gave the session.
     @ObservationIgnored private(set) weak var device: CrestCore?
     @ObservationIgnored private(set) var workspaceID: UUID?
-
-    /// The core's revision of this session, for waiting until it is on disk.
-    var acceptedRevision: UInt64 { revision }
+    /// The images the issuer of the command being committed holds, until the
+    /// core's changes for it are applied.
+    @ObservationIgnored private var offered = OfferedImages()
 
     // MARK: - Initializers
 
-    init(session: BrowserSession, workspaceKind: WorkspaceKind = .persistent, privateBrowsing: Bool = false) {
+    /// A memory-only session over `session`, attached to `core`'s device.
+    init(
+        session: BrowserSession, workspaceKind: WorkspaceKind = .persistent, privateBrowsing: Bool = false,
+        core: CrestCore
+    ) {
         projection = session
+        borrowedSource = nil
         do {
             let data = try JSONEncoder().encode(
                 Creation(
                     session: Self.compact(session), workspaceKind: workspaceKind,
                     privateBrowsing: privateBrowsing || workspaceKind == .private))
             var handle: UInt64 = 0
-            var initialRevision: UInt64 = 0
             let result = data.withUnsafeBytes {
-                crest_session_create($0.bindMemory(to: UInt8.self).baseAddress, data.count, &handle, &initialRevision)
+                crest_session_create($0.bindMemory(to: UInt8.self).baseAddress, data.count, &handle)
             }
             guard result == CREST_OK else { throw CoreError.rejected(result) }
             owner = SessionHandle(value: handle)
-            revision = initialRevision
         } catch {
             preconditionFailure("Could not initialize the core session: \(error)")
         }
+        attach(to: core)
     }
 
-    /// TRANSITIONAL until session intents land: the persistent session the
-    /// core keeps in its file, taken over with the projection it loaded.
-    init(adopting handle: UInt64, revision: UInt64, projection: BrowserSession) {
+    /// TRANSITIONAL until session intents land: the persistent session `core`
+    /// keeps in its file, taken over with the projection it loaded.
+    init(adopting handle: UInt64, projection: BrowserSession, core: CrestCore) {
         owner = SessionHandle(value: handle)
-        self.revision = revision
         self.projection = projection
+        borrowedSource = nil
+        attach(to: core)
     }
 
-    private init(
-        owner: SessionHandle, revision: UInt64, projection: BrowserSession,
-        borrowedSource: BrowserCoreSessionAuthority
-    ) {
+    private init(owner: SessionHandle, borrowedSource: BrowserCoreSessionAuthority, core: CrestCore) {
         self.owner = owner
-        self.revision = revision
-        self.projection = projection
+        projection = BrowserSession(spaces: [])
         self.borrowedSource = borrowedSource
-        borrowedSourceRevision = borrowedSource.revision
+        attach(to: core)
     }
 
     // MARK: - Actions - Device
 
-    /// Attaches this session to `core`'s device so its windows may show it,
-    /// and answers the workspace identity the core gave it. A session shows in
-    /// one core's windows only.
-    func attach(to core: CrestCore) -> UUID {
-        if let workspaceID {
-            precondition(device === core, "A session shows in one core's windows only.")
-            return workspaceID
-        }
+    /// Attaches this session to `core`'s device so its windows may show it.
+    /// The device publishes the session whole, which the projection takes.
+    private func attach(to core: CrestCore) {
         var bytes = [UInt8](repeating: 0, count: 16)
         let status = crest_session_attach_device(owner.value, core.handle, &bytes)
         guard status == CREST_OK else { CrestCore.buildBug(status, "attach a session to its device") }
         let workspace = bytes.withUnsafeBytes { UUID(uuid: $0.load(as: uuid_t.self)) }
         device = core
         workspaceID = workspace
-        return workspace
+        core.state.register(self, for: workspace)
+        core.drain()
     }
 
-    /// A window showed a tab, and the core recorded when as a revision of its
-    /// own, which the projection follows.
-    func recordActivation(_ activated: TabActivated) {
-        revision = UInt64(activated.revision)
-        guard let spaceIndex = projection.spaces.firstIndex(where: { $0.id.rawValue == activated.spaceID }),
-            let tabIndex = projection.spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == activated.tabID })
-        else { return }
-        projection.spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = activated.at
+    /// TRANSITIONAL until S6.1: one session change the core published for this
+    /// workspace. See `BrowserSession.apply(_:detached:offered:)`.
+    func receive(_ change: Change, detachedImages: inout [UUID: Data]) {
+        projection.apply(change, detached: &detachedImages, offered: offered)
+    }
+
+    /// Applies what the core published for a commit that just returned, with
+    /// the images its issuer offered.
+    private func follow(offering images: OfferedImages = OfferedImages()) {
+        offered = images
+        defer { offered = OfferedImages() }
+        device?.drain()
     }
 
     // MARK: - Actions - Borrowing
 
     func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment) throws -> BrowserCoreSessionAuthority {
+        guard let device else { preconditionFailure("A session borrows only once it shows in a core's windows.") }
         let input = try JSONEncoder().encode(
             Borrowing(spaceId: assignment.spaceID.rawValue, profileId: assignment.profileID))
         var handle: UInt64 = 0
-        var initialRevision: UInt64 = 0
-        var command: UInt64 = 0
         let status = input.withUnsafeBytes {
-            crest_session_create_borrowed(
-                owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress,
-                input.count, &handle, &initialRevision, &command)
+            crest_session_create_borrowed(owner.value, $0.bindMemory(to: UInt8.self).baseAddress, input.count, &handle)
         }
         guard status == CREST_OK else { throw CoreError.rejected(status) }
-        let child = SessionHandle(value: handle)
-        defer { crest_session_release_command(command) }
-        let session = try JSONDecoder().decode(BorrowedCreation.self, from: readCommand(command)).session
-        return BrowserCoreSessionAuthority(
-            owner: child, revision: initialRevision, projection: session, borrowedSource: self)
+        return BrowserCoreSessionAuthority(owner: SessionHandle(value: handle), borrowedSource: self, core: device)
     }
 
     /// Only the source authority supplies policy. Native callers cannot substitute
     /// a session snapshot or turn local organization into canonical profile edits.
+    /// Answers whether the borrowed Space changed.
     @discardableResult
     func refreshBorrowed() throws -> Bool {
-        guard let borrowedSource, borrowedSourceRevision != borrowedSource.revision else { return false }
+        guard borrowedSource != nil else { return false }
+        let previous = projection
         var command: UInt64 = 0
-        let prepared = crest_session_prepare_borrowed_refresh(owner.value, revision, &command)
+        let prepared = crest_session_prepare_borrowed_refresh(owner.value, &command)
         guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
         defer { crest_session_release_command(command) }
-        let next = try decodeMetadataProjection(readCommand(command)).session
-        var accepted: UInt64 = 0
-        let committed = crest_session_commit_command(command, &accepted)
+        let committed = crest_session_commit_command(command)
         guard committed == CREST_OK else { throw CoreError.rejected(committed) }
-        revision = accepted
-        borrowedSourceRevision = borrowedSource.revision
-        let changed = projection != next
-        projection = next
-        return changed
+        follow()
+        return projection != previous
     }
 
     // MARK: - Actions - Replacement
 
     /// Replaces the session and saves it before publishing. With a sync
     /// transaction its journal is saved and published with the session. A
-    /// failed save leaves the projection and the accepted revision unchanged.
+    /// failed save leaves the projection and the core's session unchanged.
     func replaceDurably(with proposed: BrowserSession, sync: BrowserCoreSyncTransaction? = nil) throws {
+        // The delta is measured from the copy, which must hold every change
+        // the core already published.
+        follow()
         let next = keepingPreferences(proposed)
         let delta = try JSONEncoder().encode(try delta(to: next))
-        var accepted: UInt64 = 0
         let result = delta.withUnsafeBytes { bytes in
             crest_session_replace_durably(
-                owner.value, revision, sync?.handle ?? 0,
-                bytes.bindMemory(to: UInt8.self).baseAddress, delta.count, &accepted)
+                owner.value, sync?.handle ?? 0, bytes.bindMemory(to: UInt8.self).baseAddress, delta.count)
         }
         guard result == CREST_OK else { throw CoreError(result) }
-        revision = accepted
-        projection = next
+        follow(offering: OfferedImages(placedFrom: next))
     }
 
     func attachSync(_ sync: BrowserCoreSyncAuthority) throws {
@@ -415,8 +418,8 @@ final class BrowserCoreSessionAuthority {
         var handle: UInt64 = 0
         let status = input.withUnsafeBytes { bytes in
             crest_session_prepare_transfer(
-                source.owner.value, source.revision, destination.owner.value, destination.revision,
-                bytes.bindMemory(to: UInt8.self).baseAddress, input.count, &handle)
+                source.owner.value, destination.owner.value, bytes.bindMemory(to: UInt8.self).baseAddress,
+                input.count, &handle)
         }
         guard status == CREST_OK else { throw CoreError.rejected(status) }
         do {
@@ -443,21 +446,19 @@ final class BrowserCoreSessionAuthority {
     }
 
     /// Commits a prepared transfer: the core saves the side that keeps a file,
-    /// with the sync journal, before either side is published.
+    /// with the sync journal, before either side is published. The moved tab
+    /// keeps the image it wore in the workspace it left.
     static func commitTransfer(
         _ prepared: PreparedTransfer,
         source: BrowserCoreSessionAuthority, destination: BrowserCoreSessionAuthority,
         sync: BrowserCoreSyncTransaction? = nil
     ) throws {
-        var sourceRevision: UInt64 = 0
-        var destinationRevision: UInt64 = 0
-        let committed = crest_session_commit_transfer(
-            prepared.handle, sync?.handle ?? 0, &sourceRevision, &destinationRevision)
+        let committed = crest_session_commit_transfer(prepared.handle, sync?.handle ?? 0)
         guard committed == CREST_OK else { throw CoreError(committed) }
-        source.revision = sourceRevision
-        destination.revision = destinationRevision
-        source.projection = prepared.source
-        destination.projection = prepared.destination
+        let images = OfferedImages(placedFrom: prepared.source, prepared.destination)
+        source.offered = images
+        destination.follow(offering: images)
+        source.offered = OfferedImages()
     }
 
     // MARK: - Actions - Commands
@@ -482,48 +483,36 @@ final class BrowserCoreSessionAuthority {
         return true
     }
 
+    /// Runs a tab, folder or split command. `image` is the image a page
+    /// reported, which the tab the core assigns it to wears.
     func execute<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID, arguments: Arguments,
-        window: UUID?, at date: Date
+        window: UUID?, at date: Date, image: Data? = nil
     ) throws -> BrowserCoreSessionEditing.Result {
-        guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }) else {
-            throw CoreError.rejected(CREST_INVALID_ARGUMENT)
-        }
+        guard let space = projection.space(id: spaceID) else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
         let data = try JSONEncoder().encode(
             Command(
-                operation: operation, spaceId: spaceID.rawValue, profileId: projection.spaces[index].profile.id,
+                operation: operation, spaceId: spaceID.rawValue, profileId: space.profile.id,
                 arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
-        return try commitCommand(data) { output in
-            let result = try BrowserCoreSessionEditing.decode(
-                output, preservingAssetsFrom: self.projection.spaces[index])
-            var next = self.projection
-            BrowserCoreSessionEditing.apply(result, to: &next, at: index)
-            return (next, result)
+        return try commitCommand(data, offering: OfferedImages(assigned: image)) {
+            try JSONDecoder().decode(BrowserCoreSessionEditing.Result.self, from: $0)
         }
-    }
-
-    /// Image bytes are native assets. The command above owns their assignment;
-    /// only its accepted tab identity can receive the bytes here.
-    func applyFavicon(
-        _ assignment: BrowserCoreSessionEditing.Result.FaviconAssignment?,
-        bytes: Data?, in spaceID: SpaceID
-    ) -> TabID? {
-        guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }) else { return nil }
-        return BrowserCoreSessionEditing.applyFavicon(assignment, bytes: bytes, to: &projection, at: index)
     }
 
     func executeSpace<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
         window: UUID?, at date: Date
     ) throws {
-        let prepared = try prepareSpace(operation, in: spaceID, arguments: arguments, window: window, at: date)
-        var accepted: UInt64 = 0
-        let result = crest_session_commit_command(prepared.handle, &accepted)
-        guard result == CREST_OK else { throw CoreError.rejected(result) }
-        revision = accepted
-        projection = prepared.session
+        let space = spaceID.flatMap { projection.space(id: $0) }
+        let data = try JSONEncoder().encode(
+            Command(
+                operation: operation, spaceId: spaceID?.rawValue, profileId: space?.profile.id,
+                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
+        try commitCommand(data) { _ in }
     }
 
+    /// Runs a history, archive, retention or split metadata command, and
+    /// answers whether it changed anything.
     func executeRecords<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
         window: UUID?, at date: Date
@@ -533,51 +522,7 @@ final class BrowserCoreSessionAuthority {
             Command(
                 operation: operation, spaceId: spaceID?.rawValue, profileId: space?.profile.id,
                 arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
-        return try commitCommand(data) { output in
-            let result = try JSONDecoder().decode(RecordChanges.self, from: output)
-            var next = self.projection
-            for change in result.changes {
-                guard let index = next.spaces.firstIndex(where: { $0.id.rawValue == change.spaceId }),
-                    next.spaces[index].profile.id == change.profileId
-                else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
-                let original = next.spaces[index]
-                if var edit = change.tabEdit {
-                    guard edit.space.id == original.id, edit.space.profile == original.profile else {
-                        throw CoreError.rejected(CREST_INVALID_ARGUMENT)
-                    }
-                    var images = Dictionary(
-                        original.archivedTabs.map { ($0.id, $0.tab.faviconData) },
-                        uniquingKeysWith: { first, _ in first })
-                    for tab in original.tabs { images[tab.id] = tab.faviconData }
-                    for tabIndex in edit.space.tabs.indices {
-                        edit.space.tabs[tabIndex].faviconData = images[edit.space.tabs[tabIndex].id] ?? nil
-                    }
-                    for archiveIndex in edit.space.archivedTabs.indices {
-                        edit.space.archivedTabs[archiveIndex].tab.faviconData =
-                            images[edit.space.archivedTabs[archiveIndex].id] ?? nil
-                    }
-                    BrowserCoreSessionEditing.apply(edit, to: &next, at: index)
-                }
-                if let removed = change.removedHistory {
-                    let ids = Set(removed)
-                    next.spaces[index].history.removeAll { ids.contains($0.id) }
-                }
-                if let entry = change.historyEntry {
-                    next.spaces[index].history.removeAll { $0.id == entry.id }
-                    next.spaces[index].history.insert(entry, at: 0)
-                }
-                if let removed = change.removedArchiveIndices {
-                    let indices = Set(removed)
-                    guard indices.allSatisfy({ next.spaces[index].archivedTabs.indices.contains($0) }) else {
-                        throw CoreError.rejected(CREST_INVALID_ARGUMENT)
-                    }
-                    next.spaces[index].archivedTabs = next.spaces[index].archivedTabs.enumerated()
-                        .filter { !indices.contains($0.offset) }.map(\.element)
-                }
-                if let groups = change.splitGroups { next.spaces[index].splitGroups = groups }
-            }
-            return (next, !result.changes.isEmpty)
-        }
+        return try commitCommand(data) { !(try JSONDecoder().decode(RecordAnswer.self, from: $0).changes.isEmpty) }
     }
 
     func prepareTabBatch(
@@ -603,6 +548,7 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
+    /// A Space command prepared for a durable commit.
     func prepareSpace<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
         window: UUID?, at date: Date
@@ -614,8 +560,7 @@ final class BrowserCoreSessionAuthority {
                 arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
         let handle = try prepareCommand(data)
         do {
-            let next = try decodeMetadataProjection(readCommand(handle))
-            return PreparedChange(handle: handle, session: next.session)
+            return PreparedChange(handle: handle, session: try stagingSession(fromSpaceAnswer: readCommand(handle)))
         } catch {
             crest_session_release_command(handle)
             throw error
@@ -640,55 +585,55 @@ final class BrowserCoreSessionAuthority {
 
     /// Commits a prepared command and saves it before publishing, with the sync
     /// transaction's journal when one is given. A failed save leaves the
-    /// projection and the accepted revision unchanged.
+    /// projection and the core's session unchanged. The tabs it places wear
+    /// the images the prepared session gave them.
     func commitDurably(_ command: PreparedChange, sync: BrowserCoreSyncTransaction? = nil) throws {
-        var accepted: UInt64 = 0
-        let result = crest_session_commit_command_durably(command.handle, sync?.handle ?? 0, &accepted)
+        let result = crest_session_commit_command_durably(command.handle, sync?.handle ?? 0)
         guard result == CREST_OK else { throw CoreError(result) }
-        revision = accepted
-        projection = command.session
+        follow(offering: OfferedImages(placedFrom: command.session))
     }
 
     // MARK: - Actions - Core calls
 
-    private func decodeMetadataProjection(_ output: Data) throws -> MetadataProjection {
-        var next = try JSONDecoder().decode(MetadataProjection.self, from: output)
-        for index in next.session.spaces.indices {
-            guard let existing = projection.space(id: next.session.spaces[index].id) else { continue }
-            guard next.session.spaces[index].profile == existing.profile else {
+    /// TRANSITIONAL until S5.2 stages sync in the core: the session a Space
+    /// command proposes, which the sync stager reads before the command
+    /// commits. The answer carries each Space's settings; the records the
+    /// copy holds complete it.
+    private func stagingSession(fromSpaceAnswer output: Data) throws -> BrowserSession {
+        var next = try JSONDecoder().decode(SpaceAnswer.self, from: output).session
+        for index in next.spaces.indices {
+            guard let existing = projection.space(id: next.spaces[index].id) else { continue }
+            guard next.spaces[index].profile == existing.profile else {
                 throw CoreError.rejected(CREST_INVALID_ARGUMENT)
             }
-            // The command keeps these collections in the core. Reattach native
-            // read models and image assets without moving them across the ABI.
-            next.session.spaces[index].tabs = existing.tabs
-            next.session.spaces[index].folders = existing.folders
-            next.session.spaces[index].history = existing.history
-            next.session.spaces[index].archivedTabs = existing.archivedTabs
+            next.spaces[index].tabs = existing.tabs
+            next.spaces[index].folders = existing.folders
+            next.spaces[index].history = existing.history
+            next.spaces[index].archivedTabs = existing.archivedTabs
         }
         return next
     }
 
+    /// Prepares, reads and commits one command, then applies what the core
+    /// published for it. The answer is read before the commit, so a failed
+    /// read commits nothing.
+    @discardableResult
     private func commitCommand<Result>(
-        _ data: Data,
-        decode: (Data) throws -> (BrowserSession, Result)
+        _ data: Data, offering images: OfferedImages = OfferedImages(), decode: (Data) throws -> Result
     ) throws -> Result {
         let command = try prepareCommand(data)
         defer { crest_session_release_command(command) }
-        let output = try readCommand(command)
-        let (next, result) = try decode(output)
-        var accepted: UInt64 = 0
-        let committed = crest_session_commit_command(command, &accepted)
+        let result = try decode(try readCommand(command))
+        let committed = crest_session_commit_command(command)
         guard committed == CREST_OK else { throw CoreError.rejected(committed) }
-        revision = accepted
-        projection = next
+        follow(offering: images)
         return result
     }
 
     private func prepareCommand(_ data: Data) throws -> UInt64 {
         var command: UInt64 = 0
         let prepared = data.withUnsafeBytes {
-            crest_session_prepare_command(
-                owner.value, revision, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &command)
+            crest_session_prepare_command(owner.value, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &command)
         }
         guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
         return command
@@ -793,14 +738,13 @@ final class BrowserCoreSessionAuthority {
 // MARK: - App preferences
 
 extension BrowserCoreSessionAuthority {
-    /// Applies one `preferences.*` command. Only the preference record changes,
-    /// so every window and Space record stays exactly as projected.
+    /// Applies one `preferences.*` command, and answers whether the
+    /// preferences changed. Only the preference record changes, so every
+    /// window and Space record stays exactly as it was.
     func executePreferences(_ request: BrowserAppPreferenceRequest) throws -> Bool {
-        try commitCommand(try JSONEncoder().encode(request)) { output in
-            var next = self.projection
-            next.appPreferences = try JSONDecoder().decode(PreferencesResult.self, from: output).preferences
-            return (next, next != self.projection)
-        }
+        let before = projection.appPreferences
+        try commitCommand(try JSONEncoder().encode(request)) { _ in }
+        return projection.appPreferences != before
     }
 
     /// The core keeps its preference record through value edits and sync

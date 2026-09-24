@@ -7,10 +7,11 @@ namespace CrestCore.Application;
 /// changing anything. Each area handles its own intents and queries. One lock
 /// serializes every call on this instance.
 ///
-/// Changes the core starts itself, such as a finished save or an engine's
-/// report, wait in a pending batch the host drains after its wake callback
-/// runs. Commands for engine bindings wait in a queue that is delivered once
-/// the lock is released.
+/// Changes the core starts itself, such as a finished save, a session commit
+/// or an engine's report, wait in a pending batch the host drains after its
+/// wake callback runs. An intent answers that batch first, so no older change
+/// arrives after a newer one. Commands for engine bindings wait in a queue that
+/// is delivered once the lock is released.
 public sealed partial class CrestApp : IDisposable {
     #region Variables
 
@@ -58,9 +59,11 @@ public sealed partial class CrestApp : IDisposable {
 
     #region Actions - Intents
 
-    /// The changes the intent published. An intent that does not apply to the
-    /// current state publishes none. Engine commands the intent caused have
-    /// been delivered when this returns, unless it runs inside a delivery.
+    /// The changes still pending when the intent ran and those it published
+    /// there, in the order they happened, then the changes the intent itself
+    /// published. An intent that does not apply to the current state publishes
+    /// none. Engine commands the intent caused have been delivered when this
+    /// returns, unless it runs inside a delivery.
     public IReadOnlyList<Change> Send(Intent intent) {
         ArgumentNullException.ThrowIfNull(intent);
         IReadOnlyList<Change> published;
@@ -82,7 +85,7 @@ public sealed partial class CrestApp : IDisposable {
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");
             }
-            published = changes.Published;
+            published = [.. Drain(), .. changes.Published];
         }
         Deliver();
         return published;
@@ -114,6 +117,7 @@ public sealed partial class CrestApp : IDisposable {
                 QuickWindowSite site => links.Answer(site),
                 CanTearOff tearOff => device.Answer(tearOff),
                 FallbackTab fallback => Window.Answer(fallback),
+                PendingSave => new PendingSaveRevision(storage?.PendingRevision is { } revision ? checked((long)revision) : null),
                 _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
             };
             return (TAnswer)answer;

@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x86, 0x31, 0x4d, 0x97, 0x9d, 0x04, 0xc4, 0xfb, 0x21, 0x43, 0x89, 0x3b, 0x34, 0x43, 0x97, 0x17, 0x3f, 0x67, 0x1d, 0xba, 0x2d, 0x25, 0x8c, 0x6a, 0x42, 0xb5, 0x56, 0x00, 0x97, 0xa1, 0x41, 0x74
+        0x26, 0x87, 0xbc, 0xef, 0xa9, 0xa0, 0x03, 0x21, 0x77, 0xf8, 0x86, 0x81, 0xd2, 0x5e, 0x26, 0x22, 0x3b, 0x71, 0x1c, 0x76, 0xc2, 0x1a, 0x66, 0x81, 0xd4, 0x8f, 0xbc, 0xb6, 0xe4, 0x90, 0x18, 0xec
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -165,18 +165,30 @@ public static class ContractCodec {
     public static Change ReadChange(WireReader reader) {
         int tag = reader.ReadTag();
         switch (tag) {
-            case 0: return ReadDownloadUpdated(reader);
-            case 1: return ReadDownloadsRemoved(reader);
-            case 2: return ReadPageChanged(reader);
-            case 3: return ReadPageOpened(reader);
-            case 4: return ReadPageRemoved(reader);
-            case 5: return ReadSaved(reader);
-            case 6: return ReadSessionAdopted(reader);
-            case 7: return ReadStorageFailed(reader);
-            case 8: return ReadTabActivated(reader);
-            case 9: return ReadWindowChanged(reader);
-            case 10: return ReadWindowClosed(reader);
-            case 11: return ReadWindowRecordsAdopted(reader);
+            case 0: return ReadAppPreferencesChanged(reader);
+            case 1: return ReadArchiveChanged(reader);
+            case 2: return ReadDownloadUpdated(reader);
+            case 3: return ReadDownloadsRemoved(reader);
+            case 4: return ReadFoldersChanged(reader);
+            case 5: return ReadHistoryChanged(reader);
+            case 6: return ReadPageChanged(reader);
+            case 7: return ReadPageOpened(reader);
+            case 8: return ReadPageRemoved(reader);
+            case 9: return ReadSaved(reader);
+            case 10: return ReadSessionAdopted(reader);
+            case 11: return ReadSpaceSettingsChanged(reader);
+            case 12: return ReadSpacesChanged(reader);
+            case 13: return ReadSplitGroupsChanged(reader);
+            case 14: return ReadStorageFailed(reader);
+            case 15: return ReadTabCopied(reader);
+            case 16: return ReadTabFaviconAssigned(reader);
+            case 17: return ReadTabsChanged(reader);
+            case 18: return ReadWindowChanged(reader);
+            case 19: return ReadWindowClosed(reader);
+            case 20: return ReadWindowRecordsAdopted(reader);
+            case 21: return ReadWorkspaceChanged(reader);
+            case 22: return ReadWorkspaceClosed(reader);
+            case 23: return ReadWorkspaceOpened(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -185,53 +197,101 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         switch (value) {
-            case DownloadUpdated member:
+            case AppPreferencesChanged member:
                 writer.WriteTag(0);
+                WriteAppPreferencesChanged(writer, member);
+                break;
+            case ArchiveChanged member:
+                writer.WriteTag(1);
+                WriteArchiveChanged(writer, member);
+                break;
+            case DownloadUpdated member:
+                writer.WriteTag(2);
                 WriteDownloadUpdated(writer, member);
                 break;
             case DownloadsRemoved member:
-                writer.WriteTag(1);
+                writer.WriteTag(3);
                 WriteDownloadsRemoved(writer, member);
                 break;
+            case FoldersChanged member:
+                writer.WriteTag(4);
+                WriteFoldersChanged(writer, member);
+                break;
+            case HistoryChanged member:
+                writer.WriteTag(5);
+                WriteHistoryChanged(writer, member);
+                break;
             case PageChanged member:
-                writer.WriteTag(2);
+                writer.WriteTag(6);
                 WritePageChanged(writer, member);
                 break;
             case PageOpened member:
-                writer.WriteTag(3);
+                writer.WriteTag(7);
                 WritePageOpened(writer, member);
                 break;
             case PageRemoved member:
-                writer.WriteTag(4);
+                writer.WriteTag(8);
                 WritePageRemoved(writer, member);
                 break;
             case Saved member:
-                writer.WriteTag(5);
+                writer.WriteTag(9);
                 WriteSaved(writer, member);
                 break;
             case SessionAdopted member:
-                writer.WriteTag(6);
+                writer.WriteTag(10);
                 WriteSessionAdopted(writer, member);
                 break;
+            case SpaceSettingsChanged member:
+                writer.WriteTag(11);
+                WriteSpaceSettingsChanged(writer, member);
+                break;
+            case SpacesChanged member:
+                writer.WriteTag(12);
+                WriteSpacesChanged(writer, member);
+                break;
+            case SplitGroupsChanged member:
+                writer.WriteTag(13);
+                WriteSplitGroupsChanged(writer, member);
+                break;
             case StorageFailed member:
-                writer.WriteTag(7);
+                writer.WriteTag(14);
                 WriteStorageFailed(writer, member);
                 break;
-            case TabActivated member:
-                writer.WriteTag(8);
-                WriteTabActivated(writer, member);
+            case TabCopied member:
+                writer.WriteTag(15);
+                WriteTabCopied(writer, member);
+                break;
+            case TabFaviconAssigned member:
+                writer.WriteTag(16);
+                WriteTabFaviconAssigned(writer, member);
+                break;
+            case TabsChanged member:
+                writer.WriteTag(17);
+                WriteTabsChanged(writer, member);
                 break;
             case WindowChanged member:
-                writer.WriteTag(9);
+                writer.WriteTag(18);
                 WriteWindowChanged(writer, member);
                 break;
             case WindowClosed member:
-                writer.WriteTag(10);
+                writer.WriteTag(19);
                 WriteWindowClosed(writer, member);
                 break;
             case WindowRecordsAdopted member:
-                writer.WriteTag(11);
+                writer.WriteTag(20);
                 WriteWindowRecordsAdopted(writer, member);
+                break;
+            case WorkspaceChanged member:
+                writer.WriteTag(21);
+                WriteWorkspaceChanged(writer, member);
+                break;
+            case WorkspaceClosed member:
+                writer.WriteTag(22);
+                WriteWorkspaceClosed(writer, member);
+                break;
+            case WorkspaceOpened member:
+                writer.WriteTag(23);
+                WriteWorkspaceOpened(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
         }
@@ -268,16 +328,17 @@ public static class ContractCodec {
             case 25: return ReadSearchEngineLimitReached(reader);
             case 26: return ReadSpaceBeingDeleted(reader);
             case 27: return ReadSpaceLocked(reader);
-            case 28: return ReadStaleCredentialComparison(reader);
-            case 29: return ReadStorageFromNewerApp(reader);
-            case 30: return ReadStorageRestoreInterrupted(reader);
-            case 31: return ReadStorageUnreadable(reader);
-            case 32: return ReadTabAlreadyHasPage(reader);
-            case 33: return ReadUnknownPage(reader);
-            case 34: return ReadUnknownSpace(reader);
-            case 35: return ReadUnknownWorkspace(reader);
-            case 36: return ReadUnsavedWorkspace(reader);
-            case 37: return ReadWindowNotOpen(reader);
+            case 28: return ReadStaleCommand(reader);
+            case 29: return ReadStaleCredentialComparison(reader);
+            case 30: return ReadStorageFromNewerApp(reader);
+            case 31: return ReadStorageRestoreInterrupted(reader);
+            case 32: return ReadStorageUnreadable(reader);
+            case 33: return ReadTabAlreadyHasPage(reader);
+            case 34: return ReadUnknownPage(reader);
+            case 35: return ReadUnknownSpace(reader);
+            case 36: return ReadUnknownWorkspace(reader);
+            case 37: return ReadUnsavedWorkspace(reader);
+            case 38: return ReadWindowNotOpen(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -398,44 +459,48 @@ public static class ContractCodec {
                 writer.WriteTag(27);
                 WriteSpaceLocked(writer, member);
                 break;
-            case StaleCredentialComparison member:
+            case StaleCommand member:
                 writer.WriteTag(28);
+                WriteStaleCommand(writer, member);
+                break;
+            case StaleCredentialComparison member:
+                writer.WriteTag(29);
                 WriteStaleCredentialComparison(writer, member);
                 break;
             case StorageFromNewerApp member:
-                writer.WriteTag(29);
+                writer.WriteTag(30);
                 WriteStorageFromNewerApp(writer, member);
                 break;
             case StorageRestoreInterrupted member:
-                writer.WriteTag(30);
+                writer.WriteTag(31);
                 WriteStorageRestoreInterrupted(writer, member);
                 break;
             case StorageUnreadable member:
-                writer.WriteTag(31);
+                writer.WriteTag(32);
                 WriteStorageUnreadable(writer, member);
                 break;
             case TabAlreadyHasPage member:
-                writer.WriteTag(32);
+                writer.WriteTag(33);
                 WriteTabAlreadyHasPage(writer, member);
                 break;
             case UnknownPage member:
-                writer.WriteTag(33);
+                writer.WriteTag(34);
                 WriteUnknownPage(writer, member);
                 break;
             case UnknownSpace member:
-                writer.WriteTag(34);
+                writer.WriteTag(35);
                 WriteUnknownSpace(writer, member);
                 break;
             case UnknownWorkspace member:
-                writer.WriteTag(35);
+                writer.WriteTag(36);
                 WriteUnknownWorkspace(writer, member);
                 break;
             case UnsavedWorkspace member:
-                writer.WriteTag(36);
+                writer.WriteTag(37);
                 WriteUnsavedWorkspace(writer, member);
                 break;
             case WindowNotOpen member:
-                writer.WriteTag(37);
+                writer.WriteTag(38);
                 WriteWindowNotOpen(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -459,10 +524,11 @@ public static class ContractCodec {
             case 11: return ReadFallbackTab(reader);
             case 12: return ReadMostRecentCredential(reader);
             case 13: return ReadPasskeyAccess(reader);
-            case 14: return ReadQuickWindowSite(reader);
-            case 15: return ReadStrongPassword(reader);
-            case 16: return ReadSystemPasswordOffer(reader);
-            case 17: return ReadSystemPasswordWriteThrough(reader);
+            case 14: return ReadPendingSave(reader);
+            case 15: return ReadQuickWindowSite(reader);
+            case 16: return ReadStrongPassword(reader);
+            case 17: return ReadSystemPasswordOffer(reader);
+            case 18: return ReadSystemPasswordWriteThrough(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -527,20 +593,24 @@ public static class ContractCodec {
                 writer.WriteTag(13);
                 WritePasskeyAccess(writer, member);
                 break;
-            case QuickWindowSite member:
+            case PendingSave member:
                 writer.WriteTag(14);
+                WritePendingSave(writer, member);
+                break;
+            case QuickWindowSite member:
+                writer.WriteTag(15);
                 WriteQuickWindowSite(writer, member);
                 break;
             case StrongPassword member:
-                writer.WriteTag(15);
+                writer.WriteTag(16);
                 WriteStrongPassword(writer, member);
                 break;
             case SystemPasswordOffer member:
-                writer.WriteTag(16);
+                writer.WriteTag(17);
                 WriteSystemPasswordOffer(writer, member);
                 break;
             case SystemPasswordWriteThrough member:
-                writer.WriteTag(17);
+                writer.WriteTag(18);
                 WriteSystemPasswordWriteThrough(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
@@ -678,21 +748,25 @@ public static class ContractCodec {
                 var answer13 = app.Query(question);
                 WritePasskeyAccessVerdict(writer, answer13);
                 break;
-            case QuickWindowSite question:
+            case PendingSave question:
                 var answer14 = app.Query(question);
-                WriteQuickWindowSiteKey(writer, answer14);
+                WritePendingSaveRevision(writer, answer14);
+                break;
+            case QuickWindowSite question:
+                var answer15 = app.Query(question);
+                WriteQuickWindowSiteKey(writer, answer15);
                 break;
             case StrongPassword question:
-                var answer15 = app.Query(question);
-                WriteStrongPasswordRecipe(writer, answer15);
+                var answer16 = app.Query(question);
+                WriteStrongPasswordRecipe(writer, answer16);
                 break;
             case SystemPasswordOffer question:
-                var answer16 = app.Query(question);
-                WriteSystemPasswordOfferDecision(writer, answer16);
+                var answer17 = app.Query(question);
+                WriteSystemPasswordOfferDecision(writer, answer17);
                 break;
             case SystemPasswordWriteThrough question:
-                var answer17 = app.Query(question);
-                WriteSystemPasswordWriteThroughSupport(writer, answer17);
+                var answer18 = app.Query(question);
+                WriteSystemPasswordWriteThroughSupport(writer, answer18);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
@@ -756,6 +830,106 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+    }
+
+    public static AppPreferences ReadAppPreferences(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new AppPreferences(
+            ReadStartupBehavior(reader),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadList(() => ReadTranslationRule(reader)),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            ReadSavedTabClosePolicy(reader),
+            reader.ReadBool(),
+            reader.ReadBool());
+    }
+
+    public static void WriteAppPreferences(WireWriter writer, AppPreferences value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteStartupBehavior(writer, value.Startup);
+        writer.WriteBool(value.OffersTranslation);
+        writer.WriteBool(value.AutomaticallyTranslates);
+        writer.WriteCount(value.TranslationRules.Count);
+        foreach (var itemTranslationRules in value.TranslationRules) {
+            WriteTranslationRule(writer, itemTranslationRules);
+        }
+        writer.WriteBool(value.ChecksSpelling);
+        writer.WriteBool(value.AutomaticallyEntersPictureInPicture);
+        WriteSavedTabClosePolicy(writer, value.SavedTabClose);
+        writer.WriteBool(value.SavedTabFaviconReturnsToSavedUrl);
+        writer.WriteBool(value.SplitFocusFollowsMouse);
+    }
+
+    public static AppPreferencesChanged ReadAppPreferencesChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new AppPreferencesChanged(
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (AppPreferences?)ReadAppPreferences(reader) : null);
+    }
+
+    public static void WriteAppPreferencesChanged(WireWriter writer, AppPreferencesChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        if (value.Preferences is { } presentPreferences) {
+            writer.WritePresence(true);
+            WriteAppPreferences(writer, presentPreferences);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static ArchiveChanged ReadArchiveChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ArchiveChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadArchivedTabState(reader)),
+            reader.ReadList(() => reader.ReadGuid()),
+            reader.ReadPresence() ? (IReadOnlyList<Guid>?)reader.ReadList(() => reader.ReadGuid()) : null);
+    }
+
+    public static void WriteArchiveChanged(WireWriter writer, ArchiveChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteCount(value.Archived.Count);
+        foreach (var itemArchived in value.Archived) {
+            WriteArchivedTabState(writer, itemArchived);
+        }
+        writer.WriteCount(value.Removed.Count);
+        foreach (var itemRemoved in value.Removed) {
+            writer.WriteGuid(itemRemoved);
+        }
+        if (value.Order is { } presentOrder) {
+            writer.WritePresence(true);
+            writer.WriteCount(presentOrder.Count);
+            foreach (var itemOrderValue in presentOrder) {
+                writer.WriteGuid(itemOrderValue);
+            }
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static ArchivedTabState ReadArchivedTabState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ArchivedTabState(
+            ReadTabState(reader),
+            reader.ReadDate(),
+            ReadArchiveReason(reader));
+    }
+
+    public static void WriteArchivedTabState(WireWriter writer, ArchivedTabState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteTabState(writer, value.Tab);
+        writer.WriteDate(value.ArchivedAt);
+        WriteArchiveReason(writer, value.Reason);
     }
 
     public static AssessDownloadRisk ReadAssessDownloadRisk(WireReader reader) {
@@ -826,6 +1000,49 @@ public static class ContractCodec {
         writer.WriteGuid(value.DownloadId);
     }
 
+    public static BrandColor ReadBrandColor(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new BrandColor(
+            reader.ReadDouble(),
+            reader.ReadDouble(),
+            reader.ReadDouble(),
+            reader.ReadDouble());
+    }
+
+    public static void WriteBrandColor(WireWriter writer, BrandColor value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteDouble(value.Red);
+        writer.WriteDouble(value.Green);
+        writer.WriteDouble(value.Blue);
+        writer.WriteDouble(value.Alpha);
+    }
+
+    public static BrowsingPreferences ReadBrowsingPreferences(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new BrowsingPreferences(
+            reader.ReadString(),
+            reader.ReadList(() => ReadCustomSearchProvider(reader)),
+            reader.ReadBool(),
+            ReadCurrentTabCleanup(reader),
+            ReadContentBlockingPolicy(reader),
+            ReadDataRetentionPreferences(reader));
+    }
+
+    public static void WriteBrowsingPreferences(WireWriter writer, BrowsingPreferences value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.SelectedSearchProviderId);
+        writer.WriteCount(value.CustomSearchProviders.Count);
+        foreach (var itemCustomSearchProviders in value.CustomSearchProviders) {
+            WriteCustomSearchProvider(writer, itemCustomSearchProviders);
+        }
+        writer.WriteBool(value.SearchSuggestionsEnabled);
+        WriteCurrentTabCleanup(writer, value.CurrentTabCleanup);
+        WriteContentBlockingPolicy(writer, value.ContentBlocking);
+        WriteDataRetentionPreferences(writer, value.DataRetention);
+    }
+
     public static CanTearOff ReadCanTearOff(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new CanTearOff(
@@ -892,6 +1109,21 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.WindowId);
+    }
+
+    public static ColorPalette ReadColorPalette(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ColorPalette(
+            reader.ReadList(() => ReadBrandColor(reader)));
+    }
+
+    public static void WriteColorPalette(WireWriter writer, ColorPalette value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Colors.Count);
+        foreach (var itemColors in value.Colors) {
+            WriteBrandColor(writer, itemColors);
+        }
     }
 
     public static ContentRuleList ReadContentRuleList(WireReader reader) {
@@ -1089,6 +1321,22 @@ public static class ContractCodec {
         writer.WriteDouble(value.SubmittedAt);
     }
 
+    public static CredentialPreferences ReadCredentialPreferences(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialPreferences(
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool());
+    }
+
+    public static void WriteCredentialPreferences(WireWriter writer, CredentialPreferences value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.IsEnabled);
+        writer.WriteBool(value.SyncsCrestPasswordsWithICloud);
+        writer.WriteBool(value.AlsoOffersSaveToSystemPasswords);
+    }
+
     public static CredentialRecord ReadCredentialRecord(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new CredentialRecord(
@@ -1249,6 +1497,39 @@ public static class ContractCodec {
         writer.WriteDouble(value.CapturedAt);
     }
 
+    public static CrestCharge ReadCrestCharge(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CrestCharge(
+            ReadCrestChargeKind(reader),
+            reader.ReadPresence() ? (CrestSymbol?)ReadCrestSymbol(reader) : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (CrestMonogramStyle?)ReadCrestMonogramStyle(reader) : null);
+    }
+
+    public static void WriteCrestCharge(WireWriter writer, CrestCharge value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCrestChargeKind(writer, value.Kind);
+        if (value.Symbol is { } presentSymbol) {
+            writer.WritePresence(true);
+            WriteCrestSymbol(writer, presentSymbol);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Text is { } presentText) {
+            writer.WritePresence(true);
+            writer.WriteString(presentText);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Style is { } presentStyle) {
+            writer.WritePresence(true);
+            WriteCrestMonogramStyle(writer, presentStyle);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static CustomSearchEngine ReadCustomSearchEngine(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new CustomSearchEngine(
@@ -1287,6 +1568,45 @@ public static class ContractCodec {
         foreach (var itemExisting in value.Existing) {
             WriteCustomSearchEngine(writer, itemExisting);
         }
+    }
+
+    public static CustomSearchProvider ReadCustomSearchProvider(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CustomSearchProvider(
+            reader.ReadGuid(),
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+    }
+
+    public static void WriteCustomSearchProvider(WireWriter writer, CustomSearchProvider value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteString(value.Name);
+        writer.WriteString(value.SearchUrlTemplate);
+        if (value.SuggestionUrlTemplate is { } presentSuggestionUrlTemplate) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSuggestionUrlTemplate);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static DataRetentionPreferences ReadDataRetentionPreferences(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DataRetentionPreferences(
+            ReadDataRetention(reader),
+            ReadDataRetention(reader),
+            ReadDataRetention(reader));
+    }
+
+    public static void WriteDataRetentionPreferences(WireWriter writer, DataRetentionPreferences value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteDataRetention(writer, value.History);
+        WriteDataRetention(writer, value.Archive);
+        WriteDataRetention(writer, value.Downloads);
     }
 
     public static DefaultEngineAlreadyRegistered ReadDefaultEngineAlreadyRegistered(WireReader reader) {
@@ -1842,6 +2162,149 @@ public static class ContractCodec {
         }
     }
 
+    public static FolderState ReadFolderState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new FolderState(
+            reader.ReadGuid(),
+            ReadTabPlacement(reader),
+            reader.ReadString(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (BrandColor?)ReadBrandColor(reader) : null,
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool(),
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteFolderState(WireWriter writer, FolderState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        WriteTabPlacement(writer, value.Location);
+        writer.WriteString(value.Title);
+        if (value.Symbol is { } presentSymbol) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSymbol);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Color is { } presentColor) {
+            writer.WritePresence(true);
+            WriteBrandColor(writer, presentColor);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.ParentId is { } presentParentId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentParentId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.IsCollapsed);
+        if (value.CollapseModifiedAt is { } presentCollapseModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentCollapseModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.OrderAnchorTabId is { } presentOrderAnchorTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentOrderAnchorTabId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static FoldersChanged ReadFoldersChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new FoldersChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadFolderState(reader)),
+            reader.ReadList(() => reader.ReadGuid()),
+            reader.ReadPresence() ? (IReadOnlyList<Guid>?)reader.ReadList(() => reader.ReadGuid()) : null);
+    }
+
+    public static void WriteFoldersChanged(WireWriter writer, FoldersChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteCount(value.Updated.Count);
+        foreach (var itemUpdated in value.Updated) {
+            WriteFolderState(writer, itemUpdated);
+        }
+        writer.WriteCount(value.Removed.Count);
+        foreach (var itemRemoved in value.Removed) {
+            writer.WriteGuid(itemRemoved);
+        }
+        if (value.Order is { } presentOrder) {
+            writer.WritePresence(true);
+            writer.WriteCount(presentOrder.Count);
+            foreach (var itemOrderValue in presentOrder) {
+                writer.WriteGuid(itemOrderValue);
+            }
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static HistoryChanged ReadHistoryChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new HistoryChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadHistoryEntryState(reader)),
+            reader.ReadList(() => reader.ReadGuid()),
+            reader.ReadPresence() ? (IReadOnlyList<Guid>?)reader.ReadList(() => reader.ReadGuid()) : null);
+    }
+
+    public static void WriteHistoryChanged(WireWriter writer, HistoryChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteCount(value.Recorded.Count);
+        foreach (var itemRecorded in value.Recorded) {
+            WriteHistoryEntryState(writer, itemRecorded);
+        }
+        writer.WriteCount(value.Removed.Count);
+        foreach (var itemRemoved in value.Removed) {
+            writer.WriteGuid(itemRemoved);
+        }
+        if (value.Order is { } presentOrder) {
+            writer.WritePresence(true);
+            writer.WriteCount(presentOrder.Count);
+            foreach (var itemOrderValue in presentOrder) {
+                writer.WriteGuid(itemOrderValue);
+            }
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static HistoryEntryState ReadHistoryEntryState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new HistoryEntryState(
+            reader.ReadGuid(),
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadDate(),
+            reader.ReadDate(),
+            reader.ReadInt32());
+    }
+
+    public static void WriteHistoryEntryState(WireWriter writer, HistoryEntryState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteString(value.Url);
+        writer.WriteString(value.Title);
+        writer.WriteDate(value.FirstVisitedAt);
+        writer.WriteDate(value.LastVisitedAt);
+        writer.WriteInt32(value.VisitCount);
+    }
+
     public static InvalidCredentialDate ReadInvalidCredentialDate(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new InvalidCredentialDate();
@@ -2151,6 +2614,25 @@ public static class ContractCodec {
         writer.WriteGuid(value.WindowId);
     }
 
+    public static NativeTabContent ReadNativeTabContent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new NativeTabContent(
+            reader.ReadString(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteNativeTabContent(WireWriter writer, NativeTabContent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Kind);
+        if (value.ResourceId is { } presentResourceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentResourceId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static OpenPage ReadOpenPage(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new OpenPage(
@@ -2354,6 +2836,33 @@ public static class ContractCodec {
         WritePasskeyAccessStatus(writer, value.Status);
     }
 
+    public static PendingSave ReadPendingSave(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PendingSave();
+    }
+
+    public static void WritePendingSave(WireWriter writer, PendingSave value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static PendingSaveRevision ReadPendingSaveRevision(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PendingSaveRevision(
+            reader.ReadPresence() ? (long?)reader.ReadInt64() : null);
+    }
+
+    public static void WritePendingSaveRevision(WireWriter writer, PendingSaveRevision value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Revision is { } presentRevision) {
+            writer.WritePresence(true);
+            writer.WriteInt64(presentRevision);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static QuickWindowSite ReadQuickWindowSite(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new QuickWindowSite(
@@ -2533,6 +3042,47 @@ public static class ContractCodec {
         }
     }
 
+    public static SessionState ReadSessionState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SessionState(
+            reader.ReadList(() => ReadSpaceState(reader)),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadList(() => ReadSpaceDeletionState(reader)),
+            reader.ReadPresence() ? (AppPreferences?)ReadAppPreferences(reader) : null);
+    }
+
+    public static void WriteSessionState(WireWriter writer, SessionState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Spaces.Count);
+        foreach (var itemSpaces in value.Spaces) {
+            WriteSpaceState(writer, itemSpaces);
+        }
+        if (value.DefaultSpaceId is { } presentDefaultSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentDefaultSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.DisposableSeedMarker is { } presentDisposableSeedMarker) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentDisposableSeedMarker);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteCount(value.SpaceDeletions.Count);
+        foreach (var itemSpaceDeletions in value.SpaceDeletions) {
+            WriteSpaceDeletionState(writer, itemSpaceDeletions);
+        }
+        if (value.AppPreferences is { } presentAppPreferences) {
+            writer.WritePresence(true);
+            WriteAppPreferences(writer, presentAppPreferences);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static SetDownloadDestination ReadSetDownloadDestination(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new SetDownloadDestination(
@@ -2631,6 +3181,155 @@ public static class ContractCodec {
         writer.WriteGuid(value.SpaceId);
     }
 
+    public static SpaceBranding ReadSpaceBranding(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceBranding(
+            ReadColorPalette(reader),
+            ReadSpaceBannerPattern(reader),
+            reader.ReadDouble(),
+            reader.ReadDouble(),
+            reader.ReadBool(),
+            ReadSpaceThemeMode(reader),
+            reader.ReadDouble(),
+            reader.ReadBool(),
+            ReadSpaceIconStyle(reader),
+            reader.ReadPresence() ? (BrandColor?)ReadBrandColor(reader) : null,
+            ReadSpaceCrest(reader),
+            reader.ReadInt32(),
+            reader.ReadDouble(),
+            ReadSpaceTextColorMode(reader),
+            reader.ReadPresence() ? (bool?)reader.ReadBool() : null);
+    }
+
+    public static void WriteSpaceBranding(WireWriter writer, SpaceBranding value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteColorPalette(writer, value.Colors);
+        WriteSpaceBannerPattern(writer, value.BannerPattern);
+        writer.WriteDouble(value.BannerStrength);
+        writer.WriteDouble(value.ReadabilityFade);
+        writer.WriteBool(value.KeepsControlsReadable);
+        WriteSpaceThemeMode(writer, value.ThemeMode);
+        writer.WriteDouble(value.GradientAngle);
+        writer.WriteBool(value.ShowsTexture);
+        WriteSpaceIconStyle(writer, value.IconStyle);
+        if (value.SymbolColor is { } presentSymbolColor) {
+            writer.WritePresence(true);
+            WriteBrandColor(writer, presentSymbolColor);
+        } else {
+            writer.WritePresence(false);
+        }
+        WriteSpaceCrest(writer, value.Crest);
+        writer.WriteInt32(value.RenderingVersion);
+        writer.WriteDouble(value.FolderColorIntensity);
+        WriteSpaceTextColorMode(writer, value.TextColorMode);
+        if (value.HasCustomAppearance is { } presentHasCustomAppearance) {
+            writer.WritePresence(true);
+            writer.WriteBool(presentHasCustomAppearance);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static SpaceCrest ReadSpaceCrest(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceCrest(
+            ReadCrestBackplate(reader),
+            ReadCrestFieldDivision(reader),
+            ReadCrestOrdinary(reader),
+            ReadCrestTrim(reader),
+            ReadCrestSymbol(reader),
+            ReadCrestChargeLayout(reader),
+            reader.ReadInt32(),
+            reader.ReadInt32(),
+            reader.ReadInt32(),
+            reader.ReadInt32(),
+            reader.ReadInt32(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadInt32(),
+            reader.ReadPresence() ? (ColorPalette?)ReadColorPalette(reader) : null,
+            reader.ReadPresence() ? (CrestCharge?)ReadCrestCharge(reader) : null,
+            reader.ReadDouble(),
+            reader.ReadDouble(),
+            reader.ReadInt32(),
+            ReadCrestFinish(reader),
+            reader.ReadDouble(),
+            reader.ReadDouble(),
+            reader.ReadInt32(),
+            reader.ReadDouble(),
+            reader.ReadDouble(),
+            ReadCrestChargeWeight(reader),
+            reader.ReadDouble(),
+            reader.ReadInt32(),
+            reader.ReadBool(),
+            ReadCrestDepth(reader));
+    }
+
+    public static void WriteSpaceCrest(WireWriter writer, SpaceCrest value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCrestBackplate(writer, value.Backplate);
+        WriteCrestFieldDivision(writer, value.FieldDivision);
+        WriteCrestOrdinary(writer, value.Ordinary);
+        WriteCrestTrim(writer, value.Trim);
+        WriteCrestSymbol(writer, value.Symbol);
+        WriteCrestChargeLayout(writer, value.ChargeLayout);
+        writer.WriteInt32(value.BackplateColorIndex);
+        writer.WriteInt32(value.SecondaryFieldColorIndex);
+        writer.WriteInt32(value.OrdinaryColorIndex);
+        writer.WriteInt32(value.TrimColorIndex);
+        writer.WriteInt32(value.SymbolColorIndex);
+        if (value.StartingPresetId is { } presentStartingPresetId) {
+            writer.WritePresence(true);
+            writer.WriteString(presentStartingPresetId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteInt32(value.EdgeColorIndex);
+        if (value.Palette is { } presentPalette) {
+            writer.WritePresence(true);
+            WriteColorPalette(writer, presentPalette);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Charge is { } presentCharge) {
+            writer.WritePresence(true);
+            WriteCrestCharge(writer, presentCharge);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteDouble(value.PlateScale);
+        writer.WriteDouble(value.EdgeWidth);
+        writer.WriteInt32(value.DivisionCount);
+        WriteCrestFinish(writer, value.Finish);
+        writer.WriteDouble(value.OrdinaryWidth);
+        writer.WriteDouble(value.TrimWeight);
+        writer.WriteInt32(value.TrimDetail);
+        writer.WriteDouble(value.ChargeScale);
+        writer.WriteDouble(value.ChargeOffset);
+        WriteCrestChargeWeight(writer, value.ChargeWeight);
+        writer.WriteDouble(value.SheenAngle);
+        writer.WriteInt32(value.SealTeeth);
+        writer.WriteBool(value.ShowsOutline);
+        WriteCrestDepth(writer, value.Depth);
+    }
+
+    public static SpaceDeletionState ReadSpaceDeletionState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceDeletionState(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteSpaceDeletionState(WireWriter writer, SpaceDeletionState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteGuid(value.ProfileId);
+    }
+
     public static SpaceLocked ReadSpaceLocked(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new SpaceLocked(
@@ -2641,6 +3340,133 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.SpaceId);
+    }
+
+    public static SpaceSettings ReadSpaceSettings(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceSettings(
+            reader.ReadString(),
+            reader.ReadString(),
+            ReadSpaceAccent(reader),
+            reader.ReadPresence() ? (SpaceBranding?)ReadSpaceBranding(reader) : null,
+            ReadBrowsingPreferences(reader),
+            ReadCredentialPreferences(reader),
+            ReadSpaceAccessPolicy(reader),
+            reader.ReadBool(),
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
+    }
+
+    public static void WriteSpaceSettings(WireWriter writer, SpaceSettings value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Name);
+        writer.WriteString(value.Symbol);
+        WriteSpaceAccent(writer, value.Accent);
+        if (value.Branding is { } presentBranding) {
+            writer.WritePresence(true);
+            WriteSpaceBranding(writer, presentBranding);
+        } else {
+            writer.WritePresence(false);
+        }
+        WriteBrowsingPreferences(writer, value.BrowsingPreferences);
+        WriteCredentialPreferences(writer, value.CredentialPreferences);
+        WriteSpaceAccessPolicy(writer, value.AccessPolicy);
+        writer.WriteBool(value.IsSavedTabsExpanded);
+        if (value.SavedTabsExpansionModifiedAt is { } presentSavedTabsExpansionModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentSavedTabsExpansionModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static SpaceSettingsChanged ReadSpaceSettingsChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceSettingsChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            ReadSpaceSettings(reader));
+    }
+
+    public static void WriteSpaceSettingsChanged(WireWriter writer, SpaceSettingsChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        WriteSpaceSettings(writer, value.Settings);
+    }
+
+    public static SpaceState ReadSpaceState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceState(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            ReadSpaceSettings(reader),
+            reader.ReadList(() => ReadFolderState(reader)),
+            reader.ReadList(() => ReadTabState(reader)),
+            reader.ReadList(() => ReadSplitGroupState(reader)),
+            reader.ReadList(() => ReadArchivedTabState(reader)),
+            reader.ReadList(() => ReadHistoryEntryState(reader)));
+    }
+
+    public static void WriteSpaceState(WireWriter writer, SpaceState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteGuid(value.ProfileId);
+        WriteSpaceSettings(writer, value.Settings);
+        writer.WriteCount(value.Folders.Count);
+        foreach (var itemFolders in value.Folders) {
+            WriteFolderState(writer, itemFolders);
+        }
+        writer.WriteCount(value.Tabs.Count);
+        foreach (var itemTabs in value.Tabs) {
+            WriteTabState(writer, itemTabs);
+        }
+        writer.WriteCount(value.SplitGroups.Count);
+        foreach (var itemSplitGroups in value.SplitGroups) {
+            WriteSplitGroupState(writer, itemSplitGroups);
+        }
+        writer.WriteCount(value.ArchivedTabs.Count);
+        foreach (var itemArchivedTabs in value.ArchivedTabs) {
+            WriteArchivedTabState(writer, itemArchivedTabs);
+        }
+        writer.WriteCount(value.History.Count);
+        foreach (var itemHistory in value.History) {
+            WriteHistoryEntryState(writer, itemHistory);
+        }
+    }
+
+    public static SpacesChanged ReadSpacesChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpacesChanged(
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadSpaceState(reader)),
+            reader.ReadList(() => reader.ReadGuid()),
+            reader.ReadPresence() ? (IReadOnlyList<Guid>?)reader.ReadList(() => reader.ReadGuid()) : null);
+    }
+
+    public static void WriteSpacesChanged(WireWriter writer, SpacesChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteCount(value.Added.Count);
+        foreach (var itemAdded in value.Added) {
+            WriteSpaceState(writer, itemAdded);
+        }
+        writer.WriteCount(value.Removed.Count);
+        foreach (var itemRemoved in value.Removed) {
+            writer.WriteGuid(itemRemoved);
+        }
+        if (value.Order is { } presentOrder) {
+            writer.WritePresence(true);
+            writer.WriteCount(presentOrder.Count);
+            foreach (var itemOrderValue in presentOrder) {
+                writer.WriteGuid(itemOrderValue);
+            }
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static SplitColumnShares ReadSplitColumnShares(WireReader reader) {
@@ -2658,6 +3484,89 @@ public static class ContractCodec {
         foreach (var itemShares in value.Shares) {
             writer.WriteDouble(itemShares);
         }
+    }
+
+    public static SplitGroupState ReadSplitGroupState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SplitGroupState(
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
+            reader.ReadPresence() ? (BrandColor?)ReadBrandColor(reader) : null,
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
+    }
+
+    public static void WriteSplitGroupState(WireWriter writer, SplitGroupState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        if (value.CustomTitle is { } presentCustomTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentCustomTitle);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.TitleModifiedAt is { } presentTitleModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentTitleModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.CustomIconSymbol is { } presentCustomIconSymbol) {
+            writer.WritePresence(true);
+            writer.WriteString(presentCustomIconSymbol);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.IconModifiedAt is { } presentIconModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentIconModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Tint is { } presentTint) {
+            writer.WritePresence(true);
+            WriteBrandColor(writer, presentTint);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.TintModifiedAt is { } presentTintModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentTintModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static SplitGroupsChanged ReadSplitGroupsChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SplitGroupsChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadSplitGroupState(reader)));
+    }
+
+    public static void WriteSplitGroupsChanged(WireWriter writer, SplitGroupsChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteCount(value.Groups.Count);
+        foreach (var itemGroups in value.Groups) {
+            WriteSplitGroupState(writer, itemGroups);
+        }
+    }
+
+    public static StaleCommand ReadStaleCommand(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new StaleCommand();
+    }
+
+    public static void WriteStaleCommand(WireWriter writer, StaleCommand value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
     }
 
     public static StaleCredentialComparison ReadStaleCredentialComparison(WireReader reader) {
@@ -2806,26 +3715,6 @@ public static class ContractCodec {
         WriteSystemPasswordWriteThroughAvailability(writer, value.Availability);
     }
 
-    public static TabActivated ReadTabActivated(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return new TabActivated(
-            reader.ReadGuid(),
-            reader.ReadGuid(),
-            reader.ReadGuid(),
-            reader.ReadDate(),
-            reader.ReadInt64());
-    }
-
-    public static void WriteTabActivated(WireWriter writer, TabActivated value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(value);
-        writer.WriteGuid(value.WorkspaceId);
-        writer.WriteGuid(value.SpaceId);
-        writer.WriteGuid(value.TabId);
-        writer.WriteDate(value.At);
-        writer.WriteInt64(value.Revision);
-    }
-
     public static TabAlreadyHasPage ReadTabAlreadyHasPage(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new TabAlreadyHasPage(
@@ -2840,6 +3729,22 @@ public static class ContractCodec {
         writer.WriteGuid(value.PageId);
     }
 
+    public static TabCopied ReadTabCopied(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabCopied(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteTabCopied(WireWriter writer, TabCopied value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SourceTabId);
+        writer.WriteGuid(value.CopyTabId);
+    }
+
     public static TabFavicon ReadTabFavicon(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new TabFavicon(
@@ -2852,6 +3757,171 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.TabId);
         writer.WriteBytes(value.Image);
+    }
+
+    public static TabFaviconAssigned ReadTabFaviconAssigned(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabFaviconAssigned(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadBool());
+    }
+
+    public static void WriteTabFaviconAssigned(WireWriter writer, TabFaviconAssigned value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.TabId);
+        writer.WriteBool(value.Adopts);
+    }
+
+    public static TabIconAccent ReadTabIconAccent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabIconAccent(
+            reader.ReadDouble(),
+            reader.ReadDouble(),
+            reader.ReadDouble());
+    }
+
+    public static void WriteTabIconAccent(WireWriter writer, TabIconAccent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteDouble(value.Red);
+        writer.WriteDouble(value.Green);
+        writer.WriteDouble(value.Blue);
+    }
+
+    public static TabState ReadTabState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabState(
+            reader.ReadGuid(),
+            reader.ReadString(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (NativeTabContent?)ReadNativeTabContent(reader) : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadString(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (TabIconAccent?)ReadTabIconAccent(reader) : null,
+            reader.ReadPresence() ? (TabIconMode?)ReadTabIconMode(reader) : null,
+            ReadTabPlacement(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadDate(),
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
+            reader.ReadBool());
+    }
+
+    public static void WriteTabState(WireWriter writer, TabState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteString(value.Title);
+        if (value.Url is { } presentUrl) {
+            writer.WritePresence(true);
+            writer.WriteString(presentUrl);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.NativeContent is { } presentNativeContent) {
+            writer.WritePresence(true);
+            WriteNativeTabContent(writer, presentNativeContent);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SavedUrl is { } presentSavedUrl) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSavedUrl);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteString(value.Symbol);
+        if (value.FaviconUrl is { } presentFaviconUrl) {
+            writer.WritePresence(true);
+            writer.WriteString(presentFaviconUrl);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.IconAccent is { } presentIconAccent) {
+            writer.WritePresence(true);
+            WriteTabIconAccent(writer, presentIconAccent);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.StoredIconMode is { } presentStoredIconMode) {
+            writer.WritePresence(true);
+            WriteTabIconMode(writer, presentStoredIconMode);
+        } else {
+            writer.WritePresence(false);
+        }
+        WriteTabPlacement(writer, value.Placement);
+        if (value.FolderId is { } presentFolderId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentFolderId);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SplitGroupId is { } presentSplitGroupId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentSplitGroupId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteDate(value.LastActivatedAt);
+        if (value.PositionModifiedAt is { } presentPositionModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentPositionModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.CustomTitle is { } presentCustomTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentCustomTitle);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.TitleModifiedAt is { } presentTitleModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentTitleModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.KeepsPageLoaded);
+    }
+
+    public static TabsChanged ReadTabsChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabsChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadTabState(reader)),
+            reader.ReadList(() => reader.ReadGuid()),
+            reader.ReadPresence() ? (IReadOnlyList<Guid>?)reader.ReadList(() => reader.ReadGuid()) : null);
+    }
+
+    public static void WriteTabsChanged(WireWriter writer, TabsChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteCount(value.Updated.Count);
+        foreach (var itemUpdated in value.Updated) {
+            WriteTabState(writer, itemUpdated);
+        }
+        writer.WriteCount(value.Removed.Count);
+        foreach (var itemRemoved in value.Removed) {
+            writer.WriteGuid(itemRemoved);
+        }
+        if (value.Order is { } presentOrder) {
+            writer.WritePresence(true);
+            writer.WriteCount(presentOrder.Count);
+            foreach (var itemOrderValue in presentOrder) {
+                writer.WriteGuid(itemOrderValue);
+            }
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static TearOffPermission ReadTearOffPermission(WireReader reader) {
@@ -2871,6 +3941,22 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+    }
+
+    public static TranslationRule ReadTranslationRule(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TranslationRule(
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadBool());
+    }
+
+    public static void WriteTranslationRule(WireWriter writer, TranslationRule value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.SourceLanguage);
+        writer.WriteString(value.TargetId);
+        writer.WriteBool(value.IsEnabled);
     }
 
     public static UnknownPage ReadUnknownPage(WireReader reader) {
@@ -3024,6 +4110,60 @@ public static class ContractCodec {
         }
     }
 
+    public static WorkspaceChanged ReadWorkspaceChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WorkspaceChanged(
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool(),
+            reader.ReadList(() => ReadSpaceDeletionState(reader)));
+    }
+
+    public static void WriteWorkspaceChanged(WireWriter writer, WorkspaceChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        if (value.DefaultSpaceId is { } presentDefaultSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentDefaultSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.IsDisposableSeed);
+        writer.WriteCount(value.SpaceDeletions.Count);
+        foreach (var itemSpaceDeletions in value.SpaceDeletions) {
+            WriteSpaceDeletionState(writer, itemSpaceDeletions);
+        }
+    }
+
+    public static WorkspaceClosed ReadWorkspaceClosed(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WorkspaceClosed(
+            reader.ReadGuid());
+    }
+
+    public static void WriteWorkspaceClosed(WireWriter writer, WorkspaceClosed value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+    }
+
+    public static WorkspaceOpened ReadWorkspaceOpened(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new WorkspaceOpened(
+            reader.ReadGuid(),
+            ReadWorkspaceKind(reader),
+            ReadSessionState(reader));
+    }
+
+    public static void WriteWorkspaceOpened(WireWriter writer, WorkspaceOpened value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        WriteWorkspaceKind(writer, value.Kind);
+        WriteSessionState(writer, value.Session);
+    }
+
     public static CredentialCaptureAction ReadCredentialCaptureAction(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (CredentialCaptureAction)reader.ReadEnum(8);
@@ -3094,6 +4234,116 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
+    public static CrestBackplate ReadCrestBackplate(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestBackplate)reader.ReadEnum(12);
+    }
+
+    public static void WriteCrestBackplate(WireWriter writer, CrestBackplate value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestChargeKind ReadCrestChargeKind(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestChargeKind)reader.ReadEnum(5);
+    }
+
+    public static void WriteCrestChargeKind(WireWriter writer, CrestChargeKind value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestChargeLayout ReadCrestChargeLayout(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestChargeLayout)reader.ReadEnum(5);
+    }
+
+    public static void WriteCrestChargeLayout(WireWriter writer, CrestChargeLayout value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestChargeWeight ReadCrestChargeWeight(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestChargeWeight)reader.ReadEnum(3);
+    }
+
+    public static void WriteCrestChargeWeight(WireWriter writer, CrestChargeWeight value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestDepth ReadCrestDepth(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestDepth)reader.ReadEnum(3);
+    }
+
+    public static void WriteCrestDepth(WireWriter writer, CrestDepth value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestFieldDivision ReadCrestFieldDivision(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestFieldDivision)reader.ReadEnum(11);
+    }
+
+    public static void WriteCrestFieldDivision(WireWriter writer, CrestFieldDivision value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestFinish ReadCrestFinish(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestFinish)reader.ReadEnum(3);
+    }
+
+    public static void WriteCrestFinish(WireWriter writer, CrestFinish value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestMonogramStyle ReadCrestMonogramStyle(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestMonogramStyle)reader.ReadEnum(2);
+    }
+
+    public static void WriteCrestMonogramStyle(WireWriter writer, CrestMonogramStyle value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestOrdinary ReadCrestOrdinary(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestOrdinary)reader.ReadEnum(13);
+    }
+
+    public static void WriteCrestOrdinary(WireWriter writer, CrestOrdinary value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestSymbol ReadCrestSymbol(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestSymbol)reader.ReadEnum(64);
+    }
+
+    public static void WriteCrestSymbol(WireWriter writer, CrestSymbol value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CrestTrim ReadCrestTrim(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CrestTrim)reader.ReadEnum(9);
+    }
+
+    public static void WriteCrestTrim(WireWriter writer, CrestTrim value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
     public static PasskeyAuthorizationState ReadPasskeyAuthorizationState(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (PasskeyAuthorizationState)reader.ReadEnum(3);
@@ -3114,6 +4364,16 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
+    public static SavedTabClosePolicy ReadSavedTabClosePolicy(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SavedTabClosePolicy)reader.ReadEnum(2);
+    }
+
+    public static void WriteSavedTabClosePolicy(WireWriter writer, SavedTabClosePolicy value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
     public static ShortcutModifiers ReadShortcutModifiers(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (ShortcutModifiers)reader.ReadFlags(15);
@@ -3130,6 +4390,76 @@ public static class ContractCodec {
     }
 
     public static void WriteSitePermissionVerdict(WireWriter writer, SitePermissionVerdict value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SpaceAccent ReadSpaceAccent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SpaceAccent)reader.ReadEnum(4);
+    }
+
+    public static void WriteSpaceAccent(WireWriter writer, SpaceAccent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SpaceAccessPolicy ReadSpaceAccessPolicy(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SpaceAccessPolicy)reader.ReadEnum(2);
+    }
+
+    public static void WriteSpaceAccessPolicy(WireWriter writer, SpaceAccessPolicy value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SpaceBannerPattern ReadSpaceBannerPattern(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SpaceBannerPattern)reader.ReadEnum(9);
+    }
+
+    public static void WriteSpaceBannerPattern(WireWriter writer, SpaceBannerPattern value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SpaceIconStyle ReadSpaceIconStyle(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SpaceIconStyle)reader.ReadEnum(2);
+    }
+
+    public static void WriteSpaceIconStyle(WireWriter writer, SpaceIconStyle value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SpaceTextColorMode ReadSpaceTextColorMode(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SpaceTextColorMode)reader.ReadEnum(3);
+    }
+
+    public static void WriteSpaceTextColorMode(WireWriter writer, SpaceTextColorMode value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SpaceThemeMode ReadSpaceThemeMode(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SpaceThemeMode)reader.ReadEnum(2);
+    }
+
+    public static void WriteSpaceThemeMode(WireWriter writer, SpaceThemeMode value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static StartupBehavior ReadStartupBehavior(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (StartupBehavior)reader.ReadEnum(2);
+    }
+
+    public static void WriteStartupBehavior(WireWriter writer, StartupBehavior value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }
@@ -3170,6 +4500,16 @@ public static class ContractCodec {
     }
 
     public static void WriteTearOffRefusal(WireWriter writer, TearOffRefusal value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static WorkspaceKind ReadWorkspaceKind(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (WorkspaceKind)reader.ReadEnum(3);
+    }
+
+    public static void WriteWorkspaceKind(WireWriter writer, WorkspaceKind value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }

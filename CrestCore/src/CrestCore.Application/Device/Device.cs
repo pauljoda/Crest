@@ -10,9 +10,11 @@ namespace CrestCore.Application;
 /// Every workspace a window may show is attached here: the persistent session
 /// the core keeps, and each memory-only session (private browsing, a borrowed
 /// workspace, a Quick Window). Only windows over the persistent session are
-/// saved; the rest live as long as the process. After any session commit, and
-/// after every window intent, the device repairs the windows of the workspace
-/// that changed and publishes each window whose state changed.
+/// saved; the rest live as long as the process. After any session commit, the
+/// device publishes what the session changed, then repairs the windows of the
+/// workspace that changed; after every window intent it publishes each window
+/// whose state changed. Attaching a session publishes it whole, and detaching
+/// it publishes that it is gone.
 ///
 /// The device lock is taken last: nothing is called on a session or on the
 /// host while it is held.
@@ -57,8 +59,9 @@ internal sealed partial class Device {
 
     #region Actions - Workspaces
 
-    /// Attaches a session a window may show and answers the identity the
-    /// device gave its workspace; a session already attached keeps its own.
+    /// Attaches a session a window may show, publishes it whole, and answers
+    /// the identity the device gave its workspace; a session already attached
+    /// keeps its own and publishes nothing.
     public Guid Attach(NativeSessionAuthority authority) {
         ArgumentNullException.ThrowIfNull(authority);
         Guid workspaceId;
@@ -69,6 +72,7 @@ internal sealed partial class Device {
             workspaces[workspaceId] = authority;
         }
         authority.AttachDevice(this, workspaceId);
+        announce(new WorkspaceOpened(workspaceId, authority.Kind, authority.Current));
         return workspaceId;
     }
 
@@ -86,9 +90,10 @@ internal sealed partial class Device {
     /// records stay, since only the persistent session has saved windows.
     public void Detach(Guid workspaceId) {
         lock (gate) {
-            workspaces.Remove(workspaceId);
+            if (!workspaces.Remove(workspaceId)) return;
             foreach (var window in open.Values.Where(window => window.WorkspaceId == workspaceId).ToArray()) open.Remove(window.Id);
         }
+        announce(new WorkspaceClosed(workspaceId));
     }
 
     private static Dictionary<Guid, Guid> LegacyTabs(JsonObject? selection) {
@@ -128,17 +133,24 @@ internal sealed partial class Device {
         }
     }
 
-    /// A workspace accepted a new revision: the window that issued the command
-    /// takes what it chose to show, and every window over the workspace is
-    /// repaired against `session`. Called with no session lock held.
-    public void SessionPublished(Guid workspaceId, SessionState session, WindowFollowUp? followUp) {
-        ArgumentNullException.ThrowIfNull(session);
-        List<Change> changes;
+    /// A workspace accepted `next` in place of `previous`: what the session
+    /// changed is published first, then what the command did that the states
+    /// cannot tell, then each window that shows something else. The window
+    /// that issued the command takes what it chose to show, and every window
+    /// over the workspace is repaired against `next`. Called with no session
+    /// lock held.
+    public void SessionPublished(Guid workspaceId, SessionState previous, SessionState next, WindowFollowUp? followUp,
+        SessionTabEvents events) {
+        ArgumentNullException.ThrowIfNull(previous);
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(events);
+        var changes = new List<Change>(SessionChanges.Publish(workspaceId, previous, next));
+        changes.AddRange(events.Changes(workspaceId));
         lock (gate) {
-            changes = Changing(open.Values.Where(window => window.WorkspaceId == workspaceId), window => {
+            changes.AddRange(Changing(open.Values.Where(window => window.WorkspaceId == workspaceId), window => {
                 if (followUp is not null && window.Id == followUp.Window?.Id) window.Apply(followUp);
-                window.Repair(session);
-            });
+                window.Repair(next);
+            }));
         }
         foreach (var change in changes) announce(change);
     }

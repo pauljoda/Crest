@@ -222,23 +222,23 @@ public sealed partial class BrowserContractsTests {
                 ["spaceOrder"] = new JsonArray(value["spaces"]!.AsArray().Select(s => s!["id"]!.DeepClone()).ToArray())
             });
         }
-        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(1, Delta(result), transaction));
+        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(Delta(result), transaction));
         Assert.True(transaction.Seal());
-        Assert.Throws<BrowserRuleException>(() => owner.Commit(1, Delta(result)));
+        Assert.Throws<BrowserRuleException>(() => owner.Commit(Delta(result)));
         var foreign = new NativeSessionAuthority(Bytes(session));
-        Assert.Throws<BrowserRuleException>(() => foreign.ReserveReplacement(1, Delta(result), transaction));
+        Assert.Throws<BrowserRuleException>(() => foreign.ReserveReplacement(Delta(result), transaction));
         var altered = result.DeepClone(); altered["spaceDeletions"]![0]!["operationID"] = Guid.NewGuid().ToString("D");
-        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(1, Delta(altered), transaction));
+        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(Delta(altered), transaction));
         result["spaceDeletions"]![0]!["operationID"] = result["spaceDeletions"]![0]!["operationID"]!.GetValue<string>().ToUpperInvariant();
         var before = sync.Snapshot.Read();
-        using (owner.ReserveReplacement(1, Delta(result), transaction)) { }
+        using (owner.ReserveReplacement(Delta(result), transaction)) { }
         Assert.Equal(1UL, owner.Revision);
         Assert.Equal(before, sync.Snapshot.Read());
-        using var accepted = owner.ReserveReplacement(1, Delta(result), transaction);
+        using var accepted = owner.ReserveReplacement(Delta(result), transaction);
         Assert.Single(JsonNode.Parse(accepted.Checkpoint.Read("core"))!["spaceDeletions"]!.AsArray());
         accepted.Commit();
         Assert.Equal(transaction.Journal.Read(), sync.Snapshot.Read());
-        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(2, Delta(result), transaction));
+        Assert.Throws<BrowserRuleException>(() => owner.ReserveReplacement(Delta(result), transaction));
     }
 
 }

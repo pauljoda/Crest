@@ -21,7 +21,7 @@ public sealed class TranslationRulesTests {
             ["appPreferences"] = new JsonObject { ["translationRules"] = rules.DeepClone() }
         };
         var authority = new NativeSessionAuthority(Encoding.UTF8.GetBytes(session.ToJsonString()));
-        var command = authority.PrepareCommand(authority.Revision, Encoding.UTF8.GetBytes(new JsonObject {
+        var command = authority.PrepareCommand(Encoding.UTF8.GetBytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "preferences.translation_rule",
             ["arguments"] = new JsonObject { ["sourceID"] = source, ["targetID"] = target, ["isEnabled"] = enabled }

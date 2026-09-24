@@ -21,6 +21,15 @@ struct BrowserAutomaticTranslationRules: Codable, Equatable, Sendable {
 
     private init(sources: [String: Rule]) { self.sources = sources }
 
+    /// TRANSITIONAL until S6.1 retires the Swift session copy: the rules the
+    /// core publishes.
+    init(core rules: [TranslationRule]) {
+        self.init(
+            sources: Dictionary(
+                rules.map { ($0.sourceLanguage, Rule(targetID: $0.targetID, isEnabled: $0.isEnabled)) },
+                uniquingKeysWith: { _, last in last }))
+    }
+
     var rawValue: String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys

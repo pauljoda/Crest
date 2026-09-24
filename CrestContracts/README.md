@@ -163,7 +163,10 @@ Window state is device-local and never enters the session. The
 `ResizeSplitColumns` and one-time `AdoptWindowRecords` intents on `crest_app_*`
 own it; windows over the persistent session keep their records in device tables
 beside the session, sixteen at most. Showing a tab records its
-`lastActivatedAt` as a revision of its own and publishes `TabActivated`. The
+`lastActivatedAt` as a change of its own and publishes `TabsChanged`. Each
+session attached to the device publishes `WorkspaceOpened`, what every
+accepted state changed, and `WorkspaceClosed`, keyed by workspace, and an
+intent answers the pending batch before its own changes. The
 `CanTearOff` query decides whether a dragged tab may leave its window, and
 `FallbackTab` answers the tab a draft Space shows first. `setup.space`, `setup.tab` and `setup.reconcile`
 admit manual-setup draft edits against the import's Space and pinned limits
@@ -216,5 +219,5 @@ until the complete contract and compatibility fixtures are ratified.
 `tests/native_abi.c` is a native consumer of the actual shared library. It
 exercises the policy, access, app, engine, permissions and session entry points,
 checking buffer
-ownership, non-consuming size probes, stale revisions and invalid handles. The
+ownership, non-consuming size probes, stale commands and invalid handles. The
 managed suite covers the session, sync and domain rules.

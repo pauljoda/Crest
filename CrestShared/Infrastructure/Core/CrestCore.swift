@@ -6,7 +6,9 @@ import Synchronization
 /// The app's one connection to the core's typed application API.
 ///
 /// `send` runs an intent and applies the changes it caused to `state` before
-/// returning them, so a caller reads the new state straight away. A rule that
+/// returning them, so a caller reads the new state straight away. The core
+/// answers any changes still pending first, so an older change never lands
+/// after a newer one. A rule that
 /// refuses an intent or a query throws its `Rejection`. Every other failure is
 /// a build bug (a core and a Swift client built from different contracts) and
 /// stops the app with a message naming the status.
@@ -36,6 +38,11 @@ final class CrestCore {
     @ObservationIgnored private let wake = CoreWakeRelay()
     /// Callers waiting for a revision to reach disk. A drain resumes them.
     @ObservationIgnored var saveWaiters: [(revision: Int64, continuation: CheckedContinuation<Void, Never>)] = []
+    #if DEBUG
+        /// Hears each batch of changes once `state` has applied it, so a test
+        /// can apply the same batch again.
+        @ObservationIgnored var batchApplied: (([Change]) -> Void)?
+    #endif
 
     // MARK: - Initializers
 
@@ -93,7 +100,7 @@ final class CrestCore {
         intent.encodeIntent(into: &writer)
         var reader = try call(crest_app_dispatch, writer, "send \(type(of: intent))")
         let changes = decodeChanges(from: &reader, "\(type(of: intent))")
-        for change in changes { state.apply(change) }
+        apply(changes)
         return changes
     }
 
@@ -123,11 +130,21 @@ final class CrestCore {
         guard status == CREST_OK else { Self.buildBug(status, "drain its changes") }
         let length = buffer.length
         var reader = WireReader(buffer.bytes.map { Array(UnsafeBufferPointer(start: $0, count: length)) } ?? [])
-        for change in decodeChanges(from: &reader, "its own work") {
+        apply(decodeChanges(from: &reader, "its own work"))
+        resumeSaveWaiters()
+    }
+
+    /// Applies one batch to `state`, in order, and reports a failed save the
+    /// core started itself.
+    private func apply(_ changes: [Change]) {
+        for change in changes {
             state.apply(change)
             if case .storageFailed(let failure) = change { storageFailed(failure.reason) }
         }
-        resumeSaveWaiters()
+        state.sessionBatchApplied()
+        #if DEBUG
+            batchApplied?(changes)
+        #endif
     }
 
     private func decodeChanges(from reader: inout WireReader, _ source: @autoclosure () -> String) -> [Change] {

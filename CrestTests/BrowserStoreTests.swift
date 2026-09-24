@@ -1339,7 +1339,7 @@ final class BrowserStoreTests: XCTestCase {
         )
         try coordinator.stage(session: session)
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
-        let family = BrowserStoreFamily(session: session)
+        let family = BrowserStoreFamily(session: session, core: CrestCore())
         let staleRevision = family.reserveSyncRevision()
         var staleSession = session
         staleSession.spaces[0].folders.removeAll { $0.id == folder.id }

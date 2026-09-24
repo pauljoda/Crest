@@ -31,7 +31,7 @@ public sealed class StoredFormatTests {
 
     /// The checkpoint's core part with each Space's history part put back.
     private static JsonObject Written(NativeSessionAuthority authority) {
-        var checkpoint = authority.Checkpoint(authority.Revision);
+        var checkpoint = authority.Checkpoint();
         var core = JsonNode.Parse(checkpoint.Read("core"))!.AsObject();
         foreach (var space in core["spaces"]!.AsArray())
             space!["history"] = JsonNode.Parse(checkpoint.Read(space["id"]!["rawValue"]!.GetValue<string>()));
@@ -93,12 +93,12 @@ public sealed class StoredFormatTests {
                     RestoresTabs: true));
                 request["windowId"] = issuer.ToString();
             }
-            var command = authority.PrepareCommand(authority.Revision, Bytes(request));
+            var command = authority.PrepareCommand(Bytes(request));
             Compare(name, JsonNode.Parse(command.Output));
             if (step["commit"]!.GetValue<bool>()) command.Commit();
             if (window is { } opened) app.Send(new CloseWindow(opened));
         }
-        var checkpoint = authority.Checkpoint(authority.Revision);
+        var checkpoint = authority.Checkpoint();
         var core = JsonNode.Parse(checkpoint.Read("core"))!;
         Compare("checkpoint.core", core);
         foreach (var (name, history) in expected.Where(pair => pair.Key.StartsWith("checkpoint.history.", StringComparison.Ordinal)))

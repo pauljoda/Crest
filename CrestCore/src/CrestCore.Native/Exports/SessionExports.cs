@@ -22,7 +22,9 @@ public static unsafe partial class Exports {
 
     private static bool ValidSessionInput(byte* bytes, nuint count) => bytes != null && count is > 0 and <= NativeSessionAuthority.MaximumBytes;
 
-    private static int SessionError(Exception error) => error is BrowserRuleException rule && rule.Code == BrowserRuleCodes.StaleSessionRevision
+    /// A command prepared against a state the session has since replaced
+    /// answers INVALID_STATE; any other refusal is INVALID_MESSAGE.
+    private static int SessionError(Exception error) => error is Rejected { Rejection: StaleCommand }
         ? CoreStatus.InvalidState : CoreStatus.InvalidMessage;
 
     #endregion
@@ -30,46 +32,42 @@ public static unsafe partial class Exports {
     #region Actions - Session lifecycle
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_create", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCreate(byte* bytes, nuint count, ulong* handle, ulong* revision) {
-        if (handle == null || revision == null) return CoreStatus.InvalidArgument;
-        *handle = 0; *revision = 0;
+    public static int SessionCreate(byte* bytes, nuint count, ulong* handle) {
+        if (handle == null) return CoreStatus.InvalidArgument;
+        *handle = 0;
         if (!ValidSessionInput(bytes, count)) return CoreStatus.InvalidArgument;
         try {
             var session = new NativeSessionAuthority(new(bytes, (int)count));
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!Sessions.TryAdd(id, session)) return CoreStatus.InternalError;
-            *handle = id; *revision = session.Revision; return CoreStatus.Ok;
+            *handle = id; return CoreStatus.Ok;
         } catch (Exception e) { return SessionError(e); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_create_borrowed", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCreateBorrowed(ulong source, ulong expected, byte* bytes, nuint count,
-        ulong* handle, ulong* revision, ulong* projection) {
-        if (handle == null || revision == null || projection == null) return CoreStatus.InvalidArgument;
-        *handle = 0; *revision = 0; *projection = 0;
+    public static int SessionCreateBorrowed(ulong source, byte* bytes, nuint count, ulong* handle) {
+        if (handle == null) return CoreStatus.InvalidArgument;
+        *handle = 0;
         if (!ValidSessionInput(bytes, count) || count > 1024) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(source, out var owner)) return CoreStatus.InvalidHandle;
         try {
             var request = JsonNode.Parse(new ReadOnlySpan<byte>(bytes, (int)count))!;
-            var child = owner.CreateBorrowed(expected, Guid.Parse(request["spaceId"]!.GetValue<string>()),
+            var child = owner.CreateBorrowed(Guid.Parse(request["spaceId"]!.GetValue<string>()),
                 Guid.Parse(request["profileId"]!.GetValue<string>()));
-            var initial = child.PrepareBorrowedRefresh(child.Revision);
             var childId = checked((ulong)Interlocked.Increment(ref nextHandle));
-            var commandId = checked((ulong)Interlocked.Increment(ref nextHandle));
-            if (!Sessions.TryAdd(childId, child)) return CoreStatus.InternalError;
-            if (!SessionCommands.TryAdd(commandId, initial)) { Sessions.TryRemove(childId, out _); child.Release(); return CoreStatus.InternalError; }
-            *handle = childId; *revision = child.Revision; *projection = commandId;
+            if (!Sessions.TryAdd(childId, child)) { child.Release(); return CoreStatus.InternalError; }
+            *handle = childId;
             return CoreStatus.Ok;
         } catch (Exception e) { return SessionError(e); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_prepare_borrowed_refresh", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionPrepareBorrowedRefresh(ulong handle, ulong expected, ulong* command) {
+    public static int SessionPrepareBorrowedRefresh(ulong handle, ulong* command) {
         if (command == null) return CoreStatus.InvalidArgument;
         *command = 0;
         if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
         try {
-            var value = session.PrepareBorrowedRefresh(expected);
+            var value = session.PrepareBorrowedRefresh();
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionCommands.TryAdd(id, value)) return CoreStatus.InternalError;
             *command = id; return CoreStatus.Ok;
@@ -99,13 +97,13 @@ public static unsafe partial class Exports {
     #region Actions - Commands
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_prepare_command", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionPrepareCommand(ulong handle, ulong expected, byte* bytes, nuint count, ulong* command) {
+    public static int SessionPrepareCommand(ulong handle, byte* bytes, nuint count, ulong* command) {
         if (command == null) return CoreStatus.InvalidArgument;
         *command = 0;
         if (!ValidSessionInput(bytes, count)) return CoreStatus.InvalidArgument;
         if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
         try {
-            var prepared = session.PrepareCommand(expected, new(bytes, (int)count));
+            var prepared = session.PrepareCommand(new(bytes, (int)count));
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SessionCommands.TryAdd(id, prepared)) return CoreStatus.InternalError;
             *command = id; return CoreStatus.Ok;
@@ -126,11 +124,9 @@ public static unsafe partial class Exports {
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_command", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommitCommand(ulong handle, ulong* revision) {
-        if (revision == null) return CoreStatus.InvalidArgument;
-        *revision = 0;
+    public static int SessionCommitCommand(ulong handle) {
         if (!SessionCommands.TryGetValue(handle, out var command)) return CoreStatus.InvalidHandle;
-        try { *revision = command.Commit(); return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
+        try { command.Commit(); return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_release_command", CallConvs = [typeof(CallConvCdecl)])]

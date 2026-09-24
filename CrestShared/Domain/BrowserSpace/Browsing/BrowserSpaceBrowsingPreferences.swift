@@ -45,6 +45,24 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
         }
     }
 
+    /// TRANSITIONAL until S6.1 retires the Swift session copy: the preferences
+    /// the core publishes, read the way the decoder reads its stored form.
+    init(core preferences: BrowsingPreferences) {
+        selectedSearchProviderID = preferences.selectedSearchProviderID
+        customSearchProviders = preferences.customSearchProviders.map {
+            BrowserCustomSearchProvider(
+                id: $0.id, name: $0.name, searchURLTemplate: $0.searchURLTemplate,
+                suggestionURLTemplate: $0.suggestionURLTemplate)
+        }
+        searchSuggestionsEnabled = preferences.searchSuggestionsEnabled
+        currentTabCleanupPolicy = preferences.currentTabCleanup
+        contentBlockingPolicy = preferences.contentBlocking
+        dataRetention = BrowserSpaceDataRetentionPreferences(
+            history: preferences.dataRetention.history, archive: preferences.dataRetention.archive,
+            downloads: preferences.dataRetention.downloads)
+        restoreSelection()
+    }
+
     static let `default` = BrowserSpaceBrowsingPreferences(
         searchProvider: .google,
         currentTabCleanupPolicy: .after12Hours,
@@ -89,8 +107,12 @@ struct BrowserSpaceBrowsingPreferences: Codable, Equatable, Sendable {
                 BrowserSpaceDataRetentionPreferences.self,
                 forKey: .dataRetention
             ) ?? .default
-        // Stored engines that no longer validate, including ones synced from
-        // elsewhere, are dropped by the core's restore rule and never offered.
+        restoreSelection()
+    }
+
+    /// Stored engines that no longer validate, including ones synced from
+    /// elsewhere, are dropped by the core's restore rule and never offered.
+    private mutating func restoreSelection() {
         if !customSearchProviders.isEmpty,
             let restored = BrowserCorePolicy.restoredCustomSearchProviders(
                 customSearchProviders, selectedID: selectedSearchProviderID)

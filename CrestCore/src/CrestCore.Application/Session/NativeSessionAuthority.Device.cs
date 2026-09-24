@@ -47,23 +47,25 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    /// Tells the device the session accepted `committed`, with what the
-    /// command chose for the window that issued it. Called with no lock held.
-    internal void Published(SessionState committed, WindowFollowUp? followUp) {
+    /// Tells the device the session accepted `next` in place of `previous`,
+    /// with what the command chose for the window that issued it and what it
+    /// did that the two states cannot tell. Called with no lock held.
+    internal void Published(SessionState previous, SessionState next, WindowFollowUp? followUp, SessionTabEvents events) {
         Device? target;
         Guid workspace;
         lock (Gate) {
             target = device;
             workspace = workspaceId;
         }
-        target?.SessionPublished(workspace, committed, followUp);
+        target?.SessionPublished(workspace, previous, next, followUp, events);
     }
 
     /// Records that a window showed `tabId`, which current-tab cleanup reads,
-    /// as a new revision saved behind. Answers null, and changes nothing, when
-    /// the Space or tab is gone, the Space is being deleted, or this session
-    /// takes no edits. Throws `Rejected` for a locked Space.
-    internal (ulong Revision, DateTimeOffset At)? Touch(Guid spaceId, Guid tabId, DateTimeOffset now) {
+    /// as a new state saved behind, and answers the state it replaced and the
+    /// new one. Answers null, and changes nothing, when the Space or tab is
+    /// gone, the Space is being deleted, or this session takes no edits. Throws
+    /// `Rejected` for a locked Space.
+    internal (SessionState Previous, SessionState Next)? Touch(Guid spaceId, Guid tabId, DateTimeOffset now) {
         lock (Gate) {
             try {
                 RequireWritable();
@@ -75,12 +77,10 @@ public sealed partial class NativeSessionAuthority {
             if (IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
             // The stored spelling of the time, so the next load reads the same value.
             var at = StoredSessionCodec.Date(StoredSessionCodec.Seconds(now));
-            session = Replacing(session, space with {
+            var next = Replacing(session, space with {
                 Tabs = [.. space.Tabs.Select(tab => tab.Id == tabId ? tab with { LastActivatedAt = at } : tab)]
             });
-            Revision = checked(Revision + 1);
-            storage?.Enqueue(session, Revision);
-            return (Revision, at);
+            return (Accept(next), next);
         }
     }
 

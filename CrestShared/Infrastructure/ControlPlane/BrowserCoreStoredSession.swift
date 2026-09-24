@@ -42,10 +42,10 @@ struct BrowserCoreStoredSession {
     /// none yet.
     static func load(core: CrestCore, favicons: any BrowserFaviconStoring) throws -> BrowserCoreStoredSession? {
         guard let handles = core.storedSessionHandles() else { return nil }
-        return try BrowserCoreStoredSession(handles: handles, favicons: favicons)
+        return try BrowserCoreStoredSession(handles: handles, favicons: favicons, core: core)
     }
 
-    private init(handles: CrestCore.StoredSessionHandles, favicons: any BrowserFaviconStoring) throws {
+    private init(handles: CrestCore.StoredSessionHandles, favicons: any BrowserFaviconStoring, core: CrestCore) throws {
         let projection: Projection
         do {
             defer { crest_session_release_command(handles.projection) }
@@ -70,13 +70,10 @@ struct BrowserCoreStoredSession {
                 crest_session_destroy(handles.session)
                 throw LoadError.invalidOrigin
             }
-            var tab = session.spaces[origin.spaceIndex].tabs[origin.tabIndex]
-            tab.faviconData = favicons.favicon(tabID: origin.sourceTabID)
-            if tab.faviconData != nil, tab.faviconURL == nil { tab.faviconURL = tab.url }
-            session.spaces[origin.spaceIndex].tabs[origin.tabIndex] = tab
+            session.spaces[origin.spaceIndex].tabs[origin.tabIndex].faviconData = favicons.favicon(
+                tabID: origin.sourceTabID)
         }
-        authority = BrowserCoreSessionAuthority(
-            adopting: handles.session, revision: handles.revision, projection: session)
+        authority = BrowserCoreSessionAuthority(adopting: handles.session, projection: session, core: core)
         self.sync = sync
     }
 
