@@ -115,15 +115,9 @@ public sealed partial class CrestApp {
 
     #endregion
 
-    #region Actions - Commands
+    #region Actions - Replacement
 
-    /// TRANSITIONAL until S5.8c: prepares a JSON session command against the
-    /// workspace `workspaceId` names. Throws `Rejected` with `UnknownWorkspace`
-    /// for one that is not open.
-    public NativeSessionCommand PrepareCommand(Guid workspaceId, ReadOnlySpan<byte> request) =>
-        device.Workspace(workspaceId).PrepareCommand(request);
-
-    /// TRANSITIONAL until S5.8c: replaces the workspace's session with the
+    /// TRANSITIONAL until slice 8a (typed sync): replaces the workspace's session with the
     /// edits `delta` names and saves the result, with a sync transaction's
     /// journal when one is given, before publishing it.
     public void ReplaceDurably(Guid workspaceId, ReadOnlySpan<byte> delta, NativeSyncTransaction? transaction) =>

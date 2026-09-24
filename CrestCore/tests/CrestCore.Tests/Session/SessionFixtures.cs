@@ -121,10 +121,6 @@ public sealed partial class BrowserContractsTests {
 
     private static Guid SpaceId(JsonNode space) => Guid.Parse(space["id"]!["rawValue"]!.GetValue<string>());
 
-    /// Asserts that `commit` is refused because the session accepted another
-    /// change after the command was prepared.
-    private static void AssertStale(Action commit) => Assert.IsType<StaleCommand>(Assert.Throws<Rejected>(commit).Rejection);
-
     /// The changes an intent answered without the saves the storage worker
     /// finished meanwhile, which join the pending batch whenever the worker
     /// gets to them.

@@ -159,9 +159,7 @@ public sealed partial class BrowserContractsTests {
                 clock.Now = navigation.At;
                 changes = RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);
             } else {
-                var command = authority.PrepareCommand(Bytes(request));
-                if (step["commit"]!.GetValue<bool>()) command.Commit();
-                changes = app.Drain();
+                throw new InvalidOperationException($"{request["operation"]}: every recorded command is an intent or an engine report now.");
             }
             published.UnionWith(changes.Select(change => change.GetType()));
             reader.Apply(changes);

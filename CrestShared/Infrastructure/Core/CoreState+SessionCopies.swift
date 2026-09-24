@@ -93,6 +93,8 @@
                         .insert(.archive)
                 case .tabCopied(let copied):
                     touched[copied.workspaceID, default: TouchedWorkspace()].hasTabsEverywhere = true
+                case .tabsImported(let imported):
+                    touched[imported.workspaceID, default: TouchedWorkspace()].isWhole = true
                 case .tabFaviconAssigned(let assigned):
                     touched[assigned.workspaceID, default: TouchedWorkspace()].hasTabsEverywhere = true
                 default:

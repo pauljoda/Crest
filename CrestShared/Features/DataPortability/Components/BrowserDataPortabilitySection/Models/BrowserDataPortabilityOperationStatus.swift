@@ -15,7 +15,7 @@ struct BrowserDataPortabilityOperationStatus {
     }
 
     init(error: Error) {
-        message = .verbatim(error.localizedDescription)
+        message = .verbatim(error.personFacingDescription)
         isError = true
     }
 

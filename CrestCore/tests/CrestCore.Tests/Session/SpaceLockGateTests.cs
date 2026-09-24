@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
@@ -44,25 +45,14 @@ public sealed partial class BrowserContractsTests {
             device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Leaked"))).Rejection);
         Assert.Equal(1UL, core.Revision);
         // A locked Space must not even be named as an import destination.
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "workspace.import",
-            ["mode"] = "manual",
-            ["now"] = 800000002.0,
-            ["arguments"] = new JsonObject {
-                ["sources"] = new JsonArray(session["spaces"]![0]!.DeepClone()),
-                ["drafts"] = new JsonArray(new JsonObject {
-                    ["sourceIndex"] = 0,
-                    ["isNew"] = false,
-                    ["customization"] = new JsonObject {
-                        ["name"] = "Reading",
-                        ["symbol"] = "book",
-                        ["accent"] = "indigo",
-                        ["branding"] = new JsonObject()
-                    }
-                })
-            }
-        }))).Code);
+        var draft = session["spaces"]![0]!.DeepClone();
+        var setup = new ApplyManualSetup(device.Workspace, Guid.NewGuid(), Encoding.UTF8.GetBytes(new JsonArray(draft).ToJsonString()),
+            [new(identity.Space, false, new("Renamed", "book", SpaceAccent.Indigo, StoredSessionCodec.DecodeBranding(new JsonObject())))],
+            false);
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() => device.Send(setup)).Rejection);
+        Assert.Equal(1UL, core.Revision);
+        // A person sees the setup before they unlock the Space it writes into.
+        Assert.Equal("Renamed", device.Query(new ImportPreview(setup)).Session.Spaces[0].Settings.Name);
 
         Unlock(device.Send, device.Workspace, identity.Space);
         device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Granted"));

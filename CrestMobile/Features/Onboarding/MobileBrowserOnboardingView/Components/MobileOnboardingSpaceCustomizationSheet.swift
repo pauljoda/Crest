@@ -3,7 +3,7 @@ import SwiftUI
 struct MobileOnboardingSpaceCustomizationSheet: View {
     let spaceID: SpaceID
     @Binding var plan: BrowserManualSetupPlan
-    let existingSession: BrowserSession
+    let browser: BrowserStore
 
     @Environment(\.dismiss) private var dismiss
 
@@ -30,7 +30,7 @@ struct MobileOnboardingSpaceCustomizationSheet: View {
                             space: MobileOnboardingSpacePreviewFactory.preview(
                                 draft: draft,
                                 plan: plan,
-                                existingSession: existingSession,
+                                browser: browser,
                                 includesSamples: true
                             )
                         )

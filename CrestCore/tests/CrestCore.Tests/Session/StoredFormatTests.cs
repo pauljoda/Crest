@@ -107,9 +107,7 @@ public sealed class StoredFormatTests {
                 clock.Now = navigation.At;
                 RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);
             } else {
-                var command = authority.PrepareCommand(Bytes(request));
-                Compare(name, JsonNode.Parse(command.Output));
-                if (step["commit"]!.GetValue<bool>()) command.Commit();
+                throw new InvalidOperationException($"{name}: every recorded command is an intent or an engine report now.");
             }
             if (window is { } opened) app.Send(new CloseWindow(opened));
         }

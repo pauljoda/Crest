@@ -9,7 +9,7 @@ struct BrowserOnboardingReviewSpacePage: View {
     @Binding var selectedSourceSpaceID: SpaceID?
 
     var body: some View {
-        let analysis = plan.analysis(in: browserSession)
+        let analysis = flow.reviewAnalysis()
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 BrowserOnboardingPreviewCardLabel(

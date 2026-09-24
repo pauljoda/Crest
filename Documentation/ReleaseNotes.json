@@ -2381,6 +2381,10 @@
     "generator-narrowed-unions": {
       "category": "internal",
       "message": "The contract generator lets a field hold only the intents that derive from one base, so a query can take exactly the intents it answers for."
+    },
+    "typed-workspace-import": {
+      "category": "internal",
+      "message": "Importing a file, a reviewed browser import or a manual setup runs as typed core intents, and the review screens ask the core what the choices mean."
     }
   }
 }

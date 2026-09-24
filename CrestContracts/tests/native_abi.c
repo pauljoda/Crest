@@ -342,55 +342,6 @@ static void engine_boundary(void) {
     assert(crest_engine_report(app, engine, created, sizeof(created)) == CREST_INVALID_HANDLE);
     assert(crest_app_destroy(app) == CREST_OK);
 }
-/* A command prepared before another one committed is refused, so a command
- * never overwrites a change it did not see. */
-static void stale_command_boundary(void) {
-    static const char* tab_id = "99999999-9999-4999-8999-999999999999";
-    char json[1024];
-    int size = snprintf(json, sizeof(json),
-        "{\"selectedSpaceID\":{\"rawValue\":\"%s\"},\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},"
-        "\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\","
-        "\"tabs\":[{\"id\":{\"rawValue\":\"%s\"},\"title\":\"Page\",\"url\":\"https://example.com/\","
-        "\"placement\":\"current\",\"lastActivatedAt\":800000000}"
-        "],\"selectedTabID\":{\"rawValue\":\"%s\"},\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}",
-        space_id, space_id, profile_id, tab_id, tab_id);
-    assert(size > 0 && (size_t)size < sizeof(json));
-    const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
-    const uint8_t memory_only[] = { 0 };
-    uint64_t app = 0, command = 0, stale = 0;
-    crest_buffer_t buffer = { NULL, 0 };
-    assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
-    uint8_t workspace[16];
-    open_seeded(app, persistent_kind, json, (size_t)size, workspace);
-    /* A manual import that adds a tab to the Space the session holds. */
-    static const char* imported_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-    char import[2048];
-    size = snprintf(import, sizeof(import),
-        "{\"version\":1,\"operation\":\"workspace.import\",\"mode\":\"manual\",\"now\":800000001,"
-        "\"arguments\":{\"sources\":[{\"id\":{\"rawValue\":\"%s\"},\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\","
-        "\"tabs\":[{\"id\":{\"rawValue\":\"%s\"},\"title\":\"Imported\",\"url\":\"https://example.org/\","
-        "\"placement\":\"current\",\"lastActivatedAt\":800000000}],\"folders\":[],\"history\":[],\"archivedTabs\":[]}],"
-        "\"drafts\":[{\"sourceIndex\":0,\"isNew\":false,"
-        "\"customization\":{\"name\":\"Reading\",\"symbol\":\"book\",\"accent\":\"indigo\"}}]}}",
-        space_id, profile_id, imported_id);
-    assert(size > 0 && (size_t)size < sizeof(import));
-    assert(crest_session_prepare_command(app, workspace, (const uint8_t*)import, (size_t)size, &command) == CREST_OK);
-    assert(crest_session_prepare_command(app, workspace, (const uint8_t*)import, (size_t)size, &stale) == CREST_OK);
-    assert(crest_session_commit_command(command) == CREST_OK);
-    assert(crest_session_release_command(command) == CREST_OK);
-    assert(crest_session_commit_command(stale) == CREST_INVALID_STATE);
-    assert(crest_session_release_command(stale) == CREST_OK);
-    /* A command names an open workspace of its app. */
-    uint8_t closing[17] = { CREST_INTENT_CLOSE_WORKSPACE };
-    memcpy(closing + 1, workspace, 16);
-    assert(crest_app_dispatch(app, closing, sizeof(closing), &buffer) == CREST_OK);
-    crest_buffer_free(&buffer);
-    assert(crest_session_prepare_command(app, workspace, (const uint8_t*)import, (size_t)size, &command) == CREST_INVALID_MESSAGE
-        && command == 0);
-    assert(crest_session_prepare_command(app + 1000, workspace, (const uint8_t*)import, (size_t)size, &command)
-        == CREST_INVALID_HANDLE);
-    assert(crest_app_destroy(app) == CREST_OK);
-}
 /* The Quick Window site key is a typed query; borrowed-workspace command
  * routing is a core policy answer. */
 static void links_boundary(void) {
@@ -596,7 +547,6 @@ int main(void) {
     session_boundary();
     engine_boundary();
     storage_boundary();
-    stale_command_boundary();
     puts("Native ABI buffer ownership, size retry, handle, session and engine checks passed.");
     return 0;
 }

@@ -150,6 +150,9 @@ public sealed partial class CrestApp : IDisposable {
                 PendingSave => new PendingSaveRevision(storage?.PendingRevision is { } revision ? checked((long)revision) : null),
                 CanSend check => Permission(check.Intent),
                 LaunchPlan plan => device.Workspace(plan.WorkspaceId).Plan(plan),
+                ImportPreview preview => device.Workspace(preview.Import.WorkspaceId).Preview(preview.Import, clock.Now),
+                ImportReviewSuggestions suggestions => device.Workspace(suggestions.WorkspaceId).Answer(suggestions),
+                ImportReviewAnalysis analysis => device.Workspace(analysis.WorkspaceId).Answer(analysis),
                 _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
             };
             return (TAnswer)answer;

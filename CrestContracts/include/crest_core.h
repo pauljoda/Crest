@@ -115,43 +115,16 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
 
-/* Native-UI session commands. TRANSITIONAL until the remaining JSON commands
- * are intents. All calls are exception-contained; inputs are <= 64 MiB and
- * carry no native objects or callbacks. Each names its app and the workspace
- * it acts on by the 16 RFC 4122 bytes WorkspaceOpened carried: the intents
- * OpenWorkspace and BorrowSpace open workspaces, and CloseWorkspace closes
- * them. A workspace that is not open answers INVALID_MESSAGE. The workspace
- * the app keeps in its file saves every accepted state behind, on the core's
- * storage worker, and the durable commits below save before they return; any
- * other workspace keeps nothing on disk. A command commits only while the
- * session still holds the state it was prepared against; otherwise commit
- * answers INVALID_STATE. Each accepted state reaches the app's device as typed
- * changes (crest_app_drain). The session holds browsing data only: Space and
- * tab selection is window state, never stored or synced. Native projections
- * exclude favicon bytes, which remain platform assets. Release a command only
- * after the caller has drained its own references and calls.
+/* The durable JSON replacement a sync merge commits. It is exception-contained;
+ * its input is <= 64 MiB and carries no native objects or callbacks. It names
+ * its app and the workspace it acts on by the 16 RFC 4122 bytes
+ * WorkspaceOpened carried; a workspace that is not open answers
+ * INVALID_MESSAGE. The accepted state reaches the app's device as typed
+ * changes (crest_app_drain). Native projections exclude favicon bytes, which
+ * remain platform assets.
  */
 
-/* Commands operate on the owned session using only arguments and, as read-only
- * context, what the requesting window shows. Prepare/read do not mutate; the
- * answer reports what the command made (a new tab, copies, an image
- * assignment), and the session's changes arrive through the app's drain when
- * it commits. Commit answers INVALID_STATE once the session accepted anything
- * after the command was prepared, including a second commit of the same command.
- * The core stages each committed command for sync itself. A command whose
- * effects outside the core depend on the file (Space deletion, imports,
- * batches, moves between Spaces) is saved with its sync journal before commit
- * returns; STORAGE_FAILED then leaves the session, the journal and the file as
- * they were, and the command can be committed again.
- * Input/output <= 4 MiB for page/Space edits, <= 64 MiB for workspace imports. Always release the command, including failed commits.
- * A command keeps the session it was prepared against until it is released. */
-CREST_API crest_status_t CREST_CALL crest_session_prepare_command(
-    uint64_t app, const uint8_t* workspace, const uint8_t* input, size_t length, uint64_t* out_command);
-CREST_API crest_status_t CREST_CALL crest_session_read_command(
-    uint64_t command, uint8_t* destination, size_t capacity, size_t* out_length);
-CREST_API crest_status_t CREST_CALL crest_session_commit_command(uint64_t command);
-CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t command);
-/* TRANSITIONAL, removed when session intents land: applies a value delta to
+/* TRANSITIONAL until slice 8a (typed sync): applies a value delta to
  * the workspace's session and saves it before returning. With a sealed incoming
  * sync transaction, which may authorize local cleanup intents, its journal is
  * saved and published with the session; without one the delta is a native

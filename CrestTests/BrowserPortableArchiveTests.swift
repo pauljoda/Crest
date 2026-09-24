@@ -264,8 +264,8 @@ final class BrowserPortableArchiveTests: XCTestCase {
 
         XCTAssertThrowsError(try store.importPortableArchive(imported)) {
             XCTAssertEqual(
-                $0 as? BrowserPortableArchiveError,
-                .spaceLimitExceeded(BrowserPortableArchive.maximumSpaceCount)
+                $0 as? Rejection,
+                .spaceLimitReached(SpaceLimitReached(limit: BrowserPortableArchive.maximumSpaceCount))
             )
         }
         XCTAssertEqual(store.session, fullSession)

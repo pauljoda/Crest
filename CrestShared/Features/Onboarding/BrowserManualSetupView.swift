@@ -3,7 +3,7 @@ import SwiftUI
 struct BrowserManualSetupView: View {
     @Binding var plan: BrowserManualSetupPlan
     @Binding var selectedSpaceID: SpaceID?
-    let existingSession: BrowserSession
+    let browser: BrowserStore
 
     @State private var model = BrowserManualSetupModel()
 
@@ -11,7 +11,7 @@ struct BrowserManualSetupView: View {
         BrowserManualSetupContent(
             plan: $plan,
             selectedSpaceID: $selectedSpaceID,
-            existingSession: existingSession,
+            browser: browser,
             model: model
         )
         .onAppear(perform: repairSelection)
@@ -36,7 +36,7 @@ struct BrowserManualSetupView: View {
     BrowserManualSetupView(
         plan: $plan,
         selectedSpaceID: $selectedSpaceID,
-        existingSession: BrowserManualSetupPreviewFixture.existingSession
+        browser: BrowserManualSetupPreviewFixture.browser
     )
     .frame(width: 1_080, height: 720)
 }

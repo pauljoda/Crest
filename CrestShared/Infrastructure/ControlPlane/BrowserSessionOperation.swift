@@ -1,7 +1,0 @@
-import Foundation
-
-/// One command of the family's core session. Raw values are the core's
-/// spellings in `SessionOperation.cs`.
-enum BrowserSessionOperation: String, Codable, Sendable {
-    case workspaceImport = "workspace.import"
-}

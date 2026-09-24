@@ -3,7 +3,11 @@ import XCTest
 
 @testable import Crest
 
+@MainActor
 final class BrowserImportReviewPlanTests: XCTestCase {
+    /// One store per session a test reviews an import against, so a plan's
+    /// suggestions, analysis and preview read the same workspace.
+    private var stores: [(session: BrowserSession, store: BrowserStore)] = []
 
     func testEmptyRawSpacesDoNotCountTowardTheImportLimit() throws {
         var rawSpaces: [Any] = [
@@ -65,7 +69,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeImportedSpace(name: " work ")
         let imported = makeImport(spaces: [importedSpace])
 
-        let plan = BrowserImportReviewPlan(imported: imported, existing: existing)
+        let plan = BrowserImportReviewPlan(imported: imported, in: store(existing))
         let review = try XCTUnwrap(plan.spaces.first)
 
         XCTAssertEqual(review.destination, .existing(existing.spaces[0].id))
@@ -75,11 +79,11 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         XCTAssertFalse(review.includedTabIDs.contains(importedSpace.tabs[0].id))
         XCTAssertEqual(
-            plan.overflowTabIDs(in: existing),
+            plan.analysis(in: store(existing)).overflowTabIDs,
             Set(importedSpace.tabs.suffix(2).map(\.id))
         )
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         let merged = try XCTUnwrap(preview.space(id: existing.spaces[0].id))
         XCTAssertEqual(merged.profile, existing.spaces[0].profile)
         XCTAssertEqual(merged.pinnedTabs.count, TabPlacement.pinnedCapacity)
@@ -100,12 +104,12 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let existing = makeExistingSession()
         let importedSpace = makeImportedSpace(name: "Work")
         let imported = makeImport(spaces: [importedSpace])
-        var plan = BrowserImportReviewPlan(imported: imported, existing: existing)
+        var plan = BrowserImportReviewPlan(imported: imported, in: store(existing))
 
         plan.setDestination(.newSpace, for: importedSpace.id)
         plan.setTab(importedSpace.tabs[0].id, isIncluded: true, in: importedSpace.id)
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
 
         XCTAssertEqual(preview.spaces.count, 2)
         XCTAssertEqual(preview.spaces[1].name, "Work")
@@ -117,12 +121,12 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let existing = makeExistingSession()
         let importedSpace = makeImportedSpace(name: "Another")
         let imported = makeImport(spaces: [importedSpace])
-        var plan = BrowserImportReviewPlan(imported: imported, existing: existing)
+        var plan = BrowserImportReviewPlan(imported: imported, in: store(existing))
         let duplicate = importedSpace.tabs[0]
 
         plan.setPlacement(.saved, for: duplicate.id, in: importedSpace.id)
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         let created = try XCTUnwrap(preview.spaces.last)
         XCTAssertEqual(created.tabs.first { $0.title == "Duplicate" }?.placement, .saved)
     }
@@ -132,7 +136,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeImportedSpace(name: "Work")
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: existing
+            in: store(existing)
         )
         var branding = existing.spaces[0].branding
         branding.colors = [.ocean, .gold]
@@ -144,7 +148,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         plan.setSpaceBranding(branding, for: importedSpace.id)
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         let merged = try XCTUnwrap(preview.spaces.first)
         XCTAssertEqual(merged.profile, existing.spaces[0].profile)
         XCTAssertEqual(merged.name, "Focused Work")
@@ -164,7 +168,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: existing
+            in: store(existing)
         )
         let openTabIDs = Set(
             importedSpace.currentTabs.map(\.id)
@@ -188,7 +192,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeImportedSpace(name: "Work")
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: existing
+            in: store(existing)
         )
         let originalIncluded = try XCTUnwrap(plan.spaces.first).includedTabIDs
 
@@ -235,16 +239,16 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [included, excluded]),
-            existing: existing
+            in: store(existing)
         )
         plan.setSpace(excluded.id, isIncluded: false)
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         XCTAssertNotNil(preview.space(id: included.id))
         XCTAssertNil(preview.space(id: excluded.id))
         XCTAssertFalse(preview.spaces.contains { $0.name == excluded.name })
 
-        let browser = BrowserStore(session: existing)
+        let browser = store(existing)
         try browser.commitReviewedImport(plan)
 
         XCTAssertEqual(browser.session, preview)
@@ -265,7 +269,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: existing
+            in: store(existing)
         )
 
         var review = try XCTUnwrap(plan.spaces.first)
@@ -281,7 +285,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeImportedSpace(name: "Work")
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: makeExistingSession()
+            in: store(makeExistingSession())
         )
 
         XCTAssertTrue(try XCTUnwrap(plan.spaces.first).includesPasswords)
@@ -302,7 +306,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeImportedSpace(name: "Work")
         let plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: existing
+            in: store(existing)
         )
         let vault = InMemoryCredentialVault()
         let browser = BrowserStore(
@@ -366,7 +370,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         ]
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: spaces),
-            existing: BrowserSession(spaces: [])
+            in: store(BrowserSession(spaces: []))
         )
         plan.setSpace(spaces[2].id, isIncluded: false)
         plan.setPasswords(false, in: spaces[1].id)
@@ -437,12 +441,12 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: existing
+            in: store(existing)
         )
 
         plan.setTab(excludedTab.id, isIncluded: false, in: importedSpace.id)
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         let merged = try XCTUnwrap(preview.spaces.first)
         XCTAssertEqual(merged.folders, [existingReadingFolder])
         XCTAssertEqual(
@@ -478,17 +482,24 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: BrowserSession(spaces: [])
+            in: store(BrowserSession(spaces: []))
         )
 
         plan.setTab(excludedTab.id, isIncluded: false, in: importedSpace.id)
 
         let preview = try plan.preview(
-            mergingInto: BrowserSession(spaces: [])
+            in: store(BrowserSession(spaces: []))
         )
         let created = try XCTUnwrap(preview.spaces.first)
         XCTAssertEqual(created.folders, [usedFolder])
         XCTAssertEqual(created.savedTabs.map(\.id), [includedTab.id])
+    }
+
+    private func store(_ session: BrowserSession) -> BrowserStore {
+        if let known = stores.first(where: { $0.session == session }) { return known.store }
+        let store = BrowserStore(session: session)
+        stores.append((session, store))
+        return store
     }
 
     private func makeExistingSession() -> BrowserSession {
@@ -527,10 +538,10 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeResearchSpace()
         let plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: seeded
+            in: store(seeded)
         )
 
-        let preview = try plan.preview(mergingInto: seeded)
+        let preview = try plan.preview(in: store(seeded))
 
         XCTAssertNil(
             preview.disposableSeedMarker,
@@ -545,15 +556,12 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeResearchSpace()
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: seeded
+            in: store(seeded)
         )
         plan.setSpace(importedSpace.id, isIncluded: false)
 
-        XCTAssertThrowsError(try plan.preview(mergingInto: seeded)) { error in
-            XCTAssertEqual(
-                error as? BrowserImportReviewPlan.ValidationError,
-                .noIncludedSpaces
-            )
+        XCTAssertThrowsError(try plan.preview(in: store(seeded))) { error in
+            XCTAssertEqual(error as? Rejection, .noIncludedSpaces(NoIncludedSpaces()))
         }
     }
 
@@ -562,11 +570,11 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let importedSpace = makeResearchSpace()
         var plan = BrowserImportReviewPlan(
             imported: makeImport(spaces: [importedSpace]),
-            existing: existing
+            in: store(existing)
         )
         plan.setSpaceIdentity(name: "   ", symbol: "\n", for: importedSpace.id)
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         let created = try XCTUnwrap(preview.space(id: importedSpace.id))
 
         XCTAssertEqual(created.name, BrowserImportSpaceCustomization.fallbackName)

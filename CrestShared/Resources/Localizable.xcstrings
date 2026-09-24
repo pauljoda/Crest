@@ -4,6 +4,12 @@
     "" : {
 
     },
+    "Crest couldn’t read the Spaces to import." : {
+
+    },
+    "Crest supports up to %lld Spaces." : {
+
+    },
     "%lld of %lld" : {
       "localizations" : {
         "en" : {
@@ -17062,6 +17068,12 @@
           }
         }
       }
+    },
+    "That Space is being deleted." : {
+
+    },
+    "That Space is no longer available." : {
+
     },
     "The address field and navigation stay in the sidebar." : {
       "extractionState" : "stale",

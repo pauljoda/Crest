@@ -7,10 +7,9 @@ import Observation
 /// the session changes the core publishes update it (see
 /// `BrowserCoreSessionBridge.swift`), so it can never show an unaccepted edit.
 /// It holds browsing data only. What each window shows is the core device's:
-/// a command names the window that issued it, and the device moves that window
-/// when the command commits and repairs the others. A command commits only
-/// while the core still holds the session it was prepared against; nothing
-/// here names a revision.
+/// an intent names the window that issued it, and the device moves that
+/// window when the intent commits and repairs the others. Nothing here names
+/// a revision.
 ///
 /// The core opens the workspace (`OpenWorkspace`, `BorrowSpace`), gives it its
 /// identity and closes it (`CloseWorkspace`). Whoever owns the family closes
@@ -20,36 +19,13 @@ import Observation
 final class BrowserCoreSessionAuthority {
     // MARK: - Types
 
-    final class PreparedChange {
-        fileprivate let handle: UInt64
-        /// TRANSITIONAL until S6.7: the session the command proposes. An
-        /// import's commit offers the images it gives the tabs it brings in;
-        /// every other tab it places already has its image in `FaviconAssets`.
-        let session: BrowserSession
-
-        fileprivate init(handle: UInt64, session: BrowserSession) {
-            self.handle = handle
-            self.session = session
-        }
-
-        deinit { crest_session_release_command(handle) }
-    }
-
     /// The images the issuer of a command holds, which `FaviconAssets` places
     /// while the core's changes for the command are applied.
     typealias OfferedImages = FaviconAssets.Offer
 
-    /// `workspace.import`.
-    private struct WorkspaceImportCommand: Encodable {
-        let version = 1
-        let operation = BrowserSessionOperation.workspaceImport
-        let mode: BrowserCoreWorkspaceImport.Mode
-        let arguments: BrowserCoreWorkspaceImport.Arguments
-        @BrowserCoreNullable var windowId: UUID?
-        let now: TimeInterval
-    }
-
-    /// The edits that take the accepted records to a proposed session.
+    /// TRANSITIONAL until slice 8a (typed sync): the edits that take the
+    /// accepted records to a proposed session, as the durable replacement a
+    /// sync merge commits reads them.
     private struct Delta: Encodable {
         let version = 1
         var metadata: BrowserSession?
@@ -246,86 +222,11 @@ final class BrowserCoreSessionAuthority {
         follow(offering: OfferedImages(placedFrom: next))
     }
 
-    // MARK: - Actions - Commands
-
-    func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, window: UUID?) throws -> PreparedChange {
-        let input = try JSONEncoder().encode(
-            WorkspaceImportCommand(
-                mode: request.mode, arguments: request.arguments, windowId: window,
-                now: Date.now.timeIntervalSinceReferenceDate))
-        let handle = try prepareCommand(input)
-        do {
-            let result = try JSONDecoder().decode(BrowserCoreWorkspaceImport.Result.self, from: readCommand(handle))
-            let next = try result.materialize(existing: projection, request: request)
-            return PreparedChange(handle: handle, session: next)
-        } catch {
-            crest_session_release_command(handle)
-            throw error
-        }
-    }
-
-    /// Commits a prepared command. The core saves one whose effects outside it
-    /// depend on the file, with the journal it stages, before this returns; a
-    /// failed save or stage leaves the projection and the core's session
-    /// unchanged. The tabs it places wear the images the prepared session gave
-    /// them.
-    func commit(_ command: PreparedChange) throws {
-        let result = crest_session_commit_command(command.handle)
-        guard result == CREST_OK else { throw CoreError(result) }
-        follow(offering: OfferedImages(placedFrom: command.session))
-    }
-
-    // MARK: - Actions - Core calls
-
-    /// Prepares, reads and commits one command, then applies what the core
-    /// published for it. The answer is read before the commit, so a failed
-    /// read commits nothing.
-    @discardableResult
-    private func commitCommand<Result>(
-        _ data: Data, offering images: OfferedImages = OfferedImages(), decode: (Data) throws -> Result
-    ) throws -> Result {
-        let command = try prepareCommand(data)
-        defer { crest_session_release_command(command) }
-        let result = try decode(try readCommand(command))
-        let committed = crest_session_commit_command(command)
-        guard committed == CREST_OK else { throw CoreError(committed) }
-        follow(offering: images)
-        return result
-    }
-
-    private func prepareCommand(_ data: Data) throws -> UInt64 {
-        var command: UInt64 = 0
-        let app = try appHandle()
-        let prepared = withUnsafeBytes(of: workspaceID.uuid) { workspace in
-            data.withUnsafeBytes {
-                crest_session_prepare_command(
-                    app, workspace.bindMemory(to: UInt8.self).baseAddress, $0.bindMemory(to: UInt8.self).baseAddress,
-                    data.count, &command)
-            }
-        }
-        guard prepared == CREST_OK else { throw CoreError.rejected(prepared) }
-        return command
-    }
-
-    /// The core the workspace is open in, which the JSON commands name with it.
+    /// The core the workspace is open in, which the durable replacement names
+    /// with it.
     private func appHandle() throws -> UInt64 {
         guard let device else { throw CoreError.rejected(CREST_INVALID_HANDLE) }
         return device.handle
-    }
-
-    private func readCommand(_ command: UInt64) throws -> Data {
-        var length = 0
-        let measured = crest_session_read_command(command, nil, 0, &length)
-        guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 64 * 1024 * 1024 else {
-            throw CoreError.rejected(measured)
-        }
-        let capacity = length
-        var output = Data(count: capacity)
-        let read = output.withUnsafeMutableBytes {
-            crest_session_read_command(command, $0.bindMemory(to: UInt8.self).baseAddress, capacity, &length)
-        }
-        guard read == CREST_OK else { throw CoreError.rejected(read) }
-        return output
     }
 
     // MARK: - Actions - Deltas

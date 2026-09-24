@@ -26,9 +26,6 @@ public static class NativeSyncQuery {
                 NativeSyncOperation.Project => NativeSyncProjection.Project(request["session"]!.AsObject(), request["preferences"]!,
                     request["records"]!.AsArray().Select(n => n!.AsObject())),
                 NativeSyncOperation.Materialize => Materialize(request),
-                NativeSyncOperation.WorkspacePreview => NativeWorkspaceImport.Preview(request["session"]!.AsObject(), request["arguments"]!.AsObject(),
-                    request["mode"]!.GetValue<string>(), request["now"]!.GetValue<double>()),
-                NativeSyncOperation.WorkspaceReview => NativeWorkspaceReview.Evaluate(request),
                 NativeSyncOperation.SessionRepair => NativeSessionMaintenance.Repair(request["session"]!.AsObject(), request["now"]!.GetValue<double>(),
                     request["emptySpace"] as JsonObject),
                 _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)

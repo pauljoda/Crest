@@ -9,12 +9,8 @@ struct BrowserCoreErrorCode: RawRepresentable, Hashable, Codable, Sendable {
 
     let rawValue: String
 
-    // Session and workspace rules (`BrowserRuleCodes`).
-    static let noIncludedSpaces = BrowserCoreErrorCode(rawValue: "no_included_spaces")
+    // The manual-setup tab policy (`BrowserRuleCodes`).
     static let pinnedLimitReached = BrowserCoreErrorCode(rawValue: "pinned_limit_reached")
-    static let spaceDeletionInProgress = BrowserCoreErrorCode(rawValue: "space_deletion_in_progress")
-    static let spaceLimitReached = BrowserCoreErrorCode(rawValue: "space_limit_reached")
-    static let wrongProfileIdentity = BrowserCoreErrorCode(rawValue: "wrong_profile_identity")
 
     // Sync document queries (`NativeSyncDocumentErrorCodes`).
     static let danglingFolder = BrowserCoreErrorCode(rawValue: "danglingFolder")

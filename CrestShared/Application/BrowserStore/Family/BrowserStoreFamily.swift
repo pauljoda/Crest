@@ -192,20 +192,19 @@ final class BrowserStoreFamily {
         scheduleSpaceDataCleanup()
     }
 
-    func importWorkspace(_ request: BrowserCoreWorkspaceImport.Request, from source: BrowserStore) throws {
+    /// Runs an import `source`'s window issued, which the core saves with its
+    /// journal before it returns. Each tab it places wears the image its tab in
+    /// `sources`, the Spaces the import brings, wears. Throws the rule that
+    /// refused it or the save that failed; either changes nothing.
+    func importSpaces(_ intent: some ImportWorkspace, from sources: [BrowserSpace], issuedBy source: BrowserStore)
+        throws(Rejection)
+    {
         let previous = authoritativeSession
-        let command = try core.prepareWorkspace(request, window: source.windowID.rawValue)
-        try commitPreparedChange(command, previous: previous, from: source)
-    }
-
-    /// Commits a prepared command whose failure the caller handles. The core
-    /// saves an import and a cross-Space move with the journal it stages
-    /// before this returns, because an upload follows.
-    private func commitPreparedChange(
-        _ command: BrowserCoreSessionAuthority.PreparedChange,
-        previous: BrowserSession, from source: BrowserStore
-    ) throws {
-        try core.commit(command)
+        let favicons = source.core.state.favicons
+        favicons.offer(FaviconAssets.Offer(importing: sources), in: workspaceID)
+        defer { favicons.withdrawOffer(in: workspaceID) }
+        _ = try source.core.send(intent)
+        guard authoritativeSession != previous else { return }
         reconcileStores(after: previous, from: source)
     }
 

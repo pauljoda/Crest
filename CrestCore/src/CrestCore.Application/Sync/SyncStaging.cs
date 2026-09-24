@@ -54,5 +54,9 @@ internal sealed record SyncStaging(SyncDeletionReason Reason, SyncUrgency Urgenc
     /// with its journal before the intent returns.
     public static SyncStaging Removal { get; } = new(SyncDeletionReason.ExplicitDelete, SyncUrgency.WithSave);
 
+    /// Spaces were imported, saved with their journal before the import
+    /// returns, because an upload follows.
+    public static SyncStaging Import { get; } = new(SyncDeletionReason.Superseded, SyncUrgency.WithSave);
+
     #endregion
 }

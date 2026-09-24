@@ -72,9 +72,10 @@ public sealed partial class NativeSessionAuthority {
 
     /// The edit an intent makes to the accepted session, validated, or null
     /// for a sweep the last one makes unnecessary. `pages` are what the
-    /// device's windows show, which a copy of a tab starts from. The caller
-    /// holds the gate.
-    private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages) {
+    /// device's windows show, which a copy of a tab starts from. An import
+    /// `previewed` reads Spaces this process has not unlocked, as a person
+    /// sees them before they import. The caller holds the gate.
+    private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages, bool previewed = false) {
         var basis = IntentBasis();
         var edit = intent switch {
             ClearHistory clear => ClearingHistory(basis, clear),
@@ -145,6 +146,9 @@ public sealed partial class NativeSessionAuthority {
             UpdateSearchEngine engine => UpdatingSearchEngine(basis, engine),
             RemoveSearchEngine engine => RemovingSearchEngine(basis, engine),
             SelectSearchEngine engine => SelectingSearchEngine(basis, engine),
+            ImportSpaces import => ImportingSpaces(basis, import, now, ids),
+            ImportReviewedSpaces import => ImportingReviewedSpaces(basis, import, now, ids, previewed),
+            ApplyManualSetup setup => ApplyingManualSetup(basis, setup, now, ids, previewed),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;

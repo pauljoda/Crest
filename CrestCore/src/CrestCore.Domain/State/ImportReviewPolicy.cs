@@ -17,56 +17,72 @@ public static class ImportReviewPolicy {
     /// record, or the address itself when history would not record it.
     public static string UrlKey(string url) => new WebAddress(url).Normalized ?? url;
 
-    /// The starting review for each imported Space. A disposable first-install
-    /// seed offers no destinations, so everything imports into new Spaces.
-    public static IReadOnlyList<ImportReviewSuggestion> Suggest(IReadOnlyList<ImportReviewSpace> sources,
+    /// The starting review for each imported Space, in their order. A
+    /// disposable first-install seed offers no destinations, so everything
+    /// imports into new Spaces.
+    public static SuggestedImportReview Suggest(IReadOnlyList<ImportReviewSpace> sources,
         IReadOnlyList<ImportReviewSpace> existing, bool replacesDisposableSeed) {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(existing);
         var destinations = replacesDisposableSeed ? [] : existing;
-        return sources.Select(source => {
+        return new([.. sources.Select(source => {
             string key = SpaceMatchKey(source.Name);
             var match = key.Length == 0 ? null : destinations.FirstOrDefault(space => SpaceMatchKey(space.Name) == key);
             var duplicates = match is null ? [] : Duplicates(source, match);
             var skipped = duplicates.ToHashSet();
-            return new ImportReviewSuggestion(match?.Id, duplicates,
-                source.Tabs.Where(tab => !skipped.Contains(tab.Id)).Select(tab => tab.Id).ToArray());
-        }).ToArray();
+            return new SuggestedSpaceReview(source.Id, match?.Id, duplicates,
+                [.. source.Tabs.Where(tab => !skipped.Contains(tab.Id)).Select(tab => tab.Id)]);
+        })]);
     }
 
-    /// What the current choices mean. <paramref name="choices"/> pairs with
-    /// <paramref name="sources"/> by position; a destination that no longer
-    /// exists holds no duplicates and no pinned tabs.
-    public static ImportReviewAnalysis Analyze(IReadOnlyList<ImportReviewSpace> sources,
-        IReadOnlyList<ImportReviewSpace> existing, IReadOnlyList<ImportReviewChoice> choices) {
+    /// What the reviews mean for each of the imported Spaces, in their order.
+    /// Each review names its Space; a destination that no longer exists holds
+    /// no duplicates and no pinned tabs. Throws `Rejected` with `InvalidImport`
+    /// when the reviews do not name each Space exactly once.
+    public static AnalyzedImportReview Analyze(IReadOnlyList<ImportReviewSpace> sources,
+        IReadOnlyList<ImportReviewSpace> existing, IReadOnlyList<SpaceReview> reviews) {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(existing);
-        ArgumentNullException.ThrowIfNull(choices);
-        if (choices.Count != sources.Count) throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
+        ArgumentNullException.ThrowIfNull(reviews);
+        var paired = Paired(sources, reviews, source => source.Id, review => review.SourceSpaceId);
         var byId = existing.GroupBy(space => space.Id).ToDictionary(group => group.Key, group => group.First());
-        var duplicates = new List<IReadOnlyList<Guid>>();
-        var matched = new List<IReadOnlyList<Guid>>();
+        var spaces = new List<AnalyzedSpaceReview>();
         Dictionary<Guid, int> pinnedCounts = existing.GroupBy(space => space.Id)
             .ToDictionary(group => group.Key, group => group.First().Tabs.Count(tab => tab.Placement == TabPlacement.Pinned));
         Dictionary<Guid, int> newCounts = [];
         List<Guid> overflow = [];
-        for (int index = 0; index < sources.Count; index++) {
-            var source = sources[index]; var choice = choices[index];
-            var destination = choice.DestinationId is { } id ? byId.GetValueOrDefault(id) : null;
-            duplicates.Add(destination is null ? [] : Duplicates(source, destination));
-            matched.Add(destination is null || !choice.Included ? [] : Matched(source, destination));
-            if (!choice.Included) continue;
-            var counts = choice.DestinationId is null ? newCounts : pinnedCounts;
-            var key = choice.DestinationId ?? source.Id;
+        foreach (var (source, review) in paired) {
+            var destination = review.DestinationId is { } id ? byId.GetValueOrDefault(id) : null;
+            spaces.Add(new(source.Id, destination is null ? [] : Duplicates(source, destination),
+                destination is null || !review.Included ? [] : Matched(source, destination)));
+            if (!review.Included) continue;
+            var counts = review.DestinationId is null ? newCounts : pinnedCounts;
+            var key = review.DestinationId ?? source.Id;
+            var included = review.IncludedTabIds.ToHashSet();
+            var placements = review.Placements.GroupBy(choice => choice.TabId)
+                .ToDictionary(group => group.Key, group => group.Last().Placement);
             foreach (var tab in source.Tabs) {
-                if (!choice.IncludedTabIds.Contains(tab.Id)
-                    || choice.Placements.GetValueOrDefault(tab.Id, tab.Placement) != TabPlacement.Pinned) continue;
+                if (!included.Contains(tab.Id) || placements.GetValueOrDefault(tab.Id, tab.Placement) != TabPlacement.Pinned) continue;
                 int count = counts.GetValueOrDefault(key);
                 if (!TabPlacement.Pinned.Holds(count + 1)) overflow.Add(tab.Id);
                 else counts[key] = count + 1;
             }
         }
-        return new(duplicates, matched, overflow);
+        return new(spaces, overflow);
+    }
+
+    /// Each source with the one choice that names it, in the sources' order.
+    /// Throws `Rejected` with `InvalidImport` unless the choices name each
+    /// source exactly once and the sources' identities are distinct.
+    public static IReadOnlyList<(TSource Source, TChoice Choice)> Paired<TSource, TChoice>(IReadOnlyList<TSource> sources,
+        IReadOnlyList<TChoice> choices, Func<TSource, Guid> sourceId, Func<TChoice, Guid> choiceId) {
+        var byId = new Dictionary<Guid, TChoice>();
+        foreach (var choice in choices)
+            if (!byId.TryAdd(choiceId(choice), choice)) throw new Rejected(new InvalidImport(ImportFlaw.UnpairedChoices));
+        if (sources.Select(sourceId).Distinct().Count() != sources.Count || byId.Count != sources.Count)
+            throw new Rejected(new InvalidImport(ImportFlaw.UnpairedChoices));
+        return [.. sources.Select(source => byId.TryGetValue(sourceId(source), out var choice)
+            ? (source, choice) : throw new Rejected(new InvalidImport(ImportFlaw.UnpairedChoices)))];
     }
 
     private static HashSet<string> Keys(ImportReviewSpace space) =>

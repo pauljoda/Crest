@@ -73,6 +73,8 @@ extension BrowserSession {
             }
         case .tabCopied(let copied):
             setImage(image(copied.copyTabID), of: copied.copyTabID)
+        case .tabsImported(let imported):
+            for tab in imported.tabs { setImage(image(tab.tabID), of: tab.tabID) }
         case .tabFaviconAssigned(let assigned):
             setImage(image(assigned.tabID), of: assigned.tabID)
         default:
@@ -80,13 +82,17 @@ extension BrowserSession {
         }
     }
 
+    /// The tab, open or archived, wears `data`.
     private mutating func setImage(_ data: Data?, of tabID: UUID) {
         for spaceIndex in spaces.indices {
-            guard let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == tabID }) else {
-                continue
+            if let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == tabID }) {
+                spaces[spaceIndex].tabs[tabIndex].faviconData = data
+                return
             }
-            spaces[spaceIndex].tabs[tabIndex].faviconData = data
-            return
+            if let archiveIndex = spaces[spaceIndex].archivedTabs.firstIndex(where: { $0.tab.id.rawValue == tabID }) {
+                spaces[spaceIndex].archivedTabs[archiveIndex].tab.faviconData = data
+                return
+            }
         }
     }
 
@@ -150,6 +156,73 @@ extension FaviconAssets.Offer {
                 for tab in space.tabs { placed[tab.id.rawValue] = tab.faviconData }
                 for archived in space.archivedTabs { placed[archived.id.rawValue] = archived.tab.faviconData }
             }
+        }
+    }
+}
+
+extension FaviconAssets.Offer {
+    /// The images every tab and archived tab of the imported `spaces` wears,
+    /// by each Space's position.
+    init(importing spaces: [BrowserSpace]) {
+        self.init()
+        imported = spaces.map { space in
+            var images: [UUID: Data] = [:]
+            for tab in space.tabs { images[tab.id.rawValue] = tab.faviconData }
+            for archived in space.archivedTabs { images[archived.id.rawValue] = archived.tab.faviconData }
+            return images
+        }
+    }
+}
+
+// MARK: - Imports
+
+extension BrowserSpace {
+    /// `spaces` as an import carries them to the core: the stored format, a
+    /// JSON array, without the images the core never sees.
+    static func storedFormat(_ spaces: [BrowserSpace]) throws -> Data {
+        let compacted = spaces.isEmpty ? [] : BrowserCoreSessionAuthority.compact(BrowserSession(spaces: spaces)).spaces
+        return try JSONEncoder().encode(compacted)
+    }
+}
+
+extension BrowserImportSpaceCustomization {
+    /// The name and look a Space takes, as the core reads them. The core
+    /// resolves a blank name or symbol and keeps the look within the ranges
+    /// every device draws.
+    var core: SpaceCustomization {
+        SpaceCustomization(name: name, symbol: symbol, accent: accent, branding: branding.core)
+    }
+}
+
+extension ImportReviewSpace {
+    /// A Space as the review of an import reads it.
+    init(_ space: BrowserSpace) {
+        self.init(
+            id: space.id.rawValue, name: space.name,
+            tabs: space.tabs.map {
+                ImportReviewTab(id: $0.id.rawValue, url: $0.url?.absoluteString, placement: $0.placement)
+            })
+    }
+}
+
+extension BrowserSession {
+    /// The session an import would leave, as `preview` answers it: each tab
+    /// it would place from `sources` wears the image its source tab wears
+    /// there, each of the workspace's own tabs the image `images` holds for
+    /// it, or for the tab it would be a new identity of.
+    @MainActor
+    init(preview: ImportedWorkspace, sources: [BrowserSpace], images: FaviconAssets) {
+        var placed: [UUID: Data] = [:]
+        let offered = FaviconAssets.Offer(importing: sources).imported
+        for tab in preview.imported where offered.indices.contains(tab.source) {
+            placed[tab.tabID] = offered[tab.source][tab.sourceTabID]
+        }
+        var copies: [UUID: UUID] = [:]
+        for copy in preview.copied { copies[copy.copyTabID] = copy.sourceTabID }
+        let imported = Set(preview.imported.map(\.tabID))
+        self.init(core: preview.session) { tabID in
+            if imported.contains(tabID) { return placed[tabID] }
+            return images.image(of: copies[tabID] ?? tabID)
         }
     }
 }

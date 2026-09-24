@@ -3,7 +3,7 @@ import SwiftUI
 struct BrowserManualSetupContent: View {
     @Binding var plan: BrowserManualSetupPlan
     @Binding var selectedSpaceID: SpaceID?
-    let existingSession: BrowserSession
+    let browser: BrowserStore
     let model: BrowserManualSetupModel
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -14,10 +14,8 @@ struct BrowserManualSetupContent: View {
                 horizontalSizeClass: horizontalSizeClass,
                 size: geometry.size
             )
-            let previewSession = model.previewSession(
-                for: plan,
-                mergingInto: existingSession
-            )
+            let existingSession = browser.session
+            let previewSession = model.previewSession(for: plan, in: browser)
 
             Group {
                 if layout.isCompact {

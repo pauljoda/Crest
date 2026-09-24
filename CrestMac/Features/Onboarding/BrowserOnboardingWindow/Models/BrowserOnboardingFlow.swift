@@ -12,7 +12,13 @@ final class BrowserOnboardingFlow {
     private(set) var selectedImportApplications: Set<BrowserImportApplication> = []
     private(set) var importQueue = BrowserImportQueue(applications: [])
     private(set) var selectedApplication: BrowserImportApplication?
-    private(set) var plan: BrowserImportReviewPlan?
+    private(set) var plan: BrowserImportReviewPlan? {
+        didSet {
+            guard plan != oldValue else { return }
+            reviewAnalysisCache = nil
+            reviewPreviewCache = nil
+        }
+    }
     private(set) var manualPlan: BrowserManualSetupPlan?
     private(set) var passwordCountsBySourceSpace: [SpaceID: Int] = [:]
     private(set) var currentImportPayload: BrowserDetectedImportPayload?
@@ -35,6 +41,10 @@ final class BrowserOnboardingFlow {
             Never
         >?
     @ObservationIgnored private var pendingResetRequest: BrowserOnboardingRequest?
+    /// What the core said of the review's current choices, until they change,
+    /// so a view's body never asks it again.
+    @ObservationIgnored private var reviewAnalysisCache: BrowserImportReviewAnalysis?
+    @ObservationIgnored private var reviewPreviewCache: BrowserSession??
     @ObservationIgnored private var operationGeneration = 0
 
     var step: BrowserOnboardingStep { state.step }
@@ -348,10 +358,7 @@ final class BrowserOnboardingFlow {
         guard let plan, !isCommittingImport else { return }
         guard let application = selectedApplication else { return }
         guard plan.hasIncludedSpaces else {
-            failure = .importCommit(
-                BrowserImportReviewPlan.ValidationError.noIncludedSpaces
-                    .localizedDescription
-            )
+            failure = .importCommit(Rejection.noIncludedSpaces(NoIncludedSpaces()).explanation)
             return
         }
         let generation = operationGeneration
@@ -402,16 +409,34 @@ final class BrowserOnboardingFlow {
         return BrowserOnboardingSummary.review(
             tabCount: includedTabCount,
             passwordCount: passwordCount,
-            overflowTabCount: plan.overflowTabIDs(in: browser.session).count
+            overflowTabCount: reviewAnalysis().overflowTabIDs.count
         )
+    }
+
+    /// What the review's current choices mean. The core answers once each
+    /// time they change.
+    func reviewAnalysis() -> BrowserImportReviewAnalysis {
+        guard let plan else { return BrowserImportReviewAnalysis() }
+        if let cached = reviewAnalysisCache { return cached }
+        let analysis = plan.analysis(in: browser)
+        reviewAnalysisCache = analysis
+        return analysis
+    }
+
+    /// The session the review's current choices would leave. The core
+    /// answers once each time they change.
+    private func reviewPreview() -> BrowserSession? {
+        guard let plan else { return nil }
+        if let cached = reviewPreviewCache { return cached }
+        let preview = try? plan.preview(in: browser)
+        reviewPreviewCache = preview
+        return preview
     }
 
     func previewDestinationSpace(
         for review: BrowserImportSpaceReview
     ) -> BrowserSpace? {
-        guard let plan,
-            let preview = try? plan.preview(mergingInto: browser.session)
-        else {
+        guard let preview = reviewPreview() else {
             return nil
         }
         switch review.destination {
@@ -622,7 +647,7 @@ final class BrowserOnboardingFlow {
     ) {
         let reviewPlan = BrowserImportReviewPlan(
             imported: imported,
-            existing: browser.session
+            in: browser
         )
         passwordCountsBySourceSpace = mappedPasswordCounts(
             passwordCandidates,
@@ -689,14 +714,14 @@ final class BrowserOnboardingFlow {
                 )
             case .failure(let error):
                 guard operationGeneration == generation else { return }
-                failure = .importCommit(error.localizedDescription)
+                failure = .importCommit(error.personFacingDescription)
                 state = .reviewing(application)
             }
         } catch is CancellationError {
             return
         } catch {
             guard operationGeneration == generation else { return }
-            failure = .importCommit(error.localizedDescription)
+            failure = .importCommit(error.personFacingDescription)
             state = .reviewing(application)
         }
     }

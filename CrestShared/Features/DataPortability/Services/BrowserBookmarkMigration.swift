@@ -91,7 +91,7 @@ enum BrowserBookmarkMigration {
             ).materialize()
         } catch let error as BrowserPortableArchiveError {
             switch error {
-            case .archiveTooLarge, .spaceLimitExceeded:
+            case .archiveTooLarge:
                 throw BrowserBookmarkMigrationError.resourceLimitExceeded
             case .invalidContents, .missingFileContents, .unrecognizedFormat,
                     .unsupportedSchemaVersion:

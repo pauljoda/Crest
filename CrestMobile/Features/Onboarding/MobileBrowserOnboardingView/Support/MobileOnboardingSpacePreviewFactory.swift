@@ -1,14 +1,15 @@
+@MainActor
 enum MobileOnboardingSpacePreviewFactory {
     static func preview(
         draft: BrowserManualSetupSpaceDraft,
         plan: BrowserManualSetupPlan,
-        existingSession: BrowserSession,
+        browser: BrowserStore,
         includesSamples: Bool
     ) -> BrowserSpace {
         var space = resolvedSpace(
             draft: draft,
             plan: plan,
-            existingSession: existingSession
+            browser: browser
         )
         guard includesSamples else { return space }
 
@@ -35,9 +36,9 @@ enum MobileOnboardingSpacePreviewFactory {
     private static func resolvedSpace(
         draft: BrowserManualSetupSpaceDraft,
         plan: BrowserManualSetupPlan,
-        existingSession: BrowserSession
+        browser: BrowserStore
     ) -> BrowserSpace {
-        if let preview = try? plan.preview(mergingInto: existingSession),
+        if let preview = try? plan.preview(in: browser),
             let space = preview.space(id: draft.id)
         {
             return space

@@ -1,20 +1,31 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
-using Key = CrestCore.Application.StoredSessionCodec.Key;
-
 namespace CrestCore.Application;
 
-/// Shared preview/command implementation. Sources contain semantic records only;
-/// positional asset references let the native caller retain opaque image bytes.
-public sealed class NativeWorkspaceImport {
-    #region Variables
+/// One import into a session: the Spaces it brings, read from the stored
+/// format, and the session's own Spaces while the import edits them. Each
+/// import intent runs its own rules over them, then `Finish` gives every
+/// record the identity sync needs and says where each tab came from. Image
+/// bytes never reach the core: the platform matches each imported tab to the
+/// image it holds by the tab it came from.
+internal sealed class NativeWorkspaceImport {
+    #region Static Variables
 
-    /// Where an imported or existing tab record came from: its source (0 for the
-    /// session, else the source's position after one), Space, position and section.
-    private sealed record Origin(int Source, int Space, int Tab, string Section);
+    /// How deep an imported Space may nest, as the stored format reads it.
+    private static readonly JsonDocumentOptions SpacesDocument = new() { MaxDepth = 64 };
+
+    #endregion
+
+    #region Types
+
+    /// Where a tab or archive record came from: `Source` is the position of
+    /// the imported Space among the import's Spaces, or null for the
+    /// session's own tab, and `TabId` the identity it had there.
+    private sealed record Origin(int? Source, Guid TabId);
 
     /// A Space while the import edits it. Spaces are compared by this holder, so a
     /// Space keeps its place in the import as its record is replaced.
@@ -28,50 +39,68 @@ public sealed class NativeWorkspaceImport {
         public Guid? ShownTab { get; set; }
     }
 
-    // Tab and archive records by reference, so two records that share an identity
-    // keep their own origins.
-    private readonly Dictionary<object, Origin> origins = new(ReferenceEqualityComparer.Instance);
+    /// The session an import leaves, the tabs it placed from its Spaces and the
+    /// session's own tabs that took a new identity.
+    internal sealed record Result(SessionState Session, IReadOnlyList<ImportedTab> Imported, IReadOnlyList<SessionTabCopy> Copied);
 
     #endregion
 
-    #region Actions - Workspace import
+    #region Variables
 
-    /// The imported session, positional asset references and the `selection`
-    /// hint for the importing window, or `{"error": code}`.
-    public static JsonObject Preview(JsonObject session, JsonObject arguments, string mode, double now) {
+    private readonly SessionState session;
+    /// The session's Spaces, then those the import adds, in the order the
+    /// session will hold them.
+    private List<Draft> spaces;
+    /// The import's Spaces, in the order it brings them.
+    private readonly IReadOnlyList<Draft> inputs;
+    private readonly Dictionary<Draft, HashSet<Guid>> originalFolderIds;
+    private readonly Dictionary<Draft, HashSet<Guid>> originalHistoryIds;
+    // Tab and archive records by reference, so two records that share an identity
+    // keep their own origins.
+    private readonly Dictionary<object, Origin> origins = new(ReferenceEqualityComparer.Instance);
+    private Guid? defaultSpace;
+    private Guid? seedMarker;
+    /// The first Space the import brought or changed, which the window shows.
+    private Draft? affected;
+
+    #endregion
+
+    #region Constructors
+
+    /// Reads `spaces`, the imported Spaces in the stored format, against
+    /// `session`. Throws `Rejected` with `InvalidImport` for Spaces that do not
+    /// decode or hold a split repair would rewrite.
+    internal NativeWorkspaceImport(SessionState session, byte[] spaces) {
+        this.session = session;
+        defaultSpace = session.DefaultSpaceId;
+        seedMarker = session.DisposableSeedMarker;
+        this.spaces = [.. session.Spaces.Select(space => new Draft(space, isOriginal: true))];
+        foreach (var space in this.spaces) Track(space.State, source: null);
+        originalFolderIds = this.spaces.ToDictionary(space => space, space => space.State.Folders.Select(f => f.Id).ToHashSet());
+        originalHistoryIds = this.spaces.ToDictionary(space => space, space => space.State.History.Select(h => h.Id).ToHashSet());
+        inputs = [.. Decoded(spaces).Select(space => new Draft(space, isOriginal: false))];
+        for (int index = 0; index < inputs.Count; index++) Track(inputs[index].State, index);
+        foreach (var input in inputs)
+            WorkspaceImportPolicy.RequireSplitMembership(
+                [.. input.State.Tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId))]);
+    }
+
+    #endregion
+
+    #region Actions - Reading
+
+    /// The imported Spaces, as the stored format spells them in a JSON array.
+    private static IReadOnlyList<SpaceState> Decoded(byte[] spaces) {
         try {
-            return Preview(StoredSessionCodec.DecodeSession(session), arguments, mode, now).Answer;
-        } catch (BrowserRuleException error) {
-            return new() { ["error"] = error.Code };
+            return [.. JsonNode.Parse(spaces, documentOptions: SpacesDocument)!.AsArray().Select(StoredSessionCodec.DecodeSpace)];
+        } catch (Exception error) when (StoredSession.IsUndecodable(error)) {
+            throw new Rejected(new InvalidImport(ImportFlaw.Unreadable));
         }
     }
 
-    /// The imported session with its answer, or no session and `{"error": code}`.
-    /// `followUp` takes what the importing window shows next.
-    internal static (SessionState? Session, JsonObject Answer) Preview(SessionState session, JsonObject arguments, string mode, double now,
-        WindowFollowUp? followUp = null) {
-        try {
-            if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
-            var import = new NativeWorkspaceImport();
-            var imported = import.Apply(session, arguments, WorkspaceImportModeCodes.Parse(mode), StoredSessionCodec.Date(now),
-                followUp ?? new WindowFollowUp(window: null), out var answer);
-            return (imported, answer);
-        } catch (BrowserRuleException error) {
-            return (null, new() { ["error"] = error.Code });
-        }
-    }
-
-    private static Guid Id(JsonNode? n) => NativeSessionAuthority.Id(n);
-
-    private static Guid? OptionalId(JsonNode? n) => n is null ? null : Id(n);
-
-    private static JsonArray Items(JsonNode n, string key) => n[key] as JsonArray ?? new();
-
-    private void Track(SpaceState space, int source, int index) {
-        foreach (var (tab, position) in space.Tabs.Select((tab, position) => (tab, position)))
-            origins[tab] = new(source, index, position, Key.Tabs);
-        foreach (var (archived, position) in space.ArchivedTabs.Select((archived, position) => (archived, position)))
-            origins[archived] = new(source, index, position, Key.ArchivedTabs);
+    private void Track(SpaceState space, int? source) {
+        foreach (var tab in space.Tabs) origins[tab] = new(source, tab.Id);
+        foreach (var archived in space.ArchivedTabs) origins[archived] = new(source, archived.Tab.Id);
     }
 
     /// A changed copy of a tab keeps the tab's origin.
@@ -80,148 +109,105 @@ public sealed class NativeWorkspaceImport {
         return copy;
     }
 
-    private static void Customize(Draft space, JsonNode values) => space.State = space.State with {
-        Settings = space.State.Settings with {
-            Name = SpaceOrganizationPolicy.Name(values[Key.Name]!.GetValue<string>()),
-            Symbol = SpaceOrganizationPolicy.Symbol(values[Key.Symbol]!.GetValue<string>()),
-            Accent = StoredSessionCodec.DecodeAccent(values[Key.Accent]),
-            Branding = values[Key.Branding] is JsonObject branding ? StoredSessionCodec.DecodeBranding(branding) : null
+    /// Each choice with the imported Space it names, in the choices' order.
+    /// Throws `Rejected` with `InvalidImport` unless they name each imported
+    /// Space exactly once.
+    private IReadOnlyList<(Draft Input, TChoice Choice)> Pair<TChoice>(IReadOnlyList<TChoice> choices, Func<TChoice, Guid> named) {
+        var paired = ImportReviewPolicy.Paired(inputs, choices, input => input.Id, named);
+        var byChoice = paired.ToDictionary(pair => named(pair.Choice), pair => pair.Source);
+        return [.. choices.Select(choice => (byChoice[named(choice)], choice))];
+    }
+
+    #endregion
+
+    #region Actions - Imports
+
+    /// A file's Spaces join after the session's own, each showing its first
+    /// tab. Throws `Rejected` with `SpaceLimitReached` when they do not fit.
+    internal void AddSpaces() {
+        WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Count);
+        foreach (var input in inputs) {
+            if (input.State.Tabs.FirstOrDefault() is { } first) input.ShownTab = first.Id;
+            spaces.Add(input);
         }
-    };
-
-    private static void Available(SessionState session, Guid id) {
-        if (session.SpaceDeletions.Any(deletion => deletion.SpaceId == id))
-            throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
+        affected = inputs.FirstOrDefault();
     }
 
-    private static void ShowAdded(Draft space, IEnumerable<TabState> tabs) {
-        var chosen = tabs.LastOrDefault(t => t.Placement == TabPlacement.Current) ?? tabs.FirstOrDefault();
-        if (chosen is not null) space.ShownTab = chosen.Id;
-    }
-
-    private SessionState Apply(SessionState session, JsonObject arguments, WorkspaceImportMode mode, DateTimeOffset now,
-        WindowFollowUp followUp, out JsonObject answer) {
-        var spaces = session.Spaces.Select(space => new Draft(space, isOriginal: true)).ToList();
-        var defaultSpace = session.DefaultSpaceId;
-        var seedMarker = session.DisposableSeedMarker;
-        for (int si = 0; si < spaces.Count; si++) Track(spaces[si].State, 0, si);
-        var originalFolderIds = spaces.ToDictionary(space => space, space => space.State.Folders.Select(f => f.Id).ToHashSet());
-        var originalHistoryIds = spaces.ToDictionary(space => space, space => space.State.History.Select(h => h.Id).ToHashSet());
-        var inputs = Items(arguments, "sources").Select((node, i) => {
-            var requested = StoredSessionCodec.LegacySelectedTab(node);
-            var input = new Draft(StoredSessionCodec.DecodeSpace(node), isOriginal: false);
-            Track(input.State, i + 1, 0);
-            if (requested is { } tab && input.State.Tabs.Any(t => t.Id == tab)) input.ShownTab = tab;
-            return input;
-        }).ToArray();
-        foreach (var input in inputs)
-            WorkspaceImportPolicy.RequireSplitMembership(input.State.Tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
-        Draft? affected = null;
-        if (mode == WorkspaceImportMode.Portable) {
-            WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Length);
-            foreach (var input in inputs) {
-                // A Space the source did not say to show opens on its first tab.
-                if (input.ShownTab is null && input.State.Tabs.FirstOrDefault() is { } first) input.ShownTab = first.Id;
-                spaces.Add(input);
-            }
-            affected = inputs.FirstOrDefault();
-        } else if (mode == WorkspaceImportMode.Manual) {
-            var drafts = Items(arguments, "drafts");
-            WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, drafts.Count(d => d!["isNew"]!.GetValue<bool>()));
-            foreach (var draft in drafts) {
-                var input = inputs[draft!["sourceIndex"]!.GetValue<int>()]; var id = input.Id;
-                bool created = draft["isNew"]!.GetValue<bool>();
-                var destination = created ? input : spaces.FirstOrDefault(s => s.Id == id);
-                if (destination is null) continue; // A draft cannot recreate an existing Space deleted elsewhere.
-                Available(session, id);
-                if (!created && destination.State.ProfileId != input.State.ProfileId)
-                    throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
-                if (created && spaces.Any(s => s.Id == id || s.State.ProfileId == input.State.ProfileId))
-                    throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
-                Customize(destination, draft["customization"]!);
-                var added = input.State.Tabs.ToArray();
-                var old = created ? [] : destination.State.Tabs.ToArray();
-                WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => t.Placement == TabPlacement.Pinned));
-                var ordered = added.OrderBy(t => t.Placement.Rank).ToArray();
-                if (created) destination.State = destination.State with { Tabs = ordered };
-                else {
-                    var list = old.ToList();
-                    // Each section's imported tabs follow the tabs it already holds.
-                    foreach (var placement in TabPlacement.All) {
-                        int end = list.FindIndex(t => t.Placement.Rank > placement.Rank);
-                        list.InsertRange(end < 0 ? list.Count : end, ordered.Where(t => t.Placement == placement));
-                    }
-                    destination.State = destination.State with { Tabs = list.ToArray() };
+    /// Applies a manual setup's drafts in their order; see `ApplyManualSetup`.
+    internal void ApplyDrafts(IReadOnlyList<SetupSpace> drafts, bool orderWasEdited) {
+        var paired = Pair(drafts, draft => draft.SpaceId);
+        WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, drafts.Count(draft => draft.IsNew));
+        foreach (var (input, draft) in paired) {
+            var id = input.Id;
+            bool created = draft.IsNew;
+            var destination = created ? input : spaces.FirstOrDefault(s => s.Id == id);
+            if (destination is null) continue; // A draft cannot recreate an existing Space deleted elsewhere.
+            Available(id);
+            if (!created && destination.State.ProfileId != input.State.ProfileId) throw new Rejected(new SpaceProfileChanged(id));
+            if (created && spaces.Any(s => s.Id == id)) throw new Rejected(new SpaceAlreadyExists(id));
+            if (created && spaces.Any(s => s.State.ProfileId == input.State.ProfileId))
+                throw new Rejected(new ProfileInUse(input.State.ProfileId));
+            Customize(destination, draft.Customization);
+            var added = input.State.Tabs.ToArray();
+            var old = created ? [] : destination.State.Tabs.ToArray();
+            WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => t.Placement == TabPlacement.Pinned));
+            var ordered = added.OrderBy(t => t.Placement.Rank).ToArray();
+            if (created) destination.State = destination.State with { Tabs = ordered };
+            else {
+                var list = old.ToList();
+                // Each section's imported tabs follow the tabs it already holds.
+                foreach (var placement in TabPlacement.All) {
+                    int end = list.FindIndex(t => t.Placement.Rank > placement.Rank);
+                    list.InsertRange(end < 0 ? list.Count : end, ordered.Where(t => t.Placement == placement));
                 }
-                ShowAdded(destination, created ? added : ordered);
-                if (created) spaces.Add(destination);
-                if (created || added.Length > 0) affected ??= destination;
+                destination.State = destination.State with { Tabs = list.ToArray() };
             }
-            if (arguments["orderWasEdited"]?.GetValue<bool>() == true) {
-                var order = drafts.Select(d => inputs[d!["sourceIndex"]!.GetValue<int>()].Id).ToArray();
-                spaces = order.Select(id => spaces.FirstOrDefault(s => s.Id == id)).OfType<Draft>()
-                    .Concat(spaces.Where(s => !order.Contains(s.Id))).ToList();
-            }
-            seedMarker = null;
-        } else if (mode == WorkspaceImportMode.Review) {
-            var reviews = Items(arguments, "reviews").Where(r => r!["included"]!.GetValue<bool>()).ToArray();
-            if (reviews.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.NoIncludedSpaces);
-            bool replaceSeed = seedMarker is not null;
-            WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count, reviews.Count(r => r!["destinationID"] is null));
-            if (replaceSeed) {
-                if (session.SpaceDeletions.Count > 0) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-                spaces.Clear(); defaultSpace = null;
-            }
-            foreach (var review in reviews) {
-                var input = inputs[review!["sourceIndex"]!.GetValue<int>()];
-                var destinationId = OptionalId(review["destinationID"]);
-                var destination = destinationId is null ? input : spaces.FirstOrDefault(s => s.Id == destinationId);
-                if (destination is null) continue;
-                Available(session, destination.Id);
-                Customize(destination, review["customization"]!);
-                Import(review, input, destination, isNew: destinationId is null);
-                if (destinationId is null) spaces.Add(destination);
-                affected ??= destination;
-            }
-            if (affected is not null) seedMarker = null;
-        } else throw new BrowserRuleException(BrowserRuleCodes.UnknownWorkspaceCommand);
-        // Folder and history record IDs are global in sync, even though their
-        // native collections are nested under Spaces. Reserve existing IDs first
-        // so an imported Space placed earlier cannot steal another Space's records.
-        var folderIds = originalFolderIds.Values.SelectMany(ids => ids).ToHashSet();
-        var historyIds = originalHistoryIds.Values.SelectMany(ids => ids).ToHashSet();
-        foreach (var space in spaces) Reserve(space, space.IsOriginal ? originalFolderIds[space] : null,
-            space.IsOriginal ? originalHistoryIds[space] : null, folderIds, historyIds);
-        int affectedIndex = affected is null ? -1 : spaces.IndexOf(affected);
-        // Repair may replace colliding identities, so hints travel by position.
-        var shown = new List<(int Space, int Tab)>();
-        for (int si = 0; si < spaces.Count; si++)
-            if (spaces[si].ShownTab is { } tab && spaces[si].State.Tabs.Select(t => t.Id).ToList().IndexOf(tab) is var ti and >= 0)
-                shown.Add((si, ti));
-        var assets = Assets(spaces);
-        var imported = session with {
-            Spaces = spaces.Select(space => space.State).ToArray(),
-            DefaultSpaceId = defaultSpace,
-            DisposableSeedMarker = seedMarker
-        };
-        var repaired = NativeSessionMaintenance.Repair(imported, now, null, new SystemIdSource(), out _);
-        // Show the imported instance even when repair replaced a colliding ID.
-        if (affectedIndex >= 0) followUp.ShowSpace(repaired.Spaces[affectedIndex].Id);
-        foreach (var (si, ti) in shown) followUp.ShowTab(repaired.Spaces[si].Id, repaired.Spaces[si].Tabs[ti].Id);
-        answer = new() {
-            ["session"] = StoredSessionCodec.Encode(repaired),
-            ["assets"] = assets
-        };
-        return repaired;
+            ShowAdded(destination, created ? added : ordered);
+            if (created) spaces.Add(destination);
+            if (created || added.Length > 0) affected ??= destination;
+        }
+        if (orderWasEdited) {
+            var order = paired.Select(pair => pair.Input.Id).ToArray();
+            spaces = [.. order.Select(id => spaces.FirstOrDefault(s => s.Id == id)).OfType<Draft>()
+                .Concat(spaces.Where(s => !order.Contains(s.Id)))];
+        }
+        seedMarker = null;
     }
+
+    /// Imports the reviewed Spaces the reviews include, in their order; see
+    /// `ImportReviewedSpaces`. New identities come from `ids`.
+    internal void ImportReviewed(IReadOnlyList<SpaceReview> reviews, IIdSource ids) {
+        var included = Pair(reviews, review => review.SourceSpaceId).Where(pair => pair.Choice.Included).ToArray();
+        if (included.Length == 0) throw new Rejected(new NoIncludedSpaces());
+        bool replaceSeed = seedMarker is not null;
+        WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count,
+            included.Count(pair => pair.Choice.DestinationId is null));
+        if (replaceSeed) {
+            if (session.SpaceDeletions.Count > 0) throw new Rejected(new SpaceBeingDeleted(session.SpaceDeletions[0].SpaceId));
+            spaces.Clear(); defaultSpace = null;
+        }
+        foreach (var (input, review) in included) {
+            var destination = review.DestinationId is { } destinationId ? spaces.FirstOrDefault(s => s.Id == destinationId) : input;
+            if (destination is null) continue;
+            Available(destination.Id);
+            Customize(destination, review.Customization);
+            Import(review, input, destination, isNew: review.DestinationId is null, ids);
+            if (review.DestinationId is null) spaces.Add(destination);
+            affected ??= destination;
+        }
+        if (affected is not null) seedMarker = null;
+    }
+
+    #endregion
+
+    #region Actions - Reviewed tabs
 
     /// A reviewed Space's included tabs, in the placements the review chose, with
     /// the saved folders they need. Pinned tabs past the limit become saved tabs
-    /// in the overflow folder.
-    private void Import(JsonNode review, Draft input, Draft destination, bool isNew) {
-        var included = Items(review, "includedTabIDs").Select(Id).ToHashSet();
-        var overrides = Items(review, "placements").ToDictionary(n => Id(n!["tabID"]),
-            n => TabPlacement.Named(n!["placement"]!.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPlacement));
+    /// in the overflow folder. New identities come from `ids`.
+    private void Import(SpaceReview review, Draft input, Draft destination, bool isNew, IIdSource ids) {
+        var included = review.IncludedTabIds.ToHashSet();
+        var overrides = review.Placements.GroupBy(choice => choice.TabId).ToDictionary(group => group.Key, group => group.Last().Placement);
         TabPlacement PlacementFor(TabState tab) => overrides.GetValueOrDefault(tab.Id, tab.Placement);
         var additions = input.State.Tabs.Where(t => included.Contains(t.Id)).ToArray();
         var sourceFolders = input.State.Folders;
@@ -241,7 +227,7 @@ public sealed class NativeWorkspaceImport {
             if (match is not null) { mapping[folder.Id] = match.Id; continue; }
             if (folders.Count >= WorkspaceImportPolicy.MaximumFolders) continue;
             var identity = folder.Id;
-            while (folders.Any(f => f.Id == identity)) identity = Guid.NewGuid();
+            while (folders.Any(f => f.Id == identity)) identity = ids.Next();
             folders.Add(original with {
                 Id = identity,
                 ParentId = parent,
@@ -260,7 +246,7 @@ public sealed class NativeWorkspaceImport {
             if (placement == TabPlacement.Pinned && !placement.Holds(++pinned)) {
                 placement = TabPlacement.Saved;
                 if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
-                    overflowFolder = new FolderState(Guid.NewGuid(), TabPlacement.Saved, WorkspaceImportPolicy.OverflowFolderTitle,
+                    overflowFolder = new FolderState(ids.Next(), TabPlacement.Saved, WorkspaceImportPolicy.OverflowFolderTitle,
                         WorkspaceImportPolicy.OverflowFolderSymbol);
                     folders.Add(overflowFolder);
                 }
@@ -275,24 +261,83 @@ public sealed class NativeWorkspaceImport {
             });
         }).ToArray();
         var existing = isNew ? [] : destination.State.Tabs;
-        // The tab the source chose to show, when it was imported; a new Space
-        // otherwise shows its first imported tab.
-        var selected = edited.FirstOrDefault(t => t.Id == input.ShownTab);
         destination.State = destination.State with { Folders = folders.ToArray(), Tabs = [.. existing, .. edited] };
-        input.ShownTab = null;
-        if ((selected ?? (isNew ? edited.FirstOrDefault() : null)) is { } first) destination.ShownTab = first.Id;
+        // A new Space shows its first imported tab.
+        if (isNew && edited.FirstOrDefault() is { } first) destination.ShownTab = first.Id;
+    }
+
+    #endregion
+
+    #region Actions - Identities
+
+    /// The session the import leaves, stamped `now`: every folder and history
+    /// record keeps an identity no other Space holds, repair gives each Space,
+    /// profile and tab its own, and `followUp` shows the first Space the import
+    /// brought or changed and the tab each Space it touched shows first. New
+    /// identities come from `ids`, in the order the records are met.
+    internal Result Finish(DateTimeOffset now, IIdSource ids, WindowFollowUp followUp) {
+        // Folder and history record IDs are global in sync, even though their
+        // native collections are nested under Spaces. Reserve existing IDs first
+        // so an imported Space placed earlier cannot steal another Space's records.
+        var folderIds = originalFolderIds.Values.SelectMany(set => set).ToHashSet();
+        var historyIds = originalHistoryIds.Values.SelectMany(set => set).ToHashSet();
+        foreach (var space in spaces) Reserve(space, space.IsOriginal ? originalFolderIds[space] : null,
+            space.IsOriginal ? originalHistoryIds[space] : null, folderIds, historyIds, ids);
+        int affectedIndex = affected is null ? -1 : spaces.IndexOf(affected);
+        // Repair may replace colliding identities, so hints and origins travel by position.
+        var shown = new List<(int Space, int Tab)>();
+        for (int si = 0; si < spaces.Count; si++)
+            if (spaces[si].ShownTab is { } tab && spaces[si].State.Tabs.Select(t => t.Id).ToList().IndexOf(tab) is var ti and >= 0)
+                shown.Add((si, ti));
+        var before = spaces.Select(space => space.State).ToArray();
+        var imported = session with {
+            Spaces = before,
+            DefaultSpaceId = defaultSpace,
+            DisposableSeedMarker = seedMarker
+        };
+        var repaired = NativeSessionMaintenance.Repair(imported, now, null, ids, out _);
+        // Show the imported instance even when repair replaced a colliding ID.
+        if (affectedIndex >= 0) followUp.ShowSpace(repaired.Spaces[affectedIndex].Id);
+        foreach (var (si, ti) in shown) followUp.ShowTab(repaired.Spaces[si].Id, repaired.Spaces[si].Tabs[ti].Id);
+        var (importedTabs, copies) = Placed(before, repaired);
+        return new(repaired, importedTabs, copies);
+    }
+
+    /// Where each tab of `repaired` came from, matched by position with the
+    /// records `before` held: each tab an imported Space brought, and each of
+    /// the session's own tabs repair gave a new identity. A Space repair kept
+    /// as it was, such as one being deleted, placed nothing.
+    private (IReadOnlyList<ImportedTab> Imported, IReadOnlyList<SessionTabCopy> Copied) Placed(IReadOnlyList<SpaceState> before,
+        SessionState repaired) {
+        var imported = new List<ImportedTab>();
+        var copied = new List<SessionTabCopy>();
+        void Place(object record, Guid id) {
+            if (!origins.TryGetValue(record, out var origin)) return;
+            if (origin.Source is { } source) imported.Add(new(id, source, origin.TabId));
+            else if (id != origin.TabId) copied.Add(new(origin.TabId, id));
+        }
+        for (int si = 0; si < before.Count; si++) {
+            var space = repaired.Spaces[si];
+            if (ReferenceEquals(space, before[si])) continue;
+            for (int ti = 0; ti < before[si].Tabs.Count; ti++) Place(before[si].Tabs[ti], space.Tabs[ti].Id);
+            // Repair drops a Start Page from the archive.
+            var archive = before[si].ArchivedTabs
+                .Where(archived => archived.Tab.Url is not null || archived.Tab.NativeContent is not null).ToArray();
+            for (int ti = 0; ti < archive.Length; ti++) Place(archive[ti], space.ArchivedTabs[ti].Tab.Id);
+        }
+        return (imported, copied);
     }
 
     /// Gives a Space's folders and history identities no other Space holds,
     /// keeping the ones it had before the import, and points its folder
     /// references at the new folder identities.
     private void Reserve(Draft space, HashSet<Guid>? originalFolders, HashSet<Guid>? originalHistory,
-        HashSet<Guid> folderIds, HashSet<Guid> historyIds) {
+        HashSet<Guid> folderIds, HashSet<Guid> historyIds, IIdSource ids) {
         Dictionary<Guid, Guid> mapping = [];
         var folders = space.State.Folders.Select(folder => {
             var id = folder.Id;
             if (originalFolders?.Contains(folder.Id) != true)
-                while (!folderIds.Add(id)) id = Guid.NewGuid();
+                while (!folderIds.Add(id)) id = ids.Next();
             mapping.TryAdd(folder.Id, id);
             return folder with { Id = id };
         }).ToArray();
@@ -300,7 +345,7 @@ public sealed class NativeWorkspaceImport {
         var history = space.State.History.Select(entry => {
             var id = entry.Id;
             if (originalHistory?.Contains(entry.Id) != true)
-                while (!historyIds.Add(id)) id = Guid.NewGuid();
+                while (!historyIds.Add(id)) id = ids.Next();
             return entry with { Id = id };
         }).ToArray();
         space.State = space.State with {
@@ -311,27 +356,27 @@ public sealed class NativeWorkspaceImport {
         };
     }
 
-    /// Where each tab's native assets come from, by position. A Start Page in the
-    /// archive is left out, as repair drops it.
-    private JsonArray Assets(IReadOnlyList<Draft> spaces) {
-        var assets = new JsonArray();
-        void Add(int space, int position, string section, object record) {
-            if (origins.TryGetValue(record, out var origin)) assets.Add((JsonNode)new JsonObject {
-                ["spaceIndex"] = space,
-                ["tabIndex"] = position,
-                ["section"] = section,
-                ["sourceIndex"] = origin.Source,
-                ["sourceSpaceIndex"] = origin.Space,
-                ["sourceTabIndex"] = origin.Tab
-            });
+    #endregion
+
+    #region Actions - Rules
+
+    private static void Customize(Draft space, SpaceCustomization customization) => space.State = space.State with {
+        Settings = space.State.Settings with {
+            Name = SpaceOrganizationPolicy.Name(customization.Name),
+            Symbol = SpaceOrganizationPolicy.Symbol(customization.Symbol),
+            Accent = customization.Accent,
+            Branding = SpaceBrandingPolicy.Normalize(customization.Branding)
         }
-        for (int si = 0; si < spaces.Count; si++) {
-            var space = spaces[si].State;
-            for (int ti = 0; ti < space.Tabs.Count; ti++) Add(si, ti, Key.Tabs, space.Tabs[ti]);
-            var archive = space.ArchivedTabs.Where(archived => archived.Tab.Url is not null || archived.Tab.NativeContent is not null).ToArray();
-            for (int ti = 0; ti < archive.Length; ti++) Add(si, ti, Key.ArchivedTabs, archive[ti]);
-        }
-        return assets;
+    };
+
+    /// Throws `Rejected` with `SpaceBeingDeleted` when `id` is going away.
+    private void Available(Guid id) {
+        if (session.SpaceDeletions.Any(deletion => deletion.SpaceId == id)) throw new Rejected(new SpaceBeingDeleted(id));
+    }
+
+    private static void ShowAdded(Draft space, IEnumerable<TabState> tabs) {
+        var chosen = tabs.LastOrDefault(t => t.Placement == TabPlacement.Current) ?? tabs.FirstOrDefault();
+        if (chosen is not null) space.ShownTab = chosen.Id;
     }
 
     #endregion

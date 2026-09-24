@@ -48,7 +48,8 @@ enum BrowserManualSetupPreviewFixture {
     )
     static let plan = BrowserManualSetupPlan(existing: existingSession)
     static let selectedSpaceID: SpaceID? = spaceID
-    static let previewSession = try? plan.preview(mergingInto: existingSession)
+    static let browser = BrowserStore(session: existingSession)
+    static let previewSession = try? plan.preview(in: browser)
     static let draft =
         plan.spaces.first(where: { $0.id == spaceID })
         ?? BrowserManualSetupSpaceDraft(space: space, isNew: false)

@@ -135,6 +135,13 @@ extension CoreState {
         forward(.tabCopied(change), to: change.workspaceID)
     }
 
+    func apply(_ change: TabsImported) {
+        if let workspace = workspaces[change.workspaceID] {
+            favicons.place(imported: change.tabs.filter { workspace.holds(tabID: $0.tabID) }, in: change.workspaceID)
+        }
+        forward(.tabsImported(change), to: change.workspaceID)
+    }
+
     /// A promoted page changes no state of its own: the session's changes
     /// before it carry the new tab, and the window that promoted it reads it
     /// from the changes its intent answered.

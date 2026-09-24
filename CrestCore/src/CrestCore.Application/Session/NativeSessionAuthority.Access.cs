@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
@@ -47,38 +45,6 @@ public sealed partial class NativeSessionAuthority {
     /// A policy this build cannot name reads as guarded (see `StoredSessionCodec`),
     /// so only an open Space skips authentication.
     private static bool RequiresAuthentication(SpaceState space) => space.Settings.AccessPolicy != SpaceAccessPolicy.Open;
-
-    private static Guid? OptionalSpace(JsonNode? value) {
-        if (value is null) return null;
-        try { return Id(value); } catch (Exception error) when (error is BrowserRuleException or FormatException or InvalidOperationException) {
-            // Malformed identities are the command's own rejection to make.
-            return null;
-        }
-    }
-
-    /// Rejects a command that would read or mutate a locked Space before any
-    /// preparation runs. The native controllers keep their own gates; this one
-    /// answers for the records and cannot be skipped by a view.
-    private void RequireAccessibleCommand(JsonObject request) {
-        if (access is null) return;
-        var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
-        foreach (var space in CommandSpaces(request, operation)) RequireAccessible(space);
-    }
-
-    private static IEnumerable<Guid> CommandSpaces(JsonObject request, SessionOperation operation) {
-        if (OptionalSpace(request["spaceId"]) is { } space) yield return space;
-        if (request["arguments"] is not JsonObject args || operation != SessionOperation.WorkspaceImport) yield break;
-        // Importing into an existing Space writes its tabs and folders. A new
-        // Space names no destination and cannot be locked yet.
-        var sources = args["sources"] as JsonArray ?? [];
-        foreach (var draft in args["drafts"] as JsonArray ?? []) {
-            if (draft!["isNew"]?.GetValue<bool>() != false) continue;
-            var index = draft["sourceIndex"]?.GetValue<int>() ?? -1;
-            if (index >= 0 && index < sources.Count && OptionalSpace(sources[index]!["id"]) is { } id) yield return id;
-        }
-        foreach (var review in args["reviews"] as JsonArray ?? [])
-            if (OptionalSpace(review!["destinationID"]) is { } id) yield return id;
-    }
 
     /// The command gate answers for semantic commands. A native value edit
     /// proposes whole records instead, so it is gated on what it actually

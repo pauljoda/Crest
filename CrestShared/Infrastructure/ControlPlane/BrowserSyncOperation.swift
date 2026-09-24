@@ -14,7 +14,5 @@ enum BrowserSyncOperation: String, Codable, Sendable {
     case orderAllocate = "order.allocate"
     case project
     case materialize
-    case workspacePreview = "workspace.preview"
-    case workspaceReview = "workspace.review"
     case sessionRepair = "session.repair"
 }

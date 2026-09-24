@@ -30,10 +30,11 @@ internal sealed record SessionTransientPromotion(Guid PageId, Guid TabId, bool A
     #endregion
 }
 
-/// The tabs a command copied, the image it assigned and the transient page it
-/// kept as a tab, which comparing the sessions before and after it cannot tell.
+/// The tabs a command copied, the image it assigned, the transient page it
+/// kept as a tab and the tabs an import placed from its Spaces, which
+/// comparing the sessions before and after it cannot tell.
 internal sealed record SessionTabEvents(IReadOnlyList<SessionTabCopy> Copies, SessionFaviconUpdate? Favicon,
-    SessionTransientPromotion? Promotion = null) {
+    SessionTransientPromotion? Promotion = null, IReadOnlyList<ImportedTab>? Imported = null) {
     #region Static Variables
 
     public static SessionTabEvents None { get; } = new([], null);
@@ -46,7 +47,8 @@ internal sealed record SessionTabEvents(IReadOnlyList<SessionTabCopy> Copies, Se
     public IEnumerable<Change> Changes(Guid workspaceId) =>
         Copies.Select(copy => (Change)copy.Copied(workspaceId))
             .Concat(Favicon is { } favicon ? [favicon.Assigned(workspaceId)] : [])
-            .Concat(Promotion is { } promotion ? [promotion.Promoted(workspaceId)] : []);
+            .Concat(Promotion is { } promotion ? [promotion.Promoted(workspaceId)] : [])
+            .Concat(Imported is { Count: > 0 } imported ? [new TabsImported(workspaceId, imported)] : []);
 
     #endregion
 }

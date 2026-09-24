@@ -12,11 +12,14 @@ final class FaviconAssets {
     // MARK: - Types
 
     /// The images the issuer of a command holds: `assigned` for the tab the
-    /// core tells to adopt the image its page reported, and `placed`, by tab,
-    /// for the tabs the command places that had none.
+    /// core tells to adopt the image its page reported, `placed`, by tab, for
+    /// the tabs the command places that had none, and `imported`, by the
+    /// position of each Space an import brings, the images of that Space's
+    /// tabs, open or archived.
     struct Offer {
         var assigned: Data?
         var placed: [UUID: Data] = [:]
+        var imported: [[UUID: Data]] = []
     }
 
     /// One tab's image, observed on its own.
@@ -99,6 +102,19 @@ final class FaviconAssets {
     /// A copy shows the image its source wears, or the one offered for it.
     func copy(_ sourceTabID: UUID, to copyTabID: UUID, in workspaceID: UUID) {
         setImage(slots[sourceTabID]?.data ?? offers[workspaceID]?.placed[sourceTabID], of: copyTabID)
+    }
+
+    /// Each tab an import placed wears the image its issuer offered for the
+    /// tab it came from. Every image is read before any is set.
+    func place(imported tabs: [ImportedTab], in workspaceID: UUID) {
+        let offered = offers[workspaceID]?.imported ?? []
+        let images = tabs.map { tab in
+            (tab.tabID, offered.indices.contains(tab.source) ? offered[tab.source][tab.sourceTabID] : nil)
+        }
+        for (tabID, image) in images {
+            detached.remove(tabID)
+            setImage(image, of: tabID)
+        }
     }
 
     /// A tab told to adopt an image wears the one `pageID` reported, which

@@ -184,9 +184,33 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         spaces[spaceIndex].addedTabs[tabIndex].symbol = admitted.symbol
     }
 
-    var coreSpaceOrderWasEdited: Bool { spaceOrderWasEdited == true }
+    /// The session the setup would leave `browser`'s workspace with. Throws
+    /// the rule that would refuse it.
+    @MainActor
+    func preview(in browser: BrowserStore) throws -> BrowserSession {
+        try browser.importPreview(try intent(in: browser), of: sources)
+    }
 
-    func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
-        return try BrowserCoreWorkspaceImport.preview(BrowserCoreWorkspaceImport.manual(self), existing: existing)
+    /// The setup's drafts as Spaces: each with its identity, profile, name
+    /// and look, holding the tabs it adds.
+    var sources: [BrowserSpace] {
+        spaces.map { draft in
+            BrowserSpace(
+                id: draft.id, profile: draft.profile, name: draft.customization.name,
+                symbol: draft.customization.symbol, accent: draft.customization.accent,
+                branding: draft.customization.branding, folders: [], tabs: draft.addedTabs)
+        }
+    }
+
+    /// The setup these drafts make, issued from `browser`'s window.
+    @MainActor
+    func intent(in browser: BrowserStore) throws -> ApplyManualSetup {
+        ApplyManualSetup(
+            workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
+            spaces: try BrowserSpace.storedFormat(sources),
+            drafts: spaces.map {
+                SetupSpace(spaceID: $0.id.rawValue, isNew: $0.isNew, customization: $0.customization.core)
+            },
+            orderWasEdited: spaceOrderWasEdited == true)
     }
 }

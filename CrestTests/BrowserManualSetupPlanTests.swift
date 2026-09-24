@@ -3,7 +3,11 @@ import XCTest
 
 @testable import Crest
 
+@MainActor
 final class BrowserManualSetupPlanTests: XCTestCase {
+    /// One store per session a test previews a setup against.
+    private var stores: [(session: BrowserSession, store: BrowserStore)] = []
+
     func testReorderingExistingSpacesPreservesContents() throws {
         var existing = makeSession()
         let firstID = try XCTUnwrap(existing.spaces.first?.id)
@@ -14,7 +18,7 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         var plan = BrowserManualSetupPlan(existing: existing)
 
         plan.moveSpace(secondID, to: firstID)
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
 
         XCTAssertEqual(preview.spaces.map(\.id), [secondID, firstID])
         XCTAssertEqual(preview.defaultSpaceID, existing.defaultSpaceID)
@@ -23,7 +27,7 @@ final class BrowserManualSetupPlanTests: XCTestCase {
             XCTAssertEqual(preview.space(id: space.id)?.profile, space.profile)
         }
         plan.moveSpace(secondID, to: firstID)
-        XCTAssertEqual(try plan.preview(mergingInto: existing).spaces.map(\.id), [firstID, secondID])
+        XCTAssertEqual(try plan.preview(in: store(existing)).spaces.map(\.id), [firstID, secondID])
     }
 
     func testDraftOrderSurvivesResumeAndKeepsConcurrentlyAddedSpaces() throws {
@@ -38,9 +42,9 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         existing.spaces.append(concurrent)
         let concurrentID = concurrent.id
 
-        XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [newID, firstID, concurrentID])
+        XCTAssertEqual(try resumed.preview(in: store(existing)).spaces.map(\.id), [newID, firstID, concurrentID])
         resumed.reconcile(with: existing)
-        XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [newID, firstID, concurrentID])
+        XCTAssertEqual(try resumed.preview(in: store(existing)).spaces.map(\.id), [newID, firstID, concurrentID])
     }
 
     func testPreviewPreservesExistingTabsWhileApplyingEditsAndManualTabs() throws {
@@ -63,7 +67,7 @@ final class BrowserManualSetupPlanTests: XCTestCase {
             at: Date(timeIntervalSince1970: 10)
         )
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         let edited = try XCTUnwrap(preview.space(id: space.id))
 
         XCTAssertEqual(edited.name, "Focused Work")
@@ -85,7 +89,7 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         _ = try plan.addTab(input: "swift.org", placement: .saved, to: newSpaceID)
         _ = try plan.addTab(input: "example.com", placement: .current, to: newSpaceID)
 
-        let preview = try plan.preview(mergingInto: existing)
+        let preview = try plan.preview(in: store(existing))
         let created = try XCTUnwrap(preview.space(id: newSpaceID))
 
         XCTAssertEqual(preview.spaces.count, existing.spaces.count + 1)
@@ -176,5 +180,12 @@ final class BrowserManualSetupPlanTests: XCTestCase {
             spaces: [space],
             disposableSeedMarker: UUID()
         )
+    }
+
+    private func store(_ session: BrowserSession) -> BrowserStore {
+        if let known = stores.first(where: { $0.session == session }) { return known.store }
+        let store = BrowserStore(session: session)
+        stores.append((session, store))
+        return store
     }
 }

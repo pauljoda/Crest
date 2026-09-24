@@ -76,7 +76,7 @@ struct MobileBrowserOnboardingView: View {
             plan: $manualPlan,
             customizedSpaceID: $customizedSpaceID,
             draftPersistence: draftPersistence,
-            existingSession: browser.session,
+            browser: browser,
             requestChanged: reset
         )
     }
@@ -251,10 +251,10 @@ struct MobileBrowserOnboardingView: View {
 
     private func finishManualSetup() {
         do {
-            _ = try manualPlan.preview(mergingInto: browser.session)
+            _ = try manualPlan.preview(in: browser)
             completeSetup(manualPlan: manualPlan)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.personFacingDescription
         }
     }
 

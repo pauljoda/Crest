@@ -6,7 +6,6 @@ enum BrowserPortableArchiveError: LocalizedError, Equatable, Sendable {
     case unrecognizedFormat
     case unsupportedSchemaVersion(Int)
     case missingFileContents
-    case spaceLimitExceeded(Int)
 
     var errorDescriptionResource: LocalizedStringResource {
         switch self {
@@ -20,8 +19,6 @@ enum BrowserPortableArchiveError: LocalizedError, Equatable, Sendable {
             "This Crest browser-data version (\(version)) is not supported."
         case .missingFileContents:
             "Crest could not read this file."
-        case .spaceLimitExceeded(let maximum):
-            "Crest supports up to \(maximum) Spaces. Remove a Space before importing this file."
         }
     }
 

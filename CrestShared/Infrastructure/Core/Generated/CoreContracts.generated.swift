@@ -22,6 +22,9 @@ protocol EngineEvent: Sendable {
     func encodeEngineEvent(into writer: inout WireWriter)
 }
 
+/// The members of `Intent` that derive from the core's `ImportWorkspace`, which a field of that type holds.
+protocol ImportWorkspace: Intent {}
+
 /// Everything an intent can change. `CoreState.apply` keeps the read model current.
 enum Change: Equatable, Sendable {
     case appPreferencesChanged(AppPreferencesChanged)
@@ -46,6 +49,7 @@ enum Change: Equatable, Sendable {
     case tabCopied(TabCopied)
     case tabFaviconAssigned(TabFaviconAssigned)
     case tabsChanged(TabsChanged)
+    case tabsImported(TabsImported)
     case transientPagePromoted(TransientPagePromoted)
     case windowChanged(WindowChanged)
     case windowClosed(WindowClosed)
@@ -92,6 +96,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidDownloadText(InvalidDownloadText)
     case invalidFolderPlacement(InvalidFolderPlacement)
     case invalidFolderSymbol(InvalidFolderSymbol)
+    case invalidImport(InvalidImport)
     case invalidName(InvalidName)
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
@@ -103,6 +108,7 @@ enum Rejection: Equatable, Error, Sendable {
     case languageTooLong(LanguageTooLong)
     case lastStartPage(LastStartPage)
     case noCurrentTabs(NoCurrentTabs)
+    case noIncludedSpaces(NoIncludedSpaces)
     case noSavedAddress(NoSavedAddress)
     case noStoredSession(NoStoredSession)
     case notPrivateWorkspace(NotPrivateWorkspace)
@@ -111,6 +117,7 @@ enum Rejection: Equatable, Error, Sendable {
     case persistentWorkspaceRequired(PersistentWorkspaceRequired)
     case pinnedTabsFull(PinnedTabsFull)
     case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
+    case profileInUse(ProfileInUse)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
@@ -161,11 +168,16 @@ enum Rejection: Equatable, Error, Sendable {
         case .currentTabsOnly(let value): value.message
         case .duplicateSearchEngineName(let value): value.message
         case .incompleteSplit(let value): value.message
+        case .invalidImport(let value): value.message
+        case .noIncludedSpaces(let value): value.message
         case .pinnedTabsFull(let value): value.message
         case .searchEngineLimitReached(let value): value.message
         case .selectionChanged(let value): value.message
         case .selectionHoldsFolders(let value): value.message
+        case .spaceBeingDeleted(let value): value.message
+        case .spaceLimitReached(let value): value.message
         case .spaceLocked(let value): value.message
+        case .spaceProfileChanged(let value): value.message
         case .splitLimitReached(let value): value.message
         case .splitNeedsTwoTabs(let value): value.message
         case .webPagesOnly(let value): value.message
@@ -207,6 +219,7 @@ extension CoreState {
         case .tabCopied(let change): apply(change)
         case .tabFaviconAssigned(let change): apply(change)
         case .tabsChanged(let change): apply(change)
+        case .tabsImported(let change): apply(change)
         case .transientPagePromoted(let change): apply(change)
         case .windowChanged(let change): apply(change)
         case .windowClosed(let change): apply(change)
@@ -248,6 +261,17 @@ struct AlreadyInSplit: Equatable, Sendable {
     let tabID: UUID
 }
 
+struct AnalyzedImportReview: Equatable, Sendable {
+    let spaces: [AnalyzedSpaceReview]
+    let overflowTabIDs: [UUID]
+}
+
+struct AnalyzedSpaceReview: Equatable, Sendable {
+    let sourceSpaceID: UUID
+    let duplicateTabIDs: [UUID]
+    let matchedTabIDs: [UUID]
+}
+
 struct AppConfiguration: Equatable, Sendable {
     let storageDirectory: String?
 }
@@ -267,6 +291,14 @@ struct AppPreferences: Equatable, Sendable {
 struct AppPreferencesChanged: Equatable, Sendable {
     let workspaceID: UUID
     let preferences: AppPreferences?
+}
+
+struct ApplyManualSetup: Intent, ImportWorkspace, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaces: Data
+    let drafts: [SetupSpace]
+    let orderWasEdited: Bool
 }
 
 struct ArchiveChanged: Equatable, Sendable {
@@ -983,6 +1015,64 @@ struct ImportAppPreferences: Intent, Equatable, Sendable {
     let legacy: LegacyAppPreferences
 }
 
+struct ImportPreview: Query, Sendable {
+    typealias Answer = ImportedWorkspace
+
+    let `import`: any ImportWorkspace
+}
+
+struct ImportReviewAnalysis: Query, Equatable, Sendable {
+    typealias Answer = AnalyzedImportReview
+
+    let workspaceID: UUID
+    let sources: [ImportReviewSpace]
+    let reviews: [SpaceReview]
+}
+
+struct ImportReviewSpace: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let name: String
+    let tabs: [ImportReviewTab]
+}
+
+struct ImportReviewSuggestions: Query, Equatable, Sendable {
+    typealias Answer = SuggestedImportReview
+
+    let workspaceID: UUID
+    let sources: [ImportReviewSpace]
+}
+
+struct ImportReviewTab: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let url: String?
+    let placement: TabPlacement
+}
+
+struct ImportReviewedSpaces: Intent, ImportWorkspace, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaces: Data
+    let reviews: [SpaceReview]
+}
+
+struct ImportSpaces: Intent, ImportWorkspace, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaces: Data
+}
+
+struct ImportedTab: Equatable, Sendable {
+    let tabID: UUID
+    let source: Int
+    let sourceTabID: UUID
+}
+
+struct ImportedWorkspace: Equatable, Sendable {
+    let session: SessionState
+    let imported: [ImportedTab]
+    let copied: [TabCopied]
+}
+
 struct IncompleteSplit: Equatable, Sendable {
     let groupID: UUID
 
@@ -1024,6 +1114,14 @@ struct InvalidFolderPlacement: Equatable, Sendable {
 
 struct InvalidFolderSymbol: Equatable, Sendable {
     let maximumBytes: Int
+}
+
+struct InvalidImport: Equatable, Sendable {
+    let flaw: ImportFlaw
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest couldn’t read the Spaces to import.")
+    }
 }
 
 struct InvalidName: Equatable, Sendable {
@@ -1333,6 +1431,12 @@ struct NoCurrentTabs: Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct NoIncludedSpaces: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Choose at least one Space to import.")
+    }
+}
+
 struct NoSavedAddress: Equatable, Sendable {
     let tabID: UUID
 }
@@ -1509,6 +1613,10 @@ struct PinnedTabsFull: Equatable, Sendable {
 
 struct PrivateWorkspaceBoundary: Equatable, Sendable {
     let destinationWorkspaceID: UUID
+}
+
+struct ProfileInUse: Equatable, Sendable {
+    let profileID: UUID
 }
 
 struct PromoteTransientPage: Intent, Equatable, Sendable {
@@ -1766,6 +1874,12 @@ struct SetTranslationRule: Intent, Equatable, Sendable {
     let isEnabled: Bool
 }
 
+struct SetupSpace: Equatable, Sendable {
+    let spaceID: UUID
+    let isNew: Bool
+    let customization: SpaceCustomization
+}
+
 struct ShortcutDefault: Equatable, Sendable {
     let platform: DevicePlatform
     let keys: KeyCombination
@@ -1794,6 +1908,10 @@ struct SpaceAlreadyExists: Equatable, Sendable {
 
 struct SpaceBeingDeleted: Equatable, Sendable {
     let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("That Space is being deleted.")
+    }
 }
 
 struct SpaceBranding: Equatable, Sendable {
@@ -1846,6 +1964,13 @@ struct SpaceCrest: Equatable, Sendable {
     let depth: CrestDepth
 }
 
+struct SpaceCustomization: Equatable, Sendable {
+    let name: String
+    let symbol: String
+    let accent: SpaceAccent
+    let branding: SpaceBranding
+}
+
 struct SpaceDeletionState: Equatable, Sendable, Identifiable {
     let id: UUID
     let spaceID: UUID
@@ -1854,6 +1979,10 @@ struct SpaceDeletionState: Equatable, Sendable, Identifiable {
 
 struct SpaceLimitReached: Equatable, Sendable {
     let limit: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest supports up to \(limit) Spaces.")
+    }
 }
 
 struct SpaceLockChanged: Equatable, Sendable {
@@ -1873,6 +2002,19 @@ struct SpaceLocked: Equatable, Sendable {
 
 struct SpaceProfileChanged: Equatable, Sendable {
     let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("That Space is no longer available.")
+    }
+}
+
+struct SpaceReview: Equatable, Sendable {
+    let sourceSpaceID: UUID
+    let included: Bool
+    let destinationID: UUID?
+    let customization: SpaceCustomization
+    let includedTabIDs: [UUID]
+    let placements: [TabPlacementChoice]
 }
 
 struct SpaceSettings: Equatable, Sendable {
@@ -2005,6 +2147,17 @@ struct StrongPasswordRecipe: Equatable, Sendable {
     let groups: [String]
 }
 
+struct SuggestedImportReview: Equatable, Sendable {
+    let spaces: [SuggestedSpaceReview]
+}
+
+struct SuggestedSpaceReview: Equatable, Sendable {
+    let sourceSpaceID: UUID
+    let destinationID: UUID?
+    let duplicateTabIDs: [UUID]
+    let includedTabIDs: [UUID]
+}
+
 struct SweepExpiredRecords: Intent, Equatable, Sendable {
     let workspaceID: UUID
 }
@@ -2092,6 +2245,11 @@ struct TabLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
+struct TabPlacementChoice: Equatable, Sendable {
+    let tabID: UUID
+    let placement: TabPlacement
+}
+
 struct TabSelection: Equatable, Sendable {
     let tabIDs: [UUID]
     let folderIDs: [UUID]
@@ -2128,6 +2286,11 @@ struct TabsChanged: Equatable, Sendable {
     let updated: [TabState]
     let removed: [UUID]
     let order: [UUID]?
+}
+
+struct TabsImported: Equatable, Sendable {
+    let workspaceID: UUID
+    let tabs: [ImportedTab]
 }
 
 struct TearOffPermission: Equatable, Sendable {
@@ -2486,6 +2649,12 @@ enum CrestTrim: Int, CaseIterable, Sendable {
     case doubleRing = 6
     case seal = 7
     case beaded = 8
+}
+
+enum ImportFlaw: Int, CaseIterable, Sendable {
+    case unreadable = 0
+    case malformedSplit = 1
+    case unpairedChoices = 2
 }
 
 struct PageMediaActivity: OptionSet, Sendable {

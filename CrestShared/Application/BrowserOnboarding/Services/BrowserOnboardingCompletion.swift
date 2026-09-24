@@ -24,7 +24,7 @@ enum BrowserOnboardingCompletion {
         let originalSession = browser.session
         let proposedSession: BrowserSession
         do {
-            proposedSession = try manualPlan?.preview(mergingInto: originalSession) ?? originalSession
+            proposedSession = try manualPlan?.preview(in: browser) ?? originalSession
         } catch {
             return .sourceChanged
         }
@@ -41,7 +41,7 @@ enum BrowserOnboardingCompletion {
         guard await spaceAccess.unlock(firstSpace), !Task.isCancelled else { return .cancelled }
         let currentSession = browser.session
         let guideSpace = manualPlan.map { plan in
-            (try? plan.preview(mergingInto: currentSession))?.spaces.first
+            (try? plan.preview(in: browser))?.spaces.first
         } ?? currentSession.spaces.first
         guard BrowserCorePolicy.confirmsOnboardingGuide(
             target: assignment,

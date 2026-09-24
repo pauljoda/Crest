@@ -54,22 +54,23 @@ never saved or synced.
 builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
-The native Crest apps use the `crest_session_*`, `crest_sync_*`,
-`crest_app_*` and `crest_permissions_*` entry points,
+The native Crest apps use the `crest_app_*`, `crest_sync_*`,
+`crest_permissions_*` and `crest_session_replace_durably` entry points,
 plus `crest_core_evaluate_policy` and `crest_core_evaluate_sync`.
 The session holds browsing data only; which Space and tab a window shows is the
 device's window state. Workspaces open and close through `crest_app_dispatch`:
 `OpenWorkspace` opens the session the core keeps in its file, a private one from
 its template, or a seed in the stored format for launches without a file;
 `BorrowSpace` opens a workspace over another's Space; `CloseWorkspace` closes one
-and its borrowers. The core gives each its identity in `WorkspaceOpened`, and the
-remaining JSON session commands name their app and that workspace. Only the
-file's workspace saves and syncs; `crest_app_sync` hands the transport its sync
-component. Session
-commands name the window that issued them (`windowId`); when a command commits,
-the device moves that window to what the command chose, repairs every other
-window of that workspace, and publishes `WindowChanged` for each window that
-changed. The session file never stores a selection; a stored document with the
+and its borrowers. The core gives each its identity in `WorkspaceOpened`, which
+every session intent names. Only the file's workspace saves and syncs;
+`crest_app_sync` hands the transport its sync component. Session intents name
+the window that issued them; when an intent commits, the device moves that
+window to what the intent chose, repairs every other window of that workspace,
+and publishes `WindowChanged` for each window that changed. Imports
+(`ImportSpaces`, `ImportReviewedSpaces`, `ApplyManualSetup`) are intents too,
+and `ImportPreview`, `ImportReviewSuggestions` and `ImportReviewAnalysis` answer
+the review a person edits before one. The session file never stores a selection; a stored document with the
 older session-level `selectedSpaceID` and per-Space `selectedTabID` still loads,
 gives its tabs to a window without a record during that launch, and loses them
 at the next save. `SweepExpiredRecords` keeps every tab an open window or a
@@ -81,7 +82,7 @@ profiles it changed. The platform presents the authentication prompt and
 answers with its result; the core accepts only the pending request for the
 exact Space/profile identity, and relocking cancels it. Grants are never
 persisted or synced. The device attaches the grants to every session it shows,
-which then rejects commands and native value edits
+which then refuses intents with `SpaceLocked`, and native value edits
 (`crest_session_replace_durably` without a journal) that would reach a locked Space with
 `space_locked`; journal-bound sync replacements are not gated.
 

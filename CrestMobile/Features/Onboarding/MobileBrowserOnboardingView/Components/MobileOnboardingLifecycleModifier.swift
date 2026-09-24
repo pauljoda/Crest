@@ -6,7 +6,7 @@ struct MobileOnboardingLifecycleModifier: ViewModifier {
     @Binding var plan: BrowserManualSetupPlan
     @Binding var customizedSpaceID: SpaceID?
     let draftPersistence: MobileOnboardingDraftPersistence
-    let existingSession: BrowserSession
+    let browser: BrowserStore
     let requestChanged: (BrowserOnboardingRequest) -> Void
 
     func body(content: Content) -> some View {
@@ -27,7 +27,7 @@ struct MobileOnboardingLifecycleModifier: ViewModifier {
                 MobileOnboardingSpaceCustomizationSheet(
                     spaceID: spaceID,
                     plan: $plan,
-                    existingSession: existingSession
+                    browser: browser
                 )
             }
     }

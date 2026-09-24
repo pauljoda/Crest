@@ -62,17 +62,32 @@ extension BrowserStore {
         }
     }
 
+    /// Adds a file's Spaces after this workspace's own. Throws the rule the
+    /// core refused it with.
     func importPortableArchive(_ imported: BrowserPortableImport) throws {
         guard !imported.spaces.isEmpty else { return }
-        try family.importWorkspace(BrowserCoreWorkspaceImport.portable(imported.spaces), from: self)
+        let intent = ImportSpaces(
+            workspaceID: family.workspaceID, windowID: windowID.rawValue,
+            spaces: try BrowserSpace.storedFormat(imported.spaces))
+        try family.importSpaces(intent, from: imported.spaces, issuedBy: self)
     }
 
+    /// Imports the Spaces a person reviewed, as the plan chose.
     func commitReviewedImport(_ plan: BrowserImportReviewPlan) throws {
-        try family.importWorkspace(BrowserCoreWorkspaceImport.review(plan), from: self)
+        try family.importSpaces(try plan.intent(in: self), from: plan.sources, issuedBy: self)
     }
 
+    /// Applies a manual setup's drafts.
     func commitManualSetup(_ plan: BrowserManualSetupPlan) throws {
-        try family.importWorkspace(BrowserCoreWorkspaceImport.manual(plan), from: self)
+        try family.importSpaces(try plan.intent(in: self), from: plan.sources, issuedBy: self)
+    }
+
+    /// The session `intent`, an import of `sources`, would leave this
+    /// workspace with, wearing the images each tab would wear. Nothing
+    /// changes. Throws the rule that would refuse the import.
+    func importPreview(_ intent: some ImportWorkspace, of sources: [BrowserSpace]) throws(Rejection) -> BrowserSession {
+        let preview = try core.query(ImportPreview(import: intent))
+        return BrowserSession(preview: preview, sources: sources, images: core.state.favicons)
     }
 
     func updateSpaceIdentity(

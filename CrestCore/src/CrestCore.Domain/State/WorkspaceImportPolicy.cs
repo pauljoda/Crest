@@ -18,21 +18,25 @@ public static class WorkspaceImportPolicy {
 
     #region Actions - State policy
 
+    /// Throws `Rejected` with `SpaceLimitReached` when `additions` more Spaces
+    /// would take a workspace holding `existing` past the limit.
     public static void RequireSpaceCapacity(int existing, int additions) {
-        if ((long)existing + additions > MaximumSpaces) throw new BrowserRuleException(BrowserRuleCodes.SpaceLimitReached);
+        if ((long)existing + additions > MaximumSpaces) throw new Rejected(new SpaceLimitReached(MaximumSpaces));
     }
 
+    /// Throws `Rejected` with `PinnedTabsFull` when a Space cannot pin `count` tabs.
     public static void RequirePinnedCapacity(int count) {
-        if (!TabPlacement.Pinned.Holds(count)) throw new BrowserRuleException(BrowserRuleCodes.PinnedLimitReached);
+        if (!TabPlacement.Pinned.Holds(count)) throw new Rejected(new PinnedTabsFull(TabPlacement.PinnedCapacity));
     }
 
     /// An imported Space must already hold well-formed split runs. Repair
-    /// would quietly rewrite a malformed archive; the import rejects it instead.
+    /// would quietly rewrite a malformed archive; the import is refused
+    /// instead, with `InvalidImport`.
     public static void RequireSplitMembership(IReadOnlyList<SplitMember> tabs) {
         ArgumentNullException.ThrowIfNull(tabs);
         var repaired = SplitMembershipPolicy.Repair(tabs);
         for (int index = 0; index < tabs.Count; index++)
-            if (repaired[index] != tabs[index].Group) throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
+            if (repaired[index] != tabs[index].Group) throw new Rejected(new InvalidImport(ImportFlaw.MalformedSplit));
     }
 
     public static string FolderMatchKey(string title) => string.Concat(title.Normalize(NormalizationForm.FormKD)

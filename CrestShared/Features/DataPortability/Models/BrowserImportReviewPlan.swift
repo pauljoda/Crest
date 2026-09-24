@@ -1,24 +1,19 @@
 import Foundation
 
+/// A person's review of an import: for each imported Space, whether it comes
+/// in, where, under what name and look, which tabs and in which placements.
+/// The core suggests where the review starts and says what it means; this
+/// holds only the person's choices.
 struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
-    enum ValidationError: LocalizedError, Equatable, Sendable {
-        case noIncludedSpaces
-
-        var errorDescription: String? {
-            switch self {
-            case .noIncludedSpaces:
-                String(localized: "Choose at least one Space to import.")
-            }
-        }
-    }
-
     private(set) var spaces: [BrowserImportSpaceReview]
     private var destinationCustomizations: [SpaceID: BrowserImportSpaceCustomization]
 
-    /// The review a person starts from. The core matches each imported Space
-    /// to the existing Space with the same name and leaves out tabs it already
-    /// holds; when the core cannot answer, everything imports into new Spaces.
-    init(imported: BrowserPortableImport, existing: BrowserSession) {
+    /// The review a person starts from, as the core suggests it against
+    /// `browser`'s workspace. When the core cannot answer, everything imports
+    /// into new Spaces.
+    @MainActor
+    init(imported: BrowserPortableImport, in browser: BrowserStore) {
+        let existing = browser.session
         let destinationSpaces =
             existing.hasDisposableSeedState
             ? []
@@ -28,23 +23,34 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
                 ($0.id, BrowserImportSpaceCustomization(space: $0))
             }
         )
-        let suggestions = BrowserCoreWorkspaceImport.reviewSuggestions(sources: imported.spaces, existing: existing)
-        spaces = imported.spaces.enumerated().map { index, sourceSpace in
-            let suggestion = suggestions?[index]
-            let matchingSpace = suggestion?.destinationID.flatMap { existing.space(id: $0) }
+        let suggestions =
+            (try? browser.core.query(
+                ImportReviewSuggestions(
+                    workspaceID: browser.family.workspaceID, sources: imported.spaces.map(ImportReviewSpace.init))))?
+            .spaces ?? []
+        let suggested = Dictionary(suggestions.map { ($0.sourceSpaceID, $0) }, uniquingKeysWith: { first, _ in first })
+        spaces = imported.spaces.map { sourceSpace in
+            let suggestion = suggested[sourceSpace.id.rawValue]
+            let matchingSpace = suggestion?.destinationID.flatMap { existing.space(id: SpaceID(rawValue: $0)) }
             return BrowserImportSpaceReview(
                 sourceSpace: sourceSpace,
                 destination: matchingSpace.map { .existing($0.id) } ?? .newSpace,
                 customization: BrowserImportSpaceCustomization(
                     space: matchingSpace ?? sourceSpace
                 ),
-                includedTabIDs: suggestion?.includedTabIDs ?? Set(sourceSpace.tabs.map(\.id)),
-                duplicateTabIDs: suggestion?.duplicateTabIDs ?? [],
+                includedTabIDs: suggestion.map { Set($0.includedTabIDs.map(TabID.init(rawValue:))) }
+                    ?? Set(sourceSpace.tabs.map(\.id)),
+                duplicateTabIDs: Set(suggestion?.duplicateTabIDs.map(TabID.init(rawValue:)) ?? []),
                 placementOverrides: [:],
                 spaceInclusionOverride: nil,
                 passwordInclusionOverride: nil
             )
         }
+    }
+
+    /// The Spaces the import brings, in the order it brings them.
+    var sources: [BrowserSpace] {
+        spaces.map(\.sourceSpace)
     }
 
     var hasIncludedSpaces: Bool {
@@ -168,19 +174,54 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
         spaces[index].customization.branding = branding.normalized()
     }
 
-    /// What the current choices mean against `existing`, answered by the core
-    /// in one pass. Empty when the core cannot answer; the import itself still
-    /// enforces the pinned limit.
-    func analysis(in existing: BrowserSession) -> BrowserImportReviewAnalysis {
-        BrowserCoreWorkspaceImport.reviewAnalysis(self, existing: existing) ?? BrowserImportReviewAnalysis()
+    /// What the current choices mean against `browser`'s workspace, answered
+    /// by the core in one pass. Empty when the core cannot answer; the import
+    /// itself still enforces the pinned limit.
+    @MainActor
+    func analysis(in browser: BrowserStore) -> BrowserImportReviewAnalysis {
+        let query = ImportReviewAnalysis(
+            workspaceID: browser.family.workspaceID, sources: sources.map(ImportReviewSpace.init), reviews: reviews)
+        guard let answer = try? browser.core.query(query) else { return BrowserImportReviewAnalysis() }
+        var analysis = BrowserImportReviewAnalysis()
+        for space in answer.spaces {
+            analysis.duplicateTabIDs.formUnion(space.duplicateTabIDs.map(TabID.init(rawValue:)))
+            analysis.matchedTabIDsBySourceSpace[SpaceID(rawValue: space.sourceSpaceID)] =
+                Set(space.matchedTabIDs.map(TabID.init(rawValue:)))
+        }
+        analysis.overflowTabIDs = Set(answer.overflowTabIDs.map(TabID.init(rawValue:)))
+        return analysis
     }
 
-    func overflowTabIDs(in existing: BrowserSession) -> Set<TabID> {
-        analysis(in: existing).overflowTabIDs
+    /// The session the import would leave `browser`'s workspace with.
+    /// Throws the rule that would refuse it.
+    @MainActor
+    func preview(in browser: BrowserStore) throws -> BrowserSession {
+        try browser.importPreview(try intent(in: browser), of: sources)
     }
 
-    func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
-        return try BrowserCoreWorkspaceImport.preview(BrowserCoreWorkspaceImport.review(self), existing: existing)
+    /// The import these choices make, issued from `browser`'s window.
+    @MainActor
+    func intent(in browser: BrowserStore) throws -> ImportReviewedSpaces {
+        ImportReviewedSpaces(
+            workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
+            spaces: try BrowserSpace.storedFormat(sources), reviews: reviews)
+    }
+
+    /// The choices for each imported Space, each naming the Space it is for.
+    private var reviews: [SpaceReview] {
+        spaces.map { review in
+            let destinationID: UUID? =
+                switch review.destination {
+                case .newSpace: nil
+                case .existing(let id): id.rawValue
+                }
+            return SpaceReview(
+                sourceSpaceID: review.id.rawValue, included: review.isIncluded, destinationID: destinationID,
+                customization: review.customization.core, includedTabIDs: review.includedTabIDs.map(\.rawValue),
+                placements: review.placementOverrides.map {
+                    TabPlacementChoice(tabID: $0.key.rawValue, placement: $0.value)
+                })
+        }
     }
 }
 
