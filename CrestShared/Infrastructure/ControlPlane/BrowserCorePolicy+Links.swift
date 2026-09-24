@@ -47,9 +47,9 @@ extension BrowserCoreLinkRouteRecord {
     }
 }
 
-/// External-link routing, route editing and Quick Window rules owned by the
-/// portable core. The native store keeps the preferences and persists what the
-/// core decides.
+/// Route editing and Quick Window rules owned by the portable core. The native
+/// store keeps the preferences and persists what the core decides; routing an
+/// external link is the typed `ExternalLinkRoute` query.
 extension BrowserCorePolicy {
     // MARK: - Types
 
@@ -74,33 +74,6 @@ extension BrowserCorePolicy {
                 try container.encode(value.rawValue.coreIdentifier, forKey: .destinationSpaceID)
             }
         }
-    }
-
-    private struct RouteRequest: Encodable {
-        let url: String
-        let routes: [BrowserCoreLinkRouteRecord]
-        let destination: BrowserExternalLinkDestination
-        @BrowserCoreNullable var chosenSpaceID: String?
-        let remembersSpaceBySite: Bool
-        @BrowserCoreNullable var rememberedSpaceID: String?
-        let spaces: [String]
-        @BrowserCoreNullable var selectedSpaceID: String?
-        let unavailableSpaceIDs: [String]
-        let lockedSpaceIDs: [String]
-    }
-
-    private struct RouteAnswer: Decodable {
-        let quickWindow: Bool
-        let spaceID: UUID
-    }
-
-    private struct SiteRequest: Encodable {
-        let url: String
-        let remembersSpaceBySite: Bool
-    }
-
-    private struct SiteAnswer: Decodable {
-        @BrowserCoreOptional var site: String?
     }
 
     private struct RouteCreateRequest: Encodable {
@@ -185,41 +158,6 @@ extension BrowserCorePolicy {
     private struct RetargetAnswer: Decodable {
         let revises: Bool
         let remembersSpace: Bool
-    }
-
-    // MARK: - Actions - Link routing
-
-    /// Where an external link opens. A link routed to a Space in
-    /// `lockedSpaceIDs` never raises a prompt for another process: the core
-    /// substitutes a Quick Window on an unlocked Space. Nil when no Space may
-    /// take the link, or when the core cannot answer — the link is then not
-    /// opened rather than landing somewhere the rules did not choose.
-    static func linkRoutingDecision(
-        for url: URL, preferences: BrowserLinkPreferences, session: BrowserPresentedSession,
-        unavailableSpaceIDs: Set<SpaceID>, lockedSpaceIDs: Set<SpaceID> = []
-    ) -> BrowserLinkRoutingDecision? {
-        let remembered = linkSite(for: url, remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite)
-            .flatMap { preferences.rememberedQuickWindowSpacesBySite[$0] }
-        let request = RouteRequest(
-            url: url.absoluteString, routes: preferences.routes.map(BrowserCoreLinkRouteRecord.init),
-            destination: preferences.externalLinkDestination,
-            chosenSpaceID: preferences.externalLinkSpaceID?.rawValue.coreIdentifier,
-            remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite,
-            rememberedSpaceID: remembered?.rawValue.coreIdentifier,
-            spaces: session.spaces.map { $0.id.rawValue.coreIdentifier },
-            selectedSpaceID: session.selectedSpaceID.rawValue.coreIdentifier,
-            unavailableSpaceIDs: unavailableSpaceIDs.map { $0.rawValue.coreIdentifier },
-            lockedSpaceIDs: lockedSpaceIDs.map { $0.rawValue.coreIdentifier })
-        guard let answer = evaluate(.linksRoute, request, answer: RouteAnswer.self) else { return nil }
-        let spaceID = SpaceID(rawValue: answer.spaceID)
-        return answer.quickWindow ? .quickWindow(spaceID: spaceID) : .space(spaceID)
-    }
-
-    /// The site key a Quick Window remembers its Space under, or nil when the
-    /// preference is off, the address has no host, or the core cannot answer.
-    static func linkSite(for url: URL, remembersSpaceBySite: Bool) -> String? {
-        let request = SiteRequest(url: url.absoluteString, remembersSpaceBySite: remembersSpaceBySite)
-        return evaluate(.linksSite, request, answer: SiteAnswer.self)?.site
     }
 
     // MARK: - Actions - Route editing

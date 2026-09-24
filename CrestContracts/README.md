@@ -115,11 +115,13 @@ and `authentication.fixture_trust` operations answer the origin, scheme,
 popup-notice and HTTP authentication rules. URLs arrive as the platform
 parser's facts; every caller refuses, blocks or asks when it gets no answer.
 
-The `links.*` operations carry link routes as `{"id","isEnabled","match",
-"pattern","destinationSpaceID"}` with lowercase UUID strings. `links.route` takes
-optional `lockedSpaceIDs`: a link routed to a locked Space answers a Quick Window
-on an unlocked one with `substitutesForLockedSpace`, or a null `spaceID` when no
-Space can take it. Route edits answer
+The `ExternalLinkRoute` query takes the link preferences routing reads and the
+Spaces this process holds locked: a link routed to a locked Space answers a Quick
+Window on an unlocked one with `SubstitutesForLockedSpace`, or no Space when none
+can take it. `QuickWindowSite` answers the site key a Quick Window remembers its
+Space under. The `links.route_*` operations carry link routes as
+`{"id","isEnabled","match","pattern","destinationSpaceID"}` with lowercase UUID
+strings. Route edits answer
 the edited route or `{"error":code}`, reorders and removals answer the route
 order, and `links.space_removed` answers what a deleted Space leaves behind.
 `quick_window.*` answer archive lifetime, archive-on-dismissal and retargeting;

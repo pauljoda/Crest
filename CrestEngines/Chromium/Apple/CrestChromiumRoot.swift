@@ -254,7 +254,8 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         let current = QuickRequest(request)
         let model = BrowserQuickWindowModel(request: request, browser: context.browser, pages: context.pages,
             spaceAccess: application.spaceAccess, supportsLivePagePromotion: context.supportsLivePagePromotion,
-            preferences: .production, requestLifecycle: BrowserQuickWindowRequestLifecycle(
+            preferences: .production(core: context.browser.core),
+            requestLifecycle: BrowserQuickWindowRequestLifecycle(
                 isCurrent: { [weak current] in current?.value.hasSamePresentationIdentity(as: $0) == true },
                 replace: { [weak current] expected, revised in
                     guard let current, current.value.hasSamePresentationIdentity(as: expected) else { return false }
@@ -514,7 +515,8 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         // unlocked one.
         guard let decision = BrowserLinkPreferenceStore.shared.routingDecision(
             for: url, in: browser.presented, unavailableSpaceIDs: browser.deletingSpaceIDs,
-            lockedSpaceIDs: Set(browser.session.spaces.filter(application.spaceAccess.isLocked).map(\.id))),
+            lockedSpaceIDs: Set(browser.session.spaces.filter(application.spaceAccess.isLocked).map(\.id)),
+            asking: browser.core),
             let space = browser.session.space(id: decision.spaceID)
         else { return nil }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)

@@ -12,7 +12,7 @@ struct MobileBrowserTransientOverlay: View {
         pages: MobileBrowserPageStore,
         coordinator: BrowserTransientBrowsingCoordinator,
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController(),
-        preferences: BrowserTransientBrowsingPreferences = .production,
+        preferences: BrowserTransientBrowsingPreferences? = nil,
         didPromote: @escaping () -> Void = {}
     ) {
         self.presentationPhase = presentationPhase
@@ -24,7 +24,7 @@ struct MobileBrowserTransientOverlay: View {
                 pages: pages,
                 coordinator: coordinator,
                 spaceAccess: spaceAccess,
-                preferences: preferences,
+                preferences: preferences ?? .production(core: browser.core),
                 didPromote: didPromote
             )
         )

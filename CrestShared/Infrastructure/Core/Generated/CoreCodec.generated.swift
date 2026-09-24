@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xca, 0x35, 0x9d, 0x5e, 0xca, 0x75, 0xdb, 0xe2, 0x70, 0x4a, 0xf1, 0xea, 0xba, 0x74, 0xc8, 0x7e, 0xba, 0xc1, 0xdc, 0x5e, 0x9d, 0x1c, 0x19, 0xaa, 0x0f, 0x55, 0xd8, 0xcb, 0x59, 0x7c, 0xc4, 0x1a
+        0xf1, 0x56, 0x19, 0xd2, 0xfc, 0x66, 0x4b, 0xb2, 0x3f, 0x80, 0x9e, 0x35, 0xfc, 0xc4, 0x59, 0xf6, 0x4a, 0xa0, 0x47, 0x6d, 0x86, 0x15, 0x4c, 0x2c, 0xe2, 0xd8, 0x06, 0x2f, 0xf3, 0x51, 0xc7, 0x1b
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -43,11 +43,13 @@ enum CoreCodec {
         case 6: return try CustomSearchEngineAdmission(from: &reader)
         case 7: return try DownloadProgress(from: &reader)
         case 8: return try DownloadRisk(from: &reader)
-        case 9: return try MostRecentCredential(from: &reader)
-        case 10: return try PasskeyAccess(from: &reader)
-        case 11: return try StrongPassword(from: &reader)
-        case 12: return try SystemPasswordOffer(from: &reader)
-        case 13: return try SystemPasswordWriteThrough(from: &reader)
+        case 9: return try ExternalLinkRoute(from: &reader)
+        case 10: return try MostRecentCredential(from: &reader)
+        case 11: return try PasskeyAccess(from: &reader)
+        case 12: return try QuickWindowSite(from: &reader)
+        case 13: return try StrongPassword(from: &reader)
+        case 14: return try SystemPasswordOffer(from: &reader)
+        case 15: return try SystemPasswordWriteThrough(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -1246,6 +1248,68 @@ extension ExpireDownloads {
     }
 }
 
+extension ExternalLinkPlacement {
+    init(from reader: inout WireReader) throws(WireError) {
+        let spaceID: UUID?
+        if try reader.readPresence() {
+            let spaceIDValue = try reader.readUUID()
+            spaceID = spaceIDValue
+        } else {
+            spaceID = nil
+        }
+        let opensQuickWindow = try reader.readBool()
+        let substitutesForLockedSpace = try reader.readBool()
+        self.init(spaceID: spaceID, opensQuickWindow: opensQuickWindow, substitutesForLockedSpace: substitutesForLockedSpace)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = spaceID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeBool(opensQuickWindow)
+        writer.writeBool(substitutesForLockedSpace)
+    }
+}
+
+extension ExternalLinkRoute {
+    init(from reader: inout WireReader) throws(WireError) {
+        let url = try reader.readString()
+        let preferences = try LinkRoutingPreferences(from: &reader)
+        let context = try LinkRoutingContext(from: &reader)
+        let lockedSpaceIDsCount = try reader.readCount()
+        var lockedSpaceIDs: [UUID] = []
+        lockedSpaceIDs.reserveCapacity(lockedSpaceIDsCount)
+        for _ in 0..<lockedSpaceIDsCount {
+            let lockedSpaceIDsElement = try reader.readUUID()
+            lockedSpaceIDs.append(lockedSpaceIDsElement)
+        }
+        self.init(url: url, preferences: preferences, context: context, lockedSpaceIDs: lockedSpaceIDs)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(url)
+        preferences.encode(into: &writer)
+        context.encode(into: &writer)
+        writer.writeCount(lockedSpaceIDs.count)
+        for element0 in lockedSpaceIDs {
+            writer.writeUUID(element0)
+        }
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(9)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> ExternalLinkPlacement {
+        let answer = try ExternalLinkPlacement(from: &reader)
+        return answer
+    }
+}
+
 extension FailDownload {
     init(from reader: inout WireReader) throws(WireError) {
         let downloadID = try reader.readUUID()
@@ -1400,6 +1464,108 @@ extension InvalidSearchEngine {
     }
 }
 
+extension LinkRoute {
+    init(from reader: inout WireReader) throws(WireError) {
+        let id = try reader.readUUID()
+        let isEnabled = try reader.readBool()
+        let match = try LinkRouteMatch(from: &reader)
+        let pattern = try reader.readString()
+        let destinationSpaceID = try reader.readUUID()
+        self.init(id: id, isEnabled: isEnabled, match: match, pattern: pattern, destinationSpaceID: destinationSpaceID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(id)
+        writer.writeBool(isEnabled)
+        match.encode(into: &writer)
+        writer.writeString(pattern)
+        writer.writeUUID(destinationSpaceID)
+    }
+}
+
+extension LinkRoutingContext {
+    init(from reader: inout WireReader) throws(WireError) {
+        let spacesCount = try reader.readCount()
+        var spaces: [UUID] = []
+        spaces.reserveCapacity(spacesCount)
+        for _ in 0..<spacesCount {
+            let spacesElement = try reader.readUUID()
+            spaces.append(spacesElement)
+        }
+        let selectedSpaceID = try reader.readUUID()
+        let unavailableSpaceIDsCount = try reader.readCount()
+        var unavailableSpaceIDs: [UUID] = []
+        unavailableSpaceIDs.reserveCapacity(unavailableSpaceIDsCount)
+        for _ in 0..<unavailableSpaceIDsCount {
+            let unavailableSpaceIDsElement = try reader.readUUID()
+            unavailableSpaceIDs.append(unavailableSpaceIDsElement)
+        }
+        self.init(spaces: spaces, selectedSpaceID: selectedSpaceID, unavailableSpaceIDs: unavailableSpaceIDs)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(spaces.count)
+        for element0 in spaces {
+            writer.writeUUID(element0)
+        }
+        writer.writeUUID(selectedSpaceID)
+        writer.writeCount(unavailableSpaceIDs.count)
+        for element0 in unavailableSpaceIDs {
+            writer.writeUUID(element0)
+        }
+    }
+}
+
+extension LinkRoutingPreferences {
+    init(from reader: inout WireReader) throws(WireError) {
+        let routesCount = try reader.readCount()
+        var routes: [LinkRoute] = []
+        routes.reserveCapacity(routesCount)
+        for _ in 0..<routesCount {
+            let routesElement = try LinkRoute(from: &reader)
+            routes.append(routesElement)
+        }
+        let destination = try ExternalLinkDestination(from: &reader)
+        let chosenSpaceID: UUID?
+        if try reader.readPresence() {
+            let chosenSpaceIDValue = try reader.readUUID()
+            chosenSpaceID = chosenSpaceIDValue
+        } else {
+            chosenSpaceID = nil
+        }
+        let remembersSpaceBySite = try reader.readBool()
+        let rememberedSpaceID: UUID?
+        if try reader.readPresence() {
+            let rememberedSpaceIDValue = try reader.readUUID()
+            rememberedSpaceID = rememberedSpaceIDValue
+        } else {
+            rememberedSpaceID = nil
+        }
+        self.init(routes: routes, destination: destination, chosenSpaceID: chosenSpaceID, remembersSpaceBySite: remembersSpaceBySite, rememberedSpaceID: rememberedSpaceID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(routes.count)
+        for element0 in routes {
+            element0.encode(into: &writer)
+        }
+        destination.encode(into: &writer)
+        if let present0 = chosenSpaceID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeBool(remembersSpaceBySite)
+        if let present0 = rememberedSpaceID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
 extension MostRecentCredential {
     init(from reader: inout WireReader) throws(WireError) {
         let recordsCount = try reader.readCount()
@@ -1420,7 +1586,7 @@ extension MostRecentCredential {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(9)
+        writer.writeTag(10)
         encode(into: &writer)
     }
 
@@ -1445,7 +1611,7 @@ extension PasskeyAccess {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(10)
+        writer.writeTag(11)
         encode(into: &writer)
     }
 
@@ -1463,6 +1629,51 @@ extension PasskeyAccessVerdict {
 
     func encode(into writer: inout WireWriter) {
         status.encode(into: &writer)
+    }
+}
+
+extension QuickWindowSite {
+    init(from reader: inout WireReader) throws(WireError) {
+        let url = try reader.readString()
+        let remembersSpaceBySite = try reader.readBool()
+        self.init(url: url, remembersSpaceBySite: remembersSpaceBySite)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(url)
+        writer.writeBool(remembersSpaceBySite)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(12)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> QuickWindowSiteKey {
+        let answer = try QuickWindowSiteKey(from: &reader)
+        return answer
+    }
+}
+
+extension QuickWindowSiteKey {
+    init(from reader: inout WireReader) throws(WireError) {
+        let site: String?
+        if try reader.readPresence() {
+            let siteValue = try reader.readString()
+            site = siteValue
+        } else {
+            site = nil
+        }
+        self.init(site: site)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = site {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -1596,7 +1807,7 @@ extension StrongPassword {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(11)
+        writer.writeTag(13)
         encode(into: &writer)
     }
 
@@ -1643,7 +1854,7 @@ extension SystemPasswordOffer {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(12)
+        writer.writeTag(14)
         encode(into: &writer)
     }
 
@@ -1681,7 +1892,7 @@ extension SystemPasswordWriteThrough {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(13)
+        writer.writeTag(15)
         encode(into: &writer)
     }
 
@@ -1833,6 +2044,34 @@ extension DownloadTextField {
         let rawValue = try reader.readEnum()
         guard let value = DownloadTextField(rawValue: rawValue) else {
             throw WireError.malformed("Unknown DownloadTextField \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension ExternalLinkDestination {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = ExternalLinkDestination(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown ExternalLinkDestination \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension LinkRouteMatch {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = LinkRouteMatch(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown LinkRouteMatch \(rawValue)")
         }
         self = value
     }

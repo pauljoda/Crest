@@ -18,7 +18,7 @@ struct BrowserQuickWindowView: View {
         requestLifecycle: BrowserQuickWindowRequestLifecycle,
         openBrowserWindow: @escaping () -> Void = {},
         supportsLivePagePromotion: Bool = false,
-        preferences: BrowserTransientBrowsingPreferences = .production
+        preferences: BrowserTransientBrowsingPreferences? = nil
     ) {
         self.request = request
         self.spaceAccess = spaceAccess
@@ -31,7 +31,7 @@ struct BrowserQuickWindowView: View {
                 pages: pages,
                 spaceAccess: spaceAccess,
                 supportsLivePagePromotion: supportsLivePagePromotion,
-                preferences: preferences,
+                preferences: preferences ?? .production(core: browser.core),
                 requestLifecycle: requestLifecycle
             )
         )

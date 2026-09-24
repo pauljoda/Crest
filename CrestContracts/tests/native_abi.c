@@ -305,18 +305,26 @@ static void preferences_boundary(void) {
         != CREST_OK && command == 0);
     assert(crest_session_destroy(session) == CREST_OK);
 }
-/* Link routing and borrowed-workspace command routing are core policy answers. */
+/* The Quick Window site key is a typed query; borrowed-workspace command
+ * routing is a core policy answer. */
 static void links_boundary(void) {
-    const char *route = "{\"version\":1,\"operation\":\"links.route\",\"url\":\"https://docs.example.org/crest\","
-        "\"routes\":[{\"id\":\"66666666-6666-4666-8666-666666666666\",\"isEnabled\":true,\"match\":\"contains\","
-        "\"pattern\":\"EXAMPLE.org\",\"destinationSpaceID\":\"77777777-7777-4777-8777-777777777777\"}],"
-        "\"destination\":\"quickWindow\",\"chosenSpaceID\":null,\"remembersSpaceBySite\":true,\"rememberedSpaceID\":null,"
-        "\"spaces\":[\"88888888-8888-4888-8888-888888888888\",\"77777777-7777-4777-8777-777777777777\"],"
-        "\"selectedSpaceID\":\"88888888-8888-4888-8888-888888888888\",\"unavailableSpaceIDs\":[]}";
+    const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
+    uint64_t app = 0;
+    crest_buffer_t buffer = { NULL, 0 };
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), &app) == CREST_OK);
+    /* QuickWindowSite: its tag, the address as a length-prefixed UTF-8 string,
+     * then whether Quick Windows remember Spaces by site. */
+    const char *url = "https://www.Docs.example.org/crest", *key = "docs.example.org";
+    uint8_t site[64] = { CREST_QUERY_QUICK_WINDOW_SITE, (uint8_t)strlen(url) };
+    memcpy(site + 2, url, strlen(url));
+    site[2 + strlen(url)] = 1;
+    assert(crest_app_query(app, site, 3 + strlen(url), &buffer) == CREST_OK);
+    /* A present key: the presence byte, then the string. */
+    assert(buffer.length == 2 + strlen(key) && buffer.bytes[0] == 1 && buffer.bytes[1] == strlen(key)
+        && memcmp(buffer.bytes + 2, key, strlen(key)) == 0);
+    crest_buffer_free(&buffer);
+    assert(crest_app_destroy(app) == CREST_OK);
     uint8_t output[512]; size_t length = 0;
-    assert(crest_core_evaluate_policy((const uint8_t*)route, strlen(route), output, sizeof(output) - 1, &length) == CREST_OK);
-    output[length] = 0;
-    assert(strstr((const char*)output, "\"quickWindow\":false") && strstr((const char*)output, "77777777-7777-4777-8777-777777777777"));
     const char *borrowed = "{\"version\":1,\"operation\":\"workspace.command_route\",\"command\":\"space.branding\",\"borrowed\":true}";
     assert(crest_core_evaluate_policy((const uint8_t*)borrowed, strlen(borrowed), output, sizeof(output) - 1, &length) == CREST_OK);
     output[length] = 0;

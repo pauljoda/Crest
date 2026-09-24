@@ -14,6 +14,7 @@ public sealed class CrestApp {
     private readonly Credentials credentials = new();
     private readonly Search search = new();
     private readonly ContentBlocking contentBlocking = new();
+    private readonly Links links = new();
 
     #endregion
 
@@ -58,6 +59,8 @@ public sealed class CrestApp {
                 SystemPasswordOffer offer => credentials.Answer(offer),
                 CustomSearchEngineAdmission admission => search.Answer(admission),
                 BalancedProtectionRules rules => contentBlocking.Answer(rules),
+                ExternalLinkRoute route => links.Answer(route),
+                QuickWindowSite site => links.Answer(site),
                 _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
             };
             return (TAnswer)answer;

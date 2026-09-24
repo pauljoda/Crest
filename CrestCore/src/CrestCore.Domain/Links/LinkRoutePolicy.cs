@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Editing rules for the ordered link routes and what a deleted Space leaves

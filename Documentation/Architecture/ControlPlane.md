@@ -622,17 +622,18 @@ authentication handling, prompt labels and fixture trust are policy
 operations; an unanswered permission is Ask, an unanswered URL or document is
 refused and an unanswered scheme is blocked.
 
-External links follow the same split. `links.route` decides where a link opened
-from outside Crest goes (the first enabled route to an open Space, then the
-Quick Window, most-recent or chosen Space preference), and `links.site` names the
-site key a Quick Window remembers its Space under. Route creation, one-field
+External links follow the same split. The `ExternalLinkRoute` query decides where
+a link opened from outside Crest goes (the first enabled route to an open Space,
+then the Quick Window, most-recent or chosen Space preference), and the
+`QuickWindowSite` query names the site key a Quick Window remembers its Space
+under. Route creation, one-field
 edits, reordering and removal are `links.route_*` operations, and
 `links.space_removed` is the Space-deletion cascade: the deleted Space's routes,
 chosen-Space preference and remembered sites go with it. The preferences stay in
 their existing UserDefaults record, unchanged in format; the native store applies
 and persists what the core returns, and an edit the core refuses or cannot answer
 changes nothing. A link routed to a Space this process holds locked never raises
-a prompt: `links.route` takes `lockedSpaceIDs` and substitutes a Quick Window on
+a prompt: `ExternalLinkRoute` takes the locked Spaces and substitutes a Quick Window on
 the shown Space when it is unlocked, else the first unlocked one, answering no
 Space when none can open; routing that cannot answer opens nothing. Quick Window archive lifetime, archive-on-dismissal and retargeting
 (whether a move revises the request and remembers the site's Space) are

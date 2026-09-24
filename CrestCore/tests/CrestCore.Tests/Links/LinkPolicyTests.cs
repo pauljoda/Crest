@@ -19,71 +19,60 @@ public sealed class LinkPolicyTests {
         return JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
     }
 
-    private static JsonObject Route(Guid destination, string pattern, string match = "contains", bool enabled = true, Guid? id = null) => new() {
-        ["id"] = (id ?? Guid.NewGuid()).ToString("D"),
-        ["isEnabled"] = enabled,
-        ["match"] = match,
+    private static LinkRoute Route(Guid destination, string pattern, LinkRouteMatch match = LinkRouteMatch.Contains,
+        bool enabled = true) => new(Guid.NewGuid(), enabled, match, pattern, destination);
+
+    private static ExternalLinkRoute Routing(string url, LinkRoute[] routes,
+        ExternalLinkDestination destination = ExternalLinkDestination.QuickWindow, Guid? chosen = null, Guid? remembered = null,
+        bool remembers = true, Guid[]? unavailable = null, Guid[]? locked = null) =>
+        new(url, new(routes, destination, chosen, remembers, remembered), new([Work, Personal], Work, unavailable ?? []),
+            locked ?? []);
+
+    private static ExternalLinkPlacement Placement(ExternalLinkRoute route) => new Links().Answer(route);
+
+    private static (bool QuickWindow, Guid Space) Decision(ExternalLinkRoute route) {
+        var placement = Placement(route);
+        return (placement.OpensQuickWindow, Assert.NotNull(placement.SpaceId));
+    }
+
+    private static JsonObject RouteRecord(Guid destination, string pattern) => new() {
+        ["id"] = Guid.NewGuid().ToString("D"),
+        ["isEnabled"] = true,
+        ["match"] = "contains",
         ["pattern"] = pattern,
         ["destinationSpaceID"] = destination.ToString("D")
     };
 
-    private static JsonObject Routing(string url, JsonArray routes, string destination = "quickWindow",
-        Guid? chosen = null, Guid? remembered = null, bool remembers = true, Guid[]? unavailable = null) => new() {
-            ["operation"] = "links.route",
-            ["url"] = url,
-            ["routes"] = routes,
-            ["destination"] = destination,
-            ["chosenSpaceID"] = chosen?.ToString("D"),
-            ["remembersSpaceBySite"] = remembers,
-            ["rememberedSpaceID"] = remembered?.ToString("D"),
-            ["spaces"] = new JsonArray(Work.ToString("D"), Personal.ToString("D")),
-            ["selectedSpaceID"] = Work.ToString("D"),
-            ["unavailableSpaceIDs"] = new JsonArray((unavailable ?? []).Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray())
-        };
-
-    private static (bool QuickWindow, string Space) Decision(JsonNode result) =>
-        (result["quickWindow"]!.GetValue<bool>(), result["spaceID"]!.GetValue<string>());
-
     [Fact]
     public void TheFirstEnabledRouteToAnOpenSpaceWinsAndExactMatchesIgnoreFragmentsAndCase() {
-        var routes = new JsonArray(
+        LinkRoute[] routes = [
             Route(Personal, "EXAMPLE.COM", enabled: false),
             Route(Missing, "example.com"),
-            Route(Work, "https://example.com/reference#configured", "exact"),
-            Route(Personal, "example.com"));
-        Assert.Equal((false, Work.ToString("D")),
-            Decision(Evaluate(Routing("https://EXAMPLE.com/reference#visited", routes))));
-        Assert.Equal((false, Personal.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com/another", routes.DeepClone().AsArray()))));
+            Route(Work, "https://example.com/reference#configured", LinkRouteMatch.Exact),
+            Route(Personal, "example.com")];
+        Assert.Equal((false, Work), Decision(Routing("https://EXAMPLE.com/reference#visited", routes)));
+        Assert.Equal((false, Personal), Decision(Routing("https://example.com/another", routes)));
         // A blank pattern, still being typed, never claims a link.
-        Assert.Equal((true, Work.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com/", new JsonArray(Route(Personal, "   "))))));
+        Assert.Equal((true, Work), Decision(Routing("https://example.com/", [Route(Personal, "   ")])));
     }
 
     [Fact]
     public void WithoutARouteTheDestinationPreferenceDecidesAndFallsBackToTheSelectedSpace() {
-        Assert.Equal((true, Personal.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com", [], remembered: Personal))));
-        Assert.Equal((true, Work.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com", [], remembered: Personal, remembers: false))));
-        Assert.Equal((true, Work.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com", [], remembered: Missing))));
-        Assert.Equal((false, Work.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com", [], "chosenSpace", chosen: Missing))));
-        Assert.Equal((false, Personal.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com", [], "chosenSpace", chosen: Personal))));
+        Assert.Equal((true, Personal), Decision(Routing("https://example.com", [], remembered: Personal)));
+        Assert.Equal((true, Work), Decision(Routing("https://example.com", [], remembered: Personal, remembers: false)));
+        Assert.Equal((true, Work), Decision(Routing("https://example.com", [], remembered: Missing)));
+        Assert.Equal((false, Work),
+            Decision(Routing("https://example.com", [], ExternalLinkDestination.ChosenSpace, chosen: Missing)));
+        Assert.Equal((false, Personal),
+            Decision(Routing("https://example.com", [], ExternalLinkDestination.ChosenSpace, chosen: Personal)));
         // A Space being deleted is skipped; the next open Space stands in.
-        Assert.Equal((false, Personal.ToString("D")),
-            Decision(Evaluate(Routing("https://example.com", [], "mostRecentSpace", unavailable: [Work]))));
+        Assert.Equal((false, Personal),
+            Decision(Routing("https://example.com", [], ExternalLinkDestination.MostRecentSpace, unavailable: [Work])));
     }
 
     [Fact]
     public void QuickWindowsRememberSpacesByNormalizedSiteOnlyWhenAllowed() {
-        static string? Site(string url, bool remembers = true) => Evaluate(new() {
-            ["operation"] = "links.site",
-            ["url"] = url,
-            ["remembersSpaceBySite"] = remembers
-        })["site"]?.GetValue<string>();
+        static string? Site(string url, bool remembers = true) => new Links().Answer(new QuickWindowSite(url, remembers)).Site;
         Assert.Equal("example.com", Site("https://www.Example.com/first"));
         Assert.Equal(Site("https://example.com/second"), Site("https://www.example.com/first"));
         Assert.Null(Site("https://example.com/", remembers: false));
@@ -173,28 +162,25 @@ public sealed class LinkPolicyTests {
     }
 
     [Fact]
-    public void RoutingRejectsMalformedRoutes() {
-        var bad = Route(Work, "example.com", "startsWith");
-        Assert.Equal(ProtocolErrorCodes.InvalidLinkRouteMatch,
-            Assert.Throws<ProtocolException>(() => Evaluate(Routing("https://example.com", new JsonArray(bad)))).Code);
-        Assert.Equal(ProtocolErrorCodes.InvalidLinkDestination,
-            Assert.Throws<ProtocolException>(() => Evaluate(Routing("https://example.com", [], "elsewhere"))).Code);
+    public void RouteEditsRejectMalformedRoutes() {
+        var bad = RouteRecord(Work, "example.com");
+        bad["match"] = "startsWith";
+        Assert.Equal(ProtocolErrorCodes.InvalidLinkRouteMatch, Assert.Throws<ProtocolException>(() => Evaluate(new() {
+            ["operation"] = "links.route_update",
+            ["route"] = bad,
+            ["field"] = new JsonObject { ["isEnabled"] = false }
+        })).Code);
     }
 
     [Fact]
     public void AnExternalLinkRoutedToALockedSpaceOpensInAQuickWindowOnAnUnlockedOne() {
-        var routes = new JsonArray(Route(Personal, "example.com"));
-        var locked = Routing("https://example.com/", routes);
-        locked["lockedSpaceIDs"] = new JsonArray(Personal.ToString("D"));
-        var substituted = Evaluate(locked);
-        Assert.Equal((true, Work.ToString("D")), Decision(substituted));
-        Assert.True(substituted["substitutesForLockedSpace"]!.GetValue<bool>());
+        LinkRoute[] routes = [Route(Personal, "example.com")];
+        Assert.Equal(new ExternalLinkPlacement(Work, true, true),
+            Placement(Routing("https://example.com/", routes, locked: [Personal])));
         // With every Space locked there is nowhere the link may open.
-        locked["lockedSpaceIDs"] = new JsonArray(Personal.ToString("D"), Work.ToString("D"));
-        Assert.Null(Evaluate(locked)["spaceID"]);
+        Assert.Equal(new ExternalLinkPlacement(null, false, false),
+            Placement(Routing("https://example.com/", routes, locked: [Personal, Work])));
         // An unlocked routed Space is used as routed.
-        var open = Evaluate(Routing("https://example.com/", routes.DeepClone().AsArray()));
-        Assert.Equal((false, Personal.ToString("D")), Decision(open));
-        Assert.False(open["substitutesForLockedSpace"]!.GetValue<bool>());
+        Assert.Equal(new ExternalLinkPlacement(Personal, false, false), Placement(Routing("https://example.com/", routes)));
     }
 }

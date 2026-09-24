@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Decides where a link opened from outside Crest goes: the first enabled
@@ -10,7 +12,7 @@ public static class LinkRoutingPolicy {
     /// in a Quick Window on the selected Space when that one is unlocked and
     /// available, else on the first that is. Null when no Space can take it.
     public static LinkRoutingDecision? DecideExternal(string url, LinkRoutingPreferences preferences,
-        LinkRoutingContext context, IReadOnlySet<Guid> locked) {
+        LinkRoutingContext context, IReadOnlyCollection<Guid> locked) {
         ArgumentNullException.ThrowIfNull(locked);
         var routed = Decide(url, preferences, context);
         if (!locked.Contains(routed.SpaceId)) return routed;

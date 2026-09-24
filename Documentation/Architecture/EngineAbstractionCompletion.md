@@ -272,7 +272,7 @@ operations or a bounded export. Swift keeps projections and adapters.
 | Window state and plans | `window.repair`, `window.split_layout`, `window.tear_off`, `tabs.selection_fallback`, `setup.space`, `setup.tab`, `setup.reconcile`, `onboarding.completion` and `onboarding.guide`; the `workspace.review` query; split-run validation in the workspace import |
 | Shortcuts, launch and media | `shortcuts.bindings`, `.assign` and `.numbered_selection`; `launch.plan`; `media.session_event` and `media.arbitrate`; the `tab.open` `after` anchor |
 | Behavior preferences | The session's `appPreferences` record behind `preferences.set`, `preferences.translation_rule` and a one-time `preferences.import`. Device-local, never synced |
-| Links, Quick Window, presentation | `links.*`, `quick_window.*`, `workspace.command_route`, `page.presentation`, the `BalancedProtectionRules` query, `branding.normalize` and the `space.branding` command |
+| Links, Quick Window, presentation | The `ExternalLinkRoute`, `QuickWindowSite` and `BalancedProtectionRules` queries; `links.route_*`, `links.space_removed`, `quick_window.*`, `workspace.command_route`, `page.presentation`, `branding.normalize` and the `space.branding` command |
 
 Selection left the core. The active Space and each Space's shown tab are
 window state (`BrowserStoreSelection`, persisted in `BrowserWindowState`).
@@ -280,7 +280,7 @@ Commands read the window's `view` and answer a `selection` hint, and
 `tab.touch` records only `lastActivatedAt`. Folder depth and count, split
 eligibility and cross-Space move eligibility are commands the caller prepares
 and releases without committing. `limits` reports every capacity the core
-enforces. `links.route` substitutes for a locked Space itself. Link, Quick
+enforces. The `ExternalLinkRoute` query substitutes for a locked Space itself. Link, Quick
 Window and authentication-label callers fail closed when the core cannot
 answer.
 

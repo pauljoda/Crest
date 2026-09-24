@@ -21,6 +21,15 @@ enum BrowserExternalLinkDestination:
         case .chosenSpace: "Chosen Space"
         }
     }
+
+    /// The core's kind for this stored destination.
+    var coreDestination: ExternalLinkDestination {
+        switch self {
+        case .quickWindow: .quickWindow
+        case .mostRecentSpace: .mostRecentSpace
+        case .chosenSpace: .chosenSpace
+        }
+    }
 }
 
 struct BrowserLinkPreferences: Codable, Equatable, Sendable {

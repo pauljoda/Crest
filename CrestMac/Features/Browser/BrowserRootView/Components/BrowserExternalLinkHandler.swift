@@ -42,7 +42,8 @@ struct BrowserExternalLinkHandler: ViewModifier {
                 for: url,
                 in: browser.presented,
                 unavailableSpaceIDs: browser.deletingSpaceIDs,
-                lockedSpaceIDs: Set(browser.session.spaces.filter(spaceAccess.isLocked).map(\.id))
+                lockedSpaceIDs: Set(browser.session.spaces.filter(spaceAccess.isLocked).map(\.id)),
+                asking: browser.core
             ),
             let assignment = await accessibleAssignment(for: decision.spaceID)
         else { return }

@@ -20,6 +20,13 @@ struct BrowserLinkRoute: Codable, Equatable, Identifiable, Sendable {
         self.pattern = pattern
         self.destinationSpaceID = destinationSpaceID
     }
+
+    /// This route as the core's routing rule reads it.
+    var coreRoute: LinkRoute {
+        LinkRoute(
+            id: id, isEnabled: isEnabled, match: match.coreMatch, pattern: pattern,
+            destinationSpaceID: destinationSpaceID.rawValue)
+    }
 }
 
 enum BrowserLinkRouteMatch:
@@ -39,6 +46,14 @@ enum BrowserLinkRouteMatch:
         switch self {
         case .contains: "Contains"
         case .exact: "Is Exactly"
+        }
+    }
+
+    /// The core's kind for this stored match.
+    var coreMatch: LinkRouteMatch {
+        switch self {
+        case .contains: .contains
+        case .exact: .exact
         }
     }
 }

@@ -48,7 +48,6 @@ public static class ProtocolErrorCodes {
 
     public const string InvalidArchivePolicy = "invalid_archive_policy";
     public const string InvalidBranding = "invalid_branding";
-    public const string InvalidLinkDestination = "invalid_link_destination";
     public const string InvalidLinkRouteMatch = "invalid_link_route_match";
     public const string InvalidPagePresentation = "invalid_page_presentation";
     public const string LinkRouteBatchLimit = "link_route_batch_limit";

@@ -329,6 +329,21 @@ struct ExpireDownloads: Intent, Equatable, Sendable {
     let retentions: [DownloadRetention]
 }
 
+struct ExternalLinkPlacement: Equatable, Sendable {
+    let spaceID: UUID?
+    let opensQuickWindow: Bool
+    let substitutesForLockedSpace: Bool
+}
+
+struct ExternalLinkRoute: Query, Equatable, Sendable {
+    typealias Answer = ExternalLinkPlacement
+
+    let url: String
+    let preferences: LinkRoutingPreferences
+    let context: LinkRoutingContext
+    let lockedSpaceIDs: [UUID]
+}
+
 struct FailDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
@@ -376,6 +391,28 @@ struct InvalidSearchEngine: Equatable, Sendable {
     let flaw: SearchEngineFlaw
 }
 
+struct LinkRoute: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let isEnabled: Bool
+    let match: LinkRouteMatch
+    let pattern: String
+    let destinationSpaceID: UUID
+}
+
+struct LinkRoutingContext: Equatable, Sendable {
+    let spaces: [UUID]
+    let selectedSpaceID: UUID
+    let unavailableSpaceIDs: [UUID]
+}
+
+struct LinkRoutingPreferences: Equatable, Sendable {
+    let routes: [LinkRoute]
+    let destination: ExternalLinkDestination
+    let chosenSpaceID: UUID?
+    let remembersSpaceBySite: Bool
+    let rememberedSpaceID: UUID?
+}
+
 struct MostRecentCredential: Query, Equatable, Sendable {
     typealias Answer = CredentialChoice
 
@@ -392,6 +429,17 @@ struct PasskeyAccess: Query, Equatable, Sendable {
 
 struct PasskeyAccessVerdict: Equatable, Sendable {
     let status: PasskeyAccessStatus
+}
+
+struct QuickWindowSite: Query, Equatable, Sendable {
+    typealias Answer = QuickWindowSiteKey
+
+    let url: String
+    let remembersSpaceBySite: Bool
+}
+
+struct QuickWindowSiteKey: Equatable, Sendable {
+    let site: String?
 }
 
 struct RecordDownloadTransfer: Intent, Equatable, Sendable {
@@ -531,6 +579,17 @@ enum DownloadTextField: Int, CaseIterable, Sendable {
     case destination = 1
     case message = 2
     case mimeType = 3
+}
+
+enum ExternalLinkDestination: Int, CaseIterable, Sendable {
+    case quickWindow = 0
+    case mostRecentSpace = 1
+    case chosenSpace = 2
+}
+
+enum LinkRouteMatch: Int, CaseIterable, Sendable {
+    case contains = 0
+    case exact = 1
 }
 
 enum PasskeyAccessStatus: Int, CaseIterable, Sendable {

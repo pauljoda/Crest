@@ -6,7 +6,7 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// Wire spellings for link routes and preferences, shared by the link policy
+/// Wire spellings for link routes, shared by the route-editing policy
 /// operations. Values use the native preference record's spellings.
 internal static class LinkCodes {
     #region Variables
@@ -36,11 +36,6 @@ internal static class LinkCodes {
             Protocol.OptionalId(value, DestinationSpaceId));
     }
 
-    public static IReadOnlyList<LinkRoute> Routes(JsonElement value) {
-        if (value.GetArrayLength() > LinkRoutePolicy.MaximumRoutes * 2) throw new ProtocolException(ProtocolErrorCodes.LinkRouteBatchLimit);
-        return value.EnumerateArray().Select(Route).ToArray();
-    }
-
     public static IReadOnlyList<Guid> Identities(JsonElement value) {
         if (value.GetArrayLength() > LinkRoutePolicy.MaximumRoutes * 2) throw new ProtocolException(ProtocolErrorCodes.LinkRouteBatchLimit);
         return value.EnumerateArray().Select(Protocol.Id).ToArray();
@@ -52,12 +47,6 @@ internal static class LinkCodes {
         _ => throw new ProtocolException(ProtocolErrorCodes.InvalidLinkRouteMatch)
     };
 
-    public static ExternalLinkDestination Destination(JsonElement value) => value.GetString() switch {
-        "quickWindow" => ExternalLinkDestination.QuickWindow,
-        "mostRecentSpace" => ExternalLinkDestination.MostRecentSpace,
-        "chosenSpace" => ExternalLinkDestination.ChosenSpace,
-        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidLinkDestination)
-    };
 
     /// A pattern the person may still be typing, so it may be empty. The
     /// domain rejects one that is too long.
@@ -83,13 +72,6 @@ internal static class LinkCodes {
     public static JsonArray Identities(IEnumerable<Guid> ids) =>
         new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
 
-    public static JsonObject RoutingAnswer(LinkRoutingDecision? decision) => new() {
-        ["quickWindow"] = decision?.OpensQuickWindow ?? false,
-        ["spaceID"] = decision?.SpaceId.ToString("D"),
-        ["substitutesForLockedSpace"] = decision?.SubstitutesForLockedSpace ?? false
-    };
-
-    public static JsonObject SiteAnswer(string? site) => new() { ["site"] = site };
 
     public static JsonObject RouteAnswer(LinkRoute route) => new() { ["route"] = Route(route) };
 

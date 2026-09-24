@@ -21,7 +21,7 @@ struct BrowserQuickWindowScene: View {
         spaceAccess: BrowserSpaceAccessController,
         pagePoolRegistry: BrowserPagePoolRegistry,
         windowCoordinator: BrowserMacWindowCoordinator,
-        preferences: BrowserTransientBrowsingPreferences = .production
+        preferences: BrowserTransientBrowsingPreferences? = nil
     ) {
         _request = request
         self.browser = browser
@@ -29,7 +29,7 @@ struct BrowserQuickWindowScene: View {
         self.spaceAccess = spaceAccess
         self.pagePoolRegistry = pagePoolRegistry
         self.windowCoordinator = windowCoordinator
-        self.preferences = preferences
+        self.preferences = preferences ?? .production(core: browser.core)
         previewModel = nil
     }
 
@@ -111,7 +111,8 @@ struct BrowserQuickWindowScene: View {
             let decision = BrowserLinkPreferenceStore.shared.routingDecision(
                 for: url,
                 in: initialContext.browser.presented,
-                unavailableSpaceIDs: initialContext.browser.deletingSpaceIDs
+                unavailableSpaceIDs: initialContext.browser.deletingSpaceIDs,
+                asking: initialContext.browser.core
             ),
             let space = initialContext.browser.session.space(
                 id: decision.spaceID

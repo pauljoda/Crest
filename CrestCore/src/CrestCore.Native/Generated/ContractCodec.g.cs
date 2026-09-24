@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xca, 0x35, 0x9d, 0x5e, 0xca, 0x75, 0xdb, 0xe2, 0x70, 0x4a, 0xf1, 0xea, 0xba, 0x74, 0xc8, 0x7e, 0xba, 0xc1, 0xdc, 0x5e, 0x9d, 0x1c, 0x19, 0xaa, 0x0f, 0x55, 0xd8, 0xcb, 0x59, 0x7c, 0xc4, 0x1a
+        0xf1, 0x56, 0x19, 0xd2, 0xfc, 0x66, 0x4b, 0xb2, 0x3f, 0x80, 0x9e, 0x35, 0xfc, 0xc4, 0x59, 0xf6, 0x4a, 0xa0, 0x47, 0x6d, 0x86, 0x15, 0x4c, 0x2c, 0xe2, 0xd8, 0x06, 0x2f, 0xf3, 0x51, 0xc7, 0x1b
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -244,11 +244,13 @@ public static class ContractCodec {
             case 6: return ReadCustomSearchEngineAdmission(reader);
             case 7: return ReadDownloadProgress(reader);
             case 8: return ReadDownloadRisk(reader);
-            case 9: return ReadMostRecentCredential(reader);
-            case 10: return ReadPasskeyAccess(reader);
-            case 11: return ReadStrongPassword(reader);
-            case 12: return ReadSystemPasswordOffer(reader);
-            case 13: return ReadSystemPasswordWriteThrough(reader);
+            case 9: return ReadExternalLinkRoute(reader);
+            case 10: return ReadMostRecentCredential(reader);
+            case 11: return ReadPasskeyAccess(reader);
+            case 12: return ReadQuickWindowSite(reader);
+            case 13: return ReadStrongPassword(reader);
+            case 14: return ReadSystemPasswordOffer(reader);
+            case 15: return ReadSystemPasswordWriteThrough(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -293,24 +295,32 @@ public static class ContractCodec {
                 writer.WriteTag(8);
                 WriteDownloadRisk(writer, member);
                 break;
-            case MostRecentCredential member:
+            case ExternalLinkRoute member:
                 writer.WriteTag(9);
+                WriteExternalLinkRoute(writer, member);
+                break;
+            case MostRecentCredential member:
+                writer.WriteTag(10);
                 WriteMostRecentCredential(writer, member);
                 break;
             case PasskeyAccess member:
-                writer.WriteTag(10);
+                writer.WriteTag(11);
                 WritePasskeyAccess(writer, member);
                 break;
+            case QuickWindowSite member:
+                writer.WriteTag(12);
+                WriteQuickWindowSite(writer, member);
+                break;
             case StrongPassword member:
-                writer.WriteTag(11);
+                writer.WriteTag(13);
                 WriteStrongPassword(writer, member);
                 break;
             case SystemPasswordOffer member:
-                writer.WriteTag(12);
+                writer.WriteTag(14);
                 WriteSystemPasswordOffer(writer, member);
                 break;
             case SystemPasswordWriteThrough member:
-                writer.WriteTag(13);
+                writer.WriteTag(15);
                 WriteSystemPasswordWriteThrough(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
@@ -357,25 +367,33 @@ public static class ContractCodec {
                 var answer8 = app.Query(question);
                 WriteDownloadRiskVerdict(writer, answer8);
                 break;
-            case MostRecentCredential question:
+            case ExternalLinkRoute question:
                 var answer9 = app.Query(question);
-                WriteCredentialChoice(writer, answer9);
+                WriteExternalLinkPlacement(writer, answer9);
+                break;
+            case MostRecentCredential question:
+                var answer10 = app.Query(question);
+                WriteCredentialChoice(writer, answer10);
                 break;
             case PasskeyAccess question:
-                var answer10 = app.Query(question);
-                WritePasskeyAccessVerdict(writer, answer10);
+                var answer11 = app.Query(question);
+                WritePasskeyAccessVerdict(writer, answer11);
+                break;
+            case QuickWindowSite question:
+                var answer12 = app.Query(question);
+                WriteQuickWindowSiteKey(writer, answer12);
                 break;
             case StrongPassword question:
-                var answer11 = app.Query(question);
-                WriteStrongPasswordRecipe(writer, answer11);
+                var answer13 = app.Query(question);
+                WriteStrongPasswordRecipe(writer, answer13);
                 break;
             case SystemPasswordOffer question:
-                var answer12 = app.Query(question);
-                WriteSystemPasswordOfferDecision(writer, answer12);
+                var answer14 = app.Query(question);
+                WriteSystemPasswordOfferDecision(writer, answer14);
                 break;
             case SystemPasswordWriteThrough question:
-                var answer13 = app.Query(question);
-                WriteSystemPasswordWriteThroughSupport(writer, answer13);
+                var answer15 = app.Query(question);
+                WriteSystemPasswordWriteThroughSupport(writer, answer15);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
@@ -1205,6 +1223,48 @@ public static class ContractCodec {
         }
     }
 
+    public static ExternalLinkPlacement ReadExternalLinkPlacement(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ExternalLinkPlacement(
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool(),
+            reader.ReadBool());
+    }
+
+    public static void WriteExternalLinkPlacement(WireWriter writer, ExternalLinkPlacement value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.SpaceId is { } presentSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.OpensQuickWindow);
+        writer.WriteBool(value.SubstitutesForLockedSpace);
+    }
+
+    public static ExternalLinkRoute ReadExternalLinkRoute(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ExternalLinkRoute(
+            reader.ReadString(),
+            ReadLinkRoutingPreferences(reader),
+            ReadLinkRoutingContext(reader),
+            reader.ReadList(() => reader.ReadGuid()));
+    }
+
+    public static void WriteExternalLinkRoute(WireWriter writer, ExternalLinkRoute value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Url);
+        WriteLinkRoutingPreferences(writer, value.Preferences);
+        WriteLinkRoutingContext(writer, value.Context);
+        writer.WriteCount(value.LockedSpaceIds.Count);
+        foreach (var itemLockedSpaceIds in value.LockedSpaceIds) {
+            writer.WriteGuid(itemLockedSpaceIds);
+        }
+    }
+
     public static FailDownload ReadFailDownload(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new FailDownload(
@@ -1356,6 +1416,81 @@ public static class ContractCodec {
         WriteSearchEngineFlaw(writer, value.Flaw);
     }
 
+    public static LinkRoute ReadLinkRoute(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new LinkRoute(
+            reader.ReadGuid(),
+            reader.ReadBool(),
+            ReadLinkRouteMatch(reader),
+            reader.ReadString(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteLinkRoute(WireWriter writer, LinkRoute value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteBool(value.IsEnabled);
+        WriteLinkRouteMatch(writer, value.Match);
+        writer.WriteString(value.Pattern);
+        writer.WriteGuid(value.DestinationSpaceId);
+    }
+
+    public static LinkRoutingContext ReadLinkRoutingContext(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new LinkRoutingContext(
+            reader.ReadList(() => reader.ReadGuid()),
+            reader.ReadGuid(),
+            reader.ReadList(() => reader.ReadGuid()));
+    }
+
+    public static void WriteLinkRoutingContext(WireWriter writer, LinkRoutingContext value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Spaces.Count);
+        foreach (var itemSpaces in value.Spaces) {
+            writer.WriteGuid(itemSpaces);
+        }
+        writer.WriteGuid(value.SelectedSpaceId);
+        writer.WriteCount(value.UnavailableSpaceIds.Count);
+        foreach (var itemUnavailableSpaceIds in value.UnavailableSpaceIds) {
+            writer.WriteGuid(itemUnavailableSpaceIds);
+        }
+    }
+
+    public static LinkRoutingPreferences ReadLinkRoutingPreferences(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new LinkRoutingPreferences(
+            reader.ReadList(() => ReadLinkRoute(reader)),
+            ReadExternalLinkDestination(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteLinkRoutingPreferences(WireWriter writer, LinkRoutingPreferences value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Routes.Count);
+        foreach (var itemRoutes in value.Routes) {
+            WriteLinkRoute(writer, itemRoutes);
+        }
+        WriteExternalLinkDestination(writer, value.Destination);
+        if (value.ChosenSpaceId is { } presentChosenSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentChosenSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.RemembersSpaceBySite);
+        if (value.RememberedSpaceId is { } presentRememberedSpaceId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentRememberedSpaceId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static MostRecentCredential ReadMostRecentCredential(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new MostRecentCredential(
@@ -1397,6 +1532,37 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         WritePasskeyAccessStatus(writer, value.Status);
+    }
+
+    public static QuickWindowSite ReadQuickWindowSite(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new QuickWindowSite(
+            reader.ReadString(),
+            reader.ReadBool());
+    }
+
+    public static void WriteQuickWindowSite(WireWriter writer, QuickWindowSite value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Url);
+        writer.WriteBool(value.RemembersSpaceBySite);
+    }
+
+    public static QuickWindowSiteKey ReadQuickWindowSiteKey(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new QuickWindowSiteKey(
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+    }
+
+    public static void WriteQuickWindowSiteKey(WireWriter writer, QuickWindowSiteKey value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Site is { } presentSite) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSite);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static RecordDownloadTransfer ReadRecordDownloadTransfer(WireReader reader) {
@@ -1677,6 +1843,26 @@ public static class ContractCodec {
     }
 
     public static void WriteDownloadTextField(WireWriter writer, DownloadTextField value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static ExternalLinkDestination ReadExternalLinkDestination(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (ExternalLinkDestination)reader.ReadEnum(3);
+    }
+
+    public static void WriteExternalLinkDestination(WireWriter writer, ExternalLinkDestination value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static LinkRouteMatch ReadLinkRouteMatch(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (LinkRouteMatch)reader.ReadEnum(2);
+    }
+
+    public static void WriteLinkRouteMatch(WireWriter writer, LinkRouteMatch value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }

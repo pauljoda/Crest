@@ -575,12 +575,14 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         let first = try XCTUnwrap(URL(string: "https://www.example.com/first"))
         let second = try XCTUnwrap(URL(string: "https://example.com/second"))
 
-        store.rememberQuickWindowSpace(personal.id, for: first)
+        let core = CrestCore()
+        store.rememberQuickWindowSpace(personal.id, for: first, asking: core)
 
         XCTAssertEqual(
             store.routingDecision(
                 for: second,
-                in: BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session))
+                in: BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session)),
+                asking: core
             ),
             .quickWindow(spaceID: personal.id)
         )

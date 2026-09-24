@@ -42,28 +42,46 @@ final class BrowserLinkPreferenceStore {
     }
 
     /// Where an external link opens, or nil when it may open nowhere. The core
-    /// owns the routing rule, including the locked-Space substitution; see
-    /// `BrowserCorePolicy.linkRoutingDecision`.
+    /// owns the routing rule, including the locked-Space substitution: a link
+    /// routed to a Space in `lockedSpaceIDs` never raises a prompt for another
+    /// process, and opens in a Quick Window on an unlocked Space instead. A
+    /// core that refuses the preferences opens the link nowhere rather than
+    /// somewhere the rules did not choose.
     func routingDecision(
         for url: URL,
         in session: BrowserPresentedSession,
         unavailableSpaceIDs: Set<SpaceID> = [],
-        lockedSpaceIDs: Set<SpaceID> = []
+        lockedSpaceIDs: Set<SpaceID> = [],
+        asking core: CrestCore
     ) -> BrowserLinkRoutingDecision? {
-        BrowserCorePolicy.linkRoutingDecision(
-            for: url,
-            preferences: preferences,
-            session: session,
-            unavailableSpaceIDs: unavailableSpaceIDs,
-            lockedSpaceIDs: lockedSpaceIDs
-        )
+        let remembered = site(for: url, asking: core).flatMap { preferences.rememberedQuickWindowSpacesBySite[$0] }
+        let routing = LinkRoutingPreferences(
+            routes: preferences.routes.map(\.coreRoute),
+            destination: preferences.externalLinkDestination.coreDestination,
+            chosenSpaceID: preferences.externalLinkSpaceID?.rawValue,
+            remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite, rememberedSpaceID: remembered?.rawValue)
+        let context = LinkRoutingContext(
+            spaces: session.spaces.map(\.id.rawValue), selectedSpaceID: session.selectedSpaceID.rawValue,
+            unavailableSpaceIDs: unavailableSpaceIDs.map(\.rawValue))
+        let route = ExternalLinkRoute(
+            url: url.absoluteString, preferences: routing, context: context,
+            lockedSpaceIDs: lockedSpaceIDs.map(\.rawValue))
+        guard let placement = try? core.query(route), let spaceID = placement.spaceID.map(SpaceID.init(rawValue:))
+        else { return nil }
+        return placement.opensQuickWindow ? .quickWindow(spaceID: spaceID) : .space(spaceID)
     }
 
-    func rememberQuickWindowSpace(_ spaceID: SpaceID, for url: URL) {
-        guard let site = BrowserCorePolicy.linkSite(
-            for: url, remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite)
-        else { return }
+    func rememberQuickWindowSpace(_ spaceID: SpaceID, for url: URL, asking core: CrestCore) {
+        guard let site = site(for: url, asking: core) else { return }
         update { $0.rememberedQuickWindowSpacesBySite[site] = spaceID }
+    }
+
+    /// The key a Quick Window remembers its Space under, or nil when the
+    /// preference is off, the address has no host, or the core refuses it.
+    private func site(for url: URL, asking core: CrestCore) -> String? {
+        let site = QuickWindowSite(
+            url: url.absoluteString, remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite)
+        return (try? core.query(site))?.site
     }
 
     // Route edits are core decisions applied to the stored preferences. An

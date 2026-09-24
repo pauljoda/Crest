@@ -232,7 +232,8 @@ final class MobileBrowserWindowSceneModel {
             let decision = linkPreferenceStore.routingDecision(
                 for: url,
                 in: browser.presented,
-                unavailableSpaceIDs: browser.deletingSpaceIDs
+                unavailableSpaceIDs: browser.deletingSpaceIDs,
+                asking: browser.core
             ),
             let route = MobileBrowserWindowSceneRoute.resolve(
                 url: url,

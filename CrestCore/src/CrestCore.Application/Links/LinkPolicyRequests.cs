@@ -7,7 +7,7 @@ using static CrestCore.Application.PolicyFields;
 
 namespace CrestCore.Application;
 
-/// Typed requests for the link routing and route-editing policy operations.
+/// Typed requests for the route-editing and Space-removal policy operations.
 /// Identities are lowercase UUID strings; routes use the native record's field
 /// names.
 internal static class LinkPolicyRequests {
@@ -19,35 +19,6 @@ internal static class LinkPolicyRequests {
 
     #region Actions - Decoding
 
-    /// `lockedSpaceIDs` (optional) names Spaces this process holds locked; a
-    /// link routed to one opens in a Quick Window on an unlocked Space instead.
-    public sealed record Route(string Url, LinkRoutingPreferences Preferences, LinkRoutingContext Context,
-        IReadOnlySet<Guid> Locked) {
-        public static Route Decode(JsonElement request) {
-            Members(request, "url", "routes", "destination", "chosenSpaceID", "remembersSpaceBySite", "rememberedSpaceID",
-                "spaces", "selectedSpaceID", "unavailableSpaceIDs", "lockedSpaceIDs");
-            var url = Protocol.Text(request, "url");
-            var routes = LinkCodes.Routes(Element(request, "routes"));
-            var destination = LinkCodes.Destination(Element(request, "destination"));
-            var chosen = Protocol.OptionalId(request, "chosenSpaceID");
-            bool remembers = Flag(request, "remembersSpaceBySite");
-            var preferences = new LinkRoutingPreferences(routes, destination, chosen, remembers,
-                Protocol.OptionalId(request, "rememberedSpaceID"));
-            var spaces = SpaceIdentities(request, "spaces");
-            var selected = Protocol.Id(request, "selectedSpaceID");
-            var context = new LinkRoutingContext(spaces, selected, SpaceIdentities(request, "unavailableSpaceIDs").ToHashSet());
-            var locked = (Optional(request, "lockedSpaceIDs") is null ? [] : SpaceIdentities(request, "lockedSpaceIDs")).ToHashSet();
-            return new(url, preferences, context, locked);
-        }
-    }
-
-    /// The address is read only when Quick Windows remember Spaces by site.
-    public sealed record Site(string? Url) {
-        public static Site Decode(JsonElement request) {
-            Members(request, "url", "remembersSpaceBySite");
-            return new(Flag(request, "remembersSpaceBySite") ? Protocol.Text(request, "url") : null);
-        }
-    }
 
     public sealed record RouteCreate(IReadOnlyList<Guid> Existing, Guid Id, Guid DestinationSpaceId) {
         public static RouteCreate Decode(JsonElement request) {

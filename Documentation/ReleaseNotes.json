@@ -2133,6 +2133,10 @@
     "search-content-blocking-typed-queries": {
       "category": "internal",
       "message": "Custom search engine admission and Balanced content-blocking rules are typed core queries."
+    },
+    "link-routing-typed-queries": {
+      "category": "internal",
+      "message": "External link routing and Quick Window site keys are typed core queries."
     }
   }
 }
