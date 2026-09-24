@@ -80,6 +80,12 @@ for `EnginePage` lists every direct engine call.
    - In Swift, it is a struct with `static let` instances, which the generator
      emits from the C# instances so the data is written once.
 
+   An instance also carries its presentation. Its user-facing text is written
+   as the English source string, and the generator emits that as a
+   localizable Swift value, so Xcode extracts it into the string catalog. Its
+   icon is written as an SF Symbol name. Views read `phase.title` and
+   `phase.symbol` instead of switching over kinds.
+
    A nested `Kinds` enum is used only where a switch cannot be avoided. Plain
    enums remain only for sets whose members carry nothing. Unions of message
    types (changes, events, rejections) are not fixed sets, so the one place
