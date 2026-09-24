@@ -19,7 +19,7 @@ namespace CrestCore.Contracts;
 /// Refused with `BorrowedWorkspaceRequiresSpace` for a kind that opens only by
 /// borrowing, `NoStoredSession` when the core keeps no file or its file holds
 /// no session yet (`AdoptLegacySession` gives it its first), `StoredSessionClosed`
-/// once the file's session was closed, and `InvalidSeed` for a seed the core
+/// once the file's session was closed, and `InvalidSession` for a seed the core
 /// cannot hold.
 [MessageLimit(64 * 1024 * 1024)]
 public sealed record OpenWorkspace(WorkspaceKind Kind, byte[]? Seed) : WorkspaceIntent;

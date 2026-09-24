@@ -257,13 +257,13 @@ session, and each accepted state publishes what changed since the one before
 (`SpacesChanged`, `SpaceSettingsChanged`, `TabsChanged`, `FoldersChanged`,
 `SplitGroupsChanged`, `HistoryChanged`, `ArchiveChanged`, `WorkspaceChanged`,
 `AppPreferencesChanged`), derived by comparing the two states, keyed by
-workspace and idempotent. `TabCopied` and `TabFaviconAssigned` tell the copy
-which tab wears which native image. Commands carry arguments and what the
-window shows, never a revision, and never resend unchanged history or favicon
-bytes. A command commits only while the session still holds the state it was
-prepared against; otherwise it is refused as `StaleCommand`. Transfers between
-families commit both graphs before either native window reconciles its
-selection.
+workspace and idempotent. `TabCopied`, `TabsImported` and `TabFaviconAssigned`
+tell the copy which tab wears which native image. Intents carry arguments and
+the window that issued them, never a revision, and never resend unchanged
+history or favicon bytes. An intent is accepted, or reserved while it is saved,
+under the lock that computed its edit, so it never overwrites a change it did
+not see. Transfers between families commit both graphs before either native
+window reconciles its selection.
 
 The core owns `session.sqlite`. The host passes only the storage directory
 (`AppConfiguration`) when it creates the core, and the core validates, opens and

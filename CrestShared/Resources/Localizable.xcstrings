@@ -4,7 +4,16 @@
     "" : {
 
     },
+    "Another Space already uses this Space’s browsing data." : {
+
+    },
+    "Crest couldn’t complete that. Try again." : {
+
+    },
     "Crest couldn’t read the Spaces to import." : {
+
+    },
+    "Crest couldn’t save this change. Try again." : {
 
     },
     "Crest supports up to %lld Spaces." : {
@@ -693,6 +702,9 @@
 
     },
     "Opacity" : {
+
+    },
+    "Open a regular window to do this." : {
 
     },
     "Open Link in Peek" : {
@@ -17068,6 +17080,9 @@
           }
         }
       }
+    },
+    "That Space already exists." : {
+
     },
     "That Space is being deleted." : {
 

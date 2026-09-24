@@ -9,14 +9,13 @@ namespace CrestCore.Native;
 public static unsafe partial class Exports {
     #region Actions - Validation
 
-    /// A durable save that failed answers STORAGE_FAILED; anything else is a
-    /// session error.
+    /// A durable save that failed answers STORAGE_FAILED, a session that
+    /// cannot take the replacement now INVALID_STATE, and any other refusal
+    /// INVALID_MESSAGE.
     private static int DurableError(Exception error) => error switch {
         StorageException => CoreStatus.StorageFailed,
-        Rejected { Rejection: StaleCommand } => CoreStatus.InvalidState,
-        Rejected => CoreStatus.InvalidMessage,
         InvalidOperationException => CoreStatus.InvalidState,
-        _ => SessionError(error)
+        _ => CoreStatus.InvalidMessage
     };
 
     #endregion
@@ -46,7 +45,7 @@ public static unsafe partial class Exports {
 
     #region Actions - Durable commits
 
-    /// TRANSITIONAL until S5.8c.
+    /// TRANSITIONAL until slice 8a (typed sync).
     [UnmanagedCallersOnly(EntryPoint = "crest_session_replace_durably", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionReplaceDurably(ulong app, byte* workspace, ulong transaction, byte* delta, nuint count) {
         if (workspace == null || !ValidSessionInput(delta, count)) return CoreStatus.InvalidArgument;

@@ -17,7 +17,7 @@ struct BrowserTabBatchActions {
 
     /// What the person is told the action would be refused for, or nil when
     /// the core would take it.
-    func reason(_ batch: BrowserTabBatch) -> String? { browser.refusal(of: batch)?.explanation }
+    func reason(_ batch: BrowserTabBatch) -> String? { browser.refusal(of: batch)?.placementExplanation }
 
     /// Performs the action, and answers whether the core took it; a refusal
     /// is shown in the selection's message instead.
@@ -40,7 +40,7 @@ struct BrowserTabBatchActions {
             try browser.send(batch, for: request)
             return true
         } catch {
-            browser.tabMultiSelection.message = error.explanation
+            browser.tabMultiSelection.message = error.placementExplanation
             return false
         }
     }
@@ -60,7 +60,8 @@ struct BrowserTabBatchActions {
                     for: BrowserTabRuntimeAssignment(
                         tabID: id, spaceID: request.assignment.spaceID, profileID: request.assignment.profileID))
             else {
-                browser.tabMultiSelection.message = Rejection.webPagesOnly(WebPagesOnly(tabID: id.rawValue)).explanation
+                browser.tabMultiSelection.message =
+                    Rejection.webPagesOnly(WebPagesOnly(tabID: id.rawValue)).placementExplanation
                 return
             }
             urls.append(url)

@@ -226,12 +226,12 @@ public sealed partial class BrowserContractsTests {
         var shared = session.DeepClone();
         shared["spaces"] = new JsonArray(space.DeepClone(), second.DeepClone());
         using (var app = new CrestApp())
-            Assert.Equal(new InvalidSeed(SeedFlaw.SharedProfile), Assert.Throws<Rejected>(
+            Assert.Equal(new InvalidSession(SessionFlaw.SharedProfile), Assert.Throws<Rejected>(
                 () => app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(shared)))).Rejection);
 
         var core = TestWorkspaces.Session(session);
         var metadata = second.DeepClone();
-        Assert.Equal("duplicate_space_profile", Assert.Throws<BrowserRuleException>(() => core.Commit(Bytes(new JsonObject {
+        Assert.Equal(new InvalidSession(SessionFlaw.SharedProfile), Assert.Throws<Rejected>(() => core.Commit(Bytes(new JsonObject {
             ["version"] = 1,
             ["spaces"] = new JsonArray(new JsonObject {
                 ["id"] = second["id"]!.DeepClone(),
@@ -239,7 +239,7 @@ public sealed partial class BrowserContractsTests {
                 ["tabs"] = new JsonObject { ["replace"] = new JsonArray() }
             }),
             ["spaceOrder"] = new JsonArray(space["id"]!.DeepClone(), second["id"]!.DeepClone())
-        }))).Code);
+        }))).Rejection);
         Assert.Equal(1UL, core.Revision);
 
         // Repair keeps the first occurrence and issues the collision a fresh

@@ -1,7 +1,7 @@
 namespace CrestCore.Contracts;
 
 /// The first rule a session breaks that keeps a workspace from holding it.
-public enum SeedFlaw {
+public enum SessionFlaw {
     /// It is not a session in the stored format.
     Unreadable,
     /// A Space, its profile, one of its tabs or a Space deletion has no identity.

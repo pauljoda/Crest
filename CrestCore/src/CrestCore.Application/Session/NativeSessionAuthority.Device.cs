@@ -8,9 +8,6 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Variables
 
-    /// The request member that names the window a command came from.
-    private const string WindowField = "windowId";
-
     /// The device whose windows show this session, and the workspace it gave
     /// it; null until attached.
     private Device? device;

@@ -101,7 +101,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
-    case invalidSeed(InvalidSeed)
+    case invalidSession(InvalidSession)
     case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidTabIcon(InvalidTabIcon)
@@ -131,7 +131,6 @@ enum Rejection: Equatable, Error, Sendable {
     case splitBoundary(SplitBoundary)
     case splitLimitReached(SplitLimitReached)
     case splitNeedsTwoTabs(SplitNeedsTwoTabs)
-    case staleCommand(StaleCommand)
     case staleCredentialComparison(StaleCredentialComparison)
     case staleUnlockRequest(StaleUnlockRequest)
     case storageFromNewerApp(StorageFromNewerApp)
@@ -170,10 +169,14 @@ enum Rejection: Equatable, Error, Sendable {
         case .incompleteSplit(let value): value.message
         case .invalidImport(let value): value.message
         case .noIncludedSpaces(let value): value.message
+        case .persistentWorkspaceRequired(let value): value.message
         case .pinnedTabsFull(let value): value.message
+        case .profileInUse(let value): value.message
+        case .saveFailed(let value): value.message
         case .searchEngineLimitReached(let value): value.message
         case .selectionChanged(let value): value.message
         case .selectionHoldsFolders(let value): value.message
+        case .spaceAlreadyExists(let value): value.message
         case .spaceBeingDeleted(let value): value.message
         case .spaceLimitReached(let value): value.message
         case .spaceLocked(let value): value.message
@@ -1140,8 +1143,8 @@ struct InvalidSearchEngine: Equatable, Sendable {
     let flaw: SearchEngineFlaw
 }
 
-struct InvalidSeed: Equatable, Sendable {
-    let flaw: SeedFlaw
+struct InvalidSession: Equatable, Sendable {
+    let flaw: SessionFlaw
 }
 
 struct InvalidSpaceOrder: Equatable, Sendable {
@@ -1601,6 +1604,10 @@ struct PendingSaveRevision: Equatable, Sendable {
 
 struct PersistentWorkspaceRequired: Equatable, Sendable {
     let workspaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Open a regular window to do this.")
+    }
 }
 
 struct PinnedTabsFull: Equatable, Sendable {
@@ -1617,6 +1624,10 @@ struct PrivateWorkspaceBoundary: Equatable, Sendable {
 
 struct ProfileInUse: Equatable, Sendable {
     let profileID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Another Space already uses this Space’s browsing data.")
+    }
 }
 
 struct PromoteTransientPage: Intent, Equatable, Sendable {
@@ -1735,6 +1746,10 @@ struct ReturnToSavedAddress: Intent, Equatable, Sendable {
 
 struct SaveFailed: Equatable, Sendable {
     let reason: StorageFailure
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest couldn’t save this change. Try again.")
+    }
 }
 
 struct Saved: Equatable, Sendable {
@@ -1904,6 +1919,10 @@ struct ShownTab: Equatable, Sendable {
 
 struct SpaceAlreadyExists: Equatable, Sendable {
     let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("That Space already exists.")
+    }
 }
 
 struct SpaceBeingDeleted: Equatable, Sendable {
@@ -2100,9 +2119,6 @@ struct SplitTabs: Intent, Equatable, Sendable {
     let selection: TabSelection
     let targetTabID: UUID?
     let index: Int?
-}
-
-struct StaleCommand: Equatable, Sendable {
 }
 
 struct StaleCredentialComparison: Equatable, Sendable {
@@ -2681,7 +2697,7 @@ enum SavedTabClosePolicy: Int, CaseIterable, Sendable {
     case returnToSavedURL = 1
 }
 
-enum SeedFlaw: Int, CaseIterable, Sendable {
+enum SessionFlaw: Int, CaseIterable, Sendable {
     case unreadable = 0
     case missingIdentity = 1
     case duplicateSpace = 2

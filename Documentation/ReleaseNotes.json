@@ -2385,6 +2385,10 @@
     "typed-workspace-import": {
       "category": "internal",
       "message": "Importing a file, a reviewed browser import or a manual setup runs as typed core intents, and the review screens ask the core what the choices mean."
+    },
+    "session-intents-commit-in-lock": {
+      "category": "internal",
+      "message": "Session intents commit under the lock that computed them, and refusals without words of their own read as a plain failure."
     }
   }
 }

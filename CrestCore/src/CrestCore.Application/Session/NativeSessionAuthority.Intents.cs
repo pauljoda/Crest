@@ -37,27 +37,40 @@ public sealed partial class NativeSessionAuthority {
             }
             return;
         }
-        NativeSessionCommand? command = null;
-        (SessionState State, SessionTabEvents Events, WindowFollowUp? FollowUp)? unchanged = null;
+        SessionEdit? edit;
+        SessionState previous;
+        NativeSessionReplacement? reserved = null;
+        // The edit is accepted, or reserved while it is saved, under the lock
+        // that computed it, so nothing else can commit in between.
         lock (Gate) {
-            var edit = Edit(intent, Stamp(now), ids, pages);
+            edit = Edit(intent, Stamp(now), ids, pages);
             if (edit is null) return;
             if (edit.Sweep is { } sweep) lastSweep = sweep;
-            if (!edit.Next.Equals(session))
-                command = new NativeSessionCommand(this, session, edit.Next, [], transientCompletion: edit.Completes,
-                    followUp: edit.FollowUp, events: edit.Events).StagedAs(edit.Staging);
-            else if (edit.Events is not null || edit.FollowUp is not null)
-                unchanged = (session, edit.Events ?? SessionTabEvents.None, edit.FollowUp);
+            previous = session;
+            if (edit.Next.Equals(previous)) {
+                if (edit.Events is null && edit.FollowUp is null) return;
+            } else if (edit.Staging is { Urgency.StagesWithSave: true }) {
+                reserved = Reserve(edit.Next, edit.Completes, edit.FollowUp, edit.Events);
+            } else {
+                if (edit.Completes is { } completed) completedTransients.Add(completed);
+                _ = Accept(edit.Next);
+            }
         }
-        if (command is null) {
-            if (unchanged is { } kept) Published(kept.State, kept.State, kept.FollowUp, kept.Events);
+        if (reserved is not null) {
+            try {
+                SaveStaged(reserved, previous, edit.Staging!);
+            } catch (StorageException error) {
+                throw new Rejected(new SaveFailed(error.Reason));
+            }
             return;
         }
-        try {
-            Commit(command);
-        } catch (StorageException error) {
-            throw new Rejected(new SaveFailed(error.Reason));
+        var events = edit.Events ?? SessionTabEvents.None;
+        if (edit.Next.Equals(previous)) {
+            Published(previous, previous, edit.FollowUp, events);
+            return;
         }
+        Published(previous, edit.Next, edit.FollowUp, events);
+        QueueStage(previous, edit.Next, edit.Staging);
     }
 
     /// Throws the `Rejected` that would refuse `intent` at `now`, and changes

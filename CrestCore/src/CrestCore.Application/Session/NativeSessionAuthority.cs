@@ -7,22 +7,19 @@ using Key = CrestCore.Application.StoredSessionCodec.Key;
 
 namespace CrestCore.Application;
 
-/// Owns the native app's durable session as typed records. Native views propose
-/// value deltas; only an accepted state becomes visible, and the device publishes
-/// what each accepted state changed. Accepted states are immutable, so storage can
-/// serialize an older checkpoint on its worker while the UI continues editing the
-/// current one. A command remembers the state it was prepared against and commits
-/// only while that state is still the accepted one; nothing outside the core names
-/// a revision. The session holds browsing data only: which Space and tab a window
-/// shows is window state, so selection fields in an older session are dropped here
-/// and never written. Commands read what the window shows as context and answer
-/// with a hint.
+/// Owns the native app's durable session as typed records. Intents edit it; only
+/// an accepted state becomes visible, and the device publishes what each accepted
+/// state changed. Accepted states are immutable, so storage can serialize an older
+/// checkpoint on its worker while the UI continues editing the current one. An
+/// intent is accepted, or reserved while it is saved, under the lock that computed
+/// its edit, so it never overwrites a change it did not see; nothing outside the
+/// core names a revision. The session holds browsing data only: which Space and
+/// tab a window shows is window state, so selection fields in an older session are
+/// dropped here and never written. Intents read what the window shows as context.
 public sealed partial class NativeSessionAuthority {
     #region Variables
 
     public const int MaximumBytes = 64 * 1024 * 1024;
-    /// The largest edit request or answer the session exchanges with a window.
-    public const int MaximumEditBytes = 4 * 1024 * 1024;
     internal static readonly object Gate = new();
     private SessionState session;
     private NativeSessionReplacement? replacement;
@@ -78,43 +75,35 @@ public sealed partial class NativeSessionAuthority {
         return id;
     }
 
-    /// Throws unless `value` is a session a workspace can hold; see `Flaw`.
-    /// TRANSITIONAL until S5.8c: the JSON command and replacement paths still
-    /// report the rule a state breaks by its code.
+    /// Throws `Rejected` with `InvalidSession` unless `value` is a session a
+    /// workspace can hold; see `Flaw`.
     private static void Validate(SessionState value) {
-        if (Flaw(value) is not { } flaw) return;
-        throw new BrowserRuleException(flaw switch {
-            SeedFlaw.DuplicateSpace => BrowserRuleCodes.DuplicateSpace,
-            SeedFlaw.SharedProfile => BrowserRuleCodes.DuplicateSpaceProfile,
-            SeedFlaw.DuplicateTab => BrowserRuleCodes.DuplicateTab,
-            SeedFlaw.UnknownDeletion => BrowserRuleCodes.InvalidDeletionIntent,
-            _ => BrowserRuleCodes.InvalidIdentity
-        });
+        if (Flaw(value) is { } flaw) throw new Rejected(new InvalidSession(flaw));
     }
 
     /// The first rule `value` breaks that keeps a workspace from holding it, or
     /// null for a session a workspace can hold.
-    internal static SeedFlaw? Flaw(SessionState value) {
+    internal static SessionFlaw? Flaw(SessionState value) {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in spaces) {
             if (space.Id == Guid.Empty || space.ProfileId == Guid.Empty || space.Tabs.Any(tab => tab.Id == Guid.Empty))
-                return SeedFlaw.MissingIdentity;
-            if (!ids.Add(space.Id)) return SeedFlaw.DuplicateSpace;
+                return SessionFlaw.MissingIdentity;
+            if (!ids.Add(space.Id)) return SessionFlaw.DuplicateSpace;
             // A Space is exactly one profile and a profile belongs to exactly one
             // Space. Two Spaces sharing a profile would share cookies, credentials
             // and extension access across an isolation boundary the user relies on,
             // and would make "which Space owns this profile" unanswerable.
-            if (!profiles.Add(space.ProfileId)) return SeedFlaw.SharedProfile;
+            if (!profiles.Add(space.ProfileId)) return SessionFlaw.SharedProfile;
             foreach (var tab in space.Tabs)
-                if (!tabs.Add(tab.Id)) return SeedFlaw.DuplicateTab;
+                if (!tabs.Add(tab.Id)) return SessionFlaw.DuplicateTab;
         }
         var pendingIds = new HashSet<Guid>();
         foreach (var deletion in value.SpaceDeletions) {
             if (deletion.Id == Guid.Empty || deletion.SpaceId == Guid.Empty || deletion.ProfileId == Guid.Empty)
-                return SeedFlaw.MissingIdentity;
+                return SessionFlaw.MissingIdentity;
             if (!pendingIds.Add(deletion.SpaceId) || !spaces.Any(s => s.Id == deletion.SpaceId && s.ProfileId == deletion.ProfileId))
-                return SeedFlaw.UnknownDeletion;
+                return SessionFlaw.UnknownDeletion;
         }
         // An empty temporary workspace and a briefly stale window selection are
         // valid native states. Window reconciliation handles their presentation.

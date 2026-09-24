@@ -73,20 +73,13 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    /// Commits a prepared command as its staging says. A command that stages
-    /// with its save is saved with its journal before either is published and
-    /// before this returns; a failed save or stage leaves the session, the
-    /// journal and the file as they were. Any other command is saved behind
-    /// and staged on the sync worker.
-    internal void Commit(NativeSessionCommand command) {
-        if (command.Staging is not { Urgency.StagesWithSave: true } staging) {
-            CommitCommand(command);
-            return;
-        }
-        var reserved = ReserveCommand(command);
+    /// Saves a state reserved from `previous` with the journal it stages, then
+    /// publishes it, all before this returns; a failed stage or save leaves
+    /// the session, the journal and the file as they were.
+    private void SaveStaged(NativeSessionReplacement reserved, SessionState previous, SyncStaging staging) {
         NativeSyncTransaction? staged;
         try {
-            staged = StageWithSave(command.Base, command.Session, staging.Reason);
+            staged = StageWithSave(previous, reserved.Session, staging.Reason);
             if (staged is not null) reserved.BindSync(staged);
         } catch {
             reserved.Dispose();
@@ -138,20 +131,16 @@ public sealed partial class NativeSessionAuthority {
         reserved.Commit();
     }
 
-    /// Reserves a prepared command's state while it is saved. Throws `Rejected`
-    /// with `StaleCommand` when the session accepted anything after the
-    /// command was prepared.
-    internal NativeSessionReplacement ReserveCommand(NativeSessionCommand command) {
-        lock (Gate) {
-            RequireWritable(requireCurrentBorrowedPolicy: false);
-            command.RequireAccepted(session);
-            var nextRevision = checked(Revision + 1);
-            var checkpoint = new NativeSessionCheckpoint(command.Session);
-            _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
-            replacement = new(this, command.Session, nextRevision, checkpoint, command.TransientCompletion, command.FollowUp,
-                command.Events);
-            return replacement;
-        }
+    /// Reserves `next`, an intent's state, while it is saved: other writers
+    /// are refused until it commits or is disposed. What it completes, what
+    /// the window that issued it shows next and what it did that the states
+    /// cannot tell are published with it. The caller holds the gate.
+    private NativeSessionReplacement Reserve(SessionState next, Guid? completes, WindowFollowUp? followUp, SessionTabEvents? events) {
+        var checkpoint = new NativeSessionCheckpoint(next);
+        _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
+        var reserved = new NativeSessionReplacement(this, next, checked(Revision + 1), checkpoint, completes, followUp, events);
+        replacement = reserved;
+        return reserved;
     }
 
     #endregion

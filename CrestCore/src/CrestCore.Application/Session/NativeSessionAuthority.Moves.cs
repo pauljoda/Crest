@@ -6,9 +6,13 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Types
 
-    /// One workspace's part in a move between windows: its command, and the
-    /// state reserved for it while the move is saved.
-    private sealed record MoveSide(NativeSessionAuthority Workspace, NativeSessionCommand Command, NativeSessionReplacement Reserved);
+    /// One workspace's part in a move between windows: the state it held, and
+    /// the one reserved for it while the move is saved.
+    private sealed record MoveSide(NativeSessionAuthority Workspace, SessionState Previous, NativeSessionReplacement Reserved);
+
+    /// What one workspace's part in a move between windows leaves it with,
+    /// and what the window it shows there shows next.
+    private sealed record MovePart(SessionState Next, WindowFollowUp FollowUp);
 
     #endregion
 
@@ -76,9 +80,10 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) {
             var (left, arrived) = Across(receiving, intent, now);
             if (!commits) return;
-            leaving = new(this, left, ReserveCommand(left));
+            leaving = new(this, session, Reserve(left.Next, completes: null, left.FollowUp, events: null));
             try {
-                arriving = new(receiving, arrived, receiving.ReserveCommand(arrived));
+                arriving = new(receiving, receiving.session,
+                    receiving.Reserve(arrived.Next, completes: null, arrived.FollowUp, events: null));
             } catch {
                 leaving.Reserved.Dispose();
                 throw;
@@ -87,12 +92,12 @@ public sealed partial class NativeSessionAuthority {
         CommitAcross(leaving, arriving);
     }
 
-    /// The commands that take the tab out of this workspace and into
+    /// The states that take the tab out of this workspace and into
     /// `receiving`, each against its accepted state. The tab joins the open
     /// tabs after the one the destination window shows, which then shows it in
     /// its Space; the window it left shows the tab it showed before. The
     /// caller holds the gate.
-    private (NativeSessionCommand Leaving, NativeSessionCommand Arriving) Across(NativeSessionAuthority receiving,
+    private (MovePart Leaving, MovePart Arriving) Across(NativeSessionAuthority receiving,
         MoveTabToWindow intent, DateTimeOffset now) {
         var basis = IntentBasis();
         var theirs = receiving.IntentBasis();
@@ -125,8 +130,7 @@ public sealed partial class NativeSessionAuthority {
         ValidateBorrowedSession(next);
         Validate(nextThere);
         receiving.ValidateBorrowedSession(nextThere);
-        return (new NativeSessionCommand(this, session, next, [], followUp: leaving).StagedAs(SyncStaging.Transfer),
-            new NativeSessionCommand(receiving, receiving.session, nextThere, [], followUp: arriving).StagedAs(SyncStaging.Transfer));
+        return (new(next, leaving), new(nextThere, arriving));
     }
 
     /// Accepts both reserved states together. The workspace that owns the
@@ -138,8 +142,8 @@ public sealed partial class NativeSessionAuthority {
         var keeper = leaving.Workspace.borrowedSource is null ? leaving : arriving.Workspace.borrowedSource is null ? arriving : null;
         NativeSyncTransaction? staged = null;
         try {
-            if (keeper is { Workspace: var owner, Command: var command, Reserved: var kept }) {
-                staged = owner.StageWithSave(command.Base, kept.Session, SyncStaging.Transfer.Reason);
+            if (keeper is { Workspace: var owner, Previous: var previous, Reserved: var kept }) {
+                staged = owner.StageWithSave(previous, kept.Session, SyncStaging.Transfer.Reason);
                 if (staged is not null) kept.BindSync(staged);
                 owner.storage?.Save(kept.Session, kept.Revision, kept.SyncTransaction?.Journal, kept.Checkpoint);
             }

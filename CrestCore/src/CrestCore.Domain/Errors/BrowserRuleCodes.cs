@@ -5,24 +5,15 @@ public static class BrowserRuleCodes {
     #region Variables
 
     public const string AccessAlreadyAttached = "access_already_attached";
-    public const string AlreadyClosing = "already_closing";
     public const string BorrowedProfileRequiresOwner = "borrowed_profile_requires_owner";
     public const string DeletionRequiresCommand = "deletion_requires_command";
     public const string DuplicateMediaSession = "duplicate_media_session";
-    public const string DuplicatePersistedIdentity = "duplicate_persisted_identity";
     public const string DuplicateResidencyCandidate = "duplicate_residency_candidate";
     public const string DuplicateShortcutCommand = "duplicate_shortcut_command";
-    public const string DuplicateSpace = "duplicate_space";
-    public const string DuplicateSpaceProfile = "duplicate_space_profile";
     public const string DuplicateSyncRecord = "duplicate_sync_record";
-    public const string DuplicateTab = "duplicate_tab";
     public const string InvalidAddress = "invalid_address";
-    public const string InvalidContentBlockingPolicy = "invalid_content_blocking_policy";
-    public const string InvalidDate = "invalid_date";
     public const string InvalidDeletionIntent = "invalid_deletion_intent";
-    public const string InvalidDestination = "invalid_destination";
     public const string InvalidFocusedIndex = "invalid_focused_index";
-    public const string InvalidFolderAnchor = "invalid_folder_anchor";
     public const string InvalidFolderTree = "invalid_folder_tree";
     public const string InvalidHistoryRange = "invalid_history_range";
     public const string InvalidHistoryVisit = "invalid_history_visit";
@@ -41,7 +32,6 @@ public static class BrowserRuleCodes {
     public const string InvalidRetentionInterval = "invalid_retention_interval";
     public const string InvalidSavedDate = "invalid_saved_date";
     public const string InvalidSavedIdentity = "invalid_saved_identity";
-    public const string InvalidSavedSelection = "invalid_saved_selection";
     public const string InvalidSavedState = "invalid_saved_state";
     public const string InvalidSavedUrl = "invalid_saved_url";
     public const string InvalidSessionTransaction = "invalid_session_transaction";
@@ -60,17 +50,8 @@ public static class BrowserRuleCodes {
     public const string InvalidTabContent = "invalid_tab_content";
     public const string InvalidTabCount = "invalid_tab_count";
     public const string InvalidTerminationCount = "invalid_termination_count";
-    public const string InvalidTransition = "invalid_transition";
     public const string MediaSessionLimit = "media_session_limit";
-    public const string MissingSpaceIdentity = "missing_space_identity";
-    public const string NoIncludedSpaces = "no_included_spaces";
     public const string NotBorrowedWorkspace = "not_borrowed_workspace";
-    public const string NotStartPageDraft = "not_start_page_draft";
-    public const string PageBusy = "page_busy";
-    public const string PageClosing = "page_closing";
-    public const string PageNotReady = "page_not_ready";
-    public const string PageNotUnloadable = "page_not_unloadable";
-    public const string PersistentWorkspaceRequired = "persistent_workspace_required";
     public const string PinnedLimitReached = "pinned_limit_reached";
     public const string ProfileLeaseRevoked = "profile_lease_revoked";
     public const string ResidencyCandidateLimit = "residency_candidate_limit";
@@ -79,32 +60,21 @@ public static class BrowserRuleCodes {
     public const string SessionSizeLimit = "session_size_limit";
     public const string SessionTransactionInProgress = "session_transaction_in_progress";
     public const string ShortcutCommandLimit = "shortcut_command_limit";
-    public const string SpaceDeleting = "space_deleting";
     public const string SpaceDeletionInProgress = "space_deletion_in_progress";
     public const string SpaceLimitReached = "space_limit_reached";
     public const string SpaceLocked = "space_locked";
-    public const string StaleAuthentication = "stale_authentication";
     public const string StaleBorrowedSource = "stale_borrowed_source";
     public const string SyncClockExhausted = "sync_clock_exhausted";
     public const string SyncIdentityMismatch = "sync_identity_mismatch";
     public const string SyncRecordLimit = "sync_record_limit";
     public const string SyncSizeLimit = "sync_size_limit";
     public const string SyncTransactionNotSealed = "sync_transaction_not_sealed";
-    public const string UnknownArchive = "unknown_archive";
-    public const string UnknownArchivedTab = "unknown_archived_tab";
     public const string UnknownCurrentTab = "unknown_current_tab";
     public const string UnknownFolder = "unknown_folder";
     public const string UnknownSearchProvider = "unknown_search_provider";
-    public const string UnknownSpace = "unknown_space";
-    public const string UnknownSplitCommand = "unknown_split_command";
     public const string UnknownSyncOperation = "unknown_sync_operation";
-    public const string UnknownWorkspaceCommand = "unknown_workspace_command";
-    public const string UnsupportedAccessPolicy = "unsupported_access_policy";
     public const string UnsupportedUrl = "unsupported_url";
     public const string VersionMismatch = "version_mismatch";
-    public const string WindowStateLimit = "window_state_limit";
-    public const string WrongProfile = "wrong_profile";
-    public const string WrongProfileIdentity = "wrong_profile_identity";
     public const string WrongSpaceIdentity = "wrong_space_identity";
 
     // Site permissions and origins.

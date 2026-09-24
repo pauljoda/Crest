@@ -53,15 +53,15 @@ public sealed partial class CrestApp {
     }
 
     /// A seed in the stored format, as a session a workspace can hold. Throws
-    /// `Rejected` with `InvalidSeed` naming the first rule it breaks.
+    /// `Rejected` with `InvalidSession` naming the first rule it breaks.
     private static SessionState Seeded(byte[] seed) {
         SessionState session;
         try {
             session = StoredSessionCodec.DecodeSession(JsonNode.Parse(seed, documentOptions: SeedDocument));
         } catch (Exception error) when (StoredSession.IsUndecodable(error)) {
-            throw new Rejected(new InvalidSeed(SeedFlaw.Unreadable));
+            throw new Rejected(new InvalidSession(SessionFlaw.Unreadable));
         }
-        return NativeSessionAuthority.Flaw(session) is { } flaw ? throw new Rejected(new InvalidSeed(flaw)) : session;
+        return NativeSessionAuthority.Flaw(session) is { } flaw ? throw new Rejected(new InvalidSession(flaw)) : session;
     }
 
     /// The session a workspace of `kind` starts with when it keeps no file and
@@ -97,10 +97,10 @@ public sealed partial class CrestApp {
     /// owner reaches this while an intent holds the lock, and then the intent
     /// delivers what the close issued.
     ///
-    /// TRANSITIONAL until S5.8c: the JSON command and replacement paths commit
-    /// an owner's state without the lock, so the close takes it itself and
-    /// delivers its engine commands afterwards. Once those paths are intents,
-    /// the lock is always held here.
+    /// TRANSITIONAL until slice 8a (typed sync): the durable JSON replacement
+    /// a sync merge commits reaches an owner's state without the lock, so the
+    /// close takes it itself and delivers its engine commands afterwards. Once
+    /// that replacement is an intent, the lock is always held here.
     private void CloseOrphan(Guid workspaceId) {
         var nested = gate.IsHeldByCurrentThread;
         lock (gate) Close(workspaceId);
@@ -117,9 +117,9 @@ public sealed partial class CrestApp {
 
     #region Actions - Replacement
 
-    /// TRANSITIONAL until slice 8a (typed sync): replaces the workspace's session with the
-    /// edits `delta` names and saves the result, with a sync transaction's
-    /// journal when one is given, before publishing it.
+    /// TRANSITIONAL until slice 8a (typed sync): replaces the workspace's
+    /// session with the edits `delta` names and saves the result, with a sync
+    /// transaction's journal when one is given, before publishing it.
     public void ReplaceDurably(Guid workspaceId, ReadOnlySpan<byte> delta, NativeSyncTransaction? transaction) =>
         device.Workspace(workspaceId).ReplaceDurably(delta, transaction);
 
