@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x64, 0x42, 0xde, 0x88, 0x22, 0x28, 0x4d, 0xc6, 0x67, 0xf4, 0xc6, 0x5a, 0x92, 0xe8, 0x7f, 0x88, 0x20, 0xdb, 0x6e, 0x2b, 0x62, 0x63, 0x4b, 0xdc, 0x2d, 0xf7, 0xc0, 0xa0, 0x6a, 0xb8, 0x67, 0xf6
+        0xb8, 0xb1, 0x7c, 0x04, 0xec, 0x13, 0x29, 0x06, 0xb2, 0x57, 0x0e, 0x82, 0xb4, 0x42, 0xf4, 0xef, 0x12, 0x37, 0x8f, 0x54, 0x13, 0xeb, 0xe7, 0x8b, 0x06, 0xf2, 0xd3, 0x47, 0xa7, 0x20, 0xfb, 0x1a
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2095,16 +2095,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static PasskeyAccessStatus ReadPasskeyAccessStatus(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (PasskeyAccessStatus)reader.ReadEnum(5);
-    }
-
-    public static void WritePasskeyAccessStatus(WireWriter writer, PasskeyAccessStatus value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static PasskeyAuthorizationState ReadPasskeyAuthorizationState(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (PasskeyAuthorizationState)reader.ReadEnum(3);
@@ -2316,6 +2306,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(NumberedSelectionTarget.All, value));
+    }
+
+    public static PasskeyAccessStatus ReadPasskeyAccessStatus(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return PasskeyAccessStatus.All[reader.ReadEnum(PasskeyAccessStatus.All.Count)];
+    }
+
+    public static void WritePasskeyAccessStatus(WireWriter writer, PasskeyAccessStatus value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(PasskeyAccessStatus.All, value));
     }
 
     public static ShortcutCommand ReadShortcutCommand(WireReader reader) {

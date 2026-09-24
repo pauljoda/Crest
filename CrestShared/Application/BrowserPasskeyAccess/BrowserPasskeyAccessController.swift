@@ -10,7 +10,7 @@ final class BrowserPasskeyAccessController {
     typealias AuthorizationRequester =
         @MainActor () async -> PasskeyAuthorizationState
 
-    private(set) var status = BrowserPasskeyAccessStatus.checking
+    private(set) var status = PasskeyAccessStatus.checking
     private(set) var isRequesting = false
 
     @ObservationIgnored private let core: CrestCore
@@ -39,7 +39,7 @@ final class BrowserPasskeyAccessController {
     }
 
     var canRequestAccess: Bool {
-        status == .notDetermined && !isRequesting
+        status.canRequestAccess && !isRequesting
     }
 
     func refreshStatus() {
@@ -73,7 +73,7 @@ final class BrowserPasskeyAccessController {
 
     private func evaluatedStatus(
         authorizationState: PasskeyAuthorizationState? = nil
-    ) -> BrowserPasskeyAccessStatus {
+    ) -> PasskeyAccessStatus {
         guard capabilityCheck() else {
             return .managedCapabilityRequired
         }
@@ -83,6 +83,6 @@ final class BrowserPasskeyAccessController {
         let access = PasskeyAccess(
             hasManagedCapability: true, deviceConfiguration: deviceConfigurationCheck(),
             authorizationState: authorizationState ?? authorizationCheck())
-        return (try? core.query(access)).map { BrowserPasskeyAccessStatus($0.status) } ?? .checking
+        return (try? core.query(access))?.status ?? .checking
     }
 }

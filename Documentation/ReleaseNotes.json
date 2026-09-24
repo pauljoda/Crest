@@ -2193,6 +2193,10 @@
     "search-provider-set": {
       "category": "internal",
       "message": "Search providers are one set of built-in and custom engines."
+    },
+    "credential-prompt-presentation": {
+      "category": "internal",
+      "message": "Credential prompts and passkey status carry their own text and symbols."
     }
   }
 }

@@ -79,7 +79,7 @@ struct BrowserCredentialSavePrompt: View {
     }
 
     private func perform(_ action: BrowserCredentialPromptPrimaryAction) {
-        switch action {
+        switch action.kind {
         case .commit:
             save()
         case .retryCredentialPreparation:

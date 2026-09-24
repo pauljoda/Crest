@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x64, 0x42, 0xde, 0x88, 0x22, 0x28, 0x4d, 0xc6, 0x67, 0xf4, 0xc6, 0x5a, 0x92, 0xe8, 0x7f, 0x88, 0x20, 0xdb, 0x6e, 0x2b, 0x62, 0x63, 0x4b, 0xdc, 0x2d, 0xf7, 0xc0, 0xa0, 0x6a, 0xb8, 0x67, 0xf6
+        0xb8, 0xb1, 0x7c, 0x04, 0xec, 0x13, 0x29, 0x06, 0xb2, 0x57, 0x0e, 0x82, 0xb4, 0x42, 0xf4, 0xef, 0x12, 0x37, 0x8f, 0x54, 0x13, 0xeb, 0xe7, 0x8b, 0x06, 0xf2, 0xd3, 0x47, 0xa7, 0x20, 0xfb, 0x1a
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2292,20 +2292,6 @@ extension CredentialUsernameSource {
     }
 }
 
-extension PasskeyAccessStatus {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = PasskeyAccessStatus(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown PasskeyAccessStatus \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension PasskeyAuthorizationState {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -2575,6 +2561,20 @@ extension NumberedSelectionTarget {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown NumberedSelectionTarget \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension PasskeyAccessStatus {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown PasskeyAccessStatus \(tag)")
         }
         self = Self.all[tag]
     }

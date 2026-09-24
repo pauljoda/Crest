@@ -136,9 +136,39 @@ final class BrowserCredentialSavePromptModel {
     }
 }
 
-enum BrowserCredentialSavePromptAction: Equatable, Sendable {
-    case create
-    case update
+/// Whether the prompt saves a new password or updates a saved one, with the
+/// words for each.
+struct BrowserCredentialSavePromptAction: Hashable, Sendable {
+    // MARK: - Variables
+
+    static let create = BrowserCredentialSavePromptAction(
+        name: "create", promptTitle: "Save password?", offerTitle: "Save & Offer to Passwords",
+        commitTitle: { spaceName in spaceName.map { "Save in \($0)" } ?? "Save in this Space" })
+    static let update = BrowserCredentialSavePromptAction(
+        name: "update", promptTitle: "Update password?", offerTitle: "Update & Offer to Passwords",
+        commitTitle: { spaceName in spaceName.map { "Update in \($0)" } ?? "Update in this Space" })
+
+    let name: String
+
+    /// The prompt's question.
+    let promptTitle: LocalizedStringResource
+
+    /// The commit button's title when the save also offers the password to
+    /// the system's Passwords app.
+    let offerTitle: LocalizedStringResource
+
+    /// The commit button's title, naming the Space the password is saved in.
+    let commitTitle: @Sendable (_ spaceName: String?) -> LocalizedStringResource
+
+    // MARK: - Actions - Identity
+
+    static func == (lhs: BrowserCredentialSavePromptAction, rhs: BrowserCredentialSavePromptAction) -> Bool {
+        lhs.name == rhs.name
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
 }
 
 enum BrowserCredentialSavePromptFailure: Equatable, Sendable {

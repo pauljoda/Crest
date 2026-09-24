@@ -637,14 +637,6 @@ enum CredentialUsernameSource: Int, CaseIterable, Sendable {
     case hint = 2
 }
 
-enum PasskeyAccessStatus: Int, CaseIterable, Sendable {
-    case managedCapabilityRequired = 0
-    case deviceNotConfigured = 1
-    case notDetermined = 2
-    case authorized = 3
-    case denied = 4
-}
-
 enum PasskeyAuthorizationState: Int, CaseIterable, Sendable {
     case authorized = 0
     case denied = 1
@@ -1438,6 +1430,138 @@ struct NumberedSelectionTarget: Hashable, Sendable {
     }
 
     static func == (lhs: NumberedSelectionTarget, rhs: NumberedSelectionTarget) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `PasskeyAccessStatus`. A member's wire tag is its index in `all`.
+struct PasskeyAccessStatus: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let detail: LocalizedStringResource
+    let symbol: String
+    let settingsDetail: LocalizedStringResource?
+    let isReady: Bool
+    let needsAttention: Bool
+    let canRequestAccess: Bool
+    let isChecking: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        detail: LocalizedStringResource,
+        symbol: String,
+        settingsDetail: LocalizedStringResource?,
+        isReady: Bool,
+        needsAttention: Bool,
+        canRequestAccess: Bool,
+        isChecking: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.detail = detail
+        self.symbol = symbol
+        self.settingsDetail = settingsDetail
+        self.isReady = isReady
+        self.needsAttention = needsAttention
+        self.canRequestAccess = canRequestAccess
+        self.isChecking = isChecking
+    }
+
+    static let managedCapabilityRequired = PasskeyAccessStatus(
+        tag: 0,
+        name: "managedCapabilityRequired",
+        title: LocalizedStringResource("Awaiting Apple approval"),
+        detail: LocalizedStringResource("This build cannot request browser-wide passkey access until Apple approves Crest’s managed capability."),
+        symbol: "checkmark.seal",
+        settingsDetail: LocalizedStringResource("This build of Crest does not include permission to request browser passkey access."),
+        isReady: false,
+        needsAttention: false,
+        canRequestAccess: false,
+        isChecking: false
+    )
+    static let deviceNotConfigured = PasskeyAccessStatus(
+        tag: 1,
+        name: "deviceNotConfigured",
+        title: LocalizedStringResource("Passkeys aren’t configured"),
+        detail: LocalizedStringResource("Configure passkeys in system settings, then reopen Crest."),
+        symbol: "key.slash",
+        settingsDetail: LocalizedStringResource("Finish setting up passkeys in System Settings, then check again."),
+        isReady: false,
+        needsAttention: true,
+        canRequestAccess: false,
+        isChecking: false
+    )
+    static let notDetermined = PasskeyAccessStatus(
+        tag: 2,
+        name: "notDetermined",
+        title: LocalizedStringResource("Permission required"),
+        detail: LocalizedStringResource("Allow Crest to use the system’s passkey providers for the website in the active page."),
+        symbol: "person.badge.key",
+        settingsDetail: nil,
+        isReady: false,
+        needsAttention: false,
+        canRequestAccess: true,
+        isChecking: false
+    )
+    static let authorized = PasskeyAccessStatus(
+        tag: 3,
+        name: "authorized",
+        title: LocalizedStringResource("Ready for websites"),
+        detail: LocalizedStringResource("WebKit can use the system’s passkey providers for the website in the active page."),
+        symbol: "person.badge.key.fill",
+        settingsDetail: nil,
+        isReady: true,
+        needsAttention: false,
+        canRequestAccess: false,
+        isChecking: false
+    )
+    static let denied = PasskeyAccessStatus(
+        tag: 4,
+        name: "denied",
+        title: LocalizedStringResource("Passkey access is off"),
+        detail: LocalizedStringResource("Turn on Crest under Privacy & Security > Passkeys Access for Web Browsers in system settings."),
+        symbol: "hand.raised.slash",
+        settingsDetail: LocalizedStringResource("Turn on Crest under Privacy & Security > Passkeys Access for Web Browsers in system settings."),
+        isReady: false,
+        needsAttention: true,
+        canRequestAccess: false,
+        isChecking: false
+    )
+    static let checking = PasskeyAccessStatus(
+        tag: 5,
+        name: "checking",
+        title: LocalizedStringResource("Checking passkey access"),
+        detail: LocalizedStringResource("Crest is checking this build and the system’s browser-passkey setting."),
+        symbol: "ellipsis.circle",
+        settingsDetail: nil,
+        isReady: false,
+        needsAttention: false,
+        canRequestAccess: false,
+        isChecking: true
+    )
+
+    static let all: [PasskeyAccessStatus] = [
+        managedCapabilityRequired,
+        deviceNotConfigured,
+        notDetermined,
+        authorized,
+        denied,
+        checking
+    ]
+
+    static func named(_ name: String?) -> PasskeyAccessStatus? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PasskeyAccessStatus, rhs: PasskeyAccessStatus) -> Bool {
         lhs.tag == rhs.tag
     }
 

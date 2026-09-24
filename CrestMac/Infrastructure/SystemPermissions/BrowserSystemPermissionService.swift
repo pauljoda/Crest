@@ -8,14 +8,14 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
     private let location = BrowserGeolocationSystemService()
     private let folderAccess = BrowserSystemFolderAccess()
     private let passkeyAccess: BrowserPasskeyAccessController
-    private let readPasskeyStatus: @Sendable () -> BrowserPasskeyAccessStatus
+    private let readPasskeyStatus: @Sendable () -> PasskeyAccessStatus
 
     /// `passkeyAccess` is the app's one passkey controller, which a request
     /// updates. `readPasskeyStatus` runs off the main actor; without one, the
     /// service reads the system's passkey facts and asks `core` for the status.
     init(
         core: CrestCore, passkeyAccess: BrowserPasskeyAccessController,
-        readPasskeyStatus: (@Sendable () -> BrowserPasskeyAccessStatus)? = nil
+        readPasskeyStatus: (@Sendable () -> PasskeyAccessStatus)? = nil
     ) {
         self.passkeyAccess = passkeyAccess
         self.readPasskeyStatus = readPasskeyStatus ?? { Self.passkeyStatus(asking: core) }
@@ -128,35 +128,26 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         // These read-only APIs can wait for synchronous system IPC.
         // Keep that wait away from the UI while General settings opens.
         let status = await Task.detached(priority: .userInitiated) { readPasskeyStatus() }.value
-        let state: BrowserSystemPermissionState
-        switch status {
-        case .checking: state = .checking
-        case .notDetermined: state = .notRequested
-        case .authorized: state = .allowed
-        case .denied, .deviceNotConfigured: state = .blocked
-        case .managedCapabilityRequired: state = .unavailable
-        }
-        let detail: String?
-        switch status {
-        case .authorized, .checking, .notDetermined: detail = nil
-        case .denied: detail = status.detail
-        case .deviceNotConfigured:
-            detail = String(localized: "Finish setting up passkeys in System Settings, then check again.")
-        case .managedCapabilityRequired:
-            detail = String(
-                localized: "This build of Crest does not include permission to request browser passkey access.")
-        }
-        return .init(state: state, detail: detail)
+        let detail = status.settingsDetail.map { String(localized: $0) }
+        return .init(state: Self.permissionState(for: status), detail: detail)
+    }
+
+    /// The system permissions row's state for the core's passkey status.
+    nonisolated private static func permissionState(for status: PasskeyAccessStatus) -> BrowserSystemPermissionState {
+        if status.isChecking { return .checking }
+        if status.isReady { return .allowed }
+        if status.needsAttention { return .blocked }
+        return status.canRequestAccess ? .notRequested : .unavailable
     }
 
     /// The system's passkey facts and the core's status for them. A core that
     /// cannot answer keeps checking.
-    nonisolated private static func passkeyStatus(asking core: CrestCore) -> BrowserPasskeyAccessStatus {
+    nonisolated private static func passkeyStatus(asking core: CrestCore) -> PasskeyAccessStatus {
         guard BrowserPasskeyAccessSystem.hasManagedCapability() else { return .managedCapabilityRequired }
         let access = PasskeyAccess(
             hasManagedCapability: true, deviceConfiguration: BrowserPasskeyAccessSystem.deviceConfiguration(),
             authorizationState: BrowserPasskeyAccessSystem.authorizationState())
-        return (try? core.query(access)).map { BrowserPasskeyAccessStatus($0.status) } ?? .checking
+        return (try? core.query(access))?.status ?? .checking
     }
 
     private func captureStatus(_ type: AVMediaType) async -> BrowserSystemPermissionStatus {
