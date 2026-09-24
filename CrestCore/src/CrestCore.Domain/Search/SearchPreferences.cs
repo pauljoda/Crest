@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// A Space's search choice and its custom engines.
@@ -34,6 +36,30 @@ public sealed class SearchPreferences {
         if (!BuiltIns.Concat(providers).Any(p => p.Id == selected)) selected = SearchProviderCatalog.GoogleId;
         return new(selected!, Array.AsReadOnly(providers), suggestions);
     }
+
+    /// A Space's stored search choice. Stored custom engines that no longer
+    /// validate are left out, as the selection that named one falls back to Google.
+    public static SearchPreferences Restore(BrowsingPreferences browsing) {
+        ArgumentNullException.ThrowIfNull(browsing);
+        var providers = new List<SearchProvider>();
+        foreach (var custom in browsing.CustomSearchProviders) {
+            try {
+                providers.Add(SearchProvider.Custom(custom.Id, custom.Name, custom.SearchUrlTemplate, custom.SuggestionUrlTemplate));
+            } catch (BrowserRuleException) {
+                // Excluded, never run.
+            }
+        }
+        return Restore(browsing.SelectedSearchProviderId, providers, browsing.SearchSuggestionsEnabled);
+    }
+
+    /// The Space's browsing preferences carrying this search choice.
+    public BrowsingPreferences Applied(BrowsingPreferences browsing) => browsing with {
+        SelectedSearchProviderId = SelectedId,
+        CustomSearchProviders = CustomProviders.Select(provider => new CustomSearchProvider(
+            Guid.Parse(provider.Id[SearchProvider.CustomPrefix.Length..]), provider.Name, provider.SearchTemplate,
+            provider.SuggestionTemplate)).ToArray(),
+        SearchSuggestionsEnabled = SuggestionsEnabled
+    };
 
     /// Rejects an already validated custom engine whose name another custom
     /// engine uses (ignoring case and diacritics), or that would exceed the limit.

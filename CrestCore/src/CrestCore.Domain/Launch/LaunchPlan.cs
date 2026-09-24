@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// How one launch treats the person's data and what it opens with.

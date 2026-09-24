@@ -20,7 +20,8 @@ public static partial class NativePolicyEvaluator {
                 PolicyFields.Members(request);
                 return PresentationCodes.ContentBlockingAnswer();
             case PolicyOperation.BrandingNormalize:
-                return PresentationCodes.BrandingAnswer(BrandingDocument.Normalize(Requests.Branding.Decode(request).Document));
+                return PresentationCodes.BrandingAnswer(StoredSessionCodec.Encode(
+                    SpaceBrandingPolicy.Normalize(StoredSessionCodec.DecodeBranding(Requests.Branding.Decode(request).Document))));
             default:
                 return null;
         }

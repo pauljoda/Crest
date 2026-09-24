@@ -97,7 +97,7 @@ public sealed class NativePresentationPolicyTests {
     }
 
     [Fact]
-    public void BrandingNormalizationClampsBannerRangesAndCrestLayersButKeepsVocabulary() {
+    public void BrandingNormalizationClampsBannerRangesAndCrestLayersAndReadsTermsAsTheNativeReaderDoes() {
         var branding = new JsonObject {
             ["colors"] = new JsonArray(Color(2, 0.5, -1), Color(0.1, 0.2, 0.3), Color(0.4, 0.5, 0.6), Color(0.7, 0.8, 0.9)),
             ["bannerStrength"] = 1.4,
@@ -121,12 +121,12 @@ public sealed class NativePresentationPolicyTests {
         Assert.Equal(0.0, result["readabilityFade"]!.GetValue<double>());
         Assert.Equal(270.0, result["gradientAngle"]!.GetValue<double>());
         Assert.Equal(1.0, result["folderColorIntensity"]!.GetValue<double>());
-        Assert.Equal("futurePattern", result["bannerPattern"]!.GetValue<string>());
+        Assert.Equal("solid", result["bannerPattern"]!.GetValue<string>());
         var crest = result["crest"]!;
         Assert.Null(crest["palette"]);
         Assert.Equal(0, crest["symbolColorIndex"]!.GetValue<int>());
         Assert.Equal(2, crest["trimColorIndex"]!.GetValue<int>());
-        Assert.True(crest["charge"]!["future"]!.GetValue<bool>());
+        Assert.Equal("none", crest["charge"]!["kind"]!.GetValue<string>());
 
         var empty = Evaluate(new() { ["operation"] = "branding.normalize", ["branding"] = new JsonObject { ["colors"] = new JsonArray() } });
         Assert.Single(empty["branding"]!["colors"]!.AsArray());

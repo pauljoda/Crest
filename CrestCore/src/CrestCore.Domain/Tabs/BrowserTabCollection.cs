@@ -25,6 +25,24 @@ public sealed partial class BrowserTabCollection {
 
     #region Actions - Persistence
 
+    /// The Space's organization for one edit.
+    public static BrowserTabCollection Restore(SpaceState space) {
+        ArgumentNullException.ThrowIfNull(space);
+        return Restore(space.Tabs, space.Folders, space.SplitGroups);
+    }
+
+    /// The Space after the edit: its organization replaced and the tabs the
+    /// edit archived added after the ones it already had.
+    public SpaceState Capture(SpaceState space) {
+        ArgumentNullException.ThrowIfNull(space);
+        return space with {
+            Tabs = TabStates,
+            Folders = folders.ToArray(),
+            SplitGroups = splitGroups.ToArray(),
+            ArchivedTabs = [.. space.ArchivedTabs, .. archive]
+        };
+    }
+
     public static BrowserTabCollection Restore(IEnumerable<TabState> tabs, IEnumerable<FolderState> folders,
         IEnumerable<SplitGroupState> splitGroups) {
         var collection = new BrowserTabCollection();

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -19,7 +20,7 @@ internal sealed record SessionEditResult(BrowserTabCollection Edited, Guid? TabI
     /// The command answer the native caller reads: the edited Space with the tabs
     /// this edit archived and no history, its side effects, and the window's
     /// follow-up selection as a hint.
-    public JsonObject Answer(SpaceDocument edited, SessionSelectionHint hint) => new() {
+    public JsonObject Answer(SpaceState edited, SessionSelectionHint hint) => new() {
         ["space"] = StoredSessionCodec.Encode(edited with { History = [], ArchivedTabs = Edited.Archive }),
         ["tabId"] = TabId?.ToString("D"),
         ["copies"] = new JsonArray(Copies.Select(item => (JsonNode)new JsonObject {

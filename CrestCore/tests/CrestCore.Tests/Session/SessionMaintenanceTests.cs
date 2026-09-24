@@ -106,7 +106,7 @@ public sealed partial class BrowserContractsTests {
         session["spaceDeletions"] = new JsonArray(new JsonObject {
             ["spaceID"] = session["spaces"]![0]!["id"]!.DeepClone(),
             ["profileID"] = session["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["operationID"] = Guid.NewGuid().ToString("D")
+            ["operationID"] = Guid.NewGuid().ToString("D").ToUpperInvariant()
         });
         var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         var journal = new NativeSyncJournal(Bytes(initial));

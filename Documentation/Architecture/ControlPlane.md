@@ -273,9 +273,9 @@ what still exists. Showing a tab sends `tab.touch`, which only records
 before any window is on screen.
 
 Older documents stored a session-level `selectedSpaceID` and per-Space
-`selectedTabID`. They still load: the core drops the fields on the way in and
-never writes them (`LegacySessionDocument` folds per-Space selection into a
-window record without captured Spaces), and the native storage reads them once
+`selectedTabID`. They still load: the core's stored-format codec
+(`StoredSessionCodec`) ignores the fields on the way in and never writes them,
+and the native storage reads them once
 (`BrowserLegacySessionSelection`) so the first window without its own record
 adopts them; a record that predates captured Spaces folds them in and captures
 from then on. Sync never carried selection and still does not.

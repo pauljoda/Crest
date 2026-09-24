@@ -5932,7 +5932,7 @@
       "checksSpelling": false
     }
   },
-  "workspace.import": {
+  "space.search_provider.upsert": {
     "session": {
       "defaultSpaceID": {
         "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
@@ -5970,6 +5970,3196 @@
         }
       ],
       "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "off",
+            "searchSuggestionsEnabled": true,
+            "searchProvider": "google",
+            "customSearchProviders": [
+              {
+                "suggestionURLTemplate": "https://docs.example/suggest?q={searchTerms}",
+                "id": "75CCF5F2-52D5-4CD4-BC2F-2B6C2D435DB4",
+                "name": "Docs",
+                "searchURLTemplate": "https://docs.example/search?q={searchTerms}"
+              },
+              {
+                "id": "DCE7ADB7-CAD9-4DE6-952E-57B580B0296B",
+                "name": "Wiki",
+                "searchURLTemplate": "https://wiki.example/find?q=%s"
+              }
+            ],
+            "selectedSearchProviderID": "custom:75ccf5f2-52d5-4cd4-bc2f-2b6c2d435db4",
+            "dataRetention": {
+              "archive": "thirtyDays",
+              "history": "ninetyDays",
+              "downloads": "oneWeek"
+            },
+            "currentTabCleanupPolicy": "after7Days"
+          },
+          "isSavedTabsExpanded": true,
+          "savedTabsExpansionModifiedAt": 800000009,
+          "symbol": "star.fill",
+          "name": "Everything",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "quartered",
+            "colors": [
+              {
+                "green": 0.2,
+                "red": 0.1,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              {
+                "green": 0.5,
+                "red": 0.4,
+                "blue": 0.6,
+                "alpha": 0.8
+              },
+              {
+                "green": 0.8,
+                "red": 0.7,
+                "blue": 0.9,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 135,
+            "themeMode": "gradient",
+            "bannerStrength": 0.8,
+            "iconStyle": "layeredCrest",
+            "readabilityFade": 0.4,
+            "textColorMode": "light",
+            "hasCustomAppearance": true,
+            "crest": {
+              "ordinaryColorIndex": 1,
+              "divisionCount": 6,
+              "symbolColorIndex": 1,
+              "chargeWeight": "light",
+              "depth": "lifted",
+              "edgeWidth": 0.5,
+              "showsOutline": true,
+              "plateScale": 0.9,
+              "sealTeeth": 18,
+              "sheenAngle": 90,
+              "symbol": "griffin",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 0,
+              "palette": [
+                {
+                  "green": 0.1,
+                  "red": 0.3,
+                  "blue": 0.2,
+                  "alpha": 1
+                },
+                {
+                  "green": 0.7,
+                  "red": 0.9,
+                  "blue": 0.3,
+                  "alpha": 1
+                }
+              ],
+              "trimWeight": 1.5,
+              "edgeColorIndex": 1,
+              "ordinaryWidth": 1.2,
+              "fieldDivision": "gyronny",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1.2,
+              "charge": {
+                "kind": "monogram",
+                "value": "AB",
+                "style": "sans"
+              },
+              "finish": "sheen",
+              "ordinary": "chevron",
+              "backplate": "frenchShield",
+              "trim": "beaded",
+              "chargeLayout": "ring",
+              "chargeOffset": 0.1,
+              "startingPresetID": "winter",
+              "trimDetail": 16
+            },
+            "folderColorIntensity": 0.6,
+            "keepsControlsReadable": true,
+            "symbolColor": {
+              "green": 0.85,
+              "red": 0.9,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            "showsTexture": true
+          },
+          "id": {
+            "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+          },
+          "profile": {
+            "id": "5966A1C3-B0B5-4BF9-A355-36857A8CC6A2"
+          },
+          "accent": "rose",
+          "splitGroups": [
+            {
+              "iconModifiedAt": 780123473.789,
+              "tintModifiedAt": 800000004.25,
+              "id": {
+                "rawValue": "AB0407DD-D08E-4D54-ABD4-6D3540EFE004"
+              },
+              "customIconSymbol": "crest.emoji:\uD83E\uDDEA",
+              "tint": {
+                "red": 0.1,
+                "green": 0.2,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              "customTitle": "Renamed split",
+              "titleModifiedAt": 800000004
+            }
+          ],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true,
+            "isEnabled": false
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "searchProvider": "google",
+            "selectedSearchProviderID": "custom:44444444-4444-4444-8444-444444444444",
+            "customSearchProviders": [
+              {
+                "id": "44444444-4444-4444-8444-444444444444",
+                "name": "Kagi",
+                "searchURLTemplate": "https://kagi.com/search?q=%s"
+              }
+            ],
+            "searchSuggestionsEnabled": true,
+            "currentTabCleanupPolicy": "after24Hours",
+            "contentBlockingPolicy": "balanced",
+            "dataRetention": {
+              "history": "oneYear",
+              "archive": "oneDay",
+              "downloads": "forever"
+            }
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Renamed",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "colors": [
+              {
+                "red": 1,
+                "green": 0.5,
+                "blue": 0,
+                "alpha": 1
+              },
+              {
+                "red": 0.2,
+                "green": 0.3,
+                "blue": 0.4,
+                "alpha": 0.5
+              }
+            ],
+            "bannerPattern": "stripes",
+            "bannerStrength": 1,
+            "readabilityFade": 0.3,
+            "keepsControlsReadable": true,
+            "themeMode": "banner",
+            "gradientAngle": 315,
+            "showsTexture": false,
+            "iconStyle": "simpleSymbol",
+            "crest": {
+              "backplate": "shield",
+              "fieldDivision": "plain",
+              "ordinary": "none",
+              "trim": "none",
+              "symbol": "mountain",
+              "chargeLayout": "single",
+              "backplateColorIndex": 1,
+              "secondaryFieldColorIndex": 1,
+              "ordinaryColorIndex": 0,
+              "trimColorIndex": 1,
+              "symbolColorIndex": 0,
+              "edgeColorIndex": 1,
+              "plateScale": 1,
+              "edgeWidth": 0,
+              "divisionCount": 4,
+              "finish": "flat",
+              "ordinaryWidth": 1,
+              "trimWeight": 1,
+              "trimDetail": 12,
+              "chargeScale": 1,
+              "chargeOffset": 0,
+              "chargeWeight": "bold",
+              "sheenAngle": 45,
+              "sealTeeth": 12,
+              "showsOutline": false,
+              "depth": "none"
+            },
+            "renderingVersion": 4,
+            "folderColorIntensity": 0.25,
+            "textColorMode": "dark",
+            "hasCustomAppearance": true
+          },
+          "id": {
+            "rawValue": "A5EB05E2-BE9A-420C-AD16-B1F728C63844"
+          },
+          "profile": {
+            "id": "EF488B84-5E8C-40BA-8A63-808A89DDD3DB"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "isEnabled": true,
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        }
+      ]
+    },
+    "selection": {
+      "spaceId": null,
+      "tabs": []
+    }
+  },
+  "space.search_provider.upsert.second": {
+    "session": {
+      "defaultSpaceID": {
+        "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+      },
+      "disposableSeedMarker": "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
+      "appPreferences": {
+        "savedTabFaviconReturnsToSavedURL": true,
+        "offersTranslation": false,
+        "automaticallyTranslates": true,
+        "splitFocusFollowsMouse": true,
+        "savedTabClosePolicy": "returnToSavedURL",
+        "translationRules": {
+          "sources": {
+            "es": {
+              "targetID": "en",
+              "isEnabled": true
+            },
+            "fr": {
+              "targetID": "de",
+              "isEnabled": false
+            }
+          }
+        },
+        "startupBehavior": "lastActiveTab",
+        "automaticallyEntersPictureInPicture": false,
+        "checksSpelling": false
+      },
+      "spaceDeletions": [
+        {
+          "profileID": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7",
+          "operationID": "F8EB2C81-9F63-4F58-B067-2AABD659EC7E",
+          "spaceID": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          }
+        }
+      ],
+      "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "off",
+            "searchSuggestionsEnabled": true,
+            "searchProvider": "google",
+            "customSearchProviders": [
+              {
+                "suggestionURLTemplate": "https://docs.example/suggest?q={searchTerms}",
+                "id": "75CCF5F2-52D5-4CD4-BC2F-2B6C2D435DB4",
+                "name": "Docs",
+                "searchURLTemplate": "https://docs.example/search?q={searchTerms}"
+              },
+              {
+                "id": "DCE7ADB7-CAD9-4DE6-952E-57B580B0296B",
+                "name": "Wiki",
+                "searchURLTemplate": "https://wiki.example/find?q=%s"
+              }
+            ],
+            "selectedSearchProviderID": "custom:75ccf5f2-52d5-4cd4-bc2f-2b6c2d435db4",
+            "dataRetention": {
+              "archive": "thirtyDays",
+              "history": "ninetyDays",
+              "downloads": "oneWeek"
+            },
+            "currentTabCleanupPolicy": "after7Days"
+          },
+          "isSavedTabsExpanded": true,
+          "savedTabsExpansionModifiedAt": 800000009,
+          "symbol": "star.fill",
+          "name": "Everything",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "quartered",
+            "colors": [
+              {
+                "green": 0.2,
+                "red": 0.1,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              {
+                "green": 0.5,
+                "red": 0.4,
+                "blue": 0.6,
+                "alpha": 0.8
+              },
+              {
+                "green": 0.8,
+                "red": 0.7,
+                "blue": 0.9,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 135,
+            "themeMode": "gradient",
+            "bannerStrength": 0.8,
+            "iconStyle": "layeredCrest",
+            "readabilityFade": 0.4,
+            "textColorMode": "light",
+            "hasCustomAppearance": true,
+            "crest": {
+              "ordinaryColorIndex": 1,
+              "divisionCount": 6,
+              "symbolColorIndex": 1,
+              "chargeWeight": "light",
+              "depth": "lifted",
+              "edgeWidth": 0.5,
+              "showsOutline": true,
+              "plateScale": 0.9,
+              "sealTeeth": 18,
+              "sheenAngle": 90,
+              "symbol": "griffin",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 0,
+              "palette": [
+                {
+                  "green": 0.1,
+                  "red": 0.3,
+                  "blue": 0.2,
+                  "alpha": 1
+                },
+                {
+                  "green": 0.7,
+                  "red": 0.9,
+                  "blue": 0.3,
+                  "alpha": 1
+                }
+              ],
+              "trimWeight": 1.5,
+              "edgeColorIndex": 1,
+              "ordinaryWidth": 1.2,
+              "fieldDivision": "gyronny",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1.2,
+              "charge": {
+                "kind": "monogram",
+                "value": "AB",
+                "style": "sans"
+              },
+              "finish": "sheen",
+              "ordinary": "chevron",
+              "backplate": "frenchShield",
+              "trim": "beaded",
+              "chargeLayout": "ring",
+              "chargeOffset": 0.1,
+              "startingPresetID": "winter",
+              "trimDetail": 16
+            },
+            "folderColorIntensity": 0.6,
+            "keepsControlsReadable": true,
+            "symbolColor": {
+              "green": 0.85,
+              "red": 0.9,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            "showsTexture": true
+          },
+          "id": {
+            "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+          },
+          "profile": {
+            "id": "5966A1C3-B0B5-4BF9-A355-36857A8CC6A2"
+          },
+          "accent": "rose",
+          "splitGroups": [
+            {
+              "iconModifiedAt": 780123473.789,
+              "tintModifiedAt": 800000004.25,
+              "id": {
+                "rawValue": "AB0407DD-D08E-4D54-ABD4-6D3540EFE004"
+              },
+              "customIconSymbol": "crest.emoji:\uD83E\uDDEA",
+              "tint": {
+                "red": 0.1,
+                "green": 0.2,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              "customTitle": "Renamed split",
+              "titleModifiedAt": 800000004
+            }
+          ],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true,
+            "isEnabled": false
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "searchProvider": "google",
+            "selectedSearchProviderID": "custom:44444444-4444-4444-8444-444444444444",
+            "customSearchProviders": [
+              {
+                "id": "44444444-4444-4444-8444-444444444444",
+                "name": "Kagi",
+                "searchURLTemplate": "https://kagi.com/search?q=%s"
+              },
+              {
+                "id": "45454545-4545-4545-8545-454545454545",
+                "name": "Example",
+                "searchURLTemplate": "https://example.com/?q={searchTerms}",
+                "suggestionURLTemplate": "https://example.com/suggest?q={searchTerms}"
+              }
+            ],
+            "searchSuggestionsEnabled": true,
+            "currentTabCleanupPolicy": "after24Hours",
+            "contentBlockingPolicy": "balanced",
+            "dataRetention": {
+              "history": "oneYear",
+              "archive": "oneDay",
+              "downloads": "forever"
+            }
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Renamed",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "colors": [
+              {
+                "red": 1,
+                "green": 0.5,
+                "blue": 0,
+                "alpha": 1
+              },
+              {
+                "red": 0.2,
+                "green": 0.3,
+                "blue": 0.4,
+                "alpha": 0.5
+              }
+            ],
+            "bannerPattern": "stripes",
+            "bannerStrength": 1,
+            "readabilityFade": 0.3,
+            "keepsControlsReadable": true,
+            "themeMode": "banner",
+            "gradientAngle": 315,
+            "showsTexture": false,
+            "iconStyle": "simpleSymbol",
+            "crest": {
+              "backplate": "shield",
+              "fieldDivision": "plain",
+              "ordinary": "none",
+              "trim": "none",
+              "symbol": "mountain",
+              "chargeLayout": "single",
+              "backplateColorIndex": 1,
+              "secondaryFieldColorIndex": 1,
+              "ordinaryColorIndex": 0,
+              "trimColorIndex": 1,
+              "symbolColorIndex": 0,
+              "edgeColorIndex": 1,
+              "plateScale": 1,
+              "edgeWidth": 0,
+              "divisionCount": 4,
+              "finish": "flat",
+              "ordinaryWidth": 1,
+              "trimWeight": 1,
+              "trimDetail": 12,
+              "chargeScale": 1,
+              "chargeOffset": 0,
+              "chargeWeight": "bold",
+              "sheenAngle": 45,
+              "sealTeeth": 12,
+              "showsOutline": false,
+              "depth": "none"
+            },
+            "renderingVersion": 4,
+            "folderColorIntensity": 0.25,
+            "textColorMode": "dark",
+            "hasCustomAppearance": true
+          },
+          "id": {
+            "rawValue": "A5EB05E2-BE9A-420C-AD16-B1F728C63844"
+          },
+          "profile": {
+            "id": "EF488B84-5E8C-40BA-8A63-808A89DDD3DB"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "isEnabled": true,
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        }
+      ]
+    },
+    "selection": {
+      "spaceId": null,
+      "tabs": []
+    }
+  },
+  "space.search_provider.remove": {
+    "session": {
+      "defaultSpaceID": {
+        "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+      },
+      "disposableSeedMarker": "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
+      "appPreferences": {
+        "savedTabFaviconReturnsToSavedURL": true,
+        "offersTranslation": false,
+        "automaticallyTranslates": true,
+        "splitFocusFollowsMouse": true,
+        "savedTabClosePolicy": "returnToSavedURL",
+        "translationRules": {
+          "sources": {
+            "es": {
+              "targetID": "en",
+              "isEnabled": true
+            },
+            "fr": {
+              "targetID": "de",
+              "isEnabled": false
+            }
+          }
+        },
+        "startupBehavior": "lastActiveTab",
+        "automaticallyEntersPictureInPicture": false,
+        "checksSpelling": false
+      },
+      "spaceDeletions": [
+        {
+          "profileID": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7",
+          "operationID": "F8EB2C81-9F63-4F58-B067-2AABD659EC7E",
+          "spaceID": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          }
+        }
+      ],
+      "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "off",
+            "searchSuggestionsEnabled": true,
+            "searchProvider": "google",
+            "customSearchProviders": [
+              {
+                "suggestionURLTemplate": "https://docs.example/suggest?q={searchTerms}",
+                "id": "75CCF5F2-52D5-4CD4-BC2F-2B6C2D435DB4",
+                "name": "Docs",
+                "searchURLTemplate": "https://docs.example/search?q={searchTerms}"
+              },
+              {
+                "id": "DCE7ADB7-CAD9-4DE6-952E-57B580B0296B",
+                "name": "Wiki",
+                "searchURLTemplate": "https://wiki.example/find?q=%s"
+              }
+            ],
+            "selectedSearchProviderID": "custom:75ccf5f2-52d5-4cd4-bc2f-2b6c2d435db4",
+            "dataRetention": {
+              "archive": "thirtyDays",
+              "history": "ninetyDays",
+              "downloads": "oneWeek"
+            },
+            "currentTabCleanupPolicy": "after7Days"
+          },
+          "isSavedTabsExpanded": true,
+          "savedTabsExpansionModifiedAt": 800000009,
+          "symbol": "star.fill",
+          "name": "Everything",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "quartered",
+            "colors": [
+              {
+                "green": 0.2,
+                "red": 0.1,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              {
+                "green": 0.5,
+                "red": 0.4,
+                "blue": 0.6,
+                "alpha": 0.8
+              },
+              {
+                "green": 0.8,
+                "red": 0.7,
+                "blue": 0.9,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 135,
+            "themeMode": "gradient",
+            "bannerStrength": 0.8,
+            "iconStyle": "layeredCrest",
+            "readabilityFade": 0.4,
+            "textColorMode": "light",
+            "hasCustomAppearance": true,
+            "crest": {
+              "ordinaryColorIndex": 1,
+              "divisionCount": 6,
+              "symbolColorIndex": 1,
+              "chargeWeight": "light",
+              "depth": "lifted",
+              "edgeWidth": 0.5,
+              "showsOutline": true,
+              "plateScale": 0.9,
+              "sealTeeth": 18,
+              "sheenAngle": 90,
+              "symbol": "griffin",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 0,
+              "palette": [
+                {
+                  "green": 0.1,
+                  "red": 0.3,
+                  "blue": 0.2,
+                  "alpha": 1
+                },
+                {
+                  "green": 0.7,
+                  "red": 0.9,
+                  "blue": 0.3,
+                  "alpha": 1
+                }
+              ],
+              "trimWeight": 1.5,
+              "edgeColorIndex": 1,
+              "ordinaryWidth": 1.2,
+              "fieldDivision": "gyronny",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1.2,
+              "charge": {
+                "kind": "monogram",
+                "value": "AB",
+                "style": "sans"
+              },
+              "finish": "sheen",
+              "ordinary": "chevron",
+              "backplate": "frenchShield",
+              "trim": "beaded",
+              "chargeLayout": "ring",
+              "chargeOffset": 0.1,
+              "startingPresetID": "winter",
+              "trimDetail": 16
+            },
+            "folderColorIntensity": 0.6,
+            "keepsControlsReadable": true,
+            "symbolColor": {
+              "green": 0.85,
+              "red": 0.9,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            "showsTexture": true
+          },
+          "id": {
+            "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+          },
+          "profile": {
+            "id": "5966A1C3-B0B5-4BF9-A355-36857A8CC6A2"
+          },
+          "accent": "rose",
+          "splitGroups": [
+            {
+              "iconModifiedAt": 780123473.789,
+              "tintModifiedAt": 800000004.25,
+              "id": {
+                "rawValue": "AB0407DD-D08E-4D54-ABD4-6D3540EFE004"
+              },
+              "customIconSymbol": "crest.emoji:\uD83E\uDDEA",
+              "tint": {
+                "red": 0.1,
+                "green": 0.2,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              "customTitle": "Renamed split",
+              "titleModifiedAt": 800000004
+            }
+          ],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true,
+            "isEnabled": false
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "searchProvider": "google",
+            "selectedSearchProviderID": "google",
+            "customSearchProviders": [
+              {
+                "id": "45454545-4545-4545-8545-454545454545",
+                "name": "Example",
+                "searchURLTemplate": "https://example.com/?q={searchTerms}",
+                "suggestionURLTemplate": "https://example.com/suggest?q={searchTerms}"
+              }
+            ],
+            "searchSuggestionsEnabled": true,
+            "currentTabCleanupPolicy": "after24Hours",
+            "contentBlockingPolicy": "balanced",
+            "dataRetention": {
+              "history": "oneYear",
+              "archive": "oneDay",
+              "downloads": "forever"
+            }
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Renamed",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "colors": [
+              {
+                "red": 1,
+                "green": 0.5,
+                "blue": 0,
+                "alpha": 1
+              },
+              {
+                "red": 0.2,
+                "green": 0.3,
+                "blue": 0.4,
+                "alpha": 0.5
+              }
+            ],
+            "bannerPattern": "stripes",
+            "bannerStrength": 1,
+            "readabilityFade": 0.3,
+            "keepsControlsReadable": true,
+            "themeMode": "banner",
+            "gradientAngle": 315,
+            "showsTexture": false,
+            "iconStyle": "simpleSymbol",
+            "crest": {
+              "backplate": "shield",
+              "fieldDivision": "plain",
+              "ordinary": "none",
+              "trim": "none",
+              "symbol": "mountain",
+              "chargeLayout": "single",
+              "backplateColorIndex": 1,
+              "secondaryFieldColorIndex": 1,
+              "ordinaryColorIndex": 0,
+              "trimColorIndex": 1,
+              "symbolColorIndex": 0,
+              "edgeColorIndex": 1,
+              "plateScale": 1,
+              "edgeWidth": 0,
+              "divisionCount": 4,
+              "finish": "flat",
+              "ordinaryWidth": 1,
+              "trimWeight": 1,
+              "trimDetail": 12,
+              "chargeScale": 1,
+              "chargeOffset": 0,
+              "chargeWeight": "bold",
+              "sheenAngle": 45,
+              "sealTeeth": 12,
+              "showsOutline": false,
+              "depth": "none"
+            },
+            "renderingVersion": 4,
+            "folderColorIntensity": 0.25,
+            "textColorMode": "dark",
+            "hasCustomAppearance": true
+          },
+          "id": {
+            "rawValue": "A5EB05E2-BE9A-420C-AD16-B1F728C63844"
+          },
+          "profile": {
+            "id": "EF488B84-5E8C-40BA-8A63-808A89DDD3DB"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "isEnabled": true,
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        }
+      ]
+    },
+    "selection": {
+      "spaceId": null,
+      "tabs": []
+    }
+  },
+  "preferences.translation_rule": {
+    "preferences": {
+      "savedTabFaviconReturnsToSavedURL": true,
+      "offersTranslation": false,
+      "automaticallyTranslates": true,
+      "splitFocusFollowsMouse": true,
+      "savedTabClosePolicy": "returnToSavedURL",
+      "translationRules": {
+        "sources": {
+          "es": {
+            "targetID": "en",
+            "isEnabled": true
+          },
+          "fr": {
+            "targetID": "de",
+            "isEnabled": false
+          },
+          "it": {
+            "targetID": "en",
+            "isEnabled": true
+          }
+        }
+      },
+      "startupBehavior": "lastActiveTab",
+      "automaticallyEntersPictureInPicture": false,
+      "checksSpelling": false
+    }
+  },
+  "preferences.set.startup": {
+    "preferences": {
+      "savedTabFaviconReturnsToSavedURL": true,
+      "offersTranslation": false,
+      "automaticallyTranslates": true,
+      "splitFocusFollowsMouse": true,
+      "savedTabClosePolicy": "returnToSavedURL",
+      "translationRules": {
+        "sources": {
+          "es": {
+            "targetID": "en",
+            "isEnabled": true
+          },
+          "fr": {
+            "targetID": "de",
+            "isEnabled": false
+          },
+          "it": {
+            "targetID": "en",
+            "isEnabled": true
+          }
+        }
+      },
+      "startupBehavior": "showStartPage",
+      "automaticallyEntersPictureInPicture": false,
+      "checksSpelling": false
+    }
+  },
+  "preferences.set.saved_tab_close": {
+    "preferences": {
+      "savedTabFaviconReturnsToSavedURL": true,
+      "offersTranslation": false,
+      "automaticallyTranslates": true,
+      "splitFocusFollowsMouse": true,
+      "savedTabClosePolicy": "resumeLastLocation",
+      "translationRules": {
+        "sources": {
+          "es": {
+            "targetID": "en",
+            "isEnabled": true
+          },
+          "fr": {
+            "targetID": "de",
+            "isEnabled": false
+          },
+          "it": {
+            "targetID": "en",
+            "isEnabled": true
+          }
+        }
+      },
+      "startupBehavior": "showStartPage",
+      "automaticallyEntersPictureInPicture": false,
+      "checksSpelling": false
+    }
+  },
+  "preferences.import": {
+    "preferences": {
+      "savedTabFaviconReturnsToSavedURL": true,
+      "offersTranslation": false,
+      "automaticallyTranslates": true,
+      "splitFocusFollowsMouse": true,
+      "savedTabClosePolicy": "resumeLastLocation",
+      "translationRules": {
+        "sources": {
+          "es": {
+            "targetID": "en",
+            "isEnabled": true
+          },
+          "fr": {
+            "targetID": "de",
+            "isEnabled": false
+          },
+          "it": {
+            "targetID": "en",
+            "isEnabled": true
+          }
+        }
+      },
+      "startupBehavior": "showStartPage",
+      "automaticallyEntersPictureInPicture": false,
+      "checksSpelling": false
+    }
+  },
+  "launch.plan": {
+    "requiresIsolation": false,
+    "usesEphemeralProfileStorage": false,
+    "presentsInstalledApplicationUI": true,
+    "startupBehavior": "showStartPage"
+  },
+  "space.reorder": {
+    "session": {
+      "defaultSpaceID": {
+        "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+      },
+      "disposableSeedMarker": "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
+      "appPreferences": {
+        "savedTabFaviconReturnsToSavedURL": true,
+        "offersTranslation": false,
+        "automaticallyTranslates": true,
+        "splitFocusFollowsMouse": true,
+        "savedTabClosePolicy": "resumeLastLocation",
+        "translationRules": {
+          "sources": {
+            "es": {
+              "targetID": "en",
+              "isEnabled": true
+            },
+            "fr": {
+              "targetID": "de",
+              "isEnabled": false
+            },
+            "it": {
+              "targetID": "en",
+              "isEnabled": true
+            }
+          }
+        },
+        "startupBehavior": "showStartPage",
+        "automaticallyEntersPictureInPicture": false,
+        "checksSpelling": false
+      },
+      "spaceDeletions": [
+        {
+          "profileID": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7",
+          "operationID": "F8EB2C81-9F63-4F58-B067-2AABD659EC7E",
+          "spaceID": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          }
+        }
+      ],
+      "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "off",
+            "searchSuggestionsEnabled": true,
+            "searchProvider": "google",
+            "customSearchProviders": [
+              {
+                "suggestionURLTemplate": "https://docs.example/suggest?q={searchTerms}",
+                "id": "75CCF5F2-52D5-4CD4-BC2F-2B6C2D435DB4",
+                "name": "Docs",
+                "searchURLTemplate": "https://docs.example/search?q={searchTerms}"
+              },
+              {
+                "id": "DCE7ADB7-CAD9-4DE6-952E-57B580B0296B",
+                "name": "Wiki",
+                "searchURLTemplate": "https://wiki.example/find?q=%s"
+              }
+            ],
+            "selectedSearchProviderID": "custom:75ccf5f2-52d5-4cd4-bc2f-2b6c2d435db4",
+            "dataRetention": {
+              "archive": "thirtyDays",
+              "history": "ninetyDays",
+              "downloads": "oneWeek"
+            },
+            "currentTabCleanupPolicy": "after7Days"
+          },
+          "isSavedTabsExpanded": true,
+          "savedTabsExpansionModifiedAt": 800000009,
+          "symbol": "star.fill",
+          "name": "Everything",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "quartered",
+            "colors": [
+              {
+                "green": 0.2,
+                "red": 0.1,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              {
+                "green": 0.5,
+                "red": 0.4,
+                "blue": 0.6,
+                "alpha": 0.8
+              },
+              {
+                "green": 0.8,
+                "red": 0.7,
+                "blue": 0.9,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 135,
+            "themeMode": "gradient",
+            "bannerStrength": 0.8,
+            "iconStyle": "layeredCrest",
+            "readabilityFade": 0.4,
+            "textColorMode": "light",
+            "hasCustomAppearance": true,
+            "crest": {
+              "ordinaryColorIndex": 1,
+              "divisionCount": 6,
+              "symbolColorIndex": 1,
+              "chargeWeight": "light",
+              "depth": "lifted",
+              "edgeWidth": 0.5,
+              "showsOutline": true,
+              "plateScale": 0.9,
+              "sealTeeth": 18,
+              "sheenAngle": 90,
+              "symbol": "griffin",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 0,
+              "palette": [
+                {
+                  "green": 0.1,
+                  "red": 0.3,
+                  "blue": 0.2,
+                  "alpha": 1
+                },
+                {
+                  "green": 0.7,
+                  "red": 0.9,
+                  "blue": 0.3,
+                  "alpha": 1
+                }
+              ],
+              "trimWeight": 1.5,
+              "edgeColorIndex": 1,
+              "ordinaryWidth": 1.2,
+              "fieldDivision": "gyronny",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1.2,
+              "charge": {
+                "kind": "monogram",
+                "value": "AB",
+                "style": "sans"
+              },
+              "finish": "sheen",
+              "ordinary": "chevron",
+              "backplate": "frenchShield",
+              "trim": "beaded",
+              "chargeLayout": "ring",
+              "chargeOffset": 0.1,
+              "startingPresetID": "winter",
+              "trimDetail": 16
+            },
+            "folderColorIntensity": 0.6,
+            "keepsControlsReadable": true,
+            "symbolColor": {
+              "green": 0.85,
+              "red": 0.9,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            "showsTexture": true
+          },
+          "id": {
+            "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+          },
+          "profile": {
+            "id": "5966A1C3-B0B5-4BF9-A355-36857A8CC6A2"
+          },
+          "accent": "rose",
+          "splitGroups": [
+            {
+              "iconModifiedAt": 780123473.789,
+              "tintModifiedAt": 800000004.25,
+              "id": {
+                "rawValue": "AB0407DD-D08E-4D54-ABD4-6D3540EFE004"
+              },
+              "customIconSymbol": "crest.emoji:\uD83E\uDDEA",
+              "tint": {
+                "red": 0.1,
+                "green": 0.2,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              "customTitle": "Renamed split",
+              "titleModifiedAt": 800000004
+            }
+          ],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true,
+            "isEnabled": false
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "searchProvider": "google",
+            "selectedSearchProviderID": "google",
+            "customSearchProviders": [
+              {
+                "id": "45454545-4545-4545-8545-454545454545",
+                "name": "Example",
+                "searchURLTemplate": "https://example.com/?q={searchTerms}",
+                "suggestionURLTemplate": "https://example.com/suggest?q={searchTerms}"
+              }
+            ],
+            "searchSuggestionsEnabled": true,
+            "currentTabCleanupPolicy": "after24Hours",
+            "contentBlockingPolicy": "balanced",
+            "dataRetention": {
+              "history": "oneYear",
+              "archive": "oneDay",
+              "downloads": "forever"
+            }
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Renamed",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "colors": [
+              {
+                "red": 1,
+                "green": 0.5,
+                "blue": 0,
+                "alpha": 1
+              },
+              {
+                "red": 0.2,
+                "green": 0.3,
+                "blue": 0.4,
+                "alpha": 0.5
+              }
+            ],
+            "bannerPattern": "stripes",
+            "bannerStrength": 1,
+            "readabilityFade": 0.3,
+            "keepsControlsReadable": true,
+            "themeMode": "banner",
+            "gradientAngle": 315,
+            "showsTexture": false,
+            "iconStyle": "simpleSymbol",
+            "crest": {
+              "backplate": "shield",
+              "fieldDivision": "plain",
+              "ordinary": "none",
+              "trim": "none",
+              "symbol": "mountain",
+              "chargeLayout": "single",
+              "backplateColorIndex": 1,
+              "secondaryFieldColorIndex": 1,
+              "ordinaryColorIndex": 0,
+              "trimColorIndex": 1,
+              "symbolColorIndex": 0,
+              "edgeColorIndex": 1,
+              "plateScale": 1,
+              "edgeWidth": 0,
+              "divisionCount": 4,
+              "finish": "flat",
+              "ordinaryWidth": 1,
+              "trimWeight": 1,
+              "trimDetail": 12,
+              "chargeScale": 1,
+              "chargeOffset": 0,
+              "chargeWeight": "bold",
+              "sheenAngle": 45,
+              "sealTeeth": 12,
+              "showsOutline": false,
+              "depth": "none"
+            },
+            "renderingVersion": 4,
+            "folderColorIntensity": 0.25,
+            "textColorMode": "dark",
+            "hasCustomAppearance": true
+          },
+          "id": {
+            "rawValue": "A5EB05E2-BE9A-420C-AD16-B1F728C63844"
+          },
+          "profile": {
+            "id": "EF488B84-5E8C-40BA-8A63-808A89DDD3DB"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "isEnabled": true,
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        }
+      ]
+    },
+    "selection": {
+      "spaceId": null,
+      "tabs": []
+    }
+  },
+  "space.create": {
+    "session": {
+      "defaultSpaceID": {
+        "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+      },
+      "disposableSeedMarker": "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
+      "appPreferences": {
+        "savedTabFaviconReturnsToSavedURL": true,
+        "offersTranslation": false,
+        "automaticallyTranslates": true,
+        "splitFocusFollowsMouse": true,
+        "savedTabClosePolicy": "resumeLastLocation",
+        "translationRules": {
+          "sources": {
+            "es": {
+              "targetID": "en",
+              "isEnabled": true
+            },
+            "fr": {
+              "targetID": "de",
+              "isEnabled": false
+            },
+            "it": {
+              "targetID": "en",
+              "isEnabled": true
+            }
+          }
+        },
+        "startupBehavior": "showStartPage",
+        "automaticallyEntersPictureInPicture": false,
+        "checksSpelling": false
+      },
+      "spaceDeletions": [
+        {
+          "profileID": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7",
+          "operationID": "F8EB2C81-9F63-4F58-B067-2AABD659EC7E",
+          "spaceID": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          }
+        }
+      ],
+      "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "off",
+            "searchSuggestionsEnabled": true,
+            "searchProvider": "google",
+            "customSearchProviders": [
+              {
+                "suggestionURLTemplate": "https://docs.example/suggest?q={searchTerms}",
+                "id": "75CCF5F2-52D5-4CD4-BC2F-2B6C2D435DB4",
+                "name": "Docs",
+                "searchURLTemplate": "https://docs.example/search?q={searchTerms}"
+              },
+              {
+                "id": "DCE7ADB7-CAD9-4DE6-952E-57B580B0296B",
+                "name": "Wiki",
+                "searchURLTemplate": "https://wiki.example/find?q=%s"
+              }
+            ],
+            "selectedSearchProviderID": "custom:75ccf5f2-52d5-4cd4-bc2f-2b6c2d435db4",
+            "dataRetention": {
+              "archive": "thirtyDays",
+              "history": "ninetyDays",
+              "downloads": "oneWeek"
+            },
+            "currentTabCleanupPolicy": "after7Days"
+          },
+          "isSavedTabsExpanded": true,
+          "savedTabsExpansionModifiedAt": 800000009,
+          "symbol": "star.fill",
+          "name": "Everything",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "quartered",
+            "colors": [
+              {
+                "green": 0.2,
+                "red": 0.1,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              {
+                "green": 0.5,
+                "red": 0.4,
+                "blue": 0.6,
+                "alpha": 0.8
+              },
+              {
+                "green": 0.8,
+                "red": 0.7,
+                "blue": 0.9,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 135,
+            "themeMode": "gradient",
+            "bannerStrength": 0.8,
+            "iconStyle": "layeredCrest",
+            "readabilityFade": 0.4,
+            "textColorMode": "light",
+            "hasCustomAppearance": true,
+            "crest": {
+              "ordinaryColorIndex": 1,
+              "divisionCount": 6,
+              "symbolColorIndex": 1,
+              "chargeWeight": "light",
+              "depth": "lifted",
+              "edgeWidth": 0.5,
+              "showsOutline": true,
+              "plateScale": 0.9,
+              "sealTeeth": 18,
+              "sheenAngle": 90,
+              "symbol": "griffin",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 0,
+              "palette": [
+                {
+                  "green": 0.1,
+                  "red": 0.3,
+                  "blue": 0.2,
+                  "alpha": 1
+                },
+                {
+                  "green": 0.7,
+                  "red": 0.9,
+                  "blue": 0.3,
+                  "alpha": 1
+                }
+              ],
+              "trimWeight": 1.5,
+              "edgeColorIndex": 1,
+              "ordinaryWidth": 1.2,
+              "fieldDivision": "gyronny",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1.2,
+              "charge": {
+                "kind": "monogram",
+                "value": "AB",
+                "style": "sans"
+              },
+              "finish": "sheen",
+              "ordinary": "chevron",
+              "backplate": "frenchShield",
+              "trim": "beaded",
+              "chargeLayout": "ring",
+              "chargeOffset": 0.1,
+              "startingPresetID": "winter",
+              "trimDetail": 16
+            },
+            "folderColorIntensity": 0.6,
+            "keepsControlsReadable": true,
+            "symbolColor": {
+              "green": 0.85,
+              "red": 0.9,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            "showsTexture": true
+          },
+          "id": {
+            "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+          },
+          "profile": {
+            "id": "5966A1C3-B0B5-4BF9-A355-36857A8CC6A2"
+          },
+          "accent": "rose",
+          "splitGroups": [
+            {
+              "iconModifiedAt": 780123473.789,
+              "tintModifiedAt": 800000004.25,
+              "id": {
+                "rawValue": "AB0407DD-D08E-4D54-ABD4-6D3540EFE004"
+              },
+              "customIconSymbol": "crest.emoji:\uD83E\uDDEA",
+              "tint": {
+                "red": 0.1,
+                "green": 0.2,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              "customTitle": "Renamed split",
+              "titleModifiedAt": 800000004
+            }
+          ],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true,
+            "isEnabled": false
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "searchProvider": "google",
+            "selectedSearchProviderID": "google",
+            "customSearchProviders": [
+              {
+                "id": "45454545-4545-4545-8545-454545454545",
+                "name": "Example",
+                "searchURLTemplate": "https://example.com/?q={searchTerms}",
+                "suggestionURLTemplate": "https://example.com/suggest?q={searchTerms}"
+              }
+            ],
+            "searchSuggestionsEnabled": true,
+            "currentTabCleanupPolicy": "after24Hours",
+            "contentBlockingPolicy": "balanced",
+            "dataRetention": {
+              "history": "oneYear",
+              "archive": "oneDay",
+              "downloads": "forever"
+            }
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Renamed",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "colors": [
+              {
+                "red": 1,
+                "green": 0.5,
+                "blue": 0,
+                "alpha": 1
+              },
+              {
+                "red": 0.2,
+                "green": 0.3,
+                "blue": 0.4,
+                "alpha": 0.5
+              }
+            ],
+            "bannerPattern": "stripes",
+            "bannerStrength": 1,
+            "readabilityFade": 0.3,
+            "keepsControlsReadable": true,
+            "themeMode": "banner",
+            "gradientAngle": 315,
+            "showsTexture": false,
+            "iconStyle": "simpleSymbol",
+            "crest": {
+              "backplate": "shield",
+              "fieldDivision": "plain",
+              "ordinary": "none",
+              "trim": "none",
+              "symbol": "mountain",
+              "chargeLayout": "single",
+              "backplateColorIndex": 1,
+              "secondaryFieldColorIndex": 1,
+              "ordinaryColorIndex": 0,
+              "trimColorIndex": 1,
+              "symbolColorIndex": 0,
+              "edgeColorIndex": 1,
+              "plateScale": 1,
+              "edgeWidth": 0,
+              "divisionCount": 4,
+              "finish": "flat",
+              "ordinaryWidth": 1,
+              "trimWeight": 1,
+              "trimDetail": 12,
+              "chargeScale": 1,
+              "chargeOffset": 0,
+              "chargeWeight": "bold",
+              "sheenAngle": 45,
+              "sealTeeth": 12,
+              "showsOutline": false,
+              "depth": "none"
+            },
+            "renderingVersion": 4,
+            "folderColorIntensity": 0.25,
+            "textColorMode": "dark",
+            "hasCustomAppearance": true
+          },
+          "id": {
+            "rawValue": "A5EB05E2-BE9A-420C-AD16-B1F728C63844"
+          },
+          "profile": {
+            "id": "EF488B84-5E8C-40BA-8A63-808A89DDD3DB"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "isEnabled": true,
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "duckDuckGo",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "duckDuckGo",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "never"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "square.grid.2x2.fill",
+          "name": "Space 4",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.49,
+                "red": 0.12,
+                "blue": 0.52,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "dragon",
+              "backplateColorIndex": 0,
+              "trimColorIndex": 0,
+              "edgeColorIndex": 0,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "emoji",
+                "value": "\uD83E\uDD8A"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "66666666-6666-4666-8666-666666666666"
+          },
+          "profile": {
+            "id": "67676767-6767-4767-8767-676767676767"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [
+            {
+              "id": {
+                "rawValue": "68686868-6868-4868-8868-686868686868"
+              },
+              "title": "Start Page",
+              "symbol": "house",
+              "placement": "current",
+              "lastActivatedAt": 800000110,
+              "keepsPageLoaded": false
+            }
+          ],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        }
+      ]
+    },
+    "selection": {
+      "spaceId": "66666666-6666-4666-8666-666666666666",
+      "tabs": [
+        {
+          "spaceId": "66666666-6666-4666-8666-666666666666",
+          "tabId": "68686868-6868-4868-8868-686868686868"
+        }
+      ]
+    }
+  },
+  "space.deletion.begin": {
+    "session": {
+      "defaultSpaceID": {
+        "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+      },
+      "disposableSeedMarker": "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
+      "appPreferences": {
+        "savedTabFaviconReturnsToSavedURL": true,
+        "offersTranslation": false,
+        "automaticallyTranslates": true,
+        "splitFocusFollowsMouse": true,
+        "savedTabClosePolicy": "resumeLastLocation",
+        "translationRules": {
+          "sources": {
+            "es": {
+              "targetID": "en",
+              "isEnabled": true
+            },
+            "fr": {
+              "targetID": "de",
+              "isEnabled": false
+            },
+            "it": {
+              "targetID": "en",
+              "isEnabled": true
+            }
+          }
+        },
+        "startupBehavior": "showStartPage",
+        "automaticallyEntersPictureInPicture": false,
+        "checksSpelling": false
+      },
+      "spaceDeletions": [
+        {
+          "profileID": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7",
+          "operationID": "F8EB2C81-9F63-4F58-B067-2AABD659EC7E",
+          "spaceID": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          }
+        },
+        {
+          "spaceID": {
+            "rawValue": "A5EB05E2-BE9A-420C-AD16-B1F728C63844"
+          },
+          "profileID": "EF488B84-5E8C-40BA-8A63-808A89DDD3DB",
+          "operationID": "55555555-5555-4555-8555-555555555555"
+        }
+      ],
+      "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "off",
+            "searchSuggestionsEnabled": true,
+            "searchProvider": "google",
+            "customSearchProviders": [
+              {
+                "suggestionURLTemplate": "https://docs.example/suggest?q={searchTerms}",
+                "id": "75CCF5F2-52D5-4CD4-BC2F-2B6C2D435DB4",
+                "name": "Docs",
+                "searchURLTemplate": "https://docs.example/search?q={searchTerms}"
+              },
+              {
+                "id": "DCE7ADB7-CAD9-4DE6-952E-57B580B0296B",
+                "name": "Wiki",
+                "searchURLTemplate": "https://wiki.example/find?q=%s"
+              }
+            ],
+            "selectedSearchProviderID": "custom:75ccf5f2-52d5-4cd4-bc2f-2b6c2d435db4",
+            "dataRetention": {
+              "archive": "thirtyDays",
+              "history": "ninetyDays",
+              "downloads": "oneWeek"
+            },
+            "currentTabCleanupPolicy": "after7Days"
+          },
+          "isSavedTabsExpanded": true,
+          "savedTabsExpansionModifiedAt": 800000009,
+          "symbol": "star.fill",
+          "name": "Everything",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "quartered",
+            "colors": [
+              {
+                "green": 0.2,
+                "red": 0.1,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              {
+                "green": 0.5,
+                "red": 0.4,
+                "blue": 0.6,
+                "alpha": 0.8
+              },
+              {
+                "green": 0.8,
+                "red": 0.7,
+                "blue": 0.9,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 135,
+            "themeMode": "gradient",
+            "bannerStrength": 0.8,
+            "iconStyle": "layeredCrest",
+            "readabilityFade": 0.4,
+            "textColorMode": "light",
+            "hasCustomAppearance": true,
+            "crest": {
+              "ordinaryColorIndex": 1,
+              "divisionCount": 6,
+              "symbolColorIndex": 1,
+              "chargeWeight": "light",
+              "depth": "lifted",
+              "edgeWidth": 0.5,
+              "showsOutline": true,
+              "plateScale": 0.9,
+              "sealTeeth": 18,
+              "sheenAngle": 90,
+              "symbol": "griffin",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 0,
+              "palette": [
+                {
+                  "green": 0.1,
+                  "red": 0.3,
+                  "blue": 0.2,
+                  "alpha": 1
+                },
+                {
+                  "green": 0.7,
+                  "red": 0.9,
+                  "blue": 0.3,
+                  "alpha": 1
+                }
+              ],
+              "trimWeight": 1.5,
+              "edgeColorIndex": 1,
+              "ordinaryWidth": 1.2,
+              "fieldDivision": "gyronny",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1.2,
+              "charge": {
+                "kind": "monogram",
+                "value": "AB",
+                "style": "sans"
+              },
+              "finish": "sheen",
+              "ordinary": "chevron",
+              "backplate": "frenchShield",
+              "trim": "beaded",
+              "chargeLayout": "ring",
+              "chargeOffset": 0.1,
+              "startingPresetID": "winter",
+              "trimDetail": 16
+            },
+            "folderColorIntensity": 0.6,
+            "keepsControlsReadable": true,
+            "symbolColor": {
+              "green": 0.85,
+              "red": 0.9,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            "showsTexture": true
+          },
+          "id": {
+            "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+          },
+          "profile": {
+            "id": "5966A1C3-B0B5-4BF9-A355-36857A8CC6A2"
+          },
+          "accent": "rose",
+          "splitGroups": [
+            {
+              "iconModifiedAt": 780123473.789,
+              "tintModifiedAt": 800000004.25,
+              "id": {
+                "rawValue": "AB0407DD-D08E-4D54-ABD4-6D3540EFE004"
+              },
+              "customIconSymbol": "crest.emoji:\uD83E\uDDEA",
+              "tint": {
+                "red": 0.1,
+                "green": 0.2,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              "customTitle": "Renamed split",
+              "titleModifiedAt": 800000004
+            }
+          ],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true,
+            "isEnabled": false
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "searchProvider": "google",
+            "selectedSearchProviderID": "google",
+            "customSearchProviders": [
+              {
+                "id": "45454545-4545-4545-8545-454545454545",
+                "name": "Example",
+                "searchURLTemplate": "https://example.com/?q={searchTerms}",
+                "suggestionURLTemplate": "https://example.com/suggest?q={searchTerms}"
+              }
+            ],
+            "searchSuggestionsEnabled": true,
+            "currentTabCleanupPolicy": "after24Hours",
+            "contentBlockingPolicy": "balanced",
+            "dataRetention": {
+              "history": "oneYear",
+              "archive": "oneDay",
+              "downloads": "forever"
+            }
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Renamed",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "colors": [
+              {
+                "red": 1,
+                "green": 0.5,
+                "blue": 0,
+                "alpha": 1
+              },
+              {
+                "red": 0.2,
+                "green": 0.3,
+                "blue": 0.4,
+                "alpha": 0.5
+              }
+            ],
+            "bannerPattern": "stripes",
+            "bannerStrength": 1,
+            "readabilityFade": 0.3,
+            "keepsControlsReadable": true,
+            "themeMode": "banner",
+            "gradientAngle": 315,
+            "showsTexture": false,
+            "iconStyle": "simpleSymbol",
+            "crest": {
+              "backplate": "shield",
+              "fieldDivision": "plain",
+              "ordinary": "none",
+              "trim": "none",
+              "symbol": "mountain",
+              "chargeLayout": "single",
+              "backplateColorIndex": 1,
+              "secondaryFieldColorIndex": 1,
+              "ordinaryColorIndex": 0,
+              "trimColorIndex": 1,
+              "symbolColorIndex": 0,
+              "edgeColorIndex": 1,
+              "plateScale": 1,
+              "edgeWidth": 0,
+              "divisionCount": 4,
+              "finish": "flat",
+              "ordinaryWidth": 1,
+              "trimWeight": 1,
+              "trimDetail": 12,
+              "chargeScale": 1,
+              "chargeOffset": 0,
+              "chargeWeight": "bold",
+              "sheenAngle": 45,
+              "sealTeeth": 12,
+              "showsOutline": false,
+              "depth": "none"
+            },
+            "renderingVersion": 4,
+            "folderColorIntensity": 0.25,
+            "textColorMode": "dark",
+            "hasCustomAppearance": true
+          },
+          "id": {
+            "rawValue": "A5EB05E2-BE9A-420C-AD16-B1F728C63844"
+          },
+          "profile": {
+            "id": "EF488B84-5E8C-40BA-8A63-808A89DDD3DB"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "isEnabled": true,
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "duckDuckGo",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "duckDuckGo",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "never"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "square.grid.2x2.fill",
+          "name": "Space 4",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.49,
+                "red": 0.12,
+                "blue": 0.52,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "dragon",
+              "backplateColorIndex": 0,
+              "trimColorIndex": 0,
+              "edgeColorIndex": 0,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "emoji",
+                "value": "\uD83E\uDD8A"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "66666666-6666-4666-8666-666666666666"
+          },
+          "profile": {
+            "id": "67676767-6767-4767-8767-676767676767"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        }
+      ]
+    },
+    "selection": {
+      "spaceId": null,
+      "tabs": []
+    }
+  },
+  "space.remove": {
+    "session": {
+      "defaultSpaceID": {
+        "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+      },
+      "disposableSeedMarker": "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
+      "appPreferences": {
+        "savedTabFaviconReturnsToSavedURL": true,
+        "offersTranslation": false,
+        "automaticallyTranslates": true,
+        "splitFocusFollowsMouse": true,
+        "savedTabClosePolicy": "resumeLastLocation",
+        "translationRules": {
+          "sources": {
+            "es": {
+              "targetID": "en",
+              "isEnabled": true
+            },
+            "fr": {
+              "targetID": "de",
+              "isEnabled": false
+            },
+            "it": {
+              "targetID": "en",
+              "isEnabled": true
+            }
+          }
+        },
+        "startupBehavior": "showStartPage",
+        "automaticallyEntersPictureInPicture": false,
+        "checksSpelling": false
+      },
+      "spaceDeletions": [
+        {
+          "profileID": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7",
+          "operationID": "F8EB2C81-9F63-4F58-B067-2AABD659EC7E",
+          "spaceID": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          }
+        }
+      ],
+      "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "off",
+            "searchSuggestionsEnabled": true,
+            "searchProvider": "google",
+            "customSearchProviders": [
+              {
+                "suggestionURLTemplate": "https://docs.example/suggest?q={searchTerms}",
+                "id": "75CCF5F2-52D5-4CD4-BC2F-2B6C2D435DB4",
+                "name": "Docs",
+                "searchURLTemplate": "https://docs.example/search?q={searchTerms}"
+              },
+              {
+                "id": "DCE7ADB7-CAD9-4DE6-952E-57B580B0296B",
+                "name": "Wiki",
+                "searchURLTemplate": "https://wiki.example/find?q=%s"
+              }
+            ],
+            "selectedSearchProviderID": "custom:75ccf5f2-52d5-4cd4-bc2f-2b6c2d435db4",
+            "dataRetention": {
+              "archive": "thirtyDays",
+              "history": "ninetyDays",
+              "downloads": "oneWeek"
+            },
+            "currentTabCleanupPolicy": "after7Days"
+          },
+          "isSavedTabsExpanded": true,
+          "savedTabsExpansionModifiedAt": 800000009,
+          "symbol": "star.fill",
+          "name": "Everything",
+          "accessPolicy": "deviceOwnerAuthentication",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "quartered",
+            "colors": [
+              {
+                "green": 0.2,
+                "red": 0.1,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              {
+                "green": 0.5,
+                "red": 0.4,
+                "blue": 0.6,
+                "alpha": 0.8
+              },
+              {
+                "green": 0.8,
+                "red": 0.7,
+                "blue": 0.9,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 135,
+            "themeMode": "gradient",
+            "bannerStrength": 0.8,
+            "iconStyle": "layeredCrest",
+            "readabilityFade": 0.4,
+            "textColorMode": "light",
+            "hasCustomAppearance": true,
+            "crest": {
+              "ordinaryColorIndex": 1,
+              "divisionCount": 6,
+              "symbolColorIndex": 1,
+              "chargeWeight": "light",
+              "depth": "lifted",
+              "edgeWidth": 0.5,
+              "showsOutline": true,
+              "plateScale": 0.9,
+              "sealTeeth": 18,
+              "sheenAngle": 90,
+              "symbol": "griffin",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 0,
+              "palette": [
+                {
+                  "green": 0.1,
+                  "red": 0.3,
+                  "blue": 0.2,
+                  "alpha": 1
+                },
+                {
+                  "green": 0.7,
+                  "red": 0.9,
+                  "blue": 0.3,
+                  "alpha": 1
+                }
+              ],
+              "trimWeight": 1.5,
+              "edgeColorIndex": 1,
+              "ordinaryWidth": 1.2,
+              "fieldDivision": "gyronny",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1.2,
+              "charge": {
+                "kind": "monogram",
+                "value": "AB",
+                "style": "sans"
+              },
+              "finish": "sheen",
+              "ordinary": "chevron",
+              "backplate": "frenchShield",
+              "trim": "beaded",
+              "chargeLayout": "ring",
+              "chargeOffset": 0.1,
+              "startingPresetID": "winter",
+              "trimDetail": 16
+            },
+            "folderColorIntensity": 0.6,
+            "keepsControlsReadable": true,
+            "symbolColor": {
+              "green": 0.85,
+              "red": 0.9,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            "showsTexture": true
+          },
+          "id": {
+            "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+          },
+          "profile": {
+            "id": "5966A1C3-B0B5-4BF9-A355-36857A8CC6A2"
+          },
+          "accent": "rose",
+          "splitGroups": [
+            {
+              "iconModifiedAt": 780123473.789,
+              "tintModifiedAt": 800000004.25,
+              "id": {
+                "rawValue": "AB0407DD-D08E-4D54-ABD4-6D3540EFE004"
+              },
+              "customIconSymbol": "crest.emoji:\uD83E\uDDEA",
+              "tint": {
+                "red": 0.1,
+                "green": 0.2,
+                "blue": 0.3,
+                "alpha": 1
+              },
+              "customTitle": "Renamed split",
+              "titleModifiedAt": 800000004
+            }
+          ],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": false,
+            "alsoOffersSaveToSystemPasswords": true,
+            "isEnabled": false
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "duckDuckGo",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "duckDuckGo",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "never"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "square.grid.2x2.fill",
+          "name": "Space 4",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.49,
+                "red": 0.12,
+                "blue": 0.52,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "dragon",
+              "backplateColorIndex": 0,
+              "trimColorIndex": 0,
+              "edgeColorIndex": 0,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 0,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "emoji",
+                "value": "\uD83E\uDD8A"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "66666666-6666-4666-8666-666666666666"
+          },
+          "profile": {
+            "id": "67676767-6767-4767-8767-676767676767"
+          },
+          "accent": "teal",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        }
+      ]
+    },
+    "selection": {
+      "spaceId": null,
+      "tabs": []
+    }
+  },
+  "workspace.import": {
+    "session": {
+      "defaultSpaceID": {
+        "rawValue": "6C1D5447-4E3D-46A7-9B60-E3B95D6C7848"
+      },
+      "disposableSeedMarker": "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
+      "appPreferences": {
+        "savedTabFaviconReturnsToSavedURL": true,
+        "offersTranslation": false,
+        "automaticallyTranslates": true,
+        "splitFocusFollowsMouse": true,
+        "savedTabClosePolicy": "resumeLastLocation",
+        "translationRules": {
+          "sources": {
+            "es": {
+              "targetID": "en",
+              "isEnabled": true
+            },
+            "fr": {
+              "targetID": "de",
+              "isEnabled": false
+            },
+            "it": {
+              "targetID": "en",
+              "isEnabled": true
+            }
+          }
+        },
+        "startupBehavior": "showStartPage",
+        "automaticallyEntersPictureInPicture": false,
+        "checksSpelling": false
+      },
+      "spaceDeletions": [
+        {
+          "profileID": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7",
+          "operationID": "F8EB2C81-9F63-4F58-B067-2AABD659EC7E",
+          "spaceID": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          }
+        }
+      ],
+      "spaces": [
+        {
+          "browsingPreferences": {
+            "contentBlockingPolicy": "balanced",
+            "searchSuggestionsEnabled": false,
+            "searchProvider": "google",
+            "customSearchProviders": [],
+            "selectedSearchProviderID": "google",
+            "dataRetention": {
+              "archive": "forever",
+              "history": "forever",
+              "downloads": "forever"
+            },
+            "currentTabCleanupPolicy": "after12Hours"
+          },
+          "isSavedTabsExpanded": true,
+          "symbol": "leaf",
+          "name": "Leaving",
+          "accessPolicy": "open",
+          "branding": {
+            "renderingVersion": 5,
+            "bannerPattern": "diagonal",
+            "colors": [
+              {
+                "green": 0.27,
+                "red": 0.85,
+                "blue": 0.2,
+                "alpha": 1
+              },
+              {
+                "green": 0.67,
+                "red": 0.88,
+                "blue": 0.25,
+                "alpha": 1
+              }
+            ],
+            "gradientAngle": 0,
+            "themeMode": "banner",
+            "bannerStrength": 1,
+            "iconStyle": "simpleSymbol",
+            "readabilityFade": 0.25,
+            "textColorMode": "automatic",
+            "crest": {
+              "ordinaryColorIndex": 0,
+              "divisionCount": 4,
+              "symbolColorIndex": 0,
+              "chargeWeight": "bold",
+              "depth": "none",
+              "edgeWidth": 0,
+              "showsOutline": false,
+              "plateScale": 1,
+              "sealTeeth": 12,
+              "sheenAngle": 45,
+              "symbol": "oak",
+              "backplateColorIndex": 1,
+              "trimColorIndex": 1,
+              "edgeColorIndex": 1,
+              "trimWeight": 1,
+              "ordinaryWidth": 1,
+              "fieldDivision": "plain",
+              "secondaryFieldColorIndex": 1,
+              "chargeScale": 1,
+              "charge": {
+                "kind": "system",
+                "value": "star.fill"
+              },
+              "finish": "flat",
+              "ordinary": "none",
+              "backplate": "shield",
+              "trim": "none",
+              "chargeLayout": "single",
+              "chargeOffset": 0,
+              "trimDetail": 12
+            },
+            "folderColorIntensity": 0,
+            "keepsControlsReadable": true,
+            "showsTexture": false
+          },
+          "id": {
+            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          },
+          "profile": {
+            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          },
+          "accent": "orange",
+          "splitGroups": [],
+          "credentialPreferences": {
+            "syncsCrestPasswordsWithICloud": true,
+            "alsoOffersSaveToSystemPasswords": false,
+            "isEnabled": true
+          },
+          "tabs": [
+            {
+              "placement": "current",
+              "title": "Start Page",
+              "id": {
+                "rawValue": "0EDA1CE7-3356-438C-A9F7-A667FA1C4904"
+              },
+              "keepsPageLoaded": false,
+              "lastActivatedAt": 780123656.7891234,
+              "symbol": "flag.fill"
+            }
+          ],
+          "folders": [],
+          "history": [],
+          "archivedTabs": []
+        },
         {
           "browsingPreferences": {
             "contentBlockingPolicy": "off",
@@ -6404,167 +9594,30 @@
         },
         {
           "browsingPreferences": {
-            "searchProvider": "bing",
-            "selectedSearchProviderID": "bing",
-            "customSearchProviders": [],
-            "searchSuggestionsEnabled": true,
-            "currentTabCleanupPolicy": "after24Hours",
-            "contentBlockingPolicy": "balanced",
-            "dataRetention": {
-              "history": "oneYear",
-              "archive": "oneDay",
-              "downloads": "forever"
-            }
-          },
-          "isSavedTabsExpanded": true,
-          "symbol": "leaf",
-          "name": "Renamed",
-          "accessPolicy": "deviceOwnerAuthentication",
-          "branding": {
-            "colors": [
-              {
-                "red": 1,
-                "green": 0.5,
-                "blue": 0,
-                "alpha": 1
-              },
-              {
-                "red": 0.2,
-                "green": 0.3,
-                "blue": 0.4,
-                "alpha": 0.5
-              }
-            ],
-            "bannerPattern": "stripes",
-            "bannerStrength": 1,
-            "readabilityFade": 0.3,
-            "keepsControlsReadable": true,
-            "themeMode": "banner",
-            "gradientAngle": 315,
-            "showsTexture": false,
-            "iconStyle": "simpleSymbol",
-            "crest": {
-              "backplate": "shield",
-              "fieldDivision": "plain",
-              "ordinary": "none",
-              "trim": "none",
-              "symbol": "mountain",
-              "chargeLayout": "single",
-              "backplateColorIndex": 1,
-              "secondaryFieldColorIndex": 1,
-              "ordinaryColorIndex": 0,
-              "trimColorIndex": 1,
-              "symbolColorIndex": 0,
-              "edgeColorIndex": 1,
-              "plateScale": 1,
-              "edgeWidth": 0,
-              "divisionCount": 4,
-              "finish": "flat",
-              "ordinaryWidth": 1,
-              "trimWeight": 1,
-              "trimDetail": 12,
-              "chargeScale": 1,
-              "chargeOffset": 0,
-              "chargeWeight": "bold",
-              "sheenAngle": 45,
-              "sealTeeth": 12,
-              "showsOutline": false,
-              "depth": "none"
-            },
-            "renderingVersion": 4,
-            "folderColorIntensity": 0.25,
-            "textColorMode": "dark",
-            "hasCustomAppearance": true
-          },
-          "id": {
-            "rawValue": "a5eb05e2-be9a-420c-ad16-b1f728c63844"
-          },
-          "profile": {
-            "id": "ef488b84-5e8c-40ba-8a63-808a89ddd3db"
-          },
-          "accent": "teal",
-          "splitGroups": [],
-          "credentialPreferences": {
-            "isEnabled": true,
-            "syncsCrestPasswordsWithICloud": false,
-            "alsoOffersSaveToSystemPasswords": true
-          },
-          "tabs": [
-            {
-              "lastActivatedAt": 780123460.7891234,
-              "faviconURL": "https://news.example/icon.png",
-              "symbol": "crest.emoji:\uD83C\uDF0A",
-              "title": "Saved article",
-              "placement": "saved",
-              "savedURL": "https://news.example/article",
-              "id": {
-                "rawValue": "b61250d4-3d4e-4dd6-8871-0bb326669142"
-              },
-              "storedIconMode": "emoji",
-              "positionModifiedAt": 800000007,
-              "titleModifiedAt": 780123462.789,
-              "iconAccent": {
-                "green": 0,
-                "red": 1,
-                "blue": 0
-              },
-              "customTitle": "Reading",
-              "url": "https://news.example/article/42",
-              "keepsPageLoaded": false,
-              "splitGroupID": null
-            },
-            {
-              "symbol": "globe",
-              "id": {
-                "rawValue": "6df2f570-7e1a-4426-b422-23609823b142"
-              },
-              "title": "Plain",
-              "placement": "current",
-              "lastActivatedAt": 780123556.7891234,
-              "url": "https://plain.example/",
-              "keepsPageLoaded": false,
-              "customTitle": null,
-              "positionModifiedAt": null,
-              "titleModifiedAt": null,
-              "splitGroupID": null
-            }
-          ],
-          "folders": [],
-          "history": [],
-          "archivedTabs": []
-        },
-        {
-          "browsingPreferences": {
             "contentBlockingPolicy": "balanced",
             "searchSuggestionsEnabled": false,
-            "searchProvider": "google",
+            "searchProvider": "duckDuckGo",
             "customSearchProviders": [],
-            "selectedSearchProviderID": "google",
+            "selectedSearchProviderID": "duckDuckGo",
             "dataRetention": {
               "archive": "forever",
               "history": "forever",
               "downloads": "forever"
             },
-            "currentTabCleanupPolicy": "after12Hours"
+            "currentTabCleanupPolicy": "never"
           },
           "isSavedTabsExpanded": true,
-          "symbol": "leaf",
-          "name": "Leaving",
+          "symbol": "square.grid.2x2.fill",
+          "name": "Space 4",
           "accessPolicy": "open",
           "branding": {
             "renderingVersion": 5,
             "bannerPattern": "diagonal",
             "colors": [
               {
-                "green": 0.27,
-                "red": 0.85,
-                "blue": 0.2,
-                "alpha": 1
-              },
-              {
-                "green": 0.67,
-                "red": 0.88,
-                "blue": 0.25,
+                "green": 0.49,
+                "red": 0.12,
+                "blue": 0.52,
                 "alpha": 1
               }
             ],
@@ -6585,18 +9638,18 @@
               "plateScale": 1,
               "sealTeeth": 12,
               "sheenAngle": 45,
-              "symbol": "oak",
-              "backplateColorIndex": 1,
-              "trimColorIndex": 1,
-              "edgeColorIndex": 1,
+              "symbol": "dragon",
+              "backplateColorIndex": 0,
+              "trimColorIndex": 0,
+              "edgeColorIndex": 0,
               "trimWeight": 1,
               "ordinaryWidth": 1,
               "fieldDivision": "plain",
-              "secondaryFieldColorIndex": 1,
+              "secondaryFieldColorIndex": 0,
               "chargeScale": 1,
               "charge": {
-                "kind": "system",
-                "value": "star.fill"
+                "kind": "emoji",
+                "value": "\uD83E\uDD8A"
               },
               "finish": "flat",
               "ordinary": "none",
@@ -6611,12 +9664,12 @@
             "showsTexture": false
           },
           "id": {
-            "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+            "rawValue": "66666666-6666-4666-8666-666666666666"
           },
           "profile": {
-            "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+            "id": "67676767-6767-4767-8767-676767676767"
           },
-          "accent": "orange",
+          "accent": "teal",
           "splitGroups": [],
           "credentialPreferences": {
             "syncsCrestPasswordsWithICloud": true,
@@ -6625,14 +9678,16 @@
           },
           "tabs": [
             {
-              "placement": "current",
-              "title": "Start Page",
               "id": {
-                "rawValue": "0EDA1CE7-3356-438C-A9F7-A667FA1C4904"
+                "rawValue": "68686868-6868-4868-8868-686868686868"
               },
+              "title": "Start Page",
+              "symbol": "flag.fill",
+              "placement": "current",
+              "lastActivatedAt": 800000110,
               "keepsPageLoaded": false,
-              "lastActivatedAt": 780123656.7891234,
-              "symbol": "flag.fill"
+              "customTitle": null,
+              "splitGroupID": null
             }
           ],
           "folders": [],
@@ -6763,76 +9818,68 @@
         "sourceTabIndex": 0
       },
       {
-        "spaceIndex": 0,
+        "spaceIndex": 1,
+        "tabIndex": 0,
+        "section": "tabs",
+        "sourceIndex": 0,
+        "sourceSpaceIndex": 1,
+        "sourceTabIndex": 0
+      },
+      {
+        "spaceIndex": 1,
         "tabIndex": 1,
         "section": "tabs",
         "sourceIndex": 0,
-        "sourceSpaceIndex": 0,
+        "sourceSpaceIndex": 1,
         "sourceTabIndex": 1
       },
       {
-        "spaceIndex": 0,
+        "spaceIndex": 1,
         "tabIndex": 2,
         "section": "tabs",
         "sourceIndex": 0,
-        "sourceSpaceIndex": 0,
+        "sourceSpaceIndex": 1,
         "sourceTabIndex": 2
       },
       {
-        "spaceIndex": 0,
+        "spaceIndex": 1,
         "tabIndex": 3,
         "section": "tabs",
         "sourceIndex": 0,
-        "sourceSpaceIndex": 0,
+        "sourceSpaceIndex": 1,
         "sourceTabIndex": 3
       },
       {
-        "spaceIndex": 0,
+        "spaceIndex": 1,
         "tabIndex": 4,
         "section": "tabs",
         "sourceIndex": 0,
-        "sourceSpaceIndex": 0,
+        "sourceSpaceIndex": 1,
         "sourceTabIndex": 4
       },
       {
-        "spaceIndex": 0,
+        "spaceIndex": 1,
         "tabIndex": 0,
         "section": "archivedTabs",
         "sourceIndex": 0,
-        "sourceSpaceIndex": 0,
+        "sourceSpaceIndex": 1,
         "sourceTabIndex": 0
       },
       {
-        "spaceIndex": 0,
+        "spaceIndex": 1,
         "tabIndex": 1,
         "section": "archivedTabs",
         "sourceIndex": 0,
-        "sourceSpaceIndex": 0,
+        "sourceSpaceIndex": 1,
         "sourceTabIndex": 1
       },
       {
-        "spaceIndex": 0,
+        "spaceIndex": 1,
         "tabIndex": 2,
         "section": "archivedTabs",
         "sourceIndex": 0,
-        "sourceSpaceIndex": 0,
+        "sourceSpaceIndex": 1,
         "sourceTabIndex": 2
-      },
-      {
-        "spaceIndex": 1,
-        "tabIndex": 0,
-        "section": "tabs",
-        "sourceIndex": 0,
-        "sourceSpaceIndex": 1,
-        "sourceTabIndex": 0
-      },
-      {
-        "spaceIndex": 1,
-        "tabIndex": 1,
-        "section": "tabs",
-        "sourceIndex": 0,
-        "sourceSpaceIndex": 1,
-        "sourceTabIndex": 1
       },
       {
         "spaceIndex": 2,
@@ -6871,7 +9918,7 @@
       "offersTranslation": false,
       "automaticallyTranslates": true,
       "splitFocusFollowsMouse": true,
-      "savedTabClosePolicy": "returnToSavedURL",
+      "savedTabClosePolicy": "resumeLastLocation",
       "translationRules": {
         "sources": {
           "es": {
@@ -6881,10 +9928,14 @@
           "fr": {
             "targetID": "de",
             "isEnabled": false
+          },
+          "it": {
+            "targetID": "en",
+            "isEnabled": true
           }
         }
       },
-      "startupBehavior": "lastActiveTab",
+      "startupBehavior": "showStartPage",
       "automaticallyEntersPictureInPicture": false,
       "checksSpelling": false
     },
@@ -6898,6 +9949,112 @@
       }
     ],
     "spaces": [
+      {
+        "browsingPreferences": {
+          "contentBlockingPolicy": "balanced",
+          "searchSuggestionsEnabled": false,
+          "searchProvider": "google",
+          "customSearchProviders": [],
+          "selectedSearchProviderID": "google",
+          "dataRetention": {
+            "archive": "forever",
+            "history": "forever",
+            "downloads": "forever"
+          },
+          "currentTabCleanupPolicy": "after12Hours"
+        },
+        "isSavedTabsExpanded": true,
+        "symbol": "leaf",
+        "name": "Leaving",
+        "accessPolicy": "open",
+        "branding": {
+          "renderingVersion": 5,
+          "bannerPattern": "diagonal",
+          "colors": [
+            {
+              "green": 0.27,
+              "red": 0.85,
+              "blue": 0.2,
+              "alpha": 1
+            },
+            {
+              "green": 0.67,
+              "red": 0.88,
+              "blue": 0.25,
+              "alpha": 1
+            }
+          ],
+          "gradientAngle": 0,
+          "themeMode": "banner",
+          "bannerStrength": 1,
+          "iconStyle": "simpleSymbol",
+          "readabilityFade": 0.25,
+          "textColorMode": "automatic",
+          "crest": {
+            "ordinaryColorIndex": 0,
+            "divisionCount": 4,
+            "symbolColorIndex": 0,
+            "chargeWeight": "bold",
+            "depth": "none",
+            "edgeWidth": 0,
+            "showsOutline": false,
+            "plateScale": 1,
+            "sealTeeth": 12,
+            "sheenAngle": 45,
+            "symbol": "oak",
+            "backplateColorIndex": 1,
+            "trimColorIndex": 1,
+            "edgeColorIndex": 1,
+            "trimWeight": 1,
+            "ordinaryWidth": 1,
+            "fieldDivision": "plain",
+            "secondaryFieldColorIndex": 1,
+            "chargeScale": 1,
+            "charge": {
+              "kind": "system",
+              "value": "star.fill"
+            },
+            "finish": "flat",
+            "ordinary": "none",
+            "backplate": "shield",
+            "trim": "none",
+            "chargeLayout": "single",
+            "chargeOffset": 0,
+            "trimDetail": 12
+          },
+          "folderColorIntensity": 0,
+          "keepsControlsReadable": true,
+          "showsTexture": false
+        },
+        "id": {
+          "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+        },
+        "profile": {
+          "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+        },
+        "accent": "orange",
+        "splitGroups": [],
+        "credentialPreferences": {
+          "syncsCrestPasswordsWithICloud": true,
+          "alsoOffersSaveToSystemPasswords": false,
+          "isEnabled": true
+        },
+        "tabs": [
+          {
+            "placement": "current",
+            "title": "Start Page",
+            "id": {
+              "rawValue": "0EDA1CE7-3356-438C-A9F7-A667FA1C4904"
+            },
+            "keepsPageLoaded": false,
+            "lastActivatedAt": 780123656.7891234,
+            "symbol": "flag.fill"
+          }
+        ],
+        "folders": [],
+        "history": [],
+        "archivedTabs": []
+      },
       {
         "browsingPreferences": {
           "contentBlockingPolicy": "off",
@@ -7323,167 +10480,30 @@
       },
       {
         "browsingPreferences": {
-          "searchProvider": "bing",
-          "selectedSearchProviderID": "bing",
-          "customSearchProviders": [],
-          "searchSuggestionsEnabled": true,
-          "currentTabCleanupPolicy": "after24Hours",
-          "contentBlockingPolicy": "balanced",
-          "dataRetention": {
-            "history": "oneYear",
-            "archive": "oneDay",
-            "downloads": "forever"
-          }
-        },
-        "isSavedTabsExpanded": true,
-        "symbol": "leaf",
-        "name": "Renamed",
-        "accessPolicy": "deviceOwnerAuthentication",
-        "branding": {
-          "colors": [
-            {
-              "red": 1,
-              "green": 0.5,
-              "blue": 0,
-              "alpha": 1
-            },
-            {
-              "red": 0.2,
-              "green": 0.3,
-              "blue": 0.4,
-              "alpha": 0.5
-            }
-          ],
-          "bannerPattern": "stripes",
-          "bannerStrength": 1,
-          "readabilityFade": 0.3,
-          "keepsControlsReadable": true,
-          "themeMode": "banner",
-          "gradientAngle": 315,
-          "showsTexture": false,
-          "iconStyle": "simpleSymbol",
-          "crest": {
-            "backplate": "shield",
-            "fieldDivision": "plain",
-            "ordinary": "none",
-            "trim": "none",
-            "symbol": "mountain",
-            "chargeLayout": "single",
-            "backplateColorIndex": 1,
-            "secondaryFieldColorIndex": 1,
-            "ordinaryColorIndex": 0,
-            "trimColorIndex": 1,
-            "symbolColorIndex": 0,
-            "edgeColorIndex": 1,
-            "plateScale": 1,
-            "edgeWidth": 0,
-            "divisionCount": 4,
-            "finish": "flat",
-            "ordinaryWidth": 1,
-            "trimWeight": 1,
-            "trimDetail": 12,
-            "chargeScale": 1,
-            "chargeOffset": 0,
-            "chargeWeight": "bold",
-            "sheenAngle": 45,
-            "sealTeeth": 12,
-            "showsOutline": false,
-            "depth": "none"
-          },
-          "renderingVersion": 4,
-          "folderColorIntensity": 0.25,
-          "textColorMode": "dark",
-          "hasCustomAppearance": true
-        },
-        "id": {
-          "rawValue": "a5eb05e2-be9a-420c-ad16-b1f728c63844"
-        },
-        "profile": {
-          "id": "ef488b84-5e8c-40ba-8a63-808a89ddd3db"
-        },
-        "accent": "teal",
-        "splitGroups": [],
-        "credentialPreferences": {
-          "isEnabled": true,
-          "syncsCrestPasswordsWithICloud": false,
-          "alsoOffersSaveToSystemPasswords": true
-        },
-        "tabs": [
-          {
-            "lastActivatedAt": 780123460.7891234,
-            "faviconURL": "https://news.example/icon.png",
-            "symbol": "crest.emoji:\uD83C\uDF0A",
-            "title": "Saved article",
-            "placement": "saved",
-            "savedURL": "https://news.example/article",
-            "id": {
-              "rawValue": "b61250d4-3d4e-4dd6-8871-0bb326669142"
-            },
-            "storedIconMode": "emoji",
-            "positionModifiedAt": 800000007,
-            "titleModifiedAt": 780123462.789,
-            "iconAccent": {
-              "green": 0,
-              "red": 1,
-              "blue": 0
-            },
-            "customTitle": "Reading",
-            "url": "https://news.example/article/42",
-            "keepsPageLoaded": false,
-            "splitGroupID": null
-          },
-          {
-            "symbol": "globe",
-            "id": {
-              "rawValue": "6df2f570-7e1a-4426-b422-23609823b142"
-            },
-            "title": "Plain",
-            "placement": "current",
-            "lastActivatedAt": 780123556.7891234,
-            "url": "https://plain.example/",
-            "keepsPageLoaded": false,
-            "customTitle": null,
-            "positionModifiedAt": null,
-            "titleModifiedAt": null,
-            "splitGroupID": null
-          }
-        ],
-        "folders": [],
-        "history": [],
-        "archivedTabs": []
-      },
-      {
-        "browsingPreferences": {
           "contentBlockingPolicy": "balanced",
           "searchSuggestionsEnabled": false,
-          "searchProvider": "google",
+          "searchProvider": "duckDuckGo",
           "customSearchProviders": [],
-          "selectedSearchProviderID": "google",
+          "selectedSearchProviderID": "duckDuckGo",
           "dataRetention": {
             "archive": "forever",
             "history": "forever",
             "downloads": "forever"
           },
-          "currentTabCleanupPolicy": "after12Hours"
+          "currentTabCleanupPolicy": "never"
         },
         "isSavedTabsExpanded": true,
-        "symbol": "leaf",
-        "name": "Leaving",
+        "symbol": "square.grid.2x2.fill",
+        "name": "Space 4",
         "accessPolicy": "open",
         "branding": {
           "renderingVersion": 5,
           "bannerPattern": "diagonal",
           "colors": [
             {
-              "green": 0.27,
-              "red": 0.85,
-              "blue": 0.2,
-              "alpha": 1
-            },
-            {
-              "green": 0.67,
-              "red": 0.88,
-              "blue": 0.25,
+              "green": 0.49,
+              "red": 0.12,
+              "blue": 0.52,
               "alpha": 1
             }
           ],
@@ -7504,18 +10524,18 @@
             "plateScale": 1,
             "sealTeeth": 12,
             "sheenAngle": 45,
-            "symbol": "oak",
-            "backplateColorIndex": 1,
-            "trimColorIndex": 1,
-            "edgeColorIndex": 1,
+            "symbol": "dragon",
+            "backplateColorIndex": 0,
+            "trimColorIndex": 0,
+            "edgeColorIndex": 0,
             "trimWeight": 1,
             "ordinaryWidth": 1,
             "fieldDivision": "plain",
-            "secondaryFieldColorIndex": 1,
+            "secondaryFieldColorIndex": 0,
             "chargeScale": 1,
             "charge": {
-              "kind": "system",
-              "value": "star.fill"
+              "kind": "emoji",
+              "value": "\uD83E\uDD8A"
             },
             "finish": "flat",
             "ordinary": "none",
@@ -7530,12 +10550,12 @@
           "showsTexture": false
         },
         "id": {
-          "rawValue": "48E39E6E-DE6E-4B5E-8AFD-D704C5D64035"
+          "rawValue": "66666666-6666-4666-8666-666666666666"
         },
         "profile": {
-          "id": "DAFD68A1-648A-4A7B-A8F2-74E7526ECBE7"
+          "id": "67676767-6767-4767-8767-676767676767"
         },
-        "accent": "orange",
+        "accent": "teal",
         "splitGroups": [],
         "credentialPreferences": {
           "syncsCrestPasswordsWithICloud": true,
@@ -7544,14 +10564,16 @@
         },
         "tabs": [
           {
-            "placement": "current",
-            "title": "Start Page",
             "id": {
-              "rawValue": "0EDA1CE7-3356-438C-A9F7-A667FA1C4904"
+              "rawValue": "68686868-6868-4868-8868-686868686868"
             },
+            "title": "Start Page",
+            "symbol": "flag.fill",
+            "placement": "current",
+            "lastActivatedAt": 800000110,
             "keepsPageLoaded": false,
-            "lastActivatedAt": 780123656.7891234,
-            "symbol": "flag.fill"
+            "customTitle": null,
+            "splitGroupID": null
           }
         ],
         "folders": [],
@@ -7663,6 +10685,7 @@
       }
     ]
   },
+  "checkpoint.history.48E39E6E-DE6E-4B5E-8AFD-D704C5D64035": [],
   "checkpoint.history.6c1d5447-4e3d-46a7-9b60-e3b95d6c7848": [
     {
       "firstVisitedAt": 780123256.7891234,
@@ -7673,8 +10696,7 @@
       "url": "https://news.example/article/42"
     }
   ],
-  "checkpoint.history.a5eb05e2-be9a-420c-ad16-b1f728c63844": [],
-  "checkpoint.history.48E39E6E-DE6E-4B5E-8AFD-D704C5D64035": [],
+  "checkpoint.history.66666666-6666-4666-8666-666666666666": [],
   "checkpoint.history.77777777-7777-4777-8777-777777777777": [
     {
       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",

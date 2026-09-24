@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Which launches must stay out of the installed profile, and what a window

@@ -10,12 +10,11 @@ public sealed partial class NativeSessionAuthority {
 
     private NativeSessionCommand PrepareWorkspaceCommand(ulong expected, JsonObject request) {
         if (workspaceKind != BrowserWorkspaceKind.Persistent) throw new BrowserRuleException(BrowserRuleCodes.PersistentWorkspaceRequired);
-        var result = NativeWorkspaceImport.Preview(StoredSessionCodec.Encode(document), request["arguments"]!.AsObject(),
+        var (next, answer) = NativeWorkspaceImport.Preview(session, request["arguments"]!.AsObject(),
             request["mode"]!.GetValue<string>(), request["now"]!.GetValue<double>());
-        var output = Encoding.UTF8.GetBytes(result.ToJsonString());
+        var output = Encoding.UTF8.GetBytes(answer.ToJsonString());
         if (output.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionSizeLimit);
-        if (result["error"] is { } error) return new(this, expected, document, output, error.GetValue<string>());
-        var next = StoredSessionCodec.DecodeSession(result["session"]);
+        if (next is null) return new(this, expected, session, output, answer["error"]!.GetValue<string>());
         Validate(next);
         return new(this, expected, next, output);
     }

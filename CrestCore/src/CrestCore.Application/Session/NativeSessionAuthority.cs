@@ -12,7 +12,7 @@ namespace CrestCore.Application;
 /// are immutable, so storage can serialize an older checkpoint on its worker while
 /// the UI continues editing the current revision. The session holds browsing data
 /// only: which Space and tab a window shows is window state, so selection fields in
-/// an older document are dropped here and never written. Commands read what the
+/// an older session are dropped here and never written. Commands read what the
 /// window shows as context and answer with a hint.
 public sealed partial class NativeSessionAuthority {
     #region Variables
@@ -23,7 +23,7 @@ public sealed partial class NativeSessionAuthority {
     internal static readonly object Gate = new();
     private const string WorkspaceKindField = "coreWorkspaceKind";
     private const string PrivateBrowsingField = "corePrivateBrowsing";
-    private SessionDocument document;
+    private SessionState session;
     private NativeSessionReplacement? replacement;
     private readonly BrowserWorkspaceKind workspaceKind;
     private readonly bool privateBrowsing;
@@ -43,8 +43,8 @@ public sealed partial class NativeSessionAuthority {
             _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidWorkspaceKind)
         };
         privateBrowsing = input[PrivateBrowsingField]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
-        document = StoredSessionCodec.DecodeSession(StoredSessionCodec.Fields(input, [WorkspaceKindField, PrivateBrowsingField]));
-        Validate(document);
+        session = StoredSessionCodec.DecodeSession(input);
+        Validate(session);
     }
 
     #endregion
@@ -65,7 +65,7 @@ public sealed partial class NativeSessionAuthority {
 
     #endregion
 
-    #region Actions - Document validation
+    #region Actions - Session validation
 
     private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
         if (bytes.Length == 0 || bytes.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionSizeLimit);
@@ -79,7 +79,7 @@ public sealed partial class NativeSessionAuthority {
         return id;
     }
 
-    private static void Validate(SessionDocument value) {
+    private static void Validate(SessionState value) {
         var spaces = value.Spaces;
         var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
         foreach (var space in spaces) {
@@ -95,11 +95,10 @@ public sealed partial class NativeSessionAuthority {
                 if (!tabs.Add(tab.Id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         }
         var pendingIds = new HashSet<Guid>();
-        foreach (var deletion in Deletions(value.Metadata)) {
-            var id = Id(deletion!["spaceID"]);
-            var profile = Id(deletion["profileID"]);
-            _ = Id(deletion["operationID"]);
-            if (!pendingIds.Add(id) || !spaces.Any(s => s.Id == id && s.ProfileId == profile))
+        foreach (var deletion in value.SpaceDeletions) {
+            if (deletion.Id == Guid.Empty || deletion.SpaceId == Guid.Empty || deletion.ProfileId == Guid.Empty)
+                throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
+            if (!pendingIds.Add(deletion.SpaceId) || !spaces.Any(s => s.Id == deletion.SpaceId && s.ProfileId == deletion.ProfileId))
                 throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent);
         }
         // An empty temporary workspace and a briefly stale window selection are
@@ -108,9 +107,9 @@ public sealed partial class NativeSessionAuthority {
 
     /// A Space's settings without its records, as settings commands answer them.
     /// Split metadata stays: windows read it with the settings.
-    private static SpaceDocument Settings(SpaceDocument space) => space with { Tabs = [], Folders = [], ArchivedTabs = [], History = [] };
+    private static SpaceState Settings(SpaceState space) => space with { Tabs = [], Folders = [], ArchivedTabs = [], History = [] };
 
-    private static SessionDocument Replacing(SessionDocument session, params SpaceDocument[] edited) => session with {
+    private static SessionState Replacing(SessionState session, params SpaceState[] edited) => session with {
         Spaces = session.Spaces.Select(space => edited.FirstOrDefault(value => value.Id == space.Id) ?? space).ToArray()
     };
 
@@ -118,50 +117,53 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Session revisions
 
-    private SessionDocument Prepare(ulong expected, ReadOnlySpan<byte> bytes, JsonNode? authorizedDeletions = null,
+    private SessionState Prepare(ulong expected, ReadOnlySpan<byte> bytes, IReadOnlyList<SpaceDeletionState>? authorizedDeletions = null,
         bool nativeValueEdit = false) {
         RequireWritable();
         if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
         var delta = Parse(bytes);
         if (delta["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
-        var metadata = delta["metadata"] is JsonObject suppliedMetadata
-            ? KeepingPreferences(StoredSessionCodec.Fields(suppliedMetadata, [Key.Spaces, LegacySelectionFields.SelectedSpace]))
-            : document.Metadata;
-        if (!EqualDeletionIntents(metadata["spaceDeletions"], authorizedDeletions ?? document.Metadata["spaceDeletions"]))
+        // Only the preference commands change the app preferences, so a value
+        // edit or a sync replacement keeps the owned ones.
+        var settings = delta["metadata"] is JsonObject suppliedSettings
+            ? StoredSessionCodec.DecodeSessionSettings(suppliedSettings) with { AppPreferences = session.AppPreferences }
+            : session;
+        if (!SameDeletions(settings.SpaceDeletions, authorizedDeletions ?? session.SpaceDeletions))
             throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
-        var byId = document.Spaces.ToDictionary(s => s.Id);
+        var byId = session.Spaces.ToDictionary(s => s.Id);
         var proposed = new List<Guid>();
         foreach (var node in delta["spaces"]!.AsArray()) {
             var change = node!.AsObject(); var id = Id(change["id"]);
             proposed.Add(id);
             byId.TryGetValue(id, out var original);
             var supplied = change["metadata"] is JsonObject fields ? StoredSessionCodec.DecodeSpace(fields) : null;
-            if ((supplied ?? original) is not { } settings || settings.Id != id)
+            if ((supplied ?? original) is not { } space || space.Id != id)
                 throw new BrowserRuleException(BrowserRuleCodes.WrongSpaceIdentity);
-            byId[id] = new(settings.Metadata,
-                Edited(original?.Tabs, change[Key.Tabs], StoredSessionCodec.DecodeTab, tab => tab.Id),
-                Edited(original?.Folders, change[Key.Folders], StoredSessionCodec.DecodeFolder, folder => folder.Id),
-                supplied?.SplitGroups ?? original!.SplitGroups,
-                Edited(original?.ArchivedTabs, change[Key.ArchivedTabs], StoredSessionCodec.DecodeArchivedTab, archived => archived.Tab.Id),
-                Edited(original?.History, change[Key.History], StoredSessionCodec.DecodeHistoryEntry, entry => entry.Id));
+            byId[id] = space with {
+                Tabs = Edited(original?.Tabs, change[Key.Tabs], StoredSessionCodec.DecodeTab, tab => tab.Id),
+                Folders = Edited(original?.Folders, change[Key.Folders], StoredSessionCodec.DecodeFolder, folder => folder.Id),
+                SplitGroups = supplied?.SplitGroups ?? original!.SplitGroups,
+                ArchivedTabs = Edited(original?.ArchivedTabs, change[Key.ArchivedTabs], StoredSessionCodec.DecodeArchivedTab,
+                    archived => archived.Tab.Id),
+                History = Edited(original?.History, change[Key.History], StoredSessionCodec.DecodeHistoryEntry, entry => entry.Id)
+            };
         }
         var spaceOrder = delta["spaceOrder"] is JsonArray suppliedOrder
-            ? suppliedOrder.Select(Id).ToArray() : document.Spaces.Select(s => s.Id).ToArray();
+            ? suppliedOrder.Select(Id).ToArray() : session.Spaces.Select(s => s.Id).ToArray();
         if (spaceOrder.Distinct().Count() != spaceOrder.Length || spaceOrder.Any(id => !byId.ContainsKey(id)))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidSpaceOrder);
-        var next = new SessionDocument(metadata, spaceOrder.Select(id => byId[id]).ToArray());
-        foreach (var existing in Deletions(document.Metadata))
-            if (!Deletions(metadata).Any(d => SameDeletionIntent(d!, existing!)))
-                throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
-        foreach (var deletion in Deletions(metadata)) {
-            var id = Id(deletion!["spaceID"]);
-            var original = document.Spaces.Single(s => s.Id == id);
-            var retained = next.Spaces.SingleOrDefault(s => s.Id == id);
-            if (retained is null || !original.Matches(retained))
+        var next = settings with { Spaces = spaceOrder.Select(id => byId[id]).ToArray() };
+        if (!session.SpaceDeletions.All(settings.SpaceDeletions.Contains))
+            throw new BrowserRuleException(BrowserRuleCodes.DeletionRequiresCommand);
+        // A Space that is being deleted stays exactly as it was until it is removed.
+        foreach (var deletion in settings.SpaceDeletions) {
+            var original = session.Spaces.Single(s => s.Id == deletion.SpaceId);
+            var retained = next.Spaces.SingleOrDefault(s => s.Id == deletion.SpaceId);
+            if (retained is null || original != retained)
                 throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
         }
         Validate(next);
-        ValidateBorrowedDocument(next);
+        ValidateBorrowedSession(next);
         if (nativeValueEdit) RequireAccessibleValueEdit(next, proposed);
         return next;
     }
@@ -199,7 +201,7 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) {
             var next = Prepare(expected, delta, nativeValueEdit: nativeValueEdit);
             var revision = checked(Revision + 1);
-            document = next; Revision = revision; return revision;
+            session = next; Revision = revision; return revision;
         }
     }
 
@@ -211,7 +213,7 @@ public sealed partial class NativeSessionAuthority {
             var a = source.Prepare(sourceRevision, sourceDelta);
             var b = destination.Prepare(destinationRevision, destinationDelta);
             var ar = checked(source.Revision + 1); var br = checked(destination.Revision + 1);
-            source.document = a; destination.document = b;
+            source.session = a; destination.session = b;
             source.Revision = ar; destination.Revision = br;
             return (ar, br);
         }
@@ -220,7 +222,7 @@ public sealed partial class NativeSessionAuthority {
     public NativeSessionCheckpoint Checkpoint(ulong expected) {
         lock (Gate) {
             if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
-            return new(document);
+            return new(session);
         }
     }
 

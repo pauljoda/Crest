@@ -9,6 +9,10 @@ public static class WorkspaceImportPolicy {
     public const int MaximumPinnedTabs = BrowserLimits.PinnedTabs;
     public const int MaximumFolders = 500;
 
+    /// The saved folder that receives imported pinned tabs past the limit.
+    public const string OverflowFolderTitle = "Imported Pinned Tabs";
+    public const string OverflowFolderSymbol = "pin.slash";
+
     #endregion
 
     #region Actions - State policy

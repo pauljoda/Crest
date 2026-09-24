@@ -1,3 +1,4 @@
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -7,7 +8,7 @@ public sealed class NativeSessionCommand {
 
     private readonly NativeSessionAuthority owner;
     internal ulong ExpectedRevision { get; }
-    internal SessionDocument Document { get; }
+    internal SessionState Session { get; }
     public byte[] Output { get; }
     private readonly string? rejection;
     internal ulong? BorrowedSourceRevision { get; }
@@ -18,8 +19,8 @@ public sealed class NativeSessionCommand {
     #region Constructors
 
     internal NativeSessionCommand(NativeSessionAuthority owner, ulong revision,
-        SessionDocument document, byte[] output, string? rejection = null, Guid? transientCompletion = null) {
-        this.owner = owner; ExpectedRevision = revision; Document = document; Output = output; this.rejection = rejection;
+        SessionState session, byte[] output, string? rejection = null, Guid? transientCompletion = null) {
+        this.owner = owner; ExpectedRevision = revision; Session = session; Output = output; this.rejection = rejection;
         BorrowedSourceRevision = owner.BorrowedRevision;
         TransientCompletion = transientCompletion;
     }

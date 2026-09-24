@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -37,12 +38,12 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// One tab, folder or split edit in the Space the request names: the next
-    /// document and the answer for the requesting window.
-    private (SessionDocument Next, JsonObject Answer) EditSpace(JsonObject request, SessionOperation operation) {
+    /// session and the answer for the requesting window.
+    private (SessionState Next, JsonObject Answer) EditSpace(JsonObject request, SessionOperation operation) {
         var spaceId = Id(request["spaceId"]);
-        if (PendingDeletion(document.Metadata, spaceId) is not null)
+        if (PendingDeletion(session, spaceId) is not null)
             throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-        var original = document.Spaces.Single(s => s.Id == spaceId);
+        var original = session.Spaces.Single(s => s.Id == spaceId);
         if (Id(request["profileId"]) != original.ProfileId)
             throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
         var view = SessionView.Decode(request[SessionView.Key]);
@@ -50,8 +51,8 @@ public sealed partial class NativeSessionAuthority {
             SessionEditArguments.Decode(request["arguments"]!.AsObject(), operation), Now(request), view.Tab(spaceId));
         var hint = new SessionSelectionHint().SelectTab(view, spaceId, result.SelectedTabId);
         if (result.SelectSpace) hint.SelectSpace(spaceId);
-        var edited = original.Organized(result.Edited);
-        var next = Replacing(document, edited);
+        var edited = result.Edited.Capture(original);
+        var next = Replacing(session, edited);
         Validate(next);
         return (next, result.Answer(edited, hint));
     }
@@ -72,7 +73,7 @@ public sealed partial class NativeSessionAuthority {
             command.RequireAccepted();
             if (command.ExpectedRevision != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             var nextRevision = checked(Revision + 1);
-            document = command.Document;
+            session = command.Session;
             if (command.TransientCompletion is { } completed) completedTransients.Add(completed);
             borrowedSourceRevision = command.BorrowedSourceRevision ?? borrowedSourceRevision;
             Revision = nextRevision;

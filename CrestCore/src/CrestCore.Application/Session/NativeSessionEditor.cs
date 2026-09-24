@@ -32,9 +32,9 @@ internal static class NativeSessionEditor {
 
     /// Edits `space` for `operation`. The viewed tab decides follow-up hints only;
     /// the result reports the tab the window should show next and nothing stores it.
-    public static SessionEditResult Evaluate(SessionOperation operation, SpaceDocument space, SessionEditArguments args,
+    public static SessionEditResult Evaluate(SessionOperation operation, SpaceState space, SessionEditArguments args,
         DateTimeOffset now, Guid? viewedTabId) {
-        var edited = space.Organization();
+        var edited = BrowserTabCollection.Restore(space);
         var selected = viewedTabId;
         int? index = args.Index;
         Guid? result = null;

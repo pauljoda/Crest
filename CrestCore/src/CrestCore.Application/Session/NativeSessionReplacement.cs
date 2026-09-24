@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Application;
 
 public sealed class NativeSessionReplacement : IDisposable {
@@ -5,7 +7,7 @@ public sealed class NativeSessionReplacement : IDisposable {
 
     private readonly NativeSessionAuthority owner;
     private bool completed;
-    internal SessionDocument Document { get; }
+    internal SessionState Session { get; }
     internal ulong Revision { get; }
     internal ulong? BorrowedSourceRevision { get; }
     internal Guid? TransientCompletion { get; }
@@ -16,9 +18,9 @@ public sealed class NativeSessionReplacement : IDisposable {
 
     #region Constructors
 
-    internal NativeSessionReplacement(NativeSessionAuthority owner, SessionDocument document,
+    internal NativeSessionReplacement(NativeSessionAuthority owner, SessionState session,
         ulong revision, NativeSessionCheckpoint checkpoint, ulong? borrowedSourceRevision = null, Guid? transientCompletion = null) {
-        this.owner = owner; Document = document; Revision = revision; Checkpoint = checkpoint;
+        this.owner = owner; Session = session; Revision = revision; Checkpoint = checkpoint;
         BorrowedSourceRevision = borrowedSourceRevision;
         TransientCompletion = transientCompletion;
     }

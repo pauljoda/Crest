@@ -12,8 +12,7 @@ internal static class SetupCodes {
     #region Variables
 
     /// New draft Spaces take the accents in this order, then repeat.
-    private static readonly string[] Accents = [SpaceAccentCodes.Indigo, SpaceAccentCodes.Orange,
-        SpaceAccentCodes.Teal, SpaceAccentCodes.Rose];
+    private static readonly SpaceAccent[] Accents = [SpaceAccent.Indigo, SpaceAccent.Orange, SpaceAccent.Teal, SpaceAccent.Rose];
 
     #endregion
 
@@ -37,7 +36,7 @@ internal static class SetupCodes {
 
     #region Actions - Encoding
 
-    public static string Accent(int number) => Accents[(number - 1) % Accents.Length];
+    public static string Accent(int number) => StoredSessionCodec.Spelling(Accents[(number - 1) % Accents.Length]);
 
     public static string Outcome(OnboardingCompletion outcome) => outcome switch {
         OnboardingCompletion.Complete => "complete",

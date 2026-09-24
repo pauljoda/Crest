@@ -47,16 +47,13 @@ internal static class LaunchCodes {
 
     #region Actions - Encoding
 
-    public static string Startup(StartupBehavior behavior) =>
-        behavior == StartupBehavior.LastActiveTab ? "lastActiveTab" : "showStartPage";
-
     public static JsonObject Plan(LaunchPlan plan) {
         ArgumentNullException.ThrowIfNull(plan);
         return new() {
             ["requiresIsolation"] = plan.RequiresIsolation,
             ["usesEphemeralProfileStorage"] = plan.UsesEphemeralProfileStorage,
             ["presentsInstalledApplicationUI"] = plan.PresentsInstalledApplicationUI,
-            ["startupBehavior"] = Startup(plan.Startup)
+            ["startupBehavior"] = StoredSessionCodec.Spelling(plan.Startup)
         };
     }
 

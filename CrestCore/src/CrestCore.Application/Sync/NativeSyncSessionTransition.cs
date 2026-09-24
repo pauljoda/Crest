@@ -80,8 +80,8 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         }
         // The app-wide behavior preferences are device-local. Incoming records
         // and cloud replacement never carry or replace them.
-        if (local[PreferencesDocument.Field] is { } appPreferences)
-            repaired["session"]![PreferencesDocument.Field] = appPreferences.DeepClone();
+        if (local[StoredSessionCodec.Key.AppPreferences] is { } appPreferences)
+            repaired["session"]![StoredSessionCodec.Key.AppPreferences] = appPreferences.DeepClone();
         if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? SyncDeletionReasons.Retention : SyncDeletionReasons.Superseded);
         return new(next, repaired);
     }

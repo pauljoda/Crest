@@ -8,9 +8,9 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Actions - Transfer
 
-    private SpaceDocument TransferSpace(Guid spaceId, Guid profileId) {
-        if (PendingDeletion(document.Metadata, spaceId) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-        var space = document.Spaces.SingleOrDefault(s => s.Id == spaceId)
+    private SpaceState TransferSpace(Guid spaceId, Guid profileId) {
+        if (PendingDeletion(session, spaceId) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
+        var space = session.Spaces.SingleOrDefault(s => s.Id == spaceId)
             ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
         if (space.ProfileId != profileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
         return space;
@@ -23,7 +23,7 @@ public sealed partial class NativeSessionAuthority {
         var destination = TransferSpace(destinationId, Id(request["destinationProfileId"]));
         var args = request["arguments"]!.AsObject(); var view = SessionView.Decode(request[SessionView.Key]);
         var result = NativeTabTransfer.Evaluate(source, view, destination, view, NativeTabTransfer.Arguments.Decode(args), Now(request));
-        var next = Replacing(document, result.Source, result.Destination);
+        var next = Replacing(session, result.Source, result.Destination);
         Validate(next);
         var hint = new SessionSelectionHint().SelectTab(view, sourceId, result.SourceSelection)
             .SelectTab(view, destinationId, result.DestinationSelection);
@@ -49,7 +49,7 @@ public sealed partial class NativeSessionAuthority {
             source.RequireAccessible(spaceId); destination.RequireAccessible(spaceId);
             var a = source.TransferSpace(spaceId, profileId); var b = destination.TransferSpace(spaceId, profileId);
             var args = NativeTabTransfer.Arguments.Decode(request["arguments"]!.AsObject());
-            if (destination.document.Spaces.Any(s => s.Tabs.Any(t => t.Id == args.TabId)
+            if (destination.session.Spaces.Any(s => s.Tabs.Any(t => t.Id == args.TabId)
                 || s.ArchivedTabs.Any(archived => archived.Tab.Id == args.TabId)))
                 throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
             // A window transfer keeps the exact profile and makes a current tab.
@@ -62,8 +62,8 @@ public sealed partial class NativeSessionAuthority {
             var sourceHint = new SessionSelectionHint().SelectTab(sourceView, spaceId, result.SourceSelection);
             var destinationHint = new SessionSelectionHint().SelectTab(destinationView, spaceId, result.DestinationSelection);
             if (args.Select) destinationHint.SelectSpace(spaceId);
-            var nextSource = Replacing(source.document, result.Source);
-            var nextDestination = Replacing(destination.document, result.Destination);
+            var nextSource = Replacing(source.session, result.Source);
+            var nextDestination = Replacing(destination.session, result.Destination);
             Validate(nextSource); Validate(nextDestination);
             return new(source, new(source, sourceRevision, nextSource, []), destination,
                 new(destination, destinationRevision, nextDestination, []), Output(result.Encode(sourceHint, destinationHint)));

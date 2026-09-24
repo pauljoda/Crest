@@ -32,14 +32,14 @@ public sealed partial class NativeSessionAuthority {
                 Placement(args["placement"]), Folder(args["folderId"]), Tab(args["before"]), Folder(args["beforeFolderId"]),
                 Tab(args["targetId"]), args["index"]?.GetValue<int>(), args["keep"]?.GetValue<bool>() == true,
                 args["follow"]?.GetValue<bool>() == true);
-            SpaceDocument? destination = null;
+            SpaceState? destination = null;
             if (action.Kind == TabBatchKind.MoveToSpace) {
                 var requested = Id(args["destinationSpaceId"]);
                 if (requested == sourceId) throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);
                 destination = TransferSpace(requested, Id(args["destinationProfileId"]));
             }
-            var a = source.Organization();
-            var b = destination?.Organization();
+            var a = BrowserTabCollection.Restore(source);
+            var b = destination is null ? null : BrowserTabCollection.Restore(destination);
             var now = Now(request);
             var result = a.ApplyBatch(captured, action, view.Tab(sourceId), Tab(args["fallbackTabId"]),
                 b, destination is null ? null : view.Tab(destination.Id), new SystemIdSource(), now);
@@ -53,8 +53,8 @@ public sealed partial class NativeSessionAuthority {
                 a.SetFolderColor(created, StoredSessionCodec.DecodeColor(color));
             foreach (var pair in result.GroupCopies) a.CopySplitMetadata(pair.Source, pair.Copy, now);
             a.PruneSplitMetadata(); b?.PruneSplitMetadata();
-            var organized = new List<(SpaceDocument Space, BrowserTabCollection Edited)> { (source.Organized(a), a) };
-            if (destination is not null && b is not null) organized.Add((destination.Organized(b), b));
+            var organized = new List<(SpaceState Space, BrowserTabCollection Edited)> { (a.Capture(source), a) };
+            if (destination is not null && b is not null) organized.Add((b.Capture(destination), b));
             var changes = new JsonArray();
             foreach (var (space, collection) in organized)
                 changes.Add((JsonNode)new JsonObject {
@@ -68,7 +68,7 @@ public sealed partial class NativeSessionAuthority {
                 hint.SelectTab(view, destination.Id, result.DestinationSelection);
                 if (action.Follow) hint.SelectSpace(destination.Id);
             }
-            var next = Replacing(document, [.. organized.Select(pair => pair.Space)]);
+            var next = Replacing(session, [.. organized.Select(pair => pair.Space)]);
             Validate(next);
             var output = Output(new JsonObject {
                 ["changes"] = changes,
@@ -76,7 +76,7 @@ public sealed partial class NativeSessionAuthority {
             });
             return new(this, expected, next, output);
         } catch (BrowserRuleException error) {
-            return new(this, expected, document, Output(new JsonObject { ["error"] = error.Code }), error.Code);
+            return new(this, expected, session, Output(new JsonObject { ["error"] = error.Code }), error.Code);
         }
     }
 

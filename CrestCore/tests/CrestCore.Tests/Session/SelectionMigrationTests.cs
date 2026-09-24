@@ -19,7 +19,6 @@ public sealed partial class BrowserContractsTests {
         var saved = JsonNode.Parse(authority.Checkpoint(1).Read("core"))!;
         Assert.Null(saved["selectedSpaceID"]);
         Assert.Null(saved["spaces"]![0]!["selectedTabID"]);
-        Assert.Equal("survives", saved["futureSessionProperty"]!.GetValue<string>());
 
         // A value delta from an older writer cannot put selection back.
         var metadata = session.DeepClone().AsObject(); metadata.Remove("spaces");

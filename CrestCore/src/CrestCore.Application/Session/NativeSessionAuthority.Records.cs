@@ -23,8 +23,8 @@ public sealed partial class NativeSessionAuthority {
         var view = SessionView.Decode(request[SessionView.Key]);
         var hint = new SessionSelectionHint();
         var changes = new JsonArray();
-        var spaces = document.Spaces.Select(original => {
-            if (target is { } requested && requested != original.Id || PendingDeletion(document.Metadata, original.Id) is not null)
+        var spaces = session.Spaces.Select(original => {
+            if (target is { } requested && requested != original.Id || PendingDeletion(session, original.Id) is not null)
                 return original;
             var change = new JsonObject {
                 ["spaceId"] = original.Id.ToString("D"),
@@ -45,12 +45,9 @@ public sealed partial class NativeSessionAuthority {
                     space = space with { ArchivedTabs = space.ArchivedTabs.Where((_, index) => index != archiveIndex).ToArray() };
                     change["removedArchiveIndices"] = new JsonArray(JsonValue.Create(archiveIndex));
                 } else if (operation is SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup) {
-                    var term = space.Metadata["browsingPreferences"]?["currentTabCleanupPolicy"]?.GetValue<string>();
-                    var policy = Enum.TryParse<CurrentTabCleanup>(term, true, out var parsed) && Enum.IsDefined(parsed)
-                        ? parsed : CurrentTabCleanup.After12Hours;
                     // Launch sweeps before any window is on screen, so the caller
                     // names every tab its restored windows show.
-                    if ((RetentionPreferences.Default with { CurrentTabs = policy }).TabLifetime is { } lifetime)
+                    if (RetentionPolicy.TabLifetime(space.BrowsingPreferences.CurrentTabCleanup) is { } lifetime)
                         editArguments = new() { Lifetime = lifetime.TotalSeconds, TabIds = KeptTabs(args) };
                 } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
@@ -60,7 +57,7 @@ public sealed partial class NativeSessionAuthority {
                         operation == SessionOperation.ArchiveRestore ? SessionOperation.TabRestoreArchive : SessionOperation.TabCleanup,
                         space, editArguments, StoredSessionCodec.Date(now), view.Tab(space.Id));
                     if (operation == SessionOperation.ArchiveRestore || !space.Tabs.SequenceEqual(edited.Edited.TabStates)) {
-                        space = space.Organized(edited.Edited);
+                        space = edited.Edited.Capture(space);
                         var spaceHint = new SessionSelectionHint().SelectTab(view, space.Id, edited.SelectedTabId);
                         hint.SelectTab(view, space.Id, edited.SelectedTabId);
                         change["tabEdit"] = edited.Answer(space, spaceHint);
@@ -71,8 +68,8 @@ public sealed partial class NativeSessionAuthority {
             if (change.Count > 2) changes.Add((JsonNode)change);
             return space;
         }).ToArray();
-        var next = document with { Spaces = spaces };
-        Validate(next); ValidateBorrowedDocument(next);
+        var next = session with { Spaces = spaces };
+        Validate(next); ValidateBorrowedSession(next);
         return new(this, expected, next, Output(new JsonObject {
             ["changes"] = changes,
             [SessionSelectionHint.Key] = hint.Encode()
@@ -87,15 +84,15 @@ public sealed partial class NativeSessionAuthority {
     private static double[] Seconds(IEnumerable<DateTimeOffset> dates) => dates.Select(StoredSessionCodec.Seconds).ToArray();
 
     /// Removes history and archive records older than the Space keeps them.
-    private static SpaceDocument SweepRecords(SpaceDocument space, double now, JsonObject change) {
-        if (RetentionLifetime(space, "history") is { } historyLifetime) {
+    private static SpaceState SweepRecords(SpaceState space, double now, JsonObject change) {
+        if (RetentionLifetime(space.BrowsingPreferences.DataRetention.History) is { } historyLifetime) {
             var expired = RecordRemovalPolicy.Expired(Seconds(space.History.Select(entry => entry.LastVisitedAt)), now, historyLifetime).ToHashSet();
             if (expired.Count > 0) {
                 change["removedHistory"] = Identities(space.History.Where((_, index) => expired.Contains(index)).Select(entry => entry.Id));
                 space = space with { History = space.History.Where((_, index) => !expired.Contains(index)).ToArray() };
             }
         }
-        if (RetentionLifetime(space, "archive") is { } archiveLifetime) {
+        if (RetentionLifetime(space.BrowsingPreferences.DataRetention.Archive) is { } archiveLifetime) {
             var expired = RecordRemovalPolicy.Expired(Seconds(space.ArchivedTabs.Select(archived => archived.ArchivedAt)), now, archiveLifetime).ToHashSet();
             if (expired.Count > 0) {
                 change["removedArchiveIndices"] = new JsonArray(expired.Order().Select(index => (JsonNode?)JsonValue.Create(index)).ToArray());
@@ -105,13 +102,9 @@ public sealed partial class NativeSessionAuthority {
         return space;
     }
 
-    private static double? RetentionLifetime(SpaceDocument space, string records) {
-        var term = space.Metadata["browsingPreferences"]?["dataRetention"]?[records]?.GetValue<string>();
-        var policy = Enum.TryParse<DataRetention>(term, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : DataRetention.Forever;
-        return RetentionPreferences.Lifetime(policy)?.TotalSeconds;
-    }
+    private static double? RetentionLifetime(DataRetention retention) => RetentionPolicy.Lifetime(retention)?.TotalSeconds;
 
-    private static SpaceDocument EditHistory(SessionOperation operation, JsonObject args, double now, SpaceDocument space,
+    private static SpaceState EditHistory(SessionOperation operation, JsonObject args, double now, SpaceState space,
         JsonObject change) {
         var history = space.History;
         if (operation == SessionOperation.HistoryVisit) {
@@ -146,8 +139,8 @@ public sealed partial class NativeSessionAuthority {
 
     /// A split's name, icon or tint, set only on a split with at least two
     /// members; a blank name clears it. The field's clock records the edit.
-    private static SpaceDocument EditSplitMetadata(SessionOperation operation, JsonObject args, DateTimeOffset now,
-        SpaceDocument space, JsonObject change) {
+    private static SpaceState EditSplitMetadata(SessionOperation operation, JsonObject args, DateTimeOffset now,
+        SpaceState space, JsonObject change) {
         var id = Id(args["groupId"]);
         var run = space.Tabs.SkipWhile(tab => tab.SplitGroupId != id).TakeWhile(tab => tab.SplitGroupId == id);
         if (run.Take(2).Count() < 2) throw new BrowserRuleException(BrowserRuleCodes.UnknownSplitGroup);

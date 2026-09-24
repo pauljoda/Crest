@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
+using Key = CrestCore.Application.StoredSessionCodec.Key;
+
 namespace CrestCore.Application;
 
 /// Shared preview/command implementation. Sources contain semantic records only;
@@ -10,281 +12,327 @@ namespace CrestCore.Application;
 public sealed class NativeWorkspaceImport {
     #region Variables
 
+    /// Where an imported or existing tab record came from: its source (0 for the
+    /// session, else the source's position after one), Space, position and section.
     private sealed record Origin(int Source, int Space, int Tab, string Section);
-    private readonly Dictionary<JsonNode, Origin> origins = new(ReferenceEqualityComparer.Instance);
 
-    // The tab each imported Space should show first. It is a hint for the
-    // window that ran the import, never a stored selection.
-    private readonly Dictionary<JsonNode, Guid> shownTabs = new(ReferenceEqualityComparer.Instance);
+    /// A Space while the import edits it. Spaces are compared by this holder, so a
+    /// Space keeps its place in the import as its record is replaced.
+    private sealed class Draft(SpaceState state, bool isOriginal) {
+        public SpaceState State { get; set; } = state;
+        public bool IsOriginal { get; } = isOriginal;
+        public Guid Id => State.Id;
+
+        // The tab this Space should show first. It is a hint for the window that
+        // ran the import, never a stored selection.
+        public Guid? ShownTab { get; set; }
+    }
+
+    // Tab and archive records by reference, so two records that share an identity
+    // keep their own origins.
+    private readonly Dictionary<object, Origin> origins = new(ReferenceEqualityComparer.Instance);
 
     #endregion
 
     #region Actions - Workspace import
 
-    private static Guid Id(JsonNode? n) => NativeSessionAuthority.Id(n);
-
-    private static JsonArray Items(JsonNode n, string key) => n[key] as JsonArray ?? new();
-
-    private static string Placement(JsonNode n) => n["placement"]?.GetValue<string>() ?? TabPlacementCodes.Current;
-
-    private static JsonObject SwiftId(Guid id) => new() { ["rawValue"] = id.ToString("D") };
-
-    private static Guid? OptionalId(JsonNode? n) => n is null ? null : Id(n);
-
     /// The imported session, positional asset references and the `selection`
     /// hint for the importing window, or `{"error": code}`.
     public static JsonObject Preview(JsonObject session, JsonObject arguments, string mode, double now) {
-        try { return new NativeWorkspaceImport().Apply(LegacySelectionFields.WithoutSelection(session.DeepClone().AsObject()), arguments, WorkspaceImportModeCodes.Parse(mode), now); } catch (BrowserRuleException error) { return new() { ["error"] = error.Code }; }
+        try {
+            return Preview(StoredSessionCodec.DecodeSession(session), arguments, mode, now).Answer;
+        } catch (BrowserRuleException error) {
+            return new() { ["error"] = error.Code };
+        }
     }
 
-    private void Track(JsonNode space, int source, int index) {
-        foreach (var section in new[] { StoredSessionCodec.Key.Tabs, StoredSessionCodec.Key.ArchivedTabs })
-            for (int ti = 0; ti < Items(space, section).Count; ti++)
-                origins[Items(space, section)[ti]!] = new(source, index, ti, section);
+    /// The imported session with its answer, or no session and `{"error": code}`.
+    internal static (SessionState? Session, JsonObject Answer) Preview(SessionState session, JsonObject arguments, string mode, double now) {
+        try {
+            if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
+            var import = new NativeWorkspaceImport();
+            var imported = import.Apply(session, arguments, WorkspaceImportModeCodes.Parse(mode), StoredSessionCodec.Date(now), out var answer);
+            return (imported, answer);
+        } catch (BrowserRuleException error) {
+            return (null, new() { ["error"] = error.Code });
+        }
     }
 
-    private JsonNode Copy(JsonNode node) {
-        var copy = node.DeepClone();
-        if (origins.TryGetValue(node, out var origin)) origins[copy] = origin;
+    private static Guid Id(JsonNode? n) => NativeSessionAuthority.Id(n);
+
+    private static Guid? OptionalId(JsonNode? n) => n is null ? null : Id(n);
+
+    private static JsonArray Items(JsonNode n, string key) => n[key] as JsonArray ?? new();
+
+    private void Track(SpaceState space, int source, int index) {
+        foreach (var (tab, position) in space.Tabs.Select((tab, position) => (tab, position)))
+            origins[tab] = new(source, index, position, Key.Tabs);
+        foreach (var (archived, position) in space.ArchivedTabs.Select((archived, position) => (archived, position)))
+            origins[archived] = new(source, index, position, Key.ArchivedTabs);
+    }
+
+    /// A changed copy of a tab keeps the tab's origin.
+    private TabState Copied(TabState tab, TabState copy) {
+        if (origins.TryGetValue(tab, out var origin)) origins[copy] = origin;
         return copy;
     }
 
-    private void Tabs(JsonNode space, IEnumerable<JsonNode> tabs) => space[StoredSessionCodec.Key.Tabs] = new JsonArray(tabs.Select(Copy).ToArray());
+    private static void Customize(Draft space, JsonNode values) => space.State = space.State with {
+        Name = SpaceOrganizationPolicy.Name(values[Key.Name]!.GetValue<string>()),
+        Symbol = SpaceOrganizationPolicy.Symbol(values[Key.Symbol]!.GetValue<string>()),
+        Accent = StoredSessionCodec.DecodeAccent(values[Key.Accent]),
+        Branding = values[Key.Branding] is JsonObject branding ? StoredSessionCodec.DecodeBranding(branding) : null
+    };
 
-    private static void Customize(JsonNode space, JsonNode values) {
-        space["name"] = SpaceOrganizationPolicy.Name(values["name"]!.GetValue<string>());
-        space["symbol"] = SpaceOrganizationPolicy.Symbol(values["symbol"]!.GetValue<string>());
-        space["accent"] = values["accent"]!.DeepClone();
-        space["branding"] = values["branding"]!.DeepClone();
-    }
-
-    private static void Available(JsonNode session, Guid id) {
-        if (Items(session, "spaceDeletions").Any(d => Id(d!["spaceID"]) == id))
+    private static void Available(SessionState session, Guid id) {
+        if (session.SpaceDeletions.Any(deletion => deletion.SpaceId == id))
             throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
     }
 
-    private void ShowAdded(JsonNode space, IEnumerable<JsonNode> tabs) {
-        var chosen = tabs.LastOrDefault(t => Placement(t) == TabPlacementCodes.Current) ?? tabs.FirstOrDefault();
-        if (chosen is not null) shownTabs[space] = Id(chosen["id"]);
+    private static void ShowAdded(Draft space, IEnumerable<TabState> tabs) {
+        var chosen = tabs.LastOrDefault(t => t.Placement == TabPlacement.Current) ?? tabs.FirstOrDefault();
+        if (chosen is not null) space.ShownTab = chosen.Id;
     }
 
-    private JsonObject Apply(JsonObject source, JsonObject arguments, WorkspaceImportMode mode, double now) {
-        var session = source.DeepClone().AsObject(); var spaces = Items(session, "spaces");
-        var originalSpaces = new HashSet<JsonNode>(spaces.Select(s => s!), ReferenceEqualityComparer.Instance);
-        Dictionary<JsonNode, HashSet<Guid>> originalFolderIds = new(ReferenceEqualityComparer.Instance);
-        Dictionary<JsonNode, HashSet<Guid>> originalHistoryIds = new(ReferenceEqualityComparer.Instance);
-        for (int si = 0; si < spaces.Count; si++) {
-            var space = spaces[si]!;
-            originalFolderIds[space] = Items(space, StoredSessionCodec.Key.Folders).Select(f => Id(f!["id"])).ToHashSet();
-            originalHistoryIds[space] = Items(space, StoredSessionCodec.Key.History).Select(h => Id(h!["id"])).ToHashSet();
-            Track(space, 0, si);
-        }
-        var inputs = Items(arguments, "sources").Select((n, i) => {
-            var value = n!.DeepClone().AsObject();
-            var requested = OptionalId(value[LegacySelectionFields.SelectedTab]);
-            LegacySelectionFields.WithoutSpaceSelection(value);
-            Track(value, i + 1, 0);
-            if (requested is { } tab && Items(value, StoredSessionCodec.Key.Tabs).Any(t => Id(t!["id"]) == tab)) shownTabs[value] = tab;
-            return value;
+    private SessionState Apply(SessionState session, JsonObject arguments, WorkspaceImportMode mode, DateTimeOffset now,
+        out JsonObject answer) {
+        var spaces = session.Spaces.Select(space => new Draft(space, isOriginal: true)).ToList();
+        var defaultSpace = session.DefaultSpaceId;
+        var seedMarker = session.DisposableSeedMarker;
+        for (int si = 0; si < spaces.Count; si++) Track(spaces[si].State, 0, si);
+        var originalFolderIds = spaces.ToDictionary(space => space, space => space.State.Folders.Select(f => f.Id).ToHashSet());
+        var originalHistoryIds = spaces.ToDictionary(space => space, space => space.State.History.Select(h => h.Id).ToHashSet());
+        var inputs = Items(arguments, "sources").Select((node, i) => {
+            var requested = StoredSessionCodec.LegacySelectedTab(node);
+            var input = new Draft(StoredSessionCodec.DecodeSpace(node), isOriginal: false);
+            Track(input.State, i + 1, 0);
+            if (requested is { } tab && input.State.Tabs.Any(t => t.Id == tab)) input.ShownTab = tab;
+            return input;
         }).ToArray();
         foreach (var input in inputs)
-            WorkspaceImportPolicy.RequireSplitMembership(Items(input, StoredSessionCodec.Key.Tabs).Select(t => new SplitMember(OptionalId(t!["splitGroupID"]),
-                TabPlacementCodes.Parse(Placement(t)) ?? TabPlacement.Saved, OptionalId(t["folderID"]))).ToArray());
-        JsonNode? affected = null;
+            WorkspaceImportPolicy.RequireSplitMembership(input.State.Tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
+        Draft? affected = null;
         if (mode == WorkspaceImportMode.Portable) {
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Length);
             foreach (var input in inputs) {
                 // A Space the source did not say to show opens on its first tab.
-                if (!shownTabs.ContainsKey(input) && Items(input, StoredSessionCodec.Key.Tabs).FirstOrDefault() is { } first)
-                    shownTabs[input] = Id(first["id"]);
-                spaces.Add((JsonNode)input);
+                if (input.ShownTab is null && input.State.Tabs.FirstOrDefault() is { } first) input.ShownTab = first.Id;
+                spaces.Add(input);
             }
             affected = inputs.FirstOrDefault();
         } else if (mode == WorkspaceImportMode.Manual) {
             var drafts = Items(arguments, "drafts");
             WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, drafts.Count(d => d!["isNew"]!.GetValue<bool>()));
             foreach (var draft in drafts) {
-                var input = inputs[draft!["sourceIndex"]!.GetValue<int>()]; var id = Id(input["id"]);
+                var input = inputs[draft!["sourceIndex"]!.GetValue<int>()]; var id = input.Id;
                 bool created = draft["isNew"]!.GetValue<bool>();
-                var destination = created ? input : spaces.FirstOrDefault(s => Id(s!["id"]) == id);
+                var destination = created ? input : spaces.FirstOrDefault(s => s.Id == id);
                 if (destination is null) continue; // A draft cannot recreate an existing Space deleted elsewhere.
                 Available(session, id);
-                if (!created && Id(destination["profile"]!["id"]) != Id(input["profile"]!["id"]))
+                if (!created && destination.State.ProfileId != input.State.ProfileId)
                     throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
-                if (created && spaces.Any(s => Id(s!["id"]) == id || Id(s["profile"]!["id"]) == Id(input["profile"]!["id"])))
+                if (created && spaces.Any(s => s.Id == id || s.State.ProfileId == input.State.ProfileId))
                     throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
                 Customize(destination, draft["customization"]!);
-                var added = Items(input, StoredSessionCodec.Key.Tabs).Select(t => t!).ToArray();
-                var old = created ? [] : Items(destination, StoredSessionCodec.Key.Tabs).Select(t => t!).ToArray();
-                WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => Placement(t) == TabPlacementCodes.Pinned));
-                var ordered = new[] { TabPlacementCodes.Pinned, TabPlacementCodes.Saved, TabPlacementCodes.Current }.SelectMany(p => added.Where(t => Placement(t) == p)).ToArray();
-                if (created) Tabs(destination, ordered);
+                var added = input.State.Tabs.ToArray();
+                var old = created ? [] : destination.State.Tabs.ToArray();
+                WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => t.Placement == TabPlacement.Pinned));
+                var ordered = new[] { TabPlacement.Pinned, TabPlacement.Saved, TabPlacement.Current }
+                    .SelectMany(p => added.Where(t => t.Placement == p)).ToArray();
+                if (created) destination.State = destination.State with { Tabs = ordered };
                 else {
                     var list = old.ToList();
-                    var firstCurrent = list.FindIndex(t => Placement(t) == TabPlacementCodes.Current);
+                    var firstCurrent = list.FindIndex(t => t.Placement == TabPlacement.Current);
                     if (firstCurrent < 0) firstCurrent = list.Count;
-                    var pinIndex = list.FindIndex(t => Placement(t) != TabPlacementCodes.Pinned);
+                    var pinIndex = list.FindIndex(t => t.Placement != TabPlacement.Pinned);
                     if (pinIndex < 0) pinIndex = list.Count;
-                    var pins = ordered.Where(t => Placement(t) == TabPlacementCodes.Pinned).ToArray();
+                    var pins = ordered.Where(t => t.Placement == TabPlacement.Pinned).ToArray();
                     list.InsertRange(pinIndex, pins);
-                    list.InsertRange(firstCurrent + pins.Length, ordered.Where(t => Placement(t) == TabPlacementCodes.Saved));
-                    list.AddRange(ordered.Where(t => Placement(t) == TabPlacementCodes.Current));
-                    Tabs(destination, list);
+                    list.InsertRange(firstCurrent + pins.Length, ordered.Where(t => t.Placement == TabPlacement.Saved));
+                    list.AddRange(ordered.Where(t => t.Placement == TabPlacement.Current));
+                    destination.State = destination.State with { Tabs = list.ToArray() };
                 }
                 ShowAdded(destination, created ? added : ordered);
                 if (created) spaces.Add(destination);
                 if (created || added.Length > 0) affected ??= destination;
             }
             if (arguments["orderWasEdited"]?.GetValue<bool>() == true) {
-                var order = drafts.Select(d => Id(inputs[d!["sourceIndex"]!.GetValue<int>()]["id"])).ToArray();
-                var sorted = order.Select(id => spaces.FirstOrDefault(s => Id(s!["id"]) == id)).OfType<JsonNode>()
-                    .Concat(spaces.Where(s => !order.Contains(Id(s!["id"]))).Select(s => s!)).ToArray();
-                spaces.Clear(); foreach (var space in sorted) spaces.Add(space);
+                var order = drafts.Select(d => inputs[d!["sourceIndex"]!.GetValue<int>()].Id).ToArray();
+                spaces = order.Select(id => spaces.FirstOrDefault(s => s.Id == id)).OfType<Draft>()
+                    .Concat(spaces.Where(s => !order.Contains(s.Id))).ToList();
             }
-            session.Remove("disposableSeedMarker");
+            seedMarker = null;
         } else if (mode == WorkspaceImportMode.Review) {
             var reviews = Items(arguments, "reviews").Where(r => r!["included"]!.GetValue<bool>()).ToArray();
             if (reviews.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.NoIncludedSpaces);
-            bool replaceSeed = session["disposableSeedMarker"] is not null;
+            bool replaceSeed = seedMarker is not null;
             WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count, reviews.Count(r => r!["destinationID"] is null));
             if (replaceSeed) {
-                if (Items(session, "spaceDeletions").Count > 0) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-                spaces.Clear(); session.Remove("defaultSpaceID");
+                if (session.SpaceDeletions.Count > 0) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
+                spaces.Clear(); defaultSpace = null;
             }
             foreach (var review in reviews) {
                 var input = inputs[review!["sourceIndex"]!.GetValue<int>()];
                 var destinationId = OptionalId(review["destinationID"]);
-                var destination = destinationId is null ? input : spaces.FirstOrDefault(s => Id(s!["id"]) == destinationId);
+                var destination = destinationId is null ? input : spaces.FirstOrDefault(s => s.Id == destinationId);
                 if (destination is null) continue;
-                Available(session, Id(destination["id"]));
+                Available(session, destination.Id);
                 Customize(destination, review["customization"]!);
-                var included = Items(review, "includedTabIDs").Select(Id).ToHashSet();
-                var overrides = Items(review, "placements").ToDictionary(n => Id(n!["tabID"]), n => n!["placement"]!.GetValue<string>());
-                string PlacementFor(JsonNode tab) => overrides.GetValueOrDefault(Id(tab["id"]), Placement(tab));
-                var additions = Items(input, StoredSessionCodec.Key.Tabs).Where(t => included.Contains(Id(t!["id"]))).Select(t => t!).ToArray();
-                var sourceFolders = Items(input, StoredSessionCodec.Key.Folders);
-                var folders = destinationId is null ? new JsonArray() : Items(destination, StoredSessionCodec.Key.Folders);
-                var required = additions.Where(t => PlacementFor(t) == TabPlacementCodes.Saved && t["folderID"] is not null)
-                    .Select(t => Id(t["folderID"])).ToHashSet();
-                var byId = sourceFolders.ToDictionary(f => Id(f!["id"]), f => f!);
-                var pending = new Stack<Guid>(required);
-                while (pending.TryPop(out var id))
-                    if (byId.TryGetValue(id, out var f) && OptionalId(f["parentID"]) is { } parent && required.Add(parent)) pending.Push(parent);
-                var tree = FolderTree.RepairPreorder(sourceFolders.Select(f => new FolderState(Id(f!["id"]),
-                    f["location"]?.GetValue<string>() == TabPlacementCodes.Current ? TabPlacement.Current : TabPlacement.Saved,
-                    f["title"]!.GetValue<string>(), ParentId: OptionalId(f["parentID"]))).ToArray());
-                Dictionary<Guid, Guid> mapping = [];
-                foreach (var folder in tree.Where(f => required.Contains(f.Id))) {
-                    var original = byId[folder.Id];
-                    Guid? parent = folder.ParentId is { } p && mapping.TryGetValue(p, out var mapped) ? mapped : null;
-                    var match = folders.FirstOrDefault(f => OptionalId(f!["parentID"]) == parent
-                        && (f["location"]?.GetValue<string>() ?? TabPlacementCodes.Saved) == (original["location"]?.GetValue<string>() ?? TabPlacementCodes.Saved)
-                        && WorkspaceImportPolicy.FolderMatchKey(f["title"]!.GetValue<string>()) == WorkspaceImportPolicy.FolderMatchKey(original["title"]!.GetValue<string>()));
-                    if (match is not null) { mapping[folder.Id] = Id(match["id"]); continue; }
-                    if (folders.Count >= WorkspaceImportPolicy.MaximumFolders) continue;
-                    var copied = original.DeepClone().AsObject(); var identity = folder.Id;
-                    copied.Remove("collapseModifiedAt"); copied.Remove("orderAnchorTabID");
-                    while (folders.Any(f => Id(f!["id"]) == identity)) identity = Guid.NewGuid();
-                    copied["id"] = SwiftId(identity); copied["parentID"] = parent is { } value ? SwiftId(value) : null;
-                    copied["isCollapsed"] = false;
-                    folders.Add((JsonNode)copied); mapping[folder.Id] = identity;
-                }
-                int pinned = destinationId is null ? 0 : Items(destination, StoredSessionCodec.Key.Tabs).Count(t => Placement(t!) == TabPlacementCodes.Pinned);
-                var overflowFolder = folders.FirstOrDefault(f => string.Equals(f!["title"]!.GetValue<string>(), "Imported Pinned Tabs", StringComparison.OrdinalIgnoreCase));
-                var edited = additions.Select(tab => {
-                    var copy = Copy(tab); var placement = PlacementFor(tab); copy["placement"] = placement;
-                    if (placement == TabPlacementCodes.Pinned && ++pinned > WorkspaceImportPolicy.MaximumPinnedTabs) {
-                        copy["placement"] = placement = TabPlacementCodes.Saved;
-                        if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
-                            overflowFolder = new JsonObject {
-                                ["id"] = SwiftId(Guid.NewGuid()),
-                                ["title"] = "Imported Pinned Tabs",
-                                ["location"] = TabPlacementCodes.Saved,
-                                ["symbol"] = "pin.slash",
-                                ["isCollapsed"] = false
-                            };
-                            folders.Add(overflowFolder);
-                        }
-                        copy["folderID"] = overflowFolder?["id"]?.DeepClone();
-                    } else copy["folderID"] = placement == TabPlacementCodes.Saved && OptionalId(tab["folderID"]) is { } old && mapping.TryGetValue(old, out var folder)
-                          ? SwiftId(folder) : null;
-                    copy["savedURL"] = placement == TabPlacementCodes.Current ? null : copy["savedURL"]?.DeepClone() ?? copy["url"]?.DeepClone();
-                    if (placement == TabPlacementCodes.Pinned) copy["symbol"] = "pin.fill";
-                    return copy;
-                }).ToArray();
-                destination[StoredSessionCodec.Key.Folders] = destinationId is null ? folders : folders.DeepClone();
-                var existing = destinationId is null ? [] : Items(destination, StoredSessionCodec.Key.Tabs).Select(t => t!).ToArray();
-                // The tab the source chose to show, when it was imported; a new
-                // Space otherwise shows its first imported tab.
-                Guid? requested = shownTabs.TryGetValue(input, out var chosen) ? chosen : null;
-                var selected = edited.FirstOrDefault(t => Id(t["id"]) == requested);
-                Tabs(destination, existing.Concat(edited));
-                shownTabs.Remove(input);
-                if ((selected ?? (destinationId is null ? edited.FirstOrDefault() : null)) is { } first)
-                    shownTabs[destination] = Id(first["id"]);
+                Import(review, input, destination, isNew: destinationId is null);
                 if (destinationId is null) spaces.Add(destination);
                 affected ??= destination;
             }
-            if (affected is not null) session.Remove("disposableSeedMarker");
+            if (affected is not null) seedMarker = null;
         } else throw new BrowserRuleException(BrowserRuleCodes.UnknownWorkspaceCommand);
         // Folder and history record IDs are global in sync, even though their
         // native collections are nested under Spaces. Reserve existing IDs first
         // so an imported Space placed earlier cannot steal another Space's records.
         var folderIds = originalFolderIds.Values.SelectMany(ids => ids).ToHashSet();
         var historyIds = originalHistoryIds.Values.SelectMany(ids => ids).ToHashSet();
-        foreach (var space in spaces.Select(s => s!)) {
-            Dictionary<Guid, Guid> mapping = [];
-            foreach (var folder in Items(space, StoredSessionCodec.Key.Folders)) {
-                var old = Id(folder!["id"]); var id = old;
-                if (!originalSpaces.Contains(space) || !originalFolderIds[space].Contains(old))
-                    while (!folderIds.Add(id)) id = Guid.NewGuid();
-                mapping.TryAdd(old, id); folder["id"] = SwiftId(id);
-            }
-            foreach (var folder in Items(space, StoredSessionCodec.Key.Folders))
-                if (OptionalId(folder!["parentID"]) is { } parent && mapping.TryGetValue(parent, out var id)) folder["parentID"] = SwiftId(id);
-            foreach (var tab in Items(space, StoredSessionCodec.Key.Tabs))
-                if (OptionalId(tab!["folderID"]) is { } folder && mapping.TryGetValue(folder, out var id)) tab["folderID"] = SwiftId(id);
-            foreach (var entry in Items(space, StoredSessionCodec.Key.History)) {
-                var old = Id(entry!["id"]); var id = old;
-                if (!originalSpaces.Contains(space) || !originalHistoryIds[space].Contains(old))
-                    while (!historyIds.Add(id)) id = Guid.NewGuid();
-                entry["id"] = id.ToString("D");
-            }
-        }
+        foreach (var space in spaces) Reserve(space, space.IsOriginal ? originalFolderIds[space] : null,
+            space.IsOriginal ? originalHistoryIds[space] : null, folderIds, historyIds);
         int affectedIndex = affected is null ? -1 : spaces.IndexOf(affected);
         // Repair may replace colliding identities, so hints travel by position.
         var shown = new List<(int Space, int Tab)>();
         for (int si = 0; si < spaces.Count; si++)
-            if (shownTabs.TryGetValue(spaces[si]!, out var tab)
-                && Items(spaces[si]!, StoredSessionCodec.Key.Tabs).Select(t => Id(t!["id"])).ToList().IndexOf(tab) is var ti and >= 0)
+            if (spaces[si].ShownTab is { } tab && spaces[si].State.Tabs.Select(t => t.Id).ToList().IndexOf(tab) is var ti and >= 0)
                 shown.Add((si, ti));
-        var assets = new JsonArray();
-        for (int si = 0; si < spaces.Count; si++)
-            foreach (var section in new[] { StoredSessionCodec.Key.Tabs, StoredSessionCodec.Key.ArchivedTabs }) {
-                int ti = 0;
-                foreach (var node in Items(spaces[si]!, section)) {
-                    if (section == StoredSessionCodec.Key.ArchivedTabs && node!["tab"]!["url"] is null && node["tab"]!["nativeContent"] is null) continue;
-                    if (origins.TryGetValue(node!, out var origin)) assets.Add((JsonNode)new JsonObject {
-                        ["spaceIndex"] = si,
-                        ["tabIndex"] = ti,
-                        ["section"] = section,
-                        ["sourceIndex"] = origin.Source,
-                        ["sourceSpaceIndex"] = origin.Space,
-                        ["sourceTabIndex"] = origin.Tab
-                    });
-                    ti++;
-                }
-            }
-        var repaired = NativeSessionMaintenance.Repair(session, now);
+        var assets = Assets(spaces);
+        var imported = session with {
+            Spaces = spaces.Select(space => space.State).ToArray(),
+            DefaultSpaceId = defaultSpace,
+            DisposableSeedMarker = seedMarker
+        };
+        var repaired = NativeSessionMaintenance.Repair(imported, now, null, new SystemIdSource(), out _);
         // Show the imported instance even when repair replaced a colliding ID.
-        var repairedSpaces = Items(repaired["session"]!, "spaces");
         var hint = new SessionSelectionHint();
-        if (affectedIndex >= 0) hint.SelectSpace(Id(repairedSpaces[affectedIndex]!["id"]));
-        foreach (var (si, ti) in shown)
-            hint.SelectTab(SessionView.Empty, Id(repairedSpaces[si]!["id"]), Id(Items(repairedSpaces[si]!, StoredSessionCodec.Key.Tabs)[ti]!["id"]));
-        repaired["assets"] = assets;
-        repaired[SessionSelectionHint.Key] = hint.Encode();
+        if (affectedIndex >= 0) hint.SelectSpace(repaired.Spaces[affectedIndex].Id);
+        foreach (var (si, ti) in shown) hint.SelectTab(SessionView.Empty, repaired.Spaces[si].Id, repaired.Spaces[si].Tabs[ti].Id);
+        answer = new() {
+            ["session"] = StoredSessionCodec.Encode(repaired),
+            ["assets"] = assets,
+            [SessionSelectionHint.Key] = hint.Encode()
+        };
         return repaired;
+    }
+
+    /// A reviewed Space's included tabs, in the placements the review chose, with
+    /// the saved folders they need. Pinned tabs past the limit become saved tabs
+    /// in the overflow folder.
+    private void Import(JsonNode review, Draft input, Draft destination, bool isNew) {
+        var included = Items(review, "includedTabIDs").Select(Id).ToHashSet();
+        var overrides = Items(review, "placements").ToDictionary(n => Id(n!["tabID"]),
+            n => TabPlacementCodes.Parse(n!["placement"]!.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPlacement));
+        TabPlacement PlacementFor(TabState tab) => overrides.GetValueOrDefault(tab.Id, tab.Placement);
+        var additions = input.State.Tabs.Where(t => included.Contains(t.Id)).ToArray();
+        var sourceFolders = input.State.Folders;
+        var folders = isNew ? [] : destination.State.Folders.ToList();
+        var required = additions.Where(t => PlacementFor(t) == TabPlacement.Saved && t.FolderId is not null)
+            .Select(t => t.FolderId!.Value).ToHashSet();
+        var byId = sourceFolders.GroupBy(f => f.Id).ToDictionary(g => g.Key, g => g.First());
+        var pending = new Stack<Guid>(required);
+        while (pending.TryPop(out var id))
+            if (byId.TryGetValue(id, out var f) && f.ParentId is { } parent && required.Add(parent)) pending.Push(parent);
+        Dictionary<Guid, Guid> mapping = [];
+        foreach (var folder in FolderTree.RepairPreorder(sourceFolders).Where(f => required.Contains(f.Id))) {
+            var original = byId[folder.Id];
+            Guid? parent = folder.ParentId is { } p && mapping.TryGetValue(p, out var mapped) ? mapped : null;
+            var match = folders.FirstOrDefault(f => f.ParentId == parent && f.Location == original.Location
+                && WorkspaceImportPolicy.FolderMatchKey(f.Title) == WorkspaceImportPolicy.FolderMatchKey(original.Title));
+            if (match is not null) { mapping[folder.Id] = match.Id; continue; }
+            if (folders.Count >= WorkspaceImportPolicy.MaximumFolders) continue;
+            var identity = folder.Id;
+            while (folders.Any(f => f.Id == identity)) identity = Guid.NewGuid();
+            folders.Add(original with {
+                Id = identity,
+                ParentId = parent,
+                IsCollapsed = false,
+                CollapseModifiedAt = null,
+                OrderAnchorTabId = null
+            });
+            mapping[folder.Id] = identity;
+        }
+        int pinned = isNew ? 0 : destination.State.Tabs.Count(t => t.Placement == TabPlacement.Pinned);
+        var overflowFolder = folders.FirstOrDefault(f =>
+            string.Equals(f.Title, WorkspaceImportPolicy.OverflowFolderTitle, StringComparison.OrdinalIgnoreCase));
+        var edited = additions.Select(tab => {
+            var placement = PlacementFor(tab);
+            Guid? folder;
+            if (placement == TabPlacement.Pinned && ++pinned > WorkspaceImportPolicy.MaximumPinnedTabs) {
+                placement = TabPlacement.Saved;
+                if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
+                    overflowFolder = new FolderState(Guid.NewGuid(), TabPlacement.Saved, WorkspaceImportPolicy.OverflowFolderTitle,
+                        WorkspaceImportPolicy.OverflowFolderSymbol);
+                    folders.Add(overflowFolder);
+                }
+                folder = overflowFolder?.Id;
+            } else folder = placement == TabPlacement.Saved && tab.FolderId is { } old && mapping.TryGetValue(old, out var copied)
+                  ? copied : null;
+            return Copied(tab, tab with {
+                Placement = placement,
+                FolderId = folder,
+                SavedUrl = placement == TabPlacement.Current ? null : tab.SavedUrl ?? tab.Url,
+                Symbol = placement == TabPlacement.Pinned ? ManualSetupPolicy.PinnedTabSymbol : tab.Symbol
+            });
+        }).ToArray();
+        var existing = isNew ? [] : destination.State.Tabs;
+        // The tab the source chose to show, when it was imported; a new Space
+        // otherwise shows its first imported tab.
+        var selected = edited.FirstOrDefault(t => t.Id == input.ShownTab);
+        destination.State = destination.State with { Folders = folders.ToArray(), Tabs = [.. existing, .. edited] };
+        input.ShownTab = null;
+        if ((selected ?? (isNew ? edited.FirstOrDefault() : null)) is { } first) destination.ShownTab = first.Id;
+    }
+
+    /// Gives a Space's folders and history identities no other Space holds,
+    /// keeping the ones it had before the import, and points its folder
+    /// references at the new folder identities.
+    private void Reserve(Draft space, HashSet<Guid>? originalFolders, HashSet<Guid>? originalHistory,
+        HashSet<Guid> folderIds, HashSet<Guid> historyIds) {
+        Dictionary<Guid, Guid> mapping = [];
+        var folders = space.State.Folders.Select(folder => {
+            var id = folder.Id;
+            if (originalFolders?.Contains(folder.Id) != true)
+                while (!folderIds.Add(id)) id = Guid.NewGuid();
+            mapping.TryAdd(folder.Id, id);
+            return folder with { Id = id };
+        }).ToArray();
+        Guid? Mapped(Guid? id) => id is { } value && mapping.TryGetValue(value, out var mapped) ? mapped : id;
+        var history = space.State.History.Select(entry => {
+            var id = entry.Id;
+            if (originalHistory?.Contains(entry.Id) != true)
+                while (!historyIds.Add(id)) id = Guid.NewGuid();
+            return entry with { Id = id };
+        }).ToArray();
+        space.State = space.State with {
+            Folders = folders.Select(folder => folder with { ParentId = Mapped(folder.ParentId) }).ToArray(),
+            Tabs = space.State.Tabs.Select(tab => tab.FolderId == Mapped(tab.FolderId) ? tab
+                : Copied(tab, tab with { FolderId = Mapped(tab.FolderId) })).ToArray(),
+            History = history
+        };
+    }
+
+    /// Where each tab's native assets come from, by position. A Start Page in the
+    /// archive is left out, as repair drops it.
+    private JsonArray Assets(IReadOnlyList<Draft> spaces) {
+        var assets = new JsonArray();
+        void Add(int space, int position, string section, object record) {
+            if (origins.TryGetValue(record, out var origin)) assets.Add((JsonNode)new JsonObject {
+                ["spaceIndex"] = space,
+                ["tabIndex"] = position,
+                ["section"] = section,
+                ["sourceIndex"] = origin.Source,
+                ["sourceSpaceIndex"] = origin.Space,
+                ["sourceTabIndex"] = origin.Tab
+            });
+        }
+        for (int si = 0; si < spaces.Count; si++) {
+            var space = spaces[si].State;
+            for (int ti = 0; ti < space.Tabs.Count; ti++) Add(si, ti, Key.Tabs, space.Tabs[ti]);
+            var archive = space.ArchivedTabs.Where(archived => archived.Tab.Url is not null || archived.Tab.NativeContent is not null).ToArray();
+            for (int ti = 0; ti < archive.Length; ti++) Add(si, ti, Key.ArchivedTabs, archive[ti]);
+        }
+        return assets;
     }
 
     #endregion

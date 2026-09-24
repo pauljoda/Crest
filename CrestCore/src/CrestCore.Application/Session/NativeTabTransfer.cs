@@ -33,17 +33,17 @@ internal static class NativeTabTransfer {
 
     #region Actions - Tab transfer
 
-    internal static SessionTransferResult Evaluate(SpaceDocument source, SessionView sourceView, SpaceDocument destination,
+    internal static SessionTransferResult Evaluate(SpaceState source, SessionView sourceView, SpaceState destination,
         SessionView destinationView, Arguments arguments, DateTimeOffset now) {
-        var a = source.Organization();
-        var b = destination.Organization();
+        var a = BrowserTabCollection.Restore(source);
+        var b = BrowserTabCollection.Restore(destination);
         var viewedDestination = destinationView.Tab(destination.Id);
         var selected = a.TransferTo(b, arguments.TabId, sourceView.Tab(source.Id), arguments.FallbackTabId, arguments.Placement,
             arguments.FolderId, arguments.Before, arguments.AfterSelection, viewedDestination, now);
         var targetSelection = viewedDestination;
         if (arguments.Select) { b.Tab(arguments.TabId).Activate(now); targetSelection = arguments.TabId; }
         a.PruneSplitMetadata(); b.PruneSplitMetadata();
-        return new(source.Organized(a), destination.Organized(b), selected, targetSelection);
+        return new(a.Capture(source), b.Capture(destination), selected, targetSelection);
     }
 
     #endregion

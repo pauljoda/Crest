@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -8,16 +9,11 @@ public sealed partial class NativeSessionAuthority {
     #region Actions - Search providers
 
     /// Adds, edits or removes one of a Space's custom search engines through
-    /// the domain rules, rewriting only the search fields of its preferences.
+    /// the domain rules, changing only the search part of its preferences.
     /// Upsert arguments: `provider` (`id`, `name`, `searchURLTemplate`,
     /// `suggestionURLTemplate`) and `selects`. Remove arguments: `id`.
-    private static void EditSearchProviders(SessionOperation operation, JsonObject fields, JsonObject args) {
-        var preferences = fields["browsingPreferences"] as JsonObject;
-        if (preferences is null) {
-            preferences = new JsonObject { ["currentTabCleanupPolicy"] = "after12Hours" };
-            fields["browsingPreferences"] = preferences;
-        }
-        var search = SearchPreferencesDocument.Read(preferences);
+    private static BrowsingPreferences EditSearchProviders(SessionOperation operation, BrowsingPreferences preferences, JsonObject args) {
+        var search = SearchPreferences.Restore(preferences);
         if (operation == SessionOperation.SpaceSearchProviderRemove) {
             search = search.Remove(Id(args[SearchCodes.Id]));
         } else {
@@ -29,7 +25,7 @@ public sealed partial class NativeSessionAuthority {
             search = search.Upsert(provider);
             if (args["selects"]?.GetValue<bool>() == true) search = search.Select(provider.Id, search.SuggestionsEnabled);
         }
-        SearchPreferencesDocument.Write(preferences, search);
+        return search.Applied(preferences);
     }
 
     #endregion

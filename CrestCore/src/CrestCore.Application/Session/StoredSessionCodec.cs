@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using CrestCore.Domain;
@@ -9,7 +10,8 @@ namespace CrestCore.Application;
 /// wrapped as <c>{"rawValue": UUID}</c>, dates as seconds since 2001, absent optional
 /// members, and the tolerant readings the native decoder applies. Checkpoints and the
 /// session projections Swift reads are written here and nowhere else, and every stored
-/// key and value spelling lives in this type.
+/// key and value spelling lives in this type. Members this format does not define are
+/// not kept: Swift's own decoder drops them before any session reaches the core.
 /// </summary>
 internal static partial class StoredSessionCodec {
     #region Variables
@@ -19,54 +21,158 @@ internal static partial class StoredSessionCodec {
     /// The stored member names, shared by every record that uses one.
     internal static class Key {
         public const string AccessPolicy = "accessPolicy";
+        public const string Accent = "accent";
+        public const string AlsoOffersSaveToSystemPasswords = "alsoOffersSaveToSystemPasswords";
         public const string Alpha = "alpha";
+        public const string AppPreferences = "appPreferences";
+        public const string Archive = "archive";
         public const string ArchivedAt = "archivedAt";
         public const string ArchivedTabs = "archivedTabs";
+        public const string AutomaticallyEntersPictureInPicture = "automaticallyEntersPictureInPicture";
+        public const string AutomaticallyTranslates = "automaticallyTranslates";
+        public const string Backplate = "backplate";
+        public const string BackplateColorIndex = "backplateColorIndex";
+        public const string BannerPattern = "bannerPattern";
+        public const string BannerStrength = "bannerStrength";
         public const string Blue = "blue";
+        public const string Branding = "branding";
+        public const string BrowsingPreferences = "browsingPreferences";
+        public const string Charge = "charge";
+        public const string ChargeLayout = "chargeLayout";
+        public const string ChargeOffset = "chargeOffset";
+        public const string ChargeScale = "chargeScale";
+        public const string ChargeWeight = "chargeWeight";
+        public const string ChecksSpelling = "checksSpelling";
         public const string CollapseModifiedAt = "collapseModifiedAt";
         public const string Color = "color";
+        public const string Colors = "colors";
+        public const string ContentBlockingPolicy = "contentBlockingPolicy";
+        public const string CredentialPreferences = "credentialPreferences";
+        public const string Crest = "crest";
+        public const string CurrentTabCleanupPolicy = "currentTabCleanupPolicy";
         public const string CustomIconSymbol = "customIconSymbol";
+        public const string CustomSearchProviders = "customSearchProviders";
         public const string CustomTitle = "customTitle";
+        public const string DataRetention = "dataRetention";
+        public const string DefaultSpaceId = "defaultSpaceID";
         public const string DeletionOrigin = "deletionOrigin";
+        public const string Depth = "depth";
+        public const string DisposableSeedMarker = "disposableSeedMarker";
+        public const string DivisionCount = "divisionCount";
+        public const string Downloads = "downloads";
+        public const string EdgeColorIndex = "edgeColorIndex";
+        public const string EdgeWidth = "edgeWidth";
         public const string FaviconUrl = "faviconURL";
+        public const string FieldDivision = "fieldDivision";
+        public const string Finish = "finish";
         public const string FirstVisitedAt = "firstVisitedAt";
+        public const string FolderColorIntensity = "folderColorIntensity";
         public const string FolderId = "folderID";
         public const string Folders = "folders";
+        public const string GradientAngle = "gradientAngle";
         public const string Green = "green";
+        public const string HasCustomAppearance = "hasCustomAppearance";
         public const string History = "history";
         public const string IconAccent = "iconAccent";
         public const string IconModifiedAt = "iconModifiedAt";
+        public const string IconStyle = "iconStyle";
         public const string Id = "id";
         public const string IsCollapsed = "isCollapsed";
+        public const string IsEnabled = "isEnabled";
+        public const string IsSavedTabsExpanded = "isSavedTabsExpanded";
+        public const string KeepsControlsReadable = "keepsControlsReadable";
         public const string KeepsPageLoaded = "keepsPageLoaded";
         public const string Kind = "kind";
         public const string LastActivatedAt = "lastActivatedAt";
         public const string LastVisitedAt = "lastVisitedAt";
+        public const string LegacySearchProvider = "searchProvider";
+        public const string LegacySelectedTab = "selectedTabID";
         public const string Location = "location";
+        public const string Name = "name";
         public const string NativeContent = "nativeContent";
+        public const string OffersTranslation = "offersTranslation";
+        public const string OperationId = "operationID";
         public const string OrderAnchorTabId = "orderAnchorTabID";
+        public const string Ordinary = "ordinary";
+        public const string OrdinaryColorIndex = "ordinaryColorIndex";
+        public const string OrdinaryWidth = "ordinaryWidth";
+        public const string Palette = "palette";
         public const string ParentId = "parentID";
         public const string Placement = "placement";
+        public const string PlateScale = "plateScale";
         public const string PositionModifiedAt = "positionModifiedAt";
         public const string Profile = "profile";
+        public const string ProfileId = "profileID";
         public const string RawValue = "rawValue";
+        public const string ReadabilityFade = "readabilityFade";
         public const string Reason = "reason";
         public const string Red = "red";
+        public const string RenderingVersion = "renderingVersion";
         public const string ResourceId = "resourceID";
+        public const string SavedTabClosePolicy = "savedTabClosePolicy";
+        public const string SavedTabFaviconReturnsToSavedUrl = "savedTabFaviconReturnsToSavedURL";
+        public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";
         public const string SavedUrl = "savedURL";
+        public const string SealTeeth = "sealTeeth";
+        public const string SearchSuggestionsEnabled = "searchSuggestionsEnabled";
+        public const string SearchUrlTemplate = "searchURLTemplate";
+        public const string SecondaryFieldColorIndex = "secondaryFieldColorIndex";
+        public const string SelectedSearchProviderId = "selectedSearchProviderID";
+        public const string SheenAngle = "sheenAngle";
+        public const string ShowsOutline = "showsOutline";
+        public const string ShowsTexture = "showsTexture";
+        public const string Sources = "sources";
+        public const string SpaceDeletions = "spaceDeletions";
+        public const string SpaceId = "spaceID";
         public const string Spaces = "spaces";
+        public const string SplitFocusFollowsMouse = "splitFocusFollowsMouse";
         public const string SplitGroupId = "splitGroupID";
         public const string SplitGroups = "splitGroups";
+        public const string StartingPresetId = "startingPresetID";
+        public const string StartupBehavior = "startupBehavior";
         public const string StoredIconMode = "storedIconMode";
+        public const string Style = "style";
+        public const string SuggestionUrlTemplate = "suggestionURLTemplate";
         public const string Symbol = "symbol";
+        public const string SymbolColor = "symbolColor";
+        public const string SymbolColorIndex = "symbolColorIndex";
+        public const string SyncsCrestPasswordsWithICloud = "syncsCrestPasswordsWithICloud";
         public const string Tab = "tab";
         public const string Tabs = "tabs";
+        public const string TargetId = "targetID";
+        public const string TextColorMode = "textColorMode";
+        public const string ThemeMode = "themeMode";
         public const string Tint = "tint";
         public const string TintModifiedAt = "tintModifiedAt";
         public const string Title = "title";
         public const string TitleModifiedAt = "titleModifiedAt";
+        public const string TranslationRules = "translationRules";
+        public const string Trim = "trim";
+        public const string TrimColorIndex = "trimColorIndex";
+        public const string TrimDetail = "trimDetail";
+        public const string TrimWeight = "trimWeight";
         public const string Url = "url";
+        public const string Value = "value";
         public const string VisitCount = "visitCount";
+    }
+
+    /// One closed set's stored spellings, read and written through the same pairs.
+    /// A spelling this build does not know reads as null, for the caller's default.
+    private sealed class StoredSpellings<T>(IReadOnlyList<(T Value, string Spelling)> pairs) where T : struct, Enum {
+        #region Variables
+
+        private readonly Dictionary<string, T> values = pairs.ToDictionary(pair => pair.Spelling, pair => pair.Value, StringComparer.Ordinal);
+        private readonly Dictionary<T, string> spellings = pairs.ToDictionary(pair => pair.Value, pair => pair.Spelling);
+
+        #endregion
+
+        #region Actions - Spelling
+
+        public T? Parse(string? spelling) => spelling is not null && values.TryGetValue(spelling, out var value) ? value : null;
+
+        public string Name(T value) => spellings[value];
+
+        #endregion
     }
 
     #endregion
@@ -136,6 +242,14 @@ internal static partial class StoredSessionCodec {
 
     private static bool? Flag(JsonNode? node) => node?.GetValue<bool>();
 
+    /// A flag that reads as absent when it holds anything but a boolean.
+    private static bool? TolerantFlag(JsonNode? node) =>
+        node is JsonValue value && value.GetValueKind() is JsonValueKind.True or JsonValueKind.False ? value.GetValue<bool>() : null;
+
+    /// Text that reads as absent when it holds anything but a string.
+    private static string? TolerantText(JsonNode? node) =>
+        node is JsonValue value && value.GetValueKind() == JsonValueKind.String ? value.GetValue<string>() : null;
+
     /// A number parsed from JSON or placed in a node by code.
     private static double Number(JsonNode node) {
         if (node is JsonValue value) {
@@ -146,6 +260,8 @@ internal static partial class StoredSessionCodec {
         }
         throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
     }
+
+    private static double? OptionalNumber(JsonNode? node) => node is null ? null : Number(node);
 
     private static int? Integer(JsonNode? node) {
         if (node is null) return null;

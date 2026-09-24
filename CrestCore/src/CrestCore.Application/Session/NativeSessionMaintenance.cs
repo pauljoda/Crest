@@ -3,8 +3,6 @@ using System.Text.Json.Nodes;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
-using Key = CrestCore.Application.StoredSessionCodec.Key;
-
 namespace CrestCore.Application;
 
 /// Checkpoint repair and retention operate on detached sessions. Native image
@@ -13,19 +11,13 @@ namespace CrestCore.Application;
 public static class NativeSessionMaintenance {
     #region Variables
 
-    private const string SpaceDeletionsField = "spaceDeletions";
-    private const string DefaultSpaceField = "defaultSpaceID";
-
-    /// The settings a Space made for an empty session starts from when the
+    /// What the Space made for an empty session is called and wears when the
     /// native caller supplies none.
-    private static JsonObject BlankSpaceSettings => new() {
-        ["name"] = "Space 1",
-        ["symbol"] = "square.grid.2x2.fill",
-        ["accent"] = SpaceAccentCodes.Indigo
-    };
+    private const string BlankSpaceName = "Space 1";
+    private const string BlankSpaceSymbol = "square.grid.2x2.fill";
 
     /// Where a repaired tab's native assets come from.
-    private sealed record TabOrigin(int SpaceIndex, int TabIndex, Guid SourceSpaceId, Guid SourceTabId);
+    internal sealed record TabOrigin(int SpaceIndex, int TabIndex, Guid SourceSpaceId, Guid SourceTabId);
 
     #endregion
 
@@ -50,14 +42,20 @@ public static class NativeSessionMaintenance {
     /// Gives every Space, profile and tab its own identity, repairs folder trees,
     /// pin limits, split runs and split metadata, keeps a Space that is being
     /// deleted exactly as it was, and adds a Space when none would remain.
-    private static SessionDocument Repair(SessionDocument source, DateTimeOffset now, SpaceDocument? emptySpace, IIdSource ids,
+    internal static SessionState Repair(SessionState source, DateTimeOffset now, SpaceState? emptySpace, IIdSource ids,
         out IReadOnlyList<TabOrigin> origins) {
-        var pending = PendingDeletions(source.Metadata);
+        var pending = source.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
         var spaces = source.Spaces.ToList();
-        if (spaces.Count == 0 || spaces.All(space => pending.Contains(space.Id))) {
-            var settings = (emptySpace?.Metadata ?? BlankSpaceSettings).DeepClone().AsObject().WithIdentity(ids.Next(), ids.Next());
-            spaces.Add(new(settings, [StartTab(ids.Next(), now)], [], [], [], []));
-        }
+        if (spaces.Count == 0 || spaces.All(space => pending.Contains(space.Id)))
+            spaces.Add((emptySpace ?? BlankSpace()) with {
+                Id = ids.Next(),
+                ProfileId = ids.Next(),
+                Folders = [],
+                Tabs = [StartTab(ids.Next(), now)],
+                SplitGroups = [],
+                ArchivedTabs = [],
+                History = []
+            });
         var spaceIds = new RuntimeIdentityRegistry(ids); var profiles = new RuntimeIdentityRegistry(ids);
         var tabIds = new RuntimeIdentityRegistry(ids); var assets = new List<TabOrigin>();
         var repaired = spaces.Select((space, spaceIndex) => {
@@ -73,7 +71,7 @@ public static class NativeSessionMaintenance {
                 foreach (var archived in space.ArchivedTabs.Where(archived => !IsStartPage(archived.Tab))) _ = tabIds.Claim(archived.Tab.Id);
                 return space;
             }
-            var identified = Identified(space, spaceIds.Claim(space.Id), profiles.Claim(space.ProfileId));
+            var identified = space with { Id = spaceIds.Claim(space.Id), ProfileId = profiles.Claim(space.ProfileId) };
             var folderIds = new RuntimeIdentityRegistry(ids);
             var folders = FolderTree.RepairPreorder(space.Folders.Select(folder => folder with { Id = folderIds.Claim(folder.Id) }).ToArray());
             var locations = folders.ToDictionary(folder => folder.Id, folder => folder.Location);
@@ -111,12 +109,11 @@ public static class NativeSessionMaintenance {
             };
         }).ToArray();
         origins = assets;
-        var metadata = source.Metadata.DeepClone().AsObject();
         // A launch Space that is gone falls back to the first Space that stays.
         var active = repaired.Select(space => space.Id).ToHashSet();
-        if (StoredSessionCodec.OptionalIdentity(metadata[DefaultSpaceField]) is not { } launch || !active.Contains(launch))
-            metadata[DefaultSpaceField] = StoredSessionCodec.WrappedIdentity(repaired.First(space => !pending.Contains(space.Id)).Id);
-        return new(metadata, repaired);
+        var launch = source.DefaultSpaceId is { } chosen && active.Contains(chosen)
+            ? chosen : repaired.First(space => !pending.Contains(space.Id)).Id;
+        return source with { Spaces = repaired, DefaultSpaceId = launch };
     }
 
     /// Removes history and archive records older than each Space keeps them;
@@ -124,12 +121,13 @@ public static class NativeSessionMaintenance {
     public static JsonObject Retain(JsonObject source, double now) {
         if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         var session = StoredSessionCodec.DecodeSession(source);
-        var pending = PendingDeletions(session.Metadata);
+        var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
         bool changed = false;
         var spaces = session.Spaces.Select(space => {
             if (pending.Contains(space.Id)) return space;
-            var history = Retained(space.History, entry => entry.LastVisitedAt, RetentionLifetime(space, "history"), now);
-            var archive = Retained(space.ArchivedTabs, archived => archived.ArchivedAt, RetentionLifetime(space, "archive"), now);
+            var retention = space.BrowsingPreferences.DataRetention;
+            var history = Retained(space.History, entry => entry.LastVisitedAt, Lifetime(retention.History), now);
+            var archive = Retained(space.ArchivedTabs, archived => archived.ArchivedAt, Lifetime(retention.Archive), now);
             changed |= history.Count != space.History.Count || archive.Count != space.ArchivedTabs.Count;
             return space with { History = history, ArchivedTabs = archive };
         }).ToArray();
@@ -143,28 +141,16 @@ public static class NativeSessionMaintenance {
         return records.Where((_, index) => !expired.Contains(index)).ToArray();
     }
 
-    private static double? RetentionLifetime(SpaceDocument space, string records) {
-        var term = StoredSessionCodec.Text(space.Metadata["browsingPreferences"]?["dataRetention"]?[records]);
-        var duration = Enum.TryParse<DataRetention>(term, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : DataRetention.Forever;
-        return RetentionPreferences.Lifetime(duration)?.TotalSeconds;
-    }
+    private static double? Lifetime(DataRetention retention) => RetentionPolicy.Lifetime(retention)?.TotalSeconds;
 
     #endregion
 
     #region Actions - Records
 
-    private static HashSet<Guid> PendingDeletions(JsonObject metadata) =>
-        (metadata[SpaceDeletionsField] as JsonArray ?? []).Select(intent => NativeSessionAuthority.Id(intent!["spaceID"])).ToHashSet();
-
-    /// The Space under its own identity and profile.
-    private static SpaceDocument Identified(SpaceDocument space, Guid id, Guid profile) =>
-        space with { Metadata = space.Metadata.DeepClone().AsObject().WithIdentity(id, profile) };
-
-    private static JsonObject WithIdentity(this JsonObject settings, Guid id, Guid profile) {
-        settings[Key.Id] = StoredSessionCodec.WrappedIdentity(id);
-        settings[Key.Profile] = new JsonObject { [Key.Id] = StoredSessionCodec.BareIdentity(profile) };
-        return settings;
-    }
+    /// The Space an empty session starts with when the native caller supplies none.
+    private static SpaceState BlankSpace() => new(Guid.Empty, Guid.Empty, BlankSpaceName, BlankSpaceSymbol, SpaceAccent.Indigo,
+        null, [], [], [], [], [], StoredSessionCodec.DefaultBrowsingPreferences, StoredSessionCodec.DefaultCredentialPreferences,
+        SpaceAccessPolicy.Open, true, null);
 
     private static bool IsStartPage(TabState tab) => tab.Url is null && tab.NativeContent is null;
 

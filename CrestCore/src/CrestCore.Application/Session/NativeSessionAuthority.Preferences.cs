@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -17,31 +16,19 @@ public sealed partial class NativeSessionAuthority {
         RequirePreferenceOwner(operation);
         if (operation == SessionOperation.LaunchPlan) return PrepareLaunchPlan(expected, request);
         var edit = PreferenceEdit.Decode(operation, request["arguments"] as JsonObject);
-        var stored = document.Metadata[PreferencesDocument.Field];
-        var metadata = document.Metadata.DeepClone().AsObject();
-        var record = PreferencesDocument.Write(stored, edit.Apply(stored));
-        metadata[PreferencesDocument.Field] = record;
-        var output = Encoding.UTF8.GetBytes(new JsonObject { [PreferenceCodes.Record] = record.DeepClone() }.ToJsonString());
-        return new NativeSessionCommand(this, expected, new SessionDocument(metadata, document.Spaces), output);
+        var preferences = edit.Apply(session.AppPreferences);
+        var output = Encoding.UTF8.GetBytes(new JsonObject { [PreferenceCodes.Record] = StoredSessionCodec.Encode(preferences) }.ToJsonString());
+        return new NativeSessionCommand(this, expected, session with { AppPreferences = preferences }, output);
     }
 
     /// A read of the owned startup preference. The caller releases the prepared
     /// plan instead of committing it; committing would change nothing.
     private NativeSessionCommand PrepareLaunchPlan(ulong expected, JsonObject request) {
-        var stored = document.Metadata[PreferencesDocument.Field];
         using var parsed = JsonDocument.Parse(request.ToJsonString());
         var launch = LaunchPlanRequest.Decode(parsed.RootElement);
-        var plan = launch.Plan(stored is null ? null : PreferencesDocument.Read(stored).Startup);
+        var plan = launch.Plan(session.AppPreferences?.Startup);
         var output = Encoding.UTF8.GetBytes(LaunchCodes.Plan(plan).ToJsonString());
-        return new NativeSessionCommand(this, expected, document, output);
-    }
-
-    /// Only the preference commands change the record. A value edit or a sync
-    /// replacement that carries a different or missing record keeps the owned one.
-    private JsonObject KeepingPreferences(JsonObject metadata) {
-        if (document.Metadata[PreferencesDocument.Field] is { } owned) metadata[PreferencesDocument.Field] = owned.DeepClone();
-        else metadata.Remove(PreferencesDocument.Field);
-        return metadata;
+        return new NativeSessionCommand(this, expected, session, output);
     }
 
     private void RequirePreferenceOwner(SessionOperation operation) {

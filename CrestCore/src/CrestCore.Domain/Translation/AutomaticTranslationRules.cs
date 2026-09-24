@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Explicit source-language choices for automatic page translation. Missing,

@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
@@ -25,7 +27,7 @@ public sealed partial class NativeSessionAuthority {
     public NativeSessionReplacement ReserveReplacement(ulong expected, ReadOnlySpan<byte> delta,
         NativeSyncTransaction? transaction = null, bool nativeValueEdit = false) {
         lock (Gate) {
-            System.Text.Json.Nodes.JsonNode? authorizedDeletions = null;
+            IReadOnlyList<CrestCore.Contracts.SpaceDeletionState>? authorizedDeletions = null;
             if (transaction is not null) {
                 if (!transaction.IsReadyToCommit || !ReferenceEquals(transaction.Owner.Session, this) || transaction.Materialization is null)
                     throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
@@ -49,7 +51,7 @@ public sealed partial class NativeSessionAuthority {
                 throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
             if (commit) {
                 value.SyncTransaction?.Commit();
-                document = value.Document; Revision = value.Revision;
+                session = value.Session; Revision = value.Revision;
                 borrowedSourceRevision = value.BorrowedSourceRevision ?? borrowedSourceRevision;
                 if (value.TransientCompletion is { } completed) completedTransients.Add(completed);
             }
@@ -65,9 +67,9 @@ public sealed partial class NativeSessionAuthority {
             if (command.ExpectedRevision != Revision)
                 throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.StaleSessionRevision);
             var nextRevision = checked(Revision + 1);
-            var checkpoint = new NativeSessionCheckpoint(command.Document);
+            var checkpoint = new NativeSessionCheckpoint(command.Session);
             _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
-            replacement = new(this, command.Document, nextRevision, checkpoint, command.BorrowedSourceRevision, command.TransientCompletion);
+            replacement = new(this, command.Session, nextRevision, checkpoint, command.BorrowedSourceRevision, command.TransientCompletion);
             return replacement;
         }
     }

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -36,11 +37,9 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    /// An unnamed policy was somebody restricting this Space in a build that knew
-    /// more terms than this one. Resolve it to the guarded side, exactly as the
-    /// native decoder does, instead of treating it as open.
-    private static bool RequiresAuthentication(SpaceDocument space)
-        => space.Metadata["accessPolicy"] is { } policy && policy.GetValue<string>() != SpaceAccessPolicyCodes.Open;
+    /// A policy this build cannot name reads as guarded (see `StoredSessionCodec`),
+    /// so only an open Space skips authentication.
+    private static bool RequiresAuthentication(SpaceState space) => space.AccessPolicy != SpaceAccessPolicy.Open;
 
     private static Guid? OptionalSpace(JsonNode? value) {
         if (value is null) return null;
@@ -60,7 +59,7 @@ public sealed partial class NativeSessionAuthority {
         // Raising protection on a Space is always allowed. Taking it away is the
         // decision authentication exists to guard, so it needs the grant.
         if (operation == SessionOperation.SpaceAccess && (request["arguments"] as JsonObject)?["value"] is JsonValue policy
-            && policy.TryGetValue<string>(out var value) && value != SpaceAccessPolicyCodes.Open) return;
+            && policy.TryGetValue<string>(out var value) && StoredSessionCodec.ParseAccessPolicy(value) != SpaceAccessPolicy.Open) return;
         foreach (var space in CommandSpaces(request, operation)) RequireAccessible(space);
     }
 
@@ -89,36 +88,32 @@ public sealed partial class NativeSessionAuthority {
     /// splits or selection this delta would change, plus one it would remove.
     /// Sync materialization does not come through here — it commits as a
     /// journal-bound replacement — so background convergence stays unaffected.
-    private void RequireAccessibleValueEdit(SessionDocument next, IEnumerable<Guid> proposed) {
+    private void RequireAccessibleValueEdit(SessionState next, IEnumerable<Guid> proposed) {
         if (access is null) return;
         var retained = next.Spaces.Select(s => s.Id).ToHashSet();
         var candidates = new HashSet<Guid>(proposed);
         // Dropping a Space's records is a change even when the delta never
         // named it, so removal is derived rather than declared.
-        foreach (var space in document.Spaces)
+        foreach (var space in session.Spaces)
             if (!retained.Contains(space.Id)) candidates.Add(space.Id);
         foreach (var id in candidates) {
-            if (document.Spaces.FirstOrDefault(s => s.Id == id) is not { } original) continue;
+            if (session.Spaces.FirstOrDefault(s => s.Id == id) is not { } original) continue;
             var updated = next.Spaces.FirstOrDefault(s => s.Id == id);
-            if (updated is not null && (original.Matches(updated) || OnlyRaisesProtection(original, updated))) continue;
+            if (updated is not null && (original == updated || OnlyRaisesProtection(original, updated))) continue;
             RequireAccessible(id);
         }
     }
 
     /// Raising protection is always allowed, exactly as it is for the command
     /// gate. Nothing else may ride along with it.
-    private static bool OnlyRaisesProtection(SpaceDocument original, SpaceDocument updated) {
-        if (updated.Metadata["accessPolicy"] is not JsonValue policy || !policy.TryGetValue<string>(out var value)
-            || value == SpaceAccessPolicyCodes.Open) return false;
-        return (original with { Metadata = StoredSessionCodec.Fields(original.Metadata, ["accessPolicy"]) })
-            .Matches(updated with { Metadata = StoredSessionCodec.Fields(updated.Metadata, ["accessPolicy"]) });
-    }
+    private static bool OnlyRaisesProtection(SpaceState original, SpaceState updated) =>
+        updated.AccessPolicy != SpaceAccessPolicy.Open && original with { AccessPolicy = updated.AccessPolicy } == updated;
 
     private void RequireAccessible(Guid spaceId) {
         if (access is null) return;
         // An unknown identity is rejected by the command itself, with the error
         // that names the real problem.
-        if (document.Spaces.FirstOrDefault(s => s.Id == spaceId) is not { } space) return;
+        if (session.Spaces.FirstOrDefault(s => s.Id == spaceId) is not { } space) return;
         var assignment = new SpaceAccessAssignment(spaceId, space.ProfileId);
         lock (access) access.RequireAccessible(assignment, RequiresAuthentication(space));
     }

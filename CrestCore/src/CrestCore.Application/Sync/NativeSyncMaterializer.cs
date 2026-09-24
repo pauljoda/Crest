@@ -44,7 +44,7 @@ public static class NativeSyncMaterializer {
     private static JsonNode? AccessPolicy(JsonNode? local, JsonNode remote, SpaceAccessAuthority? access, Guid space, Guid profile) {
         var incoming = remote["accessPolicy"]?.DeepClone();
         if (local is null) return incoming;
-        bool Guarded(JsonNode? value) => Text(value) is { } policy && policy != SpaceAccessPolicyCodes.Open;
+        bool Guarded(JsonNode? value) => StoredSessionCodec.DecodeAccessPolicy(value) != SpaceAccessPolicy.Open;
         if (!Guarded(local["accessPolicy"]) || Guarded(remote["accessPolicy"])) return incoming;
         var assignment = new SpaceAccessAssignment(space, profile);
         bool granted = access is not null && !Locked(access, assignment);
@@ -103,9 +103,7 @@ public static class NativeSyncMaterializer {
             if (!profiles.Add(Id(local["profile"]!["id"]))) throw Error(NativeSyncDocumentErrorCodes.DuplicateProfile, Id(local["profile"]!["id"]));
             spaces.Add(local.DeepClone());
         }
-        // Selection is window state: windows reconcile against the materialized
-        // Spaces themselves, and sync never carries it.
-        var result = LegacySelectionFields.WithoutSelection(session.DeepClone().AsObject());
+        var result = session.DeepClone().AsObject();
         if (spaces.Count == 0) return result;
         result.Remove("disposableSeedMarker");
         result["spaces"] = spaces;

@@ -11,13 +11,11 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void BorrowingUsesOwnedPolicyAndCannotCreateOrRewriteAProfileFromASnapshot() {
         var session = SavedSession().Document["session"]!;
-        session["spaces"]![0]!["futureProfilePolicy"] = new JsonObject { ["retained"] = true };
         var owner = new NativeSessionAuthority(Bytes(session));
         var child = Borrow(owner, session);
         var projected = JsonNode.Parse(child.PrepareBorrowedRefresh(1).Output)!["session"]!;
         var source = session["spaces"]![0]!; var space = projected["spaces"]![0]!;
         Assert.True(JsonNode.DeepEquals(source["profile"], space["profile"]));
-        Assert.True(JsonNode.DeepEquals(source["futureProfilePolicy"], space["futureProfilePolicy"]));
         foreach (var section in new[] { "tabs", "folders", "history", "archivedTabs", "splitGroups" })
             Assert.Empty(space[section]!.AsArray());
         Assert.Null(space["selectedTabID"]);

@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Application;
 
 /// An immutable, encodable revision of the session: the `core` part holds the
@@ -13,14 +15,14 @@ public sealed class NativeSessionCheckpoint {
 
     internal const string CorePart = "core";
 
-    private readonly SessionDocument document;
+    private readonly SessionState session;
     private readonly ConcurrentDictionary<string, byte[]> parts = new();
 
     #endregion
 
     #region Constructors
 
-    internal NativeSessionCheckpoint(SessionDocument document) => this.document = document;
+    internal NativeSessionCheckpoint(SessionState session) => this.session = session;
 
     #endregion
 
@@ -30,8 +32,8 @@ public sealed class NativeSessionCheckpoint {
 
     private byte[] Encode(string part) {
         JsonNode value = part == CorePart
-            ? StoredSessionCodec.Encode(document with { Spaces = document.Spaces.Select(space => space with { History = [] }).ToArray() })
-            : StoredSessionCodec.EncodeHistory(document.Spaces.Single(space => space.Id == Guid.Parse(part)).History);
+            ? StoredSessionCodec.Encode(session with { Spaces = session.Spaces.Select(space => space with { History = [] }).ToArray() })
+            : StoredSessionCodec.EncodeHistory(session.Spaces.Single(space => space.Id == Guid.Parse(part)).History);
         return Encoding.UTF8.GetBytes(value.ToJsonString());
     }
 

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -36,21 +37,22 @@ internal sealed record PreferenceEdit(SessionOperation Operation, BrowserPrefere
 
     /// The preferences after this edit. An import applies only while the
     /// session has no record, so a later launch never imports over a choice.
-    public BrowserPreferences Apply(JsonNode? stored) {
-        var current = PreferencesDocument.Read(stored);
+    public AppPreferences Apply(AppPreferences? stored) {
+        var current = stored ?? AppPreferencesPolicy.Default;
         return Operation switch {
-            SessionOperation.PreferencesImport => stored is null ? PreferencesDocument.Import(Legacy!) : current,
+            SessionOperation.PreferencesImport => stored ?? StoredSessionCodec.ImportAppPreferences(Legacy!),
             SessionOperation.PreferencesTranslationRule => current.WithTranslationRule(SourceId!, TargetId!, IsEnabled!.Value),
             _ => Set(current)
         };
     }
 
-    private BrowserPreferences Set(BrowserPreferences current) => Preference switch {
+    private AppPreferences Set(AppPreferences current) => Preference switch {
         BrowserPreference.Startup => current with {
-            Startup = PreferenceCodes.StartupValue(Value) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPreferenceValue)
+            Startup = StoredSessionCodec.ParseStartupBehavior(Value)
+                ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPreferenceValue)
         },
         BrowserPreference.SavedTabClose => current with {
-            SavedTabClose = PreferenceCodes.SavedTabCloseValue(Value)
+            SavedTabClose = StoredSessionCodec.ParseSavedTabClosePolicy(Value)
                 ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPreferenceValue)
         },
         { } flag => current.With(flag,

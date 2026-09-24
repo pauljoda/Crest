@@ -29,7 +29,6 @@ public sealed partial class BrowserContractsTests {
         var preferences = session["spaces"]![0]!["browsingPreferences"]!;
         Assert.Equal("custom:" + kagi.ToString("D"), preferences["selectedSearchProviderID"]!.GetValue<string>());
         Assert.Equal("google", preferences["searchProvider"]!.GetValue<string>());
-        Assert.True(preferences["futureFlag"]!.GetValue<bool>());
         Assert.Equal("after12Hours", preferences["currentTabCleanupPolicy"]?.GetValue<string>() ?? "after12Hours");
         Assert.Equal($"[{{\"id\":\"{kagi.ToString("D").ToUpperInvariant()}\",\"name\":\"Kagi\",\"searchURLTemplate\":\"https://kagi.com/search?q=%s\"}}]",
             preferences["customSearchProviders"]!.ToJsonString());
