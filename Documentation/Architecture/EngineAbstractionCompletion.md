@@ -243,7 +243,7 @@ Remaining. The Chromium registration declares both limits:
 - `BrowserCorePolicy.addressIntent` sends `allowsInternalPages` from the
   `internal-pages` capability rather than from a build flag.
 - Every declared capability either gates UI or services, or belongs to
-  `EngineCapabilities.Required`, the set (`pages`, `navigation`,
+  `EngineCapability.Required`, the set (`pages`, `navigation`,
   `workspace-profiles`, `profile-deletion`) the core requires before it
   registers an engine.
 

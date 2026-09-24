@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -15,15 +16,15 @@ public sealed partial class BrowserContractsTests {
         ["implementationVersion"] = "1",
         ["protocolVersion"] = 1,
         ["capabilities"] = new JsonObject {
-            ["pages"] = EngineCapability(),
-            ["navigation"] = EngineCapability(),
-            ["workspace-profiles"] = EngineCapability(),
-            ["profile-deletion"] = EngineCapability(),
-            ["pdf"] = EngineCapability("unavailable"),
-            ["extensions"] = EngineCapability("unverified")
+            ["pages"] = Declared(),
+            ["navigation"] = Declared(),
+            ["workspace-profiles"] = Declared(),
+            ["profile-deletion"] = Declared(),
+            ["pdf"] = Declared("unavailable"),
+            ["extensions"] = Declared("unverified")
         }
     };
-    private static JsonObject EngineCapability(string status = "supported") => new() {
+    private static JsonObject Declared(string status = "supported") => new() {
         ["status"] = status,
         ["contractVersion"] = 1,
         ["scope"] = "Native test port",
@@ -36,10 +37,10 @@ public sealed partial class BrowserContractsTests {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
         authority.RegisterEngine(Bytes(EngineDescriptor()));
-        Assert.True(authority.Engine!.Supports("navigation"));
-        Assert.False(authority.Engine.Supports("pdf"));
-        Assert.False(authority.Engine.Supports("extensions"));
-        Assert.False(authority.Engine.Supports("unknown-feature"));
+        Assert.True(authority.Engine!.Supports(EngineCapability.Navigation));
+        Assert.False(authority.Engine.Supports(EngineCapability.Pdf));
+        Assert.False(authority.Engine.Supports(EngineCapability.Extensions));
+        Assert.False(authority.Engine.Supports(EngineCapability.Find));
         Assert.Equal(1UL, authority.Revision);
         authority.Commit(1, RenameDelta(session, "Engine-independent tab"));
         var saved = authority.Checkpoint(2).Read("core");

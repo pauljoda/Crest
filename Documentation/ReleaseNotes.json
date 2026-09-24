@@ -2173,6 +2173,10 @@
     "settings-navigation-permission-sets": {
       "category": "internal",
       "message": "Settings destinations, sidebar navigation controls and system permissions describe themselves."
+    },
+    "engine-capability-sets": {
+      "category": "internal",
+      "message": "Engine capabilities, statuses and adapter roles are typed sets instead of strings."
     }
   }
 }

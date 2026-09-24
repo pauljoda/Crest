@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x16, 0x54, 0x61, 0xf4, 0x9b, 0x2f, 0x18, 0x20, 0xe7, 0x6b, 0xef, 0xeb, 0x5d, 0x34, 0x7b, 0xb8, 0x60, 0xa2, 0xec, 0x7d, 0x82, 0x37, 0x4b, 0xe7, 0xd1, 0xc9, 0x33, 0xb0, 0x86, 0xa5, 0x32, 0x0e
+        0xce, 0xf7, 0x3d, 0x10, 0xc0, 0xb2, 0x01, 0x36, 0x85, 0x91, 0x2c, 0xf4, 0x6a, 0x5d, 0xef, 0xa7, 0x30, 0xe2, 0xd9, 0xb6, 0xef, 0xd9, 0x8c, 0x05, 0x6b, 0xe5, 0x3a, 0xbb, 0xe3, 0xb9, 0x1a, 0x29
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2258,6 +2258,34 @@ extension SystemPasswordWriteThroughAvailability {
     }
 }
 
+extension AdapterRole {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown AdapterRole \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension CapabilityStatus {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown CapabilityStatus \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
 extension DevicePlatform {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readEnum()
@@ -2319,6 +2347,20 @@ extension DownloadTextField {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown DownloadTextField \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension EngineCapability {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown EngineCapability \(tag)")
         }
         self = Self.all[tag]
     }

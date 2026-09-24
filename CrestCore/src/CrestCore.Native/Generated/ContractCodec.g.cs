@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x16, 0x54, 0x61, 0xf4, 0x9b, 0x2f, 0x18, 0x20, 0xe7, 0x6b, 0xef, 0xeb, 0x5d, 0x34, 0x7b, 0xb8, 0x60, 0xa2, 0xec, 0x7d, 0x82, 0x37, 0x4b, 0xe7, 0xd1, 0xc9, 0x33, 0xb0, 0x86, 0xa5, 0x32, 0x0e
+        0xce, 0xf7, 0x3d, 0x10, 0xc0, 0xb2, 0x01, 0x36, 0x85, 0x91, 0x2c, 0xf4, 0x6a, 0x5d, 0xef, 0xa7, 0x30, 0xe2, 0xd9, 0xb6, 0xef, 0xd9, 0x8c, 0x05, 0x6b, 0xe5, 0x3a, 0xbb, 0xe3, 0xb9, 0x1a, 0x29
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2037,6 +2037,28 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
+    public static AdapterRole ReadAdapterRole(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return AdapterRole.All[reader.ReadEnum(AdapterRole.All.Count)];
+    }
+
+    public static void WriteAdapterRole(WireWriter writer, AdapterRole value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(AdapterRole.All, value));
+    }
+
+    public static CapabilityStatus ReadCapabilityStatus(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return CapabilityStatus.All[reader.ReadEnum(CapabilityStatus.All.Count)];
+    }
+
+    public static void WriteCapabilityStatus(WireWriter writer, CapabilityStatus value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(CapabilityStatus.All, value));
+    }
+
     public static DevicePlatform ReadDevicePlatform(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return DevicePlatform.All[reader.ReadEnum(DevicePlatform.All.Count)];
@@ -2090,6 +2112,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(DownloadTextField.All, value));
+    }
+
+    public static EngineCapability ReadEngineCapability(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return EngineCapability.All[reader.ReadEnum(EngineCapability.All.Count)];
+    }
+
+    public static void WriteEngineCapability(WireWriter writer, EngineCapability value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(EngineCapability.All, value));
     }
 
     public static NumberedSelectionTarget ReadNumberedSelectionTarget(WireReader reader) {

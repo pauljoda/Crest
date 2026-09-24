@@ -120,7 +120,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     /// The engine capability the destination's whole subject depends on. An
     /// engine without it never offers the destination.
-    let requiredCapability: BrowserEngineCapability?
+    let requiredCapability: EngineCapability?
 
     var id: String { name }
 
@@ -129,7 +129,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     private init(
         kind: Kinds, name: String, title: LocalizedStringResource, navigationTitle: LocalizedStringResource? = nil,
         subtitle: LocalizedStringResource, searchTerms: LocalizedStringResource, symbol: String, color: Color,
-        requiredCapability: BrowserEngineCapability? = nil
+        requiredCapability: EngineCapability? = nil
     ) {
         self.kind = kind
         self.name = name

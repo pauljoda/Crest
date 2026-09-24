@@ -51,7 +51,7 @@ enum BrowserEngineRegistration {
         archiveFormat: .mhtml,
         evidence: "Native host page, lifecycle, download, permission and compositor ports; isolated app validation")
 
-    private static var desktopWebKit: [BrowserEngineCapability] {
+    private static var desktopWebKit: [EngineCapability] {
         #if os(macOS)
             [.viewportCapture, .fullPageCapture, .pdf, .webArchive, .print, .inspector, .featureFlags, .beforeUnload]
         #else

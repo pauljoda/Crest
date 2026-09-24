@@ -672,6 +672,68 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
 
 // MARK: - Fixed sets
 
+/// The members of the core's `AdapterRole`. A member's wire tag is its index in `all`.
+struct AdapterRole: Hashable, Sendable {
+    let tag: Int
+    let name: String
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        self.name = name
+    }
+
+    static let ui = AdapterRole(tag: 0, name: "ui")
+    static let engine = AdapterRole(tag: 1, name: "engine")
+    static let platform = AdapterRole(tag: 2, name: "platform")
+    static let services = AdapterRole(tag: 3, name: "services")
+
+    static let all: [AdapterRole] = [ui, engine, platform, services]
+
+    static func named(_ name: String?) -> AdapterRole? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AdapterRole, rhs: AdapterRole) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CapabilityStatus`. A member's wire tag is its index in `all`.
+struct CapabilityStatus: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let isAvailable: Bool
+
+    private init(tag: Int, name: String, isAvailable: Bool) {
+        self.tag = tag
+        self.name = name
+        self.isAvailable = isAvailable
+    }
+
+    static let supported = CapabilityStatus(tag: 0, name: "supported", isAvailable: true)
+    static let partial = CapabilityStatus(tag: 1, name: "partial", isAvailable: false)
+    static let unavailable = CapabilityStatus(tag: 2, name: "unavailable", isAvailable: false)
+    static let unverified = CapabilityStatus(tag: 3, name: "unverified", isAvailable: false)
+
+    static let all: [CapabilityStatus] = [supported, partial, unavailable, unverified]
+
+    static func named(_ name: String?) -> CapabilityStatus? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CapabilityStatus, rhs: CapabilityStatus) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `DevicePlatform`. A member's wire tag is its index in `all`.
 struct DevicePlatform: Hashable, Sendable {
     let tag: Int
@@ -1026,6 +1088,89 @@ struct DownloadTextField: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `EngineCapability`. A member's wire tag is its index in `all`.
+struct EngineCapability: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let isRequired: Bool
+
+    private init(tag: Int, name: String, isRequired: Bool) {
+        self.tag = tag
+        self.name = name
+        self.isRequired = isRequired
+    }
+
+    static let pages = EngineCapability(tag: 0, name: "pages", isRequired: true)
+    static let navigation = EngineCapability(tag: 1, name: "navigation", isRequired: true)
+    static let find = EngineCapability(tag: 2, name: "find", isRequired: false)
+    static let zoom = EngineCapability(tag: 3, name: "zoom", isRequired: false)
+    static let interactionState = EngineCapability(tag: 4, name: "interaction-state", isRequired: false)
+    static let pageResidency = EngineCapability(tag: 5, name: "page-residency", isRequired: false)
+    static let popups = EngineCapability(tag: 6, name: "popups", isRequired: false)
+    static let workspaceProfiles = EngineCapability(tag: 7, name: "workspace-profiles", isRequired: true)
+    static let workspaceTransfer = EngineCapability(tag: 8, name: "workspace-transfer", isRequired: false)
+    static let profileDeletion = EngineCapability(tag: 9, name: "profile-deletion", isRequired: true)
+    static let contentBlocking = EngineCapability(tag: 10, name: "content-blocking", isRequired: false)
+    static let downloads = EngineCapability(tag: 11, name: "downloads", isRequired: false)
+    static let permissions = EngineCapability(tag: 12, name: "permissions", isRequired: false)
+    static let reader = EngineCapability(tag: 13, name: "reader", isRequired: false)
+    static let translation = EngineCapability(tag: 14, name: "translation", isRequired: false)
+    static let selectionTranslation = EngineCapability(tag: 15, name: "selection-translation", isRequired: false)
+    static let localFiles = EngineCapability(tag: 16, name: "local-files", isRequired: false)
+    static let extensions = EngineCapability(tag: 17, name: "extensions", isRequired: false)
+    static let viewportCapture = EngineCapability(tag: 18, name: "viewport-capture", isRequired: false)
+    static let fullPageCapture = EngineCapability(tag: 19, name: "full-page-capture", isRequired: false)
+    static let pdf = EngineCapability(tag: 20, name: "pdf", isRequired: false)
+    static let webArchive = EngineCapability(tag: 21, name: "web-archive", isRequired: false)
+    static let print = EngineCapability(tag: 22, name: "print", isRequired: false)
+    static let inspector = EngineCapability(tag: 23, name: "inspector", isRequired: false)
+    static let featureFlags = EngineCapability(tag: 24, name: "feature-flags", isRequired: false)
+    static let beforeUnload = EngineCapability(tag: 25, name: "before-unload", isRequired: false)
+    static let internalPages = EngineCapability(tag: 26, name: "internal-pages", isRequired: false)
+
+    static let all: [EngineCapability] = [
+        pages,
+        navigation,
+        find,
+        zoom,
+        interactionState,
+        pageResidency,
+        popups,
+        workspaceProfiles,
+        workspaceTransfer,
+        profileDeletion,
+        contentBlocking,
+        downloads,
+        permissions,
+        reader,
+        translation,
+        selectionTranslation,
+        localFiles,
+        extensions,
+        viewportCapture,
+        fullPageCapture,
+        pdf,
+        webArchive,
+        print,
+        inspector,
+        featureFlags,
+        beforeUnload,
+        internalPages
+    ]
+
+    static func named(_ name: String?) -> EngineCapability? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: EngineCapability, rhs: EngineCapability) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
 struct NumberedSelectionTarget: Hashable, Sendable {
     let tag: Int
@@ -1118,7 +1263,7 @@ struct ShortcutCommand: Hashable, Sendable {
     let searchTerms: LocalizedStringResource?
     let menuTitle: LocalizedStringResource?
     let symbol: String
-    let requiredCapability: String?
+    let requiredCapability: EngineCapability?
     let selects: NumberedSelectionTarget?
     let number: Int?
     let defaultShortcuts: [ShortcutDefault]
@@ -1132,7 +1277,7 @@ struct ShortcutCommand: Hashable, Sendable {
         searchTerms: LocalizedStringResource?,
         menuTitle: LocalizedStringResource?,
         symbol: String,
-        requiredCapability: String?,
+        requiredCapability: EngineCapability?,
         selects: NumberedSelectionTarget?,
         number: Int?,
         defaultShortcuts: [ShortcutDefault]
@@ -2169,7 +2314,7 @@ struct ShortcutCommand: Hashable, Sendable {
         searchTerms: LocalizedStringResource("reader reading mode"),
         menuTitle: nil,
         symbol: "doc.plaintext",
-        requiredCapability: "reader",
+        requiredCapability: EngineCapability.reader,
         selects: nil,
         number: nil,
         defaultShortcuts: []
@@ -2183,7 +2328,7 @@ struct ShortcutCommand: Hashable, Sendable {
         searchTerms: LocalizedStringResource("ads trackers privacy protection"),
         menuTitle: nil,
         symbol: "shield",
-        requiredCapability: "content-blocking",
+        requiredCapability: EngineCapability.contentBlocking,
         selects: nil,
         number: nil,
         defaultShortcuts: []
@@ -2706,7 +2851,7 @@ struct ShortcutCommand: Hashable, Sendable {
         searchTerms: LocalizedStringResource("translate translation language toolbar show hide"),
         menuTitle: nil,
         symbol: "translate",
-        requiredCapability: "translation",
+        requiredCapability: EngineCapability.translation,
         selects: nil,
         number: nil,
         defaultShortcuts: [

@@ -164,10 +164,10 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand SelectSpace9 = SelectingSpace(name: "selectSpace9", number: 9);
     public static readonly ShortcutCommand ToggleReaderMode = new(Kinds.ToggleReaderMode, name: "toggleReaderMode",
         ShortcutSection.Page, title: "Show or Hide Reader", symbol: "doc.plaintext", searchTerms: "reader reading mode",
-        requiredCapability: EngineCapabilities.Reader);
+        requiredCapability: EngineCapability.Reader);
     public static readonly ShortcutCommand ToggleContentBlocking = new(Kinds.ToggleContentBlocking,
         name: "toggleContentBlocking", ShortcutSection.Page, title: "Toggle Content Blocking", symbol: "shield",
-        searchTerms: "ads trackers privacy protection", requiredCapability: EngineCapabilities.ContentBlocking);
+        searchTerms: "ads trackers privacy protection", requiredCapability: EngineCapability.ContentBlocking);
     public static readonly ShortcutCommand FindInPage = new(Kinds.FindInPage, name: "findInPage", ShortcutSection.Page,
         title: "Find in Page", symbol: "text.magnifyingglass", shortcuts: Everywhere(Character("f", Command)));
     public static readonly ShortcutCommand ZoomIn = new(Kinds.ZoomIn, name: "zoomIn", ShortcutSection.Page, title: "Zoom In",
@@ -244,7 +244,7 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ToggleTranslationToolbar = new(Kinds.ToggleTranslationToolbar,
         name: "toggleTranslationToolbar", ShortcutSection.View, title: "Show or Hide Translation Toolbar", symbol: "translate",
         shortcuts: Everywhere(Character("l", Command | Shift)), searchTerms: "translate translation language toolbar show hide",
-        requiredCapability: EngineCapabilities.Translation);
+        requiredCapability: EngineCapability.Translation);
     public static readonly ShortcutCommand OpenFile = new(Kinds.OpenFile, name: "openFile", ShortcutSection.Everyday,
         title: "Open File", symbol: "folder", searchTerms: "open local file document html pdf archive webarchive mhtml",
         menuTitle: "Open File…");
@@ -286,11 +286,10 @@ public sealed class ShortcutCommand {
     /// The SF Symbol shown beside the command.
     public string Symbol { get; }
 
-    /// The engine capability, in its descriptor spelling, that the command's
-    /// whole feature depends on. An engine without it never offers the command.
-    /// Document actions an active page may lack, such as printing, stay offered
-    /// and are dimmed by the page instead.
-    public string? RequiredCapability { get; }
+    /// The engine capability the command's whole feature depends on. An engine
+    /// without it never offers the command. Document actions an active page may
+    /// lack, such as printing, stay offered and are dimmed by the page instead.
+    public EngineCapability? RequiredCapability { get; }
 
     /// What a numbered command selects from, and the position it selects,
     /// counting from one. Both are null for every other command.
@@ -307,7 +306,7 @@ public sealed class ShortcutCommand {
 
     private ShortcutCommand(Kinds kind, string name, ShortcutSection section, string title, string symbol,
         IReadOnlyList<ShortcutDefault>? shortcuts = null, string? searchTerms = null, string? menuTitle = null,
-        string? requiredCapability = null, NumberedSelectionTarget? selects = null, int? number = null) {
+        EngineCapability? requiredCapability = null, NumberedSelectionTarget? selects = null, int? number = null) {
         Kind = kind;
         Name = name;
         Section = section;

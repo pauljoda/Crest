@@ -88,15 +88,15 @@ public static class Protocol {
         var e = Parse(bytes);
         Members(e, "adapterId", "role", "implementationId", "implementationVersion", "protocolVersion", "capabilities");
         if (e.GetProperty("protocolVersion").GetInt32() != Version) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
-        string id = Endpoint(e, "adapterId"), role = Text(e, "role");
-        if (id == "core" || !AdapterRoles.Includes(role)) throw new ProtocolException(ProtocolErrorCodes.InvalidAdapter);
+        string id = Endpoint(e, "adapterId");
+        var role = AdapterRole.Named(Text(e, "role"));
+        if (id == "core" || role is null) throw new ProtocolException(ProtocolErrorCodes.InvalidAdapter);
         var capabilities = new Dictionary<string, Capability>();
         foreach (var p in e.GetProperty("capabilities").EnumerateObject()) {
             if (capabilities.Count >= 128 || p.Name.Length > 128) throw new ProtocolException(ProtocolErrorCodes.CapabilityLimit);
             var c = p.Value;
             Members(c, "status", "contractVersion", "scope", "limitations", "evidence");
-            string status = Text(c, "status");
-            if (!CapabilityStatuses.Includes(status)) throw new ProtocolException(ProtocolErrorCodes.InvalidStatus);
+            var status = CapabilityStatus.Named(Text(c, "status")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidStatus);
             int version = c.GetProperty("contractVersion").GetInt32();
             if (version < 1) throw new ProtocolException(ProtocolErrorCodes.InvalidVersion);
             var limits = c.GetProperty("limitations").EnumerateArray().Select(l => l.GetString() ?? throw new ProtocolException(ProtocolErrorCodes.InvalidLimit)).ToArray();

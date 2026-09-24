@@ -199,7 +199,7 @@ struct BrowserCommandActions {
         supportsPageCapability(.zoom) && pages.activePage?.developerViewport == nil
     }
 
-    private func supportsPageCapability(_ capability: BrowserEngineCapability) -> Bool {
+    private func supportsPageCapability(_ capability: EngineCapability) -> Bool {
         pages.hasActivePage && pages.activePage?.pageEngine.registration.supports(capability) == true
     }
 
@@ -207,7 +207,7 @@ struct BrowserCommandActions {
     /// the window rather than the document in it, so they stay available in the
     /// moment before a page exists. The active page's own engine still answers
     /// whenever there is one.
-    private func supportsEngineCapability(_ capability: BrowserEngineCapability) -> Bool {
+    private func supportsEngineCapability(_ capability: EngineCapability) -> Bool {
         (pages.activePage?.pageEngine.registration ?? BrowserEngineRegistration.current)
             .supports(capability)
     }

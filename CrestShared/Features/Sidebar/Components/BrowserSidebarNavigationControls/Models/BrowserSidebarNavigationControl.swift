@@ -13,7 +13,8 @@ struct BrowserSidebarNavigationControl: Hashable, Sendable {
         navigateToItem: { $0.goBackToHistoryItem($1) })
     static let forward = BrowserSidebarNavigationControl(
         name: "forward", systemImage: "chevron.right", accessibilityLabel: "Forward",
-        accessibilityIdentifier: "browser-forward-control", tooltip: "Forward (⌘])", emptyHistoryTitle: "No Later Pages",
+        accessibilityIdentifier: "browser-forward-control", tooltip: "Forward (⌘])",
+        emptyHistoryTitle: "No Later Pages",
         isAvailable: { $0.canGoForward() }, history: { $0.forwardHistory() }, navigate: { $0.goForward() },
         navigateToItem: { $0.goForwardToHistoryItem($1) })
 

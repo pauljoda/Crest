@@ -12,11 +12,6 @@ extension ShortcutCommand {
     /// than shown permanently dimmed, and it cannot claim a chord either.
     static let offered = all.filter { $0.isOffered(by: BrowserEngineRegistration.current) }
 
-    /// The engine capability the command's entire feature depends on.
-    var requiredEngineCapability: BrowserEngineCapability? {
-        requiredCapability.flatMap(BrowserEngineCapability.init(rawValue:))
-    }
-
     var isOfferedByCurrentEngine: Bool {
         isOffered(by: BrowserEngineRegistration.current)
     }
@@ -29,7 +24,7 @@ extension ShortcutCommand {
     // MARK: - Actions - Offering
 
     func isOffered(by registration: BrowserAdapterRegistration) -> Bool {
-        requiredEngineCapability.map(registration.supports) ?? true
+        requiredCapability.map(registration.supports) ?? true
     }
 
     // MARK: - Actions - Numbered selection
@@ -45,24 +40,4 @@ extension ShortcutCommand {
 
 extension ShortcutCommand: Identifiable {
     var id: String { name }
-}
-
-// MARK: - Codable
-
-/// A command crosses JSON policy requests and answers as its stored name.
-extension ShortcutCommand: Codable {
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let name = try container.decode(String.self)
-        guard let command = Self.named(name) else {
-            throw DecodingError.dataCorruptedError(
-                in: container, debugDescription: "Unknown shortcut command \(name)")
-        }
-        self = command
-    }
-
-    func encode(to encoder: any Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(name)
-    }
 }
