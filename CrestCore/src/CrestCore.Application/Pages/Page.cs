@@ -81,7 +81,7 @@ internal sealed class Page {
     /// document begins one only when it reaches another page: a fragment is
     /// part of the page it names, and the document keeps its icon.
     public void Commit(string url, bool sameDocument) {
-        if (sameDocument && HistoryPolicy.SamePage(documentUrl, url)) return;
+        if (sameDocument && documentUrl is { } shown && new WebAddress(shown).IsSamePage(new WebAddress(url))) return;
         documentUrl = url;
         isRecorded = false;
         if (!sameDocument) Icon = null;

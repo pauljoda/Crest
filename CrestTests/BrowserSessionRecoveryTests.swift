@@ -64,30 +64,6 @@ final class BrowserSessionRecoveryTests: XCTestCase {
         XCTAssertEqual(decoded.spaces[0].tabs.count, session.spaces[0].tabs.count)
     }
 
-    func testATabIconModeThisBuildHasNeverHeardOfFallsBackToTheTabsOwnSymbol() throws {
-        var session = try makeSessionWithHistory()
-        session.spaces[0].tabs[0].iconMode = .pulled
-        session.spaces[0].tabs[1].symbol = BrowserTab.symbol(forEmoji: "🧭")
-        session.spaces[0].tabs[1].iconMode = .emoji
-        let data = try encoded(session) { payload in
-            payload.spaces[0].tabs[0]["storedIconMode"] = "generated"
-            payload.spaces[0].tabs[1]["storedIconMode"] = "generated"
-        }
-
-        let decoded = try JSONDecoder().decode(BrowserSession.self, from: data)
-
-        XCTAssertEqual(
-            decoded.spaces[0].tabs[0].iconMode,
-            .automatic,
-            "An unknown mode means 'no stored mode', which a plain tab derives as automatic."
-        )
-        XCTAssertEqual(
-            decoded.spaces[0].tabs[1].iconMode,
-            .emoji,
-            "A tab wearing an emoji symbol derives emoji, exactly as a pre-modes tab does."
-        )
-    }
-
     func testAnAccessPolicyThisBuildHasNeverHeardOfKeepsTheSpaceGuarded() throws {
         var session = try makeSessionWithHistory()
         session.spaces[0].accessPolicy = .deviceOwnerAuthentication

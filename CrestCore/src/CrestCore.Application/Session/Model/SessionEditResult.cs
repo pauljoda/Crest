@@ -46,11 +46,11 @@ internal sealed record SessionTabEvents(IReadOnlyList<SessionTabCopy> Copies, Se
 /// edited Space afterwards and <paramref name="SelectSpace"/> whether it switches to
 /// that Space; the device applies both to that window when the edit commits.</summary>
 internal sealed record SessionEditResult(BrowserTabCollection Edited, Guid? TabId, Guid? SelectedTabId, bool SelectSpace,
-    IReadOnlyList<SessionTabCopy> Copies, bool Changed, SessionFaviconUpdate? Favicon) {
+    IReadOnlyList<SessionTabCopy> Copies, bool Changed) {
     #region Variables
 
     /// What the edit did that its sessions cannot tell.
-    public SessionTabEvents Events => new(Copies, Favicon);
+    public SessionTabEvents Events => new(Copies, null);
 
     #endregion
 
@@ -65,11 +65,7 @@ internal sealed record SessionEditResult(BrowserTabCollection Edited, Guid? TabI
             ["source"] = item.Source.ToString("D"),
             ["copy"] = item.Copy.ToString("D")
         }).ToArray()),
-        ["changed"] = Changed,
-        ["favicon"] = Favicon is { } favicon ? new JsonObject {
-            ["tabId"] = favicon.TabId.ToString("D"),
-            ["adopts"] = favicon.Adopts
-        } : null
+        ["changed"] = Changed
     };
 
     #endregion

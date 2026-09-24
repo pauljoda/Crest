@@ -52,7 +52,7 @@ public sealed partial class NativeSessionAuthority {
 
     private SessionEdit RemovingHistory(SessionState basis, RemoveHistoryAddress intent) {
         var space = Editable(basis, intent.SpaceId);
-        var address = HistoryPolicy.Normalize(intent.Address);
+        var address = new WebAddress(intent.Address).Normalized;
         return new(Replacing(basis, WithoutHistory(space, entry => address is not null && entry.Url == address)), SyncStaging.Deletion);
     }
 

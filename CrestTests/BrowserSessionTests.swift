@@ -16,32 +16,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertTrue(decoded.history.isEmpty)
     }
 
-    func testPinnedAndSavedTabsTrackWhenTheyLeaveTheirSavedLocation() throws {
-        var pinned = BrowserTab(
-            title: "Home",
-            url: URL(string: "https://example.com/home#current"),
-            savedURL: URL(string: "https://example.com/home#saved"),
-            placement: .pinned
-        )
-
-        XCTAssertTrue(pinned.supportsSavedLocationEditing)
-        XCTAssertFalse(
-            pinned.isAwayFromSavedLocation,
-            "Fragment-only navigation should still count as the saved page."
-        )
-
-        pinned.url = URL(string: "https://example.com/another-page")
-        XCTAssertTrue(pinned.isAwayFromSavedLocation)
-
-        let current = BrowserTab(
-            title: "Current",
-            url: try XCTUnwrap(URL(string: "https://example.com/current")),
-            placement: .current
-        )
-        XCTAssertFalse(current.supportsSavedLocationEditing)
-        XCTAssertFalse(current.isAwayFromSavedLocation)
-    }
-
     func testTabSectionsPartitionLargeFolderedSpaceInOneStableOrder() {
         let firstFolderID = FolderID()
         let secondFolderID = FolderID()
@@ -354,31 +328,6 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(
             decoded.positionModifiedAt,
             Date(timeIntervalSinceReferenceDate: 200)
-        )
-    }
-
-    func testABlankStoredCustomTitleFallsBackToThePageTitle() throws {
-        let json = """
-            {
-              "id": {"rawValue": "F0000000-0000-0000-0000-000000000002"},
-              "title": "Docs",
-              "url": "https://example.com/docs",
-              "symbol": "globe",
-              "placement": "current",
-              "lastActivatedAt": 100,
-              "customTitle": "   "
-            }
-            """
-
-        let decoded = try JSONDecoder().decode(
-            BrowserTab.self,
-            from: try XCTUnwrap(json.data(using: .utf8))
-        )
-
-        XCTAssertEqual(
-            decoded.displayTitle,
-            "Docs",
-            "A blank name that arrived through storage or sync is not a rename."
         )
     }
 

@@ -8,6 +8,9 @@ namespace CrestCore.Domain;
 public sealed class BrowserTab {
     #region Variables
 
+    /// The most characters a rename keeps.
+    public const int MaximumTitleLength = 4096;
+
     public TabState State { get; private set; }
 
     public Guid Id => State.Id;
@@ -21,19 +24,8 @@ public sealed class BrowserTab {
     public Guid? SplitGroupId => State.SplitGroupId;
     public DateTimeOffset LastActivatedAt => State.LastActivatedAt;
 
-    /// How the tab's icon is filled: its stored mode, or the one its symbol
-    /// implies for a tab written before modes were stored.
-    public TabIconMode IconMode => State.StoredIconMode ?? TabIconMode.Inferred(State.Symbol);
+    public TabIconMode IconMode => State.IconMode;
     public bool KeepsPageLoaded => State.KeepsPageLoaded;
-
-    /// The address a saved or pinned tab belongs to. A current tab has none:
-    /// it is wherever browsing took it, which is why it cannot be "away".
-    public string? SavedSiteUrl => SavedUrl ?? (Placement.IsDurable ? Url : null);
-
-    public bool SupportsSavedLocationEditing => Placement.IsDurable && SavedSiteUrl is not null;
-
-    public bool IsAwayFromSavedLocation
-        => SupportsSavedLocationEditing && Url is not null && !HistoryPolicy.SamePage(Url, SavedSiteUrl);
 
     #endregion
 
@@ -86,22 +78,21 @@ public sealed class BrowserTab {
 
     #endregion
 
-    #region Actions - Saved location
+    #region Actions - Saved address
 
-    /// Adopts the page the tab is actually showing as the one it belongs to.
-    public bool ReplaceSavedLocation() {
-        if (!IsAwayFromSavedLocation || Url is not { } url) return false;
-        State = State with { SavedUrl = url };
-        return true;
+    /// Adopts the page the tab shows as the one it belongs to. A tab at its
+    /// saved address keeps it. Refused with `NoSavedAddress` for a tab that
+    /// belongs nowhere.
+    public void ReplaceSavedAddress() {
+        _ = RequiredSavedAddress();
+        if (State.IsAwayFromSavedAddress) State = State with { SavedUrl = Url };
     }
 
-    /// Returns the tab to the address it belongs to, and reports it so the
-    /// platform can navigate the live page to the same place.
-    public string? RestoreSavedLocation() {
-        if (!SupportsSavedLocationEditing || SavedSiteUrl is not { } saved) return null;
-        State = State with { Url = saved };
-        return saved;
-    }
+    /// Returns the tab to the address it belongs to, which its page then
+    /// loads. Refused with `NoSavedAddress` for a tab that belongs nowhere.
+    public void ReturnToSavedAddress() => State = State with { Url = RequiredSavedAddress() };
+
+    private string RequiredSavedAddress() => State.SavedAddress ?? throw new Rejected(new NoSavedAddress(Id));
 
     #endregion
 
@@ -113,7 +104,17 @@ public sealed class BrowserTab {
 
     public void SetFavicon(string? url, TabIconAccent? accent) => State = State with { FaviconUrl = url, IconAccent = accent };
 
-    public void SetIconMode(TabIconMode mode) => State = State with { StoredIconMode = mode };
+    /// The person chose how the icon is filled: a pulled favicon keeps the
+    /// page's address and `accent` behind it, and any other choice keeps none.
+    /// Answers whether the tab wears the image its chooser holds. Refused with
+    /// `InvalidTabIcon` when the mode can make no icon from `emoji`.
+    public bool ChooseIcon(TabIconMode mode, string? emoji, TabIconAccent? accent) {
+        ArgumentNullException.ThrowIfNull(mode);
+        SetIcon(mode.Symbol(emoji) ?? throw new Rejected(new InvalidTabIcon(mode)));
+        SetFavicon(mode.RequiresFavicon ? Url : null, mode.RequiresFavicon ? accent : null);
+        State = State with { StoredIconMode = mode };
+        return mode.RequiresFavicon;
+    }
 
     /// The page reported an icon for the document at `url`, which the tab
     /// shows. An icon that follows its page wears it, with the color the
@@ -130,13 +131,14 @@ public sealed class BrowserTab {
 
     #region Mutators
 
+    /// Names the tab, trimmed; a blank name hands it back to its page's title.
+    /// The name it already has changes nothing. Refused with `InvalidName`
+    /// past `MaximumTitleLength`.
     public void Rename(string? title, DateTimeOffset now) {
-        title = title?.Trim();
-        if (title?.Length > 4096) throw new BrowserRuleException(BrowserRuleCodes.InvalidTitle);
-        State = State with {
-            CustomTitle = string.IsNullOrEmpty(title) ? null : title,
-            TitleModifiedAt = BrowserEditTimestamp.Normalize(now)
-        };
+        var custom = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
+        if (custom == CustomTitle) return;
+        if (custom?.Length > MaximumTitleLength) throw new Rejected(new InvalidName(MaximumTitleLength));
+        State = State with { CustomTitle = custom, TitleModifiedAt = BrowserEditTimestamp.Normalize(now) };
     }
 
     public void SetResidency(bool keepLoaded) => State = State with { KeepsPageLoaded = keepLoaded };

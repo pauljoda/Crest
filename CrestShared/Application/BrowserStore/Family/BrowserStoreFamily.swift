@@ -238,15 +238,14 @@ final class BrowserStoreFamily {
     /// A core answer read from the owned session without changing it.
     func readCore<Request: Encodable>(_ request: Request) -> Data? { try? core.read(request) }
 
-    /// Runs a tab command. `image` is the image a page
-    /// reported, which the tab the core assigns it to wears.
+    /// Runs a tab command.
     func execute<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
-        arguments: Arguments, from source: BrowserStore, at date: Date, image: Data? = nil)
+        arguments: Arguments, from source: BrowserStore, at date: Date)
         -> BrowserCoreSessionEditing.Result? {
         let previous = authoritativeSession
         do {
             let result = try core.execute(
-                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date, image: image)
+                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
             reconcileStores(after: previous, from: source)
             return result
         } catch {
@@ -261,18 +260,26 @@ final class BrowserStoreFamily {
     /// session changed; a refusal changes nothing, and the window's sync
     /// status reports it after `failure`.
     @discardableResult
-    func send(_ intent: some Intent, from source: BrowserStore, failure: String = "Core command failed") -> Bool {
-        perform(intent, from: source, failure: failure)?.changed ?? false
+    func send(
+        _ intent: some Intent, from source: BrowserStore, offering image: Data? = nil,
+        failure: String = "Core command failed"
+    ) -> Bool {
+        perform(intent, from: source, offering: image, failure: failure)?.changed ?? false
     }
 
     /// Runs one session intent as `send` does, and answers the changes the
     /// core published with it and whether the session changed, or nil when a
-    /// rule refused it.
-    func perform(_ intent: some Intent, from source: BrowserStore, failure: String = "Core command failed")
-        -> (changes: [Change], changed: Bool)?
-    {
+    /// rule refused it. `image` is the image `source` holds for the tab the
+    /// core tells to adopt its issuer's, such as a favicon pulled from a page.
+    func perform(
+        _ intent: some Intent, from source: BrowserStore, offering image: Data? = nil,
+        failure: String = "Core command failed"
+    ) -> (changes: [Change], changed: Bool)? {
         let previous = authoritativeSession
         let changes: [Change]
+        let favicons = source.core.state.favicons
+        if let image { favicons.offer(FaviconAssets.Offer(assigned: image), in: workspaceID) }
+        defer { if image != nil { favicons.withdrawOffer(in: workspaceID) } }
         do {
             changes = try source.core.send(intent)
         } catch {

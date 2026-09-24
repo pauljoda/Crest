@@ -17,9 +17,10 @@ public sealed partial class BrowserContractsTests {
         return (owner, sync);
     }
 
+    /// Renames `tab` in the session's first Space through the session's own
+    /// handler, where a device routes the intent.
     private static void Rename(NativeSessionAuthority owner, JsonNode session, Guid tab, string title) =>
-        owner.PrepareCommand(SpaceCommand(session, "tab.rename", new() { ["tabId"] = tab.ToString(), ["title"] = title }))
-            .Commit();
+        owner.Handle(new RenameTab(Guid.Empty, SpaceId(session["spaces"]![0]!), tab, title), DateTimeOffset.UtcNow, new TestIds());
 
     [Fact]
     public void EditsInQuickSuccessionStageOnceWithTheNewestSession() {

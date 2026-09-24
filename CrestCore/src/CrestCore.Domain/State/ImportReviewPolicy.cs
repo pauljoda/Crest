@@ -15,7 +15,7 @@ public static class ImportReviewPolicy {
 
     /// The key two tab addresses match on: the address a history visit would
     /// record, or the address itself when history would not record it.
-    public static string UrlKey(string url) => HistoryPolicy.Normalize(url) ?? url;
+    public static string UrlKey(string url) => new WebAddress(url).Normalized ?? url;
 
     /// The starting review for each imported Space. A disposable first-install
     /// seed offers no destinations, so everything imports into new Spaces.

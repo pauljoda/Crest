@@ -49,11 +49,20 @@ public sealed partial class BrowserContractsTests {
         var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         var request = Bytes(new JsonObject {
             ["version"] = 1,
-            ["operation"] = "tab.rename",
+            ["operation"] = "tab.open",
             ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["arguments"] = new JsonObject { ["tabId"] = localTab["id"]!["rawValue"]!.DeepClone(), ["title"] = "Prepared locally" }
+            ["arguments"] = new JsonObject {
+                ["tab"] = new JsonObject {
+                    ["id"] = SwiftId(Guid.NewGuid()),
+                    ["title"] = "Prepared locally",
+                    ["url"] = "https://example.org/",
+                    ["placement"] = "current",
+                    ["symbol"] = "globe",
+                    ["lastActivatedAt"] = 800000100.0
+                }
+            }
         });
         var pending = child.PrepareCommand(request);
         owner.PrepareCommand(SpaceCommand(session, "space.identity",

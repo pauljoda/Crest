@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Requests = CrestCore.Application.NavigationPolicyRequests;
@@ -14,7 +15,7 @@ public static partial class NativePolicyEvaluator {
     private static JsonObject? EvaluateNavigation(PolicyOperation operation, JsonElement request) => operation switch {
         PolicyOperation.NavigationLink => Navigate(Requests.Link.Decode(request)),
         PolicyOperation.NavigationModifiedLink => Navigate(Requests.Link.DecodeModified(request)),
-        PolicyOperation.HistoryNormalize => new() { ["url"] = HistoryPolicy.Normalize(Requests.HistoryNormalize.Decode(request).Url) },
+        PolicyOperation.HistoryNormalize => new() { ["url"] = new WebAddress(Requests.HistoryNormalize.Decode(request).Url).Normalized },
         _ => null
     };
 

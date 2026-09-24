@@ -1,6 +1,6 @@
 import Foundation
 
-struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
+struct BrowserTab: Codable, Identifiable, Sendable {
     static let startPageTitle = "Start Page"
     static let startPageSymbol = "flag.fill"
 
@@ -24,7 +24,9 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     private(set) var faviconPayloadIdentity: BrowserFaviconPayloadIdentity?
     var faviconURL: URL?
     var iconAccent: BrowserTabIconAccent?
-    private var storedIconMode: TabIconMode?
+    /// The mode the tab chose for its icon, as the stored form keeps it, or
+    /// nil for a tab that never chose one. Views read `iconMode`.
+    var storedIconMode: TabIconMode?
     var placement: TabPlacement
     var folderID: FolderID?
     /// The split group this tab is a member of. A group is the maximal
@@ -48,6 +50,23 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     /// Explicit unloading still wins, so this is a residency preference rather
     /// than an ownership promise WebKit cannot keep under process termination.
     var keepsPageLoaded: Bool
+
+    /// What the core resolved from the stored values above, as it published
+    /// them: how the icon is filled, the name every tab surface shows, whether
+    /// a saved or pinned tab shows a page other than its saved one, and
+    /// whether the favicon it keeps was taken from the page it shows while its
+    /// icon follows the page.
+    ///
+    /// TRANSITIONAL until S6.7 deletes the session copy, whose views read them
+    /// here. A tab the core has not published, such as one this platform builds
+    /// to send it or reads from the stored form, holds a new tab's: the mode it
+    /// was given or automatic, its rename or title, at home, and no current
+    /// page icon. They take no part in comparing tabs, since the stored values
+    /// decide them.
+    private(set) var iconMode: TabIconMode
+    private(set) var displayTitle: String
+    private(set) var isAwayFromSavedLocation: Bool
+    private(set) var pageIconIsCurrent: Bool
 
     init(
         id: TabID = TabID(),
@@ -89,6 +108,10 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         self.customTitle = Self.resolvedCustomTitle(customTitle)
         self.titleModifiedAt = titleModifiedAt.map(Self.normalizedTimestamp)
         self.keepsPageLoaded = keepsPageLoaded
+        self.iconMode = iconMode ?? .automatic
+        displayTitle = self.customTitle ?? title
+        isAwayFromSavedLocation = false
+        pageIconIsCurrent = false
     }
 
     /// TRANSITIONAL until S6.7 retires the Swift session copy: a tab as the
@@ -115,6 +138,10 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         customTitle = state.customTitle
         titleModifiedAt = state.titleModifiedAt.map(Self.storedEditClock)
         keepsPageLoaded = state.keepsPageLoaded
+        iconMode = state.iconMode
+        displayTitle = state.displayTitle
+        isAwayFromSavedLocation = state.isAwayFromSavedAddress
+        pageIconIsCurrent = state.pageIconIsCurrent
     }
 
     static func startPage(
@@ -144,16 +171,6 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
 
     var supportsSavedLocationEditing: Bool {
         placement.isDurable && savedSiteURL != nil
-    }
-
-    var isAwayFromSavedLocation: Bool {
-        guard supportsSavedLocationEditing,
-            let url,
-            let savedSiteURL
-        else { return false }
-        let current = BrowserHistoryURL.normalized(url) ?? url
-        let saved = BrowserHistoryURL.normalized(savedSiteURL) ?? savedSiteURL
-        return current != saved
     }
 
     var emojiIcon: String? {
@@ -186,13 +203,6 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         return abs(normalized.timeIntervalSince(date)) < 0.000_001 ? normalized : date
     }
 
-    /// The name every tab surface renders. A rename wins over the page title;
-    /// an absent or blank one hands the tab back to the page, including a blank
-    /// that reached this device through storage or sync rather than the field.
-    var displayTitle: String {
-        Self.resolvedCustomTitle(customTitle) ?? title
-    }
-
     /// Trims a proposed rename and folds a blank one back to "no rename", so a
     /// committed empty field is how someone clears the name they chose.
     static func resolvedCustomTitle(_ title: String?) -> String? {
@@ -200,11 +210,6 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
             !trimmed.isEmpty
         else { return nil }
         return trimmed
-    }
-
-    var iconMode: TabIconMode {
-        get { storedIconMode ?? .inferred(from: symbol) }
-        set { storedIconMode = newValue }
     }
 
     var displayFaviconData: Data? {
@@ -218,15 +223,10 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         displayFaviconData == nil ? nil : faviconPayloadIdentity
     }
 
+    /// The icon follows the page, and the platform holds the favicon the
+    /// core says was taken from the page the tab shows.
     var hasCurrentAutomaticFavicon: Bool {
-        guard iconMode.followsPage,
-            faviconData != nil,
-            let faviconURL,
-            let url
-        else { return false }
-        let cached = BrowserHistoryURL.normalized(faviconURL) ?? faviconURL
-        let current = BrowserHistoryURL.normalized(url) ?? url
-        return cached == current
+        pageIconIsCurrent && faviconData != nil
     }
 
     private static func payloadIdentity(for data: Data?) -> BrowserFaviconPayloadIdentity? {
@@ -312,6 +312,27 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
                 Bool.self,
                 forKey: .keepsPageLoaded
             ) ?? false
+        iconMode = storedIconMode ?? .automatic
+        displayTitle = customTitle ?? title
+        isAwayFromSavedLocation = false
+        pageIconIsCurrent = false
+    }
+}
+
+extension BrowserTab: Equatable {
+    /// Two tabs are equal when their stored values and images are. What the
+    /// core resolved from those values follows them, and a tab it has not
+    /// published holds stand-ins, so comparing a tab read from the stored form
+    /// with the published one it describes finds no difference.
+    static func == (lhs: BrowserTab, rhs: BrowserTab) -> Bool {
+        lhs.id == rhs.id && lhs.title == rhs.title && lhs.nativeContent == rhs.nativeContent && lhs.url == rhs.url
+            && lhs.savedURL == rhs.savedURL && lhs.symbol == rhs.symbol && lhs.faviconData == rhs.faviconData
+            && lhs.faviconPayloadIdentity == rhs.faviconPayloadIdentity && lhs.faviconURL == rhs.faviconURL
+            && lhs.iconAccent == rhs.iconAccent && lhs.storedIconMode == rhs.storedIconMode
+            && lhs.placement == rhs.placement && lhs.folderID == rhs.folderID && lhs.splitGroupID == rhs.splitGroupID
+            && lhs.lastActivatedAt == rhs.lastActivatedAt && lhs.positionModifiedAt == rhs.positionModifiedAt
+            && lhs.customTitle == rhs.customTitle
+            && lhs.titleModifiedAt == rhs.titleModifiedAt && lhs.keepsPageLoaded == rhs.keepsPageLoaded
     }
 }
 

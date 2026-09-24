@@ -43,7 +43,7 @@ public static class LinkRoutingPolicy {
         return route.Match.Matches(Normalized(url), pattern, Normalized);
     }
 
-    private static string Normalized(string address) => HistoryPolicy.Normalize(address) ?? address;
+    private static string Normalized(string address) => new WebAddress(address).Normalized ?? address;
 
     #endregion
 }

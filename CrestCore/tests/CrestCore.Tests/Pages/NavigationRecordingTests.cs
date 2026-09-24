@@ -178,10 +178,19 @@ public sealed partial class BrowserContractsTests {
         var authority = new NativeSessionAuthority(Bytes(session));
         var (app, engine, page, _) = NavigatingPage(authority, session);
         using var disposal = app;
-        var rename = authority.PrepareCommand(SpaceCommand(session, "tab.rename",
-            new() { ["tabId"] = FirstTab(authority).Id.ToString(), ["title"] = "Renamed" }));
+        var opened = Guid.NewGuid();
+        var opening = authority.PrepareCommand(SpaceCommand(session, "tab.open", new() {
+            ["tab"] = new JsonObject {
+                ["id"] = SwiftId(opened),
+                ["title"] = "Opened",
+                ["url"] = "https://example.org/opened",
+                ["placement"] = "current",
+                ["symbol"] = "globe",
+                ["lastActivatedAt"] = 800000001.0
+            }
+        }));
 
-        var reserved = rename.Reserve();
+        var reserved = opening.Reserve();
         app.Report(engine, new NavigationCommitted(page, "https://example.org/during", SameDocument: false));
         app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
         Assert.Empty(Own(app.Drain()));
@@ -190,8 +199,8 @@ public sealed partial class BrowserContractsTests {
         reserved.Commit();
         var changes = Own(app.Drain());
         Assert.Single(changes.OfType<NavigationRecorded>());
-        Assert.Equal(("Renamed", "https://example.org/during", "During"),
-            (FirstTab(authority).CustomTitle, FirstTab(authority).Url, FirstTab(authority).Title));
+        Assert.Contains(authority.Current.Spaces[0].Tabs, tab => tab.Id == opened);
+        Assert.Equal(("https://example.org/during", "During"), (FirstTab(authority).Url, FirstTab(authority).Title));
         Assert.Equal(("https://example.org/during", 1), (History(authority)[0].Url, History(authority)[0].VisitCount));
         app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
         Assert.Empty(Own(app.Drain()));
@@ -204,9 +213,9 @@ public sealed partial class BrowserContractsTests {
         var (app, engine, page, workspace) = NavigatingPage(authority, session);
         using var disposal = app;
         var tab = FirstTab(authority).Id;
-        void Choose(string mode, string? emoji = null) => authority.PrepareCommand(SpaceCommand(session, "tab.icon",
-            new() { ["tabId"] = tab.ToString(), ["mode"] = mode, ["emoji"] = emoji })).Commit();
-        Choose("automatic");
+        var space = authority.Current.Spaces[0].Id;
+        void Choose(TabIconMode mode, string? emoji = null) => app.Send(new ChooseTabIcon(workspace, space, tab, mode, emoji, null));
+        Choose(TabIconMode.Automatic);
         app.Drain();
         var accent = new TabIconAccent(0.5, 0.25, 0.125);
 
@@ -229,7 +238,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("https://example.org/", FirstTab(authority).FaviconUrl);
 
         // A chosen icon is never replaced by the page's.
-        Choose("emoji", "📚");
+        Choose(TabIconMode.Emoji, "📚");
         app.Drain();
         app.Report(engine, new PageIconChanged(page, "https://example.net/", accent));
         Assert.Empty(Own(app.Drain()));

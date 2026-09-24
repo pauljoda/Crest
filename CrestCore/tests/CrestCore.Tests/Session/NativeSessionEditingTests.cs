@@ -42,8 +42,11 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("Stored native title", tab.Title);
 
         // A rename runs the Space through the domain and back to its stored form.
-        var renamed = Edited(session["spaces"]![0]!, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Renamed" });
-        var output = renamed["space"]!["tabs"]![0]!;
+        var core = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(core);
+        device.Send(new RenameTab(device.Workspace, fixture.Space, fixture.Tab, "Renamed"));
+        var output = StoredSessionCodec.Encode(core.Current)["spaces"]![0]!["tabs"]![0]!;
+        Assert.Equal("Renamed", output["customTitle"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(saved["nativeContent"], output["nativeContent"]));
         Assert.Equal("Stored native title", output["title"]!.GetValue<string>());
         Assert.Null(output["url"]);
@@ -129,14 +132,13 @@ public sealed partial class BrowserContractsTests {
     public void SessionEditIgnoresFieldsUnrelatedToTheSelectedOperation() {
         var fixture = SavedSession();
         var space = fixture.Document["session"]!["spaces"]![0]!;
-        var output = Edited(space, "tab.rename", new() {
+        var output = Edited(space, "tab.delete", new() {
             ["tabId"] = fixture.Tab.ToString("D"),
-            ["title"] = "Readable name",
             ["ids"] = "unrelated invalid list",
             ["placement"] = new JsonObject { ["unexpected"] = true }
         });
 
-        Assert.Equal("Readable name", output["space"]!["tabs"]![0]!["customTitle"]!.GetValue<string>());
+        Assert.Empty(output["space"]!["tabs"]!.AsArray());
     }
 
     [Fact]

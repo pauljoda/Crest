@@ -121,12 +121,17 @@ internal sealed record KindsField(Type Type) : FieldType;
 
 internal sealed record ContractField(string Name, FieldType Type);
 
-/// A sealed positional record. Only its primary-constructor parameters cross the wire.
-internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fields) {
+/// A sealed positional record. Its primary-constructor parameters cross the
+/// wire, followed by the values the core resolves from them: its `[Resolved]`
+/// computed properties, which the core writes and never reads back.
+internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fields, IReadOnlyList<ContractField> Resolved) {
     /// The field that names a record, which an observed model keeps as its identity.
     public const string IdentityField = "Id";
 
     public string Name => Type.Name;
+
+    /// What crosses the wire, in order: the fields, then the resolved values.
+    public IReadOnlyList<ContractField> Wire => [.. Fields, .. Resolved];
 
     /// The Apple read model keeps it as an object observed field by field.
     public bool IsObserved => Type.IsDefined(typeof(ObservedAttribute), inherit: false);
@@ -313,7 +318,8 @@ internal sealed class ContractSchema {
             throw new ContractSchemaException($"{type.Name}: a contract record needs exactly one public (primary) constructor.");
         // Register before resolving fields so a record may refer to itself through a list or an optional.
         var fields = new List<ContractField>();
-        var record = new ContractRecord(type, fields);
+        var resolved = new List<ContractField>();
+        var record = new ContractRecord(type, fields, resolved);
         records[type] = record;
         foreach (var parameter in constructors[0].GetParameters()) {
             string where = $"{type.Name}.{parameter.Name}";
@@ -321,6 +327,14 @@ internal sealed class ContractSchema {
             if (property is null || property.PropertyType != parameter.ParameterType)
                 throw new ContractSchemaException($"{where}: every constructor parameter must be a positional property.");
             fields.Add(new ContractField(parameter.Name!, Resolve(parameter.ParameterType, nullability.Create(parameter), where)));
+        }
+        foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(property => property.IsDefined(typeof(ResolvedAttribute), false)).OrderBy(property => property.MetadataToken)) {
+            string where = $"{type.Name}.{property.Name}";
+            if (fields.Any(field => field.Name == property.Name) || property.SetMethod is not null
+                || property.GetIndexParameters().Length > 0)
+                throw new ContractSchemaException($"{where}: a [Resolved] value is a get-only computed property, not a field.");
+            resolved.Add(new ContractField(property.Name, Resolve(property.PropertyType, nullability.Create(property), where)));
         }
         return record;
     }
@@ -516,6 +530,9 @@ internal sealed class ContractSchema {
             case RecordField record:
                 if (!visiting.Add(record.Type))
                     throw new ContractSchemaException($"{where}: a record held as set data cannot contain itself.");
+                if (records[record.Type].Resolved.Count > 0)
+                    throw new ContractSchemaException($"{where}: a record held as set data cannot have [Resolved] values, which "
+                        + "only the core computes.");
                 foreach (var field in records[record.Type].Fields)
                     EnsureSpellable(field.Type, $"{record.Type.Name}.{field.Name}", visiting);
                 visiting.Remove(record.Type);
@@ -608,14 +625,14 @@ internal sealed class ContractSchema {
         if (duplicate is not null)
             throw new ContractSchemaException($"{duplicate.Key}: contract type names must be unique, because Swift has one namespace.");
         foreach (var record in records.Values)
-            foreach (var field in record.Fields) ValidateLists(field.Type, $"{record.Name}.{field.Name}");
+            foreach (var field in record.Wire) ValidateLists(field.Type, $"{record.Name}.{field.Name}");
         foreach (var record in records.Values.Where(record => record.IsObserved)) ValidateObserved(record);
     }
 
     /// An observed model reads its record back through `value` and is told
     /// apart from its siblings by a GUID identity.
     private static void ValidateObserved(ContractRecord record) {
-        if (record.Fields.FirstOrDefault(field => field.Name == ObservedValue) is { } value)
+        if (record.Wire.FirstOrDefault(field => field.Name == ObservedValue) is { } value)
             throw new ContractSchemaException($"{record.Name}.{value.Name}: an [Observed] record's model reads the record as `value`; "
                 + "give the field another name.");
         if (record.Fields.FirstOrDefault(field => field.Name == ContractRecord.IdentityField) is { } identity
@@ -652,7 +669,7 @@ internal sealed class ContractSchema {
     private int RecordMinimumSize(Type type, HashSet<Type> visiting) {
         if (!visiting.Add(type))
             throw new ContractSchemaException($"{type.Name}: a record cannot contain itself except through a list or an optional.");
-        int size = records[type].Fields.Sum(field => MinimumSize(field.Type, visiting));
+        int size = records[type].Wire.Sum(field => MinimumSize(field.Type, visiting));
         visiting.Remove(type);
         return size;
     }
@@ -670,7 +687,7 @@ internal sealed class ContractSchema {
 
     /// The text the fingerprint hashes: the wire version, every enum, every
     /// fixed set's members in `All` order with their data, every record's
-    /// fields in order, and each root's tags.
+    /// fields and resolved values in order, and each root's tags.
     private string Describe() {
         var text = new StringBuilder();
         text.Append(contract).Append(" wire ").Append(WireVersion).Append('\n');
@@ -684,7 +701,9 @@ internal sealed class ContractSchema {
                     $" {member.Name}={member.Tag}({string.Join(", ", member.Values.Select(DescribeValue))})"))).Append('\n');
         foreach (var record in Records)
             text.Append("record ").Append(record.Name).Append('(')
-                .Append(string.Join(", ", record.Fields.Select(field => $"{field.Name}: {Describe(field.Type)}"))).Append(")\n");
+                .Append(string.Join(", ", record.Fields.Select(field => $"{field.Name}: {Describe(field.Type)}"))).Append(')')
+                .Append(record.Resolved.Count == 0 ? "" : $" resolved({string.Join(", ", record.Resolved.Select(field =>
+                    $"{field.Name}: {Describe(field.Type)}"))})").Append('\n');
         foreach (var root in ContractRoot.All)
             foreach (var member in Members(root))
                 text.Append(root.Name.ToLowerInvariant()).Append(' ').Append(member.Tag).Append(' ').Append(member.Name)

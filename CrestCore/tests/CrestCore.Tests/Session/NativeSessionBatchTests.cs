@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -31,7 +32,7 @@ public sealed partial class BrowserContractsTests {
         var window = device.Showing(session);
         var args = BatchArguments(space, "Duplicate");
         var stale = core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
-        core.PrepareCommand(SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest shared name" })).Commit();
+        device.Send(new RenameTab(device.Workspace, fixture.Space, fixture.Tab, "Latest shared name"));
         AssertStale(stale.Commit);
         var command = core.PrepareCommand(SpaceCommand(session, "tabs.batch", args.DeepClone().AsObject(), window: window));
         var output = JsonNode.Parse(command.Output)!;

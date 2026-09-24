@@ -303,9 +303,9 @@ static void locked_space_boundary(void) {
 
     char edit[1024];
     size = snprintf(edit, sizeof(edit),
-        "{\"version\":1,\"operation\":\"tab.rename\",\"spaceId\":{\"rawValue\":\"%s\"},"
+        "{\"version\":1,\"operation\":\"tab.move\",\"spaceId\":{\"rawValue\":\"%s\"},"
         "\"profileId\":\"%s\",\"now\":800000002,"
-        "\"arguments\":{\"tabId\":\"%s\",\"title\":\"Renamed\"},"
+        "\"arguments\":{\"tabId\":\"%s\",\"placement\":\"saved\"},"
         "\"view\":{\"spaceId\":\"%s\","
         "\"tabs\":[{\"spaceId\":\"%s\",\"tabId\":\"%s\"}]}}",
         space_id, profile_id, tab_id, space_id, space_id, tab_id);

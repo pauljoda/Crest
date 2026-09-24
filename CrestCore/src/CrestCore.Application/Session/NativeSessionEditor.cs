@@ -38,7 +38,6 @@ internal static class NativeSessionEditor {
         var selectSpace = false;
         var copies = new List<SessionTabCopy>();
         var changed = true;
-        SessionFaviconUpdate? favicon = null;
         switch (operation) {
             case SessionOperation.TabPromoteTransient:
                 if (args.Tab is { } transient) {
@@ -70,26 +69,6 @@ internal static class NativeSessionEditor {
                     CopyPage(source, copy.Id);
                     break;
                 }
-            case SessionOperation.TabRename:
-                var renamed = edited.Tab(args.RequiredTabId); var title = args.Title;
-                changed = renamed.CustomTitle != (string.IsNullOrWhiteSpace(title) ? null : title.Trim());
-                if (changed) renamed.Rename(title, now);
-                break;
-            case SessionOperation.TabIcon:
-                changed = SetIcon(Target(args.RequiredTabId));
-                break;
-            case SessionOperation.TabSavedLocation:
-                var located = Target(args.RequiredTabId);
-                changed = located is not null && args.Action switch {
-                    SavedLocationAction.Replace => located.ReplaceSavedLocation(),
-                    SavedLocationAction.Restore => located.RestoreSavedLocation() is not null,
-                    _ => throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit)
-                };
-                break;
-            case SessionOperation.TabResidency:
-                var resident = edited.Tab(args.RequiredTabId); var keep = args.Keep ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
-                changed = resident.KeepsPageLoaded != keep; resident.SetResidency(keep);
-                break;
             case SessionOperation.TabMove:
                 changed = edited.MoveTab(args.RequiredTabId, args.RequiredPlacement, args.FolderId, args.Before,
                     args.Detach == true, now);
@@ -110,33 +89,7 @@ internal static class NativeSessionEditor {
         if (operation is SessionOperation.TabClose or SessionOperation.TabDelete or SessionOperation.TabClearCurrent
             || operation is SessionOperation.TabMove && args.Detach == true)
             edited.PruneSplitMetadata();
-        return new(edited, result, selected, selectSpace, copies, changed, favicon);
-
-        BrowserTab? Target(Guid? id) => id is { } value ? edited.Tabs.FirstOrDefault(t => t.Id == value) : null;
-
-        // The image itself stays in the native cache. The core names the tab
-        // whose stored bytes the platform must now replace or drop.
-        void Assign(Guid tab, bool adopts) => favicon = new SessionFaviconUpdate(tab, adopts);
-
-        void ClearIconAssets(BrowserTab tab) {
-            tab.SetFavicon(null, null);
-            Assign(tab.Id, false);
-        }
-
-        // Someone chose this tab's icon by hand, or handed it back to the page.
-        bool SetIcon(BrowserTab? tab) {
-            if (tab is null) return false;
-            // An edit must name a mode this build knows; an absent or unknown term is refused.
-            var mode = args.Mode ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidTabIcon);
-            if (mode.RequiresFavicon && args.HasFavicon != true) return false;
-            tab.SetIcon(mode.Symbol(args.Emoji) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidTabIcon));
-            if (mode.RequiresFavicon) {
-                tab.SetFavicon(tab.Url, args.IconAccent);
-                Assign(tab.Id, true);
-            } else ClearIconAssets(tab);
-            tab.SetIconMode(mode);
-            return true;
-        }
+        return new(edited, result, selected, selectSpace, copies, changed);
 
         void CopyPage(Guid source, Guid copy) {
             var observation = args.CopyObservations?.FirstOrDefault(item => item.TabId == source);

@@ -1,14 +1,5 @@
 import Foundation
 
-/// What a saved tab does with its saved address. Raw values are the core's
-/// spellings in `SavedLocationAction.cs`.
-enum BrowserSavedLocationAction: String, Encodable, Sendable {
-    /// The saved address becomes the page the tab shows now.
-    case replace
-    /// The tab returns to its saved address.
-    case restore
-}
-
 /// The `arguments` member of each session command, in the core's spelling.
 /// Identities cross as plain UUIDs (the typed identifiers code as records), and
 /// a member the core reads even without a value crosses as an explicit `null`.
@@ -39,33 +30,6 @@ enum BrowserSessionArguments {
     struct TabCloseDurable: Encodable, Sendable {
         let tabId: UUID
         let returnToSavedURL: Bool
-    }
-
-    /// `tab.icon`.
-    struct TabIcon: Encodable, Sendable {
-        let tabId: UUID
-        let mode: TabIconMode
-        let hasFavicon: Bool
-        @BrowserCoreNullable var iconAccent: BrowserTabIconAccent?
-        var emoji: String?
-    }
-
-    /// `tab.saved_location`.
-    struct TabSavedLocation: Encodable, Sendable {
-        let tabId: UUID
-        let action: BrowserSavedLocationAction
-    }
-
-    /// `tab.rename`.
-    struct TabRename: Encodable, Sendable {
-        let tabId: UUID
-        @BrowserCoreNullable var title: String?
-    }
-
-    /// `tab.residency`.
-    struct TabResidency: Encodable, Sendable {
-        let tabId: UUID
-        let keep: Bool
     }
 
     /// `tab.move`.

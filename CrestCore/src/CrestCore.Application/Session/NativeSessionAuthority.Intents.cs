@@ -18,21 +18,25 @@ public sealed partial class NativeSessionAuthority {
 
     /// Runs one session intent at `now`, drawing new identities from `ids`,
     /// and commits what it changed, which the device publishes. An intent that
-    /// changes nothing commits nothing. Throws `Rejected` naming the rule that
-    /// refused it.
+    /// changes nothing commits nothing, and publishes only what it did that
+    /// the session cannot tell, such as the image a tab now wears. Throws
+    /// `Rejected` naming the rule that refused it.
     internal void Handle(SessionIntent intent, DateTimeOffset now, IIdSource ids) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
-        NativeSessionCommand command;
+        NativeSessionCommand? command = null;
+        (SessionState State, SessionTabEvents Events)? unchanged = null;
         lock (Gate) {
             var edit = Edit(intent, Stamp(now), ids);
             if (edit is null) return;
             if (edit.Sweep is { } sweep) lastSweep = sweep;
-            if (edit.Next.Equals(session)) return;
-            command = new NativeSessionCommand(this, session, edit.Next, [], followUp: edit.FollowUp, events: edit.Events)
-                .StagedAs(edit.Staging);
+            if (!edit.Next.Equals(session))
+                command = new NativeSessionCommand(this, session, edit.Next, [], followUp: edit.FollowUp, events: edit.Events)
+                    .StagedAs(edit.Staging);
+            else if (edit.Events is { } events) unchanged = (session, events);
         }
-        Commit(command);
+        if (command is not null) Commit(command);
+        else if (unchanged is { } kept) Published(kept.State, kept.State, followUp: null, kept.Events);
     }
 
     /// Throws the `Rejected` that would refuse `intent` at `now`, and changes
@@ -73,6 +77,11 @@ public sealed partial class NativeSessionAuthority {
             SetSplitIcon icon => SettingSplitIcon(basis, icon, now),
             TintSplit tint => TintingSplit(basis, tint, now),
             NavigateTab navigation => NavigatingTab(basis, navigation),
+            RenameTab rename => RenamingTab(basis, rename, now),
+            ChooseTabIcon icon => ChoosingTabIcon(basis, icon),
+            ReplaceSavedAddress adoption => ReplacingSavedAddress(basis, adoption),
+            ReturnToSavedAddress returning => ReturningToSavedAddress(basis, returning),
+            KeepPageLoaded residency => KeepingPageLoaded(basis, residency),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;

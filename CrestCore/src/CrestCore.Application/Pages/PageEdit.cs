@@ -78,7 +78,8 @@ internal sealed record IconAdoption(Guid PageId, Guid SpaceId, DateTimeOffset At
         var index = IndexOf(space, TabId);
         if (index < 0) return null;
         var tab = BrowserTab.Restore(space.Tabs[index]);
-        if (!HistoryPolicy.SamePage(tab.Url, Icon.Url) || !tab.WearPageIcon(Icon.Url, Icon.Accent)) return (space, null);
+        if (tab.Url is not { } shown || !new WebAddress(shown).IsSamePage(new WebAddress(Icon.Url))
+            || !tab.WearPageIcon(Icon.Url, Icon.Accent)) return (space, null);
         return (Replacing(space, index, tab), new(TabId, Adopts: true, PageId));
     }
 

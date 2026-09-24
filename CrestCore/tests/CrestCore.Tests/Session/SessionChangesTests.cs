@@ -270,14 +270,25 @@ public sealed partial class BrowserContractsTests {
         var space = authority.Current.Spaces[0];
         var window = Guid.NewGuid();
         app.Send(new OpenWindow(window, workspace, Saved: false, CopyingWindowId: null, space.Id, [], RestoresTabs: true));
-        byte[] Rename(string title) => SpaceCommand(StoredSessionCodec.Encode(authority.Current), "tab.rename",
-            new() { ["tabId"] = space.Tabs[0].Id.ToString(), ["title"] = title });
-        var before = authority.PrepareCommand(Rename("Before"));
+        byte[] Open(string title) => SpaceCommand(StoredSessionCodec.Encode(authority.Current), "tab.open",
+            new() {
+                ["tab"] = new JsonObject {
+                    ["id"] = SwiftId(Guid.NewGuid()),
+                    ["title"] = title,
+                    ["url"] = "https://example.org/",
+                    ["placement"] = "current",
+                    ["symbol"] = "globe",
+                    ["lastActivatedAt"] = 800000001.0
+                }
+            });
+        var before = authority.PrepareCommand(Open("Before"));
         var touched = app.Send(new ShowTab(window, space.Id, space.Tabs[1].Id));
         Assert.Single(touched.OfType<TabsChanged>());
 
         AssertStale(before.Commit);
-        authority.PrepareCommand(Rename("After")).Commit();
-        Assert.Equal("After", authority.Current.Spaces[0].Tabs[0].CustomTitle);
+        authority.PrepareCommand(Open("After")).Commit();
+        var titles = authority.Current.Spaces[0].Tabs.Select(tab => tab.Title).ToList();
+        Assert.Contains("After", titles);
+        Assert.DoesNotContain("Before", titles);
     }
 }

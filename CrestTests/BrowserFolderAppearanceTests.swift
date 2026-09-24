@@ -10,9 +10,9 @@ final class BrowserFolderAppearanceTests: XCTestCase {
         var first = BrowserSession.makeBlankSpace(number: 1)
         let folder = BrowserFolder(title: "Reading")
         first.folders = [folder]
-        first.tabs[0].iconMode = .automatic
+        first.tabs[0].storedIconMode = .automatic
         var second = BrowserSession.makeBlankSpace(number: 2)
-        second.tabs[0].iconMode = .automatic
+        second.tabs[0].storedIconMode = .automatic
         let session = BrowserSession(spaces: [first, second])
         let browser = BrowserStore(session: session)
         let emoji = BrowserIconSymbol.symbol(forEmoji: "📚")

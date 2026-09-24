@@ -29,12 +29,15 @@ public sealed partial class BrowserContractsTests {
         var core = new NativeSessionAuthority(Bytes(session));
         core.AttachAccess(access);
         var identity = Identity(session);
-        var rename = SpaceCommand(session, "tab.rename", new() { ["tabId"] = session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "Leaked" });
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(rename)).Code);
+        var tab = Guid.Parse(session["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>());
+        var move = SpaceCommand(session, "tab.move", new() { ["tabId"] = tab.ToString(), ["placement"] = "current" });
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(move)).Code);
         using var device = new TestDevice(core);
         var folder = Guid.Parse(session["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.GetValue<string>());
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new RenameFolder(device.Workspace, identity.Space, folder, "Leaked"))).Rejection);
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
+            device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Leaked"))).Rejection);
         Assert.Equal(1UL, core.Revision);
         // A locked Space must not even be named as an import destination.
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(Bytes(new JsonObject {
@@ -58,14 +61,15 @@ public sealed partial class BrowserContractsTests {
         }))).Code);
 
         Grant(access, identity);
-        core.PrepareCommand(rename).Commit();
+        device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Granted"));
         Assert.Equal(2UL, core.Revision);
 
         access.Lock(identity.Space);
         var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
-        var relocked = JsonNode.Parse(SpaceCommand(current, "tab.rename", new() { ["tabId"] = current["spaces"]![0]!["tabs"]![0]!["id"]!["rawValue"]!.DeepClone(), ["title"] = "After relock" }))!;
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
-            () => core.PrepareCommand(Bytes(relocked))).Code);
+        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
+            SpaceCommand(current, "tab.move", new() { ["tabId"] = tab.ToString(), ["placement"] = "current" }))).Code);
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
+            device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"))).Rejection);
         // Taking protection away is the decision authentication guards.
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
             SpaceCommand(current, "space.access", new() { ["value"] = "open" }))).Code);
@@ -79,7 +83,8 @@ public sealed partial class BrowserContractsTests {
         device.Send(new SweepExpiredRecords(device.Workspace));
         device.Send(new CleanUpCurrentTabs(device.Workspace, identity.Space));
         Grant(access, identity);
-        core.PrepareCommand(Bytes(relocked)).Commit();
+        device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"));
+        Assert.Equal("After relock", core.Current.Spaces[0].Tabs[0].CustomTitle);
     }
 
     [Fact]
@@ -223,11 +228,11 @@ public sealed partial class BrowserContractsTests {
         var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => child.PrepareCommand(Bytes(new JsonObject {
             ["version"] = 1,
-            ["operation"] = "tab.rename",
+            ["operation"] = "tab.move",
             ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["arguments"] = new JsonObject { ["tabId"] = Guid.NewGuid().ToString(), ["title"] = "Leaked" }
+            ["arguments"] = new JsonObject { ["tabId"] = Guid.NewGuid().ToString(), ["placement"] = "current" }
         }))).Code);
     }
 

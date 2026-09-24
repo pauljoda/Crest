@@ -303,10 +303,7 @@ extension BrowserStore {
         _ id: TabID,
         in spaceID: SpaceID
     ) -> Bool {
-        guard
-            setSessionSavedLocation(.replace, tabID: id, in: spaceID)
-        else { return false }
-        return true
+        replaceSessionSavedAddress(tabID: id, in: spaceID)
     }
 
     @discardableResult
@@ -314,10 +311,8 @@ extension BrowserStore {
         _ id: TabID,
         in spaceID: SpaceID
     ) -> URL? {
-        guard setSessionSavedLocation(.restore, tabID: id, in: spaceID),
-            let url = session.space(id: spaceID)?.tabs.first(where: { $0.id == id })?.url
-        else { return nil }
-        return url
+        guard returnSessionTabToSavedAddress(tabID: id, in: spaceID) else { return nil }
+        return session.space(id: spaceID)?.tabs.first(where: { $0.id == id })?.url
     }
 
     @discardableResult

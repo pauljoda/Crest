@@ -57,7 +57,7 @@ internal static class SwiftEmitter {
             code.Append('\n').Append($"struct {record.Name}: {string.Join(", ", conformances)} {{\n");
             if (isSent && owner.Root.HasAnswer)
                 code.Append($"    typealias Answer = {TypeName(owner.Member.Answer!)}\n\n");
-            foreach (var field in record.Fields)
+            foreach (var field in record.Wire)
                 code.Append($"    let {Naming.SwiftIdentifier(Naming.SwiftMember(field.Name))}: {TypeName(field.Type)}\n");
             code.Append("}\n");
         }
@@ -94,7 +94,7 @@ internal static class SwiftEmitter {
         if (!equatable.Contains(record.Type))
             throw new ContractSchemaException($"{record.Name}: an [Observed] record compares its fields, so none may hold an intent or a query.");
         string model = $"{record.Name}Model";
-        var fields = record.Fields.Select(field => (Label: Naming.SwiftMember(field.Name), Name: Local(field.Name),
+        var fields = record.Wire.Select(field => (Label: Naming.SwiftMember(field.Name), Name: Local(field.Name),
             Type: TypeName(field.Type), IsIdentity: field.Name == ContractRecord.IdentityField)).ToList();
         code.Append('\n').Append($"/// `{record.Name}` as an object views observe field by field. `update` assigns only\n");
         code.Append("/// the fields that differ, so a field that keeps its value notifies no one.\n");
@@ -191,7 +191,7 @@ internal static class SwiftEmitter {
         while (changed) {
             changed = false;
             foreach (var record in records.Values.Where(record => !excluded.Contains(record.Type)))
-                if (record.Fields.Any(field => !IsEquatable(field.Type, excluded, schema))) changed |= excluded.Add(record.Type);
+                if (record.Wire.Any(field => !IsEquatable(field.Type, excluded, schema))) changed |= excluded.Add(record.Type);
         }
         return [.. records.Keys.Where(type => !excluded.Contains(type))];
     }
@@ -252,13 +252,13 @@ internal static class SwiftEmitter {
             code.Append('\n').Append($"extension {record.Name} {{\n");
             code.Append("    init(from reader: inout WireReader) throws(WireError) {\n");
             var lines = new List<string>();
-            foreach (var field in record.Fields) Decode(field.Type, Local(field.Name), lines, "        ");
+            foreach (var field in record.Wire) Decode(field.Type, Local(field.Name), lines, "        ");
             foreach (var line in lines) code.Append(line).Append('\n');
             code.Append("        self.init(");
-            code.Append(string.Join(", ", record.Fields.Select(field => $"{Naming.SwiftMember(field.Name)}: {Local(field.Name)}")));
+            code.Append(string.Join(", ", record.Wire.Select(field => $"{Naming.SwiftMember(field.Name)}: {Local(field.Name)}")));
             code.Append(")\n    }\n\n");
             code.Append("    func encode(into writer: inout WireWriter) {\n");
-            foreach (var field in record.Fields)
+            foreach (var field in record.Wire)
                 code.Append(Encode(field.Type, Naming.SwiftIdentifier(Naming.SwiftMember(field.Name)), "        ", 0));
             code.Append("    }\n");
             if (tags.TryGetValue(record.Type, out var owner)) {

@@ -2293,6 +2293,10 @@
     "single-page-app-history": {
       "category": "improved",
       "message": "Pages that change address without reloading, such as a new video or a repository page, now appear in history, and the tab keeps its current address when reopened."
+    },
+    "tab-value-intents": {
+      "category": "internal",
+      "message": "Renaming a tab, choosing its icon, its saved address and keeping it loaded are typed core intents, and the core publishes each tab's resolved icon, title and saved-address state."
     }
   }
 }

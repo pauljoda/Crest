@@ -9,7 +9,10 @@ as a positional binary wire: lengths, counts, tags and enums are LEB128
 varints, numbers are fixed-width little-endian, a GUID is 16 RFC 4122 bytes,
 dates are f64 seconds since 2001, a byte string is its length followed by the
 bytes, an optional is a presence byte and a union
-is its root's tag followed by the type's fields. `crest_app_dispatch` answers
+is its root's tag followed by the type's fields. A record's `[Resolved]`
+values, which the core computes from its fields, such as a tab's icon mode,
+follow the fields; the core writes them and reads past them, and no stored or
+synced format holds them. `crest_app_dispatch` answers
 `CREST_OK` with the published changes or `CREST_REJECTED` with one rejection;
 `crest_app_query` answers the same way. Both hand back a core-allocated
 `crest_buffer_t` that the caller releases with `crest_buffer_free`.

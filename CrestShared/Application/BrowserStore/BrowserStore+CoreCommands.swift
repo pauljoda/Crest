@@ -17,22 +17,34 @@ extension BrowserStore {
         return session.space(id: spaceID)?.folders.contains(where: { $0.id == id }) == true ? id : nil
     }
 
+    /// Chooses how a tab's icon is filled, and answers whether the core
+    /// accepted the choice. A pulled icon wears `faviconData`, the image this
+    /// platform holds for the page, so it needs one.
     func setSessionTabIcon(
         _ mode: TabIconMode, emoji: String? = nil, faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil, tabID: TabID, in spaceID: SpaceID
     ) -> Bool {
-        let arguments = BrowserSessionArguments.TabIcon(
-            tabId: tabID.rawValue, mode: mode, hasFavicon: !(faviconData?.isEmpty ?? true), iconAccent: iconAccent,
-            emoji: emoji)
-        return family.execute(.tabIcon, in: spaceID, arguments: arguments, from: self, at: .now, image: faviconData)?
-            .changed == true
+        guard !mode.requiresFavicon || faviconData?.isEmpty == false else { return false }
+        let choice = ChooseTabIcon(
+            workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue, mode: mode, emoji: emoji,
+            accent: iconAccent.map { TabIconAccent(red: $0.red, green: $0.green, blue: $0.blue) })
+        return family.perform(choice, from: self, offering: faviconData) != nil
     }
 
-    func setSessionSavedLocation(_ action: BrowserSavedLocationAction, tabID: TabID, in spaceID: SpaceID) -> Bool {
-        family.execute(
-            .tabSavedLocation, in: spaceID,
-            arguments: BrowserSessionArguments.TabSavedLocation(tabId: tabID.rawValue, action: action),
-            from: self, at: .now)?.changed ?? false
+    /// Makes the page a saved or pinned tab shows the one it belongs to, and
+    /// answers whether that changed its saved address.
+    func replaceSessionSavedAddress(tabID: TabID, in spaceID: SpaceID) -> Bool {
+        family.send(
+            ReplaceSavedAddress(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue),
+            from: self)
+    }
+
+    /// Returns a saved or pinned tab to the address it belongs to, and answers
+    /// whether the core accepted it, including for a tab already there.
+    func returnSessionTabToSavedAddress(tabID: TabID, in spaceID: SpaceID) -> Bool {
+        family.perform(
+            ReturnToSavedAddress(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue),
+            from: self) != nil
     }
 
     /// Native authentication supplies current access results. The core checks
@@ -97,16 +109,16 @@ extension BrowserStore {
     }
 
     func renameSessionTab(_ title: String?, tabID: TabID, in spaceID: SpaceID) -> Bool {
-        family.execute(
-            .tabRename, in: spaceID, arguments: BrowserSessionArguments.TabRename(tabId: tabID.rawValue, title: title),
-            from: self, at: .now)?.changed ?? false
+        family.send(
+            RenameTab(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue, title: title),
+            from: self)
     }
 
     func setSessionTabResidency(_ keep: Bool, tabID: TabID, in spaceID: SpaceID) -> Bool {
-        family.execute(
-            .tabResidency, in: spaceID,
-            arguments: BrowserSessionArguments.TabResidency(tabId: tabID.rawValue, keep: keep),
-            from: self, at: .now)?.changed ?? false
+        family.send(
+            KeepPageLoaded(
+                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue, keeps: keep),
+            from: self)
     }
 
     func renameSessionFolder(_ id: FolderID, in spaceID: SpaceID, title: String) -> Bool {

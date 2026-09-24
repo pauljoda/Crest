@@ -86,6 +86,8 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
+    case invalidTabIcon(InvalidTabIcon)
+    case noSavedAddress(NoSavedAddress)
     case pageProfileMismatch(PageProfileMismatch)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
@@ -273,6 +275,15 @@ struct CanTearOff: Query, Equatable, Sendable {
 struct CancelDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
+}
+
+struct ChooseTabIcon: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let mode: TabIconMode
+    let emoji: String?
+    let accent: TabIconAccent?
 }
 
 struct CleanUpCurrentTabs: Intent, Equatable, Sendable {
@@ -784,6 +795,10 @@ struct InvalidSearchEngine: Equatable, Sendable {
 struct InvalidSplitColumnShares: Equatable, Sendable {
 }
 
+struct InvalidTabIcon: Equatable, Sendable {
+    let mode: TabIconMode
+}
+
 struct JoinSplit: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -792,6 +807,13 @@ struct JoinSplit: Intent, Equatable, Sendable {
     let targetTabID: UUID
     let index: Int?
     let sourcePages: [SourcePage]
+}
+
+struct KeepPageLoaded: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let keeps: Bool
 }
 
 struct KeyCombination: Equatable, Sendable {
@@ -929,6 +951,10 @@ struct NavigationStarted: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let url: String
     let sameDocument: Bool
+}
+
+struct NoSavedAddress: Equatable, Sendable {
+    let tabID: UUID
 }
 
 struct OpenLinkInSplit: Intent, Equatable, Sendable {
@@ -1079,6 +1105,19 @@ struct RenameFolder: Intent, Equatable, Sendable {
     let title: String
 }
 
+struct RenameTab: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let title: String?
+}
+
+struct ReplaceSavedAddress: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+}
+
 struct ResizeSplitColumns: Intent, Equatable, Sendable {
     let windowID: UUID
     let groupID: UUID
@@ -1092,6 +1131,12 @@ struct RestartDownload: Intent, Equatable, Sendable {
 struct RestoreArchivedTab: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+}
+
+struct ReturnToSavedAddress: Intent, Equatable, Sendable {
+    let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
 }
@@ -1443,6 +1488,10 @@ struct TabState: Equatable, Sendable, Identifiable {
     let customTitle: String?
     let titleModifiedAt: Date?
     let keepsPageLoaded: Bool
+    let iconMode: TabIconMode
+    let displayTitle: String
+    let isAwayFromSavedAddress: Bool
+    let pageIconIsCurrent: Bool
 }
 
 struct TabsChanged: Equatable, Sendable {
@@ -6586,6 +6635,10 @@ final class TabStateModel: ObservedModel, Identifiable {
     private(set) var customTitle: String?
     private(set) var titleModifiedAt: Date?
     private(set) var keepsPageLoaded: Bool
+    private(set) var iconMode: TabIconMode
+    private(set) var displayTitle: String
+    private(set) var isAwayFromSavedAddress: Bool
+    private(set) var pageIconIsCurrent: Bool
 
     var value: TabState {
         TabState(
@@ -6605,7 +6658,11 @@ final class TabStateModel: ObservedModel, Identifiable {
             positionModifiedAt: positionModifiedAt,
             customTitle: customTitle,
             titleModifiedAt: titleModifiedAt,
-            keepsPageLoaded: keepsPageLoaded
+            keepsPageLoaded: keepsPageLoaded,
+            iconMode: iconMode,
+            displayTitle: displayTitle,
+            isAwayFromSavedAddress: isAwayFromSavedAddress,
+            pageIconIsCurrent: pageIconIsCurrent
         )
     }
 
@@ -6627,6 +6684,10 @@ final class TabStateModel: ObservedModel, Identifiable {
         customTitle = value.customTitle
         titleModifiedAt = value.titleModifiedAt
         keepsPageLoaded = value.keepsPageLoaded
+        iconMode = value.iconMode
+        displayTitle = value.displayTitle
+        isAwayFromSavedAddress = value.isAwayFromSavedAddress
+        pageIconIsCurrent = value.pageIconIsCurrent
     }
 
     func update(_ value: TabState) {
@@ -6647,6 +6708,10 @@ final class TabStateModel: ObservedModel, Identifiable {
         if customTitle != value.customTitle { customTitle = value.customTitle }
         if titleModifiedAt != value.titleModifiedAt { titleModifiedAt = value.titleModifiedAt }
         if keepsPageLoaded != value.keepsPageLoaded { keepsPageLoaded = value.keepsPageLoaded }
+        if iconMode != value.iconMode { iconMode = value.iconMode }
+        if displayTitle != value.displayTitle { displayTitle = value.displayTitle }
+        if isAwayFromSavedAddress != value.isAwayFromSavedAddress { isAwayFromSavedAddress = value.isAwayFromSavedAddress }
+        if pageIconIsCurrent != value.pageIconIsCurrent { pageIconIsCurrent = value.pageIconIsCurrent }
     }
 }
 

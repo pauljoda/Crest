@@ -88,9 +88,18 @@ public sealed partial class BrowserContractsTests {
             ["version"] = 1,
             ["spaceId"] = fixture.Space.ToString(),
             ["profileId"] = space["profile"]!["id"]!.DeepClone(),
-            ["operation"] = "tab.rename",
+            ["operation"] = "tab.open",
             ["now"] = 800000001.0,
-            ["arguments"] = new JsonObject { ["tabId"] = fixture.Tab.ToString(), ["title"] = title },
+            ["arguments"] = new JsonObject {
+                ["tab"] = new JsonObject {
+                    ["id"] = SwiftId(Guid.NewGuid()),
+                    ["title"] = title,
+                    ["url"] = "https://example.org/",
+                    ["placement"] = "current",
+                    ["symbol"] = "globe",
+                    ["lastActivatedAt"] = 800000001.0
+                }
+            },
         });
         var before = authority.Checkpoint().Read("core");
         var first = authority.PrepareCommand(Request("Accepted"));
@@ -102,7 +111,9 @@ public sealed partial class BrowserContractsTests {
         Assert.IsType<StaleCommand>(Assert.Throws<Rejected>(() => first.Commit()).Rejection);
         var checkpoint = authority.Checkpoint();
         var saved = JsonNode.Parse(checkpoint.Read("core"))!["spaces"]![0]!;
-        Assert.Equal("Accepted", saved["tabs"]![0]!["customTitle"]!.GetValue<string>());
+        var titles = saved["tabs"]!.AsArray().Select(tab => tab!["title"]!.GetValue<string>()).ToList();
+        Assert.Contains("Accepted", titles);
+        Assert.DoesNotContain("Stale", titles);
         Assert.Null(saved["selectedTabID"]);
         Assert.True(JsonNode.DeepEquals(space["history"], JsonNode.Parse(checkpoint.Read(fixture.Space.ToString()))));
         Assert.True(JsonNode.DeepEquals(space["branding"], saved["branding"]));
@@ -128,6 +139,7 @@ public sealed partial class BrowserContractsTests {
     public void OwnedTabCopiesUseCurrentRecordsAndRejectAStalePublication() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         var core = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(core);
         JsonObject Arguments(Guid id) => new() {
             ["tabId"] = fixture.Tab.ToString(),
             ["ids"] = new JsonArray(id.ToString()),
@@ -138,7 +150,7 @@ public sealed partial class BrowserContractsTests {
             })
         };
         var rejected = core.PrepareCommand(SpaceCommand(session, "tab.copy", Arguments(Guid.NewGuid())));
-        core.PrepareCommand(SpaceCommand(session, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Latest name" })).Commit();
+        device.Send(new RenameTab(device.Workspace, fixture.Space, fixture.Tab, "Latest name"));
         AssertStale(rejected.Commit);
         var id = Guid.NewGuid();
         var accepted = core.PrepareCommand(SpaceCommand(session, "tab.copy", Arguments(id)));

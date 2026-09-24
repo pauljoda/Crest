@@ -95,16 +95,21 @@ internal static class CSharpCodecEmitter {
         code.Append("        }\n    }\n");
     }
 
+    /// A record's resolved values follow its fields. The core computes them,
+    /// so it reads them only to pass them.
     private static void EmitRecord(StringBuilder code, ContractRecord record) {
         code.Append('\n').Append($"    public static {record.Name} Read{record.Name}(WireReader reader) {{\n");
         code.Append("        ArgumentNullException.ThrowIfNull(reader);\n");
-        code.Append($"        return new {record.Name}(");
+        code.Append(record.Resolved.Count == 0 ? "        return new " : "        var value = new ").Append(record.Name).Append('(');
         code.Append(string.Join(",", record.Fields.Select(field => $"\n            {Read(field.Type)}")));
-        code.Append(");\n    }\n");
+        code.Append(");\n");
+        foreach (var field in record.Resolved) code.Append($"        _ = {Read(field.Type)};\n");
+        if (record.Resolved.Count > 0) code.Append("        return value;\n");
+        code.Append("    }\n");
 
         code.Append('\n').Append($"    public static void Write{record.Name}(WireWriter writer, {record.Name} value) {{\n");
         code.Append("        ArgumentNullException.ThrowIfNull(writer);\n        ArgumentNullException.ThrowIfNull(value);\n");
-        foreach (var field in record.Fields) code.Append(Write(field.Type, $"value.{field.Name}", "        ", field.Name));
+        foreach (var field in record.Wire) code.Append(Write(field.Type, $"value.{field.Name}", "        ", field.Name));
         code.Append("    }\n");
     }
 

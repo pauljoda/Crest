@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -137,9 +138,9 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Theory]
-    [InlineData("tab.rename", 811679532.599763)]
-    [InlineData("tab.move", 811679532.600512)]
-    public void ReceivingCommandEditsDoesNotCreateAnotherRevisionDuringRepair(string operation, double now) {
+    [InlineData(true, 811679532.599763)]
+    [InlineData(false, 811679532.600512)]
+    public void ReceivingCommandEditsDoesNotCreateAnotherRevisionDuringRepair(bool renames, double now) {
         var fixture = SavedSession();
         var source = NativeSessionMaintenance.Repair(fixture.Document["session"]!.AsObject(), now)["session"]!;
         source.AsObject().Remove("disposableSeedMarker");
@@ -160,12 +161,15 @@ public sealed partial class BrowserContractsTests {
             }));
         var receiver = Receive(new NativeSyncJournal(Bytes(initial)), source, "replace", sender);
         var authority = new NativeSessionAuthority(Bytes(source));
-        var arguments = new JsonObject { ["tabId"] = fixture.Tab.ToString() };
-        if (operation == "tab.rename") arguments["title"] = "Renamed on the other device";
-        else { arguments["placement"] = "current"; arguments["detach"] = true; }
-        var request = JsonNode.Parse(SpaceCommand(source, operation, arguments))!;
-        request["now"] = now;
-        authority.PrepareCommand(Bytes(request)).Commit();
+        if (renames)
+            authority.Handle(new RenameTab(Guid.Empty, fixture.Space, fixture.Tab, "Renamed on the other device"),
+                StoredSessionCodec.Date(now), new TestIds());
+        else {
+            var request = JsonNode.Parse(SpaceCommand(source, "tab.move",
+                new() { ["tabId"] = fixture.Tab.ToString(), ["placement"] = "current", ["detach"] = true }))!;
+            request["now"] = now;
+            authority.PrepareCommand(Bytes(request)).Commit();
+        }
         source = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
         sender = sender.Apply(Stage(source));
         var sent = JsonNode.Parse(sender.Read())!;
@@ -182,7 +186,7 @@ public sealed partial class BrowserContractsTests {
                 Assert.True(JsonNode.DeepEquals(record!["version"], match["version"]));
             }
             var actual = receiver.Materialization["session"]!["spaces"]![0]!["tabs"]![0]!;
-            var field = operation == "tab.rename" ? "customTitle" : "placement";
+            var field = renames ? "customTitle" : "placement";
             Assert.True(JsonNode.DeepEquals(source["spaces"]![0]!["tabs"]![0]![field], actual[field]));
             receiver = Receive(new NativeSyncJournal(Bytes(received)), receiver.Materialization["session"]!, "merge", sender);
         }
