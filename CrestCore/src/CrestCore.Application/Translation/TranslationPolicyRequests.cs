@@ -11,12 +11,15 @@ namespace CrestCore.Application;
 /// Typed requests and answers for the translation policy operations. Rules
 /// travel in their persisted native shape,
 /// `{"sources":{"es":{"targetID":"en","isEnabled":true}}}`, and are validated
-/// strictly here; rule edits are the session's `preferences.translation_rule`.
+/// strictly here; rule edits are the session's `SetTranslationRule` intent.
 internal static class TranslationPolicyRequests {
     #region Variables
 
     private const int MaximumLanguageCandidates = 256;
     private const string Sources = "sources";
+    private const string SourceIdField = "sourceID";
+    private const string TargetId = "targetID";
+    private const string IsEnabled = "isEnabled";
 
     #endregion
 
@@ -24,9 +27,9 @@ internal static class TranslationPolicyRequests {
 
     public sealed record Rule(AutomaticTranslationRules Rules, string SourceId) {
         public static Rule Decode(JsonElement request) {
-            Members(request, "rules", PreferenceCodes.SourceId);
+            Members(request, "rules", SourceIdField);
             var rules = TranslationRules(Element(request, "rules"));
-            return new(rules, LanguageField(request, PreferenceCodes.SourceId));
+            return new(rules, LanguageField(request, SourceIdField));
         }
     }
 
@@ -45,9 +48,9 @@ internal static class TranslationPolicyRequests {
         var sources = value.GetProperty(Sources);
         if (sources.ValueKind != JsonValueKind.Object) throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
         return AutomaticTranslationRules.Restore(sources.EnumerateObject().Select(member => {
-            Protocol.Members(member.Value, PreferenceCodes.TargetId, PreferenceCodes.IsEnabled);
-            return new TranslationRule(member.Name, LanguageField(member.Value, PreferenceCodes.TargetId),
-                Flag(member.Value, PreferenceCodes.IsEnabled));
+            Protocol.Members(member.Value, TargetId, IsEnabled);
+            return new TranslationRule(member.Name, LanguageField(member.Value, TargetId),
+                Flag(member.Value, IsEnabled));
         }));
     }
 
@@ -67,7 +70,7 @@ internal static class TranslationPolicyRequests {
 
     public static JsonObject RuleAnswer(TranslationRule? rule, string? target) => new() {
         ["rule"] = rule is { } value
-            ? new JsonObject { [PreferenceCodes.TargetId] = value.TargetId, [PreferenceCodes.IsEnabled] = value.IsEnabled }
+            ? new JsonObject { [TargetId] = value.TargetId, [IsEnabled] = value.IsEnabled }
             : null,
         ["target"] = target
     };

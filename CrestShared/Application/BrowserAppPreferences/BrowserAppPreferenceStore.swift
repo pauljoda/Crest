@@ -4,8 +4,8 @@ import Observation
 /// The Swift projection of the core's app-wide behavior preferences.
 ///
 /// Once bound to the persistent store, every value reads the core's accepted
-/// record and every edit is a `preferences.*` command; an edit the core refuses
-/// or cannot answer leaves the current value in place. Before binding, and in
+/// record and every edit is an intent that sets the whole record; an edit the
+/// core refuses leaves the current value in place. Before binding, and in
 /// previews and tests that never bind, the store holds its own values.
 @Observable
 @MainActor
@@ -25,50 +25,46 @@ final class BrowserAppPreferenceStore {
 
     var startupBehavior: BrowserStartupBehavior {
         get { preferences.startupBehavior }
-        set { set(.startupBehavior, to: .term(newValue.rawValue)) { $0.startupBehavior = newValue } }
+        set { set { $0.startupBehavior = newValue } }
     }
 
     var offersTranslation: Bool {
         get { preferences.offersTranslation }
-        set { set(.offersTranslation, to: .flag(newValue)) { $0.offersTranslation = newValue } }
+        set { set { $0.offersTranslation = newValue } }
     }
 
     var automaticallyTranslates: Bool {
         get { preferences.automaticallyTranslates }
-        set { set(.automaticallyTranslates, to: .flag(newValue)) { $0.automaticallyTranslates = newValue } }
+        set { set { $0.automaticallyTranslates = newValue } }
     }
 
     var checksSpelling: Bool {
         get { preferences.checksSpelling }
-        set { set(.checksSpelling, to: .flag(newValue)) { $0.checksSpelling = newValue } }
+        set { set { $0.checksSpelling = newValue } }
     }
 
     var automaticallyEntersPictureInPicture: Bool {
         get { preferences.automaticallyEntersPictureInPicture }
         set {
-            set(.automaticallyEntersPictureInPicture, to: .flag(newValue)) {
-                $0.automaticallyEntersPictureInPicture = newValue
-            }
+            set { $0.automaticallyEntersPictureInPicture = newValue }
         }
     }
 
     var savedTabClosePolicy: BrowserDurableTabClosePolicy {
         get { preferences.savedTabClosePolicy }
-        set { set(.savedTabClosePolicy, to: .term(newValue.rawValue)) { $0.savedTabClosePolicy = newValue } }
+        set { set { $0.savedTabClosePolicy = newValue } }
     }
 
     var returnsToSavedURLOnFaviconClick: Bool {
         get { preferences.savedTabFaviconReturnsToSavedURL }
         set {
-            set(.savedTabFaviconReturnsToSavedURL, to: .flag(newValue)) {
-                $0.savedTabFaviconReturnsToSavedURL = newValue
-            }
+            set { $0.savedTabFaviconReturnsToSavedURL = newValue }
         }
     }
 
     var splitFocusFollowsMouse: Bool {
         get { preferences.splitFocusFollowsMouse }
-        set { set(.splitFocusFollowsMouse, to: .flag(newValue)) { $0.splitFocusFollowsMouse = newValue } }
+        set { set { $0.splitFocusFollowsMouse = newValue } }
     }
 
     // MARK: - Initializers
@@ -86,7 +82,7 @@ final class BrowserAppPreferenceStore {
         detached = legacy.preferences
         self.browser = browser
         guard browser.family.authoritativeSession.appPreferences == nil else { return }
-        browser.applyAppPreferenceCommand(.importing(legacy))
+        browser.sendAppPreferences(ImportAppPreferences(workspaceID: browser.family.workspaceID, legacy: legacy.core))
     }
 
     // MARK: - Actions - Translation
@@ -94,21 +90,24 @@ final class BrowserAppPreferenceStore {
     /// Records a source language's choice through the core's alias rules. An
     /// unbound store has no core to apply them and keeps its rules.
     func setTranslationRule(sourceID: String, targetID: String, isEnabled: Bool) {
-        browser?.applyAppPreferenceCommand(
-            .translationRule(sourceID: sourceID, targetID: targetID, isEnabled: isEnabled))
+        guard let browser else { return }
+        browser.sendAppPreferences(
+            SetTranslationRule(
+                workspaceID: browser.family.workspaceID, sourceLanguage: sourceID, targetLanguage: targetID,
+                isEnabled: isEnabled))
     }
 
     // MARK: - Actions - Commands
 
-    private func set(
-        _ preference: BrowserAppPreference,
-        to value: BrowserAppPreferenceRequest.Value,
-        detached edit: (inout BrowserAppPreferences) -> Void
-    ) {
+    /// Applies `edit` to the unbound value, or sends the record it makes of
+    /// the current one to the core.
+    private func set(_ edit: (inout BrowserAppPreferences) -> Void) {
         guard let browser else {
             edit(&detached)
             return
         }
-        browser.applyAppPreferenceCommand(.set(preference, to: value))
+        var next = preferences
+        edit(&next)
+        browser.sendAppPreferences(SetAppPreferences(workspaceID: browser.family.workspaceID, preferences: next.core))
     }
 }

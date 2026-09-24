@@ -130,14 +130,26 @@ internal static partial class StoredSessionCodec {
     /// under its stored name and null when never saved. Translation rules arrive
     /// as the raw JSON text the native setting stored. A value this build cannot
     /// read keeps its default rather than failing the whole import.
-    internal static AppPreferences ImportAppPreferences(JsonObject legacy) {
-        var stored = legacy.DeepClone().AsObject();
-        stored[Key.TranslationRules] = RawTranslationRules(legacy[Key.TranslationRules]);
+    /// The preferences an older release's settings stored, read as the stored
+    /// record is: each value saved in its stored spelling, anything missing
+    /// or unreadable the default.
+    internal static AppPreferences ImportAppPreferences(LegacyAppPreferences legacy) {
+        ArgumentNullException.ThrowIfNull(legacy);
+        var stored = new JsonObject();
+        Put(stored, Key.StartupBehavior, legacy.StartupBehavior);
+        Put(stored, Key.OffersTranslation, legacy.OffersTranslation);
+        Put(stored, Key.AutomaticallyTranslates, legacy.AutomaticallyTranslates);
+        stored[Key.TranslationRules] = RawTranslationRules(legacy.TranslationRules);
+        Put(stored, Key.ChecksSpelling, legacy.ChecksSpelling);
+        Put(stored, Key.AutomaticallyEntersPictureInPicture, legacy.AutomaticallyEntersPictureInPicture);
+        Put(stored, Key.SavedTabClosePolicy, legacy.SavedTabClosePolicy);
+        Put(stored, Key.SavedTabFaviconReturnsToSavedUrl, legacy.SavedTabFaviconReturnsToSavedUrl);
+        Put(stored, Key.SplitFocusFollowsMouse, legacy.SplitFocusFollowsMouse);
         return DecodeAppPreferences(stored);
     }
 
-    private static JsonNode? RawTranslationRules(JsonNode? value) {
-        if (TolerantText(value) is not { } text) return null;
+    private static JsonNode? RawTranslationRules(string? text) {
+        if (text is null) return null;
         try {
             return JsonNode.Parse(text, documentOptions: new() { MaxDepth = 8 });
         } catch (JsonException) {
@@ -151,7 +163,7 @@ internal static partial class StoredSessionCodec {
         try {
             return AutomaticTranslationRules.Restore(sources.Select(member => new TranslationRule(member.Key,
                 TolerantText(member.Value?[Key.TargetId]) ?? "", TolerantFlag(member.Value?[Key.IsEnabled]) ?? false))).Rules;
-        } catch (BrowserRuleException) {
+        } catch (Rejected) {
             return AutomaticTranslationRules.Empty.Rules;
         }
     }

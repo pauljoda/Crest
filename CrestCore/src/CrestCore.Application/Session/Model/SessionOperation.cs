@@ -7,12 +7,7 @@ namespace CrestCore.Application;
 
 internal enum SessionOperation {
     Unknown,
-    UnknownPreferences,
     UnknownSpace,
-    LaunchPlan,
-    PreferencesImport,
-    PreferencesSet,
-    PreferencesTranslationRule,
     SpaceBrowsingPreferences,
     SpaceSearchProviderRemove,
     SpaceSearchProviderUpsert,
@@ -25,17 +20,12 @@ internal static class SessionOperationCodes {
     #region Actions - Decoding
 
     public static SessionOperation Parse(string? value) => value switch {
-        "launch.plan" => SessionOperation.LaunchPlan,
-        "preferences.import" => SessionOperation.PreferencesImport,
-        "preferences.set" => SessionOperation.PreferencesSet,
-        "preferences.translation_rule" => SessionOperation.PreferencesTranslationRule,
         "space.browsing_preferences" => SessionOperation.SpaceBrowsingPreferences,
         "space.search_provider.remove" => SessionOperation.SpaceSearchProviderRemove,
         "space.search_provider.upsert" => SessionOperation.SpaceSearchProviderUpsert,
         "tab.transfer" => SessionOperation.TabTransfer,
         "tabs.batch" => SessionOperation.TabsBatch,
         "workspace.import" => SessionOperation.WorkspaceImport,
-        _ when value?.StartsWith("preferences.", StringComparison.Ordinal) == true => SessionOperation.UnknownPreferences,
         _ when value?.StartsWith("space.", StringComparison.Ordinal) == true => SessionOperation.UnknownSpace,
         _ => SessionOperation.Unknown
     };
@@ -58,7 +48,6 @@ internal static class SessionOperationCodes {
             SessionOperation.WorkspaceImport or SessionOperation.TabTransfer => new(superseded, SyncUrgency.WithSave),
             SessionOperation.TabsBatch => new(Enum.TryParse<TabBatchKind>(request["arguments"]?["kind"]?.GetValue<string>(), out var kind)
                 && kind == TabBatchKind.Delete ? explicitDelete : superseded, SyncUrgency.WithSave),
-            SessionOperation.LaunchPlan => null,
             _ => new(superseded, SyncUrgency.Coalesced)
         };
     }
@@ -66,14 +55,6 @@ internal static class SessionOperationCodes {
     #endregion
 
     #region Actions - Families
-
-    /// App-wide behavior preferences and the launch plan that reads them.
-    public static bool IsPreferences(SessionOperation operation) => operation is
-        SessionOperation.UnknownPreferences
-        or SessionOperation.LaunchPlan
-        or SessionOperation.PreferencesImport
-        or SessionOperation.PreferencesSet
-        or SessionOperation.PreferencesTranslationRule;
 
     public static bool IsSpace(SessionOperation operation) => operation is
         SessionOperation.UnknownSpace

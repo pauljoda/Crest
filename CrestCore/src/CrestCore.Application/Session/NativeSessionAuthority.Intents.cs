@@ -114,6 +114,9 @@ public sealed partial class NativeSessionAuthority {
             BeginDeletingSpace deletion => BeginningDeletion(basis, deletion),
             FinishDeletingSpace deletion => FinishingDeletion(basis, deletion),
             ResetPrivateBrowsing reset => ResettingPrivateBrowsing(basis, reset, now, ids),
+            SetAppPreferences preferences => SettingPreferences(basis, preferences),
+            SetTranslationRule rule => SettingTranslationRule(basis, rule),
+            ImportAppPreferences import => ImportingPreferences(basis, import),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;

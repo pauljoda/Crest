@@ -271,7 +271,7 @@ operations or a bounded export. Swift keeps projections and adapters.
 | Search and translation | `SearchProvider`; the `CustomSearchEngineAdmission` query; `search.url`, `search.custom_providers` and `translation.*`; the `space.search_provider.*` commands |
 | Windows and plans | The device store's `OpenWindow`, `CloseWindow`, `ShowSpace`, `ShowTab`, `DismissShownTab`, `ResizeSplitColumns` and `AdoptWindowRecords` intents and the `CanTearOff` and `FallbackTab` queries on `crest_app_*`; `setup.space`, `setup.tab`, `setup.reconcile`, `onboarding.completion` and `onboarding.guide`; the `workspace.review` query; split-run validation in the workspace import |
 | Shortcuts, launch and media | `shortcuts.bindings`, `.assign` and `.numbered_selection`; `launch.plan`; `media.session_event` and `media.arbitrate`; the `OpenTab` intent's `AfterTabId` |
-| Behavior preferences | The session's `appPreferences` record behind `preferences.set`, `preferences.translation_rule` and a one-time `preferences.import`. Device-local, never synced |
+| Behavior preferences | The session's `appPreferences` record behind the `SetAppPreferences`, `SetTranslationRule` and one-time `ImportAppPreferences` intents and the `LaunchPlan` query. Device-local, never synced |
 | Links, Quick Window, presentation | The `ExternalLinkRoute`, `QuickWindowSite` and `BalancedProtectionRules` queries; `links.route_*`, `links.space_removed`, `quick_window.*`, `workspace.command_route`, `page.presentation`, `branding.normalize` and the `space.branding` command |
 
 What each window shows is the core device's, saved beside the session and

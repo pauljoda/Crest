@@ -405,3 +405,21 @@ extension BrowserCredentialPreferences {
             alsoOffersSaveToSystemPasswords: alsoOffersSaveToSystemPasswords)
     }
 }
+
+extension BrowserAppPreferences {
+    /// These preferences as the core's record carries them.
+    var core: AppPreferences {
+        AppPreferences(
+            startup: StartupBehavior(copyTerm: startupBehavior) ?? .showStartPage,
+            offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates,
+            translationRules: translationRules.sources.keys.sorted().compactMap { source in
+                translationRules.sources[source].map {
+                    TranslationRule(sourceLanguage: source, targetID: $0.targetID, isEnabled: $0.isEnabled)
+                }
+            },
+            checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture,
+            savedTabClose: SavedTabClosePolicy(copyTerm: savedTabClosePolicy) ?? .resumeLastLocation,
+            savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL,
+            splitFocusFollowsMouse: splitFocusFollowsMouse)
+    }
+}

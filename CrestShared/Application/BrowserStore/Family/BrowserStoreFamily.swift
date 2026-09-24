@@ -212,23 +212,6 @@ final class BrowserStoreFamily {
         reconcileStores(after: previous, from: source)
     }
 
-    /// App-wide behavior preferences. Only the preference record changes, so
-    /// every window keeps showing what it showed.
-    func executePreferences(_ request: BrowserAppPreferenceRequest, from source: BrowserStore) -> Bool {
-        let previous = authoritativeSession
-        do {
-            let changed = try core.executePreferences(request)
-            if changed { reconcileStores(after: previous, from: nil) }
-            return changed
-        } catch {
-            source.localSyncErrorDescription = "Core preference command failed: \(error)"
-            return false
-        }
-    }
-
-    /// A core answer read from the owned session without changing it.
-    func readCore<Request: Encodable>(_ request: Request) -> Data? { try? core.read(request) }
-
     /// Runs one session intent that `source`'s window issued. What it changed
     /// reaches the session copy and the read model through the core's changes,
     /// and every window then follows the accepted session. Answers whether the

@@ -53,9 +53,6 @@ public sealed class StoredFormatTests {
         Assert.Equal([null, null, "local", "remote", null, null], ArchiveReason.All.Select(reason => reason.DeletionOrigin));
         Assert.Equal(["automatic", "pulled", "emoji"], TabIconMode.All.Select(mode => mode.Name));
         Assert.Equal("crest.emoji:", TabIconMode.EmojiPrefix);
-        Assert.Equal(["startupBehavior", "offersTranslation", "automaticallyTranslates", "checksSpelling",
-            "automaticallyEntersPictureInPicture", "savedTabClosePolicy", "savedTabFaviconReturnsToSavedURL", "splitFocusFollowsMouse"],
-            BrowserPreference.All.Select(preference => preference.Name));
         Assert.Equal(["after12Hours", "after24Hours", "after7Days", "after30Days", "never"],
             CurrentTabCleanup.All.Select(cleanup => cleanup.Name));
         Assert.Equal(["oneDay", "oneWeek", "thirtyDays", "ninetyDays", "oneYear", "forever"], DataRetention.All.Select(retention => retention.Name));
@@ -100,7 +97,9 @@ public sealed class StoredFormatTests {
                     RestoresTabs: true));
                 request["windowId"] = issuer.ToString();
             }
-            if (RecordedIntents.Typed(request, workspace, window, authority.Current) is { } intents) {
+            if (RecordedIntents.LaunchPlan(request, workspace) is { } plan) {
+                Compare(name, LaunchCodes.Plan(app.Query(plan)));
+            } else if (RecordedIntents.Typed(request, workspace, window, authority.Current) is { } intents) {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
                 foreach (var intent in intents) app.Send(intent);

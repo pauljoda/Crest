@@ -108,6 +108,11 @@ internal static class RecordedIntents {
             "space.create" => Created(workspace, window ?? Guid.Empty, StoredSessionCodec.DecodeSpace(arguments["template"]), current),
             "space.deletion.begin" => [new BeginDeletingSpace(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("operationID"))],
             "space.remove" => [new FinishDeletingSpace(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("operationID"))],
+            "preferences.set" => [new SetAppPreferences(workspace, Preferred(current.AppPreferences ?? AppPreferencesPolicy.Default,
+                Text("preference"), arguments["value"]!))],
+            "preferences.translation_rule" => [new SetTranslationRule(workspace, Text("sourceID"), Text("targetID"),
+                arguments["isEnabled"]!.GetValue<bool>())],
+            "preferences.import" => [new ImportAppPreferences(workspace, Legacy(arguments["legacy"]!.AsObject()))],
             _ => null
         };
     }
@@ -146,6 +151,33 @@ internal static class RecordedIntents {
         changes.AddRange(app.Send(new ReleasePage(page, KeepsState: false)));
         return changes;
     }
+
+    /// The query a recorded `launch.plan` read became, or null for any other request.
+    public static LaunchPlan? LaunchPlan(JsonObject request, Guid workspace) {
+        if (request["operation"]!.GetValue<string>() != "launch.plan") return null;
+        var environment = request["environment"]!.AsObject();
+        bool Flag(string key) => environment[key]!.GetValue<bool>();
+        return new(workspace, DevicePlatform.Named(request["platform"]!.GetValue<string>())!, new(Flag("testRuntime"),
+            Flag("previewRuntime"), Flag("isolatedSession"), Flag("namedProfile"), Flag("isolatedCloudSync"), Flag("resetSession"),
+            Flag("showcase"), Flag("inMemoryCredentials"), Flag("onboardingWelcome"), Flag("desktopSetup"), Flag("mobileSetup"),
+            Flag("performanceHarness"), Flag("updateTestFeed")), request["hasActiveLaunchGate"]!.GetValue<bool>());
+    }
+
+    /// `current` with the one preference a recorded `preferences.set` named
+    /// set to the value it recorded, in its stored spelling.
+    private static AppPreferences Preferred(AppPreferences current, string preference, JsonNode value) => preference switch {
+        "checksSpelling" => current with { ChecksSpelling = value.GetValue<bool>() },
+        "startupBehavior" => current with { Startup = StoredSessionCodec.ParseStartupBehavior(value)!.Value },
+        "savedTabClosePolicy" => current with { SavedTabClose = StoredSessionCodec.ParseSavedTabClosePolicy(value)!.Value },
+        _ => throw new ArgumentOutOfRangeException(nameof(preference), preference, "The recording sets no other preference.")
+    };
+
+    /// The legacy preferences a recorded import carried.
+    private static LegacyAppPreferences Legacy(JsonObject legacy) => new(legacy["startupBehavior"]?.GetValue<string>(),
+        legacy["offersTranslation"]?.GetValue<bool>(), legacy["automaticallyTranslates"]?.GetValue<bool>(),
+        legacy["translationRules"]?.GetValue<string>(), legacy["checksSpelling"]?.GetValue<bool>(),
+        legacy["automaticallyEntersPictureInPicture"]?.GetValue<bool>(), legacy["savedTabClosePolicy"]?.GetValue<string>(),
+        legacy["savedTabFaviconReturnsToSavedURL"]?.GetValue<bool>(), legacy["splitFocusFollowsMouse"]?.GetValue<bool>());
 
     /// The Spaces a recorded reorder left, which moved the ones at `offsets`
     /// to before the one at `destination`, as a list's move does.

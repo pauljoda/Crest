@@ -2329,6 +2329,10 @@
     "space-access-intents": {
       "category": "internal",
       "message": "Locking and unlocking Spaces are typed core intents, and a late unlock result can no longer complete a newer request."
+    },
+    "app-preference-intents": {
+      "category": "internal",
+      "message": "App preferences, translation rules and launch planning go through typed core intents and queries."
     }
   }
 }

@@ -26,7 +26,6 @@ public sealed partial class NativeSessionAuthority {
 
     private NativeSessionCommand PrepareOperation(JsonObject request, SessionOperation operation, int length) {
         if (operation == SessionOperation.WorkspaceImport) return PrepareWorkspaceCommand(request);
-        if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(request, operation);
         if (length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(request);
         if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(request);

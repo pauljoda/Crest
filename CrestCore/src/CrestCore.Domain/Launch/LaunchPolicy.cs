@@ -17,7 +17,7 @@ public static class LaunchPolicy {
     /// `storedStartup` is the saved preference, null when absent or unreadable.
     /// `hasActiveLaunchGate` is true while first-run setup owns the initial
     /// destination.
-    public static LaunchPlan Plan(LaunchEnvironmentFacts facts, DevicePlatform platform, StartupBehavior? storedStartup,
+    public static LaunchDecision Plan(LaunchEnvironment facts, DevicePlatform platform, StartupBehavior? storedStartup,
         bool hasActiveLaunchGate) {
         ArgumentNullException.ThrowIfNull(facts);
         bool isolated = RequiresIsolation(facts);
@@ -26,7 +26,7 @@ public static class LaunchPolicy {
     }
 
     /// Every test, preview, fixture, review and performance launch is isolated.
-    public static bool RequiresIsolation(LaunchEnvironmentFacts facts) {
+    public static bool RequiresIsolation(LaunchEnvironment facts) {
         ArgumentNullException.ThrowIfNull(facts);
         return facts.IsTestRuntime || facts.IsPreviewRuntime || facts.RequestsIsolatedSession
             || facts.RequestsIsolatedCloudSync || facts.ResetsSession || facts.PresentsShowcase
@@ -37,7 +37,7 @@ public static class LaunchPolicy {
     /// The mobile showcase always opens on the Start Page. Setup and isolated
     /// launches restore the last active tab so a fixture opens where it was
     /// staged; everyone else gets their saved choice.
-    private static StartupBehavior Startup(LaunchEnvironmentFacts facts, DevicePlatform platform, bool isolated,
+    private static StartupBehavior Startup(LaunchEnvironment facts, DevicePlatform platform, bool isolated,
         StartupBehavior? stored, bool hasActiveLaunchGate) {
         if (platform == DevicePlatform.Mobile && facts.PresentsShowcase) return StartupBehavior.ShowStartPage;
         if (hasActiveLaunchGate || isolated) return StartupBehavior.LastActiveTab;

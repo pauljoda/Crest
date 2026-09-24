@@ -279,6 +279,10 @@ internal static partial class StoredSessionCodec {
         if (member is not null) value[key] = member;
     }
 
+    private static void Put(JsonObject value, string key, bool? member) {
+        if (member is { } flag) value[key] = flag;
+    }
+
     private static void Put(JsonObject value, string key, DateTimeOffset? member) {
         if (member is { } date) value[key] = Seconds(date);
     }

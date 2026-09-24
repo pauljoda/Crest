@@ -19,6 +19,18 @@ struct BrowserLaunchPlan: Equatable, Sendable {
 }
 
 extension BrowserLaunchEnvironment {
+    /// The parsed launch flags, as the core's launch plan reads them.
+    var coreEnvironment: LaunchEnvironment {
+        LaunchEnvironment(
+            isTestRuntime: isXCTestRuntime, isPreviewRuntime: isSwiftUIPreviewRuntime,
+            requestsIsolatedSession: explicitlyRequiresIsolation, hasNamedProfile: persistentIsolationID != nil,
+            requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession,
+            presentsShowcase: presentsShowcaseSession, usesInMemoryCredentials: usesInMemoryCredentialVault,
+            forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesMacOnboardingSetup,
+            forcesMobileSetup: forcesMobileOnboardingSetup, runsPerformanceHarness: performanceBaseURLString != nil,
+            usesUpdateTestFeed: isolatedSoftwareUpdateFeedURL != nil)
+    }
+
     /// The parsed launch flags, in the core's vocabulary. Raw values never cross.
     var coreFacts: BrowserCorePolicy.LaunchFacts {
         BrowserCorePolicy.LaunchFacts(
@@ -94,15 +106,6 @@ extension BrowserCorePolicy {
                 answer: LaunchPlanAnswer.self))
     }
 
-    /// `hasActiveLaunchGate` is true while first-run setup owns the first window.
-    static func launchRequest(for environment: BrowserLaunchEnvironment, hasActiveLaunchGate: Bool)
-        -> Request<LaunchPlanRequest>
-    {
-        Request(
-            operation: .launchPlan,
-            arguments: launchArguments(for: environment, hasActiveLaunchGate: hasActiveLaunchGate))
-    }
-
     static func plan(from answer: LaunchPlanAnswer?) -> BrowserLaunchPlan {
         guard let answer else { return .unavailable }
         return BrowserLaunchPlan(
@@ -121,17 +124,18 @@ extension BrowserCorePolicy {
 }
 
 extension BrowserStore {
-    /// The destination this launch's first window opens: the session's
-    /// `launch.plan` applies the saved startup preference the core owns, the
-    /// launch's isolation and any active setup. Without an answer the window
-    /// opens the Start Page.
+    /// The destination this launch's first window opens: the core's launch
+    /// plan applies the saved startup preference this workspace keeps, the
+    /// launch's isolation and any active setup; `hasActiveLaunchGate` is true
+    /// while first-run setup owns the first window. A workspace that keeps no
+    /// preferences opens the Start Page.
     func startupBehavior(for environment: BrowserLaunchEnvironment, hasActiveLaunchGate: Bool = false)
         -> BrowserStartupBehavior
     {
-        let request = BrowserCorePolicy.launchRequest(for: environment, hasActiveLaunchGate: hasActiveLaunchGate)
-        let answer = family.readCore(request).flatMap {
-            try? JSONDecoder().decode(BrowserCorePolicy.LaunchPlanAnswer.self, from: $0)
-        }
-        return BrowserCorePolicy.plan(from: answer).startupBehavior
+        let plan = LaunchPlan(
+            workspaceID: family.workspaceID, platform: BrowserCorePolicy.devicePlatform,
+            environment: environment.coreEnvironment, hasActiveLaunchGate: hasActiveLaunchGate)
+        guard let decision = try? core.query(plan) else { return BrowserLaunchPlan.unavailable.startupBehavior }
+        return BrowserStartupBehavior(coreTerm: decision.startup) ?? BrowserLaunchPlan.unavailable.startupBehavior
     }
 }

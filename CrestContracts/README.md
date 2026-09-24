@@ -194,21 +194,19 @@ selection command to the zero-based tab or Space it reaches for the given counts
 `launch.plan` takes the platform's parsed launch flags and whether first-run
 setup owns the first window, and answers isolation, ephemeral profile storage,
 installed-app presentation and the startup behavior for a person who never
-chose. The same request as a session command reads the saved startup
-preference; the caller releases it without committing.
+chose. The `LaunchPlan` query answers the same for the persistent workspace,
+with the startup preference it keeps.
 
 The persistent session's `appPreferences` record holds the app-wide behavior
 preferences (`startupBehavior`, `offersTranslation`, `automaticallyTranslates`,
 `translationRules`, `checksSpelling`, `automaticallyEntersPictureInPicture`,
 `savedTabClosePolicy`, `savedTabFaviconReturnsToSavedURL`,
 `splitFocusFollowsMouse`), using the raw values the native settings stored.
-`preferences.set` takes `preference` and `value`,
-`preferences.translation_rule` takes `sourceID`, `targetID` and `isEnabled`,
-and `preferences.import` takes `legacy`, the old defaults values (translation
-rules as their stored JSON text), applied only while the session has no record.
-Each answers `{"preferences": record}`. Unknown names and ill-typed values are
-`unknown_preference` and `invalid_preference_value`; private and borrowed
-workspaces refuse the commands. Value deltas and sync replacement never change
+`SetAppPreferences` sets the record, `SetTranslationRule` edits one source
+language's rule, and `ImportAppPreferences` takes the old defaults values
+(translation rules as their stored JSON text), applied only while the session
+has no record. Private and borrowed workspaces refuse them with
+`PersistentWorkspaceRequired`. Value deltas and sync replacement never change
 the record, and sync never uploads it.
 `media.session_event` decides what one sequenced page media-session report does
 (ignored, retired, withdrawn or published, with its ordinal, sibling supersession,

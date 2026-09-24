@@ -1,71 +1,36 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
 
 namespace CrestCore.Tests;
 
+/// The persistent workspace imports the old settings once and keeps the
+/// preferences on this device; the launch plan reads its startup choice.
 public sealed partial class BrowserContractsTests {
-    private static readonly string[] LaunchFlags = [
-        "testRuntime", "previewRuntime", "isolatedSession", "namedProfile", "isolatedCloudSync", "resetSession", "showcase",
-        "inMemoryCredentials", "onboardingWelcome", "desktopSetup", "mobileSetup", "performanceHarness", "updateTestFeed"
-    ];
+    private static LaunchPlan LaunchPlan(Guid workspace, DevicePlatform? platform = null, bool gate = false,
+        LaunchEnvironment? environment = null) =>
+        new(workspace, platform ?? DevicePlatform.Desktop, environment ?? LaunchEnvironment.Installed, gate);
 
-    private static byte[] PreferenceCommand(string operation, JsonObject arguments) => Bytes(new JsonObject {
-        ["version"] = 1,
-        ["operation"] = operation,
-        ["arguments"] = arguments
-    });
-
-    private static JsonObject SetPreference(string preference, JsonNode? value) => new() {
-        ["preference"] = preference,
-        ["value"] = value
-    };
-
-    private static byte[] LaunchRequest(string platform = "desktop", bool gate = false, params string[] enabled) {
-        var environment = new JsonObject();
-        foreach (var flag in LaunchFlags) environment[flag] = enabled.Contains(flag);
-        return Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "launch.plan",
-            ["platform"] = platform,
-            ["environment"] = environment,
-            ["hasActiveLaunchGate"] = gate
-        });
-    }
-
-    /// Reads the plan and releases it uncommitted, as the native launch does.
-    private static string Startup(NativeSessionAuthority authority, string platform = "desktop", bool gate = false,
-        params string[] enabled) {
-        var revision = authority.Revision;
-        var plan = JsonNode.Parse(authority.PrepareCommand(LaunchRequest(platform, gate, enabled)).Output)!;
-        Assert.Equal(revision, authority.Revision);
-        return plan["startupBehavior"]!.GetValue<string>();
-    }
-
-    private static JsonObject LegacyPreferences() => new() {
-        ["startupBehavior"] = "lastActiveTab",
-        ["offersTranslation"] = false,
-        ["automaticallyTranslates"] = true,
-        ["translationRules"] = """{"sources":{"es":{"isEnabled":true,"targetID":"en"}}}""",
-        ["checksSpelling"] = true,
-        ["automaticallyEntersPictureInPicture"] = false,
-        ["savedTabClosePolicy"] = "returnToSavedURL",
-        ["savedTabFaviconReturnsToSavedURL"] = true,
-        ["splitFocusFollowsMouse"] = true
-    };
+    private static LegacyAppPreferences LegacyPreferences() => new(StartupBehavior: "lastActiveTab", OffersTranslation: false,
+        AutomaticallyTranslates: true, TranslationRules: """{"sources":{"es":{"isEnabled":true,"targetID":"en"}}}""",
+        ChecksSpelling: true, AutomaticallyEntersPictureInPicture: false, SavedTabClosePolicy: "returnToSavedURL",
+        SavedTabFaviconReturnsToSavedUrl: true, SplitFocusFollowsMouse: true);
 
     [Fact]
     public void LegacyPreferencesImportOnceAndPersistWithTheSession() {
         var session = SavedSession().Document["session"]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        Assert.Equal("showStartPage", Startup(authority));
-
-        authority.PrepareCommand(PreferenceCommand("preferences.import", new() { ["legacy"] = LegacyPreferences() })).Commit();
-        var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
-        var stored = saved["appPreferences"]!;
+        byte[] saved;
+        using (var device = new TestDevice(authority)) {
+            Assert.Equal(StartupBehavior.ShowStartPage, device.Query(LaunchPlan(device.Workspace)).Startup);
+            device.Send(new ImportAppPreferences(device.Workspace, LegacyPreferences()));
+            saved = authority.Checkpoint().Read("core");
+        }
+        var stored = JsonNode.Parse(saved)!["appPreferences"]!;
         Assert.Equal("lastActiveTab", stored["startupBehavior"]!.GetValue<string>());
         Assert.False(stored["offersTranslation"]!.GetValue<bool>());
         Assert.True(stored["automaticallyTranslates"]!.GetValue<bool>());
@@ -77,63 +42,47 @@ public sealed partial class BrowserContractsTests {
         Assert.True(stored["splitFocusFollowsMouse"]!.GetValue<bool>());
 
         // A later launch finds the record and never imports over it again.
-        var restored = new NativeSessionAuthority(Bytes(saved));
-        var repeated = restored.PrepareCommand(PreferenceCommand("preferences.import", new() {
-            ["legacy"] = new JsonObject { ["startupBehavior"] = "showStartPage", ["checksSpelling"] = false }
-        }));
-        Assert.Equal("lastActiveTab", JsonNode.Parse(repeated.Output)!["preferences"]!["startupBehavior"]!.GetValue<string>());
-        repeated.Commit();
-        Assert.Equal("lastActiveTab", Startup(restored));
-        Assert.True(JsonNode.Parse(restored.Checkpoint().Read("core"))!["appPreferences"]!["checksSpelling"]!
-            .GetValue<bool>());
+        var restored = new NativeSessionAuthority(saved);
+        using var relaunched = new TestDevice(restored);
+        var kept = restored.Current.AppPreferences;
+        relaunched.Send(new ImportAppPreferences(relaunched.Workspace, new("showStartPage", null, null, null, false, null, null, null,
+            null)));
+        Assert.Same(kept, restored.Current.AppPreferences);
+        Assert.Equal(StartupBehavior.LastActiveTab, relaunched.Query(LaunchPlan(relaunched.Workspace)).Startup);
     }
 
     [Fact]
     public void UnreadableLegacyValuesKeepTheirDefaults() {
-        var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var imported = authority.PrepareCommand(PreferenceCommand("preferences.import", new() {
-            ["legacy"] = new JsonObject {
-                ["startupBehavior"] = "retiredChoice",
-                ["translationRules"] = "not json",
-                ["checksSpelling"] = "yes",
-                ["savedTabClosePolicy"] = null
-            }
-        }));
-        var stored = JsonNode.Parse(imported.Output)!["preferences"]!;
-        Assert.Equal("showStartPage", stored["startupBehavior"]!.GetValue<string>());
-        Assert.Empty(stored["translationRules"]!["sources"]!.AsObject());
-        Assert.False(stored["checksSpelling"]!.GetValue<bool>());
-        Assert.True(stored["offersTranslation"]!.GetValue<bool>());
-        Assert.True(stored["automaticallyEntersPictureInPicture"]!.GetValue<bool>());
-        Assert.Equal("resumeLastLocation", stored["savedTabClosePolicy"]!.GetValue<string>());
+        var authority = new NativeSessionAuthority(Bytes(SavedSession().Document["session"]!));
+        using var device = new TestDevice(authority);
+        device.Send(new ImportAppPreferences(device.Workspace, new("retiredChoice", null, null, "not json", null, null, null, null, null)));
+        var stored = authority.Current.AppPreferences!;
+        Assert.Equal(AppPreferencesPolicy.Default, stored);
     }
 
     [Fact]
-    public void OnlyPreferenceCommandsChangeTheRecord() {
+    public void OnlyThePersistentWorkspaceKeepsAppPreferences() {
         var session = SavedSession().Document["session"]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", true))).Commit();
-        authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("startupBehavior", "lastActiveTab"))).Commit();
-        var rule = authority.PrepareCommand(PreferenceCommand("preferences.translation_rule", new() {
-            ["sourceID"] = "es-MX",
-            ["targetID"] = "fr",
-            ["isEnabled"] = true
-        }));
-        rule.Commit();
-        Assert.Equal("fr", JsonNode.Parse(rule.Output)!["preferences"]!["translationRules"]!["sources"]!["es-MX"]!["targetID"]!
-            .GetValue<string>());
-
-        Assert.Equal(BrowserRuleCodes.UnknownPreference, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("sidebarDensity", 1)))).Code);
-        Assert.Equal(BrowserRuleCodes.InvalidPreferenceValue, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("startupBehavior", "retiredChoice")))).Code);
-        Assert.Equal(BrowserRuleCodes.InvalidPreferenceValue, Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", "true")))).Code);
+        var owner = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(owner);
+        var preferences = AppPreferencesPolicy.Default with { ChecksSpelling = true };
+        device.Send(new SetAppPreferences(device.Workspace, preferences));
+        Assert.Equal(preferences, owner.Current.AppPreferences);
 
         // A native value edit whose header omits the record keeps the owned one.
         var header = session.DeepClone().AsObject(); header.Remove("spaces");
-        authority.Commit(Bytes(new JsonObject { ["version"] = 1, ["metadata"] = header, ["spaces"] = new JsonArray() }));
-        var saved = JsonNode.Parse(authority.Checkpoint().Read("core"))!["appPreferences"]!;
-        Assert.True(saved["checksSpelling"]!.GetValue<bool>());
-        Assert.Equal("lastActiveTab", Startup(authority));
+        owner.Commit(Bytes(new JsonObject { ["version"] = 1, ["metadata"] = header, ["spaces"] = new JsonArray() }));
+        Assert.Equal(preferences, owner.Current.AppPreferences);
+
+        var borrowed = device.Attach(Borrow(owner, session));
+        var privateSession = session.DeepClone(); privateSession["coreWorkspaceKind"] = "private";
+        var privateWorkspace = device.Attach(new NativeSessionAuthority(Bytes(privateSession)));
+        foreach (var workspace in new[] { borrowed, privateWorkspace }) {
+            Assert.Equal(new PersistentWorkspaceRequired(workspace), Assert.Throws<Rejected>(() =>
+                device.Send(new SetAppPreferences(workspace, preferences))).Rejection);
+            Assert.Equal(new PersistentWorkspaceRequired(workspace), Assert.Throws<Rejected>(() =>
+                device.Query(LaunchPlan(workspace))).Rejection);
+        }
     }
 
     [Fact]
@@ -153,31 +102,23 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Theory]
-    [InlineData("desktop", false, "lastActiveTab")]
-    [InlineData("desktop", true, "lastActiveTab")]
-    [InlineData("mobile", false, "lastActiveTab")]
-    public void TheLaunchPlanReadsTheSavedStartupChoice(string platform, bool gate, string expected) {
+    [InlineData("desktop", false)]
+    [InlineData("desktop", true)]
+    [InlineData("mobile", false)]
+    public void TheLaunchPlanReadsTheSavedStartupChoice(string platformName, bool gate) {
+        var platform = DevicePlatform.Named(platformName)!;
         var session = SavedSession().Document["session"]!.AsObject();
         session["appPreferences"] = new JsonObject { ["startupBehavior"] = "lastActiveTab" };
-        Assert.Equal(expected, Startup(new NativeSessionAuthority(Bytes(session)), platform, gate));
+        using (var device = new TestDevice(new NativeSessionAuthority(Bytes(session))))
+            Assert.Equal(StartupBehavior.LastActiveTab, device.Query(LaunchPlan(device.Workspace, platform, gate)).Startup);
         session["appPreferences"] = new JsonObject { ["startupBehavior"] = "showStartPage" };
-        var showsStartPage = new NativeSessionAuthority(Bytes(session));
-        Assert.Equal(gate ? "lastActiveTab" : "showStartPage", Startup(showsStartPage, platform, gate));
+        using var shows = new TestDevice(new NativeSessionAuthority(Bytes(session)));
+        Assert.Equal(gate ? StartupBehavior.LastActiveTab : StartupBehavior.ShowStartPage,
+            shows.Query(LaunchPlan(shows.Workspace, platform, gate)).Startup);
         // Setup and isolated fixtures restore their staged tab; the mobile showcase always opens the Start Page.
-        Assert.Equal("lastActiveTab", Startup(showsStartPage, platform, false, "isolatedSession"));
-        Assert.Equal("showStartPage", Startup(new NativeSessionAuthority(Bytes(session.DeepClone())), "mobile", false, "showcase"));
-    }
-
-    [Fact]
-    public void OnlyThePersistentWorkspaceOwnsAppPreferences() {
-        var session = SavedSession().Document["session"]!;
-        var owner = new NativeSessionAuthority(Bytes(session));
-        var borrowed = Borrow(owner, session);
-        Assert.Equal(BrowserRuleCodes.BorrowedProfileRequiresOwner, Assert.Throws<BrowserRuleException>(() =>
-            borrowed.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", true)))).Code);
-        var privateSession = session.DeepClone(); privateSession["coreWorkspaceKind"] = "private";
-        var privateAuthority = new NativeSessionAuthority(Bytes(privateSession));
-        Assert.Equal(BrowserRuleCodes.PersistentWorkspaceRequired, Assert.Throws<BrowserRuleException>(() =>
-            privateAuthority.PrepareCommand(PreferenceCommand("preferences.set", SetPreference("checksSpelling", true)))).Code);
+        Assert.Equal(StartupBehavior.LastActiveTab, shows.Query(LaunchPlan(shows.Workspace, platform, false,
+            LaunchEnvironment.Installed with { RequestsIsolatedSession = true })).Startup);
+        Assert.Equal(StartupBehavior.ShowStartPage, shows.Query(LaunchPlan(shows.Workspace, DevicePlatform.Mobile, false,
+            LaunchEnvironment.Installed with { PresentsShowcase = true })).Startup);
     }
 }

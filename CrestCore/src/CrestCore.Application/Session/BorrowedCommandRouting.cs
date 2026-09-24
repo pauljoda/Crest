@@ -15,13 +15,8 @@ internal static class BorrowedCommandRouting {
         : operation switch {
             SessionOperation.SpaceBrowsingPreferences
                 or SessionOperation.SpaceSearchProviderRemove
-                or SessionOperation.SpaceSearchProviderUpsert
-                or SessionOperation.LaunchPlan
-                or SessionOperation.PreferencesImport
-                or SessionOperation.PreferencesSet
-                or SessionOperation.PreferencesTranslationRule => BorrowedCommandRoute.Source,
+                or SessionOperation.SpaceSearchProviderUpsert => BorrowedCommandRoute.Source,
             SessionOperation.UnknownSpace
-                or SessionOperation.UnknownPreferences
                 or SessionOperation.WorkspaceImport => BorrowedCommandRoute.Rejected,
             _ => BorrowedCommandRoute.Local
         };

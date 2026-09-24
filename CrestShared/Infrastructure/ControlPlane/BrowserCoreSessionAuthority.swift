@@ -613,28 +613,11 @@ final class BrowserCoreSessionAuthority {
 // MARK: - App preferences
 
 extension BrowserCoreSessionAuthority {
-    /// Applies one `preferences.*` command, and answers whether the
-    /// preferences changed. Only the preference record changes, so every
-    /// window and Space record stays exactly as it was.
-    func executePreferences(_ request: BrowserAppPreferenceRequest) throws -> Bool {
-        let before = projection.appPreferences
-        try commitCommand(try JSONEncoder().encode(request)) { _ in }
-        return projection.appPreferences != before
-    }
-
     /// The core keeps its preference record through value edits and sync
     /// replacement; the projection follows the same rule.
     fileprivate func keepingPreferences(_ proposed: BrowserSession) -> BrowserSession {
         var next = proposed
         next.appPreferences = projection.appPreferences
         return next
-    }
-
-    /// Reads a core answer that changes nothing: the command is prepared, read
-    /// and released without committing.
-    func read<Request: Encodable>(_ request: Request) throws -> Data {
-        let command = try prepareCommand(try JSONEncoder().encode(request))
-        defer { crest_session_release_command(command) }
-        return try readCommand(command)
     }
 }

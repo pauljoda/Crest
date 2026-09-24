@@ -35,7 +35,7 @@ public sealed class AutomaticTranslationRules {
         foreach (var rule in stored) {
             RequireLanguageLength(rule.SourceLanguage, rule.TargetId);
             values[rule.SourceLanguage] = rule;
-            if (values.Count > MaximumSources) throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
+            if (values.Count > MaximumSources) throw new Rejected(new TranslationRuleLimitReached(MaximumSources));
         }
         return new(values);
     }
@@ -55,7 +55,7 @@ public sealed class AutomaticTranslationRules {
 
     private static void RequireLanguageLength(string source, string target) {
         if (source.Length > MaximumLanguageLength || target.Length > MaximumLanguageLength)
-            throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
+            throw new Rejected(new LanguageTooLong(MaximumLanguageLength));
     }
 
     #endregion
@@ -72,7 +72,7 @@ public sealed class AutomaticTranslationRules {
         var values = new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal);
         foreach (var (key, rule) in sources) if (!LanguageTag.Matches(key, source)) values[key] = rule;
         values[source] = new(source, target, isEnabled);
-        if (values.Count > MaximumSources) throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
+        if (values.Count > MaximumSources) throw new Rejected(new TranslationRuleLimitReached(MaximumSources));
         return new(values);
     }
 

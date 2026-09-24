@@ -2,15 +2,14 @@ import Foundation
 
 /// The behavior preferences as the settings stored them in defaults before the
 /// core owned them. They are read once, when a session first has no preference
-/// record, and imported through `preferences.import`. The keys stay in place, so
-/// an older build still finds its settings.
+/// record, and imported through the core's `ImportAppPreferences`. The keys
+/// stay in place, so an older build still finds its settings.
 ///
 /// Each value is read from the same defaults its setting used: an isolated
 /// launch never read the installed startup or Split View choices, and named
 /// isolated profiles kept translation and saved-tab choices in their own suite.
-/// It encodes as the `legacy` argument of `preferences.import`, omitting a
-/// value that was never saved.
-struct BrowserLegacyAppPreferences: Encodable, Equatable, Sendable {
+/// A value that was never saved is nil.
+struct BrowserLegacyAppPreferences: Equatable, Sendable {
     // MARK: - Variables
 
     var startupBehavior: String?
@@ -58,6 +57,17 @@ struct BrowserLegacyAppPreferences: Encodable, Equatable, Sendable {
         }
         if let splitFocusFollowsMouse { value.splitFocusFollowsMouse = splitFocusFollowsMouse }
         return value
+    }
+
+    /// These values as the core's import reads them.
+    var core: LegacyAppPreferences {
+        LegacyAppPreferences(
+            startupBehavior: startupBehavior, offersTranslation: offersTranslation,
+            automaticallyTranslates: automaticallyTranslates, translationRules: translationRules,
+            checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture,
+            savedTabClosePolicy: savedTabClosePolicy,
+            savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL,
+            splitFocusFollowsMouse: splitFocusFollowsMouse)
     }
 
     // MARK: - Actions - Reading

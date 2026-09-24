@@ -5,10 +5,9 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// A `launch.plan` request, as a policy operation or a session read: the flags
-/// the platform parsed from its own environment, its device platform and
-/// whether a launch gate is active.
-internal sealed record LaunchPlanRequest(LaunchEnvironmentFacts Environment, DevicePlatform Platform, bool HasActiveLaunchGate) {
+/// A `launch.plan` policy request: the flags the platform parsed from its own
+/// environment, its device platform and whether a launch gate is active.
+internal sealed record LaunchPlanRequest(LaunchEnvironment Environment, DevicePlatform Platform, bool HasActiveLaunchGate) {
     #region Actions - Decoding
 
     public static LaunchPlanRequest Decode(JsonElement request) {
@@ -22,9 +21,9 @@ internal sealed record LaunchPlanRequest(LaunchEnvironmentFacts Environment, Dev
 
     #region Actions - Planning
 
-    /// The plan for this launch. The session supplies the owned startup
-    /// preference; the stateless policy supplies none.
-    public LaunchPlan Plan(StartupBehavior? storedStartup) =>
+    /// The plan for this launch, before any session supplies its saved startup
+    /// preference; the `LaunchPlan` query supplies it.
+    public LaunchDecision Plan(StartupBehavior? storedStartup) =>
         LaunchPolicy.Plan(Environment, Platform, storedStartup, HasActiveLaunchGate);
 
     #endregion

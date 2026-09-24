@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -14,19 +15,17 @@ public sealed class TranslationRulesTests {
         return JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
     }
 
-    /// Edits go through the session command that owns the persisted rules.
+    /// Edits go through the session intent that owns the persisted rules, and
+    /// answer the rules as the session stores them.
     private static JsonNode Set(JsonNode rules, string source, string target, bool enabled) {
         var session = new JsonObject {
             ["spaces"] = new JsonArray(),
             ["appPreferences"] = new JsonObject { ["translationRules"] = rules.DeepClone() }
         };
         var authority = new NativeSessionAuthority(Encoding.UTF8.GetBytes(session.ToJsonString()));
-        var command = authority.PrepareCommand(Encoding.UTF8.GetBytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "preferences.translation_rule",
-            ["arguments"] = new JsonObject { ["sourceID"] = source, ["targetID"] = target, ["isEnabled"] = enabled }
-        }.ToJsonString()));
-        return JsonNode.Parse(command.Output)!["preferences"]!["translationRules"]!;
+        using var app = new CrestApp();
+        app.Send(new SetTranslationRule(app.AttachWorkspace(authority), source, target, enabled));
+        return StoredSessionCodec.Encode(authority.Current.AppPreferences!)["translationRules"]!;
     }
 
     private static JsonNode Rule(JsonNode rules, string source) =>
@@ -107,7 +106,9 @@ public sealed class TranslationRulesTests {
         for (int i = 0; i < AutomaticTranslationRules.MaximumSources; i++)
             sources[$"x{(char)('a' + i / 26)}{(char)('a' + i % 26)}"] = new JsonObject { ["targetID"] = "en", ["isEnabled"] = true };
         var full = new JsonObject { ["sources"] = sources };
-        Assert.Throws<BrowserRuleException>(() => AutomaticTranslationRules.Empty.Set(new string('a', 65), "en", true));
-        Assert.Throws<BrowserRuleException>(() => Set(full, "ja", "en", true));
+        Assert.Equal(new LanguageTooLong(AutomaticTranslationRules.MaximumLanguageLength), Assert.Throws<Rejected>(() =>
+            AutomaticTranslationRules.Empty.Set(new string('a', 65), "en", true)).Rejection);
+        Assert.Equal(new TranslationRuleLimitReached(AutomaticTranslationRules.MaximumSources),
+            Assert.Throws<Rejected>(() => Set(full, "ja", "en", true)).Rejection);
     }
 }

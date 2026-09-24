@@ -25,7 +25,6 @@ public sealed partial class BrowserContractsTests {
 
     [Theory]
     [InlineData("space.future", BrowserRuleCodes.UnknownSpaceCommand)]
-    [InlineData("preferences.future", BrowserRuleCodes.UnknownPreferenceCommand)]
     public void UnknownOperationFamiliesKeepTheirSpecificErrors(string operation, string expectedCode) {
         var fixture = SavedSession();
         var session = fixture.Document["session"]!;

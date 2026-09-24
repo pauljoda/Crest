@@ -11,7 +11,7 @@ namespace CrestCore.Application;
 internal static class LaunchCodes {
     #region Variables
 
-    /// The members of a `launch.plan` request, as a policy operation or a session read.
+    /// The members of a `launch.plan` policy request.
     public static readonly string[] RequestMembers = ["version", "operation", "platform", "environment", "hasActiveLaunchGate"];
     private static readonly string[] EnvironmentFields = [
         "testRuntime", "previewRuntime", "isolatedSession", "namedProfile", "isolatedCloudSync", "resetSession",
@@ -23,31 +23,20 @@ internal static class LaunchCodes {
 
     #region Actions - Decoding
 
-    public static LaunchEnvironmentFacts Environment(JsonElement value) {
+    public static LaunchEnvironment Environment(JsonElement value) {
         Protocol.Members(value, EnvironmentFields);
         bool Flag(string field) => value.GetProperty(field).GetBoolean();
-        return new() {
-            IsTestRuntime = Flag("testRuntime"),
-            IsPreviewRuntime = Flag("previewRuntime"),
-            RequestsIsolatedSession = Flag("isolatedSession"),
-            HasNamedProfile = Flag("namedProfile"),
-            RequestsIsolatedCloudSync = Flag("isolatedCloudSync"),
-            ResetsSession = Flag("resetSession"),
-            PresentsShowcase = Flag("showcase"),
-            UsesInMemoryCredentials = Flag("inMemoryCredentials"),
-            ForcesOnboardingWelcome = Flag("onboardingWelcome"),
-            ForcesDesktopSetup = Flag("desktopSetup"),
-            ForcesMobileSetup = Flag("mobileSetup"),
-            RunsPerformanceHarness = Flag("performanceHarness"),
-            UsesUpdateTestFeed = Flag("updateTestFeed")
-        };
+        return new(Flag("testRuntime"), Flag("previewRuntime"), Flag("isolatedSession"), Flag("namedProfile"),
+            Flag("isolatedCloudSync"), Flag("resetSession"), Flag("showcase"), Flag("inMemoryCredentials"),
+            Flag("onboardingWelcome"), Flag("desktopSetup"), Flag("mobileSetup"), Flag("performanceHarness"),
+            Flag("updateTestFeed"));
     }
 
     #endregion
 
     #region Actions - Encoding
 
-    public static JsonObject Plan(LaunchPlan plan) {
+    public static JsonObject Plan(LaunchDecision plan) {
         ArgumentNullException.ThrowIfNull(plan);
         return new() {
             ["requiresIsolation"] = plan.RequiresIsolation,

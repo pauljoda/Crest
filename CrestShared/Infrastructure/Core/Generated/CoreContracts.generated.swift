@@ -94,11 +94,13 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidTabIcon(InvalidTabIcon)
+    case languageTooLong(LanguageTooLong)
     case lastStartPage(LastStartPage)
     case noCurrentTabs(NoCurrentTabs)
     case noSavedAddress(NoSavedAddress)
     case notPrivateWorkspace(NotPrivateWorkspace)
     case pageProfileMismatch(PageProfileMismatch)
+    case persistentWorkspaceRequired(PersistentWorkspaceRequired)
     case pinnedTabsFull(PinnedTabsFull)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
@@ -120,6 +122,7 @@ enum Rejection: Equatable, Error, Sendable {
     case tabAlreadyHasPage(TabAlreadyHasPage)
     case tabLimitReached(TabLimitReached)
     case transientAlreadyCompleted(TransientAlreadyCompleted)
+    case translationRuleLimitReached(TranslationRuleLimitReached)
     case unknownArchivedTab(UnknownArchivedTab)
     case unknownFolder(UnknownFolder)
     case unknownPage(UnknownPage)
@@ -859,6 +862,11 @@ struct HistoryEntryState: Equatable, Sendable, Identifiable {
     let visitCount: Int
 }
 
+struct ImportAppPreferences: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let legacy: LegacyAppPreferences
+}
+
 struct InvalidCredentialDate: Equatable, Sendable {
 }
 
@@ -943,14 +951,62 @@ struct KeyCombination: Equatable, Sendable {
     let modifiers: ShortcutModifiers
 }
 
+struct LanguageTooLong: Equatable, Sendable {
+    let limit: Int
+}
+
 struct LastStartPage: Equatable, Sendable {
     let tabID: UUID
+}
+
+struct LaunchDecision: Equatable, Sendable {
+    let requiresIsolation: Bool
+    let usesEphemeralProfileStorage: Bool
+    let presentsInstalledApplicationUI: Bool
+    let startup: StartupBehavior
+}
+
+struct LaunchEnvironment: Equatable, Sendable {
+    let isTestRuntime: Bool
+    let isPreviewRuntime: Bool
+    let requestsIsolatedSession: Bool
+    let hasNamedProfile: Bool
+    let requestsIsolatedCloudSync: Bool
+    let resetsSession: Bool
+    let presentsShowcase: Bool
+    let usesInMemoryCredentials: Bool
+    let forcesOnboardingWelcome: Bool
+    let forcesDesktopSetup: Bool
+    let forcesMobileSetup: Bool
+    let runsPerformanceHarness: Bool
+    let usesUpdateTestFeed: Bool
+}
+
+struct LaunchPlan: Query, Equatable, Sendable {
+    typealias Answer = LaunchDecision
+
+    let workspaceID: UUID
+    let platform: DevicePlatform
+    let environment: LaunchEnvironment
+    let hasActiveLaunchGate: Bool
 }
 
 struct LeaveSplit: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
+}
+
+struct LegacyAppPreferences: Equatable, Sendable {
+    let startupBehavior: String?
+    let offersTranslation: Bool?
+    let automaticallyTranslates: Bool?
+    let translationRules: String?
+    let checksSpelling: Bool?
+    let automaticallyEntersPictureInPicture: Bool?
+    let savedTabClosePolicy: String?
+    let savedTabFaviconReturnsToSavedURL: Bool?
+    let splitFocusFollowsMouse: Bool?
 }
 
 struct LegacyHistory: Equatable, Sendable {
@@ -1213,6 +1269,10 @@ struct PendingSaveRevision: Equatable, Sendable {
     let revision: Int64?
 }
 
+struct PersistentWorkspaceRequired: Equatable, Sendable {
+    let workspaceID: UUID
+}
+
 struct PinnedTabsFull: Equatable, Sendable {
     let capacity: Int
 }
@@ -1354,6 +1414,11 @@ struct SessionState: Equatable, Sendable {
     let appPreferences: AppPreferences?
 }
 
+struct SetAppPreferences: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let preferences: AppPreferences
+}
+
 struct SetCredentialPreferences: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -1410,6 +1475,13 @@ struct SetSplitIcon: Intent, Equatable, Sendable {
     let spaceID: UUID
     let groupID: UUID
     let symbol: String?
+}
+
+struct SetTranslationRule: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let sourceLanguage: String
+    let targetLanguage: String
+    let isEnabled: Bool
 }
 
 struct ShortcutDefault: Equatable, Sendable {
@@ -1771,6 +1843,10 @@ struct TranslationRule: Equatable, Sendable {
     let sourceLanguage: String
     let targetID: String
     let isEnabled: Bool
+}
+
+struct TranslationRuleLimitReached: Equatable, Sendable {
+    let limit: Int
 }
 
 struct UnknownArchivedTab: Equatable, Sendable {

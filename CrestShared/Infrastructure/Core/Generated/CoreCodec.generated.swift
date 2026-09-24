@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xae, 0x07, 0x54, 0x29, 0xdf, 0x02, 0x16, 0xaa, 0xb1, 0x8e, 0x98, 0x30, 0x7f, 0x7b, 0x88, 0xe2, 0x17, 0xf6, 0xbb, 0xcd, 0xf0, 0x0e, 0x8e, 0xe6, 0x31, 0x59, 0x09, 0xa2, 0x4f, 0xbe, 0x66, 0x83
+        0xee, 0x1e, 0x47, 0x2c, 0x3c, 0xbc, 0xda, 0x0a, 0x5c, 0xd9, 0x73, 0xf8, 0x36, 0xf7, 0x8a, 0x56, 0x73, 0x63, 0xca, 0x8a, 0x40, 0xf5, 0x9c, 0x33, 0xa3, 0xa5, 0xa7, 0x66, 0x54, 0x82, 0x08, 0xb0
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -49,52 +49,55 @@ enum CoreCodec {
         case 29: return try FinishDeletingSpace(from: &reader)
         case 30: return try FinishDownload(from: &reader)
         case 31: return try FinishUnlockingSpace(from: &reader)
-        case 32: return try JoinSplit(from: &reader)
-        case 33: return try KeepPageLoaded(from: &reader)
-        case 34: return try LeaveSplit(from: &reader)
-        case 35: return try LockAllSpaces(from: &reader)
-        case 36: return try LockSpace(from: &reader)
-        case 37: return try MoveFolder(from: &reader)
-        case 38: return try MovePage(from: &reader)
-        case 39: return try MoveSplit(from: &reader)
-        case 40: return try MoveSplitMember(from: &reader)
-        case 41: return try MoveTab(from: &reader)
-        case 42: return try NameSplit(from: &reader)
-        case 43: return try NavigateTab(from: &reader)
-        case 44: return try OpenLinkInSplit(from: &reader)
-        case 45: return try OpenPage(from: &reader)
-        case 46: return try OpenTab(from: &reader)
-        case 47: return try OpenWindow(from: &reader)
-        case 48: return try PromoteTransientPage(from: &reader)
-        case 49: return try RecordDownloadTransfer(from: &reader)
-        case 50: return try ReleasePage(from: &reader)
-        case 51: return try RemoveDownload(from: &reader)
-        case 52: return try RemoveHistoryAddress(from: &reader)
-        case 53: return try RemoveHistoryRange(from: &reader)
-        case 54: return try RemoveProfileDownloads(from: &reader)
-        case 55: return try RenameFolder(from: &reader)
-        case 56: return try RenameTab(from: &reader)
-        case 57: return try ReorderSpaces(from: &reader)
-        case 58: return try ReplaceSavedAddress(from: &reader)
-        case 59: return try ResetPrivateBrowsing(from: &reader)
-        case 60: return try ResizeSplitColumns(from: &reader)
-        case 61: return try RestartDownload(from: &reader)
-        case 62: return try RestoreArchivedTab(from: &reader)
-        case 63: return try ReturnToSavedAddress(from: &reader)
-        case 64: return try SetCredentialPreferences(from: &reader)
-        case 65: return try SetDefaultSpace(from: &reader)
-        case 66: return try SetDownloadDestination(from: &reader)
-        case 67: return try SetFolderColor(from: &reader)
-        case 68: return try SetFolderSymbol(from: &reader)
-        case 69: return try SetSpaceAccess(from: &reader)
-        case 70: return try SetSpaceBranding(from: &reader)
-        case 71: return try SetSpaceIdentity(from: &reader)
-        case 72: return try SetSplitIcon(from: &reader)
-        case 73: return try ShowSpace(from: &reader)
-        case 74: return try ShowTab(from: &reader)
-        case 75: return try StepSplitMember(from: &reader)
-        case 76: return try SweepExpiredRecords(from: &reader)
-        case 77: return try TintSplit(from: &reader)
+        case 32: return try ImportAppPreferences(from: &reader)
+        case 33: return try JoinSplit(from: &reader)
+        case 34: return try KeepPageLoaded(from: &reader)
+        case 35: return try LeaveSplit(from: &reader)
+        case 36: return try LockAllSpaces(from: &reader)
+        case 37: return try LockSpace(from: &reader)
+        case 38: return try MoveFolder(from: &reader)
+        case 39: return try MovePage(from: &reader)
+        case 40: return try MoveSplit(from: &reader)
+        case 41: return try MoveSplitMember(from: &reader)
+        case 42: return try MoveTab(from: &reader)
+        case 43: return try NameSplit(from: &reader)
+        case 44: return try NavigateTab(from: &reader)
+        case 45: return try OpenLinkInSplit(from: &reader)
+        case 46: return try OpenPage(from: &reader)
+        case 47: return try OpenTab(from: &reader)
+        case 48: return try OpenWindow(from: &reader)
+        case 49: return try PromoteTransientPage(from: &reader)
+        case 50: return try RecordDownloadTransfer(from: &reader)
+        case 51: return try ReleasePage(from: &reader)
+        case 52: return try RemoveDownload(from: &reader)
+        case 53: return try RemoveHistoryAddress(from: &reader)
+        case 54: return try RemoveHistoryRange(from: &reader)
+        case 55: return try RemoveProfileDownloads(from: &reader)
+        case 56: return try RenameFolder(from: &reader)
+        case 57: return try RenameTab(from: &reader)
+        case 58: return try ReorderSpaces(from: &reader)
+        case 59: return try ReplaceSavedAddress(from: &reader)
+        case 60: return try ResetPrivateBrowsing(from: &reader)
+        case 61: return try ResizeSplitColumns(from: &reader)
+        case 62: return try RestartDownload(from: &reader)
+        case 63: return try RestoreArchivedTab(from: &reader)
+        case 64: return try ReturnToSavedAddress(from: &reader)
+        case 65: return try SetAppPreferences(from: &reader)
+        case 66: return try SetCredentialPreferences(from: &reader)
+        case 67: return try SetDefaultSpace(from: &reader)
+        case 68: return try SetDownloadDestination(from: &reader)
+        case 69: return try SetFolderColor(from: &reader)
+        case 70: return try SetFolderSymbol(from: &reader)
+        case 71: return try SetSpaceAccess(from: &reader)
+        case 72: return try SetSpaceBranding(from: &reader)
+        case 73: return try SetSpaceIdentity(from: &reader)
+        case 74: return try SetSplitIcon(from: &reader)
+        case 75: return try SetTranslationRule(from: &reader)
+        case 76: return try ShowSpace(from: &reader)
+        case 77: return try ShowTab(from: &reader)
+        case 78: return try StepSplitMember(from: &reader)
+        case 79: return try SweepExpiredRecords(from: &reader)
+        case 80: return try TintSplit(from: &reader)
         default: throw WireError.malformed("Unknown Intent tag \(tag)")
         }
     }
@@ -115,13 +118,14 @@ enum CoreCodec {
         case 10: return try DownloadRisk(from: &reader)
         case 11: return try ExternalLinkRoute(from: &reader)
         case 12: return try FallbackTab(from: &reader)
-        case 13: return try MostRecentCredential(from: &reader)
-        case 14: return try PasskeyAccess(from: &reader)
-        case 15: return try PendingSave(from: &reader)
-        case 16: return try QuickWindowSite(from: &reader)
-        case 17: return try StrongPassword(from: &reader)
-        case 18: return try SystemPasswordOffer(from: &reader)
-        case 19: return try SystemPasswordWriteThrough(from: &reader)
+        case 13: return try LaunchPlan(from: &reader)
+        case 14: return try MostRecentCredential(from: &reader)
+        case 15: return try PasskeyAccess(from: &reader)
+        case 16: return try PendingSave(from: &reader)
+        case 17: return try QuickWindowSite(from: &reader)
+        case 18: return try StrongPassword(from: &reader)
+        case 19: return try SystemPasswordOffer(from: &reader)
+        case 20: return try SystemPasswordWriteThrough(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -313,45 +317,48 @@ extension Rejection {
         case 34: self = .invalidSpaceOrder(try InvalidSpaceOrder(from: &reader))
         case 35: self = .invalidSplitColumnShares(try InvalidSplitColumnShares(from: &reader))
         case 36: self = .invalidTabIcon(try InvalidTabIcon(from: &reader))
-        case 37: self = .lastStartPage(try LastStartPage(from: &reader))
-        case 38: self = .noCurrentTabs(try NoCurrentTabs(from: &reader))
-        case 39: self = .noSavedAddress(try NoSavedAddress(from: &reader))
-        case 40: self = .notPrivateWorkspace(try NotPrivateWorkspace(from: &reader))
-        case 41: self = .pageProfileMismatch(try PageProfileMismatch(from: &reader))
-        case 42: self = .pinnedTabsFull(try PinnedTabsFull(from: &reader))
-        case 43: self = .recoveryCheckpointUnusable(try RecoveryCheckpointUnusable(from: &reader))
-        case 44: self = .saveFailed(try SaveFailed(from: &reader))
-        case 45: self = .searchEngineLimitReached(try SearchEngineLimitReached(from: &reader))
-        case 46: self = .spaceAlreadyExists(try SpaceAlreadyExists(from: &reader))
-        case 47: self = .spaceBeingDeleted(try SpaceBeingDeleted(from: &reader))
-        case 48: self = .spaceLimitReached(try SpaceLimitReached(from: &reader))
-        case 49: self = .spaceLocked(try SpaceLocked(from: &reader))
-        case 50: self = .splitBoundary(try SplitBoundary(from: &reader))
-        case 51: self = .splitLimitReached(try SplitLimitReached(from: &reader))
-        case 52: self = .staleCommand(try StaleCommand(from: &reader))
-        case 53: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
-        case 54: self = .staleUnlockRequest(try StaleUnlockRequest(from: &reader))
-        case 55: self = .storageFromNewerApp(try StorageFromNewerApp(from: &reader))
-        case 56: self = .storageRestoreInterrupted(try StorageRestoreInterrupted(from: &reader))
-        case 57: self = .storageUnreadable(try StorageUnreadable(from: &reader))
-        case 58: self = .syncStagingRefused(try SyncStagingRefused(from: &reader))
-        case 59: self = .tabAlreadyExists(try TabAlreadyExists(from: &reader))
-        case 60: self = .tabAlreadyHasPage(try TabAlreadyHasPage(from: &reader))
-        case 61: self = .tabLimitReached(try TabLimitReached(from: &reader))
-        case 62: self = .transientAlreadyCompleted(try TransientAlreadyCompleted(from: &reader))
-        case 63: self = .unknownArchivedTab(try UnknownArchivedTab(from: &reader))
-        case 64: self = .unknownFolder(try UnknownFolder(from: &reader))
-        case 65: self = .unknownPage(try UnknownPage(from: &reader))
-        case 66: self = .unknownSpace(try UnknownSpace(from: &reader))
-        case 67: self = .unknownSplitGroup(try UnknownSplitGroup(from: &reader))
-        case 68: self = .unknownTab(try UnknownTab(from: &reader))
-        case 69: self = .unknownWorkspace(try UnknownWorkspace(from: &reader))
-        case 70: self = .unsavedWorkspace(try UnsavedWorkspace(from: &reader))
-        case 71: self = .unsupportedAddress(try UnsupportedAddress(from: &reader))
-        case 72: self = .webPagesOnly(try WebPagesOnly(from: &reader))
-        case 73: self = .windowNotOpen(try WindowNotOpen(from: &reader))
-        case 74: self = .workspaceBusy(try WorkspaceBusy(from: &reader))
-        case 75: self = .wrongDeletionOperation(try WrongDeletionOperation(from: &reader))
+        case 37: self = .languageTooLong(try LanguageTooLong(from: &reader))
+        case 38: self = .lastStartPage(try LastStartPage(from: &reader))
+        case 39: self = .noCurrentTabs(try NoCurrentTabs(from: &reader))
+        case 40: self = .noSavedAddress(try NoSavedAddress(from: &reader))
+        case 41: self = .notPrivateWorkspace(try NotPrivateWorkspace(from: &reader))
+        case 42: self = .pageProfileMismatch(try PageProfileMismatch(from: &reader))
+        case 43: self = .persistentWorkspaceRequired(try PersistentWorkspaceRequired(from: &reader))
+        case 44: self = .pinnedTabsFull(try PinnedTabsFull(from: &reader))
+        case 45: self = .recoveryCheckpointUnusable(try RecoveryCheckpointUnusable(from: &reader))
+        case 46: self = .saveFailed(try SaveFailed(from: &reader))
+        case 47: self = .searchEngineLimitReached(try SearchEngineLimitReached(from: &reader))
+        case 48: self = .spaceAlreadyExists(try SpaceAlreadyExists(from: &reader))
+        case 49: self = .spaceBeingDeleted(try SpaceBeingDeleted(from: &reader))
+        case 50: self = .spaceLimitReached(try SpaceLimitReached(from: &reader))
+        case 51: self = .spaceLocked(try SpaceLocked(from: &reader))
+        case 52: self = .splitBoundary(try SplitBoundary(from: &reader))
+        case 53: self = .splitLimitReached(try SplitLimitReached(from: &reader))
+        case 54: self = .staleCommand(try StaleCommand(from: &reader))
+        case 55: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
+        case 56: self = .staleUnlockRequest(try StaleUnlockRequest(from: &reader))
+        case 57: self = .storageFromNewerApp(try StorageFromNewerApp(from: &reader))
+        case 58: self = .storageRestoreInterrupted(try StorageRestoreInterrupted(from: &reader))
+        case 59: self = .storageUnreadable(try StorageUnreadable(from: &reader))
+        case 60: self = .syncStagingRefused(try SyncStagingRefused(from: &reader))
+        case 61: self = .tabAlreadyExists(try TabAlreadyExists(from: &reader))
+        case 62: self = .tabAlreadyHasPage(try TabAlreadyHasPage(from: &reader))
+        case 63: self = .tabLimitReached(try TabLimitReached(from: &reader))
+        case 64: self = .transientAlreadyCompleted(try TransientAlreadyCompleted(from: &reader))
+        case 65: self = .translationRuleLimitReached(try TranslationRuleLimitReached(from: &reader))
+        case 66: self = .unknownArchivedTab(try UnknownArchivedTab(from: &reader))
+        case 67: self = .unknownFolder(try UnknownFolder(from: &reader))
+        case 68: self = .unknownPage(try UnknownPage(from: &reader))
+        case 69: self = .unknownSpace(try UnknownSpace(from: &reader))
+        case 70: self = .unknownSplitGroup(try UnknownSplitGroup(from: &reader))
+        case 71: self = .unknownTab(try UnknownTab(from: &reader))
+        case 72: self = .unknownWorkspace(try UnknownWorkspace(from: &reader))
+        case 73: self = .unsavedWorkspace(try UnsavedWorkspace(from: &reader))
+        case 74: self = .unsupportedAddress(try UnsupportedAddress(from: &reader))
+        case 75: self = .webPagesOnly(try WebPagesOnly(from: &reader))
+        case 76: self = .windowNotOpen(try WindowNotOpen(from: &reader))
+        case 77: self = .workspaceBusy(try WorkspaceBusy(from: &reader))
+        case 78: self = .wrongDeletionOperation(try WrongDeletionOperation(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
@@ -469,122 +476,131 @@ extension Rejection {
         case .invalidTabIcon(let value):
             writer.writeTag(36)
             value.encode(into: &writer)
-        case .lastStartPage(let value):
+        case .languageTooLong(let value):
             writer.writeTag(37)
             value.encode(into: &writer)
-        case .noCurrentTabs(let value):
+        case .lastStartPage(let value):
             writer.writeTag(38)
             value.encode(into: &writer)
-        case .noSavedAddress(let value):
+        case .noCurrentTabs(let value):
             writer.writeTag(39)
             value.encode(into: &writer)
-        case .notPrivateWorkspace(let value):
+        case .noSavedAddress(let value):
             writer.writeTag(40)
             value.encode(into: &writer)
-        case .pageProfileMismatch(let value):
+        case .notPrivateWorkspace(let value):
             writer.writeTag(41)
             value.encode(into: &writer)
-        case .pinnedTabsFull(let value):
+        case .pageProfileMismatch(let value):
             writer.writeTag(42)
             value.encode(into: &writer)
-        case .recoveryCheckpointUnusable(let value):
+        case .persistentWorkspaceRequired(let value):
             writer.writeTag(43)
             value.encode(into: &writer)
-        case .saveFailed(let value):
+        case .pinnedTabsFull(let value):
             writer.writeTag(44)
             value.encode(into: &writer)
-        case .searchEngineLimitReached(let value):
+        case .recoveryCheckpointUnusable(let value):
             writer.writeTag(45)
             value.encode(into: &writer)
-        case .spaceAlreadyExists(let value):
+        case .saveFailed(let value):
             writer.writeTag(46)
             value.encode(into: &writer)
-        case .spaceBeingDeleted(let value):
+        case .searchEngineLimitReached(let value):
             writer.writeTag(47)
             value.encode(into: &writer)
-        case .spaceLimitReached(let value):
+        case .spaceAlreadyExists(let value):
             writer.writeTag(48)
             value.encode(into: &writer)
-        case .spaceLocked(let value):
+        case .spaceBeingDeleted(let value):
             writer.writeTag(49)
             value.encode(into: &writer)
-        case .splitBoundary(let value):
+        case .spaceLimitReached(let value):
             writer.writeTag(50)
             value.encode(into: &writer)
-        case .splitLimitReached(let value):
+        case .spaceLocked(let value):
             writer.writeTag(51)
             value.encode(into: &writer)
-        case .staleCommand(let value):
+        case .splitBoundary(let value):
             writer.writeTag(52)
             value.encode(into: &writer)
-        case .staleCredentialComparison(let value):
+        case .splitLimitReached(let value):
             writer.writeTag(53)
             value.encode(into: &writer)
-        case .staleUnlockRequest(let value):
+        case .staleCommand(let value):
             writer.writeTag(54)
             value.encode(into: &writer)
-        case .storageFromNewerApp(let value):
+        case .staleCredentialComparison(let value):
             writer.writeTag(55)
             value.encode(into: &writer)
-        case .storageRestoreInterrupted(let value):
+        case .staleUnlockRequest(let value):
             writer.writeTag(56)
             value.encode(into: &writer)
-        case .storageUnreadable(let value):
+        case .storageFromNewerApp(let value):
             writer.writeTag(57)
             value.encode(into: &writer)
-        case .syncStagingRefused(let value):
+        case .storageRestoreInterrupted(let value):
             writer.writeTag(58)
             value.encode(into: &writer)
-        case .tabAlreadyExists(let value):
+        case .storageUnreadable(let value):
             writer.writeTag(59)
             value.encode(into: &writer)
-        case .tabAlreadyHasPage(let value):
+        case .syncStagingRefused(let value):
             writer.writeTag(60)
             value.encode(into: &writer)
-        case .tabLimitReached(let value):
+        case .tabAlreadyExists(let value):
             writer.writeTag(61)
             value.encode(into: &writer)
-        case .transientAlreadyCompleted(let value):
+        case .tabAlreadyHasPage(let value):
             writer.writeTag(62)
             value.encode(into: &writer)
-        case .unknownArchivedTab(let value):
+        case .tabLimitReached(let value):
             writer.writeTag(63)
             value.encode(into: &writer)
-        case .unknownFolder(let value):
+        case .transientAlreadyCompleted(let value):
             writer.writeTag(64)
             value.encode(into: &writer)
-        case .unknownPage(let value):
+        case .translationRuleLimitReached(let value):
             writer.writeTag(65)
             value.encode(into: &writer)
-        case .unknownSpace(let value):
+        case .unknownArchivedTab(let value):
             writer.writeTag(66)
             value.encode(into: &writer)
-        case .unknownSplitGroup(let value):
+        case .unknownFolder(let value):
             writer.writeTag(67)
             value.encode(into: &writer)
-        case .unknownTab(let value):
+        case .unknownPage(let value):
             writer.writeTag(68)
             value.encode(into: &writer)
-        case .unknownWorkspace(let value):
+        case .unknownSpace(let value):
             writer.writeTag(69)
             value.encode(into: &writer)
-        case .unsavedWorkspace(let value):
+        case .unknownSplitGroup(let value):
             writer.writeTag(70)
             value.encode(into: &writer)
-        case .unsupportedAddress(let value):
+        case .unknownTab(let value):
             writer.writeTag(71)
             value.encode(into: &writer)
-        case .webPagesOnly(let value):
+        case .unknownWorkspace(let value):
             writer.writeTag(72)
             value.encode(into: &writer)
-        case .windowNotOpen(let value):
+        case .unsavedWorkspace(let value):
             writer.writeTag(73)
             value.encode(into: &writer)
-        case .workspaceBusy(let value):
+        case .unsupportedAddress(let value):
             writer.writeTag(74)
             value.encode(into: &writer)
-        case .wrongDeletionOperation(let value):
+        case .webPagesOnly(let value):
             writer.writeTag(75)
+            value.encode(into: &writer)
+        case .windowNotOpen(let value):
+            writer.writeTag(76)
+            value.encode(into: &writer)
+        case .workspaceBusy(let value):
+            writer.writeTag(77)
+            value.encode(into: &writer)
+        case .wrongDeletionOperation(let value):
+            writer.writeTag(78)
             value.encode(into: &writer)
         }
     }
@@ -3357,6 +3373,24 @@ extension HistoryEntryState {
     }
 }
 
+extension ImportAppPreferences {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let legacy = try LegacyAppPreferences(from: &reader)
+        self.init(workspaceID: workspaceID, legacy: legacy)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        legacy.encode(into: &writer)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(32)
+        encode(into: &writer)
+    }
+}
+
 extension InvalidCredentialDate {
     init(from reader: inout WireReader) throws(WireError) {
         self.init()
@@ -3576,7 +3610,7 @@ extension JoinSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(32)
+        writer.writeTag(33)
         encode(into: &writer)
     }
 }
@@ -3598,7 +3632,7 @@ extension KeepPageLoaded {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(33)
+        writer.writeTag(34)
         encode(into: &writer)
     }
 }
@@ -3618,6 +3652,17 @@ extension KeyCombination {
     }
 }
 
+extension LanguageTooLong {
+    init(from reader: inout WireReader) throws(WireError) {
+        let limit = try reader.readInt()
+        self.init(limit: limit)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt(limit)
+    }
+}
+
 extension LastStartPage {
     init(from reader: inout WireReader) throws(WireError) {
         let tabID = try reader.readUUID()
@@ -3626,6 +3671,85 @@ extension LastStartPage {
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(tabID)
+    }
+}
+
+extension LaunchDecision {
+    init(from reader: inout WireReader) throws(WireError) {
+        let requiresIsolation = try reader.readBool()
+        let usesEphemeralProfileStorage = try reader.readBool()
+        let presentsInstalledApplicationUI = try reader.readBool()
+        let startup = try StartupBehavior(from: &reader)
+        self.init(requiresIsolation: requiresIsolation, usesEphemeralProfileStorage: usesEphemeralProfileStorage, presentsInstalledApplicationUI: presentsInstalledApplicationUI, startup: startup)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(requiresIsolation)
+        writer.writeBool(usesEphemeralProfileStorage)
+        writer.writeBool(presentsInstalledApplicationUI)
+        startup.encode(into: &writer)
+    }
+}
+
+extension LaunchEnvironment {
+    init(from reader: inout WireReader) throws(WireError) {
+        let isTestRuntime = try reader.readBool()
+        let isPreviewRuntime = try reader.readBool()
+        let requestsIsolatedSession = try reader.readBool()
+        let hasNamedProfile = try reader.readBool()
+        let requestsIsolatedCloudSync = try reader.readBool()
+        let resetsSession = try reader.readBool()
+        let presentsShowcase = try reader.readBool()
+        let usesInMemoryCredentials = try reader.readBool()
+        let forcesOnboardingWelcome = try reader.readBool()
+        let forcesDesktopSetup = try reader.readBool()
+        let forcesMobileSetup = try reader.readBool()
+        let runsPerformanceHarness = try reader.readBool()
+        let usesUpdateTestFeed = try reader.readBool()
+        self.init(isTestRuntime: isTestRuntime, isPreviewRuntime: isPreviewRuntime, requestsIsolatedSession: requestsIsolatedSession, hasNamedProfile: hasNamedProfile, requestsIsolatedCloudSync: requestsIsolatedCloudSync, resetsSession: resetsSession, presentsShowcase: presentsShowcase, usesInMemoryCredentials: usesInMemoryCredentials, forcesOnboardingWelcome: forcesOnboardingWelcome, forcesDesktopSetup: forcesDesktopSetup, forcesMobileSetup: forcesMobileSetup, runsPerformanceHarness: runsPerformanceHarness, usesUpdateTestFeed: usesUpdateTestFeed)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(isTestRuntime)
+        writer.writeBool(isPreviewRuntime)
+        writer.writeBool(requestsIsolatedSession)
+        writer.writeBool(hasNamedProfile)
+        writer.writeBool(requestsIsolatedCloudSync)
+        writer.writeBool(resetsSession)
+        writer.writeBool(presentsShowcase)
+        writer.writeBool(usesInMemoryCredentials)
+        writer.writeBool(forcesOnboardingWelcome)
+        writer.writeBool(forcesDesktopSetup)
+        writer.writeBool(forcesMobileSetup)
+        writer.writeBool(runsPerformanceHarness)
+        writer.writeBool(usesUpdateTestFeed)
+    }
+}
+
+extension LaunchPlan {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let platform = try DevicePlatform(from: &reader)
+        let environment = try LaunchEnvironment(from: &reader)
+        let hasActiveLaunchGate = try reader.readBool()
+        self.init(workspaceID: workspaceID, platform: platform, environment: environment, hasActiveLaunchGate: hasActiveLaunchGate)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        platform.encode(into: &writer)
+        environment.encode(into: &writer)
+        writer.writeBool(hasActiveLaunchGate)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(13)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> LaunchDecision {
+        let answer = try LaunchDecision(from: &reader)
+        return answer
     }
 }
 
@@ -3644,8 +3768,134 @@ extension LeaveSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(34)
+        writer.writeTag(35)
         encode(into: &writer)
+    }
+}
+
+extension LegacyAppPreferences {
+    init(from reader: inout WireReader) throws(WireError) {
+        let startupBehavior: String?
+        if try reader.readPresence() {
+            let startupBehaviorValue = try reader.readString()
+            startupBehavior = startupBehaviorValue
+        } else {
+            startupBehavior = nil
+        }
+        let offersTranslation: Bool?
+        if try reader.readPresence() {
+            let offersTranslationValue = try reader.readBool()
+            offersTranslation = offersTranslationValue
+        } else {
+            offersTranslation = nil
+        }
+        let automaticallyTranslates: Bool?
+        if try reader.readPresence() {
+            let automaticallyTranslatesValue = try reader.readBool()
+            automaticallyTranslates = automaticallyTranslatesValue
+        } else {
+            automaticallyTranslates = nil
+        }
+        let translationRules: String?
+        if try reader.readPresence() {
+            let translationRulesValue = try reader.readString()
+            translationRules = translationRulesValue
+        } else {
+            translationRules = nil
+        }
+        let checksSpelling: Bool?
+        if try reader.readPresence() {
+            let checksSpellingValue = try reader.readBool()
+            checksSpelling = checksSpellingValue
+        } else {
+            checksSpelling = nil
+        }
+        let automaticallyEntersPictureInPicture: Bool?
+        if try reader.readPresence() {
+            let automaticallyEntersPictureInPictureValue = try reader.readBool()
+            automaticallyEntersPictureInPicture = automaticallyEntersPictureInPictureValue
+        } else {
+            automaticallyEntersPictureInPicture = nil
+        }
+        let savedTabClosePolicy: String?
+        if try reader.readPresence() {
+            let savedTabClosePolicyValue = try reader.readString()
+            savedTabClosePolicy = savedTabClosePolicyValue
+        } else {
+            savedTabClosePolicy = nil
+        }
+        let savedTabFaviconReturnsToSavedURL: Bool?
+        if try reader.readPresence() {
+            let savedTabFaviconReturnsToSavedURLValue = try reader.readBool()
+            savedTabFaviconReturnsToSavedURL = savedTabFaviconReturnsToSavedURLValue
+        } else {
+            savedTabFaviconReturnsToSavedURL = nil
+        }
+        let splitFocusFollowsMouse: Bool?
+        if try reader.readPresence() {
+            let splitFocusFollowsMouseValue = try reader.readBool()
+            splitFocusFollowsMouse = splitFocusFollowsMouseValue
+        } else {
+            splitFocusFollowsMouse = nil
+        }
+        self.init(startupBehavior: startupBehavior, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClosePolicy: savedTabClosePolicy, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, splitFocusFollowsMouse: splitFocusFollowsMouse)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = startupBehavior {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = offersTranslation {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = automaticallyTranslates {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = translationRules {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = checksSpelling {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = automaticallyEntersPictureInPicture {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = savedTabClosePolicy {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = savedTabFaviconReturnsToSavedURL {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = splitFocusFollowsMouse {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -3834,7 +4084,7 @@ extension LockAllSpaces {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(35)
+        writer.writeTag(36)
         encode(into: &writer)
     }
 }
@@ -3850,7 +4100,7 @@ extension LockSpace {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(36)
+        writer.writeTag(37)
         encode(into: &writer)
     }
 }
@@ -3875,7 +4125,7 @@ extension MostRecentCredential {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(13)
+        writer.writeTag(14)
         encode(into: &writer)
     }
 
@@ -3952,7 +4202,7 @@ extension MoveFolder {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(37)
+        writer.writeTag(38)
         encode(into: &writer)
     }
 }
@@ -3987,7 +4237,7 @@ extension MovePage {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(38)
+        writer.writeTag(39)
         encode(into: &writer)
     }
 }
@@ -4035,7 +4285,7 @@ extension MoveSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(39)
+        writer.writeTag(40)
         encode(into: &writer)
     }
 }
@@ -4057,7 +4307,7 @@ extension MoveSplitMember {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(40)
+        writer.writeTag(41)
         encode(into: &writer)
     }
 }
@@ -4107,7 +4357,7 @@ extension MoveTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(41)
+        writer.writeTag(42)
         encode(into: &writer)
     }
 }
@@ -4140,7 +4390,7 @@ extension NameSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(42)
+        writer.writeTag(43)
         encode(into: &writer)
     }
 }
@@ -4186,7 +4436,7 @@ extension NavigateTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(43)
+        writer.writeTag(44)
         encode(into: &writer)
     }
 }
@@ -4379,7 +4629,7 @@ extension OpenLinkInSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(44)
+        writer.writeTag(45)
         encode(into: &writer)
     }
 }
@@ -4414,7 +4664,7 @@ extension OpenPage {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(45)
+        writer.writeTag(46)
         encode(into: &writer)
     }
 }
@@ -4455,7 +4705,7 @@ extension OpenTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(46)
+        writer.writeTag(47)
         encode(into: &writer)
     }
 }
@@ -4514,7 +4764,7 @@ extension OpenWindow {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(47)
+        writer.writeTag(48)
         encode(into: &writer)
     }
 }
@@ -4691,7 +4941,7 @@ extension PasskeyAccess {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(14)
+        writer.writeTag(15)
         encode(into: &writer)
     }
 
@@ -4721,7 +4971,7 @@ extension PendingSave {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(15)
+        writer.writeTag(16)
         encode(into: &writer)
     }
 
@@ -4750,6 +5000,17 @@ extension PendingSaveRevision {
         } else {
             writer.writePresence(false)
         }
+    }
+}
+
+extension PersistentWorkspaceRequired {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        self.init(workspaceID: workspaceID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
     }
 }
 
@@ -4785,7 +5046,7 @@ extension PromoteTransientPage {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(48)
+        writer.writeTag(49)
         encode(into: &writer)
     }
 }
@@ -4803,7 +5064,7 @@ extension QuickWindowSite {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(16)
+        writer.writeTag(17)
         encode(into: &writer)
     }
 
@@ -4850,7 +5111,7 @@ extension RecordDownloadTransfer {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(49)
+        writer.writeTag(50)
         encode(into: &writer)
     }
 }
@@ -4879,7 +5140,7 @@ extension ReleasePage {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(50)
+        writer.writeTag(51)
         encode(into: &writer)
     }
 }
@@ -4895,7 +5156,7 @@ extension RemoveDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(51)
+        writer.writeTag(52)
         encode(into: &writer)
     }
 }
@@ -4915,7 +5176,7 @@ extension RemoveHistoryAddress {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(52)
+        writer.writeTag(53)
         encode(into: &writer)
     }
 }
@@ -4937,7 +5198,7 @@ extension RemoveHistoryRange {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(53)
+        writer.writeTag(54)
         encode(into: &writer)
     }
 }
@@ -4953,7 +5214,7 @@ extension RemoveProfileDownloads {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(54)
+        writer.writeTag(55)
         encode(into: &writer)
     }
 }
@@ -4975,7 +5236,7 @@ extension RenameFolder {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(55)
+        writer.writeTag(56)
         encode(into: &writer)
     }
 }
@@ -5008,7 +5269,7 @@ extension RenameTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(56)
+        writer.writeTag(57)
         encode(into: &writer)
     }
 }
@@ -5035,7 +5296,7 @@ extension ReorderSpaces {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(57)
+        writer.writeTag(58)
         encode(into: &writer)
     }
 }
@@ -5055,7 +5316,7 @@ extension ReplaceSavedAddress {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(58)
+        writer.writeTag(59)
         encode(into: &writer)
     }
 }
@@ -5073,7 +5334,7 @@ extension ResetPrivateBrowsing {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(59)
+        writer.writeTag(60)
         encode(into: &writer)
     }
 }
@@ -5102,7 +5363,7 @@ extension ResizeSplitColumns {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(60)
+        writer.writeTag(61)
         encode(into: &writer)
     }
 }
@@ -5118,7 +5379,7 @@ extension RestartDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(61)
+        writer.writeTag(62)
         encode(into: &writer)
     }
 }
@@ -5140,7 +5401,7 @@ extension RestoreArchivedTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(62)
+        writer.writeTag(63)
         encode(into: &writer)
     }
 }
@@ -5160,7 +5421,7 @@ extension ReturnToSavedAddress {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(63)
+        writer.writeTag(64)
         encode(into: &writer)
     }
 }
@@ -5310,6 +5571,24 @@ extension SessionState {
     }
 }
 
+extension SetAppPreferences {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let preferences = try AppPreferences(from: &reader)
+        self.init(workspaceID: workspaceID, preferences: preferences)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        preferences.encode(into: &writer)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(65)
+        encode(into: &writer)
+    }
+}
+
 extension SetCredentialPreferences {
     init(from reader: inout WireReader) throws(WireError) {
         let workspaceID = try reader.readUUID()
@@ -5325,7 +5604,7 @@ extension SetCredentialPreferences {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(64)
+        writer.writeTag(66)
         encode(into: &writer)
     }
 }
@@ -5343,7 +5622,7 @@ extension SetDefaultSpace {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(65)
+        writer.writeTag(67)
         encode(into: &writer)
     }
 }
@@ -5363,7 +5642,7 @@ extension SetDownloadDestination {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(66)
+        writer.writeTag(68)
         encode(into: &writer)
     }
 }
@@ -5385,7 +5664,7 @@ extension SetFolderColor {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(67)
+        writer.writeTag(69)
         encode(into: &writer)
     }
 }
@@ -5407,7 +5686,7 @@ extension SetFolderSymbol {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(68)
+        writer.writeTag(70)
         encode(into: &writer)
     }
 }
@@ -5427,7 +5706,7 @@ extension SetSpaceAccess {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(69)
+        writer.writeTag(71)
         encode(into: &writer)
     }
 }
@@ -5447,7 +5726,7 @@ extension SetSpaceBranding {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(70)
+        writer.writeTag(72)
         encode(into: &writer)
     }
 }
@@ -5471,7 +5750,7 @@ extension SetSpaceIdentity {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(71)
+        writer.writeTag(73)
         encode(into: &writer)
     }
 }
@@ -5504,7 +5783,29 @@ extension SetSplitIcon {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(72)
+        writer.writeTag(74)
+        encode(into: &writer)
+    }
+}
+
+extension SetTranslationRule {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let sourceLanguage = try reader.readString()
+        let targetLanguage = try reader.readString()
+        let isEnabled = try reader.readBool()
+        self.init(workspaceID: workspaceID, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage, isEnabled: isEnabled)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        writer.writeString(sourceLanguage)
+        writer.writeString(targetLanguage)
+        writer.writeBool(isEnabled)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(75)
         encode(into: &writer)
     }
 }
@@ -5537,7 +5838,7 @@ extension ShowSpace {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(73)
+        writer.writeTag(76)
         encode(into: &writer)
     }
 }
@@ -5568,7 +5869,7 @@ extension ShowTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(74)
+        writer.writeTag(77)
         encode(into: &writer)
     }
 }
@@ -6250,7 +6551,7 @@ extension StepSplitMember {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(75)
+        writer.writeTag(78)
         encode(into: &writer)
     }
 }
@@ -6317,7 +6618,7 @@ extension StrongPassword {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(17)
+        writer.writeTag(18)
         encode(into: &writer)
     }
 
@@ -6360,7 +6661,7 @@ extension SweepExpiredRecords {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(76)
+        writer.writeTag(79)
         encode(into: &writer)
     }
 }
@@ -6417,7 +6718,7 @@ extension SystemPasswordOffer {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(18)
+        writer.writeTag(19)
         encode(into: &writer)
     }
 
@@ -6455,7 +6756,7 @@ extension SystemPasswordWriteThrough {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(19)
+        writer.writeTag(20)
         encode(into: &writer)
     }
 
@@ -6924,7 +7225,7 @@ extension TintSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(77)
+        writer.writeTag(80)
         encode(into: &writer)
     }
 }
@@ -6969,6 +7270,17 @@ extension TranslationRule {
         writer.writeString(sourceLanguage)
         writer.writeString(targetID)
         writer.writeBool(isEnabled)
+    }
+}
+
+extension TranslationRuleLimitReached {
+    init(from reader: inout WireReader) throws(WireError) {
+        let limit = try reader.readInt()
+        self.init(limit: limit)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt(limit)
     }
 }
 

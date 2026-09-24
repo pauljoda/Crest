@@ -9,11 +9,9 @@ public static class BrowserRuleCodes {
     public const string AccessAlreadyAttached = "access_already_attached";
     public const string AlreadyClosing = "already_closing";
     public const string AlreadyInSplit = "already_in_split";
-    public const string AuthenticationBusy = "authentication_busy";
     public const string BorrowedProfile = "borrowed_profile";
     public const string BorrowedProfileRequiresOwner = "borrowed_profile_requires_owner";
     public const string BorrowedSourceRequired = "borrowed_source_required";
-    public const string CannotDeleteLastSpace = "cannot_delete_last_space";
     public const string DeletionRequiresCommand = "deletion_requires_command";
     public const string DifferentProfileOwner = "different_profile_owner";
     public const string DuplicateFolder = "duplicate_folder";
@@ -31,8 +29,6 @@ public static class BrowserRuleCodes {
     public const string FolderDepthLimit = "folder_depth_limit";
     public const string FolderLimit = "folder_limit";
     public const string IncompleteSplit = "incomplete_split";
-    public const string InvalidAccent = "invalid_accent";
-    public const string InvalidAccessPolicy = "invalid_access_policy";
     public const string InvalidAddress = "invalid_address";
     public const string InvalidContentBlockingPolicy = "invalid_content_blocking_policy";
     public const string InvalidDate = "invalid_date";
@@ -49,7 +45,6 @@ public static class BrowserRuleCodes {
     public const string InvalidMediaSessionCount = "invalid_media_session_count";
     public const string InvalidName = "invalid_name";
     public const string InvalidNativeKind = "invalid_native_kind";
-    public const string InvalidNewSpace = "invalid_new_space";
     public const string InvalidPageCount = "invalid_page_count";
     public const string InvalidPlacement = "invalid_placement";
     public const string InvalidPresentedCandidate = "invalid_presented_candidate";
@@ -92,7 +87,6 @@ public static class BrowserRuleCodes {
     public const string MissingSpaceIdentity = "missing_space_identity";
     public const string NoIncludedSpaces = "no_included_spaces";
     public const string NotBorrowedWorkspace = "not_borrowed_workspace";
-    public const string NotPrivateWorkspace = "not_private_workspace";
     public const string NotStartPageDraft = "not_start_page_draft";
     public const string PageBusy = "page_busy";
     public const string PageClosing = "page_closing";
@@ -137,7 +131,6 @@ public static class BrowserRuleCodes {
     public const string SyncTransactionNotSealed = "sync_transaction_not_sealed";
     public const string TabLimit = "tab_limit";
     public const string TemporaryWorkspaceRequired = "temporary_workspace_required";
-    public const string TranslationRuleLimit = "translation_rule_limit";
     public const string UnknownArchive = "unknown_archive";
     public const string UnknownArchivedTab = "unknown_archived_tab";
     public const string UnknownCurrentTab = "unknown_current_tab";
@@ -155,7 +148,6 @@ public static class BrowserRuleCodes {
     public const string UnsupportedUrl = "unsupported_url";
     public const string VersionMismatch = "version_mismatch";
     public const string WindowStateLimit = "window_state_limit";
-    public const string WrongDeletionOperation = "wrong_deletion_operation";
     public const string WrongProfile = "wrong_profile";
     public const string WrongProfileIdentity = "wrong_profile_identity";
     public const string WrongSpaceIdentity = "wrong_space_identity";
@@ -188,14 +180,6 @@ public static class BrowserRuleCodes {
     public const string PinnedCapacity = "pinned_capacity";
     public const string SplitCapacity = "split_capacity";
     public const string WebPagesOnly = "web_pages_only";
-
-    #endregion
-
-    #region Variables - App preferences
-
-    public const string InvalidPreferenceValue = "invalid_preference_value";
-    public const string UnknownPreference = "unknown_preference";
-    public const string UnknownPreferenceCommand = "unknown_preference_command";
 
     #endregion
 

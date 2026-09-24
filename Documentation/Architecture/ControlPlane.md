@@ -657,7 +657,7 @@ commands that rewrite only the search fields of the stored preferences. Swift
 receives the generated `SearchProvider` and describes a stored custom engine
 with it; the editor's explanations stay in Swift. Automatic
 translation rules live in the core's app preferences; `translation.rule` and
-`translation.matches` answer them and `preferences.translation_rule` edits them.
+`translation.matches` answer them and the `SetTranslationRule` intent edits them.
 
 Site permissions follow the same split. The process-local core ledger behind
 `crest_permissions_*` owns every Space's saved and session choices, the
@@ -734,8 +734,8 @@ the settings list stays in Swift.
 is isolated, whether its web storage is ephemeral, whether installed-app UI
 shows, and what the first window opens; without an answer a launch stays
 isolated and opens the Start Page. Isolation is answered before any session
-exists; the first window's destination is the session's `launch.plan` read,
-which applies the saved startup preference the core owns. A tab opened from another is placed by the
+exists; the first window's destination is the `LaunchPlan` query, which
+applies the saved startup preference the core owns. A tab opened from another is placed by the
 `OpenTab` intent's `AfterTabId`, after the whole split of its origin.
 `MediaSessionPolicy` arbitrates page media sessions identically for the WebKit
 bridge and Chromium's native session: stale and retired reports, sibling
@@ -748,10 +748,10 @@ Behavior preferences are core state too. The persistent session carries one
 translation (offer, automatic, per-language rules), WebKit spell checking,
 automatic Picture in Picture, what closing a saved tab does, the saved-tab
 favicon return and Split View focus-follows-mouse. It persists with the
-session checkpoint and changes only through `preferences.set`,
-`preferences.translation_rule` and `preferences.import`; value edits and sync
+session checkpoint and changes only through the `SetAppPreferences`,
+`SetTranslationRule` and `ImportAppPreferences` intents; value edits and sync
 replacement keep the owned record, private and borrowed workspaces refuse the
-commands, and the first launch without a record imports the values the old
+intents, and the first launch without a record imports the values the old
 defaults keys held (the keys stay readable for older builds). The record is
 device-local by design: the CloudKit record model has no app-level record,
 three of these settings exist only on the Mac, and translation depends on the
@@ -787,9 +787,7 @@ Swift names every core call with a typed operation. `BrowserSessionOperation`
 lists session commands and reads, with the spellings of the core's
 `SessionOperation.cs`. `BrowserPolicyOperation` lists pure policy calls
 (`PolicyOperation.cs`), and `BrowserSyncOperation` lists sync journal
-mutations, queries and evaluations (`NativeSyncOperation.cs`). App-wide
-`preferences.*` commands use their own request model,
-`BrowserAppPreferenceCommand`.
+mutations, queries and evaluations (`NativeSyncOperation.cs`).
 
 Requests and answers are Codable models. `BrowserSessionArguments` holds each
 command's `arguments` member. `BrowserCoreNullable` encodes an absent value as

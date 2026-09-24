@@ -263,9 +263,9 @@ static void engine_boundary(void) {
     assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 }
-/* App-wide behavior preferences are session state; the launch plan reads the
- * saved startup choice from the session and is released without committing. */
-static void preferences_boundary(void) {
+/* A command prepared before another one committed is refused, so a command
+ * never overwrites a change it did not see. */
+static void stale_command_boundary(void) {
     static const char* tab_id = "99999999-9999-4999-8999-999999999999";
     char json[1024];
     int size = snprintf(json, sizeof(json),
@@ -278,31 +278,24 @@ static void preferences_boundary(void) {
     assert(size > 0 && (size_t)size < sizeof(json));
     uint64_t session = 0, command = 0, stale = 0;
     assert(crest_session_create((const uint8_t*)json, (size_t)size, &session) == CREST_OK);
-    const char *set = "{\"version\":1,\"operation\":\"preferences.set\","
-        "\"arguments\":{\"preference\":\"startupBehavior\",\"value\":\"lastActiveTab\"}}";
-    assert(crest_session_prepare_command(session, (const uint8_t*)set, strlen(set), &command) == CREST_OK);
-    assert(crest_session_prepare_command(session, (const uint8_t*)set, strlen(set), &stale) == CREST_OK);
+    /* A manual import that adds a tab to the Space the session holds. */
+    static const char* imported_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    char import[2048];
+    size = snprintf(import, sizeof(import),
+        "{\"version\":1,\"operation\":\"workspace.import\",\"mode\":\"manual\",\"now\":800000001,"
+        "\"arguments\":{\"sources\":[{\"id\":{\"rawValue\":\"%s\"},\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\","
+        "\"tabs\":[{\"id\":{\"rawValue\":\"%s\"},\"title\":\"Imported\",\"url\":\"https://example.org/\","
+        "\"placement\":\"current\",\"lastActivatedAt\":800000000}],\"folders\":[],\"history\":[],\"archivedTabs\":[]}],"
+        "\"drafts\":[{\"sourceIndex\":0,\"isNew\":false,"
+        "\"customization\":{\"name\":\"Reading\",\"symbol\":\"book\",\"accent\":\"indigo\"}}]}}",
+        space_id, profile_id, imported_id);
+    assert(size > 0 && (size_t)size < sizeof(import));
+    assert(crest_session_prepare_command(session, (const uint8_t*)import, (size_t)size, &command) == CREST_OK);
+    assert(crest_session_prepare_command(session, (const uint8_t*)import, (size_t)size, &stale) == CREST_OK);
     assert(crest_session_commit_command(command) == CREST_OK);
     assert(crest_session_release_command(command) == CREST_OK);
-    /* A command prepared before another one committed is refused. */
     assert(crest_session_commit_command(stale) == CREST_INVALID_STATE);
     assert(crest_session_release_command(stale) == CREST_OK);
-    const char *plan = "{\"version\":1,\"operation\":\"launch.plan\",\"platform\":\"desktop\",\"environment\":{"
-        "\"testRuntime\":false,\"previewRuntime\":false,\"isolatedSession\":false,\"namedProfile\":false,"
-        "\"isolatedCloudSync\":false,\"resetSession\":false,\"showcase\":false,\"inMemoryCredentials\":false,"
-        "\"onboardingWelcome\":false,\"desktopSetup\":false,\"mobileSetup\":false,\"performanceHarness\":false,"
-        "\"updateTestFeed\":false},\"hasActiveLaunchGate\":false}";
-    assert(crest_session_prepare_command(session, (const uint8_t*)plan, strlen(plan), &command) == CREST_OK);
-    char answer[512]; size_t length = 0;
-    assert(crest_session_read_command(command, (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
-    answer[length] = 0;
-    assert(strstr(answer, "\"requiresIsolation\":false") && strstr(answer, "\"startupBehavior\":\"lastActiveTab\""));
-    assert(crest_session_release_command(command) == CREST_OK);
-    const char *unknown = "{\"version\":1,\"operation\":\"preferences.set\","
-        "\"arguments\":{\"preference\":\"sidebarDensity\",\"value\":1}}";
-    command = 0;
-    assert(crest_session_prepare_command(session, (const uint8_t*)unknown, strlen(unknown), &command)
-        != CREST_OK && command == 0);
     assert(crest_session_destroy(session) == CREST_OK);
 }
 /* The Quick Window site key is a typed query; borrowed-workspace command
@@ -488,7 +481,7 @@ int main(void) {
     session_boundary();
     engine_boundary();
     storage_boundary();
-    preferences_boundary();
+    stale_command_boundary();
     puts("Native ABI buffer ownership, size retry, handle, session and engine checks passed.");
     return 0;
 }
