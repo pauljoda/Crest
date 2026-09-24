@@ -19,7 +19,6 @@ public static class ProtocolErrorCodes {
     public const string InvalidPlatform = "invalid_platform";
     public const string InvalidPlaybackState = "invalid_playback_state";
     public const string InvalidPressureLevel = "invalid_pressure_level";
-    public const string InvalidPressurePlatform = "invalid_pressure_platform";
     public const string InvalidStatus = "invalid_status";
     public const string InvalidString = "invalid_string";
     public const string InvalidUuid = "invalid_uuid";

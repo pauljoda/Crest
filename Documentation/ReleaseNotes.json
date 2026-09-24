@@ -2161,6 +2161,10 @@
     "checkpoint-exports-removed": {
       "category": "internal",
       "message": "The checkpoint and reservation entry points are removed from the core's C interface."
+    },
+    "device-platform-set": {
+      "category": "internal",
+      "message": "The device platform is one self-describing set that carries its page-release limits."
     }
   }
 }

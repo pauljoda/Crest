@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Which pages memory pressure may take back, and how many of them.
@@ -20,28 +22,24 @@ public static class PageResidencyPolicy {
 
     #region Actions - Lifecycle
 
-    public static int ReleaseLimit(MemoryPressureLevel level, int eligiblePageCount, MemoryPressurePlatform platform) {
+    public static int ReleaseLimit(MemoryPressureLevel level, int eligiblePageCount, DevicePlatform platform) {
+        ArgumentNullException.ThrowIfNull(platform);
         if (eligiblePageCount < 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidPageCount);
-        if (eligiblePageCount == 0) return 0;
-        return (platform, level) switch {
-            (MemoryPressurePlatform.Desktop, MemoryPressureLevel.Warning) => 1,
-            (MemoryPressurePlatform.Desktop, MemoryPressureLevel.Critical) => Math.Max(1, (eligiblePageCount + 1) / 2),
-            (MemoryPressurePlatform.Mobile, MemoryPressureLevel.Warning) => 0,
-            _ => 1
-        };
+        return eligiblePageCount == 0 ? 0 : platform.ReleaseLimit(level, eligiblePageCount);
     }
 
     /// The release attempt order: every off-screen candidate the person has not
     /// asked to keep loaded, least recently used first, ties broken on tab
     /// identity so a squeeze is deterministic.
     ///
-    /// `PresentedFallback` answers nothing unless pressure is critical on a
-    /// carousel platform. It is only for the case where the off-screen sweep
+    /// `PresentedFallback` answers nothing unless the platform reclaims
+    /// presented cards at this level. It is only for the case where the off-screen sweep
     /// releases nobody at all: a store with nothing to give hands the system a
     /// termination instead of a reclaim, which costs every card rather than one.
     public static (IReadOnlyList<string> OffScreen, IReadOnlyList<string> PresentedFallback) ReleasePlan(
         IReadOnlyList<ResidencyCandidate> candidates, MemoryPressureLevel level,
-        MemoryPressurePlatform platform, int? focusedIndex) {
+        DevicePlatform platform, int? focusedIndex) {
+        ArgumentNullException.ThrowIfNull(platform);
         if (candidates.Count > MaximumCandidates) throw new BrowserRuleException(BrowserRuleCodes.ResidencyCandidateLimit);
         if (candidates.Select(candidate => candidate.TabId).Distinct(StringComparer.Ordinal).Count() != candidates.Count)
             throw new BrowserRuleException(BrowserRuleCodes.DuplicateResidencyCandidate);
@@ -53,8 +51,7 @@ public static class PageResidencyPolicy {
         }
         if (focusedIndex < 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidFocusedIndex);
         var offScreen = Ordered(candidates.Where(candidate => !candidate.IsPresented && !candidate.KeepsPageLoaded));
-        var fallback = level == MemoryPressureLevel.Critical && platform == MemoryPressurePlatform.Mobile
-            && focusedIndex is { } focus
+        var fallback = platform.ReclaimsPresentedPages(level) && focusedIndex is { } focus
             ? Ordered(candidates.Where(candidate => candidate.IsPresented && !candidate.KeepsPageLoaded
                 && Math.Abs(candidate.PresentedIndex!.Value - focus) > ProtectedNeighbourDistance))
             : [];

@@ -17,12 +17,6 @@ internal static class TabPolicyCodes {
         _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPressureLevel)
     };
 
-    public static MemoryPressurePlatform Platform(string value) => value switch {
-        "desktop" => MemoryPressurePlatform.Desktop,
-        "mobile" => MemoryPressurePlatform.Mobile,
-        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPressurePlatform)
-    };
-
     #endregion
 
     #region Actions - Encoding

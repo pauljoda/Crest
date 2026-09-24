@@ -18,17 +18,17 @@ internal static class TabPolicyRequests {
 
     #region Actions - Decoding
 
-    public sealed record ReleaseLimit(MemoryPressureLevel Level, int EligiblePageCount, MemoryPressurePlatform Platform) {
+    public sealed record ReleaseLimit(MemoryPressureLevel Level, int EligiblePageCount, DevicePlatform Platform) {
         public static ReleaseLimit Decode(JsonElement request) {
             Members(request, "level", "platform", "eligiblePageCount");
             var level = PressureLevel(request);
             int count = Integer(request, "eligiblePageCount");
-            return new(level, count, PressurePlatform(request));
+            return new(level, count, DeviceCodes.Platform(request));
         }
     }
 
     public sealed record ReleasePlan(IReadOnlyList<ResidencyCandidate> Candidates, MemoryPressureLevel Level,
-        MemoryPressurePlatform Platform, int? FocusedIndex) {
+        DevicePlatform Platform, int? FocusedIndex) {
         public static ReleasePlan Decode(JsonElement request) {
             Members(request, "level", "platform", "focusedIndex", "candidates");
             var candidates = new List<ResidencyCandidate>();
@@ -41,7 +41,7 @@ internal static class TabPolicyRequests {
                     throw new ProtocolException(ProtocolErrorCodes.ResidencyCandidateLimit);
             }
             var level = PressureLevel(request);
-            var platform = PressurePlatform(request);
+            var platform = DeviceCodes.Platform(request);
             return new(candidates, level, platform, OptionalInteger(request, "focusedIndex"));
         }
     }
@@ -76,9 +76,6 @@ internal static class TabPolicyRequests {
     }
 
     private static MemoryPressureLevel PressureLevel(JsonElement request) => TabPolicyCodes.Level(Protocol.Text(request, "level"));
-
-    private static MemoryPressurePlatform PressurePlatform(JsonElement request) =>
-        TabPolicyCodes.Platform(Protocol.Text(request, "platform"));
 
     #endregion
 }

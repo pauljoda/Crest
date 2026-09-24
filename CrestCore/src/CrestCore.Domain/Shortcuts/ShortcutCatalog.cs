@@ -1,5 +1,7 @@
 using System.Globalization;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Crest's default key chords, keyed by the command identities the native

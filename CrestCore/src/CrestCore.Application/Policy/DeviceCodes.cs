@@ -9,11 +9,8 @@ namespace CrestCore.Application;
 internal static class DeviceCodes {
     #region Actions - Decoding
 
-    public static DevicePlatform Platform(JsonElement request) => Protocol.Text(request, "platform", 16) switch {
-        "desktop" => DevicePlatform.Desktop,
-        "mobile" => DevicePlatform.Mobile,
-        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPlatform)
-    };
+    public static DevicePlatform Platform(JsonElement request) =>
+        DevicePlatform.Named(Protocol.Text(request, "platform", 16)) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlatform);
 
     /// A non-negative JSON integer.
     public static ulong Unsigned(JsonElement value, string field) {

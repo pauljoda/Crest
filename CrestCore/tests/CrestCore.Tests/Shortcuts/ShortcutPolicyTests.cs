@@ -40,10 +40,11 @@ public sealed class ShortcutPolicyTests {
         new() { ["key"] = new JsonObject { ["character"] = character }, ["modifiers"] = modifiers };
 
     [Theory]
-    [InlineData(DevicePlatform.Desktop)]
-    [InlineData(DevicePlatform.Mobile)]
-    public void TheDefaultCatalogNeverGivesTwoCommandsOneChord(DevicePlatform platform) {
-        var defaults = Commands.Select(command => ShortcutCatalog.Default(command, platform)).OfType<ShortcutChord>().ToArray();
+    [InlineData("desktop")]
+    [InlineData("mobile")]
+    public void TheDefaultCatalogNeverGivesTwoCommandsOneChord(string platform) {
+        var defaults = Commands.Select(command => ShortcutCatalog.Default(command, DevicePlatform.Named(platform)!))
+            .OfType<ShortcutChord>().ToArray();
         Assert.Equal(defaults.Length, defaults.Distinct().Count());
         Assert.All(defaults, chord => Assert.True(chord.IsValid));
     }
