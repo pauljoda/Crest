@@ -47,7 +47,7 @@ public sealed partial class NativeSessionAuthority {
                 } else if (operation is SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup) {
                     // Cleanup keeps every tab a window shows, and at launch every
                     // tab a saved window will show.
-                    if (space.BrowsingPreferences.CurrentTabCleanup.Lifetime is { } lifetime)
+                    if (space.Settings.BrowsingPreferences.CurrentTabCleanup.Lifetime is { } lifetime)
                         editArguments = new() { Lifetime = lifetime.TotalSeconds, TabIds = kept?.ToArray() };
                 } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
@@ -78,14 +78,14 @@ public sealed partial class NativeSessionAuthority {
 
     /// Removes history and archive records older than the Space keeps them.
     private static SpaceState SweepRecords(SpaceState space, double now, JsonObject change) {
-        if (RetentionLifetime(space.BrowsingPreferences.DataRetention.History) is { } historyLifetime) {
+        if (RetentionLifetime(space.Settings.BrowsingPreferences.DataRetention.History) is { } historyLifetime) {
             var expired = RecordRemovalPolicy.Expired(Seconds(space.History.Select(entry => entry.LastVisitedAt)), now, historyLifetime).ToHashSet();
             if (expired.Count > 0) {
                 change["removedHistory"] = Identities(space.History.Where((_, index) => expired.Contains(index)).Select(entry => entry.Id));
                 space = space with { History = space.History.Where((_, index) => !expired.Contains(index)).ToArray() };
             }
         }
-        if (RetentionLifetime(space.BrowsingPreferences.DataRetention.Archive) is { } archiveLifetime) {
+        if (RetentionLifetime(space.Settings.BrowsingPreferences.DataRetention.Archive) is { } archiveLifetime) {
             var expired = RecordRemovalPolicy.Expired(Seconds(space.ArchivedTabs.Select(archived => archived.ArchivedAt)), now, archiveLifetime).ToHashSet();
             if (expired.Count > 0) {
                 change["removedArchiveIndices"] = new JsonArray(expired.Order().Select(index => (JsonNode?)JsonValue.Create(index)).ToArray());

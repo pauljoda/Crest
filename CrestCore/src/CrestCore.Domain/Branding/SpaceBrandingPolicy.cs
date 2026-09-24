@@ -25,9 +25,9 @@ public static class SpaceBrandingPolicy {
     /// exists. The crest's own palette is dropped when it holds no color.
     public static SpaceBranding Normalize(SpaceBranding branding) {
         ArgumentNullException.ThrowIfNull(branding);
-        var colors = branding.Colors.Take(MaximumColorCount).Select(Color).ToArray();
+        var colors = branding.Colors.Colors.Take(MaximumColorCount).Select(Color).ToArray();
         if (colors.Length == 0) colors = [DefaultColor];
-        var palette = branding.Crest.Palette?.Take(MaximumCrestPaletteCount).Select(Color).ToArray();
+        var palette = branding.Crest.Palette?.Colors.Take(MaximumCrestPaletteCount).Select(Color).ToArray();
         if (palette is { Length: 0 }) palette = null;
         int layers = LayerColorCount(palette?.Length, colors.Length);
         var crest = branding.Crest;

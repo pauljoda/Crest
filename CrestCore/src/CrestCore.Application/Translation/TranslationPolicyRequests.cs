@@ -46,8 +46,8 @@ internal static class TranslationPolicyRequests {
         if (sources.ValueKind != JsonValueKind.Object) throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
         return AutomaticTranslationRules.Restore(sources.EnumerateObject().Select(member => {
             Protocol.Members(member.Value, PreferenceCodes.TargetId, PreferenceCodes.IsEnabled);
-            return KeyValuePair.Create(member.Name,
-                new TranslationRule(LanguageField(member.Value, PreferenceCodes.TargetId), Flag(member.Value, PreferenceCodes.IsEnabled)));
+            return new TranslationRule(member.Name, LanguageField(member.Value, PreferenceCodes.TargetId),
+                Flag(member.Value, PreferenceCodes.IsEnabled));
         }));
     }
 

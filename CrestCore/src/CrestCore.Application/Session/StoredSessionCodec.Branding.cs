@@ -228,9 +228,9 @@ internal static partial class StoredSessionCodec {
     }
 
     private static ColorPalette? Palette(JsonNode? node) =>
-        node is JsonArray colors ? new(colors.OfType<JsonObject>().Select(DecodeColor)) : null;
+        node is JsonArray colors ? new([.. colors.OfType<JsonObject>().Select(DecodeColor)]) : null;
 
-    private static JsonArray Encode(ColorPalette palette) => new(palette.Select(color => (JsonNode?)Encode(color)).ToArray());
+    private static JsonArray Encode(ColorPalette palette) => new(palette.Colors.Select(color => (JsonNode?)Encode(color)).ToArray());
 
     #endregion
 }

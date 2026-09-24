@@ -2257,6 +2257,10 @@
     "engine-names-catalog": {
       "category": "internal",
       "message": "The engine names are in the localization catalog."
+    },
+    "space-settings-apart": {
+      "category": "internal",
+      "message": "A Space's settings sit apart from its records in the core, with translation rules and color palettes as records."
     }
   }
 }

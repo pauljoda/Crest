@@ -39,7 +39,7 @@ public sealed partial class NativeSessionAuthority {
 
     /// A policy this build cannot name reads as guarded (see `StoredSessionCodec`),
     /// so only an open Space skips authentication.
-    private static bool RequiresAuthentication(SpaceState space) => space.AccessPolicy != SpaceAccessPolicy.Open;
+    private static bool RequiresAuthentication(SpaceState space) => space.Settings.AccessPolicy != SpaceAccessPolicy.Open;
 
     private static Guid? OptionalSpace(JsonNode? value) {
         if (value is null) return null;
@@ -107,7 +107,8 @@ public sealed partial class NativeSessionAuthority {
     /// Raising protection is always allowed, exactly as it is for the command
     /// gate. Nothing else may ride along with it.
     private static bool OnlyRaisesProtection(SpaceState original, SpaceState updated) =>
-        updated.AccessPolicy != SpaceAccessPolicy.Open && original with { AccessPolicy = updated.AccessPolicy } == updated;
+        updated.Settings.AccessPolicy != SpaceAccessPolicy.Open
+        && original with { Settings = original.Settings with { AccessPolicy = updated.Settings.AccessPolicy } } == updated;
 
     private void RequireAccessible(Guid spaceId) {
         if (access is null) return;

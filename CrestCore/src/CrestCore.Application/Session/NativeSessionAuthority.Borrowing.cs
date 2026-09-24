@@ -62,8 +62,10 @@ public sealed partial class NativeSessionAuthority {
         SplitGroups = local.SplitGroups,
         ArchivedTabs = local.ArchivedTabs,
         History = local.History,
-        IsSavedTabsExpanded = local.IsSavedTabsExpanded,
-        SavedTabsExpansionModifiedAt = local.SavedTabsExpansionModifiedAt
+        Settings = original.Settings with {
+            IsSavedTabsExpanded = local.Settings.IsSavedTabsExpanded,
+            SavedTabsExpansionModifiedAt = local.Settings.SavedTabsExpansionModifiedAt
+        }
     };
 
     private void ValidateBorrowedSession(SessionState value) {

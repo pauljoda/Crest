@@ -9,7 +9,7 @@ public static class AppPreferencesPolicy {
 
     /// The documented defaults for a person who never chose.
     public static AppPreferences Default { get; } = new(LaunchPolicy.DefaultStartup, OffersTranslation: true,
-        AutomaticallyTranslates: false, AutomaticTranslationRules.Empty.Sources, ChecksSpelling: false,
+        AutomaticallyTranslates: false, AutomaticTranslationRules.Empty.Rules, ChecksSpelling: false,
         AutomaticallyEntersPictureInPicture: true, SavedTabClosePolicy.ResumeLastLocation,
         SavedTabFaviconReturnsToSavedUrl: false, SplitFocusFollowsMouse: false);
 
@@ -21,7 +21,7 @@ public static class AppPreferencesPolicy {
     /// alias rules.
     public static AppPreferences WithTranslationRule(this AppPreferences preferences, string source, string target, bool isEnabled) =>
         preferences with {
-            TranslationRules = AutomaticTranslationRules.Restore(preferences.TranslationRules).Set(source, target, isEnabled).Sources
+            TranslationRules = AutomaticTranslationRules.Restore(preferences.TranslationRules).Set(source, target, isEnabled).Rules
         };
 
     #endregion

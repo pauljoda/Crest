@@ -30,6 +30,11 @@ public sealed partial class NativeSessionAuthority {
     private static SpaceDeletionState? PendingDeletion(SessionState value, Guid spaceId) =>
         value.SpaceDeletions.FirstOrDefault(deletion => deletion.SpaceId == spaceId);
 
+    /// `space` with `settings`, keeping the settings it had when nothing
+    /// changed, so an edit that changes nothing publishes nothing.
+    private static SpaceState Configured(SpaceState space, SpaceSettings settings) =>
+        settings == space.Settings ? space : space with { Settings = settings };
+
     private NativeSessionCommand PrepareSpaceCommand(ulong expected, JsonObject request) {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         BorrowedCommandRouting.RequireLocal(operation, workspaceKind == BrowserWorkspaceKind.Temporary);
@@ -53,18 +58,22 @@ public sealed partial class NativeSessionAuthority {
                 || template.Tabs.Count != 1 || template.Tabs[0].Url is not null)
                 throw new BrowserRuleException(BrowserRuleCodes.InvalidNewSpace);
             var space = template with {
-                Name = operation == SessionOperation.SpaceResetPrivate ? NewPrivateSpaceName
-                    : $"{(workspaceKind == BrowserWorkspaceKind.Private ? NewPrivateSpaceName : NewSpaceName)} {spaces.Count + 1}"
+                Settings = template.Settings with {
+                    Name = operation == SessionOperation.SpaceResetPrivate ? NewPrivateSpaceName
+                        : $"{(workspaceKind == BrowserWorkspaceKind.Private ? NewPrivateSpaceName : NewSpaceName)} {spaces.Count + 1}"
+                }
             };
             if (workspaceKind == BrowserWorkspaceKind.Private)
                 space = space with {
-                    Symbol = PrivateSpaceSymbol,
-                    Accent = SpaceAccent.Indigo,
-                    BrowsingPreferences = space.BrowsingPreferences with {
-                        SelectedSearchProviderId = SearchProvider.DuckDuckGo.Name,
-                        CurrentTabCleanup = CurrentTabCleanup.Never
-                    },
-                    CredentialPreferences = PrivateCredentialPreferences
+                    Settings = space.Settings with {
+                        Symbol = PrivateSpaceSymbol,
+                        Accent = SpaceAccent.Indigo,
+                        BrowsingPreferences = space.Settings.BrowsingPreferences with {
+                            SelectedSearchProviderId = SearchProvider.DuckDuckGo.Name,
+                            CurrentTabCleanup = CurrentTabCleanup.Never
+                        },
+                        CredentialPreferences = PrivateCredentialPreferences
+                    }
                 };
             spaces.Add(space);
             // A new Space is the one its window shows next, on its only tab.
@@ -98,40 +107,49 @@ public sealed partial class NativeSessionAuthority {
                         followUp.ShowSpace(spaces.First(s => deletions.All(deletion => deletion.SpaceId != s.Id)).Id);
                     break;
                 case SessionOperation.SpaceIdentity:
-                    spaces[index] = space with {
+                    spaces[index] = Configured(space, space.Settings with {
                         Name = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>()),
                         Symbol = SpaceOrganizationPolicy.Symbol(args["symbol"]!.GetValue<string>()),
                         Accent = StoredSessionCodec.ParseAccent(args["accent"]!.GetValue<string>())
                             ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidAccent)
-                    };
+                    });
                     break;
                 case SessionOperation.SpaceBranding:
                     // The native view supplies its rendering vocabulary; the core
                     // applies its range rules to it.
-                    spaces[index] = space with { Branding = SpaceBrandingPolicy.Normalize(StoredSessionCodec.DecodeBranding(args["value"])) };
+                    spaces[index] = Configured(space, space.Settings with {
+                        Branding = SpaceBrandingPolicy.Normalize(StoredSessionCodec.DecodeBranding(args["value"]))
+                    });
                     break;
                 case SessionOperation.SpaceBrowsingPreferences:
-                    spaces[index] = space with { BrowsingPreferences = StoredSessionCodec.DecodeBrowsingPreferences(args["value"]) };
+                    spaces[index] = Configured(space, space.Settings with {
+                        BrowsingPreferences = StoredSessionCodec.DecodeBrowsingPreferences(args["value"])
+                    });
                     break;
                 case SessionOperation.SpaceSearchProviderUpsert or SessionOperation.SpaceSearchProviderRemove:
-                    spaces[index] = space with { BrowsingPreferences = EditSearchProviders(operation, space.BrowsingPreferences, args) };
+                    spaces[index] = Configured(space, space.Settings with {
+                        BrowsingPreferences = EditSearchProviders(operation, space.Settings.BrowsingPreferences, args)
+                    });
                     break;
                 case SessionOperation.SpaceCredentialPreferences:
-                    spaces[index] = space with { CredentialPreferences = StoredSessionCodec.DecodeCredentialPreferences(args["value"]) };
+                    spaces[index] = Configured(space, space.Settings with {
+                        CredentialPreferences = StoredSessionCodec.DecodeCredentialPreferences(args["value"])
+                    });
                     break;
                 case SessionOperation.SpaceAccess:
-                    spaces[index] = space with {
+                    spaces[index] = Configured(space, space.Settings with {
                         AccessPolicy = StoredSessionCodec.ParseAccessPolicy(args["value"]!.GetValue<string>())
                             ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidAccessPolicy)
-                    };
+                    });
                     break;
                 case SessionOperation.SpaceDefault:
                     defaultSpace = space.Id;
                     break;
                 case SessionOperation.SpaceSavedExpansion:
                     var expanded = args["value"]!.GetValue<bool>();
-                    if (space.IsSavedTabsExpanded != expanded)
-                        spaces[index] = space with { IsSavedTabsExpanded = expanded, SavedTabsExpansionModifiedAt = Now(request) };
+                    if (space.Settings.IsSavedTabsExpanded != expanded)
+                        spaces[index] = Configured(space,
+                            space.Settings with { IsSavedTabsExpanded = expanded, SavedTabsExpansionModifiedAt = Now(request) });
                     break;
                 case SessionOperation.SpaceRemove:
                     if (pending is null || pending.Id != Id(args["operationID"]))

@@ -130,7 +130,7 @@ public static class NativeSessionMaintenance {
         bool changed = false;
         var spaces = session.Spaces.Select(space => {
             if (pending.Contains(space.Id)) return space;
-            var retention = space.BrowsingPreferences.DataRetention;
+            var retention = space.Settings.BrowsingPreferences.DataRetention;
             var history = Retained(space.History, entry => entry.LastVisitedAt, Lifetime(retention.History), now);
             var archive = Retained(space.ArchivedTabs, archived => archived.ArchivedAt, Lifetime(retention.Archive), now);
             changed |= history.Count != space.History.Count || archive.Count != space.ArchivedTabs.Count;
@@ -153,9 +153,9 @@ public static class NativeSessionMaintenance {
     #region Actions - Records
 
     /// The Space an empty session starts with when the native caller supplies none.
-    private static SpaceState BlankSpace() => new(Guid.Empty, Guid.Empty, BlankSpaceName, BlankSpaceSymbol, SpaceAccent.Indigo,
-        null, [], [], [], [], [], StoredSessionCodec.DefaultBrowsingPreferences, StoredSessionCodec.DefaultCredentialPreferences,
-        SpaceAccessPolicy.Open, true, null);
+    private static SpaceState BlankSpace() => new(Guid.Empty, Guid.Empty,
+        new(BlankSpaceName, BlankSpaceSymbol, SpaceAccent.Indigo, null, StoredSessionCodec.DefaultBrowsingPreferences,
+            StoredSessionCodec.DefaultCredentialPreferences, SpaceAccessPolicy.Open, true, null), [], [], [], [], []);
 
     private static bool IsStartPage(TabState tab) => tab.Url is null && tab.NativeContent is null;
 

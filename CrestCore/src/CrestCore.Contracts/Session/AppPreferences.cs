@@ -4,10 +4,11 @@ namespace CrestCore.Contracts;
 /// The app-wide behavior preferences of one installation: what a window opens with,
 /// page translation and its per-language rules, spelling, automatic Picture in
 /// Picture, what closing a saved tab does and whether Split View focus follows the
-/// pointer. They stay on this device and never become sync records.
+/// pointer. Translation rules are in ordinal order of their source language. They
+/// stay on this device and never become sync records.
 /// </summary>
 public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslation, bool AutomaticallyTranslates,
-    IReadOnlyDictionary<string, TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,
+    IReadOnlyList<TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,
     SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl, bool SplitFocusFollowsMouse) {
     #region Actions - Equality
 
@@ -15,8 +16,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && Startup == other.Startup
         && OffersTranslation == other.OffersTranslation
         && AutomaticallyTranslates == other.AutomaticallyTranslates
-        && TranslationRules.Count == other.TranslationRules.Count
-        && TranslationRules.All(rule => other.TranslationRules.TryGetValue(rule.Key, out var match) && match == rule.Value)
+        && TranslationRules.SequenceEqual(other.TranslationRules)
         && ChecksSpelling == other.ChecksSpelling
         && AutomaticallyEntersPictureInPicture == other.AutomaticallyEntersPictureInPicture
         && SavedTabClose == other.SavedTabClose

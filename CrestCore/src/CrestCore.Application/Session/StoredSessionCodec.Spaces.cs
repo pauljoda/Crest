@@ -30,41 +30,42 @@ internal static partial class StoredSessionCodec {
     internal static SpaceState DecodeSpace(JsonNode? node) {
         var value = Object(node);
         return new(Identity(value[Key.Id]), Identity(value[Key.Profile]?[Key.Id]),
-            Text(value[Key.Name]) ?? FallbackSpaceName, Text(value[Key.Symbol]) ?? FallbackSpaceSymbol,
-            DecodeAccent(value[Key.Accent]),
-            value[Key.Branding] is JsonObject branding ? DecodeBranding(branding) : null,
+            new(Text(value[Key.Name]) ?? FallbackSpaceName, Text(value[Key.Symbol]) ?? FallbackSpaceSymbol,
+                DecodeAccent(value[Key.Accent]),
+                value[Key.Branding] is JsonObject branding ? DecodeBranding(branding) : null,
+                value[Key.BrowsingPreferences] is JsonObject browsing ? DecodeBrowsingPreferences(browsing) : DefaultBrowsingPreferences,
+                value[Key.CredentialPreferences] is JsonObject credentials
+                    ? DecodeCredentialPreferences(credentials) : DefaultCredentialPreferences,
+                DecodeAccessPolicy(value[Key.AccessPolicy]),
+                Flag(value[Key.IsSavedTabsExpanded]) ?? true,
+                OptionalDate(value[Key.SavedTabsExpansionModifiedAt])),
             Items(value[Key.Folders]).Select(DecodeFolder).ToArray(),
             Items(value[Key.Tabs]).Select(DecodeTab).ToArray(),
             Items(value[Key.SplitGroups]).Select(DecodeSplitGroup).ToArray(),
             Items(value[Key.ArchivedTabs]).Select(DecodeArchivedTab).ToArray(),
-            Items(value[Key.History]).Select(DecodeHistoryEntry).ToArray(),
-            value[Key.BrowsingPreferences] is JsonObject browsing ? DecodeBrowsingPreferences(browsing) : DefaultBrowsingPreferences,
-            value[Key.CredentialPreferences] is JsonObject credentials
-                ? DecodeCredentialPreferences(credentials) : DefaultCredentialPreferences,
-            DecodeAccessPolicy(value[Key.AccessPolicy]),
-            Flag(value[Key.IsSavedTabsExpanded]) ?? true,
-            OptionalDate(value[Key.SavedTabsExpansionModifiedAt]));
+            Items(value[Key.History]).Select(DecodeHistoryEntry).ToArray());
     }
 
     internal static JsonObject Encode(SpaceState space) {
+        var settings = space.Settings;
         var value = new JsonObject {
             [Key.Id] = WrappedIdentity(space.Id),
             [Key.Profile] = new JsonObject { [Key.Id] = BareIdentity(space.ProfileId) },
-            [Key.Name] = space.Name,
-            [Key.Symbol] = space.Symbol,
-            [Key.Accent] = SpaceAccents.Name(space.Accent)
+            [Key.Name] = settings.Name,
+            [Key.Symbol] = settings.Symbol,
+            [Key.Accent] = SpaceAccents.Name(settings.Accent)
         };
-        if (space.Branding is { } branding) value[Key.Branding] = Encode(branding);
+        if (settings.Branding is { } branding) value[Key.Branding] = Encode(branding);
         value[Key.Folders] = EncodeAll(space.Folders, Encode);
         value[Key.Tabs] = EncodeAll(space.Tabs, Encode);
         value[Key.SplitGroups] = EncodeAll(space.SplitGroups, Encode);
         value[Key.ArchivedTabs] = EncodeAll(space.ArchivedTabs, Encode);
         value[Key.History] = EncodeHistory(space.History);
-        value[Key.BrowsingPreferences] = Encode(space.BrowsingPreferences);
-        value[Key.CredentialPreferences] = Encode(space.CredentialPreferences);
-        value[Key.AccessPolicy] = SpaceAccessPolicies.Name(space.AccessPolicy);
-        value[Key.IsSavedTabsExpanded] = space.IsSavedTabsExpanded;
-        Put(value, Key.SavedTabsExpansionModifiedAt, space.SavedTabsExpansionModifiedAt);
+        value[Key.BrowsingPreferences] = Encode(settings.BrowsingPreferences);
+        value[Key.CredentialPreferences] = Encode(settings.CredentialPreferences);
+        value[Key.AccessPolicy] = SpaceAccessPolicies.Name(settings.AccessPolicy);
+        value[Key.IsSavedTabsExpanded] = settings.IsSavedTabsExpanded;
+        Put(value, Key.SavedTabsExpansionModifiedAt, settings.SavedTabsExpansionModifiedAt);
         return value;
     }
 

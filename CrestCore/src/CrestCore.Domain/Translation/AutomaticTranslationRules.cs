@@ -12,25 +12,29 @@ public sealed class AutomaticTranslationRules {
     public const int MaximumLanguageLength = 64;
 
     public static AutomaticTranslationRules Empty { get; } = new(new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal));
-    public IReadOnlyDictionary<string, TranslationRule> Sources => sources;
+    /// Every rule, in ordinal order of its source language.
+    public IReadOnlyList<TranslationRule> Rules { get; }
     private readonly SortedDictionary<string, TranslationRule> sources;
 
     #endregion
 
     #region Constructors
 
-    private AutomaticTranslationRules(SortedDictionary<string, TranslationRule> sources) { this.sources = sources; }
+    private AutomaticTranslationRules(SortedDictionary<string, TranslationRule> sources) {
+        this.sources = sources;
+        Rules = [.. sources.Values];
+    }
 
     #endregion
 
     #region Actions - Rules
 
-    public static AutomaticTranslationRules Restore(IEnumerable<KeyValuePair<string, TranslationRule>> stored) {
+    public static AutomaticTranslationRules Restore(IEnumerable<TranslationRule> stored) {
         ArgumentNullException.ThrowIfNull(stored);
         var values = new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal);
-        foreach (var (source, rule) in stored) {
-            RequireLanguageLength(source, rule.TargetId);
-            values[source] = rule;
+        foreach (var rule in stored) {
+            RequireLanguageLength(rule.SourceLanguage, rule.TargetId);
+            values[rule.SourceLanguage] = rule;
             if (values.Count > MaximumSources) throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
         }
         return new(values);
@@ -67,7 +71,7 @@ public sealed class AutomaticTranslationRules {
         RequireLanguageLength(source, target);
         var values = new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal);
         foreach (var (key, rule) in sources) if (!LanguageTag.Matches(key, source)) values[key] = rule;
-        values[source] = new(target, isEnabled);
+        values[source] = new(source, target, isEnabled);
         if (values.Count > MaximumSources) throw new BrowserRuleException(BrowserRuleCodes.TranslationRuleLimit);
         return new(values);
     }

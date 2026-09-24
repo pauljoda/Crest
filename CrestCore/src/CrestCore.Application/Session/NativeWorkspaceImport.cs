@@ -81,10 +81,12 @@ public sealed class NativeWorkspaceImport {
     }
 
     private static void Customize(Draft space, JsonNode values) => space.State = space.State with {
-        Name = SpaceOrganizationPolicy.Name(values[Key.Name]!.GetValue<string>()),
-        Symbol = SpaceOrganizationPolicy.Symbol(values[Key.Symbol]!.GetValue<string>()),
-        Accent = StoredSessionCodec.DecodeAccent(values[Key.Accent]),
-        Branding = values[Key.Branding] is JsonObject branding ? StoredSessionCodec.DecodeBranding(branding) : null
+        Settings = space.State.Settings with {
+            Name = SpaceOrganizationPolicy.Name(values[Key.Name]!.GetValue<string>()),
+            Symbol = SpaceOrganizationPolicy.Symbol(values[Key.Symbol]!.GetValue<string>()),
+            Accent = StoredSessionCodec.DecodeAccent(values[Key.Accent]),
+            Branding = values[Key.Branding] is JsonObject branding ? StoredSessionCodec.DecodeBranding(branding) : null
+        }
     };
 
     private static void Available(SessionState session, Guid id) {

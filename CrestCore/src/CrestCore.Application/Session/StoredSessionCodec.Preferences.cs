@@ -146,21 +146,20 @@ internal static partial class StoredSessionCodec {
     }
 
     /// Rules in their stored shape, `{"sources":{"es":{"targetID":"en","isEnabled":true}}}`.
-    internal static IReadOnlyDictionary<string, TranslationRule> TranslationRules(JsonNode? value) {
-        if (value?[Key.Sources] is not JsonObject sources) return AutomaticTranslationRules.Empty.Sources;
+    internal static IReadOnlyList<TranslationRule> TranslationRules(JsonNode? value) {
+        if (value?[Key.Sources] is not JsonObject sources) return AutomaticTranslationRules.Empty.Rules;
         try {
-            return AutomaticTranslationRules.Restore(sources.Select(member => KeyValuePair.Create(member.Key,
-                new TranslationRule(TolerantText(member.Value?[Key.TargetId]) ?? "", TolerantFlag(member.Value?[Key.IsEnabled]) ?? false))))
-                .Sources;
+            return AutomaticTranslationRules.Restore(sources.Select(member => new TranslationRule(member.Key,
+                TolerantText(member.Value?[Key.TargetId]) ?? "", TolerantFlag(member.Value?[Key.IsEnabled]) ?? false))).Rules;
         } catch (BrowserRuleException) {
-            return AutomaticTranslationRules.Empty.Sources;
+            return AutomaticTranslationRules.Empty.Rules;
         }
     }
 
-    private static JsonObject EncodeTranslationRules(IReadOnlyDictionary<string, TranslationRule> rules) {
+    private static JsonObject EncodeTranslationRules(IReadOnlyList<TranslationRule> rules) {
         var sources = new JsonObject();
-        foreach (var (source, rule) in rules)
-            sources[source] = new JsonObject { [Key.TargetId] = rule.TargetId, [Key.IsEnabled] = rule.IsEnabled };
+        foreach (var rule in rules)
+            sources[rule.SourceLanguage] = new JsonObject { [Key.TargetId] = rule.TargetId, [Key.IsEnabled] = rule.IsEnabled };
         return new() { [Key.Sources] = sources };
     }
 
