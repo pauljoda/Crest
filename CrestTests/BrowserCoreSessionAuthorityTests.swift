@@ -415,6 +415,25 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertNil(harness.favicons.favicon(tabID: tab.id))
     }
 
+    /// The Start Page a launch presents is an ordinary current tab once the
+    /// core saves it: the next launch presents that same tab again rather than
+    /// adding another, so relaunching never piles up Start Pages.
+    func testALaunchStartPageIsReusedAcrossRelaunches() async throws {
+        var session = BrowserSession.preview
+        for index in session.spaces.indices { session.spaces[index].tabs.removeAll(where: \.isStartPage) }
+        var harness = try BrowserStoredSessionHarness(session: session)
+        let spaceID = try XCTUnwrap(harness.store.selectedSpace?.id)
+        let draft = try XCTUnwrap(harness.store.presentStartPageForLaunch())
+        for _ in 0..<3 {
+            harness = try await harness.relaunch()
+            let store = harness.store
+            store.selectSpace(spaceID)
+            XCTAssertEqual(store.presentStartPageForLaunch(), draft)
+            let space = try XCTUnwrap(store.session.space(id: spaceID))
+            XCTAssertEqual(space.tabs.filter(\.isStartPage).map(\.id), [draft])
+        }
+    }
+
     // MARK: - Fixtures
 
     /// A window showing `space` on its fallback tab.

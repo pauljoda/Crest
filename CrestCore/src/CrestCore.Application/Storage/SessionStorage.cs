@@ -149,11 +149,12 @@ internal sealed class SessionStorage : IDisposable {
     }
 
     /// Writes `session` at `revision`, with `journal` when it changed, before
-    /// returning. Throws `StorageException` and leaves the file as it was when
-    /// the write fails.
-    public void Save(SessionState session, ulong revision, NativeSyncJournal? journal = null) {
+    /// returning; `encoded` holds parts already encoded for it. Throws
+    /// `StorageException` and leaves the file as it was when the write fails.
+    public void Save(SessionState session, ulong revision, NativeSyncJournal? journal = null,
+        NativeSessionCheckpoint? encoded = null) {
         ArgumentNullException.ThrowIfNull(session);
-        Announce(Write(session, revision, journal));
+        Announce(Write(session, revision, journal, encoded));
     }
 
     /// Writes `journal` before returning, in one transaction with the newest
@@ -198,7 +199,8 @@ internal sealed class SessionStorage : IDisposable {
     /// Writes one transaction under the writer lock: `session` or, without
     /// one, the newest pending revision, and `journal`. Answers `Saved` when
     /// the file now holds a newer revision.
-    private Saved? Write(SessionState? session, ulong revision, NativeSyncJournal? journal) {
+    private Saved? Write(SessionState? session, ulong revision, NativeSyncJournal? journal,
+        NativeSessionCheckpoint? encoded = null) {
         lock (writing) {
             RequireOpen();
             if (session is null) {
@@ -209,7 +211,7 @@ internal sealed class SessionStorage : IDisposable {
                 throw new InvalidOperationException("A durable save must be newer than the file.");
             }
             if (session is null && journal is null) return null;
-            WriteParts(session, journal);
+            WriteParts(session, journal, encoded);
             if (session is null) return null;
             writtenRevision = revision;
             lock (queue) {
@@ -221,11 +223,11 @@ internal sealed class SessionStorage : IDisposable {
 
     /// Writes every part of `session` and `journal` whose bytes changed, in
     /// one transaction. The caller holds the writer lock.
-    private void WriteParts(SessionState? session, NativeSyncJournal? journal) {
+    private void WriteParts(SessionState? session, NativeSyncJournal? journal, NativeSessionCheckpoint? encoded = null) {
         var puts = new List<(string Part, byte[] Data)>();
         var removals = new List<string>();
         if (session is not null) {
-            var checkpoint = new NativeSessionCheckpoint(session);
+            var checkpoint = encoded ?? new NativeSessionCheckpoint(session);
             AddIfChanged(puts, StoragePart.Core, checkpoint.Core());
             var previous = writtenSession?.Spaces.ToDictionary(space => space.Id) ?? [];
             var retained = new HashSet<string>(StringComparer.Ordinal);

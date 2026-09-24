@@ -2,7 +2,10 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-public sealed class NativeSessionReplacement : IDisposable {
+/// A validated revision reserved while it is saved. Other writers are
+/// refused until it is committed or disposed; disposing an uncommitted
+/// reservation leaves the session as it was.
+internal sealed class NativeSessionReplacement : IDisposable {
     #region Variables
 
     private readonly NativeSessionAuthority owner;
@@ -11,7 +14,7 @@ public sealed class NativeSessionReplacement : IDisposable {
     internal ulong Revision { get; }
     internal ulong? BorrowedSourceRevision { get; }
     internal Guid? TransientCompletion { get; }
-    public NativeSessionCheckpoint Checkpoint { get; }
+    internal NativeSessionCheckpoint Checkpoint { get; }
     internal NativeSyncTransaction? SyncTransaction { get; private set; }
 
     #endregion
@@ -29,7 +32,7 @@ public sealed class NativeSessionReplacement : IDisposable {
 
     #region Actions - Replacement
 
-    public void BindSync(NativeSyncTransaction value) {
+    internal void BindSync(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             if (completed || SyncTransaction is not null || !value.IsReadyToCommit || !ReferenceEquals(value.Owner.Session, owner))
                 throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
@@ -37,7 +40,7 @@ public sealed class NativeSessionReplacement : IDisposable {
         }
     }
 
-    public ulong Commit() {
+    internal ulong Commit() {
         lock (NativeSessionAuthority.Gate) {
             if (completed) throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
             var revision = owner.CompleteReplacement(this, true);

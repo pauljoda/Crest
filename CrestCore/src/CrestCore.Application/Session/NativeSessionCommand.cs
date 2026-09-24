@@ -41,7 +41,7 @@ public sealed class NativeSessionCommand {
     public ulong Commit(Durability durability, NativeSyncTransaction? transaction = null) =>
         owner.Commit(this, durability, transaction);
 
-    public NativeSessionReplacement Reserve() => owner.ReserveCommand(this);
+    internal NativeSessionReplacement Reserve() => owner.ReserveCommand(this);
 
     #endregion
 }

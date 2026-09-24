@@ -199,33 +199,9 @@ static void session_boundary(void) {
     assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_MESSAGE);
     memset(engine, 0xaa, sizeof(engine)); /* The session must own its descriptor copy. */
 
-    /* Selection is window state: the checkpoint takes none and a legacy
-     * session-level selection in the input document is not written back. */
-    uint64_t checkpoint = 0;
-    assert(crest_session_checkpoint(session, revision + 1, &checkpoint) == CREST_INVALID_STATE && checkpoint == 0);
-    assert(crest_session_checkpoint(session, revision, &checkpoint) == CREST_OK && checkpoint != 0);
-
-    /* A capacity probe reports the size without consuming the immutable part. */
-    const char* part = "core";
-    size_t length = 0, again = 0;
-    assert(crest_session_read_checkpoint(checkpoint, (const uint8_t*)part, strlen(part), NULL, 0, &length)
-        == CREST_BUFFER_TOO_SMALL && length > 0);
-    uint8_t* output = malloc(length + 1); assert(output); output[length] = 0xa5;
-    assert(crest_session_read_checkpoint(checkpoint, (const uint8_t*)part, strlen(part), output, length - 1, &again)
-        == CREST_BUFFER_TOO_SMALL && again == length);
-    assert(crest_session_read_checkpoint(checkpoint, (const uint8_t*)part, strlen(part), output, length, &again) == CREST_OK
-        && again == length && output[length] == 0xa5);
-    output[length] = 0;
-    /* Engine registration is process-local and never enters the checkpoint. */
-    assert(strstr((const char*)output, "fixture") == NULL);
-    assert(strstr((const char*)output, "selectedSpaceID") == NULL);
-    free(output);
-
-    assert(crest_session_release_checkpoint(checkpoint) == CREST_OK);
-    assert(crest_session_release_checkpoint(checkpoint) == CREST_INVALID_HANDLE);
     assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_INVALID_HANDLE);
-    assert(crest_session_checkpoint(session, 1, &checkpoint) == CREST_INVALID_HANDLE);
+    assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_HANDLE);
 }
 /* A session that consults the access authority refuses commands against a
  * locked Space until that exact Space/profile pair holds a grant. */

@@ -25,10 +25,10 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    /// Reserves a validated revision while the platform commits durable storage.
-    /// Other writes are rejected until commit or cancellation. No platform I/O
-    /// occurs under the core lock, and cancellation leaves the authority intact.
-    public NativeSessionReplacement ReserveReplacement(ulong expected, ReadOnlySpan<byte> delta,
+    /// Reserves a validated revision while it is saved. Other writes are
+    /// rejected until commit or cancellation. No I/O occurs under the core
+    /// lock, and cancellation leaves the authority intact.
+    internal NativeSessionReplacement ReserveReplacement(ulong expected, ReadOnlySpan<byte> delta,
         NativeSyncTransaction? transaction = null, bool nativeValueEdit = false) {
         lock (Gate) {
             IReadOnlyList<CrestCore.Contracts.SpaceDeletionState>? authorizedDeletions = null;
@@ -96,7 +96,7 @@ public sealed partial class NativeSessionAuthority {
     /// the file is written, and other writers stay excluded by the reservation.
     private ulong SaveAndCommit(NativeSessionReplacement reserved) {
         try {
-            storage?.Save(reserved.Session, reserved.Revision, reserved.SyncTransaction?.Journal);
+            storage?.Save(reserved.Session, reserved.Revision, reserved.SyncTransaction?.Journal, reserved.Checkpoint);
         } catch {
             reserved.Dispose();
             throw;

@@ -2157,6 +2157,10 @@
     "swift-stops-saving-session": {
       "category": "internal",
       "message": "Swift no longer saves the session; the core writes it and reports each save, and quitting waits for the last one."
+    },
+    "checkpoint-exports-removed": {
+      "category": "internal",
+      "message": "The checkpoint and reservation entry points are removed from the core's C interface."
     }
   }
 }

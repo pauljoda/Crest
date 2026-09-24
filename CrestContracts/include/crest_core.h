@@ -140,15 +140,13 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
 
-/* Native-UI session authority. All calls are exception-contained. Inputs and
- * checkpoint parts are <= 64 MiB; no native objects or callbacks. A session
- * created here keeps nothing on disk; the app's persistent session
- * (crest_app_session) saves every accepted revision behind, on the core's
- * storage worker, and the durable commits below save before they return.
- * Commits require the last accepted revision. A checkpoint pins an immutable
- * revision; worker threads can read it while editing continues. The session
- * holds browsing data only: Space and tab selection is window state, never
- * stored, checkpointed or synced. Older documents that still carry it load.
+/* Native-UI session authority. All calls are exception-contained. Inputs are
+ * <= 64 MiB; no native objects or callbacks. A session created here keeps
+ * nothing on disk; the app's persistent session (crest_app_session) saves every
+ * accepted revision behind, on the core's storage worker, and the durable
+ * commits below save before they return. Commits require the last accepted
+ * revision. The session holds browsing data only: Space and tab selection is
+ * window state, never stored or synced. Older documents that still carry it load.
  * Native projections exclude favicon bytes, which remain platform assets.
  * Destroy/release only after the caller has drained its own references/calls.
  */
@@ -185,15 +183,7 @@ CREST_API crest_status_t CREST_CALL crest_session_commit_transfer(
     uint64_t transfer, uint64_t sync_transaction, uint64_t *source_revision, uint64_t *destination_revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_transfer(uint64_t transfer);
 
-CREST_API crest_status_t CREST_CALL crest_session_checkpoint(
-    uint64_t session, uint64_t revision, uint64_t* out_checkpoint);
-/* part is "core" or a Space UUID for its history. Capacity probing never
- * consumes the immutable part. Part names are <= 64 UTF-8 bytes. */
-CREST_API crest_status_t CREST_CALL crest_session_read_checkpoint(
-    uint64_t checkpoint, const uint8_t* part, size_t part_length,
-    uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_session_destroy(uint64_t session);
-CREST_API crest_status_t CREST_CALL crest_session_release_checkpoint(uint64_t checkpoint);
 
 /* Commands operate on the owned session using only arguments and, as read-only
  * context, what the requesting window shows. Answers carry a `selection` hint the
@@ -208,9 +198,6 @@ CREST_API crest_status_t CREST_CALL crest_session_read_command(
     uint64_t command, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_session_commit_command(uint64_t command, uint64_t* out_revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t command);
-/* Reserve a prepared semantic command for durable storage before publication. */
-CREST_API crest_status_t CREST_CALL crest_session_reserve_command(uint64_t command,
-    uint64_t *replacement, uint64_t *checkpoint);
 /* TRANSITIONAL, removed when session intents land: commits a prepared command
  * and saves it before returning, with the sealed sync transaction's journal in
  * the same transaction when sync_transaction is not zero. For commits whose
@@ -220,25 +207,12 @@ CREST_API crest_status_t CREST_CALL crest_session_reserve_command(uint64_t comma
 CREST_API crest_status_t CREST_CALL crest_session_commit_command_durably(uint64_t command,
     uint64_t sync_transaction, uint64_t *revision);
 /* TRANSITIONAL, removed when session intents land: applies a value delta and
- * saves it before returning. With a sealed sync transaction (incoming sync) its
- * journal is saved and published with the session; without one the delta is a
- * native value edit. STORAGE_FAILED leaves everything as it was. */
+ * saves it before returning. With a sealed incoming sync transaction, which may
+ * authorize local cleanup intents, its journal is saved and published with the
+ * session; without one the delta is a native value edit. STORAGE_FAILED leaves
+ * everything as it was. */
 CREST_API crest_status_t CREST_CALL crest_session_replace_durably(uint64_t session, uint64_t expected_revision,
     uint64_t sync_transaction, const uint8_t *delta, size_t delta_length, uint64_t *revision);
-
-// Reserve a validated replacement while the platform writes one durable session
-// and journal transaction. Release cancels an uncommitted reservation. The
-// returned checkpoint is independently owned and must also be released.
-CREST_API crest_status_t CREST_CALL crest_session_reserve_replacement(
-    uint64_t session, uint64_t expected_revision, const uint8_t *delta, size_t delta_length,
-    uint64_t *replacement, uint64_t *checkpoint);
-// A sealed incoming sync transaction may introduce core-authorized local cleanup
-// intents. This reservation binds that transaction before returning a checkpoint.
-CREST_API crest_status_t CREST_CALL crest_session_reserve_sync_replacement(
-    uint64_t session, uint64_t expected_revision, uint64_t transaction, const uint8_t *delta, size_t delta_length,
-    uint64_t *replacement, uint64_t *checkpoint);
-CREST_API crest_status_t CREST_CALL crest_session_commit_replacement(uint64_t replacement, uint64_t *revision);
-CREST_API crest_status_t CREST_CALL crest_session_release_replacement(uint64_t replacement);
 
 // A session's sync component owns journal publication and local revision order.
 // Prepare returning zero handles means the captured local revision is stale.
@@ -259,7 +233,6 @@ CREST_API crest_status_t CREST_CALL crest_sync_authority_prepare(uint64_t author
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_seal(uint64_t transaction, int32_t *accepted);
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_commit(uint64_t transaction);
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_release(uint64_t transaction);
-CREST_API crest_status_t CREST_CALL crest_session_bind_sync_replacement(uint64_t replacement, uint64_t transaction);
 
 #ifdef __cplusplus
 } /* extern "C" */

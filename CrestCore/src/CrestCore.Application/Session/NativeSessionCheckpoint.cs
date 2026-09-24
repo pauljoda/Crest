@@ -11,7 +11,7 @@ namespace CrestCore.Application;
 /// own part, named by the Space's identity. Selection is window state, so no
 /// part carries it. Storage writes these bytes; tests read them to see the
 /// stored format.
-public sealed class NativeSessionCheckpoint {
+internal sealed class NativeSessionCheckpoint {
     #region Variables
 
     internal const string CorePart = "core";

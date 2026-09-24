@@ -12,8 +12,8 @@ public sealed class NativeSessionTransfer : IDisposable {
     private NativeSessionReplacement? a, b;
     private bool completed;
     public byte[] Output { get; }
-    public NativeSessionCheckpoint SourceCheckpoint => a!.Checkpoint;
-    public NativeSessionCheckpoint DestinationCheckpoint => b!.Checkpoint;
+    internal NativeSessionCheckpoint SourceCheckpoint => a!.Checkpoint;
+    internal NativeSessionCheckpoint DestinationCheckpoint => b!.Checkpoint;
 
     #endregion
 
@@ -26,7 +26,7 @@ public sealed class NativeSessionTransfer : IDisposable {
 
     #region Actions - Transfer
 
-    public void Reserve(NativeSyncTransaction? sync = null) {
+    internal void Reserve(NativeSyncTransaction? sync = null) {
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is not null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             try {
@@ -41,7 +41,7 @@ public sealed class NativeSessionTransfer : IDisposable {
         }
     }
 
-    public (ulong Source, ulong Destination) Commit() {
+    internal (ulong Source, ulong Destination) Commit() {
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is null || b is null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             // At most one side is persistent. Publish its journal first; the
@@ -56,8 +56,8 @@ public sealed class NativeSessionTransfer : IDisposable {
     public (ulong Source, ulong Destination) CommitDurably(NativeSyncTransaction? sync = null) {
         Reserve(sync);
         try {
-            source.Storage?.Save(a!.Session, a.Revision, a.SyncTransaction?.Journal);
-            destination.Storage?.Save(b!.Session, b.Revision, b.SyncTransaction?.Journal);
+            source.Storage?.Save(a!.Session, a.Revision, a.SyncTransaction?.Journal, a.Checkpoint);
+            destination.Storage?.Save(b!.Session, b.Revision, b.SyncTransaction?.Journal, b.Checkpoint);
         } catch {
             Dispose();
             throw;

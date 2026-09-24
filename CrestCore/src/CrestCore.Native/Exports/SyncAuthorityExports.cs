@@ -112,12 +112,5 @@ public static unsafe partial class Exports {
         value.Dispose(); return CoreStatus.Ok;
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_session_bind_sync_replacement", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionBindSyncReplacement(ulong replacement, ulong transaction) {
-        if (!SessionReplacements.TryGetValue(replacement, out var target) || !SyncTransactions.TryGetValue(transaction, out var source))
-            return CoreStatus.InvalidHandle;
-        try { target.BindSync(source); return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
-    }
-
     #endregion
 }

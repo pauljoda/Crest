@@ -43,7 +43,7 @@ public sealed class NativeSyncTransaction : IDisposable {
 
     public bool Seal() => Owner.Seal(this);
 
-    public void Commit() {
+    internal void Commit() {
         lock (NativeSessionAuthority.Gate) {
             // A paired session replacement may already have published this
             // journal under the same core lock as the browser revision.

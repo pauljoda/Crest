@@ -235,7 +235,8 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    public NativeSessionCheckpoint Checkpoint(ulong expected) {
+    /// The stored parts of the accepted revision `expected`.
+    internal NativeSessionCheckpoint Checkpoint(ulong expected) {
         lock (Gate) {
             if (expected != Revision) throw new BrowserRuleException(BrowserRuleCodes.StaleSessionRevision);
             return new(session);
