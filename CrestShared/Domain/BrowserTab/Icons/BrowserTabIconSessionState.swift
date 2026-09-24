@@ -6,7 +6,7 @@ struct BrowserTabIconSessionItem: Equatable, Sendable {
     let faviconData: Data?
     let faviconURL: URL?
     let iconAccent: BrowserTabIconAccent?
-    let iconMode: BrowserTabIconMode
+    let iconMode: TabIconMode
     let symbol: String
 }
 

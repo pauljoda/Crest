@@ -475,7 +475,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     ) {
         let previousTitle = navigationContext?.title
         let shouldRefreshAutomaticIcon =
-            tab.iconMode == .automatic
+            tab.iconMode.followsPage
             && !tab.hasCurrentAutomaticFavicon
             && webView.url != nil
             && !webView.isLoading
@@ -889,7 +889,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     }
 
     private func refreshFavicon() {
-        guard navigationContext?.iconMode == .automatic,
+        guard navigationContext?.iconMode.followsPage == true,
             webView.url != nil
         else { return }
         faviconSession.refresh()

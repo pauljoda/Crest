@@ -75,7 +75,7 @@ struct PinnedTabGridContent: View {
                     profileID: assignment.profileID,
                     isSelected: tab.id == selectedTabID,
                     isLoaded: loaded,
-                    siteTheme: tab.iconMode == .automatic
+                    siteTheme: tab.iconMode.followsPage
                         ? (siteThemeAccent(runtimeAssignment) ?? tab.iconAccent)
                         : tab.iconAccent,
                     select: {

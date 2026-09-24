@@ -48,6 +48,8 @@ public sealed class StoredFormatTests {
         Assert.Equal(["autoCleanup", "closed", "closed", "synced", "quickWindow", "synced"],
             ArchiveReason.All.Select(reason => reason.StoredReason));
         Assert.Equal([null, null, "local", "remote", null, null], ArchiveReason.All.Select(reason => reason.DeletionOrigin));
+        Assert.Equal(["automatic", "pulled", "emoji"], TabIconMode.All.Select(mode => mode.Name));
+        Assert.Equal("crest.emoji:", TabIconMode.EmojiPrefix);
     }
 
     [Theory]

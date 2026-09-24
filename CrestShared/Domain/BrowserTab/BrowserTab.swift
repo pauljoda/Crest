@@ -24,7 +24,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     private(set) var faviconPayloadIdentity: BrowserFaviconPayloadIdentity?
     var faviconURL: URL?
     var iconAccent: BrowserTabIconAccent?
-    private var storedIconMode: BrowserTabIconMode?
+    private var storedIconMode: TabIconMode?
     var placement: TabPlacement
     var folderID: FolderID?
     /// The split group this tab is a member of. A group is the maximal
@@ -59,7 +59,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         faviconData: Data? = nil,
         faviconURL: URL? = nil,
         iconAccent: BrowserTabIconAccent? = nil,
-        iconMode: BrowserTabIconMode? = nil,
+        iconMode: TabIconMode? = nil,
         placement: TabPlacement,
         folderID: FolderID? = nil,
         splitGroupID: SplitGroupID? = nil,
@@ -167,23 +167,13 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         return trimmed
     }
 
-    var iconMode: BrowserTabIconMode {
-        get {
-            if let storedIconMode { return storedIconMode }
-            return emojiIcon == nil ? .automatic : .emoji
-        }
+    var iconMode: TabIconMode {
+        get { storedIconMode ?? .inferred(from: symbol) }
         set { storedIconMode = newValue }
     }
 
     var displayFaviconData: Data? {
-        switch iconMode {
-        case .emoji:
-            return nil
-        case .pulled:
-            return faviconData
-        case .automatic:
-            return faviconData
-        }
+        iconMode.showsFavicon ? faviconData : nil
     }
 
     /// The fingerprint of whatever `displayFaviconData` would hand back. The
@@ -194,7 +184,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     }
 
     var hasCurrentAutomaticFavicon: Bool {
-        guard iconMode == .automatic,
+        guard iconMode.followsPage,
             faviconData != nil,
             let faviconURL,
             let url
@@ -265,7 +255,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         storedIconMode =
             storedIconTerm
             .flatMap { $0 }
-            .flatMap(BrowserTabIconMode.init(rawValue:))
+            .flatMap(TabIconMode.named)
         // `.saved` is the placement that preserves an unfamiliar tab most
         // faithfully: a saved tab keeps its address, is never swept by current-tab
         // cleanup, and is not subject to the pinned-tab limit.
@@ -298,16 +288,14 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
 /// and zero-width-joiner sequences survive as the complete grapheme a person
 /// picked.
 enum BrowserIconSymbol {
-    private static let emojiPrefix = "crest.emoji:"
-
     static func symbol(forEmoji input: String) -> String {
         guard let emoji = normalizedEmoji(input) else { return input }
-        return emojiPrefix + emoji
+        return TabIconMode.emojiPrefix + emoji
     }
 
     static func emoji(from symbol: String) -> String? {
-        guard symbol.hasPrefix(emojiPrefix) else { return nil }
-        return normalizedEmoji(String(symbol.dropFirst(emojiPrefix.count)))
+        guard symbol.hasPrefix(TabIconMode.emojiPrefix) else { return nil }
+        return normalizedEmoji(String(symbol.dropFirst(TabIconMode.emojiPrefix.count)))
     }
 
     static func normalizedEmoji(_ input: String) -> String? {

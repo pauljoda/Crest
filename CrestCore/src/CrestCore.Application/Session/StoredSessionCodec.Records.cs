@@ -27,7 +27,7 @@ internal static partial class StoredSessionCodec {
         return new(Identity(value[Key.Id]), title ?? shown.Title(url), url, native,
             native is null ? Text(value[Key.SavedUrl]) : null, Text(value[Key.Symbol]) ?? shown.Symbol,
             Text(value[Key.FaviconUrl]), value[Key.IconAccent] is JsonObject accent ? DecodeIconAccent(accent) : null,
-            TabIconModeCodes.Parse(Text(value[Key.StoredIconMode])),
+            TabIconMode.Named(Text(value[Key.StoredIconMode])),
             TabPlacement.Named(Text(value[Key.Placement])) ?? TabPlacement.Saved,
             OptionalIdentity(value[Key.FolderId]), OptionalIdentity(value[Key.SplitGroupId]),
             Date(value[Key.LastActivatedAt]), OptionalDate(value[Key.PositionModifiedAt]),
@@ -47,7 +47,7 @@ internal static partial class StoredSessionCodec {
         value[Key.Symbol] = tab.Symbol;
         Put(value, Key.FaviconUrl, tab.FaviconUrl);
         if (tab.IconAccent is { } accent) value[Key.IconAccent] = Encode(accent);
-        if (tab.StoredIconMode is { } mode) value[Key.StoredIconMode] = TabIconModeCodes.Name(mode);
+        if (tab.StoredIconMode is { } mode) value[Key.StoredIconMode] = mode.Name;
         value[Key.Placement] = tab.Placement.Name;
         if (tab.FolderId is { } folder) value[Key.FolderId] = WrappedIdentity(folder);
         if (tab.SplitGroupId is { } group) value[Key.SplitGroupId] = WrappedIdentity(group);

@@ -89,4 +89,6 @@ extension SitePermission: CoreNamedValue {}
 
 extension SitePermissionDecision: CoreNamedValue {}
 
+extension TabIconMode: CoreNamedValue {}
+
 extension TabPlacement: CoreNamedValue {}

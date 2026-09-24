@@ -217,7 +217,7 @@ internal static class NativeSessionEditor {
 
         BrowserTab? Target(Guid? id) => id is { } value ? edited.Tabs.FirstOrDefault(t => t.Id == value) : null;
 
-        TabIconMode Mode(BrowserTab tab) => TabIconPolicy.Mode(tab.State.StoredIconMode, tab.State.Symbol);
+        TabIconMode Mode(BrowserTab tab) => tab.State.StoredIconMode ?? TabIconMode.Inferred(tab.State.Symbol);
 
         // The image itself stays in the native cache. The core names the tab
         // whose stored bytes the platform must now replace or drop.
@@ -236,11 +236,11 @@ internal static class NativeSessionEditor {
             var url = args.Url ?? tab.Url;
             var title = args.Title;
             var accent = args.IconAccent;
-            var automatic = Mode(tab) == TabIconMode.Automatic;
-            var updatesIcon = automatic && (args.FaviconChanged == true || tab.State.IconAccent != accent);
+            var followsPage = Mode(tab).FollowsPage;
+            var updatesIcon = followsPage && (args.FaviconChanged == true || tab.State.IconAccent != accent);
             if (url == tab.Url && Blank(title) == Blank(tab.Title) && !updatesIcon) return false;
             tab.ObserveAppearance(url, title);
-            if (automatic && args.HasFavicon == true) {
+            if (followsPage && args.HasFavicon == true) {
                 tab.SetFavicon(url, accent);
                 Assign(tab.Id, true);
             }
@@ -250,10 +250,11 @@ internal static class NativeSessionEditor {
         // Someone chose this tab's icon by hand, or handed it back to the page.
         bool SetIcon(BrowserTab? tab) {
             if (tab is null) return false;
-            var mode = TabIconPolicy.RequireMode(args.Mode);
-            if (mode == TabIconMode.Pulled && args.HasFavicon != true) return false;
-            tab.SetIcon(mode == TabIconMode.Emoji ? TabIconPolicy.Symbol(args.Emoji) : TabIconPolicy.WebSymbol);
-            if (mode == TabIconMode.Pulled) {
+            // An edit must name a mode this build knows; an absent or unknown term is refused.
+            var mode = args.Mode ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidTabIcon);
+            if (mode.RequiresFavicon && args.HasFavicon != true) return false;
+            tab.SetIcon(mode.Symbol(args.Emoji) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidTabIcon));
+            if (mode.RequiresFavicon) {
                 tab.SetFavicon(tab.Url, args.IconAccent);
                 Assign(tab.Id, true);
             } else ClearIconAssets(tab);
@@ -264,10 +265,10 @@ internal static class NativeSessionEditor {
         // A favicon that finished loading after the page moved on belongs to
         // the address it was captured from, not to whatever the tab shows now.
         bool CacheFavicon(BrowserTab? tab) {
-            if (tab is null || Mode(tab) != TabIconMode.Automatic || args.HasFavicon != true) return false;
+            if (tab is null || !Mode(tab).FollowsPage || args.HasFavicon != true) return false;
             var captured = args.Url ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput);
             if (!HistoryPolicy.SamePage(tab.Url, captured)) return false;
-            tab.SetIcon(TabIconPolicy.WebSymbol);
+            tab.SetIcon(TabIconMode.WebSymbol);
             tab.SetFavicon(captured, args.IconAccent);
             Assign(tab.Id, true);
             return true;

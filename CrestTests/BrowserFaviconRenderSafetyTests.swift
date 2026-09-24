@@ -109,7 +109,7 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
         id: TabID,
         url: URL?,
         data: Data?,
-        iconMode: BrowserTabIconMode
+        iconMode: TabIconMode
     ) -> BrowserTab {
         BrowserTab(
             id: id,

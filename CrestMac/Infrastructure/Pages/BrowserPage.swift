@@ -402,7 +402,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     ) {
         let previousTitle = navigationContext?.title
         let shouldRefreshAutomaticIcon =
-            tab.iconMode == .automatic
+            tab.iconMode.followsPage
             && !tab.hasCurrentAutomaticFavicon
             && url != nil
             && !isLoading
@@ -1165,7 +1165,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func refreshFavicon() {
-        guard navigationContext?.iconMode == .automatic, url != nil else { return }
+        guard navigationContext?.iconMode.followsPage == true, url != nil else { return }
         if let faviconSession {
             faviconSession.refresh()
         } else {

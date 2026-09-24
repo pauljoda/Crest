@@ -11,7 +11,7 @@ enum BrowserFaviconTaskIdentityPolicy {
             tabID: tab.id,
             profileID: profileID,
             pageURL: tab.url,
-            iconMode: tab.iconMode.rawValue,
+            iconMode: tab.iconMode.name,
             // The tab already fingerprinted its own payload. SwiftUI evaluates
             // this identity during every view update, so nothing here may read
             // the image bytes.

@@ -104,7 +104,7 @@ internal sealed record SessionEditArguments {
             HasFavicon = Flag("hasFavicon"),
             Title = Text("title"),
             Url = Text("url"),
-            Mode = Text("mode") is { } mode ? TabIconModeCodes.Parse(mode) : null,
+            Mode = TabIconMode.Named(Text("mode")),
             Emoji = Text("emoji"),
             Symbol = Text("symbol"),
             FolderSymbolValue = operation == SessionOperation.FolderSymbol ? Text("value") : null

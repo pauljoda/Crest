@@ -4423,6 +4423,75 @@ struct SitePermissionDecision: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `TabIconMode`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `symbol`.
+struct TabIconMode: Hashable, Sendable {
+    static let emojiPrefix = "crest.emoji:"
+    static let webSymbol = "globe"
+
+    let tag: Int
+    let name: String
+    let inferencePrefix: String?
+    let followsPage: Bool
+    let requiresFavicon: Bool
+    let showsFavicon: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        inferencePrefix: String?,
+        followsPage: Bool,
+        requiresFavicon: Bool,
+        showsFavicon: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.inferencePrefix = inferencePrefix
+        self.followsPage = followsPage
+        self.requiresFavicon = requiresFavicon
+        self.showsFavicon = showsFavicon
+    }
+
+    static let automatic = TabIconMode(
+        tag: 0,
+        name: "automatic",
+        inferencePrefix: "",
+        followsPage: true,
+        requiresFavicon: false,
+        showsFavicon: true
+    )
+    static let pulled = TabIconMode(
+        tag: 1,
+        name: "pulled",
+        inferencePrefix: nil,
+        followsPage: false,
+        requiresFavicon: true,
+        showsFavicon: true
+    )
+    static let emoji = TabIconMode(
+        tag: 2,
+        name: "emoji",
+        inferencePrefix: "crest.emoji:",
+        followsPage: false,
+        requiresFavicon: false,
+        showsFavicon: false
+    )
+
+    static let all: [TabIconMode] = [automatic, pulled, emoji]
+
+    static func named(_ name: String?) -> TabIconMode? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: TabIconMode, rhs: TabIconMode) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `TabPlacement`. A member's wire tag is its index in `all`.
 struct TabPlacement: Hashable, Sendable {
     static let pinnedCapacity = 12

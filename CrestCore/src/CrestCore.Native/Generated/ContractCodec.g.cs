@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x6d, 0x60, 0x6d, 0xc7, 0xce, 0x12, 0xb9, 0x75, 0x3c, 0x46, 0x8b, 0x01, 0x8a, 0xb2, 0x2d, 0x4a, 0x85, 0x28, 0x3e, 0x15, 0x65, 0x2e, 0xd1, 0x6f, 0x05, 0x21, 0x60, 0xfe, 0x39, 0xc9, 0x49, 0xbe
+        0xc8, 0xe8, 0x87, 0x65, 0xee, 0x0f, 0xda, 0xa8, 0x67, 0x4a, 0x23, 0x2a, 0x11, 0x0a, 0xc1, 0xee, 0x79, 0xbf, 0x93, 0x74, 0x26, 0xf1, 0x0b, 0xec, 0x24, 0x22, 0xd1, 0xa9, 0x61, 0x46, 0x63, 0x9b
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2943,6 +2943,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SitePermissionDecision.All, value));
+    }
+
+    public static TabIconMode ReadTabIconMode(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return TabIconMode.All[reader.ReadEnum(TabIconMode.All.Count)];
+    }
+
+    public static void WriteTabIconMode(WireWriter writer, TabIconMode value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(TabIconMode.All, value));
     }
 
     public static TabPlacement ReadTabPlacement(WireReader reader) {

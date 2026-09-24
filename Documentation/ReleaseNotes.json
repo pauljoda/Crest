@@ -2217,6 +2217,10 @@
     "archive-reason-set": {
       "category": "internal",
       "message": "Archive reasons are spelled once, on the reasons themselves."
+    },
+    "tab-icon-mode-set": {
+      "category": "internal",
+      "message": "Tab icon modes decide their own inference, favicon use and symbols."
     }
   }
 }

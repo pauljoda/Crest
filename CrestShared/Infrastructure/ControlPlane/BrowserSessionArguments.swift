@@ -55,7 +55,7 @@ enum BrowserSessionArguments {
     /// `tab.icon`.
     struct TabIcon: Encodable, Sendable {
         let tabId: UUID
-        let mode: BrowserTabIconMode
+        let mode: TabIconMode
         let hasFavicon: Bool
         @BrowserCoreNullable var iconAccent: BrowserTabIconAccent?
         var emoji: String?

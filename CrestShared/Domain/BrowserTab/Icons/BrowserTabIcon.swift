@@ -31,9 +31,3 @@ enum BrowserTabIconAccentResolver {
         return brightest - darkest >= 0.08 && brightest >= 0.18 && darkest <= 0.90
     }
 }
-
-enum BrowserTabIconMode: String, Codable, Equatable, Sendable {
-    case automatic
-    case pulled
-    case emoji
-}

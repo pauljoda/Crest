@@ -6,7 +6,7 @@ struct BrowserPageNavigationContext: Equatable, Sendable {
     let customTitle: String?
     let placement: TabPlacement
     let savedURL: URL?
-    let iconMode: BrowserTabIconMode
+    let iconMode: TabIconMode
     let spaceAssignment: BrowserSpaceRuntimeAssignment
     let automaticallyOpensPeek: Bool
     let keepsPageLoaded: Bool

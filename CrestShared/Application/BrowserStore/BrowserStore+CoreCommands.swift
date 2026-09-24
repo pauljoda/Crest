@@ -37,7 +37,7 @@ extension BrowserStore {
     }
 
     func setSessionTabIcon(
-        _ mode: BrowserTabIconMode, emoji: String? = nil, faviconData: Data? = nil,
+        _ mode: TabIconMode, emoji: String? = nil, faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil, tabID: TabID, in spaceID: SpaceID
     ) -> Bool {
         let arguments = BrowserSessionArguments.TabIcon(

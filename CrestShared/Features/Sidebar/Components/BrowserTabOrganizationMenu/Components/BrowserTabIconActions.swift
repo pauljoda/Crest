@@ -20,7 +20,7 @@ struct BrowserTabIconActions: View {
         Button("Clear Icon", systemImage: "xmark.circle") {
             performIfCurrent(clearIcon)
         }
-        .disabled(tab.iconMode == .automatic && tab.faviconData == nil)
+        .disabled(tab.iconMode.followsPage && tab.faviconData == nil)
 
         Button("Change Icon…", systemImage: "face.smiling") {
             performIfCurrent(changeIcon)
@@ -31,6 +31,6 @@ struct BrowserTabIconActions: View {
 enum BrowserTabIconCustomizationPolicy {
     /// Reset applies to explicit icon overrides.
     static func showsReset(for tab: BrowserTab) -> Bool {
-        tab.iconMode != .automatic
+        !tab.iconMode.followsPage
     }
 }
