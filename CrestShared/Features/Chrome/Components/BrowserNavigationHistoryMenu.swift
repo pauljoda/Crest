@@ -7,7 +7,7 @@ import SwiftUI
 /// capsule.
 struct BrowserNavigationHistoryMenu: View {
     let items: [BrowserNavigationHistoryItem]
-    let emptyTitle: LocalizedStringKey
+    let emptyTitle: LocalizedStringResource
     let action: (BrowserNavigationHistoryItem) -> Void
 
     var body: some View {

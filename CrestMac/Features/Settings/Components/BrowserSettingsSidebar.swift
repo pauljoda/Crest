@@ -45,7 +45,7 @@ struct BrowserSettingsSidebar: View {
                         }
                         .buttonStyle(.plain)
                         .focused($focusedDestination, equals: destination)
-                        .accessibilityIdentifier("settings-\(destination.rawValue)")
+                        .accessibilityIdentifier("settings-\(destination.name)")
                     }
                 }.padding(10)
             }

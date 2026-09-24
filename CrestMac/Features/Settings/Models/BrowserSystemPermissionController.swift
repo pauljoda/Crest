@@ -41,7 +41,7 @@ final class BrowserSystemPermissionController {
                 if revision == refreshID { errors[.files] = error.localizedDescription }
             }
         }
-        for permission in BrowserSystemPermission.allCases {
+        for permission in BrowserSystemPermission.all {
             let status = await service.status(for: permission, spaceID: spaceID)
             guard revision == refreshID, !Task.isCancelled else { return }
             statuses[permission] = status
@@ -56,7 +56,7 @@ final class BrowserSystemPermissionController {
         let current = await service.status(for: permission, spaceID: spaceID)
         guard currentSpaceID == spaceID else { return }
         statuses[permission] = current
-        guard current.state == .notRequested || permission == .files else { return }
+        guard current.state == .notRequested || permission.checksSpaceFolder else { return }
         errors[permission] = nil
         do { try await service.request(permission, spaceID: spaceID) } catch {
             if currentSpaceID == spaceID { errors[permission] = error.localizedDescription }

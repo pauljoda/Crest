@@ -35,7 +35,7 @@ private struct BrowserSystemPermissionSettingsContent: View {
     var body: some View {
         Section("System Permissions", systemImage: "hand.raised") {
             VStack(spacing: 0) {
-                ForEach(BrowserSystemPermission.allCases) { permission in
+                ForEach(BrowserSystemPermission.all) { permission in
                     BrowserSystemPermissionRow(
                         permission: permission,
                         status: controller.status(for: permission),
@@ -49,7 +49,7 @@ private struct BrowserSystemPermissionSettingsContent: View {
                             Task { await controller.chooseFolder(spaceID: spaceID) }
                         }
                     )
-                    if permission != BrowserSystemPermission.allCases.last {
+                    if permission != BrowserSystemPermission.all.last {
                         Divider().padding(.vertical, 12)
                     }
                 }

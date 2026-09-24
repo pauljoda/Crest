@@ -22,7 +22,7 @@ struct BrowserSystemPermissionRow: View {
                 Text(permission.title).font(.headline)
                 Text(description).font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if let detail = status.detail, permission != .files || spaceName != nil {
+                if let detail = status.detail, !permission.checksSpaceFolder || spaceName != nil {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -41,7 +41,7 @@ struct BrowserSystemPermissionRow: View {
                 Spacer(minLength: 0)
                 if isWorking {
                     ProgressView().controlSize(.small)
-                } else if permission == .files, spaceName != nil {
+                } else if permission.checksSpaceFolder, spaceName != nil {
                     Menu("Manage…") {
                         Button("Check Access", action: request)
                         Button("Choose Folder…", action: chooseFolder)
@@ -55,18 +55,18 @@ struct BrowserSystemPermissionRow: View {
             .frame(width: 120)
         }
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("system-permission-\(permission.rawValue)")
+        .accessibilityIdentifier("system-permission-\(permission.name)")
     }
 
     private var description: String {
-        guard permission == .files else { return String(localized: permission.explanation) }
+        guard permission.checksSpaceFolder else { return String(localized: permission.explanation) }
         guard let spaceName else { return String(localized: "Select an unlocked Space to check its download folder.") }
         return String(
             localized: "Checks the download folder for \(spaceName). Other files are approved when you choose them.")
     }
 
     @ViewBuilder private var primaryAction: some View {
-        switch status.state {
+        switch status.state.kind {
         case .notRequested:
             if error != nil {
                 Button("Open Settings", action: openSettings)
@@ -79,8 +79,8 @@ struct BrowserSystemPermissionRow: View {
             Button("Open Settings", action: openSettings)
         case .allowed:
             Button(
-                permission == .files ? "Check Again" : "Settings…",
-                action: permission == .files ? request : openSettings)
+                permission.checksSpaceFolder ? "Check Again" : "Settings…",
+                action: permission.checksSpaceFolder ? request : openSettings)
         case .checking, .unavailable, .chooseEachTime:
             EmptyView()
         }

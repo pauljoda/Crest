@@ -16,10 +16,6 @@ enum BrowserChromeLayout {
     static let sidebarNavigationControlHitTarget: CGFloat = 30
     static let sidebarNavigationSymbolPointSize: CGFloat = 15
     static let sidebarNavigationTrailingInset = CrestSpacing.medium
-    static let sidebarNavigationControlOrder: [BrowserSidebarNavigationControl] = [
-        .back,
-        .forward,
-    ]
     static let addressUsesCustomGlass = false
     static let addressSurfaceOpacity = CrestOpacity.chromeSurface
     static let addressEditingRingUsesAccent = false

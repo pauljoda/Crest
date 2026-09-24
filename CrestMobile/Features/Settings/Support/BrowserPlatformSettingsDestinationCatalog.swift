@@ -1,6 +1,6 @@
 /// Settings destinations whose implementations are available in the mobile shell.
 enum BrowserPlatformSettingsDestinationCatalog {
-    static let cases = BrowserSettingsDestination.allCases.filter(isAvailable)
+    static let cases = BrowserSettingsDestination.all.filter(isAvailable)
 
     static func isAvailable(
         _ destination: BrowserSettingsDestination

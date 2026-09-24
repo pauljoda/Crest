@@ -13,11 +13,11 @@ struct BrowserSidebarNavigationHistoryControl: View {
         }
         .accessibilityLabel(Text(direction.accessibilityLabel))
         .accessibilityIdentifier(direction.accessibilityIdentifier)
-        .disabled(!isAvailable)
-        .help(direction.tooltip)
+        .disabled(!direction.isAvailable(port))
+        .help(Text(direction.tooltip))
         .contextMenu {
             BrowserNavigationHistoryMenu(
-                items: history,
+                items: direction.history(port),
                 emptyTitle: direction.emptyHistoryTitle,
                 action: navigate(to:)
             )
@@ -25,31 +25,11 @@ struct BrowserSidebarNavigationHistoryControl: View {
         }
     }
 
-    private var isAvailable: Bool {
-        switch direction {
-        case .back: port.canGoBack()
-        case .forward: port.canGoForward()
-        }
-    }
-
-    private var history: [BrowserNavigationHistoryItem] {
-        switch direction {
-        case .back: port.backHistory()
-        case .forward: port.forwardHistory()
-        }
-    }
-
     private func navigate() {
-        switch direction {
-        case .back: port.goBack()
-        case .forward: port.goForward()
-        }
+        direction.navigate(port)
     }
 
     private func navigate(to item: BrowserNavigationHistoryItem) {
-        switch direction {
-        case .back: port.goBackToHistoryItem(item)
-        case .forward: port.goForwardToHistoryItem(item)
-        }
+        direction.navigateToItem(port, item)
     }
 }

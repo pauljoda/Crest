@@ -17,11 +17,6 @@ struct BrowserKeyboardModifierFlags: OptionSet, Equatable, Sendable {
     static let shift = BrowserKeyboardModifierFlags(rawValue: 1 << 3)
 }
 
-enum BrowserSidebarNavigationControl: Equatable {
-    case back
-    case forward
-}
-
 enum BrowserSidebarScrollRegion: Equatable, Sendable {
     case fixed
     case scrollable

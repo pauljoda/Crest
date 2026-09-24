@@ -20,7 +20,7 @@ struct MobileBrowserSettingsDestinationList: View {
                             .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier("settings-\(destination.rawValue)")
+                    .accessibilityIdentifier("settings-\(destination.name)")
                     .listRowBackground(rowBackground(for: destination))
                     .listRowSeparator(.hidden)
                     .accessibilityAddTraits(

@@ -23,6 +23,6 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
             .padding(24)
         }
         .browserNativeScrollState(tabState?.scroll(for: destination) ?? standaloneScroll)
-        .accessibilityIdentifier("settings-form-\(destination.rawValue)")
+        .accessibilityIdentifier("settings-form-\(destination.name)")
     }
 }
