@@ -38,10 +38,11 @@ internal static class SearchCodes {
             OptionalEdited(value, SuggestionTemplate));
     }
 
-    /// A custom engine as the person typed it, validated by the domain.
+    /// A custom engine as the person typed it, validated. Throws `Rejected`
+    /// naming its first flaw.
     public static SearchProvider Custom(JsonElement value) {
         Protocol.Members(value, Id, Name, SearchTemplate, SuggestionTemplate);
-        return SearchPreferences.Custom(Protocol.Id(value, Id), Edited(value, Name), Edited(value, SearchTemplate),
+        return SearchProvider.Admit(Protocol.Id(value, Id), Edited(value, Name), Edited(value, SearchTemplate),
             OptionalEdited(value, SuggestionTemplate));
     }
 

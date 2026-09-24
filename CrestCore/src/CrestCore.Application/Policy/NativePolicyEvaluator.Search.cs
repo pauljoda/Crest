@@ -10,8 +10,8 @@ namespace CrestCore.Application;
 public static partial class NativePolicyEvaluator {
     #region Actions - Search
 
-    /// Null when the operation is not an address or search policy. Custom
-    /// engine admission is the typed `CustomSearchEngineAdmission` query.
+    /// Null when the operation is not an address or search policy. A Space's
+    /// custom engines are admitted by the search-engine intents.
     private static JsonObject? EvaluateSearch(PolicyOperation operation, JsonElement request) => operation switch {
         PolicyOperation.AddressIntent => ResolveAddress(Requests.AddressIntent.Decode(request)),
         PolicyOperation.SearchUrl => SearchUrl(Requests.SearchUrl.Decode(request)),

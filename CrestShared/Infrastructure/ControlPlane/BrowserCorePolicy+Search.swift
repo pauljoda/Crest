@@ -5,21 +5,14 @@ enum BrowserSearchQueryPurpose: String, Encodable {
     case suggestions
 }
 
-/// A custom search engine as the core stores and validates it.
-struct BrowserCoreSearchProviderRecord: Codable, Sendable {
+/// A stored custom search engine as the core's restore rule reads it.
+struct BrowserCoreSearchProviderRecord: Encodable, Sendable {
     // MARK: - Variables
 
     let id: String
     let name: String
     let searchURLTemplate: String
     @BrowserCoreNullable var suggestionURLTemplate: String?
-
-    /// The engine this record describes, or nil when its identity is not one.
-    var provider: BrowserCustomSearchProvider? {
-        guard let id = UUID(uuidString: id) else { return nil }
-        return BrowserCustomSearchProvider(
-            id: id, name: name, searchURLTemplate: searchURLTemplate, suggestionURLTemplate: suggestionURLTemplate)
-    }
 
     // MARK: - Initializers
 
@@ -28,25 +21,6 @@ struct BrowserCoreSearchProviderRecord: Codable, Sendable {
         name = provider.name
         searchURLTemplate = provider.searchURLTemplate
         suggestionURLTemplate = provider.suggestionURLTemplate
-    }
-}
-
-extension BrowserCoreSearchProviderRecord {
-    private enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case searchURLTemplate
-        case suggestionURLTemplate
-    }
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-        searchURLTemplate = try container.decode(String.self, forKey: .searchURLTemplate)
-        suggestionURLTemplate = try container.decode(
-            BrowserCoreOptional<String>.self, forKey: .suggestionURLTemplate
-        ).wrappedValue
     }
 }
 

@@ -33,7 +33,6 @@ public static partial class NativePolicyEvaluator {
             ?? EvaluateLinks(operation, request)
             ?? EvaluateQuickWindow(operation, request)
             ?? EvaluatePresentation(operation, request)
-            ?? EvaluateWorkspace(operation, request)
             ?? EvaluateSetup(operation, request)
             ?? EvaluateShortcuts(operation, request)
             ?? EvaluateLaunch(operation, request)

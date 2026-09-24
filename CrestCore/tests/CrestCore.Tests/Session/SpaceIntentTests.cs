@@ -51,8 +51,8 @@ public sealed partial class BrowserContractsTests {
 
         device.Send(new CreateSpace(device.Workspace, window, Guid.NewGuid()));
         var added = core.Current.Spaces[1];
-        Assert.Equal(("Private 2", "eyeglasses", SearchProvider.DuckDuckGo.Name, CurrentTabCleanup.Never),
-            (added.Settings.Name, added.Settings.Symbol, added.Settings.BrowsingPreferences.SelectedSearchProviderId,
+        Assert.Equal(("Private 2", "eyeglasses", BuiltInSearchEngine.DuckDuckGo, CurrentTabCleanup.Never),
+            (added.Settings.Name, added.Settings.Symbol, added.Settings.BrowsingPreferences.SelectedBuiltInEngine,
                 added.Settings.BrowsingPreferences.CurrentTabCleanup));
         Assert.Equal(new CredentialPreferences(false, false, false), added.Settings.CredentialPreferences);
         device.Send(new BeginDeletingSpace(device.Workspace, window, added.Id, Guid.NewGuid()));

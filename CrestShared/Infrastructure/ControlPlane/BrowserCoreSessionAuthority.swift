@@ -411,18 +411,6 @@ final class BrowserCoreSessionAuthority {
 
     // MARK: - Actions - Commands
 
-    func executeSpace<Arguments: Encodable>(
-        _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
-        window: UUID?, at date: Date
-    ) throws {
-        let space = spaceID.flatMap { projection.space(id: $0) }
-        let data = try JSONEncoder().encode(
-            Command(
-                operation: operation, spaceId: spaceID?.rawValue, profileId: space?.profile.id,
-                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
-        try commitCommand(data) { _ in }
-    }
-
     /// Runs a history command, and
     /// answers whether it changed anything.
     func executeRecords<Arguments: Encodable>(

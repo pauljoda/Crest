@@ -43,13 +43,13 @@ public sealed class SpaceTemplate {
     public static readonly SpaceTemplate Ordinary = new(isPrivate: false, name: number => $"Space {number}",
         symbol: "square.grid.2x2.fill", accent: number => Enum.GetValues<SpaceAccent>()[(number - 1) % Enum.GetValues<SpaceAccent>().Length],
         look: accent => HouseLooks[accent],
-        browsing: new(SearchProvider.Google.Name, [], SearchSuggestionsEnabled: false, CurrentTabCleanup.After12Hours,
+        browsing: new(BuiltInSearchEngine.Google, SelectedCustomEngineId: null, [], SearchSuggestionsEnabled: false, CurrentTabCleanup.After12Hours,
             ContentBlockingPolicy.Balanced, KeepsEverything),
         credentials: new(IsEnabled: true, SyncsCrestPasswordsWithICloud: true, AlsoOffersSaveToSystemPasswords: false));
 
     public static readonly SpaceTemplate Private = new(isPrivate: true, name: number => number == 1 ? "Private" : $"Private {number}",
         symbol: "eyeglasses", accent: _ => SpaceAccent.Indigo, look: _ => PrivateLook,
-        browsing: new(SearchProvider.DuckDuckGo.Name, [], SearchSuggestionsEnabled: false, CurrentTabCleanup.Never,
+        browsing: new(BuiltInSearchEngine.DuckDuckGo, SelectedCustomEngineId: null, [], SearchSuggestionsEnabled: false, CurrentTabCleanup.Never,
             ContentBlockingPolicy.Balanced, KeepsEverything),
         credentials: new(IsEnabled: false, SyncsCrestPasswordsWithICloud: false, AlsoOffersSaveToSystemPasswords: false));
 

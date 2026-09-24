@@ -145,6 +145,9 @@ extension BrowserStore {
 // MARK: - Data Retention
 
 extension BrowserStore {
+    /// Sets how long a Space keeps what it browses. The core sweeps the Space
+    /// under the new retention as it accepts it, so a changed retention is
+    /// never held back by the last sweep.
     func updateDataRetentionPreferences(
         _ retention: BrowserSpaceDataRetentionPreferences,
         in spaceID: SpaceID
@@ -155,11 +158,6 @@ extension BrowserStore {
             return
         }
         preferences.dataRetention = retention
-        // Retention is one field of the same Space preferences record every
-        // other settings surface writes, so it takes the same core command, and
-        // the core's own sweep then applies it: a changed retention is never
-        // held back by the last sweep.
-        guard setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
-        sweepExpiredBrowsingData()
+        updateBrowsingPreferences(preferences, in: spaceID)
     }
 }

@@ -117,6 +117,11 @@ public sealed partial class NativeSessionAuthority {
             SetAppPreferences preferences => SettingPreferences(basis, preferences),
             SetTranslationRule rule => SettingTranslationRule(basis, rule),
             ImportAppPreferences import => ImportingPreferences(basis, import),
+            SetBrowsingPreferences preferences => SettingBrowsingPreferences(basis, preferences, now),
+            AddSearchEngine engine => AddingSearchEngine(basis, engine),
+            UpdateSearchEngine engine => UpdatingSearchEngine(basis, engine),
+            RemoveSearchEngine engine => RemovingSearchEngine(basis, engine),
+            SelectSearchEngine engine => SelectingSearchEngine(basis, engine),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;

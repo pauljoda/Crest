@@ -130,55 +130,84 @@ extension BrowserStore {
             failure: "Core Space command failed")
     }
 
+    /// Sets a Space's browsing preferences through the core: the settings the
+    /// core sweeps the Space under, then the engine it searches with, each only
+    /// when it changed.
     func updateBrowsingPreferences(
         _ preferences: BrowserSpaceBrowsingPreferences,
         in spaceID: SpaceID
     ) {
-        guard let owner = spaceCommandOwner(.spaceBrowsingPreferences, in: spaceID),
-            owner.session.space(id: spaceID) != nil else { return }
-        guard owner.setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
+        let owner = profileSettingsBrowser
+        guard let current = owner.session.space(id: spaceID)?.browsingPreferences else { return }
+        let workspaceID = owner.family.workspaceID
+        if preferences.searchSuggestionsEnabled != current.searchSuggestionsEnabled
+            || preferences.currentTabCleanupPolicy != current.currentTabCleanupPolicy
+            || preferences.contentBlockingPolicy != current.contentBlockingPolicy
+            || preferences.dataRetention != current.dataRetention
+        {
+            sendSpaceSettings(
+                SetBrowsingPreferences(
+                    workspaceID: workspaceID, spaceID: spaceID.rawValue,
+                    searchSuggestionsEnabled: preferences.searchSuggestionsEnabled,
+                    currentTabCleanup: preferences.currentTabCleanupPolicy,
+                    contentBlocking: preferences.contentBlockingPolicy, dataRetention: preferences.dataRetention.core))
+        }
+        if preferences.searchProvider != current.searchProvider {
+            let selection = preferences.searchProvider.selection
+            sendSpaceSettings(
+                SelectSearchEngine(
+                    workspaceID: workspaceID, spaceID: spaceID.rawValue, builtIn: selection.builtIn,
+                    customEngineID: selection.customEngineID))
+        }
     }
 
-    /// Saves a custom search engine through the core, which validates it,
-    /// rejects duplicate names and the Space's engine limit, and optionally
-    /// selects it. Throws the rule the engine breaks.
+    /// Saves a custom search engine through the core, which trims and
+    /// validates it, refuses a duplicate name or one past the Space's limit,
+    /// and selects it when `selects`. Throws the rule the engine breaks; an
+    /// unchanged save changes nothing.
     func upsertCustomSearchProvider(
         _ provider: BrowserCustomSearchProvider,
         selects: Bool,
         in spaceID: SpaceID
     ) throws {
-        guard let owner = spaceCommandOwner(.spaceSearchProviderUpsert, in: spaceID),
-            let space = owner.session.space(id: spaceID) else { return }
-        let admission = CustomSearchEngineAdmission(
-            engine: provider.engine, existing: space.browsingPreferences.customSearchProviders.map(\.engine))
-        let admitted: BrowserCustomSearchProvider
-        do {
-            admitted = BrowserCustomSearchProvider(try core.query(admission))
+        let owner = profileSettingsBrowser
+        guard let space = owner.session.space(id: spaceID) else { return }
+        let workspaceID = owner.family.workspaceID
+        do throws(Rejection) {
+            if space.browsingPreferences.customSearchProviders.contains(where: { $0.id == provider.id }) {
+                try owner.family.commit(
+                    UpdateSearchEngine(workspaceID: workspaceID, spaceID: spaceID.rawValue, engine: provider.engine),
+                    from: owner)
+                if selects {
+                    try owner.family.commit(
+                        SelectSearchEngine(
+                            workspaceID: workspaceID, spaceID: spaceID.rawValue, builtIn: nil,
+                            customEngineID: provider.id),
+                        from: owner)
+                }
+            } else {
+                try owner.family.commit(
+                    AddSearchEngine(
+                        workspaceID: workspaceID, spaceID: spaceID.rawValue, engine: provider.engine,
+                        selects: selects),
+                    from: owner)
+            }
         } catch {
-            throw BrowserCustomSearchProviderError(error)
+            switch error {
+            case .invalidSearchEngine, .duplicateSearchEngineName, .searchEngineLimitReached:
+                throw BrowserCustomSearchProviderError(error)
+            default:
+                owner.localSyncErrorDescription = "Core Space command failed: \(error)"
+            }
         }
-        // The command re-applies the same rule against the accepted record; an
-        // unchanged save reports no change rather than an error.
-        guard
-            owner.family.executeSpace(
-                .spaceSearchProviderUpsert, in: spaceID,
-                arguments: BrowserSessionArguments.SearchProviderUpsert(
-                    provider: BrowserCoreSearchProviderRecord(admitted), selects: selects),
-                from: owner)
-        else { return }
     }
 
     /// Removes a custom search engine; the core selects Google if it was chosen.
     func removeCustomSearchProvider(id: UUID, in spaceID: SpaceID) {
-        guard let owner = spaceCommandOwner(.spaceSearchProviderRemove, in: spaceID),
-            owner.session.space(id: spaceID) != nil else { return }
-        guard
-            owner.family.executeSpace(
-                .spaceSearchProviderRemove, in: spaceID,
-                arguments: BrowserSessionArguments.SearchProviderRemove(id: id.coreIdentifier), from: owner)
-        else { return }
+        sendSpaceSettings(
+            RemoveSearchEngine(
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue, engineID: id))
     }
-
 }
 
 // MARK: - Folders

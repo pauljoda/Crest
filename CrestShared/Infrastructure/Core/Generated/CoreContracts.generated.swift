@@ -126,6 +126,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownArchivedTab(UnknownArchivedTab)
     case unknownFolder(UnknownFolder)
     case unknownPage(UnknownPage)
+    case unknownSearchEngine(UnknownSearchEngine)
     case unknownSpace(UnknownSpace)
     case unknownSplitGroup(UnknownSplitGroup)
     case unknownTab(UnknownTab)
@@ -140,6 +141,8 @@ enum Rejection: Equatable, Error, Sendable {
     var message: LocalizedStringResource? {
         switch self {
         case .cannotDeleteLastSpace(let value): value.message
+        case .duplicateSearchEngineName(let value): value.message
+        case .searchEngineLimitReached(let value): value.message
         default: nil
         }
     }
@@ -192,6 +195,13 @@ extension CoreState {
 
 struct AcknowledgeDownloads: Intent, Equatable, Sendable {
     let profileID: UUID
+}
+
+struct AddSearchEngine: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let engine: CustomSearchEngine
+    let selects: Bool
 }
 
 struct AdoptLegacySession: Intent, Equatable, Sendable {
@@ -304,7 +314,8 @@ struct BrandColor: Equatable, Sendable {
 }
 
 struct BrowsingPreferences: Equatable, Sendable {
-    let selectedSearchProviderID: String
+    let selectedBuiltInEngine: BuiltInSearchEngine?
+    let selectedCustomEngineID: UUID?
     let customSearchProviders: [CustomSearchProvider]
     let searchSuggestionsEnabled: Bool
     let currentTabCleanup: CurrentTabCleanup
@@ -557,13 +568,6 @@ struct CustomSearchEngine: Equatable, Sendable, Identifiable {
     let suggestionTemplate: String?
 }
 
-struct CustomSearchEngineAdmission: Query, Equatable, Sendable {
-    typealias Answer = CustomSearchEngine
-
-    let engine: CustomSearchEngine
-    let existing: [CustomSearchEngine]
-}
-
 struct CustomSearchProvider: Equatable, Sendable, Identifiable {
     let id: UUID
     let name: String
@@ -709,6 +713,9 @@ struct DuplicatePage: Equatable, Sendable {
 }
 
 struct DuplicateSearchEngineName: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("A custom search engine already uses this name.")
+    }
 }
 
 struct DuplicateTab: Intent, Equatable, Sendable {
@@ -1333,6 +1340,12 @@ struct RemoveProfileDownloads: Intent, Equatable, Sendable {
     let profileID: UUID
 }
 
+struct RemoveSearchEngine: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let engineID: UUID
+}
+
 struct RenameFolder: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -1396,6 +1409,17 @@ struct Saved: Equatable, Sendable {
 
 struct SearchEngineLimitReached: Equatable, Sendable {
     let limit: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("A Space can contain up to \(limit) custom search engines.")
+    }
+}
+
+struct SelectSearchEngine: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let builtIn: BuiltInSearchEngine?
+    let customEngineID: UUID?
 }
 
 struct SendPermission: Equatable, Sendable {
@@ -1417,6 +1441,15 @@ struct SessionState: Equatable, Sendable {
 struct SetAppPreferences: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let preferences: AppPreferences
+}
+
+struct SetBrowsingPreferences: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let searchSuggestionsEnabled: Bool
+    let currentTabCleanup: CurrentTabCleanup
+    let contentBlocking: ContentBlockingPolicy
+    let dataRetention: DataRetentionPreferences
 }
 
 struct SetCredentialPreferences: Intent, Equatable, Sendable {
@@ -1861,6 +1894,10 @@ struct UnknownPage: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct UnknownSearchEngine: Equatable, Sendable {
+    let engineID: UUID?
+}
+
 struct UnknownSpace: Equatable, Sendable {
     let spaceID: UUID
 }
@@ -1883,6 +1920,12 @@ struct UnsavedWorkspace: Equatable, Sendable {
 
 struct UnsupportedAddress: Equatable, Sendable {
     let url: String
+}
+
+struct UpdateSearchEngine: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let engine: CustomSearchEngine
 }
 
 struct WebPagesOnly: Equatable, Sendable {
@@ -2615,6 +2658,37 @@ struct BlockedPopupStatus: Hashable, Sendable {
     }
 
     static func == (lhs: BlockedPopupStatus, rhs: BlockedPopupStatus) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `BuiltInSearchEngine`. A member's wire tag is its index in `all`.
+struct BuiltInSearchEngine: Hashable, Sendable {
+    let tag: Int
+    let name: String
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        self.name = name
+    }
+
+    static let google = BuiltInSearchEngine(tag: 0, name: "google")
+    static let duckDuckGo = BuiltInSearchEngine(tag: 1, name: "duckDuckGo")
+    static let bing = BuiltInSearchEngine(tag: 2, name: "bing")
+    static let ecosia = BuiltInSearchEngine(tag: 3, name: "ecosia")
+    static let brave = BuiltInSearchEngine(tag: 4, name: "brave")
+
+    static let all: [BuiltInSearchEngine] = [google, duckDuckGo, bing, ecosia, brave]
+
+    static func named(_ name: String?) -> BuiltInSearchEngine? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: BuiltInSearchEngine, rhs: BuiltInSearchEngine) -> Bool {
         lhs.tag == rhs.tag
     }
 

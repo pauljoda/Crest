@@ -17,7 +17,7 @@ internal static partial class StoredSessionCodec {
     ]);
 
     /// What a Space that stored no browsing preferences searches and keeps.
-    internal static BrowsingPreferences DefaultBrowsingPreferences { get; } = new(SearchProvider.Google.Name, [], false,
+    internal static BrowsingPreferences DefaultBrowsingPreferences { get; } = new(BuiltInSearchEngine.Google, null, [], false,
         CurrentTabCleanup.After12Hours, ContentBlockingPolicy.Balanced,
         new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever));
 
@@ -37,20 +37,33 @@ internal static partial class StoredSessionCodec {
         DataRetention Kept(string key) => DataRetention.Named(TolerantText(retention?[key])) ?? DataRetention.Forever;
         var cleanup = value[Key.CurrentTabCleanupPolicy] is { } stored
             ? CurrentTabCleanup.Named(TolerantText(stored)) ?? CurrentTabCleanup.Never : CurrentTabCleanup.After12Hours;
-        return new(TolerantText(value[Key.SelectedSearchProviderId]) ?? TolerantText(value[Key.LegacySearchProvider])
-                ?? SearchProvider.Google.Name,
+        var (builtIn, custom) = SearchSelection(TolerantText(value[Key.SelectedSearchProviderId])
+            ?? TolerantText(value[Key.LegacySearchProvider]));
+        return new(builtIn, custom,
             Items(value[Key.CustomSearchProviders]).OfType<JsonObject>().Select(CustomSearchProvider).OfType<CustomSearchProvider>().ToArray(),
             TolerantFlag(value[Key.SearchSuggestionsEnabled]) ?? false, cleanup,
             ContentBlockingPolicy.Named(TolerantText(value[Key.ContentBlockingPolicy])) ?? ContentBlockingPolicy.Balanced,
             new(Kept(Key.History), Kept(Key.Archive), Kept(Key.Downloads)));
     }
 
+    /// The engine a stored selection names: a built-in's spelling, or `custom:`
+    /// and a custom engine's identity. One this build cannot read selects Google.
+    private static (BuiltInSearchEngine? BuiltIn, Guid? Custom) SearchSelection(string? spelling) =>
+        spelling is not null && spelling.StartsWith(SearchProvider.CustomPrefix, StringComparison.Ordinal)
+            && Guid.TryParseExact(spelling[SearchProvider.CustomPrefix.Length..], "D", out var custom)
+            ? (null, custom) : (BuiltInSearchEngine.Named(spelling) ?? BuiltInSearchEngine.Google, null);
+
+    /// A selection in its stored spelling.
+    internal static string SearchSelection(BrowsingPreferences preferences) =>
+        preferences.SelectedCustomEngineId is { } custom ? SearchProvider.CustomId(custom)
+            : (preferences.SelectedBuiltInEngine ?? BuiltInSearchEngine.Google).Name;
+
     /// Older builds read only the legacy provider member, so a custom selection
     /// keeps Google there as their safe fallback.
     internal static JsonObject Encode(BrowsingPreferences preferences) => new() {
-        [Key.LegacySearchProvider] = preferences.SelectedSearchProviderId.StartsWith(SearchProvider.CustomPrefix, StringComparison.Ordinal)
-            ? SearchProvider.Google.Name : preferences.SelectedSearchProviderId,
-        [Key.SelectedSearchProviderId] = preferences.SelectedSearchProviderId,
+        [Key.LegacySearchProvider] = preferences.SelectedCustomEngineId is null
+            ? (preferences.SelectedBuiltInEngine ?? BuiltInSearchEngine.Google).Name : BuiltInSearchEngine.Google.Name,
+        [Key.SelectedSearchProviderId] = SearchSelection(preferences),
         [Key.CustomSearchProviders] = new JsonArray(preferences.CustomSearchProviders.Select(provider => {
             var value = new JsonObject {
                 [Key.Id] = BareIdentity(provider.Id),

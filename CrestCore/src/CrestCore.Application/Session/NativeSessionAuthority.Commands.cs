@@ -29,7 +29,6 @@ public sealed partial class NativeSessionAuthority {
         if (length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
         if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(request);
         if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(request);
-        if (SessionOperationCodes.IsSpace(operation)) return PrepareSpaceCommand(request);
         throw new ProtocolException(ProtocolErrorCodes.UnknownSessionEdit);
     }
 

@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
@@ -147,38 +145,6 @@ public sealed partial class NativeSessionAuthority {
         var space = SpaceTemplate.Private.Make(ids.Next(), ids.Next(), ids.Next(), number: 1, now);
         var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId)).ShowSpace(space.Id).ShowTab(space.Id, space.Tabs[0].Id);
         return new(basis with { Spaces = [space], SpaceDeletions = [], DefaultSpaceId = null }, Staging: null, followUp);
-    }
-
-    #endregion
-
-    #region Actions - Space commands
-
-    /// TRANSITIONAL until the search-engine and browsing-preference intents
-    /// land: the Space commands still sent as JSON.
-    private NativeSessionCommand PrepareSpaceCommand(JsonObject request) {
-        var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
-        BorrowedCommandRouting.RequireLocal(operation, workspaceKind == WorkspaceKind.Borrowed);
-        var args = request["arguments"]!.AsObject();
-        var id = Id(request["spaceId"]);
-        var spaces = session.Spaces.ToList();
-        var index = spaces.FindIndex(s => s.Id == id);
-        if (index < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
-        var space = spaces[index];
-        if (Id(request["profileId"]) != space.ProfileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
-        if (PendingDeletion(session, id) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-        spaces[index] = operation switch {
-            SessionOperation.SpaceBrowsingPreferences => Configured(space, space.Settings with {
-                BrowsingPreferences = StoredSessionCodec.DecodeBrowsingPreferences(args["value"])
-            }),
-            SessionOperation.SpaceSearchProviderUpsert or SessionOperation.SpaceSearchProviderRemove => Configured(space, space.Settings with {
-                BrowsingPreferences = EditSearchProviders(operation, space.Settings.BrowsingPreferences, args)
-            }),
-            _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSpaceCommand)
-        };
-        var next = session with { Spaces = spaces.ToArray() };
-        Validate(next);
-        var projection = StoredSessionCodec.Encode(next with { Spaces = spaces.Select(Settings).ToArray() });
-        return new NativeSessionCommand(this, session, next, Output(new JsonObject { ["session"] = projection }));
     }
 
     #endregion

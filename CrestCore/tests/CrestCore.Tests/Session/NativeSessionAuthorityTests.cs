@@ -23,25 +23,6 @@ public sealed partial class BrowserContractsTests {
         });
     }
 
-    [Theory]
-    [InlineData("space.future", BrowserRuleCodes.UnknownSpaceCommand)]
-    public void UnknownOperationFamiliesKeepTheirSpecificErrors(string operation, string expectedCode) {
-        var fixture = SavedSession();
-        var session = fixture.Document["session"]!;
-        var space = session["spaces"]![0]!;
-        var authority = new NativeSessionAuthority(Bytes(session));
-        var request = new JsonObject {
-            ["version"] = 1,
-            ["operation"] = operation,
-            ["spaceId"] = fixture.Space.ToString(),
-            ["profileId"] = space["profile"]!["id"]!.DeepClone(),
-            ["arguments"] = new JsonObject { ["requestId"] = Guid.NewGuid().ToString() },
-            ["now"] = 800000001.0
-        };
-
-        var error = Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(Bytes(request)));
-        Assert.Equal(expectedCode, error.Code);
-    }
     [Fact]
     public void DurableReplacementReservesPublicationAndCancellationKeepsTheAcceptedRevision() {
         var session = SavedSession().Document["session"]!;

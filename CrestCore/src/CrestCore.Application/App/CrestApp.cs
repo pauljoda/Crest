@@ -19,7 +19,6 @@ public sealed partial class CrestApp : IDisposable {
     private readonly Lock gate = new();
     private readonly Downloads downloads = new();
     private readonly Credentials credentials = new();
-    private readonly Search search = new();
     private readonly ContentBlocking contentBlocking = new();
     private readonly Links links = new();
     /// This device's windows and what each shows.
@@ -137,7 +136,6 @@ public sealed partial class CrestApp : IDisposable {
                 PasskeyAccess access => credentials.Answer(access),
                 SystemPasswordWriteThrough writeThrough => credentials.Answer(writeThrough),
                 SystemPasswordOffer offer => credentials.Answer(offer),
-                CustomSearchEngineAdmission admission => search.Answer(admission),
                 BalancedProtectionRules rules => contentBlocking.Answer(rules),
                 ExternalLinkRoute route => links.Answer(route),
                 QuickWindowSite site => links.Answer(site),

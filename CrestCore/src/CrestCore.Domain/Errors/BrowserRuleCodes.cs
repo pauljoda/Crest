@@ -1,5 +1,3 @@
-using CrestCore.Contracts;
-
 namespace CrestCore.Domain;
 
 /// Stable browser rule error code identifiers exposed to native callers.
@@ -18,7 +16,6 @@ public static class BrowserRuleCodes {
     public const string DuplicateMediaSession = "duplicate_media_session";
     public const string DuplicatePersistedIdentity = "duplicate_persisted_identity";
     public const string DuplicateResidencyCandidate = "duplicate_residency_candidate";
-    public const string DuplicateSearchName = "duplicate_search_name";
     public const string DuplicateShortcutCommand = "duplicate_shortcut_command";
     public const string DuplicateSpace = "duplicate_space";
     public const string DuplicateSpaceProfile = "duplicate_space_profile";
@@ -59,10 +56,6 @@ public static class BrowserRuleCodes {
     public const string InvalidSavedSelection = "invalid_saved_selection";
     public const string InvalidSavedState = "invalid_saved_state";
     public const string InvalidSavedUrl = "invalid_saved_url";
-    public const string InvalidSearchName = "invalid_search_name";
-    public const string InvalidSearchPlaceholder = "invalid_search_placeholder";
-    public const string InvalidSearchProvider = "invalid_search_provider";
-    public const string InvalidSearchTemplate = "invalid_search_template";
     public const string InvalidSessionTransaction = "invalid_session_transaction";
     public const string InvalidShortcut = "invalid_shortcut";
     public const string InvalidSpaceCount = "invalid_space_count";
@@ -101,15 +94,6 @@ public static class BrowserRuleCodes {
     public const string SameCollectionTransfer = "same_collection_transfer";
     public const string SameSessionTransfer = "same_session_transfer";
     public const string SameSpaceTransfer = "same_space_transfer";
-    public const string SearchNameTooLong = "search_name_too_long";
-    public const string SearchPlaceholderInFragment = "search_placeholder_in_fragment";
-    public const string SearchPlaceholderMissing = "search_placeholder_missing";
-    public const string SearchProviderLimit = "search_provider_limit";
-    public const string SearchTemplateContainsSecret = "search_template_contains_secret";
-    public const string SearchTemplateCredentials = "search_template_credentials";
-    public const string SearchTemplatePort = "search_template_port";
-    public const string SearchTemplateRequiresHttps = "search_template_requires_https";
-    public const string SearchTemplateTooLong = "search_template_too_long";
     public const string SessionEditLimit = "session_edit_limit";
     public const string SessionReleased = "session_released";
     public const string SessionSizeLimit = "session_size_limit";
@@ -137,13 +121,11 @@ public static class BrowserRuleCodes {
     public const string UnknownFolder = "unknown_folder";
     public const string UnknownSearchProvider = "unknown_search_provider";
     public const string UnknownSpace = "unknown_space";
-    public const string UnknownSpaceCommand = "unknown_space_command";
     public const string UnknownSplitCommand = "unknown_split_command";
     public const string UnknownSplitGroup = "unknown_split_group";
     public const string UnknownSyncOperation = "unknown_sync_operation";
     public const string UnknownTab = "unknown_tab";
     public const string UnknownWorkspaceCommand = "unknown_workspace_command";
-    public const string UnsafeSearchTemplate = "unsafe_search_template";
     public const string UnsupportedAccessPolicy = "unsupported_access_policy";
     public const string UnsupportedUrl = "unsupported_url";
     public const string VersionMismatch = "version_mismatch";
@@ -180,37 +162,6 @@ public static class BrowserRuleCodes {
     public const string PinnedCapacity = "pinned_capacity";
     public const string SplitCapacity = "split_capacity";
     public const string WebPagesOnly = "web_pages_only";
-
-    #endregion
-
-    #region Actions - Search engines
-
-    /// TRANSITIONAL: the code a session command reports for a refused custom
-    /// search engine, until those commands answer typed rejections. Deleted
-    /// with that bridge.
-    private static readonly Dictionary<SearchEngineFlaw, string> SearchEngineFlawCodes = new() {
-        [SearchEngineFlaw.EmptyName] = InvalidSearchName,
-        [SearchEngineFlaw.NameTooLong] = SearchNameTooLong,
-        [SearchEngineFlaw.TemplateTooLong] = SearchTemplateTooLong,
-        [SearchEngineFlaw.MissingPlaceholder] = SearchPlaceholderMissing,
-        [SearchEngineFlaw.AmbiguousPlaceholder] = InvalidSearchPlaceholder,
-        [SearchEngineFlaw.InvalidTemplate] = InvalidSearchTemplate,
-        [SearchEngineFlaw.RequiresHttps] = SearchTemplateRequiresHttps,
-        [SearchEngineFlaw.UnsafeHost] = UnsafeSearchTemplate,
-        [SearchEngineFlaw.NonstandardPort] = SearchTemplatePort,
-        [SearchEngineFlaw.CredentialsInTemplate] = SearchTemplateCredentials,
-        [SearchEngineFlaw.PlaceholderInFragment] = SearchPlaceholderInFragment,
-        [SearchEngineFlaw.SecretInTemplate] = SearchTemplateContainsSecret
-    };
-
-    /// TRANSITIONAL: the code a session command reports for a refused custom
-    /// search engine, until those commands answer typed rejections.
-    public static string SearchEngine(Rejection rejection) => rejection switch {
-        DuplicateSearchEngineName => DuplicateSearchName,
-        SearchEngineLimitReached => SearchProviderLimit,
-        InvalidSearchEngine invalid => SearchEngineFlawCodes.GetValueOrDefault(invalid.Flaw, InvalidSearchProvider),
-        _ => InvalidSearchProvider
-    };
 
     #endregion
 }

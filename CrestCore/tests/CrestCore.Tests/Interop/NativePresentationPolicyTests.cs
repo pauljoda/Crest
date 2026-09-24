@@ -131,21 +131,6 @@ public sealed class NativePresentationPolicyTests {
             Evaluate(new() { ["operation"] = "branding.normalize", ["branding"] = "indigo" })).Code);
     }
 
-    [Fact]
-    public void BorrowedWorkspacesRouteProfileSettingsToTheirSourceAndRejectSpaceOrganization() {
-        static string Route(string command, bool borrowed) => Evaluate(new() {
-            ["operation"] = "workspace.command_route",
-            ["command"] = command,
-            ["borrowed"] = borrowed
-        })["route"]!.GetValue<string>();
-        foreach (var command in new[] { "space.browsing_preferences", "space.search_provider.upsert", "space.search_provider.remove" }) {
-            Assert.Equal("source", Route(command, true));
-            Assert.Equal("local", Route(command, false));
-        }
-        Assert.Equal("rejected", Route("workspace.import", true));
-        Assert.Equal("local", Route("tab.transfer", true));
-    }
-
     private static JsonObject Color(double red, double green, double blue) =>
         new() { ["red"] = red, ["green"] = green, ["blue"] = blue, ["alpha"] = 1.0 };
 }

@@ -398,6 +398,12 @@ extension BrowserSpaceCrestCharge {
     }
 }
 
+extension BrowserSpaceDataRetentionPreferences {
+    var core: DataRetentionPreferences {
+        DataRetentionPreferences(history: history, archive: archive, downloads: downloads)
+    }
+}
+
 extension BrowserCredentialPreferences {
     var core: CredentialPreferences {
         CredentialPreferences(

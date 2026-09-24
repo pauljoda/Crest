@@ -49,7 +49,7 @@ internal static class SearchPolicyRequests {
                 if (index >= MaximumStoredProviders) throw new ProtocolException(ProtocolErrorCodes.SearchProviderBatchLimit);
                 try {
                     stored.Add((index, SearchCodes.Custom(item)));
-                } catch (BrowserRuleException) {
+                } catch (Rejected) {
                     // Left out; see the summary.
                 }
                 index++;

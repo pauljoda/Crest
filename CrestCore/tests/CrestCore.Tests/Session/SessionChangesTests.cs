@@ -155,10 +155,6 @@ public sealed partial class BrowserContractsTests {
                 TestGrants.UnlockGuarded(intent => { var sent = app.Send(intent); granted.AddRange(sent); return sent; }, workspace,
                     authority.Current);
                 changes = [.. changes, .. granted];
-                if (RecordedIntents.FollowingCommand(request) is { } following) {
-                    authority.PrepareCommand(Bytes(following)).Commit();
-                    changes = [.. changes, .. app.Drain()];
-                }
             } else if (RecordedIntents.Navigation(request) is { } navigation) {
                 clock.Now = navigation.At;
                 changes = RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);

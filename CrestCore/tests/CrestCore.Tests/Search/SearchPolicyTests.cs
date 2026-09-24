@@ -31,10 +31,19 @@ public sealed class SearchPolicyTests {
     private static CustomSearchEngine Engine(string name, string template, Guid? id = null) =>
         new(id ?? Guid.Parse(KagiId), name, template, "  ");
 
+    /// The engine as a Space saves it next to `existing`, through the rules
+    /// the search-engine intents apply. Throws `Rejected` with the first rule
+    /// it breaks.
+    private static CustomSearchEngine Admitted(CustomSearchEngine engine, params CustomSearchEngine[] existing) {
+        var provider = SearchProvider.Admit(engine.Id, engine.Name, engine.SearchTemplate, engine.SuggestionTemplate);
+        SearchPreferences.Admit(provider, [.. existing.Select(other => (SearchProvider.CustomId(other.Id), other.Name))]);
+        return new(engine.Id, provider.Title, provider.SearchTemplate, provider.SuggestionTemplate);
+    }
+
     /// The rule admitting `engine` next to `existing` breaks, or null when it is admitted.
     private static Rejection? Refusal(CustomSearchEngine engine, params CustomSearchEngine[] existing) {
         try {
-            new Search().Answer(new CustomSearchEngineAdmission(engine, existing));
+            Admitted(engine, existing);
             return null;
         } catch (Rejected rejected) {
             return rejected.Rejection;
@@ -124,7 +133,7 @@ public sealed class SearchPolicyTests {
         var engine = Engine(name, template);
         Assert.Equal(SearchEngineFlaw.Named(flaw) is { } expected ? new InvalidSearchEngine(expected) : null, Refusal(engine));
         if (flaw is null) {
-            var admitted = new Search().Answer(new CustomSearchEngineAdmission(engine, []));
+            var admitted = Admitted(engine);
             Assert.Equal(new CustomSearchEngine(engine.Id, "Example", template.Trim(), null), admitted);
         }
     }
@@ -141,10 +150,6 @@ public sealed class SearchPolicyTests {
         Assert.Equal(new SearchEngineLimitReached(SearchPreferences.MaximumCustomProviders), Refusal(engine, full));
         full[5] = engine with { Name = "Engine 5" };
         Assert.Null(Refusal(engine, full));
-        // Session commands still report the same rules as their codes.
-        Assert.Equal(BrowserRuleCodes.SearchProviderLimit, BrowserRuleCodes.SearchEngine(new SearchEngineLimitReached(32)));
-        Assert.Equal(BrowserRuleCodes.SearchTemplatePort,
-            Assert.Throws<BrowserRuleException>(() => SearchPreferences.Custom(Guid.NewGuid(), "Port", "https://a.example:8443/?q=%s", null)).Code);
     }
 
     [Fact]

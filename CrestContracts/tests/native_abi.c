@@ -318,11 +318,6 @@ static void links_boundary(void) {
         && memcmp(buffer.bytes + 2, key, strlen(key)) == 0);
     crest_buffer_free(&buffer);
     assert(crest_app_destroy(app) == CREST_OK);
-    uint8_t output[512]; size_t length = 0;
-    const char *borrowed = "{\"version\":1,\"operation\":\"workspace.command_route\",\"command\":\"space.browsing_preferences\",\"borrowed\":true}";
-    assert(crest_core_evaluate_policy((const uint8_t*)borrowed, strlen(borrowed), output, sizeof(output) - 1, &length) == CREST_OK);
-    output[length] = 0;
-    assert(strstr((const char*)output, "\"route\":\"source\""));
 }
 static volatile int storage_wakes = 0;
 static void count_wake(void* context) {

@@ -46,5 +46,4 @@ enum BrowserPolicyOperation: String, Codable, Sendable {
     case pagePresentation = "page.presentation"
     case quickWindowDismissal = "quick_window.dismissal"
     case quickWindowRetarget = "quick_window.retarget"
-    case workspaceCommandRoute = "workspace.command_route"
 }

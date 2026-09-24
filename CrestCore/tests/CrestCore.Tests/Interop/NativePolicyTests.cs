@@ -152,11 +152,13 @@ public sealed class NativePolicyTests {
             "https://192.168.1.1/?q=%s", "https://%s.example.org/", "https://example.org/#%s",
             "https://example.org/?q=%s&other={searchTerms}", "https://example.org/?q=%s&bad=%z",
             "https://user:secret@example.org/?q=%s", "https://example.org:8443/?q=%s" })
-            Assert.Throws<BrowserRuleException>(() => SearchPreferences.Custom(Guid.NewGuid(), "Custom", template, null));
-        var id = Guid.NewGuid(); var provider = SearchPreferences.Custom(id, "Café", "https://example.org/find/{searchTerms}", null);
-        var preferences = SearchPreferences.Default.Upsert(provider).Select(provider.Name, true);
+            Assert.IsType<InvalidSearchEngine>(Assert.Throws<Rejected>(() =>
+                SearchProvider.Admit(Guid.NewGuid(), "Custom", template, null)).Rejection);
+        var id = Guid.NewGuid(); var provider = SearchProvider.Admit(id, "Café", "https://example.org/find/{searchTerms}", null);
+        var preferences = SearchPreferences.Default.Add(provider).Select(provider);
         Assert.Equal("https://example.org/find/a%2Fb%3Fc", preferences.Resolve("a/b?c", false));
-        Assert.Throws<BrowserRuleException>(() => preferences.Upsert(SearchPreferences.Custom(Guid.NewGuid(), "CAFE", "https://example.com/?q=%s", null)));
+        Assert.IsType<DuplicateSearchEngineName>(Assert.Throws<Rejected>(() =>
+            preferences.Add(SearchProvider.Admit(Guid.NewGuid(), "CAFE", "https://example.com/?q=%s", null))).Rejection);
         Assert.Equal("google", preferences.Remove(id).SelectedId);
         Assert.Equal(provider.Name, preferences.SelectedId);
         Assert.Throws<BrowserRuleException>(() => SearchPreferences.Default.Resolve("https://user:password@example.org", false));

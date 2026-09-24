@@ -1,15 +1,7 @@
 import Foundation
 import os
 
-/// Which authority applies a Space command issued from a workspace.
-enum BrowserWorkspaceCommandRoute: String, Decodable {
-    case local
-    case source
-    case rejected
-}
-
-/// Page presentation, branding and workspace routing rules owned by the
-/// portable core.
+/// Page presentation and branding rules owned by the portable core.
 extension BrowserCorePolicy {
     // MARK: - Types
 
@@ -23,15 +15,6 @@ extension BrowserCorePolicy {
 
     private struct BrandingAnswer: Decodable {
         let branding: BrowserSpaceBranding
-    }
-
-    private struct CommandRouteRequest: Encodable {
-        let command: BrowserSessionOperation
-        let borrowed: Bool
-    }
-
-    private struct CommandRouteAnswer: Decodable {
-        let route: BrowserWorkspaceCommandRoute
     }
 
     // MARK: - Variables
@@ -58,16 +41,5 @@ extension BrowserCorePolicy {
     static func normalizedBranding(_ branding: BrowserSpaceBranding) -> BrowserSpaceBranding {
         evaluate(.brandingNormalize, BrandingRequest(branding: branding), answer: BrandingAnswer.self)?.branding
             ?? branding
-    }
-
-    /// Which authority applies `command`: a borrowed workspace sends profile
-    /// settings to its source and cannot reorganize Spaces. Nil when the core
-    /// cannot answer, and the caller applies nothing.
-    static func workspaceCommandRoute(_ command: BrowserSessionOperation, borrowed: Bool)
-        -> BrowserWorkspaceCommandRoute?
-    {
-        evaluate(
-            .workspaceCommandRoute, CommandRouteRequest(command: command, borrowed: borrowed),
-            answer: CommandRouteAnswer.self)?.route
     }
 }

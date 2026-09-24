@@ -12,6 +12,13 @@ extension SearchProvider: Identifiable {
         Self.named(name) == nil
     }
 
+    /// This engine as a Space's selection names it to the core: a built-in,
+    /// or a custom engine's identity.
+    var selection: (builtIn: BuiltInSearchEngine?, customEngineID: UUID?) {
+        if let builtIn = BuiltInSearchEngine.named(name) { return (builtIn, nil) }
+        return (nil, UUID(uuidString: String(name.dropFirst(Self.customPrefix.count))))
+    }
+
     /// The website a custom engine's favicon is loaded from.
     var iconPageURL: URL? {
         guard isCustom else { return nil }

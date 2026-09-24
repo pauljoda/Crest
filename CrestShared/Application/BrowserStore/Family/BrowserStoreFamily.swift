@@ -173,20 +173,6 @@ final class BrowserStoreFamily {
         scheduleSpaceDataCleanup()
     }
 
-    func executeSpace<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
-        arguments: Arguments, from source: BrowserStore, at date: Date = .now) -> Bool {
-        let previous = authoritativeSession
-        let shown = source.window
-        do {
-            try core.executeSpace(operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
-            reconcileStores(after: previous, from: source)
-            return authoritativeSession != previous || source.window != shown
-        } catch {
-            source.localSyncErrorDescription = "Core Space command failed: \(error)"
-            return false
-        }
-    }
-
     func importWorkspace(_ request: BrowserCoreWorkspaceImport.Request, from source: BrowserStore) throws {
         let previous = authoritativeSession
         let command = try core.prepareWorkspace(request, window: source.windowID.rawValue)
@@ -252,7 +238,7 @@ final class BrowserStoreFamily {
     /// Runs one session intent as `send` does, and throws the rule that
     /// refused it or the save that failed, for a caller that handles either,
     /// such as a deletion step the core saves before it returns.
-    func commit(_ intent: some Intent, from source: BrowserStore) throws {
+    func commit(_ intent: some Intent, from source: BrowserStore) throws(Rejection) {
         let previous = authoritativeSession
         try source.core.send(intent)
         guard authoritativeSession != previous else { return }

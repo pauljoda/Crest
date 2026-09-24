@@ -25,16 +25,16 @@ public sealed class SearchProvider {
     private static readonly string[] SecretParameters =
         ["token", "key", "apikey", "api_key", "access_token", "password", "credential", "credentials", "auth", "authorization"];
 
-    public static readonly SearchProvider Google = new(name: "google", title: "Google", logo: "SearchProviderGoogle",
+    public static readonly SearchProvider Google = new(name: BuiltInSearchEngine.Google.Name, title: "Google", logo: "SearchProviderGoogle",
         searchTemplate: "https://www.google.com/search?q=%s",
         suggestionTemplate: "https://www.google.com/complete/search?client=chrome&q=%s");
-    public static readonly SearchProvider DuckDuckGo = new(name: "duckDuckGo", title: "DuckDuckGo", logo: "SearchProviderDuckDuckGo",
+    public static readonly SearchProvider DuckDuckGo = new(name: BuiltInSearchEngine.DuckDuckGo.Name, title: "DuckDuckGo", logo: "SearchProviderDuckDuckGo",
         searchTemplate: "https://duckduckgo.com/?q=%s", suggestionTemplate: "https://duckduckgo.com/ac/?q=%s&type=list");
-    public static readonly SearchProvider Bing = new(name: "bing", title: "Bing", logo: "SearchProviderBing",
+    public static readonly SearchProvider Bing = new(name: BuiltInSearchEngine.Bing.Name, title: "Bing", logo: "SearchProviderBing",
         searchTemplate: "https://www.bing.com/search?q=%s", suggestionTemplate: "https://www.bing.com/osjson.aspx?query=%s");
-    public static readonly SearchProvider Ecosia = new(name: "ecosia", title: "Ecosia", logo: "SearchProviderEcosia",
+    public static readonly SearchProvider Ecosia = new(name: BuiltInSearchEngine.Ecosia.Name, title: "Ecosia", logo: "SearchProviderEcosia",
         searchTemplate: "https://www.ecosia.org/search?q=%s", suggestionTemplate: "https://ac.ecosia.org/autocomplete?q=%s&type=list");
-    public static readonly SearchProvider Brave = new(name: "brave", title: "Brave Search", logo: "SearchProviderBrave",
+    public static readonly SearchProvider Brave = new(name: BuiltInSearchEngine.Brave.Name, title: "Brave Search", logo: "SearchProviderBrave",
         searchTemplate: "https://search.brave.com/search?q=%s", suggestionTemplate: "https://search.brave.com/api/suggest?q=%s");
 
     /// The built-in engines, in the order the settings offer them.
@@ -78,6 +78,10 @@ public sealed class SearchProvider {
     public bool IsCustom() => !All.Contains(this);
 
     public static string CustomId(Guid id) => CustomPrefix + id.ToString("D");
+
+    /// A custom engine's identity, which its name spells after `CustomPrefix`;
+    /// null for a built-in.
+    public Guid? Identity() => IsCustom() && Guid.TryParseExact(Name[CustomPrefix.Length..], "D", out var id) ? id : null;
 
     #endregion
 

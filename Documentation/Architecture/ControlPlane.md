@@ -692,12 +692,10 @@ Space when none can open; routing that cannot answer opens nothing. Quick Window
 (whether a move revises the request and remembers the site's Space) are
 `quick_window.*` operations for the Mac window and the mobile overlay.
 
-A borrowed workspace's Space commands are routed by one core rule,
-`workspace.command_route`: identity, appearance, default Space, access,
-browsing, search and credential preferences go to the Space it borrows from;
-creating, removing, reordering Spaces and imports are refused there; everything
-else is local. The borrowed authority enforces the same rule, rejecting a
-source-owned command with `borrowed_profile_requires_owner`. The page surface
+A borrowed workspace never edits its Spaces: Swift sends identity, appearance,
+default Space, access, browsing, search and credential preferences to the
+workspace it borrows from, and the core refuses every Space intent issued to a
+borrowed workspace with `BorrowedProfileRequiresOwner`. The page surface
 for a selected tab (`page.presentation`), the Balanced content-blocking rule
 list (the `BalancedProtectionRules` query) and branding range rules (`branding.normalize`,
 also applied by the `SetSpaceBranding` intent) are core policy; the crest's

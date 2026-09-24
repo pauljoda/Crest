@@ -8,22 +8,9 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// Custom search engines and Balanced protection through the native app
-/// boundary: encoded queries in, encoded answers or one rejection out.
+/// Balanced protection through the native app boundary: an encoded query
+/// in, the encoded rule list out.
 public sealed class AppSearchTests {
-    [Fact]
-    public void CustomEngineAdmissionAnswersTheSavedEngineOrTheRuleItBreaks() {
-        using var app = new AppClient();
-        var id = Guid.NewGuid();
-        var typed = new CustomSearchEngine(id, "  Kagi ", " https://kagi.com/search?q=%s ", " ");
-        Assert.Equal(new CustomSearchEngine(id, "Kagi", "https://kagi.com/search?q=%s", null),
-            app.Ask(new CustomSearchEngineAdmission(typed, []), ContractCodec.ReadCustomSearchEngine));
-        Assert.Equal(new InvalidSearchEngine(SearchEngineFlaw.RequiresHttps),
-            app.Refuse(new CustomSearchEngineAdmission(typed with { SearchTemplate = "http://kagi.com/?q=%s" }, [])));
-        Assert.Equal(new DuplicateSearchEngineName(),
-            app.Refuse(new CustomSearchEngineAdmission(typed, [typed with { Id = Guid.NewGuid(), Name = "KAGI" }])));
-    }
-
     [Fact]
     public void BalancedProtectionBlocksThirdPartyLoadsFromEveryListedHostAndItsSubdomains() {
         using var app = new AppClient();

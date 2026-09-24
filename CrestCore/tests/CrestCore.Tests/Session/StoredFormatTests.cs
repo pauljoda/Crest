@@ -59,6 +59,8 @@ public sealed class StoredFormatTests {
         Assert.Equal(["after1Hour", "after6Hours", "after12Hours", "after24Hours", "never"],
             QuickWindowArchivePolicy.All.Select(policy => policy.Name));
         Assert.Equal(["balanced", "off"], ContentBlockingPolicy.All.Select(policy => policy.Name));
+        Assert.Equal(["google", "duckDuckGo", "bing", "ecosia", "brave"], BuiltInSearchEngine.All.Select(engine => engine.Name));
+        Assert.Equal("custom:", SearchProvider.CustomPrefix);
     }
 
     [Theory]
@@ -104,7 +106,6 @@ public sealed class StoredFormatTests {
                 ids.Supply(RecordedIntents.Identities(request));
                 foreach (var intent in intents) app.Send(intent);
                 TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
-                if (RecordedIntents.FollowingCommand(request) is { } following) authority.PrepareCommand(Bytes(following)).Commit();
             } else if (RecordedIntents.Navigation(request) is { } navigation) {
                 clock.Now = navigation.At;
                 RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);

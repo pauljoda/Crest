@@ -95,12 +95,14 @@ brand colors, crest palette, Spaces, tabs per Space, sync records).
 `address.intent` and `search.url` name the engine as `{"id":"google"}` for a
 built-in or a `custom:<uuid>` identity with its stored templates; the core owns the
 built-in catalog, template validation and query encoding, and a stored custom
-engine that no longer validates resolves to Google. The typed
-`CustomSearchEngineAdmission` query answers the engine Crest would save or
-refuses it with the rule it breaks, and `search.custom_providers` applies the
-restore rule to stored engines. `translation.rule` and `translation.matches`
-answer automatic page-translation choices in their persisted native shape. Custom-engine saves and removals are the
-`space.search_provider.upsert` and `space.search_provider.remove` session commands.
+engine that no longer validates resolves to Google. `search.custom_providers`
+applies the restore rule to stored engines. `translation.rule` and `translation.matches`
+answer automatic page-translation choices in their persisted native shape. The
+`AddSearchEngine`, `UpdateSearchEngine`, `RemoveSearchEngine` and
+`SelectSearchEngine` intents edit a Space's engines and its choice, refusing with
+`DuplicateSearchEngineName`, `SearchEngineLimitReached`, `InvalidSearchEngine` or
+`UnknownSearchEngine`. A Space's choice is a `BuiltInSearchEngine` or a custom
+engine's identity, stored as the built-in's name or `custom:<uuid>`.
 
 The downloads area of `crest_app_*` owns the process's download ledger: record
 phases and their transitions, newest-first ordering, badge acknowledgement and
@@ -159,8 +161,6 @@ order, and `links.space_removed` answers what a deleted Space leaves behind.
 `page.presentation` and `branding.normalize` answer page surfaces and branding
 range rules, and the `BalancedProtectionRules` query answers the Balanced rule
 list.
-`workspace.command_route` answers `local`, `source` or `rejected` for a session
-command issued from an owned or borrowed workspace.
 
 Window state is device-local and never enters the session. The
 `OpenWindow`, `CloseWindow`, `ShowSpace`, `ShowTab`, `DismissShownTab`,

@@ -113,6 +113,9 @@ internal static class RecordedIntents {
             "preferences.translation_rule" => [new SetTranslationRule(workspace, Text("sourceID"), Text("targetID"),
                 arguments["isEnabled"]!.GetValue<bool>())],
             "preferences.import" => [new ImportAppPreferences(workspace, Legacy(arguments["legacy"]!.AsObject()))],
+            "space.browsing_preferences" => Browsing(workspace, Id("spaceId"), StoredSessionCodec.DecodeBrowsingPreferences(arguments["value"])),
+            "space.search_provider.upsert" => Upserted(workspace, Id("spaceId"), arguments, current),
+            "space.search_provider.remove" => [new RemoveSearchEngine(workspace, Id("spaceId"), Argument("id"))],
             _ => null
         };
     }
@@ -195,23 +198,30 @@ internal static class RecordedIntents {
         new CreateSpace(workspace, window, template.Id),
         new SetSpaceIdentity(workspace, template.Id, $"Space {current.Spaces.Count + 1}", template.Settings.Symbol, template.Settings.Accent),
         new SetSpaceBranding(workspace, template.Id, template.Settings.Branding!),
-        new SetCredentialPreferences(workspace, template.Id, template.Settings.CredentialPreferences)
+        new SetCredentialPreferences(workspace, template.Id, template.Settings.CredentialPreferences),
+        .. Browsing(workspace, template.Id, template.Settings.BrowsingPreferences)
     ];
 
-    /// TRANSITIONAL until browsing preferences are an intent: the command a
-    /// recorded Space creation still needs after its intents, which gives
-    /// the new Space the browsing preferences its template carried.
-    public static JsonObject? FollowingCommand(JsonObject request) {
-        if (request["operation"]!.GetValue<string>() != "space.create") return null;
-        var template = request["arguments"]!["template"]!;
-        return new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "space.browsing_preferences",
-            ["spaceId"] = template["id"]!["rawValue"]!.GetValue<string>(),
-            ["profileId"] = template["profile"]!["id"]!.GetValue<string>(),
-            ["arguments"] = new JsonObject { ["value"] = template["browsingPreferences"]!.DeepClone() },
-            ["now"] = request["now"]!.DeepClone()
-        };
+    /// Recorded browsing preferences, which carried the search choice beside
+    /// the rest: the preferences, then the engine they selected.
+    private static IReadOnlyList<SessionIntent> Browsing(Guid workspace, Guid space, BrowsingPreferences preferences) => [
+        new SetBrowsingPreferences(workspace, space, preferences.SearchSuggestionsEnabled, preferences.CurrentTabCleanup,
+            preferences.ContentBlocking, preferences.DataRetention),
+        new SelectSearchEngine(workspace, space, preferences.SelectedBuiltInEngine, preferences.SelectedCustomEngineId)
+    ];
+
+    /// A recorded upsert, which added an engine the Space did not hold and
+    /// replaced one it did, selecting it when it asked to.
+    private static IReadOnlyList<SessionIntent> Upserted(Guid workspace, Guid space, JsonObject arguments, SessionState current) {
+        var provider = arguments["provider"]!;
+        var engine = new CustomSearchEngine(Guid.Parse(provider["id"]!.GetValue<string>()), provider["name"]!.GetValue<string>(),
+            provider["searchURLTemplate"]!.GetValue<string>(), provider["suggestionURLTemplate"]?.GetValue<string>());
+        bool selects = arguments["selects"]?.GetValue<bool>() == true;
+        bool held = current.Spaces.Single(candidate => candidate.Id == space).Settings.BrowsingPreferences.CustomSearchProviders
+            .Any(stored => stored.Id == engine.Id);
+        return held
+            ? [new UpdateSearchEngine(workspace, space, engine), .. selects ? [new SelectSearchEngine(workspace, space, null, engine.Id)] : Array.Empty<SessionIntent>()]
+            : [new AddSearchEngine(workspace, space, engine, selects)];
     }
 
     /// The identities a recorded request gave the records it made, which the

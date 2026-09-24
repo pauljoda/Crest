@@ -2333,6 +2333,10 @@
     "app-preference-intents": {
       "category": "internal",
       "message": "App preferences, translation rules and launch planning go through typed core intents and queries."
+    },
+    "search-engine-intents": {
+      "category": "internal",
+      "message": "Adding, editing, choosing and removing search engines are typed core intents, and the chosen engine is stored as a typed value."
     }
   }
 }

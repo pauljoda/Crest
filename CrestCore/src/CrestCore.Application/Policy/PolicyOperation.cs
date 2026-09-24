@@ -46,7 +46,6 @@ internal enum PolicyOperation {
     PagePresentation,
     QuickWindowDismissal,
     QuickWindowRetarget,
-    WorkspaceCommandRoute,
 }
 
 internal static class PolicyOperationCodes {
@@ -97,7 +96,6 @@ internal static class PolicyOperationCodes {
         "page.presentation" => PolicyOperation.PagePresentation,
         "quick_window.dismissal" => PolicyOperation.QuickWindowDismissal,
         "quick_window.retarget" => PolicyOperation.QuickWindowRetarget,
-        "workspace.command_route" => PolicyOperation.WorkspaceCommandRoute,
         _ => PolicyOperation.Unknown
     };
 

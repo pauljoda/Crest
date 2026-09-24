@@ -37,8 +37,8 @@ struct BrowserCustomSearchProvider: Codable, Equatable, Identifiable, Sendable {
 }
 
 /// The core's refusal of a custom engine, with the explanation the editor
-/// shows. A flaw explains itself; any other refusal reads as an invalid
-/// template.
+/// shows. A flaw explains itself, as does a duplicate name or the Space's
+/// limit; any other refusal reads as an invalid template.
 struct BrowserCustomSearchProviderError: LocalizedError, Equatable {
     let errorDescription: String?
 
@@ -46,9 +46,7 @@ struct BrowserCustomSearchProviderError: LocalizedError, Equatable {
         errorDescription =
             switch rejection {
             case .invalidSearchEngine(let invalid): String(localized: invalid.flaw.message)
-            case .duplicateSearchEngineName: String(localized: "A custom search engine already uses this name.")
-            case .searchEngineLimitReached: String(localized: "A Space can contain up to 32 custom search engines.")
-            default: String(localized: SearchEngineFlaw.invalidTemplate.message)
+            default: String(localized: rejection.message ?? SearchEngineFlaw.invalidTemplate.message)
             }
     }
 }
