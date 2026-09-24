@@ -2233,6 +2233,10 @@
     "content-blocking-policy-set": {
       "category": "internal",
       "message": "Content-blocking policies carry their own rules and titles."
+    },
+    "utility-filter-surfaces": {
+      "category": "internal",
+      "message": "Utility list filters and surfaces are built from what they show."
     }
   }
 }

@@ -19,13 +19,6 @@ enum BrowserUtilityAccessibilityID {
     }
 
     private static func component(for surface: BrowserUtilitySurface) -> String {
-        switch surface {
-        case .archive:
-            "archive"
-        case .history:
-            "history"
-        case .downloads:
-            "downloads"
-        }
+        surface.name
     }
 }

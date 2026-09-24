@@ -41,7 +41,7 @@ final class BrowserUtilityPresentationState {
         self.defaults = defaults
         self.persistenceKey = persistenceKey
         if let rawValue = defaults?.string(forKey: persistenceKey),
-            let persistedSurface = BrowserUtilitySurface(rawValue: rawValue)
+            let persistedSurface = BrowserUtilitySurface.named(rawValue)
         {
             lastSelectedSurface = persistedSurface
         }
@@ -73,7 +73,7 @@ final class BrowserUtilityPresentationState {
     func present(_ surface: BrowserUtilitySurface) {
         self.surface = surface
         lastSelectedSurface = surface
-        defaults?.set(surface.rawValue, forKey: persistenceKey)
+        defaults?.set(surface.name, forKey: persistenceKey)
         isSwitcherExpanded = true
     }
 
@@ -110,14 +110,6 @@ enum BrowserUtilityInteractionSurface: Equatable, Sendable {
     case webContent
     case sidebarBlankSpace
     case control
-}
-
-enum BrowserUtilitySurface: String, CaseIterable, Equatable, Hashable, Identifiable, Sendable {
-    case archive
-    case history
-    case downloads
-
-    var id: Self { self }
 }
 
 extension BrowserUtilityPresentationState: BrowserStoreFirstObservable {}

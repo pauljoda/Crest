@@ -21,26 +21,8 @@ enum BrowserUtilityListPreparation {
             deadlines.append(nextDay)
         }
 
-        switch request.filter.normalized(for: request.surface) {
-        case .historyPastWeek:
-            deadlines += request.history.compactMap {
-                calendar.date(
-                    byAdding: .day,
-                    value: 7,
-                    to: $0.lastVisitedAt
-                )
-            }
-        case .historyPastMonth:
-            deadlines += request.history.compactMap {
-                calendar.date(
-                    byAdding: .month,
-                    value: 1,
-                    to: $0.lastVisitedAt
-                )
-            }
-        default:
-            break
-        }
+        let activeFilter = request.filter.normalized(for: request.surface)
+        deadlines += baseItems(for: request).compactMap { activeFilter.expiry(of: $0, in: calendar) }
 
         return deadlines.filter { $0 > now }.min()
     }
@@ -93,16 +75,7 @@ enum BrowserUtilityListPreparation {
     nonisolated private static func baseItems(
         for request: BrowserUtilityListRequest
     ) -> [BrowserUtilityListItem] {
-        switch request.surface {
-        case .archive:
-            request.archivedTabs
-                .filter { !$0.tab.isStartPage }
-                .map(BrowserUtilityListItem.archive)
-        case .history:
-            request.history.map(BrowserUtilityListItem.history)
-        case .downloads:
-            request.downloads.map(BrowserUtilityListItem.download)
-        }
+        request.surface.items(in: request)
     }
 
     nonisolated private static func matchesSearch(
@@ -131,40 +104,6 @@ enum BrowserUtilityListPreparation {
         now: Date,
         calendar: Calendar
     ) -> Bool {
-        let activeFilter = request.filter.normalized(for: request.surface)
-        return switch (activeFilter, item) {
-        case (.all, _):
-            true
-        case (.archivedClosed, let .archive(item)):
-            item.reason == .closed || item.reason == .deleted
-        case (.archivedAutomatically, let .archive(item)):
-            item.reason == .autoCleanup
-        case (.archivedSynced, let .archive(item)):
-            item.reason == .synced || item.reason == .deletedOnAnotherDevice
-        case (.archivedQuickWindow, let .archive(item)):
-            item.reason == .quickWindow
-        case (.historyToday, let .history(item)):
-            calendar.isDate(item.lastVisitedAt, inSameDayAs: now)
-        case (.historyPastWeek, let .history(item)):
-            item.lastVisitedAt >= calendar.date(
-                byAdding: .day,
-                value: -7,
-                to: now
-            ) ?? .distantPast
-        case (.historyPastMonth, let .history(item)):
-            item.lastVisitedAt >= calendar.date(
-                byAdding: .month,
-                value: -1,
-                to: now
-            ) ?? .distantPast
-        case (.downloadsInProgress, let .download(item)):
-            item.phase.isLive
-        case (.downloadsFinished, let .download(item)):
-            item.phase.isComplete
-        case (.downloadsNeedsAttention, let .download(item)):
-            item.phase.needsAttention
-        default:
-            false
-        }
+        request.filter.normalized(for: request.surface).includes(item, at: now, in: calendar)
     }
 }

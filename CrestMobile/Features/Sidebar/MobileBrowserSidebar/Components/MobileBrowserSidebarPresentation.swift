@@ -16,7 +16,7 @@ struct MobileBrowserSidebarPresentation<Content: View>: View {
         content
             .environment(\.colorScheme, configuration.selectedColorScheme)
             .sheet(item: configuration.presentedSpaceSheet) { request in
-                switch request.surface {
+                switch request.surface.kind {
                 case .archive:
                     MobileArchiveView(
                         browser: configuration.browser,

@@ -29,12 +29,6 @@ struct MobileBrowserSidebarSpaceSheet: Equatable, Identifiable {
     let assignment: BrowserSpaceRuntimeAssignment
 
     var id: String {
-        let surfaceName =
-            switch surface {
-            case .archive: "archive"
-            case .history: "history"
-            case .downloads: "downloads"
-            }
-        return "\(surfaceName)-\(assignment.spaceID)-\(assignment.profileID.uuidString)"
+        "\(surface.name)-\(assignment.spaceID)-\(assignment.profileID.uuidString)"
     }
 }

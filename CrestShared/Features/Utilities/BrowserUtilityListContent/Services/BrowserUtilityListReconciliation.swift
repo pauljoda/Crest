@@ -28,7 +28,7 @@ enum BrowserUtilityListReconciliation {
                     emittedDownloadIDs.insert(preparedDownload.id).inserted,
                     let currentDownload = liveDownloads[preparedDownload.id],
                     matchesSearch(currentDownload, query: query),
-                    matchesFilter(currentDownload, filter: activeFilter)
+                    activeFilter.includes(.download(currentDownload), at: Date(), in: .autoupdatingCurrent)
                 else { return nil }
                 return BrowserUtilityListItem.download(currentDownload)
             }
@@ -49,23 +49,5 @@ enum BrowserUtilityListReconciliation {
             || BrowserDownloadRowPresentation.status(of: item)
                 .resolvedForSearch()
                 .localizedStandardContains(query)
-    }
-
-    nonisolated private static func matchesFilter(
-        _ item: DownloadState,
-        filter: BrowserUtilityListFilter
-    ) -> Bool {
-        switch filter {
-        case .all:
-            true
-        case .downloadsInProgress:
-            item.phase.isLive
-        case .downloadsFinished:
-            item.phase.isComplete
-        case .downloadsNeedsAttention:
-            item.phase.needsAttention
-        default:
-            false
-        }
     }
 }

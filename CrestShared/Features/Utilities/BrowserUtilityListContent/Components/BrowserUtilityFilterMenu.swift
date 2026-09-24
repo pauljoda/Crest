@@ -9,13 +9,13 @@ struct BrowserUtilityFilterMenu: View {
         Menu {
             Group {
                 Picker("Filter", selection: $filter) {
-                    ForEach(BrowserUtilityListFilter.options(for: surface)) { option in
+                    ForEach(surface.filters) { option in
                         Label(option.title, systemImage: option.systemImage)
                             .tag(option)
                     }
                 }
 
-                if let clearHistory, surface == .history {
+                if let clearHistory, surface.clearsHistory {
                     Divider()
                     Button(
                         "Clear History",
