@@ -100,6 +100,16 @@ final class BrowserMacWindowCoordinator {
         return model
     }
 
+    /// The window a scene opened without a request presents: the initial
+    /// window, or while a window presents that one, a window of its own that
+    /// starts as the initial window shows. Its model exists before the scene
+    /// renders it, so no two scenes ever present one window.
+    func defaultWindowRequest() -> BrowserMacWindowRequest {
+        let request: BrowserMacWindowRequest = windows[.main] == nil ? .initial : .normal(sourceWindowID: .main)
+        _ = model(for: request)
+        return request
+    }
+
     @discardableResult
     func attach(_ window: NSWindow, to id: BrowserWindowID) -> Bool {
         guard let model = windows[id] else {

@@ -2301,6 +2301,10 @@
     "isolated-review-website-data": {
       "category": "internal",
       "message": "A named isolated review opens its own website data stores, derived from its isolation ID, so a review of a copied session never reads, clears or removes the installed app's cookies and site data."
+    },
+    "restored-windows-keep-their-own-content": {
+      "category": "fixed",
+      "message": "When macOS reopens Crest's windows after you quit, each window comes back on its own Space and tab instead of mirroring the first window."
     }
   }
 }

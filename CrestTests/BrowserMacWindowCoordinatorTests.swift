@@ -220,12 +220,63 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         XCTAssertTrue(source.browser.selectedSpace?.tabs.isEmpty == true)
     }
 
+    /// SwiftUI builds a restored window before it hands back the request the
+    /// window was saved with. The window still comes back under its own
+    /// identity, on what it showed, and never on the initial window's model.
+    func testARestoredWindowReopensItsOwnRecordAndNotTheInitialWindow() async throws {
+        var session = BrowserSession.preview
+        session.defaultSpaceID = session.spaces[0].id
+        let harness = try BrowserStoredSessionHarness(session: session)
+        harness.core.engines.register(WebKitEngineBinding(), isDefault: true)
+        let launched = makeCoordinator(over: harness.store)
+        let main = try XCTUnwrap(launched.model(for: .initial))
+        let second = try XCTUnwrap(launched.model(for: .normal(sourceWindowID: main.id)))
+        let space = try XCTUnwrap(harness.store.session.spaces.last)
+        let tab = try XCTUnwrap(space.tabs.last)
+        XCTAssertTrue(second.browser.activateSessionTab(tab.id, in: space.id))
+
+        let relaunched = try await harness.relaunch()
+        relaunched.core.engines.register(WebKitEngineBinding(), isDefault: true)
+        let coordinator = makeCoordinator(over: relaunched.store)
+        let center = NotificationCenter()
+        let restoration = BrowserMacWindowRestoration(center: center)
+        let restoredScene = SceneRequest()
+        let initialScene = SceneRequest()
+        let restoring = Task { await restoration.window(presentedBy: { restoredScene.value }, in: coordinator) }
+        let opening = Task { await restoration.window(presentedBy: { initialScene.value }, in: coordinator) }
+        await Task.yield()
+        restoredScene.value = BrowserMacWindowRequest(id: second.id, kind: .normal, sourceWindowID: main.id)
+        center.post(name: NSApplication.didFinishRestoringWindowsNotification, object: nil)
+        let restoredRequest = await restoring.value
+        let initialRequest = await opening.value
+        let restored = try XCTUnwrap(coordinator.model(for: XCTUnwrap(restoredRequest)))
+        let initial = try XCTUnwrap(coordinator.model(for: XCTUnwrap(initialRequest)))
+
+        XCTAssertEqual(restored.id, second.id)
+        XCTAssertEqual(initial.id, .main)
+        XCTAssertEqual(restored.browser.selectedSpaceID, space.id)
+        XCTAssertEqual(restored.browser.selectedTab?.id, tab.id)
+        XCTAssertEqual(initial.browser.selectedSpaceID, session.spaces[0].id)
+        // A scene opened without a request while the initial window is open
+        // presents a window of its own.
+        let anotherRequest = await restoration.window(presentedBy: { nil }, in: coordinator)
+        let another = try XCTUnwrap(anotherRequest)
+        XCTAssertFalse([BrowserWindowID.main, second.id].contains(another.id))
+        XCTAssertFalse(coordinator.model(for: another) === initial)
+    }
+
     private func makeNativeWindow() -> NSWindow {
         let window = NSWindow(
             contentRect: CGRect(x: 100, y: 100, width: 900, height: 600),
             styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         return window
+    }
+
+    private func makeCoordinator(over browser: BrowserStore) -> BrowserMacWindowCoordinator {
+        BrowserMacWindowCoordinator(
+            browser: browser, pages: BrowserPagePool(browser: browser, monitorsMemoryPressure: false),
+            spaceAccess: BrowserSpaceAccessController(), windowLayouts: BrowserWindowLayouts(defaults: nil))
     }
 
     private func makeFixture() -> (browser: BrowserStore, coordinator: BrowserMacWindowCoordinator) {
@@ -244,4 +295,10 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
                 windowLayouts: BrowserWindowLayouts(defaults: nil))
         )
     }
+}
+
+/// The request SwiftUI has handed back to a scene so far.
+@MainActor
+private final class SceneRequest {
+    var value: BrowserMacWindowRequest?
 }

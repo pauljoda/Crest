@@ -7,6 +7,7 @@ struct CrestApp: App {
     @State private var launch = BrowserApplicationLaunch {
         try BrowserMacApplication(pageClosePreparation: BrowserWebKitPageClosePreparer())
     }
+    @State private var windowRestoration = BrowserMacWindowRestoration()
 
     var body: some Scene {
         WindowGroup(
@@ -22,8 +23,20 @@ struct CrestApp: App {
                         BrowserMacOnboardingLaunchGate(
                             coordinator: application.onboardingCoordinator
                         )
+                    } else if let request {
+                        application.browserWindowContent(request)
                     } else {
-                        application.browserWindowContent(request ?? .initial)
+                        // A restored window has no request yet when SwiftUI
+                        // first builds it. Whichever window this scene settles
+                        // on goes back into it, and SwiftUI saves it with the
+                        // window for the next launch.
+                        Color.clear.task {
+                            if let presented = await windowRestoration.window(
+                                presentedBy: { request }, in: application.windowCoordinator)
+                            {
+                                request = presented
+                            }
+                        }
                     }
                 }
                 .task {
