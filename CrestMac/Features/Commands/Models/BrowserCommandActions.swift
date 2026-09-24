@@ -316,12 +316,7 @@ struct BrowserCommandActions {
     }
 
     var contentBlockingActionTitle: LocalizedStringResource {
-        switch browser.selectedSpace?.browsingPreferences.contentBlockingPolicy {
-        case .balanced:
-            "Turn Off Content Blocking in This Space"
-        case .off, nil:
-            "Turn On Balanced Content Blocking in This Space"
-        }
+        ContentBlockingPolicy.switchTitle(for: browser.selectedSpace?.browsingPreferences.contentBlockingPolicy)
     }
 
     // MARK: - Chrome
@@ -407,8 +402,7 @@ struct BrowserCommandActions {
     func toggleContentBlocking() {
         guard let space = browser.selectedSpace else { return }
         var preferences = space.browsingPreferences
-        preferences.contentBlockingPolicy =
-            preferences.contentBlockingPolicy == .balanced ? .off : .balanced
+        preferences.contentBlockingPolicy = preferences.contentBlockingPolicy.switched
         browser.updateBrowsingPreferences(preferences, in: space.id)
         let session = browser.session
         Task { await pages.reconcileContentBlocking(in: session) }

@@ -5,7 +5,7 @@ struct BrowserRuntimeSessionProjection: Equatable, Sendable {
 
     init(session: BrowserSession) {
         var tabIconItems: [BrowserTabIconSessionItem] = []
-        var contentBlockingPolicies: [SpaceID: BrowserContentBlockingPolicy] = [:]
+        var contentBlockingPolicies: [SpaceID: ContentBlockingPolicy] = [:]
         var credentialAccessBySpaceID: [SpaceID: Bool] = [:]
 
         for space in session.spaces {

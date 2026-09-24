@@ -2,7 +2,7 @@ import WebKit
 
 extension BrowserPlatformPage {
     func applyContentBlocking(
-        policy: BrowserContentBlockingPolicy,
+        policy: ContentBlockingPolicy,
         balancedRuleList: WKContentRuleList?,
         activation: BrowserContentRuleListActivation = .onNextNavigation
     ) {

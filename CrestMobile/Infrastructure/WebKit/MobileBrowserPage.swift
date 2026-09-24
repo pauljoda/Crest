@@ -598,7 +598,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     }
 
     func applyContentBlocking(
-        policy: BrowserContentBlockingPolicy,
+        policy: ContentBlockingPolicy,
         balancedRuleLists: [WKContentRuleList],
         activation: BrowserContentRuleListActivation = .onNextNavigation
     ) {

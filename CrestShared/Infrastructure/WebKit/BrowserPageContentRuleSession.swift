@@ -21,12 +21,12 @@ final class BrowserPageContentRuleSession {
     /// explicitly changed protection for this page. Never discard a form just
     /// because the filter lists were updated.
     func apply(
-        policy: BrowserContentBlockingPolicy,
+        policy: ContentBlockingPolicy,
         balancedRuleLists: [WKContentRuleList],
         to webView: WKWebView,
         reloadsImmediately: Bool
     ) {
-        let desired = policy == .balanced ? balancedRuleLists : []
+        let desired = policy.blocksContent ? balancedRuleLists : []
         guard
             ruleLists.count != desired.count
                 || !zip(ruleLists, desired).allSatisfy({ $0 === $1 })

@@ -25,14 +25,14 @@ final class BrowserTransientPageLease {
     @ObservationIgnored private let rebuild: () -> BrowserPlatformPage?
     @ObservationIgnored private let userActivity: () -> Void
     @ObservationIgnored private let onDownloadOnlyNavigation: (() -> Void)?
-    @ObservationIgnored private var contentBlockingPolicy: BrowserContentBlockingPolicy
+    @ObservationIgnored private var contentBlockingPolicy: ContentBlockingPolicy
     @ObservationIgnored private var balancedContentRuleLists: [WKContentRuleList]
     @ObservationIgnored private var isInvalidated = false
 
     init(
         page: BrowserPlatformPage,
         url: URL,
-        contentBlockingPolicy: BrowserContentBlockingPolicy,
+        contentBlockingPolicy: ContentBlockingPolicy,
         balancedContentRuleLists: [WKContentRuleList],
         rebuild: @escaping () -> BrowserPlatformPage?,
         userActivity: @escaping () -> Void,
@@ -90,7 +90,7 @@ final class BrowserTransientPageLease {
     }
 
     func applyContentBlocking(
-        policy: BrowserContentBlockingPolicy,
+        policy: ContentBlockingPolicy,
         balancedRuleLists: [WKContentRuleList]
     ) {
         contentBlockingPolicy = policy

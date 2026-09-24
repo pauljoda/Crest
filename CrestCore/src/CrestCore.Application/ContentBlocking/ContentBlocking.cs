@@ -1,7 +1,4 @@
-using System.Text.Json.Nodes;
-
 using CrestCore.Contracts;
-using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -12,22 +9,9 @@ public sealed class ContentBlocking {
 
     public ContentRuleList Answer(BalancedProtectionRules query) {
         ArgumentNullException.ThrowIfNull(query);
-        return new(BalancedContentBlocking.Identifier, BalancedRuleSource());
+        return ContentBlockingPolicy.Balanced.RuleList()
+            ?? throw new InvalidOperationException("Balanced protection always has a rule list.");
     }
-
-    /// Every listed host and its subdomains, blocked for third-party network
-    /// loads of every resource type but the top-level document.
-    private static string BalancedRuleSource() => new JsonArray(BalancedContentBlocking.BlockedHostSuffixes.Select(host =>
-        (JsonNode)new JsonObject {
-            ["trigger"] = new JsonObject {
-                ["url-filter"] = BalancedContentBlocking.UrlFilter(host),
-                ["url-filter-is-case-sensitive"] = true,
-                ["load-type"] = new JsonArray("third-party"),
-                ["resource-type"] = new JsonArray(BalancedContentBlocking.NetworkResourceTypes
-                    .Select(type => (JsonNode?)JsonValue.Create(type)).ToArray())
-            },
-            ["action"] = new JsonObject { ["type"] = "block" }
-        }).ToArray()).ToJsonString();
 
     #endregion
 }

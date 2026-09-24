@@ -1104,6 +1104,88 @@ struct CapabilityStatus: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `ContentBlockingPolicy`. A member's wire tag is its index in `all`.
+struct ContentBlockingPolicy: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let switchTitle: LocalizedStringResource
+    let identifier: String?
+    let blockedHostSuffixes: [String]
+    let blocksContent: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        switchTitle: LocalizedStringResource,
+        identifier: String?,
+        blockedHostSuffixes: [String],
+        blocksContent: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.switchTitle = switchTitle
+        self.identifier = identifier
+        self.blockedHostSuffixes = blockedHostSuffixes
+        self.blocksContent = blocksContent
+    }
+
+    static let balanced = ContentBlockingPolicy(
+        tag: 0,
+        name: "balanced",
+        title: LocalizedStringResource("Balanced"),
+        switchTitle: LocalizedStringResource("Turn Off Content Blocking in This Space"),
+        identifier: "com.pauldavis.crest.content-blocking.balanced.v2",
+        blockedHostSuffixes: [
+            "doubleclick.net",
+            "googleadservices.com",
+            "googlesyndication.com",
+            "google-analytics.com",
+            "googletagmanager.com",
+            "ads-twitter.com",
+            "analytics.twitter.com",
+            "scorecardresearch.com",
+            "quantserve.com",
+            "hotjar.com",
+            "segment.io",
+            "segment.com",
+            "mixpanel.com",
+            "amplitude.com",
+            "clarity.ms",
+            "nr-data.net",
+            "taboola.com",
+            "outbrain.com",
+            "snap.licdn.com"
+        ],
+        blocksContent: true
+    )
+    static let off = ContentBlockingPolicy(
+        tag: 1,
+        name: "off",
+        title: LocalizedStringResource("Off"),
+        switchTitle: LocalizedStringResource("Turn On Balanced Content Blocking in This Space"),
+        identifier: nil,
+        blockedHostSuffixes: [],
+        blocksContent: false
+    )
+
+    static let all: [ContentBlockingPolicy] = [balanced, off]
+
+    static func named(_ name: String?) -> ContentBlockingPolicy? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ContentBlockingPolicy, rhs: ContentBlockingPolicy) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `CurrentTabCleanup`. A member's wire tag is its index in `all`.
 struct CurrentTabCleanup: Hashable, Sendable {
     let tag: Int

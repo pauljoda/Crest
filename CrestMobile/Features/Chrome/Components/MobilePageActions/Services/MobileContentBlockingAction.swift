@@ -25,8 +25,7 @@ struct MobileContentBlockingAction {
             space.profile.id == assignment.profileID
         else { return false }
         var preferences = space.browsingPreferences
-        preferences.contentBlockingPolicy =
-            preferences.contentBlockingPolicy == .balanced ? .off : .balanced
+        preferences.contentBlockingPolicy = preferences.contentBlockingPolicy.switched
         browser.updateBrowsingPreferences(preferences, in: space.id)
         let committedSession = browser.session
         await reconcile(committedSession)

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserContentBlockingSettingsSection: View {
-    @Binding var policy: BrowserContentBlockingPolicy
+    @Binding var policy: ContentBlockingPolicy
     let errorDescription: String?
 
     var body: some View {
@@ -14,7 +14,7 @@ struct BrowserContentBlockingSettingsSection: View {
             )
             .crestFormFootnote()
 
-            if policy == .balanced, let errorDescription {
+            if policy.blocksContent, let errorDescription {
                 Label(
                     errorDescription,
                     systemImage: "exclamationmark.triangle.fill"
@@ -27,9 +27,9 @@ struct BrowserContentBlockingSettingsSection: View {
 
     private var isEnabled: Binding<Bool> {
         Binding {
-            policy == .balanced
+            policy.blocksContent
         } set: { isEnabled in
-            policy = isEnabled ? .balanced : .off
+            policy = .blocking(isEnabled)
         }
     }
 }

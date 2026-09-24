@@ -65,6 +65,8 @@ extension ArchiveReason: CoreNamedValue {}
 
 extension CapabilityStatus: CoreNamedValue {}
 
+extension ContentBlockingPolicy: CoreNamedValue {}
+
 extension CurrentTabCleanup: CoreNamedValue {}
 
 extension DataRetention: CoreNamedValue {}

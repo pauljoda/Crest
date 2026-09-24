@@ -30,7 +30,7 @@ final class BrowserContentBlockingController {
 
     func reconcile(in session: BrowserSession) async -> BrowserContentBlockingUpdate {
         let state = BrowserContentBlockingSessionState(session: session)
-        if state.policiesBySpaceID.values.contains(.balanced) {
+        if state.policiesBySpaceID.values.contains(where: \.blocksContent) {
             await prepare()
         }
         let update = BrowserContentBlockingUpdate(state: state, previousState: reconciledState)
@@ -38,7 +38,7 @@ final class BrowserContentBlockingController {
         return update
     }
 
-    func ruleLists(for policy: BrowserContentBlockingPolicy) -> [WKContentRuleList] {
-        policy == .balanced ? balancedRuleLists ?? [] : []
+    func ruleLists(for policy: ContentBlockingPolicy) -> [WKContentRuleList] {
+        policy.blocksContent ? balancedRuleLists ?? [] : []
     }
 }

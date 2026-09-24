@@ -93,7 +93,7 @@ extension BrowserPage {
     var geolocationCoordinator: BrowserGeolocationCoordinator? { webKitAdapter?.geolocationCoordinator }
 
     func applyContentBlocking(
-        policy: BrowserContentBlockingPolicy,
+        policy: ContentBlockingPolicy,
         balancedRuleLists: [WKContentRuleList],
         activation: BrowserContentRuleListActivation = .onNextNavigation
     ) {

@@ -28,9 +28,10 @@ public sealed class AppSearchTests {
     public void BalancedProtectionBlocksThirdPartyLoadsFromEveryListedHostAndItsSubdomains() {
         using var app = new AppClient();
         var list = app.Ask(new BalancedProtectionRules(), ContractCodec.ReadContentRuleList);
-        Assert.Equal(BalancedContentBlocking.Identifier, list.Identifier);
+        Assert.Equal("com.pauldavis.crest.content-blocking.balanced.v2", list.Identifier);
         var rules = JsonNode.Parse(list.Source)!.AsArray();
-        Assert.Equal(BalancedContentBlocking.BlockedHostSuffixes.Count, rules.Count);
+        Assert.Equal(ContentBlockingPolicy.Balanced.BlockedHostSuffixes.Count, rules.Count);
+        Assert.Null(ContentBlockingPolicy.Off.RuleList());
         var trigger = rules[0]!["trigger"]!;
         Assert.Equal(@"^[^:]+://+([^:/]+\.)?doubleclick\.net[:/]", trigger["url-filter"]!.GetValue<string>());
         Assert.Equal(["third-party"], trigger["load-type"]!.AsArray().Select(value => value!.GetValue<string>()));

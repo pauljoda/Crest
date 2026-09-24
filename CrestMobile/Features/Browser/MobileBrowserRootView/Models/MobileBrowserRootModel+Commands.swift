@@ -48,10 +48,8 @@ extension MobileBrowserRootModel {
             canToggleTranslationToolbar: usesPageToolbars && pageActions?.isAvailable == true
                 && pageActions?.readerModeState.isActive != true,
             isTranslationToolbarVisible: pageActions?.activePage?.translation.showsToolbar == true,
-            contentBlockingActionTitle: MobileContentBlockingActionTitle.resolve(
-                policy: browser.selectedSpace?.browsingPreferences
-                    .contentBlockingPolicy
-            ),
+            contentBlockingActionTitle: ContentBlockingPolicy.switchTitle(
+                for: browser.selectedSpace?.browsingPreferences.contentBlockingPolicy),
             openNewTab: openNewTab,
             togglePrivateBrowsing: togglePrivateBrowsing,
             openLocation: openLocation,

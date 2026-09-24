@@ -2229,6 +2229,10 @@
     "retention-choice-sets": {
       "category": "internal",
       "message": "Tab cleanup, data retention and Quick Window archive choices carry their own lifetimes and titles."
+    },
+    "content-blocking-policy-set": {
+      "category": "internal",
+      "message": "Content-blocking policies carry their own rules and titles."
     }
   }
 }

@@ -1,7 +1,7 @@
 struct BrowserContentBlockingSessionState: Equatable, Sendable {
-    let policiesBySpaceID: [SpaceID: BrowserContentBlockingPolicy]
+    let policiesBySpaceID: [SpaceID: ContentBlockingPolicy]
 
-    init(policiesBySpaceID: [SpaceID: BrowserContentBlockingPolicy]) {
+    init(policiesBySpaceID: [SpaceID: ContentBlockingPolicy]) {
         self.policiesBySpaceID = policiesBySpaceID
     }
 

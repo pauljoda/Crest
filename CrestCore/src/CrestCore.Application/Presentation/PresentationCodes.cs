@@ -6,8 +6,8 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// Wire spellings for the page presentation, content-blocking and branding
-/// policy operations. They match the native presentation models' case names.
+/// Wire spellings for the page presentation and branding policy operations.
+/// They match the native presentation models' case names.
 internal static class PresentationCodes {
     #region Actions - Decoding
 

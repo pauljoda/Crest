@@ -58,6 +58,7 @@ public sealed class StoredFormatTests {
         Assert.Equal(["oneDay", "oneWeek", "thirtyDays", "ninetyDays", "oneYear", "forever"], DataRetention.All.Select(retention => retention.Name));
         Assert.Equal(["after1Hour", "after6Hours", "after12Hours", "after24Hours", "never"],
             QuickWindowArchivePolicy.All.Select(policy => policy.Name));
+        Assert.Equal(["balanced", "off"], ContentBlockingPolicy.All.Select(policy => policy.Name));
     }
 
     [Theory]

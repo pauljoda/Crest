@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x43, 0xb6, 0x6c, 0x47, 0xa0, 0x96, 0x0d, 0x92, 0x5a, 0xd5, 0x58, 0xb9, 0xe9, 0x38, 0x1c, 0x97, 0xe5, 0x50, 0x8e, 0x88, 0xce, 0x78, 0xbf, 0x67, 0xe6, 0x5e, 0x03, 0x1a, 0x8a, 0x6d, 0x1e, 0x2f
+        0x23, 0xa7, 0x95, 0x86, 0xae, 0x65, 0xac, 0xc7, 0x49, 0x0e, 0x6a, 0x4e, 0xd7, 0xce, 0x17, 0x94, 0xfc, 0x3c, 0x46, 0xe7, 0x44, 0xc5, 0x36, 0x67, 0xc1, 0x6f, 0x6d, 0xc2, 0x68, 0x44, 0xc0, 0xb2
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2745,6 +2745,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(CapabilityStatus.All, value));
+    }
+
+    public static ContentBlockingPolicy ReadContentBlockingPolicy(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ContentBlockingPolicy.All[reader.ReadEnum(ContentBlockingPolicy.All.Count)];
+    }
+
+    public static void WriteContentBlockingPolicy(WireWriter writer, ContentBlockingPolicy value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ContentBlockingPolicy.All, value));
     }
 
     public static CurrentTabCleanup ReadCurrentTabCleanup(WireReader reader) {

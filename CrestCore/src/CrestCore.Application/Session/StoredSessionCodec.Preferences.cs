@@ -9,9 +9,6 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    private static readonly StoredSpellings<ContentBlockingPolicy> ContentBlockingPolicies = new([
-        (ContentBlockingPolicy.Balanced, "balanced"), (ContentBlockingPolicy.Off, "off")
-    ]);
     private static readonly StoredSpellings<StartupBehavior> StartupBehaviors = new([
         (StartupBehavior.ShowStartPage, "showStartPage"), (StartupBehavior.LastActiveTab, "lastActiveTab")
     ]);
@@ -44,7 +41,7 @@ internal static partial class StoredSessionCodec {
                 ?? SearchProvider.Google.Name,
             Items(value[Key.CustomSearchProviders]).OfType<JsonObject>().Select(CustomSearchProvider).OfType<CustomSearchProvider>().ToArray(),
             TolerantFlag(value[Key.SearchSuggestionsEnabled]) ?? false, cleanup,
-            ContentBlockingPolicies.Parse(TolerantText(value[Key.ContentBlockingPolicy])) ?? ContentBlockingPolicy.Balanced,
+            ContentBlockingPolicy.Named(TolerantText(value[Key.ContentBlockingPolicy])) ?? ContentBlockingPolicy.Balanced,
             new(Kept(Key.History), Kept(Key.Archive), Kept(Key.Downloads)));
     }
 
@@ -65,7 +62,7 @@ internal static partial class StoredSessionCodec {
         }).ToArray()),
         [Key.SearchSuggestionsEnabled] = preferences.SearchSuggestionsEnabled,
         [Key.CurrentTabCleanupPolicy] = preferences.CurrentTabCleanup.Name,
-        [Key.ContentBlockingPolicy] = ContentBlockingPolicies.Name(preferences.ContentBlocking),
+        [Key.ContentBlockingPolicy] = preferences.ContentBlocking.Name,
         [Key.DataRetention] = new JsonObject {
             [Key.History] = preferences.DataRetention.History.Name,
             [Key.Archive] = preferences.DataRetention.Archive.Name,

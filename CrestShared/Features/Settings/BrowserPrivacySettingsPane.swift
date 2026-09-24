@@ -113,7 +113,7 @@ struct BrowserPrivacySettingsPane: View {
         BrowserEngineRegistration.current.supports(.contentBlocking)
     }
 
-    private var contentBlockingPolicyBinding: Binding<BrowserContentBlockingPolicy> {
+    private var contentBlockingPolicyBinding: Binding<ContentBlockingPolicy> {
         browser.browsingPreferenceBinding(
             \.contentBlockingPolicy,
             in: selectedSpaceID,

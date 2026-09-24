@@ -272,7 +272,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     func adoptEngineCreatedPage(_ token: String) -> Bool { false }
 
     func applyContentBlocking(
-        policy: BrowserContentBlockingPolicy,
+        policy: ContentBlockingPolicy,
         balancedRuleLists: [WKContentRuleList],
         reloadsImmediately: Bool
     ) {

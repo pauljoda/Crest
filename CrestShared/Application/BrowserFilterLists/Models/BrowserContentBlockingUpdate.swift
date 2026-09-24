@@ -17,7 +17,7 @@ struct BrowserContentBlockingUpdate {
         )
     }
 
-    func policy(for spaceID: SpaceID) -> BrowserContentBlockingPolicy {
+    func policy(for spaceID: SpaceID) -> ContentBlockingPolicy {
         state.policiesBySpaceID[spaceID] ?? .off
     }
 
