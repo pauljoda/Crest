@@ -90,6 +90,48 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
         XCTAssertEqual(page.backHistory.map(\.url), page.webView.backForwardList.backList.reversed().map(\.url))
     }
 
+    func testForwardReturnsToThePageAScriptOpenedAfterGoingBack() async throws {
+        // WebKit stops listing an entry a script created without user
+        // activation once the page leaves it, and its canGoForward follows.
+        let server = try BrowserPrivacyHTTPServer()
+        server.overrideResponse = { request in
+            let script =
+                request.path == "/start"
+                ? """
+                <script>
+                if (!sessionStorage.getItem('left')) {
+                  sessionStorage.setItem('left', '1');
+                  setTimeout(() => { location.href = '/next'; }, 100);
+                }
+                </script>
+                """ : ""
+            return (
+                "200 OK", "Content-Type: text/html\r\n",
+                Data("<html><title>\(request.path)</title><body>\(script)</body></html>".utf8)
+            )
+        }
+        try await server.start()
+        defer { server.stop() }
+        let page = try makePage()
+        defer { page.release(keepingState: false) }
+        let start = server.url(host: "127.0.0.1", path: "/start")
+        let next = server.url(host: "127.0.0.1", path: "/next")
+        page.load(start)
+        try await waitForNavigation { page.live.documentURL == next && !page.live.isLoading }
+
+        page.goBack()
+        try await waitForNavigation { page.live.documentURL == start && !page.live.isLoading }
+        // The core hears the history with the page's next snapshot, which can
+        // be a turn after the address.
+        try await waitForNavigation { page.live.canGoForward }
+        XCTAssertEqual(page.forwardHistory.map(\.url), [next])
+
+        page.goForward()
+        try await waitForNavigation { page.live.documentURL == next && !page.live.isLoading }
+        try await waitForNavigation { !page.live.canGoForward }
+        XCTAssertEqual(page.backHistory.map(\.url), [start])
+    }
+
     private func waitForNavigation(_ condition: () -> Bool) async throws {
         let deadline = Date().addingTimeInterval(10)
         while !condition(), Date() < deadline {
@@ -141,8 +183,6 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
 
         XCTAssertFalse(page.isAppInitiated(replay))
     }
-
-
 
     private func makePage() throws -> BrowserPage {
         let tab = BrowserTab.startPage()

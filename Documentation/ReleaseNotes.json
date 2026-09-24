@@ -2353,6 +2353,10 @@
     "page-copies-from-core": {
       "category": "internal",
       "message": "Copies of a tab, and Quick Window or Peek pages that are kept or archived, start from what the core says the page shows."
+    },
+    "forward-after-script-page": {
+      "category": "fixed",
+      "message": "Forward works again after going back from a page that a site's script opened on its own."
     }
   }
 }

@@ -59,9 +59,9 @@ extension MobileBrowserPage: WKNavigationDelegate {
         if let url = webView.url { reporter.committed(url) }
         mediaSessionCoordinator?.didCommitNavigation()
         committedNavigationCount &+= 1
-        // Supplements belong to the current document. A document replacement
-        // can discard an item that WebKit omits from its public history lists.
-        navigationHistory = BrowserPageNavigationHistory()
+        // A new document drops the supplements that described the old one; a
+        // return to history keeps the entries the person may go forward to.
+        navigationHistory.documentDidCommit(in: webView.backForwardList)
         refreshNavigationState()
         downloadCenter.resetAutomaticDownloadSequence(for: pageEngine)
     }
@@ -141,11 +141,14 @@ extension MobileBrowserPage: WKNavigationDelegate {
                 || BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks)
         // A modified click keeps its initiator's referrer through a staged
         // request; a saved-site Peek starts afresh, as it does on Chromium.
-        let engineNavigation = decision == .peekModifier
+        let engineNavigation =
+            decision == .peekModifier
             ? BrowserWebKitPageEngine.stageLink(navigationAction.request, from: webView) : nil
-        if let request = decision.peekRequest(destinationURL: navigationAction.request.url,
+        if let request = decision.peekRequest(
+            destinationURL: navigationAction.request.url,
             context: navigationContext, sourcePresentation: sourcePresentation,
-            engineNavigation: engineNavigation) {
+            engineNavigation: engineNavigation)
+        {
             openPeek(request)
             decisionHandler(.cancel)
             return
