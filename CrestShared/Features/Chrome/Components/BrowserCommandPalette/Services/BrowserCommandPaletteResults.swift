@@ -165,7 +165,7 @@ extension BrowserCommandPaletteResults {
 extension BrowserCommandPaletteResults {
     static func actionResults(
         query: BrowserCommandPaletteQuery,
-        commands: [BrowserShortcutCommand]
+        commands: [ShortcutCommand]
     ) -> [BrowserCommandPaletteResult] {
         let available = commands.filter { !excludedCommands.contains($0) }
         guard !available.isEmpty else { return [] }
@@ -180,22 +180,22 @@ extension BrowserCommandPaletteResults {
         ) { command in
             BrowserCommandPaletteText.score(
                 query,
-                title: command.title,
-                detail: command.section.title
+                title: command.title(locale: .current),
+                detail: command.section.title(locale: .current)
             )
         }
         .map(actionResult)
     }
 
     static func actionResult(
-        _ command: BrowserShortcutCommand
+        _ command: ShortcutCommand
     ) -> BrowserCommandPaletteResult {
         BrowserCommandPaletteResult(
             section: .actions,
-            id: "command-\(command.rawValue)",
-            title: command.title,
-            subtitle: command.section.title,
-            symbol: command.paletteSymbol,
+            id: "command-\(command.name)",
+            title: command.title(locale: .current),
+            subtitle: command.section.title(locale: .current),
+            symbol: command.symbol,
             trailing: "",
             target: .command(command)
         )
@@ -205,7 +205,7 @@ extension BrowserCommandPaletteResults {
 // MARK: - Commands
 
 extension BrowserCommandPaletteResults {
-    static let restingCommands: [BrowserShortcutCommand] = [
+    static let restingCommands: [ShortcutCommand] = [
         .newWindow,
         .reopenClosedTab,
         .showHistory,
@@ -213,7 +213,7 @@ extension BrowserCommandPaletteResults {
         .toggleSidebar,
     ]
 
-    static let excludedCommands: Set<BrowserShortcutCommand> = [
+    static let excludedCommands: Set<ShortcutCommand> = [
         .newTab,
         .openLocation,
     ]

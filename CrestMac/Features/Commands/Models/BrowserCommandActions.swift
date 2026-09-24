@@ -27,7 +27,7 @@ struct BrowserCommandActions {
     /// Numbered tab and Space selection are left out: they are chords, not
     /// things anyone searches for by name, and the launcher already lists the
     /// tabs themselves.
-    static let paletteCommands: [BrowserShortcutCommand] = [
+    static let paletteCommands: [ShortcutCommand] = [
         .newWindow,
         .openFile,
         .newBlankWindow,
@@ -88,115 +88,115 @@ struct BrowserCommandActions {
         )
     }
 
-    func perform(_ command: BrowserShortcutCommand) {
-        guard canPerform(command) else { return }
-        switch command {
-        case .newWindow: openNewWindow()
-        case .newBlankWindow: openBlankWindow()
-        case .newTab: openNewTab()
-        case .openLocation: openLocation()
-        case .openFile: openFile()
-        case .newQuickWindow: openQuickWindow()
-        case .newPrivateWindow: openPrivateWindow()
-        case .closeTabOrWindow: closeTabOrWindow()
-        case .closeWindow: closeKeyWindow()
-        case .back: pages.goBack()
-        case .forward: pages.goForward()
-        case .reloadPage: pages.reloadOrStop(in: browser.presented)
-        case .stopLoading: pages.stopLoading()
-        case .reloadFromOrigin: pages.reloadFromOrigin(in: browser.presented)
-        case .toggleSelectedTabPinned: toggleSelectedTabPinned()
-        case .duplicateTab: duplicateSelectedTab()
-        case .reopenClosedTab: reopenClosedTab()
-        case .clearUnpinnedTabs: cleanupCurrentTabs()
-        case .archiveTab: archiveSelectedTab()
-        case .previousTab: selectPreviousTab()
-        case .nextTab: selectNextTab()
-        case .mostRecentTab: selectMostRecentTab()
-        case .splitWithNextTab: splitWithNextTab()
-        case .focusNextSplitCard: focusAdjacentSplitCard(offset: 1)
-        case .focusPreviousSplitCard: focusAdjacentSplitCard(offset: -1)
-        case .removeTabFromSplit: removeSelectedTabFromSplit()
-        case .separateSplitTabs: separateSplitTabs()
-        case .moveSplitCardLeft: moveFocusedSplitCard(.left)
-        case .moveSplitCardRight: moveFocusedSplitCard(.right)
-        case .previousSpace: selectPreviousSpace()
-        case .nextSpace: selectNextSpace()
-        case .toggleReaderMode: pages.toggleReaderMode()
-        case .toggleContentBlocking: toggleContentBlocking()
-        case .findInPage: pages.presentFind()
-        case .zoomIn: zoomIn()
-        case .zoomOut: zoomOut()
-        case .actualSize: resetZoom()
-        case .copyPageLink: copyPageLink()
-        case .copyPageLinkAsMarkdown: copyPageLinkAsMarkdown()
-        case .sharePage: pages.sharePage()
-        case .exportPDF: pages.exportPDF()
-        case .saveWebArchive: pages.exportWebArchive()
-        case .printPage: pages.printPage()
-        case .toggleSidebar: toggleSidebar()
-        case .showHistory: chrome.presentHistory()
-        case .showArchive: presentArchive()
-        case .showDownloads: presentDownloads()
-        case .showWebInspector: pages.showWebInspector()
-        case .toggleTranslationToolbar:
-            guard let page = pages.activePage, !page.readerModeState.isActive else { return }
-            page.translation.toggleToolbarVisibility()
-        case .toggleDeveloperToolbar:
-            if let page = pages.activePage {
-                page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)
-            }
-        case .selectTab1, .selectTab2, .selectTab3, .selectTab4, .selectTab5,
-            .selectTab6, .selectTab7, .selectTab8, .selectTab9,
-            .selectSpace1, .selectSpace2, .selectSpace3, .selectSpace4,
-            .selectSpace5, .selectSpace6, .selectSpace7, .selectSpace8,
-            .selectSpace9:
-            switch numberedSelections[command] {
-            case .tab(let index): selectTab(at: index)
-            case .space(let index): selectSpace(at: index)
-            case nil: break
-            }
-        }
+    func perform(_ command: ShortcutCommand) {
+        let route = route(command)
+        guard route.isAvailable else { return }
+        route.run()
     }
 
     /// Availability belongs to the same command route used by menus and keys.
     /// In particular, a disabled split shortcut must leave text selection alone.
-    func canPerform(_ command: BrowserShortcutCommand) -> Bool {
-        if command.tabNumber != nil || command.spaceNumber != nil { return numberedSelections[command] != nil }
-        switch command {
-        case .newBlankWindow: return !browser.isPrivateBrowsing && browser.selectedSpace != nil
-        case .newQuickWindow, .showArchive: return browser.selectedSpace != nil
-        case .showDownloads: return supportsEngineCapability(.downloads)
-        case .toggleContentBlocking:
-            return browser.selectedSpace != nil && supportsEngineCapability(.contentBlocking)
+    func canPerform(_ command: ShortcutCommand) -> Bool {
+        route(command).isAvailable
+    }
+
+    /// What a command does in the Mac shell, and whether it can do it now.
+    private struct Route {
+        var isAvailable = true
+        let run: @MainActor () -> Void
+    }
+
+    /// The one place that turns each command into what the Mac shell does.
+    private func route(_ command: ShortcutCommand) -> Route {
+        switch command.kind {
+        case .newWindow: Route(run: openNewWindow)
+        case .newBlankWindow:
+            Route(isAvailable: !browser.isPrivateBrowsing && browser.selectedSpace != nil, run: openBlankWindow)
+        case .newTab: Route(run: openNewTab)
+        case .openLocation: Route(run: openLocation)
         case .openFile:
-            return browser.selectedSpace != nil && supportsEngineCapability(.localFiles)
-        case .back: return pages.canGoBack
-        case .forward: return pages.canGoForward
-        case .reloadPage, .reloadFromOrigin: return canReloadSelectedTab
-        case .stopLoading: return pages.isLoading
-        case .toggleSelectedTabPinned: return browser.selectedTab != nil
-        case .duplicateTab: return canDuplicateSelectedTab
-        case .reopenClosedTab: return browser.selectedSpace?.archivedTabs.isEmpty == false
-        case .archiveTab: return canArchiveSelectedTab
-        case .toggleReaderMode: return supportsPageCapability(.reader) && pages.readerModeState.canToggle
-        case .toggleTranslationToolbar: return supportsPageCapability(.translation) && !pages.readerModeState.isActive
-        case .zoomIn, .zoomOut, .actualSize:
-            return supportsPageCapability(.zoom) && pages.activePage?.developerViewport == nil
-        case .exportPDF: return supportsPageCapability(.pdf)
-        case .saveWebArchive: return supportsPageCapability(.webArchive)
-        case .printPage: return supportsPageCapability(.print)
-        case .showWebInspector: return supportsPageCapability(.inspector)
-        case .findInPage: return supportsPageCapability(.find)
-        case .copyPageLink, .copyPageLinkAsMarkdown, .sharePage, .toggleDeveloperToolbar:
-            return pages.hasActivePage
-        case .splitWithNextTab: return canSplitWithNextTab
-        case .focusNextSplitCard, .focusPreviousSplitCard, .removeTabFromSplit, .separateSplitTabs:
-            return isSelectedTabInSplit
-        case .moveSplitCardLeft: return canMoveFocusedSplitCard(.left)
-        case .moveSplitCardRight: return canMoveFocusedSplitCard(.right)
-        default: return true
+            Route(
+                isAvailable: browser.selectedSpace != nil && supportsEngineCapability(.localFiles), run: openFile)
+        case .newQuickWindow: Route(isAvailable: browser.selectedSpace != nil, run: openQuickWindow)
+        case .newPrivateWindow: Route(run: openPrivateWindow)
+        case .closeTabOrWindow: Route(run: closeTabOrWindow)
+        case .closeWindow: Route(run: closeKeyWindow)
+        case .back: Route(isAvailable: pages.canGoBack, run: pages.goBack)
+        case .forward: Route(isAvailable: pages.canGoForward, run: pages.goForward)
+        case .reloadPage:
+            Route(isAvailable: canReloadSelectedTab) { pages.reloadOrStop(in: browser.presented) }
+        case .stopLoading: Route(isAvailable: pages.isLoading, run: pages.stopLoading)
+        case .reloadFromOrigin:
+            Route(isAvailable: canReloadSelectedTab) { pages.reloadFromOrigin(in: browser.presented) }
+        case .toggleSelectedTabPinned:
+            Route(isAvailable: browser.selectedTab != nil, run: toggleSelectedTabPinned)
+        case .duplicateTab: Route(isAvailable: canDuplicateSelectedTab, run: duplicateSelectedTab)
+        case .reopenClosedTab:
+            Route(isAvailable: browser.selectedSpace?.archivedTabs.isEmpty == false, run: reopenClosedTab)
+        case .clearUnpinnedTabs: Route(run: cleanupCurrentTabs)
+        case .archiveTab: Route(isAvailable: canArchiveSelectedTab, run: archiveSelectedTab)
+        case .previousTab: Route(run: selectPreviousTab)
+        case .nextTab: Route(run: selectNextTab)
+        case .mostRecentTab: Route(run: selectMostRecentTab)
+        case .splitWithNextTab: Route(isAvailable: canSplitWithNextTab, run: splitWithNextTab)
+        case .focusNextSplitCard:
+            Route(isAvailable: isSelectedTabInSplit) { focusAdjacentSplitCard(offset: 1) }
+        case .focusPreviousSplitCard:
+            Route(isAvailable: isSelectedTabInSplit) { focusAdjacentSplitCard(offset: -1) }
+        case .removeTabFromSplit: Route(isAvailable: isSelectedTabInSplit, run: removeSelectedTabFromSplit)
+        case .separateSplitTabs: Route(isAvailable: isSelectedTabInSplit, run: separateSplitTabs)
+        case .moveSplitCardLeft:
+            Route(isAvailable: canMoveFocusedSplitCard(.left)) { moveFocusedSplitCard(.left) }
+        case .moveSplitCardRight:
+            Route(isAvailable: canMoveFocusedSplitCard(.right)) { moveFocusedSplitCard(.right) }
+        case .previousSpace: Route(run: selectPreviousSpace)
+        case .nextSpace: Route(run: selectNextSpace)
+        case .toggleReaderMode:
+            Route(
+                isAvailable: supportsPageCapability(.reader) && pages.readerModeState.canToggle,
+                run: pages.toggleReaderMode)
+        case .toggleContentBlocking:
+            Route(
+                isAvailable: browser.selectedSpace != nil && supportsEngineCapability(.contentBlocking),
+                run: toggleContentBlocking)
+        case .findInPage: Route(isAvailable: supportsPageCapability(.find), run: pages.presentFind)
+        case .zoomIn: Route(isAvailable: canZoom, run: zoomIn)
+        case .zoomOut: Route(isAvailable: canZoom, run: zoomOut)
+        case .actualSize: Route(isAvailable: canZoom, run: resetZoom)
+        case .copyPageLink: Route(isAvailable: pages.hasActivePage, run: copyPageLink)
+        case .copyPageLinkAsMarkdown: Route(isAvailable: pages.hasActivePage, run: copyPageLinkAsMarkdown)
+        case .sharePage: Route(isAvailable: pages.hasActivePage, run: pages.sharePage)
+        case .exportPDF: Route(isAvailable: supportsPageCapability(.pdf), run: pages.exportPDF)
+        case .saveWebArchive: Route(isAvailable: supportsPageCapability(.webArchive), run: pages.exportWebArchive)
+        case .printPage: Route(isAvailable: supportsPageCapability(.print), run: pages.printPage)
+        case .toggleSidebar: Route(run: toggleSidebar)
+        case .showHistory: Route(run: chrome.presentHistory)
+        case .showArchive: Route(isAvailable: browser.selectedSpace != nil, run: presentArchive)
+        case .showDownloads: Route(isAvailable: supportsEngineCapability(.downloads), run: presentDownloads)
+        case .showWebInspector:
+            Route(isAvailable: supportsPageCapability(.inspector), run: pages.showWebInspector)
+        case .toggleTranslationToolbar:
+            Route(isAvailable: supportsPageCapability(.translation) && !pages.readerModeState.isActive) {
+                guard let page = pages.activePage, !page.readerModeState.isActive else { return }
+                page.translation.toggleToolbarVisibility()
+            }
+        case .toggleDeveloperToolbar:
+            Route(isAvailable: pages.hasActivePage) {
+                if let page = pages.activePage {
+                    page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)
+                }
+            }
+        case .selectNumbered:
+            switch numberedSelections[command] {
+            case .tab(let index): Route { selectTab(at: index) }
+            case .space(let index): Route { selectSpace(at: index) }
+            case nil: Route(isAvailable: false) {}
+            }
         }
+    }
+
+    private var canZoom: Bool {
+        supportsPageCapability(.zoom) && pages.activePage?.developerViewport == nil
     }
 
     private func supportsPageCapability(_ capability: BrowserEngineCapability) -> Bool {
@@ -213,7 +213,7 @@ struct BrowserCommandActions {
     }
 
     /// Where each numbered selection command leads right now, per the core.
-    var numberedSelections: [BrowserShortcutCommand: BrowserNumberedSelection] {
+    var numberedSelections: [ShortcutCommand: BrowserNumberedSelection] {
         BrowserCorePolicy.numberedSelections(tabCount: orderedTabs.count, spaceCount: browser.session.spaces.count)
     }
 

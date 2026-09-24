@@ -41,24 +41,24 @@ final class BrowserShortcutSettingsModel {
     }
 
     func shortcut(
-        for command: BrowserShortcutCommand
+        for command: ShortcutCommand
     ) -> BrowserShortcut? {
         shortcuts.shortcut(for: command)
     }
 
-    func isCustomized(_ command: BrowserShortcutCommand) -> Bool {
+    func isCustomized(_ command: ShortcutCommand) -> Bool {
         shortcuts.isCustomized(command)
     }
 
     var commandGroups: [BrowserShortcutCommandGroup] {
-        let matches = BrowserShortcutCommand.userFacingCases.filter {
+        let matches = ShortcutCommand.offered.filter {
             searchProvider.matches(
                 $0,
                 currentShortcut: shortcuts.shortcut(for: $0),
                 query: searchText
             )
         }
-        return BrowserShortcutSection.allCases.compactMap { section in
+        return ShortcutSection.all.compactMap { section in
             let commands = matches.filter { $0.section == section }
             guard !commands.isEmpty else { return nil }
             return BrowserShortcutCommandGroup(
@@ -76,7 +76,7 @@ final class BrowserShortcutSettingsModel {
 
     func record(
         _ shortcut: BrowserShortcut?,
-        for command: BrowserShortcutCommand
+        for command: ShortcutCommand
     ) {
         guard let shortcut else {
             shortcuts.clearShortcut(for: command)
@@ -113,7 +113,7 @@ final class BrowserShortcutSettingsModel {
         pendingConflict = nil
     }
 
-    func reset(_ command: BrowserShortcutCommand) {
+    func reset(_ command: ShortcutCommand) {
         shortcuts.reset(command)
         validationIssue = nil
     }

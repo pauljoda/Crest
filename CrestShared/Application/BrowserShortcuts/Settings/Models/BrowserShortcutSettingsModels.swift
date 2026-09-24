@@ -1,20 +1,20 @@
 struct BrowserShortcutCommandGroup: Equatable, Identifiable, Sendable {
-    let section: BrowserShortcutSection
-    let commands: [BrowserShortcutCommand]
+    let section: ShortcutSection
+    let commands: [ShortcutCommand]
 
-    var id: BrowserShortcutSection { section }
+    var id: ShortcutSection { section }
 }
 
 struct BrowserShortcutPendingConflict: Equatable, Sendable {
-    let command: BrowserShortcutCommand
+    let command: ShortcutCommand
     let shortcut: BrowserShortcut
-    let conflictingCommands: [BrowserShortcutCommand]
+    let conflictingCommands: [ShortcutCommand]
 }
 
 enum BrowserShortcutValidationIssue: Equatable, Sendable {
     case invalidShortcut
     case reservedByCrest(
         shortcut: BrowserShortcut,
-        commands: [BrowserShortcutCommand]
+        commands: [ShortcutCommand]
     )
 }

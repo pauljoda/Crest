@@ -10,7 +10,7 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed class ShortcutPolicyTests {
-    /// Every command identity the native layer persists, in its display order.
+    /// Every command name persisted overrides are keyed by, in display order.
     private static readonly string[] Commands = [
         "newWindow", "newBlankWindow", "newTab", "newQuickWindow", "newPrivateWindow", "closeTabOrWindow", "closeWindow",
         "openLocation", "back", "forward", "reloadPage", "stopLoading", "reloadFromOrigin", "toggleSelectedTabPinned",
@@ -39,27 +39,33 @@ public sealed class ShortcutPolicyTests {
     private static JsonObject Chord(string character, int modifiers) =>
         new() { ["key"] = new JsonObject { ["character"] = character }, ["modifiers"] = modifiers };
 
+    private static ShortcutChord? Default(string command, DevicePlatform platform) =>
+        ShortcutCommand.Named(command)?.DefaultShortcut(platform) is { } fallback ? ShortcutChord.Of(fallback.Keys) : null;
+
+    [Fact]
+    public void EveryCommandKeepsTheNameItsOverridesArePersistedUnder() {
+        Assert.Equal(Commands, ShortcutCommand.All.Select(command => command.Name));
+        Assert.Same(ShortcutCommand.ShowWebInspector, ShortcutCommand.Named("webInspectorInstructions"));
+    }
+
     [Theory]
     [InlineData("desktop")]
     [InlineData("mobile")]
     public void TheDefaultCatalogNeverGivesTwoCommandsOneChord(string platform) {
-        var defaults = Commands.Select(command => ShortcutCatalog.Default(command, DevicePlatform.Named(platform)!))
-            .OfType<ShortcutChord>().ToArray();
+        var defaults = Commands.Select(command => Default(command, DevicePlatform.Named(platform)!)).OfType<ShortcutChord>().ToArray();
         Assert.Equal(defaults.Length, defaults.Distinct().Count());
         Assert.All(defaults, chord => Assert.True(chord.IsValid));
     }
 
     [Fact]
     public void NumberedCommandsDefaultToCommandAndControlDigitsAndTheMacAddsABlankWindow() {
-        Assert.Equal(Key("3", ShortcutChord.Command), ShortcutCatalog.Default("selectTab3", DevicePlatform.Mobile));
-        Assert.Equal(Key("9", ShortcutChord.Control), ShortcutCatalog.Default("selectSpace9", DevicePlatform.Desktop));
-        Assert.Null(ShortcutCatalog.Default("selectTab10", DevicePlatform.Desktop));
-        Assert.Equal(Key("n", ShortcutChord.Command | ShortcutChord.Option),
-            ShortcutCatalog.Default("newBlankWindow", DevicePlatform.Desktop));
-        Assert.Null(ShortcutCatalog.Default("newBlankWindow", DevicePlatform.Mobile));
-        Assert.Equal(Key("n", ShortcutChord.Command | ShortcutChord.Option),
-            ShortcutCatalog.Default("newQuickWindow", DevicePlatform.Mobile));
-        Assert.Null(ShortcutCatalog.Default("duplicateTab", DevicePlatform.Desktop));
+        Assert.Equal(Key("3", ShortcutChord.Command), Default("selectTab3", DevicePlatform.Mobile));
+        Assert.Equal(Key("9", ShortcutChord.Control), Default("selectSpace9", DevicePlatform.Desktop));
+        Assert.Null(Default("selectTab10", DevicePlatform.Desktop));
+        Assert.Equal(Key("n", ShortcutChord.Command | ShortcutChord.Option), Default("newBlankWindow", DevicePlatform.Desktop));
+        Assert.Null(Default("newBlankWindow", DevicePlatform.Mobile));
+        Assert.Equal(Key("n", ShortcutChord.Command | ShortcutChord.Option), Default("newQuickWindow", DevicePlatform.Mobile));
+        Assert.Null(Default("duplicateTab", DevicePlatform.Desktop));
     }
 
     [Fact]

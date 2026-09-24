@@ -1,15 +1,36 @@
 struct BrowserShortcut: Codable, Equatable, Hashable, Sendable {
     let key: BrowserShortcutKey
-    let modifiers: BrowserShortcutModifiers
+    let modifiers: ShortcutModifiers
 
     var isValid: Bool {
         !modifiers.intersection(.supported).isEmpty
     }
 }
 
+extension BrowserShortcut {
+    /// The chord a catalog default names. The catalog spells special keys the
+    /// way `BrowserShortcutSpecialKey` does, and every other key as the one
+    /// character it types.
+    init(_ keys: KeyCombination) {
+        let key: BrowserShortcutKey
+        if keys.isSpecialKey {
+            guard let special = BrowserShortcutSpecialKey(rawValue: keys.key) else {
+                preconditionFailure("The shortcut catalog names an unknown special key \(keys.key)")
+            }
+            key = .special(special)
+        } else {
+            guard keys.key.count == 1, let character = keys.key.first else {
+                preconditionFailure("The shortcut catalog's key \(keys.key) is not one character")
+            }
+            key = .character(character)
+        }
+        self.init(key: key, modifiers: keys.modifiers)
+    }
+}
+
 enum BrowserShortcutAssignmentResult: Equatable, Sendable {
     case assigned
-    case conflict(commands: [BrowserShortcutCommand])
+    case conflict(commands: [ShortcutCommand])
     case invalid
 }
 
@@ -53,15 +74,9 @@ enum BrowserShortcutKey: Codable, Hashable, Sendable {
     }
 }
 
-struct BrowserShortcutModifiers: OptionSet, Codable, Hashable, Sendable {
-    let rawValue: Int
-
-    static let command = BrowserShortcutModifiers(rawValue: 1 << 0)
-    static let option = BrowserShortcutModifiers(rawValue: 1 << 1)
-    static let control = BrowserShortcutModifiers(rawValue: 1 << 2)
-    static let shift = BrowserShortcutModifiers(rawValue: 1 << 3)
-
-    static let supported: BrowserShortcutModifiers = [
+/// A modifier mask persists as its raw bits.
+extension ShortcutModifiers: Codable, Hashable {
+    static let supported: ShortcutModifiers = [
         .command,
         .option,
         .control,
@@ -78,14 +93,8 @@ struct BrowserShortcutSearchDocument: Equatable, Sendable {
     let fields: [String]
 }
 
-enum BrowserShortcutSection: String, CaseIterable, Identifiable, Sendable {
-    case everyday
-    case tabs
-    case spaces
-    case page
-    case view
-
-    var id: Self { self }
+extension ShortcutSection: Identifiable {
+    var id: String { name }
 }
 
 enum BrowserShortcutSpecialKey:

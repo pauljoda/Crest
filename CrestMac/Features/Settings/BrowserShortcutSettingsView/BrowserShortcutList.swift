@@ -22,7 +22,7 @@ struct BrowserShortcutList: View {
                             )
                         }
                     } header: {
-                        Text(group.section.titleResource)
+                        Text(group.section.title)
                     }
                 }
 
@@ -50,7 +50,7 @@ struct BrowserShortcutList: View {
 private struct BrowserShortcutRow: View {
     @Environment(\.locale) private var locale
 
-    let command: BrowserShortcutCommand
+    let command: ShortcutCommand
     let shortcut: BrowserShortcut?
     let isCustomized: Bool
     let record: (BrowserShortcut?) -> Void
@@ -59,7 +59,7 @@ private struct BrowserShortcutRow: View {
 
     var body: some View {
         HStack(spacing: BrowserShortcutSettingsMetrics.rowSpacing) {
-            Text(command.titleResource)
+            Text(command.title)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if isCustomized {
@@ -70,7 +70,7 @@ private struct BrowserShortcutRow: View {
             }
 
             BrowserShortcutRecorder(
-                identifier: command.rawValue,
+                identifier: command.name,
                 title: command.title(locale: locale),
                 shortcut: shortcut,
                 record: record,

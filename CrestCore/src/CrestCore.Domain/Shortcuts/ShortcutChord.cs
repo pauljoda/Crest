@@ -1,5 +1,7 @@
 using System.Text;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// One key chord: a typed character or a named special key, and a modifier
@@ -8,10 +10,10 @@ namespace CrestCore.Domain;
 public sealed record ShortcutChord {
     #region Variables
 
-    public const int Command = 1 << 0;
-    public const int Option = 1 << 1;
-    public const int Control = 1 << 2;
-    public const int Shift = 1 << 3;
+    public const int Command = (int)ShortcutModifiers.Command;
+    public const int Option = (int)ShortcutModifiers.Option;
+    public const int Control = (int)ShortcutModifiers.Control;
+    public const int Shift = (int)ShortcutModifiers.Shift;
     public const int SupportedModifiers = Command | Option | Control | Shift;
     public const int MaximumCharacterLength = 64;
 
@@ -51,6 +53,12 @@ public sealed record ShortcutChord {
         if (character.Length == 0 || character.Length > MaximumCharacterLength)
             throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
         return new(character.Normalize(NormalizationForm.FormC), false, modifiers);
+    }
+
+    /// The chord a catalog default names.
+    public static ShortcutChord Of(KeyCombination keys) {
+        ArgumentNullException.ThrowIfNull(keys);
+        return keys.IsSpecialKey ? Special(keys.Key, (int)keys.Modifiers) : Character(keys.Key, (int)keys.Modifiers);
     }
 
     public static ShortcutChord Special(string key, int modifiers) {

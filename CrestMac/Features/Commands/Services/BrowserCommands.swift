@@ -32,38 +32,38 @@ struct BrowserCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button(
                 "New Window",
-                systemImage: BrowserShortcutCommand.newWindow.paletteSymbol,
+                systemImage: ShortcutCommand.newWindow.symbol,
                 action: actions.openNewWindow
             )
             .keyboardShortcut(shortcut(.newWindow))
             Button(
-                "New Blank Window", systemImage: BrowserShortcutCommand.newBlankWindow.paletteSymbol,
+                "New Blank Window", systemImage: ShortcutCommand.newBlankWindow.symbol,
                 action: actions.openBlankWindow
             )
             .keyboardShortcut(shortcut(.newBlankWindow))
             .disabled(commandBrowser.isPrivateBrowsing)
             Button(
                 "New Tab",
-                systemImage: BrowserShortcutCommand.newTab.paletteSymbol,
+                systemImage: ShortcutCommand.newTab.symbol,
                 action: actions.openNewTab
             )
             .keyboardShortcut(shortcut(.newTab))
             Button(
                 "New Quick Window",
-                systemImage: BrowserShortcutCommand.newQuickWindow.paletteSymbol,
+                systemImage: ShortcutCommand.newQuickWindow.symbol,
                 action: actions.openQuickWindow
             )
             .keyboardShortcut(shortcut(.newQuickWindow))
             Button(
                 "New Private Window",
-                systemImage: BrowserShortcutCommand.newPrivateWindow.paletteSymbol,
+                systemImage: ShortcutCommand.newPrivateWindow.symbol,
                 action: actions.openPrivateWindow
             )
             .keyboardShortcut(shortcut(.newPrivateWindow))
             Divider()
             Button(
                 "Open File…",
-                systemImage: BrowserShortcutCommand.openFile.paletteSymbol,
+                systemImage: ShortcutCommand.openFile.symbol,
                 action: actions.openFile
             )
             .keyboardShortcut(shortcut(.openFile))
@@ -71,13 +71,13 @@ struct BrowserCommands: Commands {
             Divider()
             Button(
                 "Close Current Tab or Window",
-                systemImage: BrowserShortcutCommand.closeTabOrWindow.paletteSymbol,
+                systemImage: ShortcutCommand.closeTabOrWindow.symbol,
                 action: closeTabOrWindow
             )
             .keyboardShortcut(shortcut(.closeTabOrWindow))
             Button(
                 "Close Window",
-                systemImage: BrowserShortcutCommand.closeWindow.paletteSymbol,
+                systemImage: ShortcutCommand.closeWindow.symbol,
                 action: actions.closeKeyWindow
             )
             .keyboardShortcut(shortcut(.closeWindow))
@@ -86,28 +86,28 @@ struct BrowserCommands: Commands {
         CommandMenu("Navigate") {
             Button(
                 "Open Location",
-                systemImage: BrowserShortcutCommand.openLocation.paletteSymbol,
+                systemImage: ShortcutCommand.openLocation.symbol,
                 action: actions.openLocation
             )
             .keyboardShortcut(shortcut(.openLocation))
             Divider()
             Button(
                 "Back",
-                systemImage: BrowserShortcutCommand.back.paletteSymbol,
+                systemImage: ShortcutCommand.back.symbol,
                 action: commandPages.goBack
             )
             .keyboardShortcut(shortcut(.back))
             .disabled(!commandPages.canGoBack)
             Button(
                 "Forward",
-                systemImage: BrowserShortcutCommand.forward.paletteSymbol,
+                systemImage: ShortcutCommand.forward.symbol,
                 action: commandPages.goForward
             )
             .keyboardShortcut(shortcut(.forward))
             .disabled(!commandPages.canGoForward)
             Button(
                 "Reload Page",
-                systemImage: BrowserShortcutCommand.reloadPage.paletteSymbol
+                systemImage: ShortcutCommand.reloadPage.symbol
             ) {
                 commandPages.reloadOrStop(in: commandBrowser.presented)
             }
@@ -115,14 +115,14 @@ struct BrowserCommands: Commands {
             .disabled(!actions.canReloadSelectedTab)
             Button(
                 "Stop Loading",
-                systemImage: BrowserShortcutCommand.stopLoading.paletteSymbol,
+                systemImage: ShortcutCommand.stopLoading.symbol,
                 action: commandPages.stopLoading
             )
             .keyboardShortcut(shortcut(.stopLoading))
             .disabled(!commandPages.isLoading)
             Button(
                 "Reload from Origin",
-                systemImage: BrowserShortcutCommand.reloadFromOrigin.paletteSymbol
+                systemImage: ShortcutCommand.reloadFromOrigin.symbol
             ) {
                 commandPages.reloadFromOrigin(in: commandBrowser.presented)
             }
@@ -133,34 +133,34 @@ struct BrowserCommands: Commands {
         CommandMenu("Tabs") {
             Button(
                 "Pin or Unpin Tab",
-                systemImage: BrowserShortcutCommand.toggleSelectedTabPinned.paletteSymbol,
+                systemImage: ShortcutCommand.toggleSelectedTabPinned.symbol,
                 action: actions.toggleSelectedTabPinned
             )
             .keyboardShortcut(shortcut(.toggleSelectedTabPinned))
             .disabled(commandBrowser.selectedTab == nil)
             Button(
                 "Duplicate Tab",
-                systemImage: BrowserShortcutCommand.duplicateTab.paletteSymbol,
+                systemImage: ShortcutCommand.duplicateTab.symbol,
                 action: actions.duplicateSelectedTab
             )
             .keyboardShortcut(shortcut(.duplicateTab))
             .disabled(!actions.canDuplicateSelectedTab)
             Button(
                 "Reopen Closed Tab",
-                systemImage: BrowserShortcutCommand.reopenClosedTab.paletteSymbol,
+                systemImage: ShortcutCommand.reopenClosedTab.symbol,
                 action: actions.reopenClosedTab
             )
             .keyboardShortcut(shortcut(.reopenClosedTab))
             .disabled(commandBrowser.selectedSpace?.archivedTabs.isEmpty != false)
             Button(
                 "Clear Unpinned Tabs",
-                systemImage: BrowserShortcutCommand.clearUnpinnedTabs.paletteSymbol,
+                systemImage: ShortcutCommand.clearUnpinnedTabs.symbol,
                 action: actions.cleanupCurrentTabs
             )
             .keyboardShortcut(shortcut(.clearUnpinnedTabs))
             Button(
                 "Archive Tab",
-                systemImage: BrowserShortcutCommand.archiveTab.paletteSymbol,
+                systemImage: ShortcutCommand.archiveTab.symbol,
                 action: actions.archiveSelectedTab
             )
             .keyboardShortcut(shortcut(.archiveTab))
@@ -168,19 +168,19 @@ struct BrowserCommands: Commands {
             Divider()
             Button(
                 "Previous Tab",
-                systemImage: BrowserShortcutCommand.previousTab.paletteSymbol,
+                systemImage: ShortcutCommand.previousTab.symbol,
                 action: actions.selectPreviousTab
             )
             .keyboardShortcut(shortcut(.previousTab))
             Button(
                 "Next Tab",
-                systemImage: BrowserShortcutCommand.nextTab.paletteSymbol,
+                systemImage: ShortcutCommand.nextTab.symbol,
                 action: actions.selectNextTab
             )
             .keyboardShortcut(shortcut(.nextTab))
             Button(
                 "Most Recent Tab",
-                systemImage: BrowserShortcutCommand.mostRecentTab.paletteSymbol,
+                systemImage: ShortcutCommand.mostRecentTab.symbol,
                 action: actions.selectMostRecentTab
             )
             .keyboardShortcut(shortcut(.mostRecentTab))
@@ -188,14 +188,14 @@ struct BrowserCommands: Commands {
             Divider()
             Button(
                 "Split With Next Tab",
-                systemImage: BrowserShortcutCommand.splitWithNextTab.paletteSymbol,
+                systemImage: ShortcutCommand.splitWithNextTab.symbol,
                 action: actions.splitWithNextTab
             )
             .keyboardShortcut(shortcut(.splitWithNextTab))
             .disabled(!actions.canSplitWithNextTab)
             Button(
                 "Focus Next Split Card",
-                systemImage: BrowserShortcutCommand.focusNextSplitCard.paletteSymbol
+                systemImage: ShortcutCommand.focusNextSplitCard.symbol
             ) {
                 actions.focusAdjacentSplitCard(offset: 1)
             }
@@ -203,7 +203,7 @@ struct BrowserCommands: Commands {
             .disabled(!actions.isSelectedTabInSplit)
             Button(
                 "Focus Previous Split Card",
-                systemImage: BrowserShortcutCommand.focusPreviousSplitCard.paletteSymbol
+                systemImage: ShortcutCommand.focusPreviousSplitCard.symbol
             ) {
                 actions.focusAdjacentSplitCard(offset: -1)
             }
@@ -211,7 +211,7 @@ struct BrowserCommands: Commands {
             .disabled(!actions.isSelectedTabInSplit)
             Button(
                 "Move Split Card Left",
-                systemImage: BrowserShortcutCommand.moveSplitCardLeft.paletteSymbol
+                systemImage: ShortcutCommand.moveSplitCardLeft.symbol
             ) {
                 actions.moveFocusedSplitCard(.left)
             }
@@ -219,7 +219,7 @@ struct BrowserCommands: Commands {
             .disabled(!actions.canMoveFocusedSplitCard(.left))
             Button(
                 "Move Split Card Right",
-                systemImage: BrowserShortcutCommand.moveSplitCardRight.paletteSymbol
+                systemImage: ShortcutCommand.moveSplitCardRight.symbol
             ) {
                 actions.moveFocusedSplitCard(.right)
             }
@@ -227,14 +227,14 @@ struct BrowserCommands: Commands {
             .disabled(!actions.canMoveFocusedSplitCard(.right))
             Button(
                 "Remove Tab From Split",
-                systemImage: BrowserShortcutCommand.removeTabFromSplit.paletteSymbol,
+                systemImage: ShortcutCommand.removeTabFromSplit.symbol,
                 action: actions.removeSelectedTabFromSplit
             )
             .keyboardShortcut(shortcut(.removeTabFromSplit))
             .disabled(!actions.isSelectedTabInSplit)
             Button(
                 "Separate All Tabs",
-                systemImage: BrowserShortcutCommand.separateSplitTabs.paletteSymbol,
+                systemImage: ShortcutCommand.separateSplitTabs.symbol,
                 action: actions.separateSplitTabs
             )
             .keyboardShortcut(shortcut(.separateSplitTabs))
@@ -243,7 +243,7 @@ struct BrowserCommands: Commands {
             Divider()
             let tabSelections = actions.numberedSelections
             ForEach(1...9, id: \.self) { number in
-                let command = BrowserShortcutCommand.tabSelection(number)
+                let command = ShortcutCommand.selecting(.tab, number: number)
                 Button("Select Tab \(number)", systemImage: "\(number).square") {
                     command.map(actions.perform)
                 }
@@ -255,20 +255,20 @@ struct BrowserCommands: Commands {
         CommandMenu("Spaces") {
             Button(
                 "Previous Space",
-                systemImage: BrowserShortcutCommand.previousSpace.paletteSymbol,
+                systemImage: ShortcutCommand.previousSpace.symbol,
                 action: actions.selectPreviousSpace
             )
             .keyboardShortcut(shortcut(.previousSpace))
             Button(
                 "Next Space",
-                systemImage: BrowserShortcutCommand.nextSpace.paletteSymbol,
+                systemImage: ShortcutCommand.nextSpace.symbol,
                 action: actions.selectNextSpace
             )
             .keyboardShortcut(shortcut(.nextSpace))
             Divider()
             let spaceSelections = actions.numberedSelections
             ForEach(1...9, id: \.self) { number in
-                let command = BrowserShortcutCommand.spaceSelection(number)
+                let command = ShortcutCommand.selecting(.space, number: number)
                 Button("Select Space \(number)", systemImage: "\(number).square") {
                     command.map(actions.perform)
                 }
@@ -280,25 +280,25 @@ struct BrowserCommands: Commands {
         CommandMenu("Page") {
             // Features the running engine declares absent are left out of the
             // menu rather than shown permanently dimmed.
-            if BrowserShortcutCommand.toggleTranslationToolbar.isOfferedByCurrentEngine {
+            if ShortcutCommand.toggleTranslationToolbar.isOfferedByCurrentEngine {
                 Button("Translate Page", systemImage: "translate") {
                     commandPages.activePage?.translation.present()
                 }
                 .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
             }
-            if BrowserShortcutCommand.toggleReaderMode.isOfferedByCurrentEngine {
+            if ShortcutCommand.toggleReaderMode.isOfferedByCurrentEngine {
                 Button(
                     commandPages.readerModeActionTitle,
-                    systemImage: BrowserShortcutCommand.toggleReaderMode.paletteSymbol,
+                    systemImage: ShortcutCommand.toggleReaderMode.symbol,
                     action: commandPages.toggleReaderMode
                 )
                 .keyboardShortcut(shortcut(.toggleReaderMode))
                 .disabled(!commandPages.readerModeState.canToggle)
             }
-            if BrowserShortcutCommand.toggleContentBlocking.isOfferedByCurrentEngine {
+            if ShortcutCommand.toggleContentBlocking.isOfferedByCurrentEngine {
                 Button(
                     actions.contentBlockingActionTitle,
-                    systemImage: BrowserShortcutCommand.toggleContentBlocking.paletteSymbol,
+                    systemImage: ShortcutCommand.toggleContentBlocking.symbol,
                     action: actions.toggleContentBlocking
                 )
                 .keyboardShortcut(shortcut(.toggleContentBlocking))
@@ -307,7 +307,7 @@ struct BrowserCommands: Commands {
             Divider()
             Button(
                 "Find in Page",
-                systemImage: BrowserShortcutCommand.findInPage.paletteSymbol,
+                systemImage: ShortcutCommand.findInPage.symbol,
                 action: commandPages.presentFind
             )
             .keyboardShortcut(shortcut(.findInPage))
@@ -315,21 +315,21 @@ struct BrowserCommands: Commands {
             Divider()
             Button(
                 "Zoom In",
-                systemImage: BrowserShortcutCommand.zoomIn.paletteSymbol,
+                systemImage: ShortcutCommand.zoomIn.symbol,
                 action: actions.zoomIn
             )
             .keyboardShortcut(shortcut(.zoomIn))
             .disabled(!commandPages.hasActivePage || commandPages.activePage?.developerViewport != nil)
             Button(
                 "Zoom Out",
-                systemImage: BrowserShortcutCommand.zoomOut.paletteSymbol,
+                systemImage: ShortcutCommand.zoomOut.symbol,
                 action: actions.zoomOut
             )
             .keyboardShortcut(shortcut(.zoomOut))
             .disabled(!commandPages.hasActivePage || commandPages.activePage?.developerViewport != nil)
             Button(
                 "Actual Size",
-                systemImage: BrowserShortcutCommand.actualSize.paletteSymbol,
+                systemImage: ShortcutCommand.actualSize.symbol,
                 action: actions.resetZoom
             )
             .keyboardShortcut(shortcut(.actualSize))
@@ -337,35 +337,35 @@ struct BrowserCommands: Commands {
             Divider()
             Button(
                 "Copy Page Link",
-                systemImage: BrowserShortcutCommand.copyPageLink.paletteSymbol,
+                systemImage: ShortcutCommand.copyPageLink.symbol,
                 action: actions.copyPageLink
             )
             .keyboardShortcut(shortcut(.copyPageLink))
             .disabled(!commandPages.hasActivePage)
             Button(
                 "Copy Page Link as Markdown",
-                systemImage: BrowserShortcutCommand.copyPageLinkAsMarkdown.paletteSymbol,
+                systemImage: ShortcutCommand.copyPageLinkAsMarkdown.symbol,
                 action: actions.copyPageLinkAsMarkdown
             )
             .keyboardShortcut(shortcut(.copyPageLinkAsMarkdown))
             .disabled(!commandPages.hasActivePage)
             Button(
                 "Share…",
-                systemImage: BrowserShortcutCommand.sharePage.paletteSymbol,
+                systemImage: ShortcutCommand.sharePage.symbol,
                 action: commandPages.sharePage
             )
             .keyboardShortcut(shortcut(.sharePage))
             .disabled(!commandPages.hasActivePage)
             Button(
                 "Export as PDF…",
-                systemImage: BrowserShortcutCommand.exportPDF.paletteSymbol,
+                systemImage: ShortcutCommand.exportPDF.symbol,
                 action: commandPages.exportPDF
             )
             .keyboardShortcut(shortcut(.exportPDF))
             .disabled(!actions.canPerform(.exportPDF))
             Button(
                 "Save Web Archive…",
-                systemImage: BrowserShortcutCommand.saveWebArchive.paletteSymbol,
+                systemImage: ShortcutCommand.saveWebArchive.symbol,
                 action: commandPages.exportWebArchive
             )
             .keyboardShortcut(shortcut(.saveWebArchive))
@@ -378,7 +378,7 @@ struct BrowserCommands: Commands {
             Divider()
             Button(
                 "Show Web Inspector",
-                systemImage: BrowserShortcutCommand.showWebInspector.paletteSymbol,
+                systemImage: ShortcutCommand.showWebInspector.symbol,
                 action: commandPages.showWebInspector
             )
             .keyboardShortcut(shortcut(.showWebInspector))
@@ -388,7 +388,7 @@ struct BrowserCommands: Commands {
         CommandGroup(replacing: .printItem) {
             Button(
                 "Print…",
-                systemImage: BrowserShortcutCommand.printPage.paletteSymbol,
+                systemImage: ShortcutCommand.printPage.symbol,
                 action: commandPages.printPage
             )
             .keyboardShortcut(shortcut(.printPage))
@@ -396,7 +396,7 @@ struct BrowserCommands: Commands {
         }
 
         CommandGroup(after: .sidebar) {
-            if BrowserShortcutCommand.toggleTranslationToolbar.isOfferedByCurrentEngine {
+            if ShortcutCommand.toggleTranslationToolbar.isOfferedByCurrentEngine {
                 Toggle(
                     isOn: Binding(
                         get: { commandPages.activePage?.translation.showsToolbar == true },
@@ -405,7 +405,7 @@ struct BrowserCommands: Commands {
                 ) {
                     Label(
                         "Show Translation Toolbar",
-                        systemImage: BrowserShortcutCommand.toggleTranslationToolbar.paletteSymbol)
+                        systemImage: ShortcutCommand.toggleTranslationToolbar.symbol)
                 }
                 .keyboardShortcut(shortcut(.toggleTranslationToolbar))
                 .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
@@ -413,7 +413,7 @@ struct BrowserCommands: Commands {
             developerToolbarToggle
             Button(
                 "Toggle Sidebar",
-                systemImage: BrowserShortcutCommand.toggleSidebar.paletteSymbol,
+                systemImage: ShortcutCommand.toggleSidebar.symbol,
                 action: actions.toggleSidebar
             )
             .keyboardShortcut(shortcut(.toggleSidebar))
@@ -429,20 +429,20 @@ struct BrowserCommands: Commands {
         CommandGroup(after: .toolbar) {
             Button(
                 "Show History",
-                systemImage: BrowserShortcutCommand.showHistory.paletteSymbol,
+                systemImage: ShortcutCommand.showHistory.symbol,
                 action: commandChrome.presentHistory
             )
             .keyboardShortcut(shortcut(.showHistory))
             Button(
                 "Show Archive",
-                systemImage: BrowserShortcutCommand.showArchive.paletteSymbol,
+                systemImage: ShortcutCommand.showArchive.symbol,
                 action: actions.presentArchive
             )
             .keyboardShortcut(shortcut(.showArchive))
             .disabled(commandBrowser.selectedSpace == nil)
             Button(
                 "Show Downloads",
-                systemImage: BrowserShortcutCommand.showDownloads.paletteSymbol,
+                systemImage: ShortcutCommand.showDownloads.symbol,
                 action: actions.presentDownloads
             )
             .keyboardShortcut(shortcut(.showDownloads))
@@ -482,16 +482,16 @@ struct BrowserCommands: Commands {
         actions.closeTabOrWindow()
     }
 
-    private func shortcut(_ command: BrowserShortcutCommand) -> KeyboardShortcut? {
+    private func shortcut(_ command: ShortcutCommand) -> KeyboardShortcut? {
         shortcuts.keyboardShortcut(for: command)
     }
 
     private func tabSelectionShortcut(_ number: Int) -> KeyboardShortcut? {
-        BrowserShortcutCommand.tabSelection(number).flatMap(shortcut)
+        ShortcutCommand.selecting(.tab, number: number).flatMap(shortcut)
     }
 
     private func spaceSelectionShortcut(_ number: Int) -> KeyboardShortcut? {
-        BrowserShortcutCommand.spaceSelection(number).flatMap(shortcut)
+        ShortcutCommand.selecting(.space, number: number).flatMap(shortcut)
     }
 
     private var commandBrowser: BrowserStore {

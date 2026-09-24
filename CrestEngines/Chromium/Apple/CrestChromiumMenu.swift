@@ -12,15 +12,15 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
     }
     private let shortcuts: BrowserShortcutStore
     private let actions: () -> BrowserCommandActions?
-    private let perform: (BrowserShortcutCommand) -> Void
-    private let canPerform: (BrowserShortcutCommand) -> Bool
+    private let perform: (ShortcutCommand) -> Void
+    private let canPerform: (ShortcutCommand) -> Bool
     private let applicationAction: (ApplicationAction) -> Void
     private let canCheckForUpdates: () -> Bool
-    private var commandItems: [(BrowserShortcutCommand, NSMenuItem)] = []
+    private var commandItems: [(ShortcutCommand, NSMenuItem)] = []
 
     init(shortcuts: BrowserShortcutStore, actions: @escaping () -> BrowserCommandActions?,
-         perform: @escaping (BrowserShortcutCommand) -> Void,
-         canPerform: @escaping (BrowserShortcutCommand) -> Bool,
+         perform: @escaping (ShortcutCommand) -> Void,
+         canPerform: @escaping (ShortcutCommand) -> Bool,
          applicationAction: @escaping (ApplicationAction) -> Void,
          canCheckForUpdates: @escaping () -> Bool) {
         self.shortcuts = shortcuts
@@ -72,10 +72,10 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
                   nil, .previousTab, .nextTab, .mostRecentTab, nil, .splitWithNextTab,
                   .focusNextSplitCard, .focusPreviousSplitCard, .moveSplitCardLeft, .moveSplitCardRight,
                   .removeTabFromSplit, .separateSplitTabs, nil], in: tabs)
-        commands((1...9).compactMap(BrowserShortcutCommand.tabSelection).map(Optional.some), in: tabs)
+        commands(ShortcutCommand.all.filter { $0.selects == .tab }, in: tabs)
         let spaces = submenu("Spaces", in: bar)
         commands([.previousSpace, .nextSpace, nil], in: spaces)
-        commands((1...9).compactMap(BrowserShortcutCommand.spaceSelection).map(Optional.some), in: spaces)
+        commands(ShortcutCommand.all.filter { $0.selects == .space }, in: spaces)
         // The menus list the same commands as every other shell; `commands(_:in:)`
         // leaves out what this engine declares absent (Reader, whole-page
         // translation, Crest's own content blocking). Selection translation stays
@@ -101,11 +101,9 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         guard let value = item.representedObject as? String else { return true }
-        if let command = BrowserShortcutCommand(rawValue: value) {
-            let context = actions()
-            switch command {
-            case .toggleDeveloperToolbar: item.state = context?.pages.activePage?.isDeveloperModeEnabled == true ? .on : .off
-            default: break
+        if let command = ShortcutCommand.named(value) {
+            if command.kind == .toggleDeveloperToolbar {
+                item.state = actions()?.pages.activePage?.isDeveloperModeEnabled == true ? .on : .off
             }
             return canPerform(command)
         }
@@ -115,7 +113,7 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
 
     @objc private func runCommand(_ item: NSMenuItem) {
         guard let value = item.representedObject as? String,
-            let command = BrowserShortcutCommand(rawValue: value), canPerform(command) else { return }
+            let command = ShortcutCommand.named(value), canPerform(command) else { return }
         perform(command)
     }
 
@@ -141,7 +139,7 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
         }
     }
 
-    private func commands(_ commands: [BrowserShortcutCommand?], in menu: NSMenu) {
+    private func commands(_ commands: [ShortcutCommand?], in menu: NSMenu) {
         for command in commands {
             guard let command else {
                 // A separator never leads a menu or doubles up when the
@@ -150,23 +148,12 @@ final class CrestChromiumMenu: NSObject, NSMenuDelegate, NSMenuItemValidation {
                 continue
             }
             guard command.isOfferedByCurrentEngine else { continue }
-            let title: String
-            switch command {
-            case .toggleSelectedTabPinned: title = String(localized: "Pin or Unpin Tab")
-            case .reopenClosedTab: title = String(localized: "Reopen Closed Tab")
-            case .toggleDeveloperToolbar: title = String(localized: "Show Developer Toolbar")
-            case .openFile: title = String(localized: "Open File…")
-            case .toggleSidebar: title = String(localized: "Toggle Sidebar")
-            case .printPage: title = String(localized: "Print…")
-            case .sharePage: title = String(localized: "Share…")
-            case .exportPDF: title = String(localized: "Export as PDF…")
-            case .saveWebArchive: title = String(localized: "Save Web Archive…")
-            default: title = command.title
-            }
-            let item = NSMenuItem(title: title, action: #selector(runCommand(_:)), keyEquivalent: "")
-            item.image = NSImage(systemSymbolName: command.paletteSymbol, accessibilityDescription: nil)
+            let item = NSMenuItem(
+                title: String(localized: command.menuTitle ?? command.title), action: #selector(runCommand(_:)),
+                keyEquivalent: "")
+            item.image = NSImage(systemSymbolName: command.symbol, accessibilityDescription: nil)
             item.target = self
-            item.representedObject = command.rawValue
+            item.representedObject = command.name
             menu.addItem(item)
             commandItems.append((command, item))
         }

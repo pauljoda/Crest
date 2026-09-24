@@ -106,5 +106,5 @@ enum BrowserCommandPaletteSection: String, CaseIterable, Sendable {
 enum BrowserCommandPaletteTarget: Equatable, Hashable, Sendable {
     case tab(BrowserTabRuntimeAssignment)
     case url(URL)
-    case command(BrowserShortcutCommand)
+    case command(ShortcutCommand)
 }

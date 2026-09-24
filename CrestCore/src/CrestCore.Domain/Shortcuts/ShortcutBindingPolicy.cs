@@ -6,9 +6,10 @@ namespace CrestCore.Domain;
 /// chord does to the commands that already hold it.
 ///
 /// `offered` is the ordered set of commands this process shows anywhere; only
-/// they can claim or lose a chord. Overrides map a command to its custom chord,
-/// or to null when the person left it unassigned. Overrides for commands this
-/// build does not know are carried through unchanged.
+/// they can claim or lose a chord. Overrides map a command's stored name to its
+/// custom chord, or to null when the person left it unassigned. Overrides for
+/// commands this build does not know are carried through unchanged, and a name
+/// this build does not know has no default.
 public static class ShortcutBindingPolicy {
     #region Variables
 
@@ -23,11 +24,11 @@ public static class ShortcutBindingPolicy {
         IReadOnlyDictionary<string, ShortcutChord?> overrides, DevicePlatform platform) {
         Validate(offered, overrides);
         return offered.Select(command => new ShortcutBinding(command, Effective(command, offered, overrides, platform),
-            ShortcutCatalog.Default(command, platform), overrides.ContainsKey(command))).ToArray();
+            Default(command, platform)?.Chord, overrides.ContainsKey(command))).ToArray();
     }
 
-    /// The chord a command answers to right now. On the Mac the two new-window
-    /// defaults never take a chord the person already gave another command;
+    /// The chord a command answers to right now. A default that yields to
+    /// overrides never takes a chord the person already gave another command;
     /// that override is kept, and resetting it restores the default.
     public static ShortcutChord? Effective(string command, IReadOnlyList<string> offered,
         IReadOnlyDictionary<string, ShortcutChord?> overrides, DevicePlatform platform) {
@@ -35,11 +36,10 @@ public static class ShortcutBindingPolicy {
         ArgumentNullException.ThrowIfNull(offered);
         ArgumentNullException.ThrowIfNull(overrides);
         if (overrides.TryGetValue(command, out var custom)) return custom;
-        if (ShortcutCatalog.Default(command, platform) is not { } chord) return null;
-        if (platform == DevicePlatform.Desktop
-            && command is ShortcutCatalog.NewBlankWindow or ShortcutCatalog.NewQuickWindow
-            && offered.Any(other => overrides.TryGetValue(other, out var taken) && taken == chord)) return null;
-        return chord;
+        if (Default(command, platform) is not { } fallback) return null;
+        if (fallback.YieldsToOverrides
+            && offered.Any(other => overrides.TryGetValue(other, out var taken) && taken == fallback.Chord)) return null;
+        return fallback.Chord;
     }
 
     #endregion
@@ -66,8 +66,16 @@ public static class ShortcutBindingPolicy {
 
     private static void Set(Dictionary<string, ShortcutChord?> overrides, string command, ShortcutChord? chord,
         DevicePlatform platform) {
-        if (chord == ShortcutCatalog.Default(command, platform)) overrides.Remove(command);
+        if (chord == Default(command, platform)?.Chord) overrides.Remove(command);
         else overrides[command] = chord;
+    }
+
+    /// The catalog default for a stored command name on `platform`.
+    private static (ShortcutChord Chord, bool YieldsToOverrides)? Default(string command, DevicePlatform platform) {
+        ArgumentNullException.ThrowIfNull(platform);
+        return ShortcutCommand.Named(command)?.DefaultShortcut(platform) is { } fallback
+            ? (ShortcutChord.Of(fallback.Keys), fallback.YieldsToOverrides)
+            : null;
     }
 
     private static void Validate(IReadOnlyList<string> offered, IReadOnlyDictionary<string, ShortcutChord?> overrides) {

@@ -402,6 +402,12 @@ struct InvalidSearchEngine: Equatable, Sendable {
     let flaw: SearchEngineFlaw
 }
 
+struct KeyCombination: Equatable, Sendable {
+    let key: String
+    let isSpecialKey: Bool
+    let modifiers: ShortcutModifiers
+}
+
 struct LinkRoute: Equatable, Sendable, Identifiable {
     let id: UUID
     let isEnabled: Bool
@@ -483,6 +489,12 @@ struct SetDownloadDestination: Intent, Equatable, Sendable {
     let downloadID: UUID
     let destination: String
     let filename: String
+}
+
+struct ShortcutDefault: Equatable, Sendable {
+    let platform: DevicePlatform
+    let keys: KeyCombination
+    let yieldsToOverrides: Bool
 }
 
 struct StaleCredentialComparison: Equatable, Sendable {
@@ -634,6 +646,14 @@ enum SearchEngineFlaw: Int, CaseIterable, Sendable {
     case secretInTemplate = 12
 }
 
+struct ShortcutModifiers: OptionSet, Sendable {
+    let rawValue: Int
+    static let command = ShortcutModifiers(rawValue: 1)
+    static let option = ShortcutModifiers(rawValue: 2)
+    static let control = ShortcutModifiers(rawValue: 4)
+    static let shift = ShortcutModifiers(rawValue: 8)
+}
+
 enum StorageFailure: Int, CaseIterable, Sendable {
     case diskFull = 0
     case readOnly = 1
@@ -651,6 +671,34 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
 }
 
 // MARK: - Fixed sets
+
+/// The members of the core's `DevicePlatform`. A member's wire tag is its index in `all`.
+struct DevicePlatform: Hashable, Sendable {
+    let tag: Int
+    let name: String
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        self.name = name
+    }
+
+    static let desktop = DevicePlatform(tag: 0, name: "desktop")
+    static let mobile = DevicePlatform(tag: 1, name: "mobile")
+
+    static let all: [DevicePlatform] = [desktop, mobile]
+
+    static func named(_ name: String?) -> DevicePlatform? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DevicePlatform, rhs: DevicePlatform) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
 
 /// The members of the core's `DownloadPhase`. A member's wire tag is its index in `all`.
 struct DownloadPhase: Hashable, Sendable {
@@ -970,6 +1018,1834 @@ struct DownloadTextField: Hashable, Sendable {
     }
 
     static func == (lhs: DownloadTextField, rhs: DownloadTextField) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
+struct NumberedSelectionTarget: Hashable, Sendable {
+    let tag: Int
+    let name: String
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        self.name = name
+    }
+
+    static let tab = NumberedSelectionTarget(tag: 0, name: "tab")
+    static let space = NumberedSelectionTarget(tag: 1, name: "space")
+
+    static let all: [NumberedSelectionTarget] = [tab, space]
+
+    static func named(_ name: String?) -> NumberedSelectionTarget? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: NumberedSelectionTarget, rhs: NumberedSelectionTarget) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `ShortcutCommand`. A member's wire tag is its index in `all`.
+struct ShortcutCommand: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case newWindow
+        case newBlankWindow
+        case newTab
+        case newQuickWindow
+        case newPrivateWindow
+        case closeTabOrWindow
+        case closeWindow
+        case openLocation
+        case back
+        case forward
+        case reloadPage
+        case stopLoading
+        case reloadFromOrigin
+        case toggleSelectedTabPinned
+        case duplicateTab
+        case reopenClosedTab
+        case clearUnpinnedTabs
+        case archiveTab
+        case previousTab
+        case nextTab
+        case mostRecentTab
+        case selectNumbered
+        case previousSpace
+        case nextSpace
+        case toggleReaderMode
+        case toggleContentBlocking
+        case findInPage
+        case zoomIn
+        case zoomOut
+        case actualSize
+        case copyPageLink
+        case copyPageLinkAsMarkdown
+        case sharePage
+        case exportPDF
+        case saveWebArchive
+        case printPage
+        case toggleSidebar
+        case showHistory
+        case showArchive
+        case showDownloads
+        case showWebInspector
+        case splitWithNextTab
+        case focusNextSplitCard
+        case focusPreviousSplitCard
+        case removeTabFromSplit
+        case separateSplitTabs
+        case moveSplitCardLeft
+        case moveSplitCardRight
+        case toggleDeveloperToolbar
+        case toggleTranslationToolbar
+        case openFile
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let section: ShortcutSection
+    let title: LocalizedStringResource
+    let searchTerms: LocalizedStringResource?
+    let menuTitle: LocalizedStringResource?
+    let symbol: String
+    let requiredCapability: String?
+    let selects: NumberedSelectionTarget?
+    let number: Int?
+    let defaultShortcuts: [ShortcutDefault]
+
+    private init(
+        tag: Int,
+        kind: Kinds,
+        name: String,
+        section: ShortcutSection,
+        title: LocalizedStringResource,
+        searchTerms: LocalizedStringResource?,
+        menuTitle: LocalizedStringResource?,
+        symbol: String,
+        requiredCapability: String?,
+        selects: NumberedSelectionTarget?,
+        number: Int?,
+        defaultShortcuts: [ShortcutDefault]
+    ) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.section = section
+        self.title = title
+        self.searchTerms = searchTerms
+        self.menuTitle = menuTitle
+        self.symbol = symbol
+        self.requiredCapability = requiredCapability
+        self.selects = selects
+        self.number = number
+        self.defaultShortcuts = defaultShortcuts
+    }
+
+    static let newWindow = ShortcutCommand(
+        tag: 0,
+        kind: .newWindow,
+        name: "newWindow",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("New Window"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "macwindow.badge.plus",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let newBlankWindow = ShortcutCommand(
+        tag: 1,
+        kind: .newBlankWindow,
+        name: "newBlankWindow",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("New Blank Window"),
+        searchTerms: LocalizedStringResource("temporary disposable unsynced window"),
+        menuTitle: nil,
+        symbol: "macwindow.badge.plus",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command, .option]),
+                yieldsToOverrides: true
+            )
+        ]
+    )
+    static let newTab = ShortcutCommand(
+        tag: 2,
+        kind: .newTab,
+        name: "newTab",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("New Tab"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "plus.square",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let newQuickWindow = ShortcutCommand(
+        tag: 3,
+        kind: .newQuickWindow,
+        name: "newQuickWindow",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("New Quick Window"),
+        searchTerms: LocalizedStringResource("little arc quick lookup"),
+        menuTitle: nil,
+        symbol: "macwindow.badge.plus",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let newPrivateWindow = ShortcutCommand(
+        tag: 4,
+        kind: .newPrivateWindow,
+        name: "newPrivateWindow",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("New Private Window"),
+        searchTerms: LocalizedStringResource("incognito private browsing"),
+        menuTitle: nil,
+        symbol: "eyeglasses",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "n", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let closeTabOrWindow = ShortcutCommand(
+        tag: 5,
+        kind: .closeTabOrWindow,
+        name: "closeTabOrWindow",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Close Current Tab or Window"),
+        searchTerms: LocalizedStringResource("close archive current tab window"),
+        menuTitle: nil,
+        symbol: "xmark.square",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let closeWindow = ShortcutCommand(
+        tag: 6,
+        kind: .closeWindow,
+        name: "closeWindow",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Close Window"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "xmark.square",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "w", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let openLocation = ShortcutCommand(
+        tag: 7,
+        kind: .openLocation,
+        name: "openLocation",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Open Location"),
+        searchTerms: LocalizedStringResource("change current tab url address focus"),
+        menuTitle: nil,
+        symbol: "magnifyingglass",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let back = ShortcutCommand(
+        tag: 8,
+        kind: .back,
+        name: "back",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Back"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "chevron.left",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "[", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "[", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let forward = ShortcutCommand(
+        tag: 9,
+        kind: .forward,
+        name: "forward",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Forward"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "chevron.right",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "]", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "]", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let reloadPage = ShortcutCommand(
+        tag: 10,
+        kind: .reloadPage,
+        name: "reloadPage",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Reload Page"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "arrow.clockwise",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let stopLoading = ShortcutCommand(
+        tag: 11,
+        kind: .stopLoading,
+        name: "stopLoading",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Stop Loading"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "xmark.circle",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: ".", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: ".", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let reloadFromOrigin = ShortcutCommand(
+        tag: 12,
+        kind: .reloadFromOrigin,
+        name: "reloadFromOrigin",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Reload from Origin"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "arrow.clockwise",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "r", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let toggleSelectedTabPinned = ShortcutCommand(
+        tag: 13,
+        kind: .toggleSelectedTabPinned,
+        name: "toggleSelectedTabPinned",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Pin or Unpin Current Tab"),
+        searchTerms: LocalizedStringResource("favorite bookmark pin unpin"),
+        menuTitle: LocalizedStringResource("Pin or Unpin Tab"),
+        symbol: "pin",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "d", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "d", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let duplicateTab = ShortcutCommand(
+        tag: 14,
+        kind: .duplicateTab,
+        name: "duplicateTab",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Duplicate Tab"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "plus.square.on.square",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let reopenClosedTab = ShortcutCommand(
+        tag: 15,
+        kind: .reopenClosedTab,
+        name: "reopenClosedTab",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Reopen Last Closed Tab"),
+        searchTerms: nil,
+        menuTitle: LocalizedStringResource("Reopen Closed Tab"),
+        symbol: "arrow.uturn.backward",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "t", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let clearUnpinnedTabs = ShortcutCommand(
+        tag: 16,
+        kind: .clearUnpinnedTabs,
+        name: "clearUnpinnedTabs",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Clear Unpinned Tabs"),
+        searchTerms: LocalizedStringResource("clean tidy archive unpinned tabs"),
+        menuTitle: nil,
+        symbol: "sparkles",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let archiveTab = ShortcutCommand(
+        tag: 17,
+        kind: .archiveTab,
+        name: "archiveTab",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Archive Tab"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "archivebox",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let previousTab = ShortcutCommand(
+        tag: 18,
+        kind: .previousTab,
+        name: "previousTab",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Previous Tab"),
+        searchTerms: LocalizedStringResource("switch cycle tabs up down arrow"),
+        menuTitle: nil,
+        symbol: "chevron.up",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "upArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "upArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let nextTab = ShortcutCommand(
+        tag: 19,
+        kind: .nextTab,
+        name: "nextTab",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Next Tab"),
+        searchTerms: LocalizedStringResource("switch cycle tabs up down arrow"),
+        menuTitle: nil,
+        symbol: "chevron.down",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "downArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "downArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let mostRecentTab = ShortcutCommand(
+        tag: 20,
+        kind: .mostRecentTab,
+        name: "mostRecentTab",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Most Recent Tab"),
+        searchTerms: LocalizedStringResource("toggle recent switch tabs"),
+        menuTitle: nil,
+        symbol: "arrow.left.arrow.right",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab1 = ShortcutCommand(
+        tag: 21,
+        kind: .selectNumbered,
+        name: "selectTab1",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(1)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 1,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab2 = ShortcutCommand(
+        tag: 22,
+        kind: .selectNumbered,
+        name: "selectTab2",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(2)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 2,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab3 = ShortcutCommand(
+        tag: 23,
+        kind: .selectNumbered,
+        name: "selectTab3",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(3)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 3,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab4 = ShortcutCommand(
+        tag: 24,
+        kind: .selectNumbered,
+        name: "selectTab4",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(4)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 4,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab5 = ShortcutCommand(
+        tag: 25,
+        kind: .selectNumbered,
+        name: "selectTab5",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(5)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 5,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab6 = ShortcutCommand(
+        tag: 26,
+        kind: .selectNumbered,
+        name: "selectTab6",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(6)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 6,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab7 = ShortcutCommand(
+        tag: 27,
+        kind: .selectNumbered,
+        name: "selectTab7",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(7)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 7,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab8 = ShortcutCommand(
+        tag: 28,
+        kind: .selectNumbered,
+        name: "selectTab8",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(8)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 8,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectTab9 = ShortcutCommand(
+        tag: 29,
+        kind: .selectNumbered,
+        name: "selectTab9",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Select Tab \(9)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "square.on.square",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.tab,
+        number: 9,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let previousSpace = ShortcutCommand(
+        tag: 30,
+        kind: .previousSpace,
+        name: "previousSpace",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Previous Space"),
+        searchTerms: LocalizedStringResource("switch cycle spaces left right arrow"),
+        menuTitle: nil,
+        symbol: "chevron.up",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let nextSpace = ShortcutCommand(
+        tag: 31,
+        kind: .nextSpace,
+        name: "nextSpace",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Next Space"),
+        searchTerms: LocalizedStringResource("switch cycle spaces left right arrow"),
+        menuTitle: nil,
+        symbol: "chevron.down",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace1 = ShortcutCommand(
+        tag: 32,
+        kind: .selectNumbered,
+        name: "selectSpace1",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(1)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 1,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "1", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace2 = ShortcutCommand(
+        tag: 33,
+        kind: .selectNumbered,
+        name: "selectSpace2",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(2)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 2,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "2", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace3 = ShortcutCommand(
+        tag: 34,
+        kind: .selectNumbered,
+        name: "selectSpace3",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(3)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 3,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "3", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace4 = ShortcutCommand(
+        tag: 35,
+        kind: .selectNumbered,
+        name: "selectSpace4",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(4)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 4,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "4", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace5 = ShortcutCommand(
+        tag: 36,
+        kind: .selectNumbered,
+        name: "selectSpace5",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(5)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 5,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "5", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace6 = ShortcutCommand(
+        tag: 37,
+        kind: .selectNumbered,
+        name: "selectSpace6",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(6)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 6,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "6", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace7 = ShortcutCommand(
+        tag: 38,
+        kind: .selectNumbered,
+        name: "selectSpace7",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(7)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 7,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "7", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace8 = ShortcutCommand(
+        tag: 39,
+        kind: .selectNumbered,
+        name: "selectSpace8",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(8)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 8,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "8", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let selectSpace9 = ShortcutCommand(
+        tag: 40,
+        kind: .selectNumbered,
+        name: "selectSpace9",
+        section: ShortcutSection.spaces,
+        title: LocalizedStringResource("Select Space \(9)"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "rectangle.3.group",
+        requiredCapability: nil,
+        selects: NumberedSelectionTarget.space,
+        number: 9,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "9", isSpecialKey: false, modifiers: [.control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let toggleReaderMode = ShortcutCommand(
+        tag: 41,
+        kind: .toggleReaderMode,
+        name: "toggleReaderMode",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Show or Hide Reader"),
+        searchTerms: LocalizedStringResource("reader reading mode"),
+        menuTitle: nil,
+        symbol: "doc.plaintext",
+        requiredCapability: "reader",
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let toggleContentBlocking = ShortcutCommand(
+        tag: 42,
+        kind: .toggleContentBlocking,
+        name: "toggleContentBlocking",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Toggle Content Blocking"),
+        searchTerms: LocalizedStringResource("ads trackers privacy protection"),
+        menuTitle: nil,
+        symbol: "shield",
+        requiredCapability: "content-blocking",
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let findInPage = ShortcutCommand(
+        tag: 43,
+        kind: .findInPage,
+        name: "findInPage",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Find in Page"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "text.magnifyingglass",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "f", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "f", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let zoomIn = ShortcutCommand(
+        tag: 44,
+        kind: .zoomIn,
+        name: "zoomIn",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Zoom In"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "plus.magnifyingglass",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "+", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "+", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let zoomOut = ShortcutCommand(
+        tag: 45,
+        kind: .zoomOut,
+        name: "zoomOut",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Zoom Out"),
+        searchTerms: nil,
+        menuTitle: nil,
+        symbol: "minus.magnifyingglass",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "-", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "-", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let actualSize = ShortcutCommand(
+        tag: 46,
+        kind: .actualSize,
+        name: "actualSize",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Actual Size"),
+        searchTerms: LocalizedStringResource("reset zoom zero"),
+        menuTitle: nil,
+        symbol: "1.magnifyingglass",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "0", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "0", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let copyPageLink = ShortcutCommand(
+        tag: 47,
+        kind: .copyPageLink,
+        name: "copyPageLink",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Copy Page Link"),
+        searchTerms: LocalizedStringResource("copy url address clipboard"),
+        menuTitle: nil,
+        symbol: "link",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "c", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "c", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let copyPageLinkAsMarkdown = ShortcutCommand(
+        tag: 48,
+        kind: .copyPageLinkAsMarkdown,
+        name: "copyPageLinkAsMarkdown",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Copy Page Link as Markdown"),
+        searchTerms: LocalizedStringResource("copy url address markdown clipboard"),
+        menuTitle: nil,
+        symbol: "link",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "c", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "c", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let sharePage = ShortcutCommand(
+        tag: 49,
+        kind: .sharePage,
+        name: "sharePage",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Share Page"),
+        searchTerms: nil,
+        menuTitle: LocalizedStringResource("Share…"),
+        symbol: "square.and.arrow.up",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let exportPDF = ShortcutCommand(
+        tag: 50,
+        kind: .exportPDF,
+        name: "exportPDF",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Export as PDF"),
+        searchTerms: nil,
+        menuTitle: LocalizedStringResource("Export as PDF…"),
+        symbol: "square.and.arrow.down",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let saveWebArchive = ShortcutCommand(
+        tag: 51,
+        kind: .saveWebArchive,
+        name: "saveWebArchive",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Save Web Archive"),
+        searchTerms: nil,
+        menuTitle: LocalizedStringResource("Save Web Archive…"),
+        symbol: "square.and.arrow.down",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let printPage = ShortcutCommand(
+        tag: 52,
+        kind: .printPage,
+        name: "printPage",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Print Page"),
+        searchTerms: nil,
+        menuTitle: LocalizedStringResource("Print…"),
+        symbol: "printer",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "p", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "p", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let toggleSidebar = ShortcutCommand(
+        tag: 53,
+        kind: .toggleSidebar,
+        name: "toggleSidebar",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Show or Hide Sidebar"),
+        searchTerms: nil,
+        menuTitle: LocalizedStringResource("Toggle Sidebar"),
+        symbol: "sidebar.leading",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "s", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "s", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let showHistory = ShortcutCommand(
+        tag: 54,
+        kind: .showHistory,
+        name: "showHistory",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Show History"),
+        searchTerms: LocalizedStringResource("visited pages history"),
+        menuTitle: nil,
+        symbol: "clock",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "y", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "y", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let showArchive = ShortcutCommand(
+        tag: 55,
+        kind: .showArchive,
+        name: "showArchive",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Show Archive"),
+        searchTerms: LocalizedStringResource("closed tabs archive"),
+        menuTitle: nil,
+        symbol: "archivebox",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let showDownloads = ShortcutCommand(
+        tag: 56,
+        kind: .showDownloads,
+        name: "showDownloads",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Show Downloads"),
+        searchTerms: LocalizedStringResource("download files transfers"),
+        menuTitle: nil,
+        symbol: "arrow.down.circle",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "j", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "j", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let showWebInspector = ShortcutCommand(
+        tag: 57,
+        kind: .showWebInspector,
+        name: "webInspectorInstructions",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Show Web Inspector"),
+        searchTerms: LocalizedStringResource("developer tools inspect element webkit safari"),
+        menuTitle: nil,
+        symbol: "hammer",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "i", isSpecialKey: false, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "i", isSpecialKey: false, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let splitWithNextTab = ShortcutCommand(
+        tag: 58,
+        kind: .splitWithNextTab,
+        name: "splitWithNextTab",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Split With Next Tab"),
+        searchTerms: LocalizedStringResource("split view cards side by side columns"),
+        menuTitle: nil,
+        symbol: "rectangle.split.2x1",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let focusNextSplitCard = ShortcutCommand(
+        tag: 59,
+        kind: .focusNextSplitCard,
+        name: "focusNextSplitCard",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Focus Next Split Card"),
+        searchTerms: LocalizedStringResource("split view cards focus cycle left right arrow"),
+        menuTitle: nil,
+        symbol: "rectangle.righthalf.filled",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let focusPreviousSplitCard = ShortcutCommand(
+        tag: 60,
+        kind: .focusPreviousSplitCard,
+        name: "focusPreviousSplitCard",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Focus Previous Split Card"),
+        searchTerms: LocalizedStringResource("split view cards focus cycle left right arrow"),
+        menuTitle: nil,
+        symbol: "rectangle.lefthalf.filled",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .control]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .control]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let removeTabFromSplit = ShortcutCommand(
+        tag: 61,
+        kind: .removeTabFromSplit,
+        name: "removeTabFromSplit",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Remove Tab From Split"),
+        searchTerms: LocalizedStringResource("split view card remove leave unsplit"),
+        menuTitle: nil,
+        symbol: "minus.rectangle",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+    static let separateSplitTabs = ShortcutCommand(
+        tag: 62,
+        kind: .separateSplitTabs,
+        name: "separateSplitTabs",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Separate All Tabs"),
+        searchTerms: LocalizedStringResource("split view break up unsplit separate cards"),
+        menuTitle: nil,
+        symbol: "rectangle.split.2x1.slash",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "u", isSpecialKey: false, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "u", isSpecialKey: false, modifiers: [.command, .option]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let moveSplitCardLeft = ShortcutCommand(
+        tag: 63,
+        kind: .moveSplitCardLeft,
+        name: "moveSplitCardLeft",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Move Split Card Left"),
+        searchTerms: LocalizedStringResource("split view cards move reorder rearrange left right arrow"),
+        menuTitle: nil,
+        symbol: "arrow.left.square",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "leftArrow", isSpecialKey: true, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let moveSplitCardRight = ShortcutCommand(
+        tag: 64,
+        kind: .moveSplitCardRight,
+        name: "moveSplitCardRight",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Move Split Card Right"),
+        searchTerms: LocalizedStringResource("split view cards move reorder rearrange left right arrow"),
+        menuTitle: nil,
+        symbol: "arrow.right.square",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "rightArrow", isSpecialKey: true, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let toggleDeveloperToolbar = ShortcutCommand(
+        tag: 65,
+        kind: .toggleDeveloperToolbar,
+        name: "toggleDeveloperToolbar",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Show or Hide Developer Toolbar"),
+        searchTerms: LocalizedStringResource("developer toolbar viewport preview responsive custom size"),
+        menuTitle: LocalizedStringResource("Show Developer Toolbar"),
+        symbol: "macbook.and.iphone",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "i", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "i", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let toggleTranslationToolbar = ShortcutCommand(
+        tag: 66,
+        kind: .toggleTranslationToolbar,
+        name: "toggleTranslationToolbar",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Show or Hide Translation Toolbar"),
+        searchTerms: LocalizedStringResource("translate translation language toolbar show hide"),
+        menuTitle: nil,
+        symbol: "translate",
+        requiredCapability: "translation",
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "l", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ]
+    )
+    static let openFile = ShortcutCommand(
+        tag: 67,
+        kind: .openFile,
+        name: "openFile",
+        section: ShortcutSection.everyday,
+        title: LocalizedStringResource("Open File"),
+        searchTerms: LocalizedStringResource("open local file document html pdf archive webarchive mhtml"),
+        menuTitle: LocalizedStringResource("Open File…"),
+        symbol: "folder",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: []
+    )
+
+    static let all: [ShortcutCommand] = [
+        newWindow,
+        newBlankWindow,
+        newTab,
+        newQuickWindow,
+        newPrivateWindow,
+        closeTabOrWindow,
+        closeWindow,
+        openLocation,
+        back,
+        forward,
+        reloadPage,
+        stopLoading,
+        reloadFromOrigin,
+        toggleSelectedTabPinned,
+        duplicateTab,
+        reopenClosedTab,
+        clearUnpinnedTabs,
+        archiveTab,
+        previousTab,
+        nextTab,
+        mostRecentTab,
+        selectTab1,
+        selectTab2,
+        selectTab3,
+        selectTab4,
+        selectTab5,
+        selectTab6,
+        selectTab7,
+        selectTab8,
+        selectTab9,
+        previousSpace,
+        nextSpace,
+        selectSpace1,
+        selectSpace2,
+        selectSpace3,
+        selectSpace4,
+        selectSpace5,
+        selectSpace6,
+        selectSpace7,
+        selectSpace8,
+        selectSpace9,
+        toggleReaderMode,
+        toggleContentBlocking,
+        findInPage,
+        zoomIn,
+        zoomOut,
+        actualSize,
+        copyPageLink,
+        copyPageLinkAsMarkdown,
+        sharePage,
+        exportPDF,
+        saveWebArchive,
+        printPage,
+        toggleSidebar,
+        showHistory,
+        showArchive,
+        showDownloads,
+        showWebInspector,
+        splitWithNextTab,
+        focusNextSplitCard,
+        focusPreviousSplitCard,
+        removeTabFromSplit,
+        separateSplitTabs,
+        moveSplitCardLeft,
+        moveSplitCardRight,
+        toggleDeveloperToolbar,
+        toggleTranslationToolbar,
+        openFile
+    ]
+
+    static func named(_ name: String?) -> ShortcutCommand? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ShortcutCommand, rhs: ShortcutCommand) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `ShortcutSection`. A member's wire tag is its index in `all`.
+struct ShortcutSection: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+    }
+
+    static let everyday = ShortcutSection(tag: 0, name: "everyday", title: LocalizedStringResource("Everyday Use"))
+    static let tabs = ShortcutSection(tag: 1, name: "tabs", title: LocalizedStringResource("Tabs"))
+    static let spaces = ShortcutSection(tag: 2, name: "spaces", title: LocalizedStringResource("Spaces"))
+    static let page = ShortcutSection(tag: 3, name: "page", title: LocalizedStringResource("Page"))
+    static let view = ShortcutSection(tag: 4, name: "view", title: LocalizedStringResource("View & Tools"))
+
+    static let all: [ShortcutSection] = [everyday, tabs, spaces, page, view]
+
+    static func named(_ name: String?) -> ShortcutSection? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ShortcutSection, rhs: ShortcutSection) -> Bool {
         lhs.tag == rhs.tag
     }
 

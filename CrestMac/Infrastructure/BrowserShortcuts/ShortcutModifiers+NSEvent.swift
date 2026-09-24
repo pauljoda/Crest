@@ -1,8 +1,8 @@
 import AppKit
 
-extension BrowserShortcutModifiers {
+extension ShortcutModifiers {
     init(_ flags: NSEvent.ModifierFlags) {
-        var result: BrowserShortcutModifiers = []
+        var result: ShortcutModifiers = []
         let flags = flags.intersection(.deviceIndependentFlagsMask)
         if flags.contains(.command) { result.insert(.command) }
         if flags.contains(.option) { result.insert(.option) }

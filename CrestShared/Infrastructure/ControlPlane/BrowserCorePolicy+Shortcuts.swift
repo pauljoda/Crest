@@ -7,33 +7,24 @@ enum BrowserNumberedSelection: Equatable, Sendable {
     case space(Int)
 }
 
-/// The live chord of every offered command and the catalog defaults, as the
-/// core resolved them from the person's overrides.
-struct BrowserShortcutBindings: Equatable, Sendable {
-    var shortcuts: [BrowserShortcutCommand: BrowserShortcut] = [:]
-    var defaults: [BrowserShortcutCommand: BrowserShortcut] = [:]
-}
-
-/// Shortcut rules owned by the portable core: the default catalog, how
-/// overrides resolve, conflicts, and what the numbered commands select.
-/// Section grouping and search for the settings list stay native. A chord
-/// crosses in `BrowserShortcut`'s own coded shape, which is also the core's
-/// wire and persisted shape.
+/// Shortcut rules owned by the portable core: how overrides resolve against
+/// the catalog, conflicts, and what the numbered commands select. Search for
+/// the settings list stays native. A chord crosses in `BrowserShortcut`'s own
+/// coded shape, which is also the core's wire and persisted shape.
 extension BrowserCorePolicy {
     // MARK: - Types
 
     private struct BindingsRequest: Encodable {
         let platform: DevicePlatform
-        let commands: [BrowserShortcutCommand]
+        let commands: [ShortcutCommand]
         /// A command left unassigned crosses as `null`.
         let overrides: [String: BrowserShortcut?]
     }
 
     private struct BindingsAnswer: Decodable {
         struct Binding: Decodable {
-            let command: BrowserShortcutCommand
+            let command: ShortcutCommand
             @BrowserCoreOptional var shortcut: BrowserShortcut?
-            @BrowserCoreOptional var `default`: BrowserShortcut?
         }
 
         let bindings: [Binding]
@@ -41,9 +32,9 @@ extension BrowserCorePolicy {
 
     private struct AssignRequest: Encodable {
         let platform: DevicePlatform
-        let commands: [BrowserShortcutCommand]
+        let commands: [ShortcutCommand]
         let overrides: [String: BrowserShortcut?]
-        let command: BrowserShortcutCommand
+        let command: ShortcutCommand
         @BrowserCoreNullable var shortcut: BrowserShortcut?
         let replacingConflicts: Bool
     }
@@ -58,7 +49,7 @@ extension BrowserCorePolicy {
 
         let result: Result
         @BrowserCoreOptional var overrides: [String: BrowserShortcut?]?
-        @BrowserCoreOptional var conflicts: BrowserCoreKnownValues<BrowserShortcutCommand>?
+        @BrowserCoreOptional var conflicts: BrowserCoreKnownValues<ShortcutCommand>?
     }
 
     private struct NumberedSelectionRequest: Encodable {
@@ -74,7 +65,7 @@ extension BrowserCorePolicy {
                 case space
             }
 
-            @BrowserCoreOptional var command: BrowserShortcutCommand?
+            @BrowserCoreOptional var command: ShortcutCommand?
             @BrowserCoreOptional var index: Int?
             @BrowserCoreOptional var target: Target?
         }
@@ -82,27 +73,19 @@ extension BrowserCorePolicy {
         let selections: [Selection]
     }
 
-    // MARK: - Variables
-
-    /// Crest's default chords for this platform. Empty only when the core
-    /// cannot answer, which leaves every command without a default.
-    static let defaultShortcuts: [BrowserShortcutCommand: BrowserShortcut] =
-        shortcutBindings(overrides: [:], commands: BrowserShortcutCommand.allCases)?.defaults ?? [:]
-
     // MARK: - Actions - Shortcuts
 
     /// Live chords for `commands`. Nil when the core cannot answer; the caller
     /// then binds nothing rather than guessing.
     static func shortcutBindings(
         overrides: [String: BrowserShortcutOverride],
-        commands: [BrowserShortcutCommand]
-    ) -> BrowserShortcutBindings? {
+        commands: [ShortcutCommand]
+    ) -> [ShortcutCommand: BrowserShortcut]? {
         let request = BindingsRequest(platform: devicePlatform, commands: commands, overrides: coreOverrides(overrides))
         guard let answer = evaluate(.shortcutsBindings, request, answer: BindingsAnswer.self) else { return nil }
-        var bindings = BrowserShortcutBindings()
+        var bindings: [ShortcutCommand: BrowserShortcut] = [:]
         for binding in answer.bindings {
-            if let shortcut = binding.shortcut { bindings.shortcuts[binding.command] = shortcut }
-            if let shortcut = binding.default { bindings.defaults[binding.command] = shortcut }
+            if let shortcut = binding.shortcut { bindings[binding.command] = shortcut }
         }
         return bindings
     }
@@ -111,8 +94,8 @@ extension BrowserCorePolicy {
     /// returns the revised overrides when the binding applies. A core that
     /// cannot answer reports a conflict, so nothing is ever bound twice.
     static func assignShortcut(
-        _ shortcut: BrowserShortcut?, to command: BrowserShortcutCommand,
-        replacingConflicts: Bool, overrides: [String: BrowserShortcutOverride], commands: [BrowserShortcutCommand]
+        _ shortcut: BrowserShortcut?, to command: ShortcutCommand,
+        replacingConflicts: Bool, overrides: [String: BrowserShortcutOverride], commands: [ShortcutCommand]
     ) -> (result: BrowserShortcutAssignmentResult, overrides: [String: BrowserShortcutOverride]?) {
         let unavailable: (BrowserShortcutAssignmentResult, [String: BrowserShortcutOverride]?) = (
             .conflict(commands: []), nil
@@ -135,13 +118,13 @@ extension BrowserCorePolicy {
     /// Where each numbered selection command leads for these counts. A command
     /// with nowhere to go is absent, and so is every command when the core
     /// cannot answer.
-    static func numberedSelections(tabCount: Int, spaceCount: Int) -> [BrowserShortcutCommand: BrowserNumberedSelection]
+    static func numberedSelections(tabCount: Int, spaceCount: Int) -> [ShortcutCommand: BrowserNumberedSelection]
     {
         let request = NumberedSelectionRequest(tabCount: tabCount, spaceCount: spaceCount)
         guard let answer = evaluate(.shortcutsNumberedSelection, request, answer: NumberedSelectionAnswer.self) else {
             return [:]
         }
-        var selections: [BrowserShortcutCommand: BrowserNumberedSelection] = [:]
+        var selections: [ShortcutCommand: BrowserNumberedSelection] = [:]
         for selection in answer.selections {
             guard let command = selection.command, let index = selection.index else { continue }
             selections[command] = selection.target == .space ? .space(index) : .tab(index)

@@ -67,14 +67,19 @@ internal sealed record ContractSet(Type Type, IReadOnlyList<ContractField> Prope
 
 /// One member of a fixed set: the name of its static field, its wire tag, and
 /// its value for each of the set's properties, in property order. A value is a
-/// primitive, a `TimeSpan`, a `SetMemberReference` or null.
+/// primitive, a `TimeSpan`, an enum value, a `SetMemberReference`, a
+/// `RecordValue`, a list of values or null.
 internal sealed record ContractSetMember(string Name, int Tag, IReadOnlyList<object?> Values);
 
 /// A data value that is a member of another fixed set.
 internal sealed record SetMemberReference(Type Set, string Member);
 
-/// A localized data value: its English text and the note for translators.
-internal sealed record LocalizedText(string Text, string? Comment);
+/// A data value that is a contract record: its value for each field, in field order.
+internal sealed record RecordValue(ContractRecord Record, IReadOnlyList<object?> Values);
+
+/// A localized data value: its English text, the note for translators and the
+/// value the text carries where it spells `%lld`.
+internal sealed record LocalizedText(string Text, string? Comment, int? Argument);
 
 /// A contract type the generator cannot describe.
 internal sealed class ContractSchemaException(string message) : Exception(message);
@@ -83,9 +88,10 @@ internal sealed class ContractSchemaException(string message) : Exception(messag
 /// canonical description.
 ///
 /// The roots are every concrete type assignable to `Intent`, `Change` or
-/// `Rejection`, or deriving from `Query<>`. Configurations cross once, at
+/// `Rejection`, or deriving from `Query<>`, and every fixed set, so a set
+/// reaches Swift before any record names it. Configurations cross once, at
 /// creation, so they join the closure without a tag. The closure adds the
-/// records, enums and fixed sets their constructor parameters use.
+/// records, enums and fixed sets their constructor parameters and set data use.
 internal sealed class ContractSchema {
     #region Variables
 
@@ -97,6 +103,7 @@ internal sealed class ContractSchema {
     private const string SetTag = "Tag";
     private const string SetKinds = "Kinds";
     private const string CommentSuffix = "Comment";
+    private const string ArgumentFormat = "%lld";
 
     private readonly Dictionary<Type, ContractRecord> records = [];
     private readonly Dictionary<Type, ContractEnum> enums = [];
@@ -141,6 +148,8 @@ internal sealed class ContractSchema {
         schema.AddRoot(ContractRoot.Query, candidates.Where(type => QueryAnswer(type) is not null));
         foreach (var type in candidates.Where(typeof(Configuration).IsAssignableFrom).OrderBy(type => type.Name, StringComparer.Ordinal))
             schema.DescribeRecord(type);
+        foreach (var set in candidates.Where(IsFixedSet).OrderBy(type => type.Name, StringComparer.Ordinal))
+            schema.DescribeSet(set, set.Name);
         schema.Validate();
         schema.Canonical = schema.Describe();
         return schema;
@@ -273,6 +282,7 @@ internal sealed class ContractSchema {
             .Where(property => !typeof(Delegate).IsAssignableFrom(property.PropertyType)).OrderBy(property => property.MetadataToken).ToList();
         var comments = TranslatorComments(accessors, name);
         accessors.RemoveAll(comments.ContainsValue);
+        var arguments = LocalizedArguments(accessors, name);
         foreach (var property in accessors) {
             string at = $"{name}.{property.Name}";
             if (property.Name == SetTag)
@@ -290,7 +300,7 @@ internal sealed class ContractSchema {
         foreach (var (instance, tag) in instances.Select((instance, tag) => (instance, tag))) {
             string member = MemberName(type, instance, $"{name}.{SetAll}[{tag}]");
             members.Add(new ContractSetMember(member, tag, [.. accessors.Select((property, index) =>
-                SetData(properties[index].Type, DataValue(property, instance, comments), $"{name}.{member}.{property.Name}"))]));
+                SetData(properties[index].Type, DataValue(property, instance, comments, arguments), $"{name}.{member}.{property.Name}"))]));
         }
         if (members.GroupBy(member => member.Values[nameIndex]).FirstOrDefault(group => group.Count() > 1) is { } shared)
             throw new ContractSchemaException($"{name}: {string.Join(" and ", shared.Select(member => member.Name))} share the {SetName} \"{shared.Key}\".");
@@ -323,8 +333,9 @@ internal sealed class ContractSchema {
         return [.. instances.OfType<object>()];
     }
 
-    /// A data member Swift can spell as a literal: a primitive, a duration,
-    /// another fixed set or the set's own `Kinds`, any of them optional.
+    /// A data member Swift can spell as a literal: a primitive, a duration, an
+    /// enum, another fixed set, the set's own `Kinds`, a contract record whose
+    /// fields are all spellable, or a list of any of them, each optional.
     private FieldType ResolveSetData(Type type, NullabilityInfo? info, string where, Type set) {
         if (Nullable.GetUnderlyingType(type) is { } underlying) return new OptionalField(ResolveSetData(underlying, null, where, set));
         if (!type.IsValueType && info?.ReadState == NullabilityState.Nullable) return new OptionalField(ResolveSetData(type, null, where, set));
@@ -335,10 +346,49 @@ internal sealed class ContractSchema {
         if (type == typeof(string)) return new PrimitiveField(Primitive.String);
         if (type == typeof(TimeSpan)) return new PrimitiveField(Primitive.Duration);
         if (type.IsEnum && type.DeclaringType == set && type.Name == SetKinds) return new KindsField(type);
+        if (type.IsEnum) return DescribeEnum(type, where);
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IReadOnlyList<>))
+            return new ListField(ResolveSetData(type.GetGenericArguments()[0], info?.GenericTypeArguments.FirstOrDefault(), $"{where}[]", set));
         if (IsFixedSet(type)) return DescribeSet(type, where);
-        throw new ContractSchemaException($"{where}: a fixed set's data members are bool, int, long, double, string, TimeSpan, another "
-            + $"fixed set or the set's own nested {SetKinds}, optionally nullable, and {Display(type)} is none of them. Keep other state "
-            + "private, or pass behavior as a delegate.");
+        if (IsRecordOf(type, set)) {
+            DescribeRecord(type);
+            var record = new RecordField(type);
+            EnsureSpellable(record, where, []);
+            return record;
+        }
+        throw new ContractSchemaException($"{where}: a fixed set's data members are bool, int, long, double, string, TimeSpan, an enum, "
+            + $"another fixed set, the set's own nested {SetKinds}, a record declared beside the set or a list of them, optionally "
+            + $"nullable, and {Display(type)} is none of them. Keep other state private, or pass behavior as a delegate.");
+    }
+
+    /// A record declared in the same assembly as the set that holds it.
+    private static bool IsRecordOf(Type type, Type set) =>
+        type is { IsClass: true, IsAbstract: false } && type.Assembly == set.Assembly
+        && type.GetProperty("EqualityContract", BindingFlags.NonPublic | BindingFlags.Instance) is not null;
+
+    /// A record held as set data is spelled with its memberwise initializer,
+    /// so each of its fields must itself be a value Swift can spell.
+    private void EnsureSpellable(FieldType type, string where, HashSet<Type> visiting) {
+        switch (type) {
+            case PrimitiveField { Kind: Primitive.Guid or Primitive.Date }:
+                throw new ContractSchemaException($"{where}: a record held as set data cannot hold a {Describe(type)}, which Swift "
+                    + "cannot spell as a literal.");
+            case RootField:
+                throw new ContractSchemaException($"{where}: a record held as set data cannot hold a union.");
+            case RecordField record:
+                if (!visiting.Add(record.Type))
+                    throw new ContractSchemaException($"{where}: a record held as set data cannot contain itself.");
+                foreach (var field in records[record.Type].Fields)
+                    EnsureSpellable(field.Type, $"{record.Type.Name}.{field.Name}", visiting);
+                visiting.Remove(record.Type);
+                break;
+            case ListField list:
+                EnsureSpellable(list.Element, where, visiting);
+                break;
+            case OptionalField optional:
+                EnsureSpellable(optional.Value, where, visiting);
+                break;
+        }
     }
 
     private static bool IsLocalized(PropertyInfo property) => property.IsDefined(typeof(LocalizedAttribute), false);
@@ -360,19 +410,45 @@ internal sealed class ContractSchema {
         return comments;
     }
 
-    private static object? DataValue(PropertyInfo property, object instance, Dictionary<PropertyInfo, PropertyInfo> comments) {
-        object? value = property.GetValue(instance);
-        if (!IsLocalized(property) || value is not string text) return value;
-        return new LocalizedText(text, comments.TryGetValue(property, out var comment) ? (string?)comment.GetValue(instance) : null);
+    /// Each localized member's argument: the int member its
+    /// `[Localized(Argument = ...)]` names.
+    private static Dictionary<PropertyInfo, PropertyInfo> LocalizedArguments(IReadOnlyList<PropertyInfo> accessors, string set) {
+        var arguments = new Dictionary<PropertyInfo, PropertyInfo>();
+        foreach (var localized in accessors.Where(IsLocalized)) {
+            if (localized.GetCustomAttribute<LocalizedAttribute>()!.Argument is not { } name) continue;
+            if (accessors.FirstOrDefault(property => property.Name == name) is not { } argument
+                || (argument.PropertyType != typeof(int) && argument.PropertyType != typeof(int?)))
+                throw new ContractSchemaException($"{set}.{localized.Name}: its argument {name} must be an int member of the set.");
+            arguments[localized] = argument;
+        }
+        return arguments;
     }
 
-    private static object? SetData(FieldType type, object? value, string where) => (type, value) switch {
+    private static object? DataValue(PropertyInfo property, object instance, Dictionary<PropertyInfo, PropertyInfo> comments,
+        Dictionary<PropertyInfo, PropertyInfo> arguments) {
+        object? value = property.GetValue(instance);
+        if (!IsLocalized(property) || value is not string text) return value;
+        int? argument = arguments.TryGetValue(property, out var source) ? (int?)source.GetValue(instance) : null;
+        if (text.Split(ArgumentFormat).Length - 1 != (argument is null ? 0 : 1))
+            throw new ContractSchemaException($"{instance.GetType().Name}.{property.Name}: \"{text}\" must spell {ArgumentFormat} exactly "
+                + "once when its argument has a value, and never otherwise.");
+        return new LocalizedText(text, comments.TryGetValue(property, out var comment) ? (string?)comment.GetValue(instance) : null,
+            argument);
+    }
+
+    private object? SetData(FieldType type, object? value, string where) => (type, value) switch {
         (OptionalField, null) => null,
         (OptionalField optional, _) => SetData(optional.Value, value, where),
         (_, null) => throw new ContractSchemaException($"{where}: a data member that is not nullable holds null."),
         (SetField set, _) => new SetMemberReference(set.Type, MemberName(set.Type, value, where)),
+        (ListField list, System.Collections.IEnumerable items) =>
+            items.Cast<object?>().Select((item, index) => SetData(list.Element, item, $"{where}[{index}]")).ToList(),
+        (RecordField record, _) => RecordData(records[record.Type], value, where),
         _ => value
     };
+
+    private RecordValue RecordData(ContractRecord record, object value, string where) => new(record, [.. record.Fields.Select(field =>
+        SetData(field.Type, record.Type.GetProperty(field.Name)!.GetValue(value), $"{where}.{field.Name}"))]);
 
     private static string MemberName(Type set, object instance, string where) =>
         set.GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -485,9 +561,15 @@ internal sealed class ContractSchema {
         string text => $"\"{JsonEncodedText.Encode(text)}\"",
         double number => number.ToString("R", CultureInfo.InvariantCulture),
         TimeSpan duration => $"{duration.Ticks.ToString(CultureInfo.InvariantCulture)}ticks",
+        Enum flags when flags.GetType().IsDefined(typeof(FlagsAttribute), false) =>
+            $"{flags.GetType().Name}({Convert.ToInt64(flags, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)})",
         Enum kind => kind.ToString(),
         int or long => Convert.ToString(value, CultureInfo.InvariantCulture)!,
         SetMemberReference reference => $"{reference.Set.Name}.{reference.Member}",
+        RecordValue record => $"{record.Record.Name}({string.Join(", ", record.Values.Select(DescribeValue))})",
+        IReadOnlyList<object?> items => $"[{string.Join(", ", items.Select(DescribeValue))}]",
+        LocalizedText { Argument: { } argument } text =>
+            $"localized({DescribeValue(text.Text)}, {DescribeValue(text.Comment)}, {DescribeValue(argument)})",
         LocalizedText text => $"localized({DescribeValue(text.Text)}, {DescribeValue(text.Comment)})",
         _ => throw new ContractSchemaException($"Unknown set value {value}.")
     };

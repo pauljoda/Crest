@@ -2165,6 +2165,10 @@
     "device-platform-set": {
       "category": "internal",
       "message": "The device platform is one self-describing set that carries its page-release limits."
+    },
+    "shortcut-commands-set": {
+      "category": "internal",
+      "message": "Shortcut commands are one set shared by the core and Swift, carrying their sections, default keys, titles and symbols."
     }
   }
 }

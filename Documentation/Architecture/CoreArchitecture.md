@@ -83,9 +83,14 @@ for `EnginePage` lists every direct engine call.
    - Presentation lives on the instance too. User-facing text is English
      source marked `[Localized]`, with an optional `<Member>Comment` for
      translators, and Swift receives it as a `LocalizedStringResource`, so
-     Xcode extracts it into the string catalog. SF Symbol names are plain
-     strings. Views read `phase.title` and `phase.symbol` instead of
-     switching over kinds.
+     Xcode extracts it into the string catalog. Text that names a number
+     spells it `%lld` and names the int member that supplies it, so every
+     member shares one catalog key. SF Symbol names are plain strings. Views
+     read `phase.title` and `phase.symbol` instead of switching over kinds.
+   - A member's data may also be an enum, a flags enum, a record declared
+     beside the set, or a list of these; Swift receives each as a literal.
+     Every fixed set in the contracts reaches Swift, whether or not a record
+     names it.
 
    A nested `Kinds` enum is used only where a switch cannot be avoided. Plain
    enums remain only for sets whose members carry nothing. Unions of message

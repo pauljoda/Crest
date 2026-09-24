@@ -34,10 +34,10 @@ final class BrowserShortcutTests: XCTestCase {
     }
 
     func testCommandsForAnEngineFeatureAreOfferedOnlyWhereTheEngineDeclaresIt() {
-        let engineFeatures: Set<BrowserShortcutCommand> = [
+        let engineFeatures: Set<ShortcutCommand> = [
             .toggleReaderMode, .toggleContentBlocking, .toggleTranslationToolbar,
         ]
-        for command in BrowserShortcutCommand.allCases {
+        for command in ShortcutCommand.all {
             XCTAssertTrue(command.isOffered(by: BrowserEngineRegistration.webKit), "\(command)")
             XCTAssertEqual(
                 command.isOffered(by: BrowserEngineRegistration.chromium),
@@ -74,14 +74,14 @@ final class BrowserShortcutTests: XCTestCase {
         restored.reset(.newTab)
         XCTAssertEqual(
             restored.shortcut(for: .newTab),
-            BrowserShortcutCommand.newTab.defaultShortcut
+            ShortcutCommand.newTab.defaultShortcut
         )
         XCTAssertNil(restored.shortcut(for: .showHistory))
 
         restored.resetAll()
         XCTAssertEqual(
             restored.shortcut(for: .showHistory),
-            BrowserShortcutCommand.showHistory.defaultShortcut
+            ShortcutCommand.showHistory.defaultShortcut
         )
         XCTAssertFalse(restored.hasCustomizations)
         XCTAssertNil(persistence.overrides)
@@ -89,13 +89,13 @@ final class BrowserShortcutTests: XCTestCase {
 
     @MainActor
     func testNewWindowDefaultsYieldToPersistedCustomBindingsWithoutRewritingThem() {
-        let cases: [(owner: BrowserShortcutCommand, displaced: BrowserShortcutCommand, chord: BrowserShortcut)] = [
+        let cases: [(owner: ShortcutCommand, displaced: ShortcutCommand, chord: BrowserShortcut)] = [
             (.newQuickWindow, .newBlankWindow, shortcut("n", [.command, .option])),
             (.newTab, .newQuickWindow, shortcut("n", [.command, .option, .shift])),
         ]
         for item in cases {
             let saved: [String: BrowserShortcutOverride] = [
-                item.owner.rawValue: .custom(item.chord), BrowserShortcutCommand.showHistory.rawValue: .unassigned,
+                item.owner.name: .custom(item.chord), ShortcutCommand.showHistory.name: .unassigned,
             ]
             let persistence = InMemoryBrowserShortcutPersistence(overrides: saved)
             let store = BrowserShortcutStore(persistence: persistence)
@@ -143,7 +143,7 @@ final class BrowserShortcutTests: XCTestCase {
         let nextLaunch = BrowserShortcutStore.inMemory()
         XCTAssertEqual(
             nextLaunch.shortcut(for: .newTab),
-            BrowserShortcutCommand.newTab.defaultShortcut
+            ShortcutCommand.newTab.defaultShortcut
         )
     }
 
@@ -216,14 +216,14 @@ final class BrowserShortcutTests: XCTestCase {
 
     private func shortcut(
         _ character: Character,
-        _ modifiers: BrowserShortcutModifiers
+        _ modifiers: ShortcutModifiers
     ) -> BrowserShortcut {
         BrowserShortcut(key: .character(character), modifiers: modifiers)
     }
 
     private func special(
         _ key: BrowserShortcutSpecialKey,
-        _ modifiers: BrowserShortcutModifiers
+        _ modifiers: ShortcutModifiers
     ) -> BrowserShortcut {
         BrowserShortcut(key: .special(key), modifiers: modifiers)
     }

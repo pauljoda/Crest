@@ -9,7 +9,7 @@ struct MobileBrowserCommands: Commands {
         CommandGroup(after: .newItem) {
             Button(
                 "New Window",
-                systemImage: BrowserShortcutCommand.newWindow.paletteSymbol
+                systemImage: ShortcutCommand.newWindow.symbol
             ) {
                 openWindow(value: BrowserWindowID())
             }
@@ -17,7 +17,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "New Tab",
-                systemImage: BrowserShortcutCommand.newTab.paletteSymbol
+                systemImage: ShortcutCommand.newTab.symbol
             ) {
                 context?.openNewTab()
             }
@@ -27,7 +27,7 @@ struct MobileBrowserCommands: Commands {
             Button(
                 context?.isPrivateBrowsing == true
                     ? "Leave Private Browsing" : "Private Browsing",
-                systemImage: BrowserShortcutCommand.newPrivateWindow.paletteSymbol
+                systemImage: ShortcutCommand.newPrivateWindow.symbol
             ) {
                 context?.togglePrivateBrowsing()
             }
@@ -36,7 +36,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Close Tab",
-                systemImage: BrowserShortcutCommand.closeTabOrWindow.paletteSymbol
+                systemImage: ShortcutCommand.closeTabOrWindow.symbol
             ) {
                 context?.dismissSelectedTab()
             }
@@ -47,7 +47,7 @@ struct MobileBrowserCommands: Commands {
         CommandMenu("Navigate") {
             Button(
                 "Open Location",
-                systemImage: BrowserShortcutCommand.openLocation.paletteSymbol
+                systemImage: ShortcutCommand.openLocation.symbol
             ) {
                 context?.openLocation()
             }
@@ -58,7 +58,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Back",
-                systemImage: BrowserShortcutCommand.back.paletteSymbol
+                systemImage: ShortcutCommand.back.symbol
             ) {
                 context?.goBack()
             }
@@ -72,7 +72,7 @@ struct MobileBrowserCommands: Commands {
             // "Back" should not take that away.
             Button(
                 "Back (Arrow)",
-                systemImage: BrowserShortcutCommand.back.paletteSymbol
+                systemImage: ShortcutCommand.back.symbol
             ) {
                 context?.goBack()
             }
@@ -81,7 +81,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Forward",
-                systemImage: BrowserShortcutCommand.forward.paletteSymbol
+                systemImage: ShortcutCommand.forward.symbol
             ) {
                 context?.goForward()
             }
@@ -90,7 +90,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Forward (Arrow)",
-                systemImage: BrowserShortcutCommand.forward.paletteSymbol
+                systemImage: ShortcutCommand.forward.symbol
             ) {
                 context?.goForward()
             }
@@ -99,7 +99,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Reload Page",
-                systemImage: BrowserShortcutCommand.reloadPage.paletteSymbol
+                systemImage: ShortcutCommand.reloadPage.symbol
             ) {
                 context?.reloadOrStop()
             }
@@ -108,7 +108,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Stop Loading",
-                systemImage: BrowserShortcutCommand.stopLoading.paletteSymbol
+                systemImage: ShortcutCommand.stopLoading.symbol
             ) {
                 context?.stopLoading()
             }
@@ -117,7 +117,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Reload from Origin",
-                systemImage: BrowserShortcutCommand.reloadFromOrigin.paletteSymbol
+                systemImage: ShortcutCommand.reloadFromOrigin.symbol
             ) {
                 context?.reloadFromOrigin()
             }
@@ -128,7 +128,7 @@ struct MobileBrowserCommands: Commands {
         CommandMenu("Tabs") {
             Button(
                 "Pin or Unpin Tab",
-                systemImage: BrowserShortcutCommand.toggleSelectedTabPinned.paletteSymbol
+                systemImage: ShortcutCommand.toggleSelectedTabPinned.symbol
             ) {
                 context?.toggleSelectedTabPinned()
             }
@@ -137,7 +137,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Duplicate Tab",
-                systemImage: BrowserShortcutCommand.duplicateTab.paletteSymbol
+                systemImage: ShortcutCommand.duplicateTab.symbol
             ) {
                 context?.duplicateSelectedTab()
             }
@@ -146,7 +146,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Reopen Closed Tab",
-                systemImage: BrowserShortcutCommand.reopenClosedTab.paletteSymbol
+                systemImage: ShortcutCommand.reopenClosedTab.symbol
             ) {
                 context?.reopenClosedTab()
             }
@@ -155,7 +155,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Clear Unpinned Tabs",
-                systemImage: BrowserShortcutCommand.clearUnpinnedTabs.paletteSymbol
+                systemImage: ShortcutCommand.clearUnpinnedTabs.symbol
             ) {
                 context?.cleanupCurrentTabs()
             }
@@ -164,7 +164,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Archive Tab",
-                systemImage: BrowserShortcutCommand.archiveTab.paletteSymbol
+                systemImage: ShortcutCommand.archiveTab.symbol
             ) {
                 context?.archiveSelectedTab()
             }
@@ -175,7 +175,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Previous Tab",
-                systemImage: BrowserShortcutCommand.previousTab.paletteSymbol
+                systemImage: ShortcutCommand.previousTab.symbol
             ) {
                 context?.selectPreviousTab()
             }
@@ -184,7 +184,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Next Tab",
-                systemImage: BrowserShortcutCommand.nextTab.paletteSymbol
+                systemImage: ShortcutCommand.nextTab.symbol
             ) {
                 context?.selectNextTab()
             }
@@ -193,7 +193,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Previous Tab (Bracket)",
-                systemImage: BrowserShortcutCommand.previousTab.paletteSymbol
+                systemImage: ShortcutCommand.previousTab.symbol
             ) {
                 context?.selectPreviousTab()
             }
@@ -202,7 +202,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Next Tab (Bracket)",
-                systemImage: BrowserShortcutCommand.nextTab.paletteSymbol
+                systemImage: ShortcutCommand.nextTab.symbol
             ) {
                 context?.selectNextTab()
             }
@@ -211,7 +211,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Most Recent Tab",
-                systemImage: BrowserShortcutCommand.mostRecentTab.paletteSymbol
+                systemImage: ShortcutCommand.mostRecentTab.symbol
             ) {
                 context?.selectMostRecentTab()
             }
@@ -222,7 +222,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Split With Next Tab",
-                systemImage: BrowserShortcutCommand.splitWithNextTab.paletteSymbol
+                systemImage: ShortcutCommand.splitWithNextTab.symbol
             ) {
                 context?.splitWithNextTab()
             }
@@ -231,7 +231,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Focus Next Split Card",
-                systemImage: BrowserShortcutCommand.focusNextSplitCard.paletteSymbol
+                systemImage: ShortcutCommand.focusNextSplitCard.symbol
             ) {
                 context?.focusNextSplitCard()
             }
@@ -240,7 +240,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Focus Previous Split Card",
-                systemImage: BrowserShortcutCommand.focusPreviousSplitCard.paletteSymbol
+                systemImage: ShortcutCommand.focusPreviousSplitCard.symbol
             ) {
                 context?.focusPreviousSplitCard()
             }
@@ -249,7 +249,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Move Split Card Left",
-                systemImage: BrowserShortcutCommand.moveSplitCardLeft.paletteSymbol
+                systemImage: ShortcutCommand.moveSplitCardLeft.symbol
             ) {
                 context?.moveFocusedSplitCard(.left)
             }
@@ -258,7 +258,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Move Split Card Right",
-                systemImage: BrowserShortcutCommand.moveSplitCardRight.paletteSymbol
+                systemImage: ShortcutCommand.moveSplitCardRight.symbol
             ) {
                 context?.moveFocusedSplitCard(.right)
             }
@@ -267,7 +267,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Remove Tab From Split",
-                systemImage: BrowserShortcutCommand.removeTabFromSplit.paletteSymbol
+                systemImage: ShortcutCommand.removeTabFromSplit.symbol
             ) {
                 context?.removeTabFromSplit()
             }
@@ -276,7 +276,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Separate All Tabs",
-                systemImage: BrowserShortcutCommand.separateSplitTabs.paletteSymbol
+                systemImage: ShortcutCommand.separateSplitTabs.symbol
             ) {
                 context?.separateSplitTabs()
             }
@@ -287,7 +287,7 @@ struct MobileBrowserCommands: Commands {
 
             let tabSelections = numberedSelections
             ForEach(1...9, id: \.self) { number in
-                let command = BrowserShortcutCommand.tabSelection(number)
+                let command = ShortcutCommand.selecting(.tab, number: number)
                 Button("Select Tab \(number)", systemImage: "\(number).square") {
                     if case .tab(let index)? = command.flatMap({ numberedSelections[$0] }) {
                         context?.selectTab(index)
@@ -301,7 +301,7 @@ struct MobileBrowserCommands: Commands {
         CommandMenu("Spaces") {
             Button(
                 "Previous Space",
-                systemImage: BrowserShortcutCommand.previousSpace.paletteSymbol
+                systemImage: ShortcutCommand.previousSpace.symbol
             ) {
                 context?.selectPreviousSpace()
             }
@@ -310,7 +310,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Next Space",
-                systemImage: BrowserShortcutCommand.nextSpace.paletteSymbol
+                systemImage: ShortcutCommand.nextSpace.symbol
             ) {
                 context?.selectNextSpace()
             }
@@ -321,7 +321,7 @@ struct MobileBrowserCommands: Commands {
 
             let spaceSelections = numberedSelections
             ForEach(1...9, id: \.self) { number in
-                let command = BrowserShortcutCommand.spaceSelection(number)
+                let command = ShortcutCommand.selecting(.space, number: number)
                 Button("Select Space \(number)", systemImage: "\(number).square") {
                     if case .space(let index)? = command.flatMap({ numberedSelections[$0] }) {
                         context?.selectSpace(index)
@@ -335,7 +335,7 @@ struct MobileBrowserCommands: Commands {
         CommandMenu("Page") {
             Button(
                 context?.readerModeActionTitle ?? "Show Reader",
-                systemImage: BrowserShortcutCommand.toggleReaderMode.paletteSymbol
+                systemImage: ShortcutCommand.toggleReaderMode.symbol
             ) {
                 context?.toggleReaderMode()
             }
@@ -344,7 +344,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 context?.contentBlockingActionTitle ?? "Content Blocking",
-                systemImage: BrowserShortcutCommand.toggleContentBlocking.paletteSymbol
+                systemImage: ShortcutCommand.toggleContentBlocking.symbol
             ) {
                 Task { await context?.toggleContentBlocking() }
             }
@@ -355,7 +355,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Find in Page",
-                systemImage: BrowserShortcutCommand.findInPage.paletteSymbol
+                systemImage: ShortcutCommand.findInPage.symbol
             ) {
                 context?.presentFind()
             }
@@ -366,7 +366,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Zoom In",
-                systemImage: BrowserShortcutCommand.zoomIn.paletteSymbol
+                systemImage: ShortcutCommand.zoomIn.symbol
             ) {
                 context?.zoomIn()
             }
@@ -375,7 +375,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Zoom Out",
-                systemImage: BrowserShortcutCommand.zoomOut.paletteSymbol
+                systemImage: ShortcutCommand.zoomOut.symbol
             ) {
                 context?.zoomOut()
             }
@@ -384,7 +384,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Actual Size",
-                systemImage: BrowserShortcutCommand.actualSize.paletteSymbol
+                systemImage: ShortcutCommand.actualSize.symbol
             ) {
                 context?.resetZoom()
             }
@@ -395,7 +395,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Copy Page Link",
-                systemImage: BrowserShortcutCommand.copyPageLink.paletteSymbol
+                systemImage: ShortcutCommand.copyPageLink.symbol
             ) {
                 context?.copyPageLink()
             }
@@ -404,7 +404,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Copy Page Link as Markdown",
-                systemImage: BrowserShortcutCommand.copyPageLinkAsMarkdown.paletteSymbol
+                systemImage: ShortcutCommand.copyPageLinkAsMarkdown.symbol
             ) {
                 context?.copyPageLinkAsMarkdown()
             }
@@ -415,7 +415,7 @@ struct MobileBrowserCommands: Commands {
         CommandGroup(replacing: .printItem) {
             Button(
                 "Print…",
-                systemImage: BrowserShortcutCommand.printPage.paletteSymbol
+                systemImage: ShortcutCommand.printPage.symbol
             ) {
                 context?.printPage()
             }
@@ -432,14 +432,14 @@ struct MobileBrowserCommands: Commands {
             ) {
                 Label(
                     "Show Translation Toolbar",
-                    systemImage: BrowserShortcutCommand.toggleTranslationToolbar.paletteSymbol)
+                    systemImage: ShortcutCommand.toggleTranslationToolbar.symbol)
             }
             .keyboardShortcut(shortcut(.toggleTranslationToolbar))
             .disabled(context?.canToggleTranslationToolbar != true)
 
             Button(
                 "Toggle Sidebar",
-                systemImage: BrowserShortcutCommand.toggleSidebar.paletteSymbol
+                systemImage: ShortcutCommand.toggleSidebar.symbol
             ) {
                 context?.toggleSidebar()
             }
@@ -448,7 +448,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Show History",
-                systemImage: BrowserShortcutCommand.showHistory.paletteSymbol
+                systemImage: ShortcutCommand.showHistory.symbol
             ) {
                 context?.presentHistory()
             }
@@ -457,7 +457,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Show Archive",
-                systemImage: BrowserShortcutCommand.showArchive.paletteSymbol
+                systemImage: ShortcutCommand.showArchive.symbol
             ) {
                 context?.presentArchive()
             }
@@ -466,7 +466,7 @@ struct MobileBrowserCommands: Commands {
 
             Button(
                 "Show Downloads",
-                systemImage: BrowserShortcutCommand.showDownloads.paletteSymbol
+                systemImage: ShortcutCommand.showDownloads.symbol
             ) {
                 context?.presentDownloads()
             }
@@ -476,21 +476,21 @@ struct MobileBrowserCommands: Commands {
     }
 
     private func shortcut(
-        _ command: BrowserShortcutCommand
+        _ command: ShortcutCommand
     ) -> KeyboardShortcut? {
         shortcuts.keyboardShortcut(for: command)
     }
 
     /// Where each numbered selection command leads right now, per the core.
-    private var numberedSelections: [BrowserShortcutCommand: BrowserNumberedSelection] {
+    private var numberedSelections: [ShortcutCommand: BrowserNumberedSelection] {
         BrowserCorePolicy.numberedSelections(tabCount: context?.tabCount ?? 0, spaceCount: context?.spaceCount ?? 0)
     }
 
     private func tabSelectionShortcut(_ number: Int) -> KeyboardShortcut? {
-        BrowserShortcutCommand.tabSelection(number).flatMap(shortcut)
+        ShortcutCommand.selecting(.tab, number: number).flatMap(shortcut)
     }
 
     private func spaceSelectionShortcut(_ number: Int) -> KeyboardShortcut? {
-        BrowserShortcutCommand.spaceSelection(number).flatMap(shortcut)
+        ShortcutCommand.selecting(.space, number: number).flatMap(shortcut)
     }
 }

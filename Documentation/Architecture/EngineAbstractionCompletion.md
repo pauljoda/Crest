@@ -231,7 +231,7 @@ Remaining. The Chromium registration declares both limits:
 ### WP6. Capability truth and UI hygiene. Done
 
 - `BrowserCommandActions.paletteCommands` and
-  `BrowserShortcutCommand.userFacingCases` filter by the current engine's
+  `ShortcutCommand.offered` filter by the current engine's
   capabilities.
 - Settings destinations filter on `isProvidedByCurrentEngine`, which covers
   Feature Flags.

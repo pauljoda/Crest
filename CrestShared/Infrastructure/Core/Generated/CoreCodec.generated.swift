@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x94, 0x45, 0x94, 0x97, 0xed, 0xca, 0x0a, 0x35, 0x06, 0x7e, 0xc6, 0x55, 0x20, 0xad, 0xc1, 0x6d, 0xdd, 0x8d, 0x49, 0x89, 0xaf, 0x12, 0xf5, 0x59, 0xf0, 0x77, 0x0e, 0xeb, 0x51, 0xe3, 0x63, 0x5c
+        0x16, 0x54, 0x61, 0xf4, 0x9b, 0x2f, 0x18, 0x20, 0xe7, 0x6b, 0xef, 0xeb, 0x5d, 0x34, 0x7b, 0xb8, 0x60, 0xa2, 0xec, 0x7d, 0x82, 0x37, 0x4b, 0xe7, 0xd1, 0xc9, 0x33, 0xb0, 0x86, 0xa5, 0x32, 0x0e
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -1506,6 +1506,21 @@ extension InvalidSearchEngine {
     }
 }
 
+extension KeyCombination {
+    init(from reader: inout WireReader) throws(WireError) {
+        let key = try reader.readString()
+        let isSpecialKey = try reader.readBool()
+        let modifiers = try ShortcutModifiers(from: &reader)
+        self.init(key: key, isSpecialKey: isSpecialKey, modifiers: modifiers)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(key)
+        writer.writeBool(isSpecialKey)
+        modifiers.encode(into: &writer)
+    }
+}
+
 extension LinkRoute {
     init(from reader: inout WireReader) throws(WireError) {
         let id = try reader.readUUID()
@@ -1826,6 +1841,21 @@ extension SetDownloadDestination {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(13)
         encode(into: &writer)
+    }
+}
+
+extension ShortcutDefault {
+    init(from reader: inout WireReader) throws(WireError) {
+        let platform = try DevicePlatform(from: &reader)
+        let keys = try KeyCombination(from: &reader)
+        let yieldsToOverrides = try reader.readBool()
+        self.init(platform: platform, keys: keys, yieldsToOverrides: yieldsToOverrides)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        platform.encode(into: &writer)
+        keys.encode(into: &writer)
+        writer.writeBool(yieldsToOverrides)
     }
 }
 
@@ -2188,6 +2218,18 @@ extension SearchEngineFlaw {
     }
 }
 
+extension ShortcutModifiers {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard rawValue & ~15 == 0 else { throw WireError.malformed("Unknown ShortcutModifiers \(rawValue)") }
+        self.init(rawValue: rawValue)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
 extension StorageFailure {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -2213,6 +2255,20 @@ extension SystemPasswordWriteThroughAvailability {
 
     func encode(into writer: inout WireWriter) {
         writer.writeEnum(rawValue)
+    }
+}
+
+extension DevicePlatform {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown DevicePlatform \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
     }
 }
 
@@ -2263,6 +2319,48 @@ extension DownloadTextField {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown DownloadTextField \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension NumberedSelectionTarget {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown NumberedSelectionTarget \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension ShortcutCommand {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown ShortcutCommand \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension ShortcutSection {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown ShortcutSection \(tag)")
         }
         self = Self.all[tag]
     }

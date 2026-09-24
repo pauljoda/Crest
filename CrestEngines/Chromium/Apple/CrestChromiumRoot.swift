@@ -876,9 +876,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         return true
     }
 
-    private func canPerform(_ command: BrowserShortcutCommand) -> Bool {
+    private func canPerform(_ command: ShortcutCommand) -> Bool {
         guard !quitting, NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil else { return false }
-        switch command {
+        switch command.kind {
         case .newWindow, .newPrivateWindow: return true
         case .closeWindow, .closeTabOrWindow:
             return actions != nil || quickWindows.values.contains(where: { $0.window === NSApp.keyWindow })
@@ -886,10 +886,10 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
     }
 
-    private func perform(_ command: BrowserShortcutCommand) {
+    private func perform(_ command: ShortcutCommand) {
         guard canPerform(command) else { return }
         if let actions { actions.perform(command); return }
-        switch command {
+        switch command.kind {
         case .newWindow: openWindow(.normal(sourceWindowID: nil))
         case .newPrivateWindow: openPrivateWindow()
         case .closeWindow, .closeTabOrWindow: NSApp.keyWindow?.performClose(nil)

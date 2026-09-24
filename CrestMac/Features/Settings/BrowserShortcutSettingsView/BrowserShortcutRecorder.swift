@@ -105,7 +105,7 @@ final class BrowserShortcutRecorderCoordinator: NSObject {
     }
 
     func handle(_ event: NSEvent, sender: ShortcutRecorderButton) {
-        let modifiers = BrowserShortcutModifiers(event.modifierFlags)
+        let modifiers = ShortcutModifiers(event.modifierFlags)
         if modifiers.isEmpty,
             let specialKey = BrowserShortcutSpecialKey(keyCode: event.keyCode)
         {

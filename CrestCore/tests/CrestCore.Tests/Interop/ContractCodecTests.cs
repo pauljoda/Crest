@@ -36,18 +36,20 @@ public sealed unsafe class ContractCodecTests {
             ? [.. members.Cast<object>()]
             : null;
 
-    /// Every record reachable from the roots, including query answers, and
-    /// every fixed set they hold.
+    /// Every record reachable from the roots, including query answers, every
+    /// fixed set the contracts declare, and every record or set they hold.
     private static IEnumerable<Type> Reachable() {
         var found = new HashSet<Type>();
         var pending = new Queue<Type>(Roots.Append(typeof(Query<>)).SelectMany(RootMembers));
         foreach (var query in RootMembers(typeof(Query<>))) pending.Enqueue(Answer(query));
+        foreach (var set in Contracts.GetExportedTypes().Where(type => type.IsSealed && SetMembers(type) is not null)) pending.Enqueue(set);
         while (pending.TryDequeue(out var type)) {
-            if (!type.IsClass || type.Assembly != Contracts || type.IsAbstract || !found.Add(type) || SetMembers(type) is not null) continue;
-            foreach (var parameter in type.GetConstructors().Single().GetParameters()) {
-                var parameterType = Nullable.GetUnderlyingType(parameter.ParameterType) ?? parameter.ParameterType;
-                pending.Enqueue(parameterType.IsGenericType ? parameterType.GetGenericArguments()[0] : parameterType);
-            }
+            if (!type.IsClass || type.Assembly != Contracts || type.IsAbstract || !found.Add(type)) continue;
+            var held = SetMembers(type) is not null
+                ? type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(property => property.PropertyType)
+                : type.GetConstructors().Single().GetParameters().Select(parameter => parameter.ParameterType);
+            foreach (var heldType in held.Select(held => Nullable.GetUnderlyingType(held) ?? held))
+                pending.Enqueue(heldType.IsGenericType ? heldType.GetGenericArguments()[0] : heldType);
         }
         return found;
     }
@@ -188,10 +190,27 @@ public sealed unsafe class ContractCodecTests {
         Assert.NotEqual(ordered.Fingerprint, reordered.Fingerprint);
     }
 
+    [Fact]
+    public void AFixedSetSpellsItsListsRecordsFlagsAndCountedTitlesAsSwiftLiterals() {
+        var schema = ContractSchema.Load([typeof(Spelled.Key)]);
+        string swift = SwiftEmitter.EmitContracts(schema);
+
+        Assert.Equal(["Grip", "Key"], schema.Sets.Select(set => set.Name));
+        Assert.Contains("static let second = Key(", swift, StringComparison.Ordinal);
+        Assert.Contains("title: LocalizedStringResource(\"Press Key \\(2)\")", swift, StringComparison.Ordinal);
+        Assert.Contains("title: LocalizedStringResource(\"Any Key\")", swift, StringComparison.Ordinal);
+        Assert.Contains("Binding(grip: Grip.firm, modifiers: [.command, .shift])", swift, StringComparison.Ordinal);
+        Assert.Contains("Binding(grip: Grip.loose, modifiers: [])", swift, StringComparison.Ordinal);
+        Assert.Contains("bindings: []", swift, StringComparison.Ordinal);
+        Assert.Contains("struct Binding: Equatable, Sendable {", swift, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(typeof(Malformed.SendUnlisted), "Unlisted.Hidden:")]
     [InlineData(typeof(Malformed.SendConstructible), "Constructible:")]
-    [InlineData(typeof(Malformed.SendListed), "Listed.Parts:")]
+    [InlineData(typeof(Malformed.SendDated), "Dated.When:")]
+    [InlineData(typeof(Malformed.SendStamped), "Stamp.Id:")]
+    [InlineData(typeof(Malformed.SendUncounted), "Uncounted.Title:")]
     public void TheGeneratorRefusesAFixedSetItCannotTagOrSpell(Type intent, string culprit) {
         var error = Assert.Throws<ContractSchemaException>(() => ContractSchema.Load([intent]));
         Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);

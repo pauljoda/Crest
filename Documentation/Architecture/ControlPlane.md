@@ -672,13 +672,16 @@ destinations, duplicates and pinned overflow through the `workspace.review`
 query, and decides what finishing setup does. The workspace import rejects a
 source whose split runs its repair would rewrite.
 
-Shortcuts, launch and media follow it too. The core's `ShortcutCatalog` holds the
-default chords, including ⌘1–⌘9 and ⌃1–⌃9 for numbered tab and Space selection,
-and `ShortcutBindingPolicy` resolves the persisted overrides, reports conflicts
-and revises the overrides when a binding applies; `BrowserShortcutStore` persists
-the overrides in their existing format and caches the resolved chords for
-dispatch, and a core that cannot answer reports a conflict rather than binding a
-chord twice. Section grouping and search for the settings list stay in Swift.
+Shortcuts, launch and media follow it too. The core's `ShortcutCommand` set
+holds every command's stored name, section, title, search terms, symbol and
+default keys on each platform, including ⌘1–⌘9 and ⌃1–⌃9 for numbered tab and
+Space selection, and the generator gives Swift the same members. Swift maps each
+command's kind to what the shell does in one place. `ShortcutBindingPolicy`
+resolves the persisted overrides, reports conflicts and revises the overrides
+when a binding applies; `BrowserShortcutStore` persists the overrides in their
+existing format and caches the resolved chords for dispatch, and a core that
+cannot answer reports a conflict rather than binding a chord twice. Search for
+the settings list stays in Swift.
 `LaunchPolicy` decides from the platform's parsed launch flags whether a launch
 is isolated, whether its web storage is ephemeral, whether installed-app UI
 shows, and what the first window opens; without an answer a launch stays

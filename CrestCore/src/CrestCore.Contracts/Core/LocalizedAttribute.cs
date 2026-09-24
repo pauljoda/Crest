@@ -6,4 +6,14 @@ namespace CrestCore.Contracts;
 /// with `Comment` appended, such as `TitleComment` for `Title`, is the note for
 /// translators and reaches Swift only as the resource's comment.
 [AttributeUsage(AttributeTargets.Property)]
-public sealed class LocalizedAttribute : Attribute;
+public sealed class LocalizedAttribute : Attribute {
+    #region Variables
+
+    /// An int member of the same set whose value the text carries. Where the
+    /// member has a value, the text spells it `%lld` exactly once, and Swift
+    /// interpolates the value there, so every member shares the one catalog
+    /// key: `Select Tab %lld` reaches Swift as "Select Tab \(3)".
+    public string? Argument { get; set; }
+
+    #endregion
+}

@@ -57,7 +57,7 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
         XCTAssertEqual(fixture.shortcuts.shortcut(for: .newTab), shortcut)
         XCTAssertEqual(
             fixture.shortcuts.shortcut(for: .newWindow),
-            BrowserShortcutCommand.newWindow.defaultShortcut
+            ShortcutCommand.newWindow.defaultShortcut
         )
         XCTAssertNil(fixture.model.pendingConflict)
     }
@@ -74,8 +74,8 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
         func remove() { overrides = nil }
     }
     private struct SearchProvider: BrowserShortcutSearchProviding {
-        func matches(_ command: BrowserShortcutCommand, currentShortcut: BrowserShortcut?, query: String) -> Bool {
-            query.isEmpty || command.rawValue.localizedCaseInsensitiveContains(query)
+        func matches(_ command: ShortcutCommand, currentShortcut: BrowserShortcut?, query: String) -> Bool {
+            query.isEmpty || command.name.localizedCaseInsensitiveContains(query)
         }
     }
 }

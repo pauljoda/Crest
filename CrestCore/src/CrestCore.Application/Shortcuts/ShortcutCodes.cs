@@ -82,8 +82,6 @@ internal static class ShortcutCodes {
         _ => "invalid"
     };
 
-    public static string Target(NumberedSelectionTarget target) => target == NumberedSelectionTarget.Tab ? "tab" : "space";
-
     public static JsonObject BindingsAnswer(IEnumerable<ShortcutBinding> bindings) => new() {
         ["bindings"] = new JsonArray(bindings.Select(binding => (JsonNode?)new JsonObject {
             ["command"] = binding.Command,
@@ -103,7 +101,7 @@ internal static class ShortcutCodes {
     public static JsonObject SelectionsAnswer(IEnumerable<NumberedSelection> selections) => new() {
         ["selections"] = new JsonArray(selections.Select(selection => (JsonNode?)new JsonObject {
             ["command"] = selection.Command,
-            ["target"] = Target(selection.Target),
+            ["target"] = selection.Target.Name,
             ["index"] = selection.Index
         }).ToArray())
     };

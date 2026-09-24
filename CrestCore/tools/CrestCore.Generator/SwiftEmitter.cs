@@ -121,7 +121,8 @@ internal static class SwiftEmitter {
         foreach (var member in set.Members)
             code.Append(Wrapped($"    static let {Local(member.Name)} = {set.Name}(", ")", [
                 $"tag: {member.Tag}",
-                .. properties.Select((property, index) => $"{property.Name}: {Literal(property.Type, member.Values[index])}")])).Append('\n');
+                .. properties.Select((property, index) =>
+                    $"{property.Name}: {Literal(property.Type, member.Values[index], MemberIndent)}")])).Append('\n');
         code.Append('\n').Append(Wrapped($"    static let all: [{set.Name}] = [", "]", [.. set.Members.Select(member => Local(member.Name))]))
             .Append('\n');
         code.Append('\n').Append($"    static func named(_ name: String?) -> {set.Name}? {{\n        all.first {{ $0.name == name }}\n    }}\n");
@@ -349,19 +350,29 @@ internal static class SwiftEmitter {
 
     private const int LineLength = 120;
 
+    /// Where a member's data values start: inside `static let … = Set(`.
+    private const string MemberIndent = "        ";
+
     /// `open` and `close` around the items on one line when it fits, or one
     /// item per line, indented one level deeper than `open`.
     private static string Wrapped(string open, string close, IReadOnlyList<string> items) {
-        string line = $"{open}{string.Join(", ", items)}{close}";
-        if (line.Length <= LineLength) return line;
         string indent = new(' ', open.Length - open.TrimStart().Length);
+        return indent + Wrapped(indent, open.TrimStart(), close, items);
+    }
+
+    /// `Wrapped` for a value that starts partway along a line indented by
+    /// `indent`. An item that already spans lines puts every item on its own.
+    private static string Wrapped(string indent, string open, string close, IReadOnlyList<string> items) {
+        string line = $"{open}{string.Join(", ", items)}{close}";
+        if (indent.Length + line.Length <= LineLength && !line.Contains('\n')) return line;
         return $"{open}\n{string.Join(",\n", items.Select(item => $"{indent}    {item}"))}\n{indent}{close}";
     }
 
-    /// A fixed set member's data value as a Swift literal.
-    private static string Literal(FieldType type, object? value) => (type, value) switch {
+    /// A fixed set member's data value as a Swift literal, for a line indented
+    /// by `indent`. A record is spelled with its memberwise initializer.
+    private static string Literal(FieldType type, object? value, string indent) => (type, value) switch {
         (OptionalField, null) => "nil",
-        (OptionalField optional, _) => Literal(optional.Value, value),
+        (OptionalField optional, _) => Literal(optional.Value, value, indent),
         (PrimitiveField, bool flag) => flag ? "true" : "false",
         (PrimitiveField, int or long) => Convert.ToString(value, CultureInfo.InvariantCulture)!,
         (PrimitiveField, double number) => DoubleLiteral(number),
@@ -369,11 +380,40 @@ internal static class SwiftEmitter {
         (PrimitiveField, string text) => StringLiteral(text),
         (SetField, SetMemberReference reference) => $"{reference.Set.Name}.{Local(reference.Member)}",
         (KindsField, Enum kind) => $".{Local(kind.ToString())}",
-        (LocalizedField, LocalizedText text) => text.Comment is { } comment
-            ? $"LocalizedStringResource({StringLiteral(text.Text)}, comment: {StringLiteral(comment)})"
-            : $"LocalizedStringResource({StringLiteral(text.Text)})",
+        (EnumField item, Enum member) => EnumLiteral(item, member),
+        (ListField list, IReadOnlyList<object?> items) =>
+            Wrapped(indent, "[", "]", [.. items.Select(item => Literal(list.Element, item, indent + "    "))]),
+        (RecordField, RecordValue record) => Wrapped(indent, $"{record.Record.Name}(", ")", [
+            .. record.Record.Fields.Select((field, index) =>
+                $"{Naming.SwiftMember(field.Name)}: {Literal(field.Type, record.Values[index], indent + "    ")}")]),
+        (LocalizedField, LocalizedText text) => LocalizedLiteral(text),
         _ => throw new ContractSchemaException($"Cannot spell {value} as a Swift {TypeName(type)}.")
     };
+
+    /// A plain enum value is its case; a flags value is the option set of its
+    /// named members, which must account for every bit.
+    private static string EnumLiteral(EnumField item, Enum value) {
+        if (!item.Type.IsDefined(typeof(FlagsAttribute), false)) return $".{Local(value.ToString())}";
+        long bits = Convert.ToInt64(value, CultureInfo.InvariantCulture);
+        var members = Enum.GetValues(item.Type).Cast<Enum>()
+            .Select(member => (Name: member.ToString(), Bits: Convert.ToInt64(member, CultureInfo.InvariantCulture)))
+            .Where(member => member.Bits != 0 && (bits & member.Bits) == member.Bits).OrderBy(member => member.Bits).ToList();
+        if (members.Aggregate(0L, (covered, member) => covered | member.Bits) != bits)
+            throw new ContractSchemaException($"Cannot spell {item.Type.Name} value {bits} from its named members.");
+        return $"[{string.Join(", ", members.Select(member => $".{Local(member.Name)}"))}]";
+    }
+
+    /// The text as a `LocalizedStringResource`. Its argument, when it has one,
+    /// is interpolated where the text spells `%lld`, so Xcode extracts the text
+    /// itself as the key.
+    private static string LocalizedLiteral(LocalizedText text) {
+        string literal = StringLiteral(text.Text);
+        if (text.Argument is { } argument)
+            literal = literal.Replace("%lld", $"\\({argument.ToString(CultureInfo.InvariantCulture)})", StringComparison.Ordinal);
+        return text.Comment is { } comment
+            ? $"LocalizedStringResource({literal}, comment: {StringLiteral(comment)})"
+            : $"LocalizedStringResource({literal})";
+    }
 
     private static string DoubleLiteral(double number) => number switch {
         double.NaN => ".nan",

@@ -1,6 +1,6 @@
 import SwiftUI
 
-extension BrowserShortcutModifiers {
+extension ShortcutModifiers {
     var eventModifiers: EventModifiers {
         var result: EventModifiers = []
         if contains(.command) { result.insert(.command) }

@@ -94,7 +94,7 @@ extension BrowserShortcutValidationIssue {
     }
 
     private func localizedCommandList(
-        _ commands: [BrowserShortcutCommand],
+        _ commands: [ShortcutCommand],
         locale: Locale
     ) -> String {
         BrowserShortcutLocalization.list(

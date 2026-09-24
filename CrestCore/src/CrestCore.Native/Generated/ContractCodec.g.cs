@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x94, 0x45, 0x94, 0x97, 0xed, 0xca, 0x0a, 0x35, 0x06, 0x7e, 0xc6, 0x55, 0x20, 0xad, 0xc1, 0x6d, 0xdd, 0x8d, 0x49, 0x89, 0xaf, 0x12, 0xf5, 0x59, 0xf0, 0x77, 0x0e, 0xeb, 0x51, 0xe3, 0x63, 0x5c
+        0x16, 0x54, 0x61, 0xf4, 0x9b, 0x2f, 0x18, 0x20, 0xe7, 0x6b, 0xef, 0xeb, 0x5d, 0x34, 0x7b, 0xb8, 0x60, 0xa2, 0xec, 0x7d, 0x82, 0x37, 0x4b, 0xe7, 0xd1, 0xc9, 0x33, 0xb0, 0x86, 0xa5, 0x32, 0x0e
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -1458,6 +1458,22 @@ public static class ContractCodec {
         WriteSearchEngineFlaw(writer, value.Flaw);
     }
 
+    public static KeyCombination ReadKeyCombination(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new KeyCombination(
+            reader.ReadString(),
+            reader.ReadBool(),
+            ReadShortcutModifiers(reader));
+    }
+
+    public static void WriteKeyCombination(WireWriter writer, KeyCombination value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Key);
+        writer.WriteBool(value.IsSpecialKey);
+        WriteShortcutModifiers(writer, value.Modifiers);
+    }
+
     public static LinkRoute ReadLinkRoute(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new LinkRoute(
@@ -1697,6 +1713,22 @@ public static class ContractCodec {
         writer.WriteGuid(value.DownloadId);
         writer.WriteString(value.Destination);
         writer.WriteString(value.Filename);
+    }
+
+    public static ShortcutDefault ReadShortcutDefault(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ShortcutDefault(
+            ReadDevicePlatform(reader),
+            ReadKeyCombination(reader),
+            reader.ReadBool());
+    }
+
+    public static void WriteShortcutDefault(WireWriter writer, ShortcutDefault value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteDevicePlatform(writer, value.Platform);
+        WriteKeyCombination(writer, value.Keys);
+        writer.WriteBool(value.YieldsToOverrides);
     }
 
     public static StaleCredentialComparison ReadStaleCredentialComparison(WireReader reader) {
@@ -1975,6 +2007,16 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
+    public static ShortcutModifiers ReadShortcutModifiers(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (ShortcutModifiers)reader.ReadFlags(15);
+    }
+
+    public static void WriteShortcutModifiers(WireWriter writer, ShortcutModifiers value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
     public static StorageFailure ReadStorageFailure(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (StorageFailure)reader.ReadEnum(5);
@@ -1993,6 +2035,17 @@ public static class ContractCodec {
     public static void WriteSystemPasswordWriteThroughAvailability(WireWriter writer, SystemPasswordWriteThroughAvailability value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
+    }
+
+    public static DevicePlatform ReadDevicePlatform(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return DevicePlatform.All[reader.ReadEnum(DevicePlatform.All.Count)];
+    }
+
+    public static void WriteDevicePlatform(WireWriter writer, DevicePlatform value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(DevicePlatform.All, value));
     }
 
     public static DownloadPhase ReadDownloadPhase(WireReader reader) {
@@ -2037,6 +2090,39 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(DownloadTextField.All, value));
+    }
+
+    public static NumberedSelectionTarget ReadNumberedSelectionTarget(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return NumberedSelectionTarget.All[reader.ReadEnum(NumberedSelectionTarget.All.Count)];
+    }
+
+    public static void WriteNumberedSelectionTarget(WireWriter writer, NumberedSelectionTarget value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(NumberedSelectionTarget.All, value));
+    }
+
+    public static ShortcutCommand ReadShortcutCommand(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ShortcutCommand.All[reader.ReadEnum(ShortcutCommand.All.Count)];
+    }
+
+    public static void WriteShortcutCommand(WireWriter writer, ShortcutCommand value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ShortcutCommand.All, value));
+    }
+
+    public static ShortcutSection ReadShortcutSection(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ShortcutSection.All[reader.ReadEnum(ShortcutSection.All.Count)];
+    }
+
+    public static void WriteShortcutSection(WireWriter writer, ShortcutSection value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ShortcutSection.All, value));
     }
 
     /// <summary>A fixed set member's wire tag: its index in the set's <c>All</c>.</summary>
